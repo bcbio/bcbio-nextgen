@@ -191,14 +191,7 @@ def _get_conda_bin():
         return conda_bin
 
 def _default_deploy_args(args):
-    toolplus = {"data": {"bio_nextgen": []}}
-    custom_add = collections.defaultdict(list)
-    for x in args.toolplus:
-        if not x.fname:
-            for k, vs in toolplus.get(x.name, {}).iteritems():
-                custom_add[k].extend(vs)
     return {"flavor": "ngs_pipeline_minimal",
-            "custom_add": dict(custom_add),
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides": {"edition": "minimal",
@@ -258,15 +251,17 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
                               remotes["genome_resources"])
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
-    _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
-    toolplus = set([x.name for x in args.toolplus])
-    if 'data' in toolplus:
+    if "vep" in args.datatarget:
+        _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
+    if 'gemini' in args.datatarget:
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
         extras = []
-        if "cadd" in toolplus:
+        if "cadd" in args.datatarget:
             extras.extend(["--extra", "cadd_score"])
         ann_dir = get_gemini_dir()
         subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
+    if "kraken" in args.datatarget:
+        _install_kraken_db(_get_data_dir(), args)
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -340,19 +335,33 @@ def _is_old_database(db_dir, args):
     return False
 
 def _get_biodata(base_file, args):
+    """Retrieve biodata genome targets customized by install parameters.
+    """
     with open(base_file) as in_handle:
         config = yaml.load(in_handle)
     config["install_liftover"] = False
     config["genome_indexes"] = args.aligners
-    config["genomes"] = [_add_biodata_flags(g, args) for g in config["genomes"] if g["dbkey"] in args.genomes]
+    ann_groups = config.pop("annotation_groups", {})
+    config["genomes"] = [_setup_genome_annotations(g, args, ann_groups)
+                         for g in config["genomes"] if g["dbkey"] in args.genomes]
     return config
 
-def _add_biodata_flags(g, args):
-    toolplus = set([x.name for x in args.toolplus])
-    if g["dbkey"] in ["hg19", "GRCh37"]:
-        for flag in ["dbnsfp"]:
-            if flag in toolplus:
-                g[flag] = True
+def _setup_genome_annotations(g, args, ann_groups):
+    """Configure genome annotations to install based on datatarget.
+    """
+    available_anns = g.get("annotations", []) + g.pop("annotations_available", [])
+    anns = []
+    for orig_target in args.datatarget:
+        if orig_target in ann_groups:
+            targets = ann_groups[orig_target]
+        else:
+            targets = [orig_target]
+        for target in targets:
+            if target in available_anns:
+                anns.append(target)
+    g["annotations"] = anns
+    if "variation" not in args.datatarget and "validation" in g:
+        del g["validation"]
     return g
 
 def upgrade_thirdparty_tools(args, remotes):
@@ -391,14 +400,8 @@ def _install_toolplus(args):
     system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
     toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
     for tool in args.toolplus:
-        if tool.name == "kraken":
-            _install_kraken_db(_get_data_dir(), args)
-        elif tool.name in set(["gatk", "mutect"]):
+        if tool.name in set(["gatk", "mutect"]):
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
-        elif tool.name in set(["protected"]):  # back compatibility
-            pass
-        elif tool.name in set(["cadd", "dbnsfp", "data"]):  # larger data targets
-            pass
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" % (tool.name, tool.fname))
 
@@ -513,7 +516,7 @@ def save_install_defaults(args):
     if args.tooldir:
         cur_config["tooldir"] = args.tooldir
     cur_config["isolate"] = args.isolate
-    for attr in ["genomes", "aligners"]:
+    for attr in ["genomes", "aligners", "datatarget"]:
         if not cur_config.get(attr):
             cur_config[attr] = []
         for x in getattr(args, attr):
@@ -533,10 +536,8 @@ def save_install_defaults(args):
 def add_install_defaults(args):
     """Add any saved installation defaults to the upgrade.
     """
-    def _has_data_toolplus(args):
-        return len([x for x in args.toolplus if x.name not in ["gatk", "mutect"]]) > 0
     # Ensure we install data if we've specified any secondary installation targets
-    if len(args.genomes) > 0 or len(args.aligners) > 0 or _has_data_toolplus(args):
+    if len(args.genomes) > 0 or len(args.aligners) > 0 or len(args.datatarget) > 0:
         args.install_data = True
     install_config = _get_install_config()
     if install_config is None or not utils.file_exists(install_config):
@@ -554,18 +555,52 @@ def add_install_defaults(args):
                              "Specify the '--tooldir=/path/to/tools' to upgrade tools. "
                              "After a successful upgrade, the '--tools' parameter will "
                              "work for future upgrades.")
-    for attr in ["genomes", "aligners", "toolplus"]:
+    for attr in ["genomes", "aligners"]:
         # don't upgrade default genomes if a genome was specified
         if attr == "genomes" and len(args.genomes) > 0:
             continue
         for x in default_args.get(attr, []):
-            x = Tool(x, None) if attr == "toolplus" else str(x)
+            x = str(x)
             new_val = getattr(args, attr)
             if x not in getattr(args, attr):
                 new_val.append(x)
             setattr(args, attr, new_val)
+    args = _datatarget_defaults(args, default_args)
     if "isolate" in default_args and args.isolate is not True:
         args.isolate = default_args["isolate"]
+    return args
+
+def _datatarget_defaults(args, default_args):
+    """Set data installation targets, handling defaults.
+
+    Sets variation, rnaseq, smallrna as default targets if we're not
+    isolated to a single method.
+
+    Provides back compatibility for toolplus specifications.
+    """
+    default_data = default_args.get("datatarget", [])
+    # back-compatible toolplus specifications
+    for x in default_args.get("toolplus", []):
+        val = None
+        if x == "data":
+            val = "gemini"
+        elif x in ["cadd", "dbnsfp", "kraken"]:
+            val = x
+        if val and val not in default_data:
+            default_data.append(val)
+    new_val = getattr(args, "datatarget")
+    for x in default_data:
+        if x not in new_val:
+            new_val.append(x)
+    has_std_target = False
+    std_targets = ["variation", "rnaseq", "smallrna"]
+    for target in std_targets:
+        if target in new_val:
+            has_std_target = True
+            break
+    if not has_std_target:
+        new_val = new_val + std_targets
+    setattr(args, "datatarget", new_val)
     return args
 
 def get_defaults():
@@ -578,10 +613,7 @@ def get_defaults():
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.
     """
-    std_choices = set(["data", "cadd", "dbnsfp", "kraken"])
-    if x in std_choices:
-        return Tool(x, None)
-    elif "=" in x and len(x.split("=")) == 2:
+    if "=" in x and len(x.split("=")) == 2:
         name, fname = x.split("=")
         fname = os.path.normpath(os.path.realpath(fname))
         if not os.path.exists(fname):
@@ -603,6 +635,10 @@ def add_subparser(subparsers):
                         choices=["stable", "development", "system", "deps", "skip"], default="skip")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
+    parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
+                        action="append", default=[],
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp",
+                                 "battenberg", "kraken"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",

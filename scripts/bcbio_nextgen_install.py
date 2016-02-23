@@ -218,6 +218,10 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
+    parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
+                        action="append", default=[],
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp",
+                                 "battenberg", "kraken"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",

@@ -81,7 +81,7 @@ the :ref:`automated-sample-config` with one of the default templates:
   Run GATK best practices, including Base Quality Score Recalibration,
   realignment and HaplotypeCaller variant calling. This requires a license from
   Broad for commercial use. You need to manually install GATK along with bcbio
-  using downloads from the GATK Broad site or Appistry (see :ref:`extra-install`).
+  using downloads from the GATK Broad site or Appistry (see :ref:`toolplus-install`).
 
 You may also want to enable :ref:`svs-pipeline` for detection of larger events,
 which work with either caller. Another good source of inspiration are the

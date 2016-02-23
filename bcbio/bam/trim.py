@@ -3,7 +3,7 @@
 import os
 import sys
 
-from bcbio.utils import (file_exists, append_stem, replace_directory)
+from bcbio.utils import (file_exists, append_stem, replace_directory, safe_makedir)
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.provenance import do
@@ -23,7 +23,7 @@ def trim_adapters(data):
     to_trim = [x for x in data["files"] if x is not None]
     logger.info("Trimming low quality ends and read through adapter "
                 "sequence from %s." % (", ".join(to_trim)))
-    out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
+    out_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed"))
     config = dd.get_config(data)
     name = dd.get_sample_name(data)
     return _trim_adapters(to_trim, out_dir, name, config)

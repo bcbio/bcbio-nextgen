@@ -360,12 +360,12 @@ def _maybe_add_seqbuster(algorithm, sample, out):
     if utils.file_exists(fn):
         out.append({"path": fn,
                     "type": "counts",
-                    "ext": "ready"})
+                    "ext": "mirbase-ready"})
     fn = sample.get("seqbuster_novel")
     if fn and utils.file_exists(fn):
         out.append({"path": fn,
                     "type": "counts",
-                    "ext": "ready"})
+                    "ext": "novel-ready"})
     return out
 
 def _maybe_add_peaks(algorithm, sample, out):

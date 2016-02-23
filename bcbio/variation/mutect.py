@@ -8,11 +8,12 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.utils import file_exists, get_in, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
-from bcbio.variation.realign import has_aligned_reads
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.variation import bamprep, vcfutils, scalpel
+from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger
 
@@ -131,7 +132,8 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
         if not utils.file_uptodate(out_file_mutect, out_file_orig):
             out_file_mutect = _fix_mutect_output(out_file_orig, config, out_file_mutect, is_paired)
         indelcaller = vcfutils.get_indelcaller(base_config)
-        if "scalpel" in indelcaller.lower():
+        if ("scalpel" in indelcaller.lower() and region and isinstance(region, (tuple, list))
+              and chromhacks.is_nonalt(region[0])):
             # Scalpel InDels
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")

@@ -62,7 +62,15 @@ def variant(variables):
             [_cwl_nonfile_world(["region"])]),
           s("variantcall_batch_region", "batch-parallel",
             [["batch_rec"]],
-            [_cwl_file_world(["vrn_file_region"], ".tbi")])]
+            [_cwl_file_world(["vrn_file_region"], ".tbi"),
+             _cwl_nonfile_world(["region"])]),
+          s("concat_batch_variantcalls", "batch-merge",
+            [["batch_rec"], ["vrn_file_region"]],
+            [_cwl_file_world(["vrn_file"], ".tbi")]),
+          s("postprocess_variants", "batch-single",
+            [["batch_rec"], ["vrn_file"]],
+            [_cwl_file_world(["vrn_file"], ".tbi")],
+            noinputs=[["region"]])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
@@ -72,7 +80,7 @@ def variant(variables):
                 _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"] ],
+                ["reference", "fasta", "base"]],
                [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
                 _cwl_file_world(["regions", "callable"]),
                 _cwl_file_world(["regions", "sample_callable"]),
@@ -233,17 +241,21 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     we split previously and are merging now, then we only nest those
     combing from the split process.
     """
-    inputs = [_get_variable(x, file_vs) for x in step.inputs]
-    is_record_input = len(inputs) == 1 and tz.get_in(["type", "type"], inputs[0]) == "record"
     skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
     if wf:
         skip_inputs = skip_inputs | set([_get_string_vid(x) for x in wf.noinputs])
-    if is_record_input:
-        inputs = _unpack_record(inputs[0], skip_inputs)
-        skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in inputs])
+    inputs = []
+    for orig_input in [_get_variable(x, file_vs) for x in step.inputs]:
+        is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
+        if is_record_input:
+            unpack_inputs = _unpack_record(orig_input, skip_inputs)
+            inputs.extend(unpack_inputs)
+            skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in unpack_inputs])
+        elif get_base_id(orig_input["id"]) not in skip_inputs:
+            inputs.append(orig_input)
     inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
-    if step.parallel in ["single-merge"]:
+    if step.parallel in ["single-merge", "batch-merge"]:
         if parallel_ids:
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
@@ -452,6 +464,8 @@ def _create_variable(orig_v, step, variables):
     for key, val in orig_v.items():
         if key not in ["id", "type"]:
             v[key] = val
+    if v.get("type") == "null" and orig_v.get("type") != "null":
+        v["type"] = orig_v["type"]
     return _convert_to_step_id(v, step)
 
 def _merge_variables(new, cur):

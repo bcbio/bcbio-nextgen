@@ -13,13 +13,12 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
-from bcbio.variation import multi as vmulti
 
-def extract(data):
+def extract(data, items):
     """Extract germline calls for the given sample, if tumor/normal or prioritized.
     """
     if vcfutils.get_paired_phenotype(data):
-        is_paired = dd.get_batches(data) and len(vmulti.get_orig_items(data)) > 1
+        is_paired = dd.get_batches(data) and len(items) > 1
         if is_paired:
             germline_vcf = _extract_germline(data["vrn_file"], data)
         else:
@@ -29,16 +28,20 @@ def extract(data):
     return data
 
 def _remove_prioritization(in_file, data):
-    """Remove normal-only prioritization and return non-filtered calls.
+    """Remove tumor-only prioritization and return non-filtered calls.
     """
     out_file = "%s-germline.vcf" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(in_file)
             reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
-            with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
+            # with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(reader.raw_header)
                 for rec in reader:
-                    writer.write_record(_update_prioritization_filters(rec))
+                    rec = _update_prioritization_filters(rec)
+                    out_handle.write(str(rec))
+                    # writer.write_record(rec)
     return out_file
 
 def _update_prioritization_filters(rec):
@@ -53,9 +56,13 @@ def _extract_germline(in_file, data):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(in_file)
             reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
-            with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
+            #with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(reader.raw_header)
                 for rec in reader:
-                    writer.write_record(_update_germline_filters(rec))
+                    rec = _update_germline_filters(rec)
+                    out_handle.write(str(rec))
+                    #writer.write_record(rec)
     return out_file
 
 def _update_germline_filters(rec):

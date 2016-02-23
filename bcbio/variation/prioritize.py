@@ -21,15 +21,14 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import population, vcfutils
-from bcbio.variation import multi as vmulti
 
-def handle_vcf_calls(vcf_file, data):
+def handle_vcf_calls(vcf_file, data, orig_items):
     """Prioritize VCF calls based on external annotations supplied through GEMINI.
     """
-    if not _do_prioritize(data):
+    if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        if population.do_db_build([data]):
+        if population.do_db_build(orig_items):
             gemini_db = population.create_gemini_db(vcf_file, data)
             if gemini_db:
                 priority_file = _prep_priority_filter(gemini_db, data)
@@ -144,16 +143,15 @@ def _find_known(row):
         out.append("clinvar")
     return out
 
-def _do_prioritize(data):
+def _do_prioritize(items):
     """Determine if we should perform prioritization.
 
     Currently done on tumor-only input samples.
     """
-    if vcfutils.get_paired_phenotype(data):
+    if vcfutils.get_paired_phenotype(items[0]):
         has_tumor = False
         has_normal = False
-        orig_items = vmulti.get_orig_items(data) if tz.get_in(["metadata", "batch"], data) else [data]
-        for sub_data in orig_items:
+        for sub_data in items:
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":
                 has_tumor = True
             elif vcfutils.get_paired_phenotype(sub_data) == "normal":

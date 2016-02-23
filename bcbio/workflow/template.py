@@ -86,12 +86,12 @@ def _prep_items_from_base(base, in_files):
         if ext == "bam":
             for f in files:
                 details.append(_prep_bam_input(f, i, base))
-        elif ext == "fastq":
+        elif ext in ["fastq", "fq", "fasta"]:
             files = list(files)
             for fs in fastq.combine_pairs(files):
                 details.append(_prep_fastq_input(fs, base))
         else:
-            print("Ignoring ynexpected input file types %s: %s" % (ext, list(files)))
+            print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
     return details
 
 def _expand_file(x):
@@ -386,6 +386,16 @@ def _convert_to_relpaths(data, work_dir):
                 data[topk][k] = os.path.relpath(v, work_dir)
     return data
 
+def _check_all_metadata_found(metadata, items):
+    """Print warning if samples in CSV file are missing in folder"""
+    for name in metadata:
+        seen = False
+        for sample in items:
+            if sample['files'][0].find(name) > -1:
+                seen = True
+        if not seen:
+            print "WARNING: sample not found %s" % name
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
@@ -395,7 +405,7 @@ def setup(args):
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
                  for item in _prep_items_from_base(base_item, inputs)]
     items = [x for x in raw_items if x]
-
+    _check_all_metadata_found(metadata, items)
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if hasattr(args, "relpaths") and args.relpaths:

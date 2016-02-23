@@ -10,7 +10,7 @@ from bcbio import bam, utils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
-from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vfilter
+from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vcfutils, vfilter
 
 # ## Variant filtration -- shared functionality
 
@@ -284,18 +284,60 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     data["vrn_file"] = out_file
     return [data]
 
-def variantcall_batch_region(items):
-    """CWL entry point for variant calling a batch of samples in a region.
+def concat_batch_variantcalls(items):
+    """CWL entry point: combine variant calls from regions into single VCF.
     """
-    align_bams = [dd.get_align_bam(x) for x in items]
-    variantcaller = list(set([get_variantcaller(x) for x in items]))
-    assert len(variantcaller) == 1
-    variantcaller = variantcaller[0]
-    region = list(set([x.get("region") for x in items if "region" in x]))
-    assert len(region) == 1, region
-    region = region[0]
-    caller_fn = get_variantcallers()[variantcaller]
-    assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
+    items, cwl_extras = split_data_cwl_items(items)
+    batch_name = _get_batch_name(items)
+    variantcaller = _get_batch_variantcaller(items)
+    out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
+    utils.safe_makedir(os.path.dirname(out_file))
+    regions = [_region_to_coords(r) for r in cwl_extras["region"]]
+    out_file = vcfutils.concat_variant_files(cwl_extras["vrn_file_region"], out_file, regions,
+                                             dd.get_ref_file(items[0]), items[0]["config"])
+    return {"vrn_file": out_file}
+
+def split_data_cwl_items(items):
+    """Split a set of CWL output dictionaries into data samples and CWL items.
+
+    Handles cases where we're arrayed on multiple things, like a set of regional
+    VCF calls and data objects.
+    """
+    data_out = []
+    extra_out = []
+    for data in items:
+        if "config" in data:
+            data_out.append(data)
+        else:
+            extra_out.append(data)
+    if len(extra_out) == 0:
+        return data_out, {}
+    else:
+        cwl_keys = extra_out[0]["cwl_keys"]
+        for extra in extra_out[1:]:
+            cur_cwl_keys = extra["cwl_keys"]
+            assert cur_cwl_keys == cwl_keys
+        cwl_extras = collections.defaultdict(list)
+        for data in items:
+            for key in cwl_keys:
+                cwl_extras[key].append(data[key])
+        data_final = []
+        for data in data_out:
+            for key in cwl_keys:
+                data.pop(key)
+            data_final.append(data)
+        return data_final, dict(cwl_extras)
+
+def _region_to_coords(region):
+    """Split GATK region specification (chr1:1-10) into a tuple of chrom, start, end
+    """
+    chrom, coords = region.split(":")
+    start, end = coords.split("-")
+    return (chrom, int(start), int(end))
+
+def _get_batch_name(items):
+    """Retrieve the shared batch name for a group of items.
+    """
     batch_names = collections.defaultdict(int)
     for data in items:
         batches = dd.get_batches(data) or dd.get_sample_name(data)
@@ -303,13 +345,29 @@ def variantcall_batch_region(items):
             batches = [batches]
         for b in batches:
             batch_names[b] += 1
-    batch_name = sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
-    chrom, coords = region.split(":")
-    start, end = coords.split("-")
-    region = (chrom, int(start), int(end))
+    return sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
+
+def _get_batch_variantcaller(items):
+    variantcaller = list(set([get_variantcaller(x) for x in items]))
+    assert len(variantcaller) == 1
+    return variantcaller[0]
+
+def variantcall_batch_region(items):
+    """CWL entry point: variant call a batch of samples in a region.
+    """
+    align_bams = [dd.get_align_bam(x) for x in items]
+    variantcaller = _get_batch_variantcaller(items)
+    region = list(set([x.get("region") for x in items if "region" in x]))
+    assert len(region) == 1, region
+    region = region[0]
+    caller_fn = get_variantcallers()[variantcaller]
+    assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
+    region = _region_to_coords(region)
+    chrom, start, end = region
     region_str = "_".join(str(x) for x in region)
+    batch_name = _get_batch_name(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
                             "%s-%s.vcf.gz" % (batch_name, region_str))
     utils.safe_makedir(os.path.dirname(out_file))
     call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files, region, out_file)
-    return {"vrn_file_region": call_file}
+    return {"vrn_file_region": call_file, "region": "%s:%s-%s" % (chrom, start, end)}

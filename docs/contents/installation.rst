@@ -98,6 +98,9 @@ Tune the upgrade with these options:
   gets the most recent released version and ``development``
   retrieves the latest code from GitHub.
 
+- ``--datatarget`` Customized installed data or download additional files not
+  included by default: :ref:`datatarget-install`
+
 - ``--toolplus`` Specify additional tools to include. See the section on
   :ref:`toolplus-install` for more details.
 
@@ -118,40 +121,57 @@ Tune the upgrade with these options:
 - Leave out the ``--data`` option if you don't want to get any upgrades
   of associated genome data.
 
+.. _datatarget-install:
+
+Customizing data installation
+=============================
+
+bcbio installs associated data files for sequence processing, and you're able to
+customize this to installer larger files or change the defaults. Use the
+``--datatarget`` flag (potentially multiple times) to customize or add new
+targets.
+
+By default, bcbio will install data files for ``variation``, ``rnaseq`` and
+``smallrna`` but you can sub-select a single one of these if you don't require
+other analyses. The available targets are:
+
+- ``variation`` -- Data files required for variant calling: SNPs, indels and
+  structural variants. These include files for annotation like dbSNP, associated
+  files for variant filtering, coverage and annotation files.
+- ``rnaseq`` -- Transcripts and indices for running RNA-seq. The transcript
+  files are also used for annotating and prioritizing structural variants.
+- ``smallrna`` -- Data files for doing small RNA analysis.
+- ``gemini`` -- The `GEMINI <http://gemini.readthedocs.org/>`_ framework
+  associated publicly available metadata with called variants, and provides
+  utilities for query and analysis. This target installs the required GEMINI
+  data files.
+- ``cadd`` -- `CADD <http://cadd.gs.washington.edu/home>`_ evaluates the
+  potential impact of variations. It is freely available for non-commercial
+  research, but require licensing for commercial usage. The download is 30Gb and
+  GEMINI will include CADD annotations if present.
+- ``vep`` -- Data files for the `Variant Effects Predictor (VEP)
+  <http://www.ensembl.org/info/docs/tools/vep/index.html>`_. To use VEP as an
+  alternative to the default installed snpEff, set ``vep`` in the
+  :ref:`variant-config` configuration.
+- ``dbnsfp`` Like CADD, `dbNSFP <https://sites.google.com/site/jpopgen/dbNSFP>`_
+  provides integrated and generalized metrics from multiple sources to help with
+  prioritizing variations for follow up. The files are large: dbNSFP is 10Gb,
+  expanding to 100Gb during preparation. VEP will use dbNSFP for annotation of
+  VCFs in included.
+- ``battenberg`` Data files for `Battenberg
+  <https://github.com/cancerit/cgpBattenberg>`_, which detects subclonality and
+  copy number changes in whole genome cancer samples.
+- ``kraken`` Database for `Kraken <https://ccb.jhu.edu/software/kraken/>`_,
+  optionally used for contamination detection.
+
 .. _toolplus-install:
 
-System requirements
-===================
-
-bcbio-nextgen provides a wrapper around external tools and data, so the actual
-tools used drive the system requirements. For small projects, it should install
-on workstations or laptops with a couple Gb of memory, and then scale as needed
-on clusters or multicore machines.
-
-Disk space requirements for the tools, including all system packages are under
-4Gb. Biological data requirements will depend on the genomes and aligner indices
-used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
-appromximately 35Gb of storage during preparation and ~25Gb after::
-
-    $ du -shc genomes/Hsapiens/GRCh37/*
-    3.8G  bowtie2
-    5.1G  bwa
-    3.0G  rnaseq-2014-05-02
-    3.0G  seq
-    340M  snpeff
-    4.2G  variation
-    4.4G  vep
-    23.5G total
-
-.. _extra-install:
-
-Extra software and data
-=======================
+Extra software
+==============
 
 We're not able to automatically install some useful tools due to licensing
 restrictions, so we provide a mechanism to manually download and add these to
-bcbio-nextgen during an upgrade with the ``--toolplus`` command line. This also
-includes mechanisms to add in large annotation files not included by default.
+bcbio-nextgen during an upgrade with the ``--toolplus`` command line.
 
 GATK and muTect
 ~~~~~~~~~~~~~~~
@@ -182,48 +202,32 @@ use. After `downloading the MuTect jar
 Note that muTect does not provide an easy way to query for the current version,
 so your input jar needs to include the version in the name.
 
-GEMINI
-~~~~~~
-
-``-- toolplus`` is also used to install data rich supplemental software which is
-not installed by default such as GEMINI. We're making changes to automatically
-include these tools in the default install, but for now include  GEMINI with::
-
-    bcbio_nextgen.py upgrade --tools --toolplus data
-
-dbNSFP and CADD
-~~~~~~~~~~~~~~~
-
-Two useful databases for evaluating the potential impact of variations are
-`CADD`_ and `dbNSFP`_. They provide integrated and generalized metrics from
-multiple sources to help with prioritizing variations for follow up. The files
-are large: dbNSFP is 10Gb, expanding to 100Gb during preparation; and CADD is
-30Gb. As a result they are not included in an install by default. You can add them,
-either together or individually, using ``--toolplus``::
-
-    bcbio_nextgen.py upgrade --tools --toolplus cadd --toolplus dbnsfp --data
-
-When installed, GEMINI will automatically include `CADD`_ annotations as part of
-the created SQLite database. Setting `VEP`_ in the :ref:`variant-config`
-configuration will include annotation of VCFs with `dbNSFP`_.
-
-Both tools are freely available for non-commercial research, but require licensing
-for commercial usage.
-
-.. _CADD: http://cadd.gs.washington.edu/home
-.. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
-.. _VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
-.. _GATK download: http://www.broadinstitute.org/gatk/download
-.. _a distribution of GATK for commercial users: http://www.appistry.com/gatk
 .. _FreeBayes and GATK comparison: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
+.. _GATK download: http://www.broadinstitute.org/gatk/download
 
-kraken
-~~~~~~
+System requirements
+===================
 
-``-- toolplus`` is also used to install data rich supplemental software which is
-not installed by default such as kraken database::
+bcbio-nextgen provides a wrapper around external tools and data, so the actual
+tools used drive the system requirements. For small projects, it should install
+on workstations or laptops with a couple Gb of memory, and then scale as needed
+on clusters or multicore machines.
 
-    bcbio_nextgen.py upgrade --tools --toolplus kraken
+Disk space requirements for the tools, including all system packages are under
+4Gb. Biological data requirements will depend on the genomes and aligner indices
+used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
+appromximately 35Gb of storage during preparation and ~25Gb after::
+
+    $ du -shc genomes/Hsapiens/GRCh37/*
+    3.8G  bowtie2
+    5.1G  bwa
+    3.0G  rnaseq-2014-05-02
+    3.0G  seq
+    340M  snpeff
+    4.2G  variation
+    4.4G  vep
+    23.5G total
+
 
 Troubleshooting
 ===============
