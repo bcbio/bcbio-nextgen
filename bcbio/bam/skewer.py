@@ -14,7 +14,7 @@ def trim_adapters(data):
     skewer = config_utils.get_program("skewer", data, default="skewer")
     nthreads = dd.get_num_cores(data)
     samplename = dd.get_sample_name(data)
-    out_dir = os.path.join(dd.get_work_dir(data), "trimmed", samplename)
+    out_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed", samplename))
     of1 = os.path.join(out_dir, samplename + "-trimmed-pair1.fastq.gz")
     of2 = os.path.join(out_dir, samplename + "-trimmed-pair2.fastq.gz")
     of2 = of2 if fq2 else None
