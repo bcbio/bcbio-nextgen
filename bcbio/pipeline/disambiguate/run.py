@@ -101,6 +101,8 @@ def disambiguate(humanlist, mouselist, disambalgo):
                 except KeyError:
                     if bwatags[x] == 'NM':
                         bwatags[x] = 'nM' # oddity of STAR
+                    elif bwatags[x] == 'AS':
+                        continue # this can happen for e.g. hg38 ALT-alignments (missing AS)
                     QScore = bwatagsigns[x]*read.opt(bwatags[x])
                     
                 if AS[x][d12]<QScore:
@@ -117,6 +119,8 @@ def disambiguate(humanlist, mouselist, disambalgo):
                 except KeyError:
                     if bwatags[x] == 'NM':
                         bwatags[x] = 'nM' # oddity of STAR
+                    elif bwatags[x] == 'AS':
+                        continue # this can happen for e.g. hg38 ALT-alignments (missing AS)
                     QScore = bwatagsigns[x]*read.opt(bwatags[x])
                 
                 if AS[x][d12]<QScore:
