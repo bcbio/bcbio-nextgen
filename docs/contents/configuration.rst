@@ -137,7 +137,7 @@ The main parameters are:
 
 
         samplename,description,batch,phenotype,sex,variant_regions
-        file1.fastq,sample1,batch1,normal,female,,/path/to/regions.bed
+        file1.fastq,sample1,batch1,normal,female,/path/to/regions.bed
         file2.fastq,sample1,batch1,normal,female,/path/to/regions.bed
         file1.fastq,sample2,batch1,tumor,,/path/to/regions.bed
 
