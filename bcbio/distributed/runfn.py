@@ -150,7 +150,7 @@ def _dissoc_in(d, key_parts):
     if len(key_parts) > 1:
         d[key_parts[0]] = _dissoc_in(d[key_parts[0]], key_parts[1:])
     else:
-        del d[key_parts[0]]
+        d.pop(key_parts[0], None)
     return d
 
 def _update_nested(key, val, data):

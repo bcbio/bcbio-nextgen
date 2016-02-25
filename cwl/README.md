@@ -52,8 +52,7 @@ python setup.py install
 ```
 cwltool uses javascript for data manipulation and requires either a local
 installation of [nodejs](https://nodejs.org) or having
-[Docker](https://www.docker.com/) installed and running `docker pull
-commonworkflowlanguage/nodejs-engine`.
+[Docker](https://www.docker.com/) installed and running `docker pull node:slim`.
 
 To make it easy to get started, we have a pre-built CWL description that uses
 test data. This will run under 5 minutes on a local machine and doesn't require

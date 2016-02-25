@@ -52,6 +52,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
     cores, mem_gb_per_core = resources.cpu_and_memory(programs if programs else ["default"], samples)
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
     out = {"class": "CommandLineTool",
+           "cwlVersion": "cwl:draft-3",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "hints": [{"class": "ResourceRequirement",
                       "coresMin": cores, "ramMin": mem_mb_total}],

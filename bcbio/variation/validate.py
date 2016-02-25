@@ -23,7 +23,7 @@ from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import validateplot, vcfutils, multi, naming
+from bcbio.variation import bedutils, validateplot, vcfutils, multi, naming
 
 # ## Individual sample comparisons
 
@@ -84,11 +84,36 @@ def _get_caller_supplement(caller, data):
             caller = "%s/%s" % (caller, icaller)
     return caller
 
+def _normalize_cwl_inputs(items):
+    """Extract variation and validation data from CWL input list of batched samples.
+    """
+    with_validate = []
+    vrn_files = []
+    for data in items:
+        if tz.get_in(["config", "algorithm", "validate"], data):
+            with_validate.append(data)
+        if data.get("vrn_file"):
+            vrn_files.append(data["vrn_file"])
+    if len(with_validate) == 0:
+        return items[0]
+    else:
+        assert len(set([tz.get_in(["config", "algorithm", "validate"], data) for data in with_validate])) == 1
+        assert len(set(vrn_files)) == 1
+        data = with_validate[0]
+        data["vrn_file"] = vrn_files[0]
+        return data
+
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
+    if isinstance(data, (list, tuple)):
+        data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
     if toval_data:
+        caller = _get_caller(toval_data)
+        sample = dd.get_sample_name(toval_data)
+        base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
+
         if isinstance(toval_data["vrn_file"], (list, tuple)):
             raise NotImplementedError("Multiple input files for validation: %s" % toval_data["vrn_file"])
         else:
@@ -97,9 +122,8 @@ def compare_to_rm(data):
         rm_interval_file = _gunzip(normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
                                                         toval_data),
                                    toval_data)
-        caller = _get_caller(toval_data)
-        sample = dd.get_sample_name(toval_data)
-        base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
+        rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data,
+                                               bedprep_dir=utils.safe_makedir(os.path.join(base_dir, "bedprep")))
         rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data["genome_build"], base_dir, data)
         rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),
                                                    data["genome_build"], base_dir, data)
@@ -152,18 +176,16 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
             rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
         if len(vcfutils.get_samples(vrn_file)) > 1:
-            base, ext = utils.splitext_plus(vrn_file)
+            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
             sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
             vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
         if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
             vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
 
         interval_bed = _get_merged_intervals(rm_interval_file, base_dir, data)
-        ref_dir, ref_filebase = os.path.split(dd.get_ref_file(data))
-        rtg_ref = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
-                                                "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
-        assert os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
-                                         "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
+        rtg_ref = tz.get_in(["reference", "rtg"], data)
+        assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
+                                                     "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
         cmd = ["rtg", "vcfeval", "--threads", "6",
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
@@ -260,18 +282,18 @@ def get_analysis_intervals(data):
     """
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
+    elif dd.get_callable_regions(data):
+        return dd.get_callable_regions(data)
     elif data.get("align_bam"):
         return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)
     elif data.get("work_bam"):
         return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)
     elif data.get("work_bam_callable"):
         return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)
-    else:
-        for key in ["callable_regions", "variant_regions"]:
-            intervals = data["config"]["algorithm"].get(key)
-            if intervals:
-                return intervals
-
+    elif tz.get_in(["config", "algorithm", "callable_regions"], data):
+        return tz.get_in(["config", "algorithm", "callable_regions"], data)
+    elif tz.get_in(["config", "algorithm", "variant_regions"], data):
+        return tz.get_in(["config", "algorithm", "variant_regions"], data)
 
 # ## bcbio.variation comparison -- deprecated approach
 
