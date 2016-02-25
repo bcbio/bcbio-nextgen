@@ -200,11 +200,19 @@ def get_refs(genome_build, aligner, galaxy_base, data):
             base = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
             if os.path.isdir(base):
                 indexes = glob.glob(os.path.join(base, "*"))
-            else:
+            elif name != "samtools":
                 indexes = glob.glob("%s*" % utils.splitext_plus(base)[0])
-            out[name_remap.get(name, name)] = {"indexes": indexes}
+            else:
+                indexes = []
+            out[name_remap.get(name, name)] = {}
             if os.path.exists(base) and os.path.isfile(base):
                 out[name_remap.get(name, name)]["base"] = base
+            if indexes:
+                out[name_remap.get(name, name)]["indexes"] = indexes
+    # add additional indices relative to the base
+    ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
+    out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
+                                               "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
     return out
 
 def get_builds(galaxy_base):

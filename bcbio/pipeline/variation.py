@@ -18,6 +18,7 @@ def postprocess_variants(items):
     data = _get_batch_representative(items, "vrn_file")
     cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
     logger.info("Finalizing variant calls: %s" % cur_name)
+    orig_vrn_file = data.get("vrn_file")
     data = _symlink_to_workdir(data, ["vrn_file"])
     data = _symlink_to_workdir(data, ["config", "algorithm", "variant_regions"])
     if data.get("align_bam") and data.get("vrn_file"):
@@ -36,6 +37,8 @@ def postprocess_variants(items):
         data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data, orig_items)
         logger.info("Germline extraction for %s" % cur_name)
         data = germline.extract(data, orig_items)
+    if orig_vrn_file and os.path.samefile(data["vrn_file"], orig_vrn_file):
+        data["vrn_file"] = orig_vrn_file
     return [[data]]
 
 def _get_orig_items(data):

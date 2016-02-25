@@ -18,6 +18,7 @@ details:
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+      validate_regions: ../data/automated/variant_regions-bam.bed
       cwl_reporting: true
     metadata:
       batch: b1
