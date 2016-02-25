@@ -251,6 +251,11 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("estimate expression (single threaded)", dirs):
             samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
     samples = rnaseq.combine_files(samples)
+    with prun.start(_wres(parallel, ["splicecaller"]),
+                    samples, config, dirs, "splicecaller",
+                    multiplier = splice._get_multiplier(samples)) as run_parallel:
+        with profile.report("alternative splice calling", dirs):
+            samples = rnaseq.quantitate_splicecaller(samples, run_parallel)
     with prun.start(_wres(parallel, ["gatk"]), samples, config,
                     dirs, "rnaseq-variation") as run_parallel:
         with profile.report("RNA-seq variant calling", dirs):

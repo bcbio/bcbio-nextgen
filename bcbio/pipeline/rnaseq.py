@@ -80,6 +80,13 @@ def quantitate_expression_noparallel(samples, run_parallel):
     if "express" in dd.get_expression_caller(data):
         samples = run_parallel("run_express", samples)
     samples = run_parallel("run_dexseq", samples)
+    return samples
+
+def quantitate_splicecaller(samples, run_parallel):
+    """
+    run quantitation for alternative splice with rMATS
+    """
+    data = samples[0][0]
     if "rmats" in dd.get_splicecaller(data):
         samples = run_parallel("run_rmats", samples)
     return samples
@@ -128,7 +135,7 @@ def run_express(data):
     """Quantitative isoform expression by eXpress"""
     data = express.run(data)
     return [[data]]
-    
+
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
     to_combine = [dd.get_express_counts(x) for x in
