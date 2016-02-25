@@ -131,6 +131,10 @@ def run_express(*args):
     return rnaseq.run_express(*args)
 
 @utils.map_wrap
+def run_rmats(*args):
+    return rnaseq.run_rmats(*args)
+
+@utils.map_wrap
 def run_dexseq(*args):
     return rnaseq.run_dexseq(*args)
 
