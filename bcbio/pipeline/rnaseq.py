@@ -1,7 +1,7 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish)
+                          express, variation, stringtie, sailfish, splice)
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict
 import bcbio.pipeline.datadict as dd
