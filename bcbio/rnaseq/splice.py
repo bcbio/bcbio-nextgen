@@ -13,7 +13,7 @@ from bcbio.rnaseq import rmats
 
 def get_callers():
     from bcbio.rnaseq import rmats
-    return {"rmats": rmats.run}
+    return {"python RNASeq-MATS.py": rmats.run}
 
 def peakcall_prepare(data, run_parallel):
     """Entry point for doing alternative splice callers"""

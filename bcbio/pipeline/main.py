@@ -23,6 +23,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
 from bcbio.provenance import profile, system
 from bcbio.variation import ensemble, genotype, population, validate, joint
 from bcbio.chipseq import peaks
+from bcbio.rnaseq import splice
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -255,7 +256,7 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     samples, config, dirs, "splicecaller",
                     multiplier = splice._get_multiplier(samples)) as run_parallel:
         with profile.report("alternative splice calling", dirs):
-            samples = rnaseq.quantitate_splicecaller(samples, run_parallel)
+            samples = splice.peakcall_prepare(samples, run_parallel)
     with prun.start(_wres(parallel, ["gatk"]), samples, config,
                     dirs, "rnaseq-variation") as run_parallel:
         with profile.report("RNA-seq variant calling", dirs):
