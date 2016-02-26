@@ -55,7 +55,7 @@ installation of [nodejs](https://nodejs.org) or having
 [Docker](https://www.docker.com/) installed and running `docker pull node:slim`.
 
 To make it easy to get started, we have a pre-built CWL description that uses
-test data. This will run under 5 minutes on a local machine and doesn't require
+test data. This will run in under 5 minutes on a local machine and doesn't require
 a bcbio installation if you have Docker available on your machine:
 
 1. Download and unpack the test data:
@@ -65,7 +65,7 @@ a bcbio installation if you have Docker available on your machine:
    cd test_bcbio_cwl
    ```
 
-2. Run the analysis using `cwtool`. If you have Docker cwltool will download the
+2. Run the analysis using `cwltool`. If you have Docker cwltool will download the
    `bcbio/bcbio` container and you don't need to install anything else to get
    started. You can use the `run_cwl.sh` script or run directly from the command
    line:
