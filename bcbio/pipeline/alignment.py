@@ -37,7 +37,7 @@ TOOLS = {
     "tophat": NgsTool(tophat.align, None,
                       bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "samtools": NgsTool(None, None, BASE_LOCATION_FILE, None),
-    "snap": NgsTool(snap.align, snap.align_bam, snap.galaxy_location_file, snap.remap_index_fn),
+    "snap": NgsTool(snap.align, None, snap.galaxy_location_file, snap.remap_index_fn),
     "star": NgsTool(star.align, None, None, star.remap_index_fn),
     "tophat2": NgsTool(tophat.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),

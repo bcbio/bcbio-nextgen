@@ -305,10 +305,11 @@ The environment can then be switched on with `source activate bcbio` and off
 with `source deactivate`. Activate the environment and install bcbio within it::
 
   source activate bcbio
-  conda install -c bcbio bcbio-nextgen # This will install dependencies
+  conda install --yes -c bioconda bcbio-nextgen # This will install dependencies
   git clone https://github.com/chapmanb/bcbio-nextgen.git
   cd bcbio-nextgen
   python setup.py install
+  ln -s path-to-bcbio/anaconda/bin/* path-to-bcbio/anaconda/envs/bioconda/bin/
 
 If you want to use a different (e.g., system-wide) bcbio installation for
 genomes, indices and the various tools point to that
