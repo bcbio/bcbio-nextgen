@@ -16,6 +16,7 @@ from bcbio import rnaseq
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.rnaseq import splice
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -114,6 +115,12 @@ def peakcalling(* args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(peaks.calling, *args))
+
+@require(splice)
+def splicealling(* args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(splice.calling, *args))
 
 @require(sailfish)
 def run_sailfish(*args):

@@ -41,7 +41,7 @@ def variant(variables):
                 _cwl_nonfile_world(["align_split"], allow_missing=True)]),
              s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "base"],
-                ["reference", "aligner", "indexes"]],
+                ["reference", "bwa", "indexes"]],
                [_cwl_file_world(["work_bam"]),
                 _cwl_file_world(["align_bam"]),
                 _cwl_file_world(["hla", "fastq"], allow_missing=True),
@@ -253,7 +253,7 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     if wf:
         skip_inputs = skip_inputs | set([_get_string_vid(x) for x in wf.noinputs])
     inputs = []
-    for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
+    for orig_input in [_get_variable(x, file_vs) for x in step.inputs]:
         is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
         if is_record_input:
             unpack_inputs = _unpack_record(orig_input, skip_inputs)
@@ -416,35 +416,6 @@ def _get_variable(vid, variables):
             return copy.deepcopy(v)
     raise ValueError("Did not find variable %s in \n%s" % (vid, pprint.pformat(variables)))
 
-def _handle_special_inputs(inputs, variables):
-    """Adjust input variables based on special cases.
-
-    This case handles inputs where we are optional or can have flexible choices.
-
-    XXX Need to better expose this at a top level definition.
-    """
-    optional = [["config", "algorithm", "coverage"],
-                ["config", "algorithm", "variant_regions"],
-                ["config", "algorithm", "validate"],
-                ["config", "algorithm", "validate_regions"]]
-    all_vs = set([get_base_id(v["id"]) for v in variables])
-    out = []
-    for input in inputs:
-        if input == ["reference", "aligner", "indexes"]:
-            found_indexes = False
-            for v in variables:
-                vid = get_base_id(v["id"]).split("__")
-                if vid[0] == "reference" and vid[-1] == "indexes":
-                    out.append(vid)
-                    found_indexes = True
-            assert found_indexes, "Found no aligner indexes in %s" % [v["id"] for v in variables]
-        elif input in optional:
-            if _get_string_vid(input) in all_vs:
-                out.append(input)
-        else:
-            out.append(input)
-    return out
-
 def _clean_output_extras(v):
     """Remove extra variables we don't want in output.
 
@@ -552,9 +523,7 @@ def _split_variables(variables):
         cur_type = v["type"]
         while isinstance(cur_type, dict):
             cur_type = cur_type["items"]
-        if (cur_type == "File" or cur_type == "null" or
-              (isinstance(cur_type, (list, tuple)) and
-               ("File" in cur_type or {'items': 'File', 'type': 'array'} in cur_type))):
+        if cur_type == "File" or isinstance(cur_type, (list, tuple)) and "File" in cur_type or cur_type == "null":
             file_vs.append(v)
         else:
             std_vs.append(v)

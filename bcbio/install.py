@@ -181,9 +181,8 @@ def _install_container_bcbio_system(datadir):
                 expose_vals[k] = v
         if len(expose_vals) > 0 and pname not in expose_config["resources"]:
             expose_config["resources"][pname] = expose_vals
-    if expose_file and os.path.exists(expose_file):
-        with open(expose_file, "w") as out_handle:
-            yaml.safe_dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
+    with open(expose_file, "w") as out_handle:
+        yaml.safe_dump(expose_config, out_handle, default_flow_style=False, allow_unicode=False)
     return expose_file
 
 def _get_conda_bin():

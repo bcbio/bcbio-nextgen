@@ -36,7 +36,7 @@ def postprocess_variants(items):
         logger.info("Prioritization for %s" % cur_name)
         data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data, orig_items)
         logger.info("Germline extraction for %s" % cur_name)
-        data = germline.extract(data, orig_items)
+        #data = germline.extract(data, orig_items)
     if orig_vrn_file and os.path.samefile(data["vrn_file"], orig_vrn_file):
         data["vrn_file"] = orig_vrn_file
     return [[data]]
