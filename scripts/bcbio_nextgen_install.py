@@ -93,7 +93,7 @@ def install_anaconda_python(args):
         dist = args.distribution if args.distribution else _guess_distribution()
         url = REMOTES["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
-            subprocess.check_call(["wget", url])
+            subprocess.check_call(["wget", "--no-check-certificate", url])
         subprocess.check_call("bash %s -b -p %s" %
                               (os.path.basename(url), anaconda_dir), shell=True)
     return {"conda": conda,
