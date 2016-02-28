@@ -83,7 +83,8 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None):
         sns.set_palette(sns.xkcd_palette([colors[vi]]))
         for gi, group in enumerate(groups):
             for mi, (metric, label) in enumerate(metrics):
-                cur_plot = axs[vi * len(groups) + gi][mi]
+                row_plots = axs if len(vtypes) * len(groups) == 1 else axs[vi * len(groups) + gi]
+                cur_plot = row_plots if len(metrics) == 1 else row_plots[mi]
                 vals, labels = [], []
                 for cat in cats:
                     cur_data = data_dict.get((cat, group, vtype))
