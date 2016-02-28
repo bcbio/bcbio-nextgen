@@ -94,10 +94,10 @@ def variant(variables):
                 _cwl_file_world(["regions", "nblock"]),
                 _cwl_file_world(["regions", "highdepth"], allow_missing=True),
                 _cwl_file_world(["regions", "offtarget_stats"])]),
-             s("call_hla", "multi-parallel",
-               [["hla", "fastq"]],
-               [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
-                _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
+             #s("call_hla", "multi-parallel",
+             #  [["hla", "fastq"]],
+             #  [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
+             #   _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["reference", "fasta", "base"]],
@@ -115,22 +115,22 @@ def variant(variables):
              w("variantcall", "multi-parallel", vc,
                [["region"], ["vrn_file_region"]],
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
-             s("pipeline_summary", "multi-parallel",
-               [["align_bam"], ["reference", "fasta", "base"]],
-               [_cwl_file_world(["summary", "qc"])],
-               ["samtools", "bamtools"]),
-             s("coverage_report", "multi-parallel",
-               [["align_bam"],
-                ["reference", "fasta", "base"],
-                ["config", "algorithm", "coverage"],
-                ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
-               [_cwl_file_world(["coverage", "all"], allow_missing=True),
-                _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
-             s("qc_report_summary", "multi-combined",
-               [["align_bam"],
-                ["reference", "fasta", "base"],
-                ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
-               [_cwl_file_world(["coverage", "report"], allow_missing=True)])
+             #s("pipeline_summary", "multi-parallel",
+             #  [["align_bam"], ["reference", "fasta", "base"]],
+             #  [_cwl_file_world(["summary", "qc"])],
+             #  ["samtools", "bamtools"]),
+             #s("coverage_report", "multi-parallel",
+             #  [["align_bam"],
+             #   ["reference", "fasta", "base"],
+             #   ["config", "algorithm", "coverage"],
+             #   ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
+             #  [_cwl_file_world(["coverage", "all"], allow_missing=True),
+             #   _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
+             #s("qc_report_summary", "multi-combined",
+             #  [["align_bam"],
+             #   ["reference", "fasta", "base"],
+             #   ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
+             #  [_cwl_file_world(["coverage", "report"], allow_missing=True)])
              ]
     parallel_ids = []
     for step in steps:
@@ -164,7 +164,7 @@ def variant(variables):
             yield "step", step.name, step.parallel, inputs, outputs, step.programs
     # Final outputs
     outputs = [["align_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = [["align_bam"]]
+    outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"]]
     yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
