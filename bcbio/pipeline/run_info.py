@@ -22,6 +22,7 @@ from bcbio.illumina import flowcell
 from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics, programs, versioncheck
+from bcbio.provenance import data as provenancedata
 from bcbio.variation import effects, genotype, population, joint, vcfutils
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
@@ -78,6 +79,7 @@ def normalize_world(data):
 def _add_provenance(items, dirs, config, add_provenance=True):
     if add_provenance:
         p = programs.write_versions(dirs, config=config)
+        d = provenancedata.write_versions(dirs, items)
         versioncheck.testall(items)
         p_db = diagnostics.initialize(dirs)
     out = []
@@ -86,7 +88,7 @@ def _add_provenance(items, dirs, config, add_provenance=True):
             entity_id = diagnostics.store_entity(item)
             item["config"]["resources"]["program_versions"] = p
             item["provenance"] = {"programs": p, "entity": entity_id,
-                                "db": p_db}
+                                  "db": p_db, "data": d}
         out.append([item])
     return out
 

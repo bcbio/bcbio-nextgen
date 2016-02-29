@@ -1,5 +1,7 @@
 ## 0.9.7 (in progress)
 
+- Provide `data_versions.csv` in output folder that has versions of reference
+  data used in the analysis.
 - New install procedure for data: `--datatarget` allows installation of sub-sets
   of supplemental data for smaller installs for small RNA only analysis. Also
   provides a consistent framework for installing larger data types.

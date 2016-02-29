@@ -398,7 +398,7 @@ def _has_alignment_file(algorithm, sample):
 def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
-    out = [{"path": sample["provenance"]["programs"]}]
+    out = [{"path": sample["provenance"]["programs"]}, {"path": sample["provenance"]["data"]}]
     for fname in ["bcbio-nextgen.log", "bcbio-nextgen-commands.log"]:
         if os.path.exists(os.path.join(log.get_log_dir(sample["config"]), fname)):
             out.append({"path": os.path.join(log.get_log_dir(sample["config"]), fname),

@@ -213,6 +213,13 @@ def _update_conda_packages():
                            "--file", os.path.basename(REMOTES["requirements"])])
     return os.path.dirname(os.path.dirname(conda_bin))
 
+def get_genomes_dir():
+    """Return standard location of genome directories.
+    """
+    gdir = os.path.join(_get_data_dir(), "genomes")
+    assert os.path.exists(gdir), gdir
+    return gdir
+
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))))
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
