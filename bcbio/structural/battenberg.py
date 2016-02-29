@@ -45,10 +45,11 @@ def _do_run(paired):
     """
     work_dir = _sv_workdir(paired.tumor_data)
     out = _get_battenberg_out(paired, work_dir)
+    ignore_file = os.path.join(work_dir, "ignore_chromosomes.txt")
     if len(_missing_files(out)) > 0:
         ref_file = dd.get_ref_file(paired.tumor_data)
         bat_datadir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "battenberg"))
-        ignore_file, gl_file = _make_ignore_file(work_dir, ref_file,
+        ignore_file, gl_file = _make_ignore_file(work_dir, ref_file, ignore_file,
                                                  os.path.join(bat_datadir, "impute", "impute_info.txt"))
         local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
                                      "lib", "R", "site-library")
@@ -74,10 +75,9 @@ def _do_run(paired):
     out["ignore"] = ignore_file
     return out
 
-def _make_ignore_file(work_dir, ref_file, impute_file):
+def _make_ignore_file(work_dir, ref_file, ignore_file, impute_file):
     """Create input files with chromosomes to ignore and gender loci.
     """
-    ignore_file = os.path.join(work_dir, "ignore_chromosomes.txt")
     gl_file = os.path.join(work_dir, "gender_loci.txt")
     chroms = set([])
     with open(impute_file) as in_handle:
