@@ -1,3 +1,5 @@
+fc_date: '20150229'
+fc_name: 'develtest'
 upload:
   dir: upload
   # method: galaxy

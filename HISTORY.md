@@ -1,14 +1,17 @@
 ## 0.9.7 (in progress)
 
-- Provide `data_versions.csv` in output folder that has versions of reference
-  data used in the analysis.
 - New install procedure for data: `--datatarget` allows installation of sub-sets
   of supplemental data for smaller installs for small RNA only analysis. Also
   provides a consistent framework for installing larger data types.
 - VEP data no longer installed by default. Requires `--datatarget vep`
 - During install, `--toolplus` only used for third party tools like GATK and
   MuTect and not data installation, which moved to `--datatarget`
-- Lazy import of matplotlib libraries on usage to avoid slow startup times.
+- Provide `data_versions.csv` in output folder that has versions of reference
+  data used in the analysis.
+- Use sample descriptions for file names instead of lane/flowcall information.
+  Makes re-runs more stable when using template and files easier to interpret.
+  Back compatible with re-runs of old work directories.
+- Lazy import of matplotlib libraries to avoid slow startup times.
 - Improvement to bcbio CWL integration: support parallel alignment and variant
   calling.
 

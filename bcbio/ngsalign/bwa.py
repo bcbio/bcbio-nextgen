@@ -117,7 +117,10 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
+    # back compatible -- older files were named with lane information, use sample name now
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
     qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
     min_size = None
     if data.get("align_split") or fastq_file.endswith(".sdf"):
