@@ -179,7 +179,8 @@ def _add_high_covered_regions(in_file, bed_file, sample):
     with file_transaction(out_file) as out_tx:
         with open(bed_file) as in_handle:
             with open(out_tx, 'w') as out_handle:
-                print >>out_handle, regions["header"]
+                if "header" in regions:
+                    print >>out_handle, regions["header"]
                 for line in in_handle:
                     idx = "".join(line.split("\t")[:2])
                     if idx not in regions:
@@ -198,6 +199,7 @@ def coverage(data):
         return data
     cleaned_bed = os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed"
 
+    sambamba = config_utils.get_program("sambamba", data["config"])
     work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -211,11 +213,11 @@ def coverage(data):
                 cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file)).replace(".bed.gz", ".bed")
                 cleaned_bed = bed.decomment(bed_file, cleaned_bed)
                 with file_transaction(parse_file) as out_tx:
-                    cmd = ("sambamba depth region -F \"not unmapped\" -t {cores} "
-                           "-C 1000 -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
+                    cmd = ("{sambamba} depth region -F \"not unmapped\" -t {cores} "
+                           "%s -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
                            "-T 80 -T 100 -L {cleaned_bed} {in_bam} | sed 's/# "
                            "chrom/chrom/' > {out_tx}")
-                    do.run(cmd.format(**locals()), "Run coverage for {}".format(sample))
+                    do.run(cmd.format(**locals()) % "-C 1000", "Run coverage for {}".format(sample))
         parse_file = _add_high_covered_regions(parse_file, bed_file, sample)
         _calculate_percentiles(parse_file, sample)
         data['coverage'] = os.path.abspath(parse_file)
