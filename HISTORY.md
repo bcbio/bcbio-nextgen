@@ -8,7 +8,10 @@
   MuTect and not data installation, which moved to `--datatarget`
 - Provide `data_versions.csv` in output folder that has versions of reference
   data used in the analysis.
-- Use sample descriptions for file names instead of lane/flowcall information.
+- Use sample description for BAM read group IDs, instead of lane index. This
+  allows remixing of samples after processing without potential collisions. Thanks
+  to Neill Gibson.
+- Use sample description for file names instead of lane/flowcall information.
   Makes re-runs more stable when using template and files easier to interpret.
   Back compatible with re-runs of old work directories.
 - Do not bgzip inputs when they are already gzipped and do not require

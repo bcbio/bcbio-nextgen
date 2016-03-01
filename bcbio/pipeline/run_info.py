@@ -264,7 +264,7 @@ def prep_rg_names(item, config, fc_name, fc_date):
         lane_name = "%s_%s_%s" % (item["lane"], fc_date, fc_name)
     else:
         lane_name = item["description"]
-    return {"rg": item["lane"],
+    return {"rg": item["description"],
             "sample": item["description"],
             "lane": lane_name,
             "pl": (tz.get_in(["algorithm", "platform"], item)
