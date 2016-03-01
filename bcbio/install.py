@@ -16,6 +16,7 @@ import subprocess
 import sys
 import glob
 import urllib
+from fabric.api import *
 
 import requests
 import yaml
@@ -254,6 +255,7 @@ def upgrade_bcbio_data(args, remotes):
     cbl = get_cloudbiolinux(remotes)
     s["genomes"] = _get_biodata(cbl["biodata"], args)
     sys.path.insert(0, cbl["dir"])
+    env.cores = args.cores
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
     cbl_deploy.deploy(s)
     _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
@@ -633,6 +635,8 @@ def _check_toolplus(x):
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("upgrade", help="Install or upgrade bcbio-nextgen")
+    parser.add_argument("--cores", default=1,
+                        help="Number of cores to use if local indexing is necessary.")
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
