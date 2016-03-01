@@ -11,6 +11,8 @@
 - Use sample descriptions for file names instead of lane/flowcall information.
   Makes re-runs more stable when using template and files easier to interpret.
   Back compatible with re-runs of old work directories.
+- Do not bgzip inputs when they are already gzipped and do not require
+  parallelization or format conversion. Thanks to Miika Ahdesmaki.
 - Lazy import of matplotlib libraries to avoid slow startup times.
 - Improvement to bcbio CWL integration: support parallel alignment and variant
   calling.

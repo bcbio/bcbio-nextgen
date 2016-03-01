@@ -182,11 +182,21 @@ def _is_bam_input(in_files):
 def _is_cram_input(in_files):
     return in_files and in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
 
+def _ready_gzip_fastq(in_files, data):
+    """Check if we have gzipped fastq and don't need format conversion or splitting.
+    """
+    all_gzipped = all([not x or x.endswith(".gz") for x in in_files])
+    needs_convert = tz.get_in(["config", "algorithm", "quality_format"], data, "").lower() == "illumina"
+    do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data)
+    return all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
+
 def _prep_grabix_indexes(in_files, dirs, data):
     if _is_bam_input(in_files):
         out = _bgzip_from_bam(in_files[0], dirs, data["config"])
     elif _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], dirs, data)
+    elif _ready_gzip_fastq(in_files, data):
+        out = in_files
     else:
         inputs = [{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
                   for x in in_files if x]
