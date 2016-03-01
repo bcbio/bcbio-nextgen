@@ -16,7 +16,7 @@ import subprocess
 import sys
 import glob
 import urllib
-from fabric.api import *
+from fabric.api import env
 
 import requests
 import yaml
