@@ -14,6 +14,8 @@
 - Do not bgzip inputs when they are already gzipped and do not require
   parallelization or format conversion. Thanks to Miika Ahdesmaki.
 - Lazy import of matplotlib libraries to avoid slow startup times.
+- Only apply ploidyfix to all female batches to remove Y chromosome. Avoids
+  confusion with file produced in other cases without any changes.
 - Improvement to bcbio CWL integration: support parallel alignment and variant
   calling.
 

@@ -14,13 +14,13 @@ from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vcfutils, 
 
 # ## Variant filtration -- shared functionality
 
-def variant_filtration(call_file, ref_file, vrn_files, data):
+def variant_filtration(call_file, ref_file, vrn_files, data, items):
     """Filter variant calls using Variant Quality Score Recalibration.
 
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
     caller = data["config"]["algorithm"].get("variantcaller")
-    call_file = ploidy.filter_vcf_by_sex(call_file, data)
+    call_file = ploidy.filter_vcf_by_sex(call_file, items)
     if caller in ["freebayes"]:
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
     elif caller in ["platypus"]:

@@ -29,10 +29,10 @@ def postprocess_variants(items):
         if vrn_stats:
             data["vrn_stats"] = vrn_stats
         logger.info("Filtering for %s" % cur_name)
+        orig_items = _get_orig_items(items)
         data["vrn_file"] = variant_filtration(data["vrn_file"], dd.get_ref_file(data),
                                               tz.get_in(("genome_resources", "variation"), data, {}),
-                                              data)
-        orig_items = _get_orig_items(items)
+                                              data, orig_items)
         logger.info("Prioritization for %s" % cur_name)
         data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data, orig_items)
         logger.info("Germline extraction for %s" % cur_name)

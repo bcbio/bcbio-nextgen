@@ -52,65 +52,30 @@ def get_ploidy(items, region):
     else:
         return ploidy
 
-def _to_haploid(parts):
-    """Check if a variant call is homozygous variant, convert to haploid.
-    XXX Needs generalization or use of a standard VCF library.
-    """
-    finfo = dict(zip(parts[-2].split(":"), parts[-1].strip().split(":")))
-    pat = re.compile(r"\||/")
-    if "GT" in finfo:
-        calls = set(pat.split(finfo["GT"]))
-        if len(calls) == 1:
-            gt_index = parts[-2].split(":").index("GT")
-            call_parts = parts[-1].strip().split(":")
-            call_parts[gt_index] = calls.pop()
-            parts[-1] = ":".join(call_parts) + "\n"
-            return "\t".join(parts)
-
-def _fix_line_ploidy(line, sex):
-    """Check variant calls to be sure if conforms to expected ploidy for sex/custom chromosomes.
-    """
-    parts = line.split("\t")
-    chrom = chromosome_special_cases(parts[0])
-    if chrom == "mitochondrial":
-        return _to_haploid(parts)
-    elif chrom == "X":
-        if sex == "male":
-            return _to_haploid(parts)
-        else:
-            return line
-    elif chrom == "Y":
-        if sex != "female":
-            return _to_haploid(parts)
-    else:
-        return line
-
-def filter_vcf_by_sex(vcf_file, data):
+def filter_vcf_by_sex(vcf_file, items):
     """Post-filter a single sample VCF, handling sex chromosomes.
 
-    Handles sex chromosomes and mitochondrial. Does not try to resolve called
-    hets into potential homozygotes when converting diploid to haploid.
-
-    Skips filtering on pooled samples, we still need to implement.
+    Removes Y chromosomes from batches with all female samples.
     """
-    if len(vcfutils.get_samples(vcf_file)) > 1:
-        return vcf_file
-    _, sexes = _configured_ploidy_sex([data])
-    sex = sexes.pop()
     out_file = "%s-ploidyfix%s" % utils.splitext_plus(vcf_file)
     if not utils.file_exists(out_file):
-        orig_out_file = out_file
-        out_file = orig_out_file.replace(".vcf.gz", ".vcf")
-        with file_transaction(data, out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                with utils.open_gzipsafe(vcf_file) as in_handle:
-                    for line in in_handle:
-                        if line.startswith("#"):
-                            out_handle.write(line)
-                        else:
-                            line = _fix_line_ploidy(line, sex)
-                            if line:
+        genders = list(_configured_ploidy_sex(items)[-1])
+        is_female = len(genders) == 1 and genders[0] and genders[0] in ["female", "f"]
+        if is_female:
+            orig_out_file = out_file
+            out_file = orig_out_file.replace(".vcf.gz", ".vcf")
+            with file_transaction(items[0], out_file) as tx_out_file:
+                with open(tx_out_file, "w") as out_handle:
+                    with utils.open_gzipsafe(vcf_file) as in_handle:
+                        for line in in_handle:
+                            if line.startswith("#"):
                                 out_handle.write(line)
-        if orig_out_file.endswith(".gz"):
-            out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+                            else:
+                                chrom = chromosome_special_cases(line.split("\t"))
+                                if chrom != "Y":
+                                    out_handle.write(line)
+            if orig_out_file.endswith(".gz"):
+                out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
+        else:
+            out_file = vcf_file
     return out_file
