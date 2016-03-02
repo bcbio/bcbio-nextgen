@@ -67,6 +67,7 @@ def _extract_germline(in_file, data):
 
 def _update_germline_filters(rec):
     rec = _remove_germline_filter(rec, "REJECT")
+    rec = _remove_germline_filter(rec, "germline_risk")
     rec = _add_somatic_filter(rec)
     return rec
 
@@ -78,20 +79,22 @@ def _add_somatic_filter(rec):
 def _remove_germline_filter(rec, name):
     """Check if germline based on STATUS/SS and REJECT flag.
 
-    Handles VarDict, FreeBayes, MuTect and VarScan.
+    Handles VarDict, FreeBayes, MuTect, MuTect2 and VarScan.
     """
     if _is_germline(rec):
-        if rec.FILTER and "REJECT" in rec.FILTER:
+        if rec.FILTER and name in rec.FILTER:
             return _remove_filter(rec, name)
     elif not _is_somatic(rec):
-        if rec.FILTER and "REJECT" in rec.FILTER:
+        if rec.FILTER and name in rec.FILTER:
             return _remove_filter(rec, name)
     return rec
 
 def _is_somatic(rec):
-    """Handle somatic classifications from MuTect, VarDict and VarScan
+    """Handle somatic classifications from MuTect, MuTect2, VarDict and VarScan
     """
-    if "SOMATIC" in dict(rec.INFO):
+    if _has_somatic_flag(rec):
+        return True
+    if _is_mutect2_somatic(rec):
         return True
     ss_flag = rec.INFO.get("SS")
     if ss_flag is not None:
@@ -103,10 +106,24 @@ def _is_somatic(rec):
             return True
     return False
 
-def _is_germline(rec):
-    """Handle somatic INFO classifications from MuTect, VarDict and VarScan
+def _has_somatic_flag(rec):
+    try:
+        rec.INFO["SOMATIC"]
+        return True
+    except KeyError:
+        return False
+
+def _is_mutect2_somatic(rec):
+    """MuTect2 does not use SOMATIC flag, instead using presence of tumor TLOD and PASS.
     """
-    if "SOMATIC" in dict(rec.INFO):
+    return rec.INFO.get("TLOD") is not None and rec.FILTER is None
+
+def _is_germline(rec):
+    """Handle somatic INFO classifications from MuTect, MuTect2, VarDict and VarScan
+    """
+    if _has_somatic_flag(rec):
+        return False
+    if _is_mutect2_somatic(rec):
         return False
     ss_flag = rec.INFO.get("SS")
     if ss_flag is not None:
