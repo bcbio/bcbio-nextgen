@@ -213,6 +213,7 @@ def _pick_best_quality_score(vrn_file):
     (RTG=AVR/GATK=VQSLOD/MuTect=t_lod_fstar, otherwise GQ, otherwise QUAL, otherwise DP.)
 
     For MuTect, it's not clear how to get t_lod_fstar, the right quality score, into VCF cleanly.
+    MuTect2 has TLOD in the INFO field.
     """
     # pysam fails on checking reference contigs if input is empty
     if not vcfutils.vcf_has_variants(vrn_file):
@@ -229,12 +230,14 @@ def _pick_best_quality_score(vrn_file):
                 break
             if rec.info.get("VQSLOD") is not None:
                 scores["INFO=VQSLOD"] += 1
+            if rec.info.get("TLOD") is not None:
+                scores["INFO=TLOD"] += 1
             for skey in ["AVR", "GQ", "DP"]:
                 if rec.samples[0].get(skey) is not None:
                     scores[skey] += 1
             if rec.qual:
                 scores["QUAL"] += 1
-    for key in ["AVR", "INFO=VQSLOD", "GQ", "QUAL", "DP"]:
+    for key in ["AVR", "INFO=VQSLOD", "INFO=TLOD", "GQ", "QUAL", "DP"]:
         if scores[key] > 0:
             return key
     raise ValueError("Did not find quality score for validation from %s" % vrn_file)

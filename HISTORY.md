@@ -14,6 +14,8 @@
 - Use sample description for file names instead of lane/flowcall information.
   Makes re-runs more stable when using template and files easier to interpret.
   Back compatible with re-runs of old work directories.
+- Finalize support for MuTect2 with validation against the DREAM synthetic 4
+  dataset (http://imgur.com/CLqJlNF). Thanks to Alessandro (@apastore).
 - Do not bgzip inputs when they are already gzipped and do not require
   parallelization or format conversion. Thanks to Miika Ahdesmaki.
 - Lazy import of matplotlib libraries to avoid slow startup times.

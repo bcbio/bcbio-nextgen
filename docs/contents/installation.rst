@@ -72,7 +72,7 @@ improve. Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers like `Docker`_. The
 :ref:`upgrade-install` section has additional documentation on including
 additional genome data, and the section on :ref:`toolplus-install` describes how
-to add commercially restricted software like GATK. Following installation, you
+to add commercially restricted software like GATK and MuTect. Following installation, you
 should edit the pre-created system configuration file in
 ``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
 system or cluster configuration.
@@ -173,16 +173,16 @@ We're not able to automatically install some useful tools due to licensing
 restrictions, so we provide a mechanism to manually download and add these to
 bcbio-nextgen during an upgrade with the ``--toolplus`` command line.
 
-GATK and muTect
-~~~~~~~~~~~~~~~
+GATK and MuTect/MuTect2
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Calling variants with GATK's HaplotypeCaller or UnifiedGenotyper requires manual
+Calling variants with GATK's HaplotypeCaller, MuTect2 or UnifiedGenotyper requires manual
 installation of the latest GATK release. This is freely available for academic
 users, but requires a `license for commerical use
 <https://www.broadinstitute.org/gatk/about/#licensing>`_. It is not freely
 redistributable so requires a manual download from the `GATK download`_ site. If
 you don't want to use the restricted GATK version, freely available callers like
-FreeBayes provide a better alternative than using older GATK versions. See the
+FreeBayes and VarDict provide a better alternative than using older GATK versions. See the
 `FreeBayes and GATK comparison`_ for a full evaluation.
 
 To install GATK, download and unzip the latest version from the GATK
@@ -192,6 +192,8 @@ distribution. Then make this jar available to bcbio-nextgen with::
 
 This will copy the jar and update your bcbio_system.yaml and manifest files to
 reflect the new version.
+
+`MuTect2 <https://www.broadinstitute.org/gatk/guide/tooldocs/org_broadinstitute_gatk_tools_walkers_cancer_m2_MuTect2.php>`_ is distributed with GATK in versions 3.5 and later.
 
 MuTect also has similar licensing terms and requires a license for commerical
 use. After `downloading the MuTect jar

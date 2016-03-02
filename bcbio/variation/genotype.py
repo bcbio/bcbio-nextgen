@@ -270,15 +270,16 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         else:
             items = multi.get_orig_items(data)
             assert len(items) == len(align_bams)
-        call_file = "%s-raw%s" % utils.splitext_plus(out_file)
         assoc_files = tz.get_in(("genome_resources", "variation"), data, {})
         if not assoc_files: assoc_files = {}
         for bam_file in align_bams:
             bam.index(bam_file, data["config"], check_timestamp=False)
+        do_phasing = data["config"]["algorithm"].get("phasing", False)
+        call_file = "%s-raw%s" % utils.splitext_plus(out_file) if do_phasing else out_file
         call_file = caller_fn(align_bams, items, sam_ref, assoc_files, region, call_file)
-        if data["config"]["algorithm"].get("phasing", False) == "gatk":
+        if do_phasing == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
-        utils.symlink_plus(call_file, out_file)
+            utils.symlink_plus(call_file, out_file)
     if region:
         data["region"] = region
     data["vrn_file"] = out_file
