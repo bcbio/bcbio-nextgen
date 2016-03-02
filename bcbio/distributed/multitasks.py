@@ -5,6 +5,7 @@ from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.rnaseq import splice
 from bcbio.cwl import create as cwl_create
 from bcbio.rnaseq import (sailfish)
 from bcbio.ngsalign import alignprep
@@ -65,6 +66,10 @@ def srna_alignment(*args):
 @utils.map_wrap
 def peakcalling(*args):
     return peaks.calling(*args)
+
+@utils.map_wrap
+def splicecalling(*args):
+    return splice.calling(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):
@@ -129,6 +134,10 @@ def run_stringtie_expression(*args):
 @utils.map_wrap
 def run_express(*args):
     return rnaseq.run_express(*args)
+
+@utils.map_wrap
+def run_rmats(*args):
+    return rnaseq.run_rmats(*args)
 
 @utils.map_wrap
 def run_dexseq(*args):
