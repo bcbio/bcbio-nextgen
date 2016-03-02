@@ -8,6 +8,13 @@ import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten
 from bcbio.log import logger
 
+def run_rmats(data):
+    """Detect differential alternative splicing by rMATS"""
+    splicecaller =  dd.get_splicecaller(data)
+    if "rmats" in splicecaller:
+    	data = splice.peakcall_prepare(data)
+    return [[data]]
+
 def rnaseq_variant_calling(samples, run_parallel):
     """
     run RNA-seq variant calling using GATK
@@ -73,6 +80,8 @@ def quantitate_expression_noparallel(samples, run_parallel):
     if "express" in dd.get_expression_caller(data):
         samples = run_parallel("run_express", samples)
     samples = run_parallel("run_dexseq", samples)
+    if "rmats" in dd.get_splicecaller(data):
+        samples = run_parallel("run_rmats", samples)
     return samples
 
 def generate_transcript_counts(data):
@@ -119,7 +128,7 @@ def run_express(data):
     """Quantitative isoform expression by eXpress"""
     data = express.run(data)
     return [[data]]
-
+    
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
     to_combine = [dd.get_express_counts(x) for x in
