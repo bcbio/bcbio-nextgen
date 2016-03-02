@@ -75,4 +75,4 @@ def _get_multiplier(samples):
     for sample in samples:
         if dd.get_phenotype(sample[0]) == "chip":
             to_process += 1.0
-    return int(to_process / len(samples))
+    return to_process / len(samples)

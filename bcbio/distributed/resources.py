@@ -213,7 +213,7 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
             num_jobs, _ = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
 
     # do not overschedule if we don't have extra items to process
-    num_jobs = min(num_jobs, len(items) * multiplier)
+    num_jobs = int(min(num_jobs, len(items) * multiplier))
     logger.debug("Configuring %d jobs to run, using %d cores each with %sg of "
                  "memory reserved for each job" % (num_jobs, cores_per_job,
                                                    str(memory_per_job)))
