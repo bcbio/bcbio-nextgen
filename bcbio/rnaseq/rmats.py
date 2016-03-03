@@ -1,7 +1,7 @@
 import os
 
 import subprocess
-import commands
+
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.provenance import do

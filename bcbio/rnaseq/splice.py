@@ -2,7 +2,7 @@
 """
 import os
 import copy
-
+import commands
 from bcbio.log import logger
 from bcbio import bam, utils
 from bcbio.pipeline import datadict as dd
@@ -52,6 +52,7 @@ def calling(data):
     myCmd = 'samtools view '+chip_bam+' | head -n 1'
     status,output=commands.getstatusoutput(myCmd)
     read_len=len(output.strip().split('\t')[9])
+    fastq_file = fastq.get_fastq_files(data)
     if len(fastq_file) > 1:
         read_pair = "paired"
     else:
