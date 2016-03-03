@@ -49,14 +49,9 @@ def calling(data):
     input_bam = data["work_bam_input"]
     caller_fn = get_callers()[data["rmats_fn"]]
     name = dd.get_sample_name(data)
-    fastq_file = fastq.get_fastq_files(data)
-    read_len = bam.fastq.estimate_read_length(fastq_file[0])
-    if read_len < 50:
-        read_len = 50
-    elif read_len > 50 and read_len < 75:
-        read_len = 75
-    else:
-        read_len = 100
+    myCmd = 'samtools view '+chip_bam+' | head -n 1'
+    status,output=commands.getstatusoutput(myCmd)
+    read_len=len(output.strip().split('\t')[9])
     if len(fastq_file) > 1:
         read_pair = "paired"
     else:

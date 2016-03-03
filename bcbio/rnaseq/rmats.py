@@ -30,9 +30,6 @@ def run(name, chip_bam, rep_bam, input_bam, gtf_file, out_dir, rlength, rpair, c
     MATS_dir = os.path.join(out_dir, "MATS_output")
     rmats_file = os.path.join(out_dir, "summary.txt")
     out_file = os.path.join(out_dir, name + "_summary.txt")
-    '''myCmd = 'samtools view '+chip_bam+' | head -n 1'
-    status,output=commands.getstatusoutput(myCmd)
-    rlength=len(output.strip().split('\t')[9])'''
     libType = _get_stranded_flag(config)
     if rep_bam != "":
             chip_bam = chip_bam + "," + rep_bam
