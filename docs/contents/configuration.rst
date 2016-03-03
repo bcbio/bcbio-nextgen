@@ -649,6 +649,28 @@ RNA sequencing
   expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data.
   Supports [gatk] or [vardict].
+  
+Abberant splicing detection with rMATS in RNA sequencing pipeline
+===============
+
+- ``splicecaller`` bcbio only accepts ``rmats``
+- ``aligner`` Currently support ``tophat2`` with untrimmed reads is the only one tested
+The ``phenotype`` and ``replicate`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the sample (``phenotype: name``) and control samples (``phenotype: control``). The ``replicate`` tag will specify a progressive integer number for each replicate set of samples and control for example, samples1 ``replicate: 1`` , samples2 ``replicate: 2``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``::
+
+     samplename,description,batch,phenotype,replicate
+     231ESRPfirst,231ESRP25K1,batch1,mutant,1
+     231ESRPsecond,231ESRP25K2,batch1,mutant,2
+     231EVfirst,231EV25K1,batch1,control,1
+     231EVsecond,231EV25K2,batch1,control,2
+
+You can pass different parameters for ``rmats`` adding to :ref:`config-resources`::
+please adding to :ref:`config-resources`::
+
+        resources:
+          rmats:
+            cmd: path/to/rMATS/RNASeq-MATS.py
+            core: 1
+            memory: 8g
 
 smallRNA sequencing
 ===================
@@ -670,6 +692,7 @@ You can pass different parameters for ``macs2`` adding to :ref:`config-resources
         resources:
           macs2:
             options: ["--broad"]
+            
 
 Quality control
 ===============
