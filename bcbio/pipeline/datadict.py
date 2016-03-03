@@ -46,6 +46,7 @@ LOOKUPS = {
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "batch": {"keys": ["metadata", "batch"]},
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
+    "replicate": {"keys": ["metadata", "replicate"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},

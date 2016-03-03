@@ -64,6 +64,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_oncofuse(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     out = _maybe_add_sailfish_files(algorithm, sample, out)
+    out = _maybe_add_splice(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -382,6 +383,24 @@ def _maybe_add_peaks(algorithm, sample, out):
 def _get_peak_file(x, fn_name):
     """Get peak caller for this file name."""
     for caller in dd.get_peakcaller(x):
+        if fn_name.find(caller) > -1:
+            return caller
+    return os.path.basename(fn_name)
+
+def _maybe_add_splice(algorithm, sample, out):
+    fns = sample.get("splice_file", [])
+    for fn in fns:
+        if utils.file_exists(fn):
+            name, ext = utils.splitext_plus(fn)
+            caller = _get_splice_file(sample, name)
+            out.append({"path": fn,
+                        "type": ext,
+                        "ext": caller})
+    return out
+
+def _get_splice_file(x, fn_name):
+    """Get peak caller for this file name."""
+    for caller in dd.get_splicecaller(x):
         if fn_name.find(caller) > -1:
             return caller
     return os.path.basename(fn_name)
