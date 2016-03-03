@@ -19,6 +19,7 @@ import urllib
 from fabric.api import env
 
 import requests
+import toolz as tz
 import yaml
 
 from bcbio import broad, utils
@@ -214,12 +215,18 @@ def _update_conda_packages():
                            "--file", os.path.basename(REMOTES["requirements"])])
     return os.path.dirname(os.path.dirname(conda_bin))
 
-def get_genomes_dir():
+def get_genome_dir(gid, galaxy_dir, data):
     """Return standard location of genome directories.
     """
-    gdir = os.path.join(_get_data_dir(), "genomes")
-    assert os.path.exists(gdir), gdir
-    return gdir
+    if galaxy_dir:
+        refs = genome.get_refs(gid, None, galaxy_dir, data)
+        seq_file = tz.get_in(["fasta", "base"], refs)
+        if seq_file and os.path.exists(seq_file):
+            return os.path.dirname(os.path.dirname(seq_file))
+    else:
+        gdirs = glob.glob(os.path.join(_get_data_dir(), "genomes", "*", gid))
+        if len(gdirs) == 1 and os.path.exists(gdirs[0]):
+            return gdirs[0]
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))))
