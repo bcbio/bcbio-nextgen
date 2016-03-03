@@ -297,7 +297,7 @@ def priority_coverage(data):
                     end = line.end
                     coords = "%s:%s-%s" % (chrom, start, end)
                     coord_batch.append(coords)
-                    line_batch += str(line)
+                    line_batch += "%s\t%s\t%s\n" % (chrom, start, end)
                 if not coord_batch:
                     continue
                 region_file = pybedtools.BedTool(line_batch,
