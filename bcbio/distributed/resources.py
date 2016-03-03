@@ -24,11 +24,14 @@ def _get_resource_programs(progs, algs):
                 aligner = alg.get("aligner")
                 if aligner:
                     out.add(aligner)
-        elif p in ["variantcaller", "svcaller", "peakcaller"]:
+        elif p in ["variantcaller", "svcaller", "peakcaller", "splicecaller"]:
             if p == "variantcaller":
                 for key, fn in parent_child.items():
                     if fn(algs):
                         out.add(key)
+            if p == "splicecaller":
+                for key, fn in parent_child.items():
+                    if fn(algs):out.add(key)
             for alg in algs:
                 callers = alg.get(p)
                 if callers:

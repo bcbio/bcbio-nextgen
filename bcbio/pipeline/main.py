@@ -23,6 +23,8 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
 from bcbio.provenance import profile, system
 from bcbio.variation import ensemble, genotype, population, validate, joint
 from bcbio.chipseq import peaks
+from bcbio.rnaseq import splice
+from bcbio.log import logger
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -251,6 +253,11 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("estimate expression (single threaded)", dirs):
             samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
     samples = rnaseq.combine_files(samples)
+    with prun.start(_wres(parallel, ["splicecaller"]),
+        samples, config, dirs, "splicecalling",
+        multiplier = splice._get_multiplier(samples)) as run_parallel:
+        with profile.report("splicecalling", dirs):
+            samples = splice.splicecall_prepare(samples, run_parallel)
     with prun.start(_wres(parallel, ["gatk"]), samples, config,
                     dirs, "rnaseq-variation") as run_parallel:
         with profile.report("RNA-seq variant calling", dirs):
