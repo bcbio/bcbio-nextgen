@@ -9,7 +9,7 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import sailfish
+from bcbio.rnaseq import (sailfish, splice)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio import rnaseq
@@ -114,6 +114,12 @@ def peakcalling(* args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(peaks.calling, *args))
+
+@require(splice)
+def splicecalling(* args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(splice.calling, *args))
 
 @require(sailfish)
 def run_sailfish(*args):
@@ -245,6 +251,12 @@ def run_express(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(rnaseq.run_express, *args))
+
+@require(rnaseq)
+def run_rmats(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.run_rmats, *args))
 
 @require(rnaseq)
 def run_dexseq(*args):
