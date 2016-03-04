@@ -186,11 +186,14 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         rtg_ref = tz.get_in(["reference", "rtg"], data)
         assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
                                                      "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
-        cmd = ["rtg", "vcfeval", "--threads", "6",
+        threads = min(dd.get_num_cores(data), 6)
+        mem = "%sg" % threads
+        cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
         cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
-        cmd = "export RTG_JAVA_OPTS='-Xms1g' && export RTG_MEM=5g && " + " ".join(cmd)
+        mem_export = "export RTG_JAVA_OPTS='-Xms1g' && export RTG_MEM=%s" % mem
+        cmd = mem_export + " && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     out = {"fp": os.path.join(out_dir, "fp.vcf.gz"),
            "fn": os.path.join(out_dir, "fn.vcf.gz")}
