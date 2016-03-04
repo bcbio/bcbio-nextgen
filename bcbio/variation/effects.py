@@ -224,11 +224,6 @@ def _snpeff_args_from_config(data):
     """
     config = data["config"]
     args = []
-    # Use older EFF formatting instead of new combined ANN formatting until
-    # GEMINI supports ANN. Only used for small variants, not SVs.
-    svcaller = tz.get_in(["config", "algorithm", "svcaller_active"], data)
-    if not svcaller and LooseVersion(snpeff_version(data=data)) >= LooseVersion("4.1"):
-        args += ["-formatEff", "-classic"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):

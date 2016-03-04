@@ -18,6 +18,8 @@
   dataset (http://imgur.com/CLqJlNF). Thanks to Alessandro (@apastore).
 - Do not bgzip inputs when they are already gzipped and do not require
   parallelization or format conversion. Thanks to Miika Ahdesmaki.
+- Use new snpEff annotations (ANN) instead of older approach (EFF). The
+  new annotations are more interoperable and supported by GEMINI.
 - Lazy import of matplotlib libraries to avoid slow startup times.
 - Only apply ploidyfix to all female batches to remove Y chromosome. Avoids
   confusion with file produced in other cases without any changes.
