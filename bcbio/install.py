@@ -311,6 +311,9 @@ def _upgrade_vep_data(galaxy_dir, tooldir):
 def _upgrade_snpeff_data(galaxy_dir, args, remotes):
     """Install or upgrade snpEff databases, localized to reference directory.
     """
+    snpeff_version = effects.snpeff_version(args)
+    if not snpeff_version:
+        return
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
         if os.path.exists(resource_file):
@@ -325,7 +328,7 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                 if not os.path.exists(snpeff_db_dir):
                     print("Installing snpEff database %s in %s" % (snpeff_db, snpeff_base_dir))
                     dl_url = remotes["snpeff_dl_url"].format(
-                        snpeff_ver=effects.snpeff_version(args).replace(".", "_"),
+                        snpeff_ver=snpeff_version.replace(".", "_"),
                         genome=snpeff_db)
                     dl_file = os.path.basename(dl_url)
                     with utils.chdir(snpeff_base_dir):

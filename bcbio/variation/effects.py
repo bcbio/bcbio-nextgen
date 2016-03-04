@@ -208,7 +208,6 @@ def snpeff_version(args=None, data=None):
         raw_version = ""
     snpeff_version = "".join([x for x in str(raw_version)
                               if x in set(string.digits + ".")])
-    assert snpeff_version, "Did not find snpEff version information"
     return snpeff_version
 
 def snpeff_effects(vcf_in, data):
