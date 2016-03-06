@@ -246,7 +246,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     ann_file = _run_vardict_caller(align_bams, items, ref_file,
                                                    assoc_files, region, out_file)
                     return ann_file
-                vcffilter = config_utils.get_program("vcffilter", config)
                 vardict = get_vardict_command(items[0])
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 strandbias = "testsomatic.R"

@@ -140,7 +140,6 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                 ann_file = _run_scalpel_caller(align_bams, items, ref_file,
                                                assoc_files, region, out_file)
                 return ann_file
-            vcffilter = config_utils.get_program("vcffilter", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
             perl_exports = utils.get_perl_exports()
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]

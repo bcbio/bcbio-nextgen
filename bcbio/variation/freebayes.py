@@ -103,7 +103,6 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             freebayes = config_utils.get_program("freebayes", config)
-            vcffilter = config_utils.get_program("vcffilter", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
             opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
             if no_target_regions:
@@ -118,8 +117,9 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-                cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} | "
-                       "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
+                cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
+                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
+                       "| {fix_ambig} | "
                        "bcftools view -a - 2> /dev/null | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                        "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
@@ -164,7 +164,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cl = ("{freebayes} -f {ref_file} {opts} "
                       "{paired.tumor_bam} {paired.normal_bam} "
-                      "| vcffilter -f 'QUAL > 5' -s "
+                      """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                       "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
                       "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
