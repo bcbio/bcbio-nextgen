@@ -76,7 +76,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     pipelines, config = _pair_samples_with_pipelines(run_info_yaml, config)
     system.write_info(dirs, parallel, config)
-    with tx_tmpdir(config) as tmpdir:
+    with tx_tmpdir(config if parallel.get("type") == "local" else None) as tmpdir:
         tempfile.tempdir = tmpdir
         for pipeline, samples in pipelines.items():
             for xs in pipeline(config, run_info_yaml, parallel, dirs, samples):
