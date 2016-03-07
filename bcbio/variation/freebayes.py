@@ -33,7 +33,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     Checks for empty sets of target regions after filtering for high depth,
     in which case we should skip the FreeBayes run.
     """
-    opts = []
+    opts = ["--genotype-qualities"]
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
     variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
@@ -66,7 +66,7 @@ def _add_somatic_opts(opts, paired):
                                                           "min_allele_fraction"), 10)) / 100.0
         opts += " --min-alternate-fraction %s" % min_af
     # Recommended settings for cancer calling
-    opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
+    opts += (" --pooled-discrete --pooled-continuous "
              "--report-genotype-likelihood-max --allele-balance-priors-off")
     return opts
 
