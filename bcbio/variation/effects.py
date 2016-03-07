@@ -230,8 +230,15 @@ def _snpeff_args_from_config(data):
     # cancer specific calling arguments
     if vcfutils.get_paired_phenotype(data):
         args += ["-cancer"]
+
+    # Skip HGVS if running structural variant calling due to errors
+    # https://github.com/chapmanb/bcbio-nextgen/issues/1205
+    # https://github.com/pcingola/SnpEff/issues/128
+    svcaller = tz.get_in(["config", "algorithm", "svcaller_active"], data)
+    if svcaller:
+        args += ["-noHgvs"]
     # Provide options tuned to reporting variants in clinical environments
-    if config["algorithm"].get("clinical_reporting"):
+    elif config["algorithm"].get("clinical_reporting"):
         args += ["-canon", "-hgvs"]
     return args
 
