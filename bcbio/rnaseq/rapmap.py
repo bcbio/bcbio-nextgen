@@ -60,10 +60,8 @@ def rapmap_pseudoindex(gtf_file, ref_file, data, out_dir):
     if dd.get_disambiguate(data):
         out_dir = "-".join([out_dir] + dd.get_disambguate(data))
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
-    num_cores = dd.get_num_cores(data)
     gtf_fa = sailfish._create_combined_fasta(data, out_dir)
     tmpdir = dd.get_tmp_dir(data)
-    ### TODO PUT MEMOZATION HERE
     if file_exists(out_dir + "rapidx.jfhash"):
         return out_dir
     with file_transaction(out_dir) as tx_out_dir:
