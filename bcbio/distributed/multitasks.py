@@ -6,7 +6,7 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
-from bcbio.rnaseq import (sailfish)
+from bcbio.rnaseq import (sailfish, rapmap)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -17,6 +17,10 @@ from bcbio.variation import (bamprep, bedutils, genotype, ensemble,
 @utils.map_wrap
 def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
+
+@utils.map_wrap
+def run_rapmap_pseudoalign(*args):
+    return rapmap.run_rapmap_pseudoalign(*args)
 
 @utils.map_wrap
 def prepare_sample(*args):

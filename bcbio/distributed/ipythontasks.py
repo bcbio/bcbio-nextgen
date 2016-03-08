@@ -9,7 +9,7 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import sailfish
+from bcbio.rnaseq import (sailfish, rapmap)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio import rnaseq
@@ -120,6 +120,12 @@ def run_sailfish(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(sailfish.run_sailfish, *args))
+
+@require(rapmap)
+def run_rapmap_pseudoalign(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(rapmap.run_rapmap_pseudoalign, *args))
 
 @require(sample)
 def process_alignment(*args):

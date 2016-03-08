@@ -8,6 +8,10 @@ import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten
 from bcbio.log import logger
 
+def fast_rnaseq(samples, run_parallel):
+    samples = run_parallel("run_rapmap_pseudoalign", samples)
+    return samples
+
 def rnaseq_variant_calling(samples, run_parallel):
     """
     run RNA-seq variant calling using GATK

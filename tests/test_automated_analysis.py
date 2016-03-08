@@ -192,6 +192,19 @@ class AutomatedAnalysisTest(unittest.TestCase):
             subprocess.check_call(cl)
 
     @attr(rnaseq=True)
+    @attr(fastrnaseq=True)
+    def test_2_fastrnaseq(self):
+        """Run a fast RNA-seq analysis
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "110907_ERP000591"),
+                  os.path.join(self.data_dir, "run_info-fastrnaseq.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(rnaseq=True)
     @attr(rnaseq_standard=True)
     @attr(hisat2=True)
     def test_2_hisat2(self):
