@@ -264,8 +264,8 @@ def _item_to_cwldata(x):
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx) for subx in x]
     elif x and isinstance(x, basestring) and (os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x):
-        out = {"class": "File", "path": x}
         if os.path.isfile(x):
+            out = {"class": "File", "path": x}
             if x.endswith(".bam"):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
             elif x.endswith((".vcf.gz", ".bed.gz")):
@@ -275,6 +275,20 @@ def _item_to_cwldata(x):
                 secondary = [x for x in secondary if os.path.exists(x)]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": x} for x in secondary]
+        else:
+            base_names = ["mainIndex"]
+            assert os.path.isdir(x)
+            base_name = None
+            fnames = sorted(os.listdir(x))
+            for test_base in base_names:
+                if test_base in fnames:
+                    base_name = test_base
+                    fnames.pop(fnames.index(base_name))
+            assert base_name, "Did not find base file for %s" % x
+            base_name = os.path.join(x, base_name)
+            fnames = [os.path.join(x, y) for y in fnames]
+            out = {"class": "File", "path": base_name,
+                   "secondaryFiles": [{"class": "File", "path": f} for f in fnames]}
         return out
     else:
         return x

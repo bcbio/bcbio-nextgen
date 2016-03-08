@@ -186,6 +186,9 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         rtg_ref = tz.get_in(["reference", "rtg"], data)
         assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
                                                      "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
+        # handle CWL where we have a reference to a single file in the RTG directory
+        if os.path.isfile(rtg_ref):
+            rtg_ref = os.path.dirname(rtg_ref)
         threads = min(dd.get_num_cores(data), 6)
         mem = "%sg" % threads
         cmd = ["rtg", "vcfeval", "--threads", str(threads),

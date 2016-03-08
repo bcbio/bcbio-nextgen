@@ -115,6 +115,8 @@ def _world_from_cwl(fnargs, work_dir):
 def _collapse_to_cwl_record(samples, work_dir):
     """Convert nested samples from batches into a CWL record, based on input keys.
     """
+    # files where we list the entire directory as secondary files
+    dir_targets = ["mainIndex"]
     all_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
     out = {}
     for key in all_keys:
@@ -135,6 +137,11 @@ def _collapse_to_cwl_record(samples, work_dir):
                         idx_file = os.path.splitext(val["path"])[0] + idx
                         if os.path.exists(idx_file):
                             secondary.append({"class": "File", "path": idx_file})
+                    cur_dir, cur_file = os.path.split(val["path"])
+                    if cur_file in dir_targets:
+                        for fname in os.listdir(cur_dir):
+                            if fname != cur_file:
+                                secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
                     if secondary:
                         val["secondaryFiles"] = secondary
             elif isinstance(val, dict):
