@@ -84,24 +84,27 @@ def generate_transcript_counts(data):
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
 
-    if dd.get_transcriptome_align(data) and not dd.get_transcriptome_bam(data):
-        file1, file2 = None, None
-
+    if dd.get_transcriptome_align(data):
+        # to create a disambiguated transcriptome file realign with bowtie2
         if dd.get_disambiguate(data):
+            logger.info("Aligning to the transcriptome with bowtie2 using the "
+                        "disambiguated reads.")
             bam_path = data["work_bam"]
             fastq_paths = alignprep._bgzip_from_bam(bam_path, data["dirs"], data["config"], is_retry=False, output_infix='-transcriptome')
             if len(fastq_paths) == 2:
                 file1, file2 = fastq_paths
             else:
                 file1, file2 = fastq_paths[0], None
+            ref_file = dd.get_ref_file(data)
+            data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
         else:
             file1, file2 = dd.get_input_sequence_files(data)
-
-        ref_file = dd.get_ref_file(data)
-        logger.info("Transcriptome alignment was flagged to run, but the "
-                    "transcriptome BAM file was not found. Aligning to the "
-                    "transcriptome with bowtie2.")
-        data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
+        if not dd.get_transcriptome_bam(data):
+            ref_file = dd.get_ref_file(data)
+            logger.info("Transcriptome alignment was flagged to run, but the "
+                        "transcriptome BAM file was not found. Aligning to the "
+                        "transcriptome with bowtie2.")
+            data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
     return [[data]]
 
 def run_stringtie_expression(data):
