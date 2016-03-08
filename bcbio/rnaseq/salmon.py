@@ -42,6 +42,7 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     num_cores = dd.get_num_cores(data)
     cmd = ("{salmon} quant {libtype} -p {num_cores} -t {gtf_fa} "
            "-o {tx_out_dir} -a {bam_file} ")
+    cmd += "--numBootstraps 30 "
     with file_transaction(data, salmon_dir) as tx_out_dir:
         message = "Quantifying transcripts in %s with Salmon." % bam_file
         do.run(cmd.format(**locals()), message, None)
