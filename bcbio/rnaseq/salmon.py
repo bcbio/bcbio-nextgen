@@ -8,7 +8,7 @@ import os
 
 from bcbio.rnaseq import sailfish
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import (file_exists, safe_makedir)
+from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
@@ -27,6 +27,54 @@ def run_salmon_bam(data):
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
     return [[data]]
+
+def run_salmon_reads(data):
+    samplename = dd.get_sample_name(data)
+    work_dir = dd.get_work_dir(data)
+    salmon_dir = os.path.join(work_dir, "salmon", samplename)
+    gtf_file = dd.get_gtf_file(data)
+    files = dd.get_input_sequence_files(data)
+    if len(files) == 2:
+        fq1, fq2 = files
+    else:
+        fq1, fq2 = files[0], None
+    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
+    fasta_file = dd.get_ref_file(data)
+    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
+    out_file = salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, fasta_file, data)
+    data = dd.set_sailfish(data, out_file)
+    data = dd.set_sailfish_dir(data, salmon_dir)
+    return [[data]]
+
+def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
+    safe_makedir(salmon_dir)
+    samplename = dd.get_sample_name(data)
+    out_file = os.path.join(salmon_dir, "quant.sf")
+    if file_exists(out_file):
+        return out_file
+    gtf_fa = sailfish._create_combined_fasta(data, salmon_dir)
+    num_cores = dd.get_num_cores(data)
+    strandedness = dd.get_strandedness(data).lower()
+    salmon = config_utils.get_program("salmon", dd.get_config(data))
+    libtype = sailfish._libtype_string(fq1, fq2, strandedness)
+    num_cores = dd.get_num_cores(data)
+    index = salmon_index(gtf_file, ref_file, data, salmon_dir)
+    cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
+           "-o {tx_out_dir} ")
+    fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
+    fq1_cmd = fq1_cmd.format(fq1=fq1)
+    if not fq2:
+        cmd += " -r {fq1_cmd} "
+    else:
+        fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
+        fq2_cmd = fq2_cmd.format(fq2=fq2)
+        cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
+    cmd += "--numBootstraps 30 --useVBOpt "
+    with file_transaction(data, salmon_dir) as tx_out_dir:
+        message = ("Quantifying transcripts in %s and %s with Salmon."
+                   %(fq1, fq2))
+        do.run(cmd.format(**locals()), message, None)
+    return out_file
 
 def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     safe_makedir(salmon_dir)

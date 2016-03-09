@@ -15,6 +15,10 @@ from bcbio.variation import (bamprep, bedutils, genotype, ensemble,
                              vcfutils)
 
 @utils.map_wrap
+def run_salmon_reads(*args):
+    return salmon.run_salmon_reads(*args)
+
+@utils.map_wrap
 def run_salmon_bam(*args):
     return salmon.run_salmon_bam(*args)
 
