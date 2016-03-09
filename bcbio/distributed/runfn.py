@@ -44,11 +44,13 @@ def process(args):
             if argfile.endswith(".json"):
                 if parallel in ["single-split", "multi-combined", "batch-split"]:
                     json.dump([utils.to_single_data(xs) for xs in out],
-                              out_handle)
+                              out_handle, sort_keys=True, separators=(',', ':'))
                 elif parallel in ["multi-batch"]:
-                    json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle)
+                    json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle,
+                              sort_keys=True, separators=(',', ':'))
                 else:
-                    json.dump(utils.to_single_data(utils.to_single_data(out)), out_handle)
+                    json.dump(utils.to_single_data(utils.to_single_data(out)), out_handle,
+                              sort_keys=True, separators=(',', ':'))
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
@@ -145,7 +147,7 @@ def _collapse_to_cwl_record(samples, work_dir):
                     if secondary:
                         val["secondaryFiles"] = secondary
             elif isinstance(val, dict):
-                val = json.dumps(val)
+                val = json.dumps(val, sort_keys=True, separators=(',', ':'))
             vals.append(val)
             # Remove nested keys to avoid specifying multiple times
             cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)

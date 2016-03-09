@@ -59,8 +59,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
            "arguments": [],
            "inputs": [],
            "outputs": []}
-    out["arguments"].append({"position": 0, "prefix": "sentinel-runtime=", "separate": False,
-                             "valueFrom": "$(JSON.stringify(runtime))"})
+    out["arguments"].append({"position": 0, "valueFrom": "sentinel-runtime=$(runtime)"})
     std_inputs = [{"id": "#sentinel-parallel", "type": "string",
                    "default": parallel}]
     inputs = std_inputs + inputs
@@ -253,7 +252,7 @@ def _to_cwldata(key, val):
             else:
                 out.append((cur_nkey, cwl_nval))
         if remain_val:
-            out.append((key, json.dumps(remain_val, separators=(',', ':'))))
+            out.append((key, json.dumps(remain_val, sort_keys=True, separators=(',', ':'))))
     else:
         out.append((key, _item_to_cwldata(val)))
     return out
