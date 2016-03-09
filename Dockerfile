@@ -1,7 +1,7 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# v0.9.7a -- https://github.com/chapmanb/bcbio-nextgen/commit/922f4c4
+# v0.9.7a -- https://github.com/chapmanb/bcbio-nextgen/commit/ee18f80
 
 # Setup a base system 
 RUN apt-get update && \
@@ -48,7 +48,6 @@ RUN apt-get update && \
     cd /usr/local && \ 
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/tmp/* && \
-    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --yes qt && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda clean --yes --tarballs && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/qt* && \
     rm -rf /usr/local/.git && \
