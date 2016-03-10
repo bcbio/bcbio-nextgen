@@ -44,6 +44,8 @@ def generate_parallel(samples, run_parallel):
     samples = run_parallel("coverage_report", samples)
     samples = run_parallel("qc_report_summary", [samples])
     qsign_info = run_parallel("qsignature_summary", [samples])
+    if "multiqc" in tz.get_in(("config", "algorithm", "tools_on"), samples[0][0], []):
+        multiqc_info = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
@@ -846,6 +848,24 @@ def _run_gemini_stats(bam_file, data, out_dir):
         if k == dd.get_sample_name(data):
             res.update(v)
     return res
+
+## multiqc
+
+def multiqc_summary(*samples):
+    """Summrize all quality metrics together"""
+    work_dir = dd.get_work_dir(samples[0][0])
+    qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc"))
+    multiqc = config_utils.get_program("multiqc", samples[0][0]["config"])
+    align = os.path.join(work_dir, "align")
+    qc = os.path.join(work_dir, "qc")
+    out_dir = os.path.join(work_dir, "multiqc")
+    out_file = os.path.join(out_dir, "multiqc_report.html")
+    if not utils.file_exists(out_file):
+        cmd = "{multiqc} {align} {qc} -o {tx_out} "
+        with tx_tmpdir() as tx_out:
+            do.run(cmd.format(**locals()), "Run multiqc")
+            shutil.move(tx_out, out_dir)
+    return out_file
 
 ## qsignature
 
