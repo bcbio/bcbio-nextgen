@@ -283,11 +283,14 @@ def _item_to_cwldata(x):
                 if test_base in fnames:
                     base_name = test_base
                     fnames.pop(fnames.index(base_name))
-            assert base_name, "Did not find base file for %s" % x
-            base_name = os.path.join(x, base_name)
-            fnames = [os.path.join(x, y) for y in fnames]
-            out = {"class": "File", "path": base_name,
-                   "secondaryFiles": [{"class": "File", "path": f} for f in fnames]}
+            if base_name:
+                base_name = os.path.join(x, base_name)
+                fnames = [os.path.join(x, y) for y in fnames]
+                out = {"class": "File", "path": base_name,
+                       "secondaryFiles": [{"class": "File", "path": f} for f in fnames]}
+            # skip directories we're not currently using in CWL recipes
+            else:
+                out = None
         return out
     else:
         return x
