@@ -460,10 +460,11 @@ Variant calling
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
       tumor-only mode.
--  ``indelcaller`` For SNP only variant callers it is possible to combine the calling
-   with indelcallers such as scalpel, pindel and somatic indel detector (for Appistry MuTect
-   users only). Currently an experimental option that adds these indel calls to
-   MuTect's SNP-only output. Omit to ignore. [scalpel, pindel, sid, false]
+- ``indelcaller`` For the MuTect SNP only variant caller it is possible to add
+   calls from an indelcaller such as scalpel, pindel and somatic indel detector
+   (for Appistry MuTect users only). Currently an experimental option that adds
+   these indel calls to MuTect's SNP-only output. Only one caller supported.
+   Omit to ignore. [scalpel, pindel, sid, false]
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
    match with appropriate ``variantcaller``

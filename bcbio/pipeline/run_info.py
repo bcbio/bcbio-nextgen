@@ -530,6 +530,12 @@ def _check_jointcaller(data):
         raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
                          "Supported options: %s\n" % (problem, sorted(list(allowed))))
 
+def _check_indelcaller(data):
+    c = data["algorithm"].get("indelcaller")
+    if c and isinstance(c, (tuple, list)):
+        raise ValueError("In sample %s, indelcaller specified as list. Can only be a single item: %s"
+                         % (data["description"], str(c)))
+
 def _check_sample_config(items, in_file, config):
     """Identify common problems in input sample configuration files.
     """
@@ -548,6 +554,7 @@ def _check_sample_config(items, in_file, config):
     [_check_algorithm_values(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
+    [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
