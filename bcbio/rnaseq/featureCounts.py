@@ -25,6 +25,7 @@ def count(data):
     out_dir = os.path.join(work_dir, "htseq-count")
     safe_makedir(out_dir)
     count_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts"
+    summary_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts.summary"
     if file_exists(count_file):
         return count_file
 
@@ -39,7 +40,8 @@ def count(data):
 
     message = ("Count reads in {tx_count_file} mapping to {gtf_file} using "
                "featureCounts")
-    with file_transaction(data, count_file) as tx_count_file:
+    with file_transaction(data, [count_file, summary_file]) as tx_files:
+        tx_count_file, tx_summary_file = tx_files
         do.run(cmd.format(**locals()), message.format(**locals()))
     fixed_count_file = _format_count_file(count_file, data)
     shutil.move(fixed_count_file, count_file)

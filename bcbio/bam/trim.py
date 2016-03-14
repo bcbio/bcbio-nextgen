@@ -3,7 +3,7 @@
 import os
 import sys
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, safe_makedir)
+from bcbio.utils import (file_exists, append_stem, replace_directory, safe_makedir, splitext_plus)
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.provenance import do
@@ -53,14 +53,18 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
     if all([file_exists(x) for x in out_files]):
         return out_files
     cmd = _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files)
+    cmd = "%s | tee > {log_tx}" % cmd
+    log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
     if len(fastq_files) == 1:
-        of1 = out_files[0]
+        of = [out_files[0], log_file]
         message = "Trimming %s in single end mode with cutadapt." % (fastq_files[0])
-        with file_transaction(config, of1) as of1_tx:
+        with file_transaction(config, of) as of_tx:
+            of1_tx, log_tx = of_tx
             do.run(cmd.format(**locals()), message)
     else:
-        with file_transaction(config, out_files) as tx_out_files:
-            of1_tx, of2_tx = tx_out_files
+        of = out_files + [log_file]
+        with file_transaction(config, of) as tx_out_files:
+            of1_tx, of2_tx, log_tx = tx_out_files
             tmp_fq1 = append_stem(of1_tx, ".tmp")
             tmp_fq2 = append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
@@ -105,7 +109,7 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     cmd = base_cmd + " --minimum-length={min_length} ".format(**locals())
     fq1 = objectstore.cl_input(fastq_files[0])
     of1 = out_files[0]
-    cmd += " -o {of1} " + str(fq1)
+    cmd += " -o {of1_tx} " + str(fq1)
     return cmd
 
 def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):

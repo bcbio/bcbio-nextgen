@@ -111,13 +111,14 @@ def _run_qc_tools(bam_file, data):
     if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
         to_run.append(("fastqc", _run_fastqc))
     if data["analysis"].lower().startswith("rna-seq"):
-        to_run.append(("bamtools", _run_bamtools_stats))
+        to_run += [("samtools", _run_samtools_stats)]
         if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
             to_run.append(("qualimap", _rnaseq_qualimap))
     elif data["analysis"].lower().startswith("chip-seq"):
-        to_run.append(["bamtools", _run_bamtools_stats])
+        bam_file = bam_file.replace(".unique", "")
+        to_run += [("samtools", _run_samtools_stats)]
     elif not data["analysis"].lower().startswith("smallrna-seq"):
-        to_run += [("bamtools", _run_bamtools_stats), ("gemini", _run_gemini_stats)]
+        to_run += [("samtools", _run_samtools_stats), ("gemini", _run_gemini_stats)]
     if data["analysis"].lower().startswith(("standard", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
         if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, []) for tool in ["qualimap", "qualimap_full"]]):
@@ -738,26 +739,22 @@ def _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file=None, single_end=No
 
 # ## Lightweight QC approaches
 
-def _parse_bamtools_stats(stats_file):
+def _parse_samtools_stats(stats_file):
     out = {}
-    want = set(["Total reads", "Mapped reads", "Duplicates", "Median insert size"])
+    want = {"raw total sequences": "Total reads", "reads mapped": "Mapped reads",
+            "reads duplicated": "Duplicates", "insert size average": "Average insert size"}
     with open(stats_file) as in_handle:
         for line in in_handle:
-            parts = line.split(":")
-            if len(parts) == 2:
-                metric, stat_str = parts
-                metric = metric.split("(")[0].strip()
-                if metric in want:
-                    stat_parts = stat_str.split()
-                    if len(stat_parts) == 2:
-                        stat, pct = stat_parts
-                        pct = pct.replace("(", "").replace(")", "")
-                    else:
-                        stat = stat_parts[0]
-                        pct = None
-                    out[metric] = stat
-                    if pct:
-                        out["%s pct" % metric] = pct
+            if not line.startswith("SN"):
+                continue
+            parts = line.split("\t")
+            metric, stat_str = parts[1:3]
+            metric = metric.replace(":", "").strip()
+            if metric in want:
+                stat = float(stat_str.strip())
+                out[want[metric]] = stat
+                if metric in ["reads mapped", "reads duplicated"]:
+                    out["%s pct" % want[metric]] = stat / out["Total reads"]
     return out
 
 def _parse_offtargets(bam_file):
@@ -773,6 +770,7 @@ def _parse_offtargets(bam_file):
 
 def _run_bamtools_stats(bam_file, data, out_dir):
     """Run bamtools stats with reports on mapped reads, duplicates and insert sizes.
+    To be replaced by samtools. Kept in case of back-compatibility issues.
     """
     stats_file = os.path.join(out_dir, "bamtools_stats.txt")
     if not utils.file_exists(stats_file):
@@ -785,6 +783,21 @@ def _run_bamtools_stats(bam_file, data, out_dir):
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "bamtools stats", data)
     out = _parse_bamtools_stats(stats_file)
+    out.update(_parse_offtargets(bam_file))
+    return out
+
+def _run_samtools_stats(bam_file, data, out_dir):
+    """Run samtools stats with reports on mapped reads, duplicates and insert sizes.
+    """
+    stats_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
+    if not utils.file_exists(stats_file):
+        utils.safe_makedir(out_dir)
+        samtools = config_utils.get_program("samtools", data["config"])
+        with file_transaction(data, stats_file) as tx_out_file:
+            cmd = "{samtools} stats {bam_file}"
+            cmd += " > {tx_out_file}"
+            do.run(cmd.format(**locals()), "samtools stats", data)
+    out = _parse_samtools_stats(stats_file)
     out.update(_parse_offtargets(bam_file))
     return out
 
@@ -851,21 +864,31 @@ def _run_gemini_stats(bam_file, data, out_dir):
 
 ## multiqc
 
+def _check_multiqc_input(path):
+    """Check if dir exists, and return empty if it doesn't"""
+    if len(glob.glob(path)) > 0:
+        return path
+    return ""
+
 def multiqc_summary(*samples):
     """Summrize all quality metrics together"""
     work_dir = dd.get_work_dir(samples[0][0])
     qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc"))
     multiqc = config_utils.get_program("multiqc", samples[0][0]["config"])
-    align = os.path.join(work_dir, "align")
-    qc = os.path.join(work_dir, "qc")
-    out_dir = os.path.join(work_dir, "multiqc")
-    out_file = os.path.join(out_dir, "multiqc_report.html")
-    if not utils.file_exists(out_file):
-        cmd = "{multiqc} {align} {qc} -o {tx_out} "
-        with tx_tmpdir() as tx_out:
-            do.run(cmd.format(**locals()), "Run multiqc")
-            shutil.move(tx_out, out_dir)
-    return out_file
+    if not multiqc:
+        logger.debug("multiqc not found. Update bcbio_nextge.py tools to fix this issue.")
+    input_dir = ""
+    folders = ["aling", "trimmed", "qc", "htseq-count/*summary"]
+    with utils.chdir(work_dir):
+        input_dir = " ".join([_check_multiqc_input(d) for d in folders])
+        out_dir = os.path.join(work_dir, "multiqc")
+        out_file = os.path.join(out_dir, "multiqc_report.html")
+        if not utils.file_exists(out_file):
+            cmd = "{multiqc} {input_dir} -o {tx_out} "
+            with tx_tmpdir() as tx_out:
+                do.run(cmd.format(**locals()), "Run multiqc")
+                shutil.move(tx_out, out_dir)
+        return out_file
 
 ## qsignature
 

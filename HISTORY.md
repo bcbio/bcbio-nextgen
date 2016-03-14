@@ -1,5 +1,7 @@
 ## 0.9.7 (in progress)
 
+- Use MultiQC (github.com/ewels/MultiQC) as main package to process all
+  QC metrics.
 - New install procedure for data: `--datatarget` allows installation of sub-sets
   of supplemental data for smaller installs for small RNA only analysis. Also
   provides a consistent framework for installing larger data types.
