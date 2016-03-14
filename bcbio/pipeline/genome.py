@@ -68,14 +68,22 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
                 if v.lower() == "none":
                     out[k] = None
                 elif os.path.exists(v) or objectstore.is_remote(v):
-                    out[k] = os.path.normpath(os.path.join(base_dir, objectstore.download(v, input_dir)))
+                    dl = objectstore.download(v, input_dir)
+                    if dl:
+                        out[k] = os.path.normpath(os.path.join(base_dir, dl))
+                    else:
+                        out[k] = v
                 else:
                     out[k] = v
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
         if os.path.exists(xs) or objectstore.is_remote(xs):
-            out = os.path.normpath(os.path.join(base_dir, objectstore.download(xs, input_dir)))
+            dl = objectstore.download(xs, input_dir)
+            if dl:
+                out = os.path.normpath(os.path.join(base_dir, dl))
+            else:
+                out = xs
         else:
             out = xs
     else:

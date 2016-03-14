@@ -22,7 +22,7 @@ from bcbio import utils
 from bcbio.bam import fastq, sample_name
 from bcbio.distributed import objectstore
 from bcbio.upload import s3
-from bcbio.pipeline import run_info
+from bcbio.pipeline import config_utils, run_info
 from bcbio.workflow.xprize import HelpArgParser
 
 def parse_args(inputs):
@@ -72,7 +72,6 @@ KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".txt.gz": "fastq", ".gz": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
               ".txt.bz2": "fastq", ".bz2": "fastq"}
-
 
 def _prep_items_from_base(base, in_files):
     """Prepare a set of configuration items for input files.
@@ -402,6 +401,11 @@ def setup(args):
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", [])
+    if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
+        config, _ = config_utils.load_system_config(args.systemconfig)
+        for iname, retriever in args.integrations.items():
+            if iname in config:
+                inputs += retriever.get_files(metadata, config[iname])
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
                  for item in _prep_items_from_base(base_item, inputs)]
     items = [x for x in raw_items if x]

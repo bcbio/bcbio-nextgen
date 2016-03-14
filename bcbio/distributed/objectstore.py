@@ -540,10 +540,19 @@ class AzureBlob(StorageManager):
                           blob=file_info.blob,
                           chunk_size=cls._BLOB_CHUNK_DATA_SIZE)
 
+class ArvadosKeep:
+    """Files stored in Arvados Keep. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("keep:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, AzureBlob):
+    for manager in (AmazonS3, AzureBlob, ArvadosKeep):
         if manager.check_resource(resource):
             return manager()
 

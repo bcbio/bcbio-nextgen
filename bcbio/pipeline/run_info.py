@@ -31,7 +31,8 @@ ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters)
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
-def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True):
+def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,
+             integrations=None):
     """Organize run information from a passed YAML file or the Galaxy API.
 
     Creates the high level structure used for subsequent processing.
@@ -39,10 +40,14 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     sample_names is a list of samples to include from the overall file, for cases
     where we are running multiple pipelines from the same configuration file.
     """
+    if integrations is None: integrations = {}
     logger.info("Using input YAML configuration: %s" % run_info_yaml)
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
     run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names)
+    for iname, retriever in integrations.iteritems():
+        if iname in config:
+            run_details = retriever.add_remotes(run_details, config[iname])
     out = []
     for item in run_details:
         item["dirs"] = dirs
