@@ -1,0 +1,14 @@
+upload:
+  dir: upload
+fc_date: '110907'
+fc_name: ERP000591
+details:
+  - analysis: fastrna-seq
+    algorithm: {}
+    description: Test1
+    files:
+      - ../data/110907_ERP000591/1_110907_ERP000591_1_fastq.txt
+      - ../data/110907_ERP000591/1_110907_ERP000591_2_fastq.txt
+    #files: ["s3://bcbio_nextgen/testing/1_110907_ERP000591_1_fastq.txt.gz", "s3://bcbio_nextgen/testing/1_110907_ERP000591_2_fastq.txt.gz"]
+    genome_build: mm9
+    lane: 1
