@@ -188,7 +188,7 @@ def _fill_validation_targets(data):
                      tz.get_in(["config", "algorithm", "svvalidate"], data, {}).keys())
     for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + sv_targets]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
-        if val and not os.path.exists(val):
+        if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
             if os.path.exists(installed_val):
                 data = tz.update_in(data, ["config", "algorithm"] + vtarget, lambda x: installed_val)

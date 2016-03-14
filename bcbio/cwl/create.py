@@ -10,7 +10,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.cwl import workflow
-from bcbio.distributed import resources
+from bcbio.distributed import objectstore, resources
 
 def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
@@ -262,8 +262,10 @@ def _item_to_cwldata(x):
     """
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx) for subx in x]
-    elif x and isinstance(x, basestring) and (os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x):
-        if os.path.isfile(x):
+    elif (x and isinstance(x, basestring) and
+          (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
+           objectstore.is_remote(x))):
+        if os.path.isfile(x) or objectstore.is_remote(x):
             out = {"class": "File", "path": x}
             if x.endswith(".bam"):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
@@ -271,9 +273,9 @@ def _item_to_cwldata(x):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
             elif x.endswith(".fa"):
                 secondary = [x + ".fai", os.path.splitext(x)[0] + ".dict"]
-                secondary = [x for x in secondary if os.path.exists(x)]
+                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
                 if secondary:
-                    out["secondaryFiles"] = [{"class": "File", "path": x} for x in secondary]
+                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
             base_names = ["mainIndex"]
             assert os.path.isdir(x)
