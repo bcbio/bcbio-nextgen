@@ -115,7 +115,8 @@ We're actively testing bcbio generated CWL workflows on
 [Arvados](https://arvados.org/). These instructions detail how to run this on
 the [Arvdos public instance](https://cloud.curoverse.com/).
 
-First, install the [Arvados cwl-runner](https://github.com/curoverse/arvados):
+[Arvados cwl-runner](https://github.com/curoverse/arvados) comes pre-installed
+with bcbio-vm. If you don't have it you can install using conda:
 ```
 conda install -c bioconda arvados-cwl-runner
 ```
@@ -132,15 +133,17 @@ To run an analysis:
    Note the project ID from the URL of the project (an identifier like
    `qr1hi-j7d0g-7t73h4hrau3l063`).
 
-2. Upload reference data to Aravdos. Keep track of the genome collection
+2. Upload reference data to Aravdos Keep. Note the genome collection
 portable data hash:
 ```
 arv-put --portable-data-hash --name hg19-testdata --project-uuid qr1hi-j7d0g-7t73h4hrau3l063 testdata/genomes
 ```
-3. Upload input data to Arvados. Keep track of the collection portable data hash:
+
+3. Upload input data to Arvados Keep. Note the collection portable data hash:
 ```
 arv-put --portable-data-hash --name input-testdata --project-uuid qr1hi-j7d0g-7t73h4hrau3l063 testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
 ```
+
 4. Create an Arvados section in a `bcbio_system.yaml` file specifying locations
 to look. The token and host sections are optional and can instead be in
 environmental variables:
@@ -161,17 +164,20 @@ resources:
   gatk:
     jvm_opts: [-Xms750m, -Xmx2500m]
 ```
-5. Generate the CWL to run your samples. If you're using multiple input files, a
-   [CSV metadata file and template](https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration):
+
+5. Generate the CWL to run your samples. If you're using multiple input files with a
+   [CSV metadata file and template](https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
+   then start with creation of a configuration file:
 ```
 bcbio_vm.py template --systemconfig bcbio_system_arvados.yaml testcwl_template.yaml testcwl.csv
 ```
-Following this (or if you have a pre-prepared input file):
+To generate the CWL from the system and sample configuration files:
 ```
 bcbio_vm.py cwl --systemconfig bcbio_system_arvados.yaml testcwl/config/testcwl.yaml
 
 ```
-6. Run the CWL on the Arvados public cloud using the arvados cwl-runner:
+
+6. Run the CWL on the Arvados public cloud using the Arvados cwl-runner:
 ```
 arvados-cwl-runner --project-uuid qr1hi-your-projectuuid --enable-reuse testcwl-workflow/main-testcwl.cwl testcwl-workflow/main-testcwl-samples.json
 ```
