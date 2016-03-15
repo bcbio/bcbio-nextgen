@@ -1089,6 +1089,9 @@ def report_summary(*samples):
 
         out_dir = utils.safe_makedir("variants")
 
+        logger.info("summarize metrics")
+        samples = _merge_metrics(samples)
+
         bcbreport.report(parent_dir)
         out_report = os.path.join(parent_dir, "qc-coverage-report.html")
         if not utils.file_exists(out_report):
@@ -1111,10 +1114,6 @@ def report_summary(*samples):
                 d["coverage"]["report"] = out_report
             out.append(d)
         samples = out
-
-        logger.info("summarize metrics")
-        samples = _merge_metrics(samples)
-
     return [[d] for d in samples]
 
 def coverage_report(data):
