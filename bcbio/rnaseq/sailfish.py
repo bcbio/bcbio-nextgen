@@ -199,7 +199,7 @@ def combine_sailfish(samples):
     return updated_samples
 
 def _sailfish_expression_parser(sailfish_file, samplename):
-    col_names = ["name", "length", "tpm", "numreads"]
+    col_names = ["name", "length", "effectiveLength", "tpm", "numreads"]
     df = pd.read_csv(sailfish_file, comment="#", header=None, skiprows=1, index_col=0,
                      names=col_names, sep="\t")
     df["sample"] = samplename
