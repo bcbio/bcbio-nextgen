@@ -45,9 +45,11 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
     run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names)
+    remote_retriever = None
     for iname, retriever in integrations.iteritems():
         if iname in config:
             run_details = retriever.add_remotes(run_details, config[iname])
+            remote_retriever = retriever
     out = []
     for item in run_details:
         item["dirs"] = dirs
@@ -61,7 +63,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
         item["resources"] = _add_remote_resources(item["resources"])
         item["config"] = config_utils.update_w_custom(config, item)
         item.pop("algorithm", None)
-        item = add_reference_resources(item)
+        item = add_reference_resources(item, remote_retriever)
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
         if tmp_dir:
@@ -145,18 +147,24 @@ def _add_remote_resources(resources):
 
 # ## Genome reference information
 
-def add_reference_resources(data):
+def add_reference_resources(data, remote_retriever=None):
     """Add genome reference information to the item to process.
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
-    data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
-    _check_ref_files(data["reference"], data)
+    if remote_retriever:
+        data["reference"] = remote_retriever.get_refs(data["genome_build"], aligner, data["config"])
+    else:
+        data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
+        _check_ref_files(data["reference"], data)
     # back compatible `sam_ref` target
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
     ref_loc = utils.get_in(data, ("config", "resources", "species", "dir"),
                            utils.get_in(data, ("reference", "fasta", "base")))
-    data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
-    if effects.get_type(data) == "snpeff":
+    if remote_retriever:
+        data = remote_retriever.get_resources(data["genome_build"], ref_loc, data)
+    else:
+        data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
+    if effects.get_type(data) == "snpeff" and "snpeff" not in data["reference"]:
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     data = _fill_validation_targets(data)
     data = _fill_prioritization_targets(data)

@@ -217,10 +217,10 @@ def get_refs(genome_build, aligner, galaxy_base, data):
                 out[name_remap.get(name, name)]["base"] = base
             if indexes:
                 out[name_remap.get(name, name)]["indexes"] = indexes
-    # add additional indices relative to the base
-    ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
-    out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
-                                               "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
+        # add additional indices relative to the base
+        ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
+        out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
+                                                "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
     return out
 
 def get_builds(galaxy_base):

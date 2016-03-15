@@ -197,6 +197,10 @@ def _flatten_samples(samples, base_file):
         out[key] = []
         for cur_flat in flat_data:
             out[key].append(cur_flat.get(key))
+    # special case for back-compatibility with fasta specifications -- yuck
+    if "reference__fasta__base" not in out and "reference__fasta" in out:
+        out["reference__fasta__base"] = out["reference__fasta"]
+        del out["reference__fasta"]
     with open(out_file, "w") as out_handle:
         json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
         return out_file, _samplejson_to_inputs(out)
@@ -241,21 +245,30 @@ def _to_cwldata(key, val):
     """
     out = []
     if isinstance(val, dict):
-        remain_val = {}
-        for nkey, nval in val.items():
-            cur_nkey = "%s__%s" % (key, nkey)
-            cwl_nval = _item_to_cwldata(nval)
-            if isinstance(cwl_nval, dict):
-                out.extend(_to_cwldata(cur_nkey, nval))
-            elif cwl_nval == nval:
-                remain_val[nkey] = nval
-            else:
-                out.append((cur_nkey, cwl_nval))
-        if remain_val:
-            out.append((key, json.dumps(remain_val, sort_keys=True, separators=(',', ':'))))
+        if len(val) == 2 and "base" in val and "indexes" in val:
+            out.append((key, _to_cwlfile_with_indexes(val)))
+        else:
+            remain_val = {}
+            for nkey, nval in val.items():
+                cur_nkey = "%s__%s" % (key, nkey)
+                cwl_nval = _item_to_cwldata(nval)
+                if isinstance(cwl_nval, dict):
+                    out.extend(_to_cwldata(cur_nkey, nval))
+                elif cwl_nval == nval:
+                    remain_val[nkey] = nval
+                else:
+                    out.append((cur_nkey, cwl_nval))
+            if remain_val:
+                out.append((key, json.dumps(remain_val, sort_keys=True, separators=(',', ':'))))
     else:
         out.append((key, _item_to_cwldata(val)))
     return out
+
+def _to_cwlfile_with_indexes(val):
+    """Convert reads with ready to go indexes into the right CWL object.
+    """
+    return {"class": "File", "path": val["base"],
+            "secondaryFiles": [{"class": "File", "path": x} for x in val["indexes"]]}
 
 def _item_to_cwldata(x):
     """"Markup an item with CWL specific metadata.
