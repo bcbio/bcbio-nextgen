@@ -14,7 +14,7 @@ def _bowtie_args_from_config(data):
     """
     config = data['config']
     qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format is None or qual_format.lower() == "illumina":
+    if qual_format.lower() == "illumina":
         qual_flags = ["--phred64-quals"]
     else:
         qual_flags = []
