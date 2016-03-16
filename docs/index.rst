@@ -28,6 +28,7 @@ Contents:
    contents/configuration
    contents/parallel
    contents/cloud
+   contents/cwl
    contents/outputs
    contents/code
    contents/sequencer
@@ -42,4 +43,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
