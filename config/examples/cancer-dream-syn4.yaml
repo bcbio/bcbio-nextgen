@@ -1,0 +1,112 @@
+# Cancer tumor/normal calling evaluation using synthetic dataset 4
+# from the ICGC-TCGA DREAM challenge:
+# https://www.synapse.org/#!Synapse:syn412572/wiki/62018
+---
+details:
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    tools_on: [svplots]
+    variantcaller: [vardict, mutect2, mutect, freebayes, varscan]
+    indelcaller: scalpel
+    svprioritize: cancer/az300
+    ensemble:
+      numpass: 2
+    # svcaller: [battenberg, cnvkit, lumpy, manta, metasv, wham]
+    # hetcaller: [theta, bubbletree]
+  analysis: variant2
+  description: syn4-normal
+  files: ../input/synthetic.challenge.set4.normal.bam
+  genome_build: GRCh37
+  metadata:
+    batch: syn4
+    phenotype: normal
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    tools_on: [svplots]
+    variantcaller: [vardict, mutect2, mutect, freebayes, varscan]
+    indelcaller: scalpel
+    svprioritize: cancer/az300
+    ensemble:
+     numpass: 2
+    #svcaller: [battenberg, cnvkit, lumpy, manta, metasv, wham]
+    #svprioritize: cancer/civic
+    #hetcaller: [theta, bubbletree]
+    validate: dream-syn4/truth_small_variants.vcf.gz
+    validate_regions: dream-syn4/truth_regions.bed
+    svvalidate:
+      DEL: dream-syn4/truth_DEL.bed
+      DUP: dream-syn4/truth_DUP.bed
+      INV: dream-syn4/truth_INV.bed
+  analysis: variant2
+  description: syn4-tumor
+  files: ../input/synthetic.challenge.set4.tumour.bam
+  genome_build: GRCh37
+  metadata:
+    batch: syn4
+    phenotype: tumor
+    validate_sample: DREAM synthetic 4 (GRCh37)
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    variantcaller: [vardict, mutect2, mutect, freebayes, varscan]
+    indelcaller: scalpel
+    #svcaller: [lumpy, metasv, manta, wham]
+    #hetcaller: [theta, bubbletree]
+  analysis: variant2
+  description: syn4-38-normal
+  files: ../input/synthetic.challenge.set4.normal.bam
+  genome_build: hg38
+  metadata:
+    batch: syn4-38
+    phenotype: normal
+- algorithm:
+    aligner: bwa
+    align_split_size: 5000000
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    variantcaller: [vardict, mutect2, mutect, freebayes, varscan]
+    indelcaller: scalpel
+    #svcaller: [lumpy, metasv, manta, wham]
+    #hetcaller: [theta, bubbletree]
+    validate: dream-syn4-crossmap/truth_small_variants.vcf.gz
+    validate_regions: dream-syn4-crossmap/truth_regions.bed
+    svvalidate:
+      DEL: dream-syn4-crossmap/truth_DEL.bed
+      DUP: dream-syn4-crossmap/truth_DUP.bed
+      INV: dream-syn4-crossmap/truth_INV.bed
+  analysis: variant2
+  description: syn4-38-tumor
+  files: ../input/synthetic.challenge.set4.tumour.bam
+  genome_build: hg38
+  metadata:
+    batch: syn4-38
+    phenotype: tumor
+    validate_sample: DREAM synthetic 4 (hg38)
+fc_date: '2015-08-17'
+fc_name: dream-syn4
+upload:
+  dir: ../final
