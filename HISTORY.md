@@ -27,6 +27,12 @@
   confusion with file produced in other cases without any changes.
 - Improvement to bcbio CWL integration: support parallel alignment and variant
   calling.
+- Support for Salmon and RapMap added.
+- FastRNA-seq pipeline implemented that does nothing but run Salmon with no QC.
+- Singlecell RNA-seq pipeline implemented that uses https://github.com/vals/umis
+to handle the UMI and cellular barcode, aligns with RapMap and quantitates
+by counting, scaling ambiguous reads by the number of transcripts they could have
+come from.
 
 ## 0.9.6 (12 February 2016)
 
