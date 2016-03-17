@@ -711,9 +711,12 @@ Post-processing
   bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
   samples with less than 70bp reads.  ``bnd-genotype`` enables genotyping
   of breakends in Lumpy calls, which improves accuracy but can be slow.
+  ``multiqc`` run `MultiQC`_ to gather all QC metrics from different tools, such as,
+  cutadapt, featureCounts, samtools, STAR ... into an unique HTLM report.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini
+.. _MultiQC: http://multiqc.info
 
 parallelization
 ===============
