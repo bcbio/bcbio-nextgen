@@ -9,7 +9,7 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import (sailfish, rapmap, salmon)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio import rnaseq
@@ -126,6 +126,30 @@ def run_rapmap_pseudoalign(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(rapmap.run_rapmap_pseudoalign, *args))
+
+@require(umi)
+def run_umi_transform(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.umi_transform, *args))
+
+@require(umi)
+def run_filter_barcodes(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.filter_barcodes, *args))
+
+@require(umi)
+def run_tagcount(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.tagcount, *args))
+
+@require(umi)
+def run_barcode_histogram(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.barcode_histogram, *args))
 
 @require(salmon)
 def run_salmon_bam(*args):

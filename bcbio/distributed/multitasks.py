@@ -6,13 +6,29 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
-from bcbio.rnaseq import (sailfish, rapmap, salmon)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
 from bcbio.variation import (bamprep, bedutils, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
                              vcfutils)
+
+@utils.map_wrap
+def run_tagcount(*args):
+    return umi.tagcount(*args)
+
+@utils.map_wrap
+def run_filter_barcodes(*args):
+    return umi.filter_barcodes(*args)
+
+@utils.map_wrap
+def run_barcode_histogram(*args):
+    return umi.barcode_histogram(*args)
+
+@utils.map_wrap
+def run_umi_transform(*args):
+    return umi.umi_transform(*args)
 
 @utils.map_wrap
 def run_salmon_reads(*args):

@@ -68,7 +68,7 @@ def _sleuthify_sailfish(sailfish_dir):
         do.run(cmd.format(**locals()), "Converting Sailfish to Sleuth format.")
     return os.path.join(sailfish_dir, "abundance.h5")
 
-def _create_combined_fasta(data, out_dir):
+def create_combined_fasta(data, out_dir):
     """
     if there are genomes to be disambiguated, create a FASTA file of
     all of the transcripts for all genomes
@@ -105,8 +105,7 @@ def sailfish_index(gtf_file, ref_file, data, out_dir):
         out_dir = "-".join([out_dir] + dd.get_disambiguate(data))
     sailfish = config_utils.get_program("sailfish", data["config"])
     num_cores = dd.get_num_cores(data)
-    gtf_fa = _create_combined_fasta(data, out_dir)
-    tmpdir = dd.get_tmp_dir(data)
+    gtf_fa = create_combined_fasta(data, out_dir)
     if file_exists(out_dir + "versionInfo.json"):
         return out_dir
     with file_transaction(out_dir) as tx_out_dir:

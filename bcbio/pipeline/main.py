@@ -281,6 +281,19 @@ def fastrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     logger.info("Timing: finished")
     return samples
 
+def singlecellrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
+    samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
+    with prun.start(_wres(parallel, ["samtools"]), samples, config,
+                    dirs, "singlecell-rnaseq") as run_parallel:
+        with profile.report("singlecell-rnaseq", dirs):
+            samples = rnaseq.singlecell_rnaseq(samples, run_parallel)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for samples in samples:
+                run_parallel("upload_samples_project", [samples])
+    logger.info("Timing: finished")
+    return samples
+
 def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     # causes a circular import at the top level
     from bcbio.srna.group import report as srna_report
@@ -428,7 +441,8 @@ SUPPORTED_PIPELINES = {"variant2": variant2pipeline,
                        "rna-seq": rnaseqpipeline,
                        "smallrna-seq": smallrnaseqpipeline,
                        "chip-seq": chipseqpipeline,
-                       "fastrna-seq": fastrnaseqpipeline}
+                       "fastrna-seq": fastrnaseqpipeline,
+                       "scrna-seq": singlecellrnaseqpipeline}
 
 def _is_trim_set(samples):
     for sample in dd.sample_data_iterator(samples):

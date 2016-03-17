@@ -52,7 +52,7 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     out_file = os.path.join(salmon_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
-    gtf_fa = sailfish._create_combined_fasta(data, salmon_dir)
+    gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     salmon = config_utils.get_program("salmon", dd.get_config(data))
