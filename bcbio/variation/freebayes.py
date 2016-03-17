@@ -189,14 +189,20 @@ def _check_lods(parts, tumor_thresh, normal_thresh):
     except ValueError:
         return True
     try:
-        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",")]
-        tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",") if x != "."]
+        if tumor_gls:
+            tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+        else:
+            tumor_lod = -1.0
     # No GL information, no tumor call (so fail it)
     except IndexError:
         tumor_lod = -1.0
     try:
-        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",")]
-        normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",") if x != "."]
+        if normal_gls:
+            normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+        else:
+            normal_lod = normal_thresh
     # No GL inofmration, no normal call (so pass it)
     except IndexError:
         normal_lod = normal_thresh

@@ -190,7 +190,7 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         if os.path.isfile(rtg_ref):
             rtg_ref = os.path.dirname(rtg_ref)
         threads = min(dd.get_num_cores(data), 6)
-        mem = "%sg" % threads
+        mem = "%sg" % max(threads, 2)
         cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
@@ -239,7 +239,7 @@ def _pick_best_quality_score(vrn_file):
             if rec.info.get("TLOD") is not None:
                 scores["INFO=TLOD"] += 1
             for skey in ["AVR", "GQ", "DP"]:
-                if rec.samples[0].get(skey) is not None:
+                if len(rec.samples) > 0 and rec.samples[0].get(skey) is not None:
                     scores[skey] += 1
             if rec.qual:
                 scores["QUAL"] += 1
