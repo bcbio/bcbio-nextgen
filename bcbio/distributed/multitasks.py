@@ -43,8 +43,8 @@ def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
 
 @utils.map_wrap
-def run_rapmap_pseudoalign(*args):
-    return rapmap.run_rapmap_pseudoalign(*args)
+def run_rapmap_align(*args):
+    return rapmap.run_rapmap_align(*args)
 
 @utils.map_wrap
 def prepare_sample(*args):

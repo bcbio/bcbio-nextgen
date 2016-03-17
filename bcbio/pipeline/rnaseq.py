@@ -19,7 +19,7 @@ def singlecell_rnaseq(samples, run_parallel):
     samples = run_parallel("run_umi_transform", samples)
     samples = run_parallel("run_barcode_histogram", samples)
     samples = run_parallel("run_filter_barcodes", samples)
-    samples = run_parallel("run_rapmap_pseudoalign", samples)
+    samples = run_parallel("run_rapmap_align", samples)
     samples = run_parallel("run_tagcount", samples)
     return samples
 

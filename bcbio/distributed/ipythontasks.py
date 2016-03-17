@@ -122,10 +122,10 @@ def run_sailfish(*args):
         return ipython.zip_args(apply(sailfish.run_sailfish, *args))
 
 @require(rapmap)
-def run_rapmap_pseudoalign(*args):
+def run_rapmap_align(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
-        return ipython.zip_args(apply(rapmap.run_rapmap_pseudoalign, *args))
+        return ipython.zip_args(apply(rapmap.run_rapmap_align, *args))
 
 @require(umi)
 def run_umi_transform(*args):
