@@ -36,10 +36,11 @@ def rapmap_pseudoalign(fq1, fq2, rapmap_dir, gtf_file, ref_file, data):
     out_file = os.path.join(rapmap_dir, samplename + ".bam")
     if file_exists(out_file):
         return out_file
-    rapmap_index = rapmap_pseudoindex(gtf_file, ref_file, data, rapmap_dir)
+    rapmap_index_loc = rapmap_index(gtf_file, ref_file, "pseudoindex", data,
+                                    rapmap_dir)
     num_cores = dd.get_num_cores(data)
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
-    cmd = "{rapmap} pseudomap -t {num_cores} -i {rapmap_index} "
+    cmd = "{rapmap} pseudomap -t {num_cores} -i {rapmap_index_loc} "
     fq1_cmd = "{fq1} " if not is_gzipped(fq1) else "<(gzip -cd {fq1}) "
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
@@ -55,8 +56,11 @@ def rapmap_pseudoalign(fq1, fq2, rapmap_dir, gtf_file, ref_file, data):
         do.run(cmd.format(**locals()), run_message, None)
     return out_file
 
-def rapmap_pseudoindex(gtf_file, ref_file, data, out_dir):
-    out_dir = os.path.join(out_dir, "pseudoindex", dd.get_genome_build(data))
+def rapmap_index(gtf_file, ref_file, index_type, data, out_dir):
+    valid_indexes = ["pseudoindex", "quasiindex"]
+    assert index_type in valid_indexes, \
+        "RapMap only supports %s indices." % valid_indexes
+    out_dir = os.path.join(out_dir, index_type, dd.get_genome_build(data))
     if dd.get_disambiguate(data):
         out_dir = "-".join([out_dir] + dd.get_disambguate(data))
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
@@ -65,7 +69,7 @@ def rapmap_pseudoindex(gtf_file, ref_file, data, out_dir):
     if file_exists(out_dir + "rapidx.jfhash"):
         return out_dir
     with file_transaction(out_dir) as tx_out_dir:
-        cmd = "{rapmap} pseudoindex -k 31 -i {tx_out_dir} -t {gtf_fa}"
-        message = "Creating rapmap pseudoindex for {gtf_fa}."
+        cmd = "{rapmap} {index_type} -k 31 -i {tx_out_dir} -t {gtf_fa}"
+        message = "Creating rapmap {index_type} for {gtf_fa}."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
