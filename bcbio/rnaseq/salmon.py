@@ -82,7 +82,7 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     out_file = os.path.join(salmon_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
-    gtf_fa = sailfish._create_combined_fasta(data, salmon_dir)
+    gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     salmon = config_utils.get_program("salmon", dd.get_config(data))
@@ -107,7 +107,7 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
         out_dir = "-".join([out_dir] + dd.get_disambguate(data))
     salmon = config_utils.get_program("salmon", dd.get_config(data))
     num_cores = dd.get_num_cores(data)
-    gtf_fa = sailfish._create_combined_fasta(data, out_dir)
+    gtf_fa = sailfish.create_combined_fasta(data, out_dir)
     tmpdir = dd.get_tmp_dir(data)
     ### TODO PUT MEMOZATION HERE
     with file_transaction(out_dir) as tx_out_dir:
