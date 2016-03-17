@@ -128,26 +128,32 @@ def report(data):
     summary_file = op.join(out_dir, "summary.csv")
     with file_transaction(summary_file) as out_tx:
         with open(out_tx, 'w') as out_handle:
-            print >>out_handle, "sample_id,size_stats,miraligner,group"
+            print >>out_handle, "sample_id,%s" % _guess_header(data[0][0])
             for sample in data:
                 info = sample[0]
                 group = _guess_group(info)
                 files = info["seqbuster"] if "seqbuster" in info else "None"
                 print >>out_handle, ",".join([dd.get_sample_name(info),
-                                              info["size_stats"],
-                                              files, group])
-    _create_rmd(summary_file)
+                                              group])
+    _modify_report(work_dir, out_dir)
     return summary_file
+
+def _guess_header(info):
+    """Add the first group to get report with some factor"""
+    value = "group"
+    if "metadata" in info:
+        if info["metadata"]:
+            return ",".join(info["metadata"].keys())
+    return value
 
 def _guess_group(info):
     """Add the first group to get report with some factor"""
     value = "fake"
     if "metadata" in info:
         if info["metadata"]:
-            key, value = info['metadata'].popitem()
+            return ",".join(info["metadata"].values())
     return value
 
-def _create_rmd(summary_fn):
     """Create relatie path files for Rmd report"""
     root_path, fn = op.split(os.path.abspath(summary_fn))
     out_file = op.join(root_path, fn.replace(".csv", "_re.csv"))
@@ -157,21 +163,18 @@ def _create_rmd(summary_fn):
                 cols = line.strip().split(",")
                 fix_line = ",".join([op.relpath(c, root_path) if op.exists(c) else c for c in cols])
                 print >>out_handle, fix_line
-    report_file = _modify_report(root_path, out_file)
 
     return out_file, report_file
 
-def _modify_report(summary_path, summary_fn):
+def _modify_report(summary_path, out_dir):
     """Read Rmd template and dump with project path."""
     summary_path = op.abspath(summary_path)
     template = op.normpath(op.join(op.dirname(op.realpath(template_seqcluster.__file__)), "report.rmd"))
     content = open(template).read()
-    out_content = string.Template(content).safe_substitute({'path_abs': summary_path,
-                                                            'path_summary': os.path.join(summary_path, summary_fn)})
-    out_file = op.join(op.dirname(summary_fn), "srna_report.rmd")
+    out_content = string.Template(content).safe_substitute({'path_abs': summary_path})
+    out_file = op.join(out_dir, "srna_report.rmd")
     with open(out_file, 'w') as out_handle:
         print >>out_handle, out_content
-
     return out_file
 
 def _make_isomir_counts(data, srna_type="seqbuster", out_dir=None, stem=""):
