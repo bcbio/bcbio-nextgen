@@ -339,8 +339,7 @@ inside ``tdrmapper`` or final project folder.
 ChIP-seq
 ~~~~~~~~
 bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning with
-bowtie2. It doesn't do anything other than get the samples into a state
-where a peak caller like MACS2 can be used.
+bowtie2. It does alignment and peak calling with MACS2.
 
 - Adapter trimming:
   - `cutadapt`_
