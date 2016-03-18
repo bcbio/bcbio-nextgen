@@ -266,6 +266,35 @@ directory is also a ``combined.counts`` file which can be used as a starting
 point for performing differential expression calling using any count-based
 method such as EdgeR, DESeq2 or voom+limma, etc.
 
+single-cell RNA-seq
+-------------------
+bcbio-nextgen supports universal molecular identifiers (UMI) based single-cell
+RNA-seq analyses. If your single-cell prep does not use universal molecular
+identifiers (UMI), you can most likely just run the standard RNA-seq pipeline
+and use the results from that. The UMI are used to discard reads which
+are possibly PCR duplicates and is very helpful for removing some of the
+PCR duplicate noise that can dominate single-cell experiments.
+
+Unlike the standard RNA-seq pipeline, the single-cell pipeline expects the FASTQ
+input files to not be separated by cellular barcode, so each file is a mix of
+cells identified by a cellular barcode (CB), and unique reads from a transcript
+are identified with a UMI. bcbio-nextgen inspects each read, identifies the
+cellular barcode and UMI and puts them in the read name. Then the reads are
+aligned to the transcriptome with `RapMap <https://github.com/COMBINE-lab/RapMap>`_
+and the number of reads aligning to each transcript is counted for each cellular
+barcode. The output is a table of counts with transcripts as the rows and
+columns as the cellular barcodes for each input FASTQ file.
+
+To extract the UMI and cellular barcodes from the read, bcbio-nextgen
+needs to know where the UMI and the cellular barcode are expected to be
+in the read. Currently support for two schemes, the inDrop system from
+the Harvard single-cell core facility and CEL-seq. If bcbio-nextgen does not
+support your UMI and barcoding scheme, please open up an issue and we will
+help implement support for it.
+
+Most of the heavy lifting for this part of bcbio-nextgen is implemented in
+the `umis <https://github.com/vals/umis>`_ repository.
+
 smallRNA-seq
 ~~~~~~~~~~~~
 
