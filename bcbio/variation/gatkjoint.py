@@ -9,7 +9,7 @@ import toolz as tz
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import bamprep
+from bcbio.variation import bamprep, vcfutils
 
 def run_region(data, region, vrn_files, out_file):
     """Perform variant calling on gVCF inputs in a specific genomic region.
@@ -40,7 +40,7 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
             else:
                 memscale = None
             broad_runner.run_gatk(params, memscale=memscale)
-    return out_file
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## gVCF batching
 
@@ -73,4 +73,4 @@ def _run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.new_resources("gatk-haplotype")
             broad_runner.run_gatk(params, memscale=memscale)
-    return out_file
+    return vcfutils.bgzip_and_index(out_file, data["config"])
