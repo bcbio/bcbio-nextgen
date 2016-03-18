@@ -5,13 +5,12 @@ http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 import os
 
 from bcbio.pipeline import config_utils
-from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio import bam
+from bcbio import bam, utils
 from bcbio.pipeline import datadict as dd
 from bcbio.rnaseq import gtf
-from bcbio.ngsalign import postalign
+from bcbio.ngsalign import alignprep, postalign
 
 def _bowtie2_args_from_config(config):
     """Configurable high level options for bowtie2.
@@ -32,9 +31,15 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
     config = data["config"]
     analysis_config = ANALYSIS.get(data["analysis"].lower())
     assert analysis_config, "Analysis %s is not supported by bowtie2" % (data["analysis"])
-    out_file = os.path.join(align_dir, "%s.sam" % names["lane"])
-    if not file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
+    if data.get("align_split"):
+        final_file = out_file
+        out_file, data = alignprep.setup_combine(final_file, data)
+        fastq_file, pair_file = alignprep.split_namedpipe_cls(fastq_file, pair_file, data)
+    else:
+        final_file = None
+    if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
+        with postalign.tobam_cl(data, out_file, pair_file is not None) as (tobam_cl, tx_out_file):
             cl = [config_utils.get_program("bowtie2", config)]
             cl += _bowtie2_args_from_config(config)
             cl += extra_args if extra_args is not None else []
@@ -45,15 +50,14 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
                 cl += ["-1", fastq_file, "-2", pair_file]
             else:
                 cl += ["-U", fastq_file]
-            cl += ["-S", tx_out_file]
             if names and "rg" in names:
                 cl += ["--rg-id", names["rg"]]
                 for key, tag in [("sample", "SM"), ("pl", "PL"), ("pu", "PU"), ("lb", "LB")]:
                     if names.get(key):
                         cl += ["--rg", "%s:%s" % (tag, names[key])]
             cl = [str(i) for i in cl]
-            do.run(cl, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file),
-                   None)
+            cmd = " ".join(cl) + " | " + tobam_cl
+            do.run(cmd, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file))
     return out_file
 
 # Optional galaxy location file. Falls back on remap_index_fn if not found
@@ -75,7 +79,7 @@ def filter_multimappers(align_file, data):
     type_flag = "" if bam.is_bam(align_file) else "S"
     base, ext = os.path.splitext(align_file)
     out_file = base + ".unique" + ext
-    if file_exists(out_file):
+    if utils.file_exists(out_file):
         return out_file
     base_filter = '-F "[XS] == null and not unmapped {paired_filter}"'
     if bam.is_paired(align_file):
@@ -122,7 +126,7 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     work_bam = dd.get_work_bam(data)
     base, ext = os.path.splitext(work_bam)
     out_file = base + ".transcriptome" + ext
-    if file_exists(out_file):
+    if utils.file_exists(out_file):
         data = dd.set_transcriptome_bam(data, out_file)
         return data
     bowtie2 = config_utils.get_program("bowtie2", data["config"])

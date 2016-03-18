@@ -30,9 +30,12 @@
 - Support for Salmon and RapMap added.
 - FastRNA-seq pipeline implemented that does nothing but run Salmon with no QC.
 - Singlecell RNA-seq pipeline implemented that uses https://github.com/vals/umis
-to handle the UMI and cellular barcode, aligns with RapMap and quantitates
-by counting, scaling ambiguous reads by the number of transcripts they could have
-come from.
+  to handle the UMI and cellular barcode, aligns with RapMap and quantitates
+  by counting, scaling ambiguous reads by the number of transcripts they could have
+  come from.
+- Migrate bowtie and bowtie2 to handle split input alignments, bgzipped inputs,
+  and produce sorted, de-duplicated BAM files. This allows use in additional
+  standard pipelines. Thanks to Luca Beltrame.
 
 ## 0.9.6 (12 February 2016)
 

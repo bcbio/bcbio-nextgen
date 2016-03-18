@@ -43,6 +43,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
         else:
             stream_input = fastq_file[2:-1]
     else:
+        final_file = None
         assert fastq_file.endswith(".gz")
         if pair_file:
             stream_input = (r"paste <(zcat {fastq_file} | paste - - - -) "
