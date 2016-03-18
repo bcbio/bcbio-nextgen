@@ -17,7 +17,12 @@ transforms = {"harvard-indrop":
               {"json": {
                   "read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
                   "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-               "dual": True}}
+               "dual": True},
+              "CEL-seq":
+              {"json": {
+                  "read1": r"""(?P<name>@.*) .*\\n(?P<CB>.{8})(?P<MB>.{4})(.*)\\n\\+(.*)\\n(.*)\\n""",
+                  "read2": r"""(@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n"""},
+               "dual": False}}
 
 def write_transform_file(transform_data, out_file):
     """
