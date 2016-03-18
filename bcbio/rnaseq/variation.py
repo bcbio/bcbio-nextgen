@@ -106,7 +106,7 @@ def rnaseq_vardict_variant_calling(data):
     sample = dd.get_sample_name(data)
     variation_dir = os.path.join(dd.get_work_dir(data), "variation")
     safe_makedir(variation_dir)
-    out_file = os.path.join(variation_dir, sample + ".vcf.gz")
+    out_file = os.path.join(variation_dir, sample + "-vardict.vcf.gz")
     if file_exists(out_file):
         data = dd.set_vrn_file(data, out_file)
         return data
