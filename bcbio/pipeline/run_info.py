@@ -176,16 +176,19 @@ def add_reference_resources(data, remote_retriever=None):
 
 def _check_ref_files(ref_info, data):
     problems = []
-    for contig in ref.file_contigs(ref_info["fasta"]["base"], data["config"]):
-        cur_problems = set([])
-        for char in list(contig.name):
-            if char not in ALLOWED_CONTIG_NAME_CHARS:
-                cur_problems.add(char)
-        if len(cur_problems) > 0:
-            problems.append("Found non-allowed characters in chromosome name %s: %s" %
-                            (contig.name, " ".join(list(cur_problems))))
+    if not data["genome_build"]:
+        problems.append("Did not find 'genome_build' for sample: %s" % dd.get_sample_name(data))
+    else:
+        for contig in ref.file_contigs(ref_info["fasta"]["base"], data["config"]):
+            cur_problems = set([])
+            for char in list(contig.name):
+                if char not in ALLOWED_CONTIG_NAME_CHARS:
+                    cur_problems.add(char)
+            if len(cur_problems) > 0:
+                problems.append("Found non-allowed characters in chromosome name %s: %s" %
+                                (contig.name, " ".join(list(cur_problems))))
     if len(problems) > 0:
-        msg = ("\nProblems with input reference file %s\n" % ref_info["fasta"]["base"])
+        msg = ("\nProblems with input reference file %s\n" % tz.get_in(["fasta", "base"], ref_info))
         raise ValueError(msg + "\n".join(problems) + "\n")
 
 def _fill_validation_targets(data):
