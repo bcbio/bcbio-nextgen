@@ -651,6 +651,18 @@ RNA sequencing
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data.
   Supports [gatk] or [vardict].
 
+Single-cell RNA sequencing
+==========================
+
+- ``umi_type`` The UMI/cellular barcode scheme used for your data. Supports
+  [harvard-indrop, cel-seq].
+- ``minimum_barcode_depth`` Cellular barcodes with less than this many reads
+  assigned to them are discarded (default 100,000).
+- ``cellular_barcodes`` An optional list of one or two files which have the
+  valid cellular barcodes. Provide one file if there is only one barcode and
+  two files if the barcodes are split. If no file is provided, all cellular
+  barcodes passing the ``minimum_barcode_depth`` filter are kept.
+
 smallRNA sequencing
 ===================
 
