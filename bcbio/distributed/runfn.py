@@ -44,14 +44,14 @@ def process(args):
             if argfile.endswith(".json"):
                 if parallel in ["single-split", "multi-combined", "batch-split"]:
                     json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
-                              out_handle, sort_keys=True, separators=(',', ':'))
+                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
                 elif parallel in ["multi-batch"]:
                     json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
                                                    fnargs),
-                              out_handle, sort_keys=True, separators=(',', ':'))
+                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
                 else:
                     json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
-                              out_handle, sort_keys=True, separators=(',', ':'))
+                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 

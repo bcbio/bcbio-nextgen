@@ -24,7 +24,6 @@ def variant(variables):
     as they're added and updated by steps, passing this information on to
     creation of the CWL files.
     """
-    file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
         Step = collections.namedtuple("Step", "name parallel inputs outputs programs noinputs")
         if programs is None: programs = []
@@ -36,74 +35,74 @@ def variant(variables):
         return Workflow(name, parallel, workflow, internal, noinputs)
     align = [s("prep_align_inputs", "single-split",
                [["files"]],
-               [_cwl_file_world(["files"], ".gbi"),
-                _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
-                _cwl_nonfile_world(["align_split"], allow_missing=True)]),
+               [_cwl_out(["files"], "File", [".gbi"]),
+                _cwl_out(["config", "algorithm", "quality_format"], "string"),
+                _cwl_out(["align_split"], ["string", "null"])]),
              s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "base"],
                 ["reference", "aligner", "indexes"]],
-               [_cwl_file_world(["work_bam"]),
-                _cwl_file_world(["align_bam"]),
-                _cwl_file_world(["hla", "fastq"], allow_missing=True),
-                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai")],
+               [_cwl_out(["work_bam"], "File"),
+                _cwl_out(["align_bam"], "File"),
+                _cwl_out(["hla", "fastq"], ["File", "null"]),
+                _cwl_out(["work_bam-plus", "disc"], "File", [".bai"]),
+                _cwl_out(["work_bam-plus", "sr"], "File", [".bai"])],
                ["aligner", "samtools", "sambamba"]),
              s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["hla", "fastq"]],
-               [_cwl_file_world(["align_bam"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
-                _cwl_file_world(["hla", "fastq"], allow_missing=True)],
+               [_cwl_out(["align_bam"], "File", [".bai"]),
+                _cwl_out(["work_bam-plus", "disc"], "File", [".bai"]),
+                _cwl_out(["work_bam-plus", "sr"], "File", [".bai"]),
+                _cwl_out(["hla", "fastq"], ["File", "null"])],
                ["biobambam"],
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
     vc = [s("get_parallel_regions", "batch-split",
             [["batch_rec"]],
-            [_cwl_nonfile_world(["region"])]),
+            [_cwl_out(["region"], "string")]),
           s("variantcall_batch_region", "batch-parallel",
             [["batch_rec"]],
-            [_cwl_file_world(["vrn_file_region"], ".tbi"),
-             _cwl_nonfile_world(["region"])]),
+            [_cwl_out(["vrn_file_region"], "File", [".tbi"]),
+             _cwl_out(["region"], "string")]),
           s("concat_batch_variantcalls", "batch-merge",
             [["batch_rec"], ["vrn_file_region"]],
-            [_cwl_file_world(["vrn_file"], ".tbi")]),
+            [_cwl_out(["vrn_file"], "File", [".tbi"])]),
           s("postprocess_variants", "batch-single",
             [["batch_rec"], ["vrn_file"]],
-            [_cwl_file_world(["vrn_file"], ".tbi")],
+            [_cwl_out(["vrn_file"], "File", [".tbi"])],
             noinputs=[["region"]]),
           s("compare_to_rm", "batch-single",
             [["batch_rec"], ["vrn_file"]],
-            [_cwl_file_world(["validate", "summary"]),
-             _cwl_file_world(["validate", "tp"], ".tbi"),
-             _cwl_file_world(["validate", "fp"], ".tbi"),
-             _cwl_file_world(["validate", "fn"], ".tbi")],
+            [_cwl_out(["validate", "summary"], "File"),
+             _cwl_out(["validate", "tp"], "File", [".tbi"]),
+             _cwl_out(["validate", "fp"], "File", [".tbi"]),
+             _cwl_out(["validate", "fn"], "File", [".tbi"])],
             noinputs=[["region"]])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
                [["config", "algorithm", "variant_regions"],
                 ["reference", "fasta", "base"]],
-               [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
-                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
+               [_cwl_out(["config", "algorithm", "variant_regions"], ["File", "null"]),
+                _cwl_out(["config", "algorithm", "variant_regions_merged"], ["File", "null"])]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
                 ["reference", "fasta", "base"]],
-               [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
-                _cwl_file_world(["regions", "callable"]),
-                _cwl_file_world(["regions", "sample_callable"]),
-                _cwl_file_world(["regions", "nblock"]),
-                _cwl_file_world(["regions", "highdepth"], allow_missing=True),
-                _cwl_file_world(["regions", "offtarget_stats"])]),
-             #s("call_hla", "multi-parallel",
-             #  [["hla", "fastq"]],
-             #  [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
-             #   _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
+               [_cwl_out(["config", "algorithm", "coverage_interval"], "string"),
+                _cwl_out(["regions", "callable"], "File"),
+                _cwl_out(["regions", "sample_callable"], "File"),
+                _cwl_out(["regions", "nblock"], "File"),
+                _cwl_out(["regions", "highdepth"], ["File", "null"]),
+                _cwl_out(["regions", "offtarget_stats"], "File")]),
+             # s("call_hla", "multi-parallel",
+             #   [["hla", "fastq"]],
+             #   [_cwl_out(["hla", "hlacaller"], ["string", "null"]),
+             #    _cwl_out(["hla", "call_file"], ["File", "null"])]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["reference", "fasta", "base"]],
-               [_cwl_file_world(["config", "algorithm", "callable_regions"]),
-                _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
-                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
+               [_cwl_out(["config", "algorithm", "callable_regions"], "File"),
+                _cwl_out(["config", "algorithm", "non_callable_regions"], "File"),
+                _cwl_out(["config", "algorithm", "callable_count"], "int")]),
              s("batch_for_variantcall", "multi-batch",
                [["align_bam"], ["config", "algorithm", "callable_regions"], ["regions", "callable"],
                 ["config", "algorithm", "variant_regions"],
@@ -115,23 +114,26 @@ def variant(variables):
              w("variantcall", "multi-parallel", vc,
                [["region"], ["vrn_file_region"]],
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
-             #s("pipeline_summary", "multi-parallel",
-             #  [["align_bam"], ["reference", "fasta", "base"]],
-             #  [_cwl_file_world(["summary", "qc"])],
-             #  ["samtools", "bamtools"]),
-             #s("coverage_report", "multi-parallel",
-             #  [["align_bam"],
-             #   ["reference", "fasta", "base"],
-             #   ["config", "algorithm", "coverage"],
-             #   ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
-             #  [_cwl_file_world(["coverage", "all"], allow_missing=True),
-             #   _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
-             #s("qc_report_summary", "multi-combined",
-             #  [["align_bam"],
-             #   ["reference", "fasta", "base"],
-             #   ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
-             #  [_cwl_file_world(["coverage", "report"], allow_missing=True)])
+             # s("pipeline_summary", "multi-parallel",
+             #   [["align_bam"], ["reference", "fasta", "base"]],
+             #   [_cwl_out(["summary", "qc"], "File")],
+             #   ["samtools", "bamtools"]),
+             # s("coverage_report", "multi-parallel",
+             #   [["align_bam"],
+             #    ["reference", "fasta", "base"],
+             #    ["config", "algorithm", "coverage"],
+             #    ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
+             #   [_cwl_out(["coverage", "all"], ["File", "null"]),
+             #    _cwl_out(["coverage", "problems"], ["File", "null"])]),
+             # s("qc_report_summary", "multi-combined",
+             #   [["align_bam"],
+             #    ["reference", "fasta", "base"],
+             #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
+             #   [_cwl_out(["coverage", "report"], ["File", "null"])])
              ]
+    final_outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"]]
+
+    file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     parallel_ids = []
     for step in steps:
         if hasattr(step, "workflow"):
@@ -162,10 +164,7 @@ def variant(variables):
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
             parallel_ids = _find_split_vs(outputs, step.parallel)
             yield "step", step.name, step.parallel, inputs, outputs, step.programs
-    # Final outputs
-    outputs = [["align_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"]]
-    yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
+    yield "upload", [_get_upload_output(x, file_vs) for x in final_outputs]
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
@@ -306,62 +305,11 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
 
-def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
-    """Retrieve a non-file value from a key in the bcbio world object.
-    """
-    converter = ["if (val === null || val === undefined)",
-                 "  return null;",
-                 "else",
-                 "  return val;"]
-    return _cwl_get_from_world(key, converter, [outtype, 'null'] if allow_missing else outtype)
-
-def _cwl_file_world(key, extension="", allow_missing=False):
-    """Retrieve a file, or array of files, from a key in the bcbio world object.
-    """
-    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': val + '%s'}]" % extension) if extension else ""
-    converter = ["if (val === null || val === undefined)",
-                 "  return null;",
-                 "else if (typeof val === 'string' || val instanceof String)",
-                 "  return {'path': val, 'class': 'File'%s};" % secondary_str,
-                 "else if (val.length != null && val.length > 0) {",
-                 "  var vals = val;",
-                 "  return vals.map(function(val){return {'path': val, 'class': 'File'%s};});}" % secondary_str,
-                 "else",
-                 "  return null;"]
-    return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
-
-def _cwl_get_from_world(key, convert_val, valtype, extension=""):
-    """Generic function to retrieve specific results from a bcbio world object.
-
-    For global variables we provide `val` -- the value of the `key` attribute
-    from the bcbio world object.
-
-    Will handle both single sample world outputs (a dictionary) as well as multiple world
-    objects (when samples get batched together). It determines which case based on
-    looking at the world object string and determining if it's a list or a dictionary.
-    """
-    keygetter = "".join(["['%s']" % k for k in key])
-    getter = ["${",
-              " function world_to_val(world) {",
-              "   var val = world%s;" % keygetter] + \
-              ["   %s" % v for v in convert_val] + \
-              [" }",
-               ' if (self[0].contents.lastIndexOf("[{", 0) === 0)',
-               "   return JSON.parse(self[0].contents).map(function(w){return world_to_val(w)});",
-               " else",
-               "   return world_to_val(JSON.parse(self[0].contents));",
-               "}"]
+def _cwl_out(key, valtype, extensions=None):
     out = {"id": key,
            "type": valtype}
-    if extension:
-        out["secondaryFiles"] = [extension]
-    return out
-
-def _cwl_output(key, valtype, extension=None):
-    out = {"id": key,
-           "type": valtype}
-    if extension:
-        out["secondaryFiles"] = [extension]
+    if extensions:
+        out["secondaryFiles"] = extensions
     return out
 
 def _flatten_nested_input(v):

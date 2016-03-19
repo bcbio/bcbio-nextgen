@@ -1117,8 +1117,7 @@ def report_summary(*samples):
     return [[d] for d in samples]
 
 def coverage_report(data):
-    """
-    Run heavy coverage and variants process in parallel
+    """Run heavy coverage and variant processing in parallel
     """
     data = utils.to_single_data(data)
     data = cov.coverage(data)
@@ -1126,13 +1125,14 @@ def coverage_report(data):
     data = cov.priority_coverage(data)
     data = cov.priority_total_coverage(data)
     problem_regions = dd.get_problem_region_dir(data)
-    data["coverage"] = {}
     if "coverage" in data:
         coverage = data['coverage']
         annotated = None
         if problem_regions and coverage:
             annotated = cov.decorate_problem_regions(coverage, problem_regions)
         data['coverage'] = {'all': coverage, 'problems': annotated}
+    else:
+        data["coverage"] = {}
     return [[data]]
 
 def _get_coverage_per_region(name):
