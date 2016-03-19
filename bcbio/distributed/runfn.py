@@ -35,7 +35,7 @@ def process(args):
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
         fnargs, parallel = _world_from_cwl(fnargs[1:], work_dir)
-        argfile = os.path.join(work_dir, "cwl-%s-world.json" % args.name)
+        argfile = os.path.join(work_dir, "cwl.output.json")
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
         out = fn(fnargs)
@@ -43,14 +43,15 @@ def process(args):
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
                 if parallel in ["single-split", "multi-combined", "batch-split"]:
-                    json.dump([utils.to_single_data(xs) for xs in out],
+                    json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
                               out_handle, sort_keys=True, separators=(',', ':'))
                 elif parallel in ["multi-batch"]:
-                    json.dump([_collapse_to_cwl_record(xs, work_dir) for xs in out], out_handle,
-                              sort_keys=True, separators=(',', ':'))
+                    json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
+                                                   fnargs),
+                              out_handle, sort_keys=True, separators=(',', ':'))
                 else:
-                    json.dump(utils.to_single_data(utils.to_single_data(out)), out_handle,
-                              sort_keys=True, separators=(',', ':'))
+                    json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
+                              out_handle, sort_keys=True, separators=(',', ':'))
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
@@ -70,6 +71,7 @@ def _world_from_cwl(fnargs, work_dir):
     runs (returning a list of individual samples to get processed together).
     """
     parallel = None
+    output_cwl_keys = None
     runtime = {}
     out = []
     data = {}
@@ -85,10 +87,14 @@ def _world_from_cwl(fnargs, work_dir):
         if key == "sentinel-runtime":
             runtime = json.loads(val)
             continue
+        if key == "sentinel-outputs":
+            output_cwl_keys = json.loads(val)
+            continue
         # starting a new record -- duplicated key
         if key in passed_keys:
             data["dirs"] = {"work": work_dir}
             data["cwl_keys"] = passed_keys
+            data["output_cwl_keys"] = output_cwl_keys
             data = _add_resources(data, runtime)
             data = run_info.normalize_world(data)
             out.append(data)
@@ -104,6 +110,7 @@ def _world_from_cwl(fnargs, work_dir):
     if data:
         data["dirs"] = {"work": work_dir}
         data["cwl_keys"] = passed_keys
+        data["output_cwl_keys"] = output_cwl_keys
         data = _add_resources(data, runtime)
         data = run_info.normalize_world(data)
         out.append(data)
@@ -114,46 +121,82 @@ def _world_from_cwl(fnargs, work_dir):
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel
 
+def _convert_to_cwl_json(data, fnargs):
+    """Convert world data object (or list of data objects) into outputs for CWL ingestion.
+    """
+    out = {}
+    for outvar in _get_output_cwl_keys(fnargs):
+        keys = outvar.split("__")
+        if isinstance(data, dict):
+            out[outvar] = _to_cwl(tz.get_in(keys, data))
+        else:
+            out[outvar] = [_to_cwl(tz.get_in(keys, x)) for x in data]
+    return out
+
+def _get_output_cwl_keys(fnargs):
+    """Retrieve output_cwl_keys from potentially nested input arguments.
+    """
+    for items in fnargs:
+        if isinstance(items, dict):
+            items = [items]
+        for d in items:
+            if isinstance(d, dict) and d.get("output_cwl_keys"):
+                return d["output_cwl_keys"]
+    raise ValueError("Did not find output_cwl_keys in %s" % (pprint.pformat(fnargs)))
+
+def _combine_cwl_records(recs, fnargs):
+    """Provide a list of nexted CWL records keyed by output key.
+    """
+    output_keys = _get_output_cwl_keys(fnargs)
+    assert len(output_keys) == 1, output_keys
+    return {output_keys[0]: recs}
+
 def _collapse_to_cwl_record(samples, work_dir):
     """Convert nested samples from batches into a CWL record, based on input keys.
     """
-    # files where we list the entire directory as secondary files
-    dir_targets = ["mainIndex"]
-    all_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
+    input_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
     out = {}
-    for key in all_keys:
+    for key in input_keys:
         key_parts = key.split("__")
         vals = []
         cur = []
         for d in samples:
-            val = tz.get_in(key_parts, d)
-            if isinstance(val, basestring):
-                if os.path.exists(val):
-                    val = {"class": "File", "path": val}
-                    secondary = []
-                    for idx in [".bai", ".tbi", ".gbi", ".fai"]:
-                        idx_file = val["path"] + idx
-                        if os.path.exists(idx_file):
-                            secondary.append({"class": "File", "path": idx_file})
-                    for idx in [".dict"]:
-                        idx_file = os.path.splitext(val["path"])[0] + idx
-                        if os.path.exists(idx_file):
-                            secondary.append({"class": "File", "path": idx_file})
-                    cur_dir, cur_file = os.path.split(val["path"])
-                    if cur_file in dir_targets:
-                        for fname in os.listdir(cur_dir):
-                            if fname != cur_file:
-                                secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
-                    if secondary:
-                        val["secondaryFiles"] = secondary
-            elif isinstance(val, dict):
-                val = json.dumps(val, sort_keys=True, separators=(',', ':'))
-            vals.append(val)
+            vals.append(_to_cwl(tz.get_in(key_parts, d)))
             # Remove nested keys to avoid specifying multiple times
             cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)
         samples = cur
         out[key] = vals
     return out
+
+def _to_cwl(val):
+    """Convert a value into CWL formatted JSON, handling files and complex things.
+    """
+    # files where we list the entire directory as secondary files
+    dir_targets = ["mainIndex"]
+    if isinstance(val, basestring):
+        if os.path.exists(val):
+            val = {"class": "File", "path": val}
+            secondary = []
+            for idx in [".bai", ".tbi", ".gbi", ".fai"]:
+                idx_file = val["path"] + idx
+                if os.path.exists(idx_file):
+                    secondary.append({"class": "File", "path": idx_file})
+            for idx in [".dict"]:
+                idx_file = os.path.splitext(val["path"])[0] + idx
+                if os.path.exists(idx_file):
+                    secondary.append({"class": "File", "path": idx_file})
+            cur_dir, cur_file = os.path.split(val["path"])
+            if cur_file in dir_targets:
+                for fname in os.listdir(cur_dir):
+                    if fname != cur_file:
+                        secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
+            if secondary:
+                val["secondaryFiles"] = secondary
+    elif isinstance(val, (list, tuple)):
+        val = [_to_cwl(x) for x in val]
+    elif isinstance(val, dict):
+        val = json.dumps(val, sort_keys=True, separators=(',', ':'))
+    return val
 
 def _dissoc_in(d, key_parts):
     if len(key_parts) > 1:

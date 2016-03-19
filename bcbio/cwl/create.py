@@ -61,7 +61,10 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
            "outputs": []}
     out["arguments"].append({"position": 0, "valueFrom": "sentinel-runtime=$(runtime)"})
     std_inputs = [{"id": "#sentinel-parallel", "type": "string",
-                   "default": parallel}]
+                   "default": parallel},
+                  {"id": "#sentinel-outputs", "type": "string",
+                   "default": json.dumps([workflow.get_base_id(x["id"]) for x in outputs],
+                                         sort_keys=True, separators=(',', ':'))}]
     inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])

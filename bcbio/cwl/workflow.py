@@ -352,26 +352,16 @@ def _cwl_get_from_world(key, convert_val, valtype, extension=""):
                "   return world_to_val(JSON.parse(self[0].contents));",
                "}"]
     out = {"id": key,
-           "type": valtype,
-           "outputBinding": {"glob": "cwl-*-world.json",
-                             "loadContents": True,
-                             "outputEval": "\n".join(getter)}}
+           "type": valtype}
     if extension:
-        out["outputBinding"]["secondaryFiles"] = [extension]
+        out["secondaryFiles"] = [extension]
     return out
 
-def _cwl_file_glob(key, file_pattern, extension=""):
-    """Retrieve an output CWL file, and extensions, using glob on the filesystem.
-    """
-    file_glob = ["${",
-                 "   var name = JSON.parse(inputs.rgnames)['sample'];",
-                 "   return %s;" % file_pattern,
-                 "}"]
+def _cwl_output(key, valtype, extension=None):
     out = {"id": key,
-           "type": "File",
-           "outputBinding": {"glob": "\n".join(file_glob)}}
+           "type": valtype}
     if extension:
-        out["outputBinding"]["secondaryFiles"] = [extension]
+        out["secondaryFiles"] = [extension]
     return out
 
 def _flatten_nested_input(v):
@@ -483,10 +473,7 @@ def _create_record(name, inputs, noinputs, file_vs, std_vs):
     return {"id": "#%s" % name,
             "type": {"name": name,
                      "type": "record",
-                     "fields": fields},
-            "outputBinding": {"glob": "cwl-*-world.json",
-                              "loadContents": True,
-                              "outputEval": "${return JSON.parse(self[0].contents)}"}}
+                     "fields": fields}}
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.
