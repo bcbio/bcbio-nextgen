@@ -1,22 +1,12 @@
 """Prepare bcbio workflows from input YAML files.
-
-This organizes the metadata and other information about workflows,
-providing the necessary information to translate into CWL. The goal is to
-eventually replace pipeline/main.py workflows with generalized
-versions of this code.
 """
 import copy
-import collections
 import pprint
 
 import toolz as tz
 
-def variant(variables):
-    """Variant calling workflow implementation in CWL.
-
-    The logic here is general, aside from `steps` and could be re-used for
-    non-variable pipelines. This is an attempt to get the approach right before
-    supporting everything with CWL.
+def generate(variables, steps, final_outputs):
+    """Generate all of the components of a CWL workflow from input steps.
 
     file_vs and std_vs are the list of world variables, split into those that
     reference files (and need declaration at each step) and those that don't
@@ -24,115 +14,6 @@ def variant(variables):
     as they're added and updated by steps, passing this information on to
     creation of the CWL files.
     """
-    def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
-        Step = collections.namedtuple("Step", "name parallel inputs outputs programs noinputs")
-        if programs is None: programs = []
-        if noinputs is None: noinputs = []
-        return Step(name, parallel, inputs, outputs, programs, noinputs)
-    def w(name, parallel, workflow, internal, noinputs=None):
-        Workflow = collections.namedtuple("Workflow", "name parallel workflow internal noinputs")
-        if noinputs is None: noinputs = []
-        return Workflow(name, parallel, workflow, internal, noinputs)
-    align = [s("prep_align_inputs", "single-split",
-               [["files"]],
-               [_cwl_out(["files"], "File", [".gbi"]),
-                _cwl_out(["config", "algorithm", "quality_format"], "string"),
-                _cwl_out(["align_split"], ["string", "null"])]),
-             s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "base"],
-                ["reference", "aligner", "indexes"]],
-               [_cwl_out(["work_bam"], "File"),
-                _cwl_out(["align_bam"], "File"),
-                _cwl_out(["hla", "fastq"], ["File", "null"]),
-                _cwl_out(["work_bam-plus", "disc"], "File", [".bai"]),
-                _cwl_out(["work_bam-plus", "sr"], "File", [".bai"])],
-               ["aligner", "samtools", "sambamba"]),
-             s("merge_split_alignments", "single-merge",
-               [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
-                ["hla", "fastq"]],
-               [_cwl_out(["align_bam"], "File", [".bai"]),
-                _cwl_out(["work_bam-plus", "disc"], "File", [".bai"]),
-                _cwl_out(["work_bam-plus", "sr"], "File", [".bai"]),
-                _cwl_out(["hla", "fastq"], ["File", "null"])],
-               ["biobambam"],
-               noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
-    vc = [s("get_parallel_regions", "batch-split",
-            [["batch_rec"]],
-            [_cwl_out(["region"], "string")]),
-          s("variantcall_batch_region", "batch-parallel",
-            [["batch_rec"]],
-            [_cwl_out(["vrn_file_region"], "File", [".tbi"]),
-             _cwl_out(["region"], "string")]),
-          s("concat_batch_variantcalls", "batch-merge",
-            [["batch_rec"], ["vrn_file_region"]],
-            [_cwl_out(["vrn_file"], "File", [".tbi"])]),
-          s("postprocess_variants", "batch-single",
-            [["batch_rec"], ["vrn_file"]],
-            [_cwl_out(["vrn_file"], "File", [".tbi"])],
-            noinputs=[["region"]]),
-          s("compare_to_rm", "batch-single",
-            [["batch_rec"], ["vrn_file"]],
-            [_cwl_out(["validate", "summary"], "File"),
-             _cwl_out(["validate", "tp"], "File", [".tbi"]),
-             _cwl_out(["validate", "fp"], "File", [".tbi"]),
-             _cwl_out(["validate", "fn"], "File", [".tbi"])],
-            noinputs=[["region"]])]
-    steps = [w("alignment", "multi-parallel", align,
-               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("prep_samples", "multi-parallel",
-               [["config", "algorithm", "variant_regions"],
-                ["reference", "fasta", "base"]],
-               [_cwl_out(["config", "algorithm", "variant_regions"], ["File", "null"]),
-                _cwl_out(["config", "algorithm", "variant_regions_merged"], ["File", "null"])]),
-             s("postprocess_alignment", "multi-parallel",
-               [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"]],
-               [_cwl_out(["config", "algorithm", "coverage_interval"], "string"),
-                _cwl_out(["regions", "callable"], "File"),
-                _cwl_out(["regions", "sample_callable"], "File"),
-                _cwl_out(["regions", "nblock"], "File"),
-                _cwl_out(["regions", "highdepth"], ["File", "null"]),
-                _cwl_out(["regions", "offtarget_stats"], "File")]),
-             # s("call_hla", "multi-parallel",
-             #   [["hla", "fastq"]],
-             #   [_cwl_out(["hla", "hlacaller"], ["string", "null"]),
-             #    _cwl_out(["hla", "call_file"], ["File", "null"])]),
-             s("combine_sample_regions", "multi-combined",
-               [["regions", "callable"], ["regions", "nblock"],
-                ["reference", "fasta", "base"]],
-               [_cwl_out(["config", "algorithm", "callable_regions"], "File"),
-                _cwl_out(["config", "algorithm", "non_callable_regions"], "File"),
-                _cwl_out(["config", "algorithm", "callable_count"], "int")]),
-             s("batch_for_variantcall", "multi-batch",
-               [["align_bam"], ["config", "algorithm", "callable_regions"], ["regions", "callable"],
-                ["config", "algorithm", "variant_regions"],
-                ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
-                ["reference", "fasta", "base"], ["reference", "rtg"],
-                ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
-               "batch_rec",
-               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
-             w("variantcall", "multi-parallel", vc,
-               [["region"], ["vrn_file_region"]],
-               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
-             # s("pipeline_summary", "multi-parallel",
-             #   [["align_bam"], ["reference", "fasta", "base"]],
-             #   [_cwl_out(["summary", "qc"], "File")],
-             #   ["samtools", "bamtools"]),
-             # s("coverage_report", "multi-parallel",
-             #   [["align_bam"],
-             #    ["reference", "fasta", "base"],
-             #    ["config", "algorithm", "coverage"],
-             #    ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
-             #   [_cwl_out(["coverage", "all"], ["File", "null"]),
-             #    _cwl_out(["coverage", "problems"], ["File", "null"])]),
-             # s("qc_report_summary", "multi-combined",
-             #   [["align_bam"],
-             #    ["reference", "fasta", "base"],
-             #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
-             #   [_cwl_out(["coverage", "report"], ["File", "null"])])
-             ]
-    final_outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"]]
-
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
     parallel_ids = []
     for step in steps:
@@ -304,13 +185,6 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
-
-def _cwl_out(key, valtype, extensions=None):
-    out = {"id": key,
-           "type": valtype}
-    if extensions:
-        out["secondaryFiles"] = extensions
-    return out
 
 def _flatten_nested_input(v):
     """Flatten a parallel scatter input -- we only get one of them to tools.

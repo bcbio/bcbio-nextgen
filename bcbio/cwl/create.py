@@ -9,7 +9,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
-from bcbio.cwl import workflow
+from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 
 def from_world(world, run_info_file):
@@ -18,11 +18,12 @@ def from_world(world, run_info_file):
     out_file = os.path.join(out_dir, "main-%s.cwl" % (base))
     samples = [xs[0] for xs in world]  # unpack world data objects
     analyses = list(set([x["analysis"] for x in samples]))
-    assert len(analyses) == 1, "Currently support writing CWL for a single analysis type"
-    if analyses[0].startswith("variant"):
-        prep_variant_cwl(samples, out_dir, out_file)
-    else:
+    assert len(analyses) == 1, "Only support writing CWL for a single analysis type: %s" % analyses
+    try:
+        workflow_fn = defs.workflows[analyses[0]]
+    except KeyError:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
+    prep_cwl(samples, workflow_fn, out_dir, out_file)
 
 def _cwl_workflow_template(inputs):
     """Retrieve CWL inputs shared amongst different workflows.
@@ -150,14 +151,15 @@ def _step_template(name, run_file, inputs, outputs, parallel):
                     "scatter": scatter_inputs})
     return out
 
-def prep_variant_cwl(samples, out_dir, out_file):
-    """Output a CWL decription for running a variant calling workflow.
+def prep_cwl(samples, workflow_fn, out_dir, out_file):
+    """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     sample_json, variables = _flatten_samples(samples, out_file)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
-    for cur in workflow.variant(variables):
+    steps, wfoutputs = workflow_fn()
+    for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
             _, name, parallel, inputs, outputs, programs = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples)
