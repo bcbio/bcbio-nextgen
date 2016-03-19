@@ -640,6 +640,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
     global_config = {}
     global_vars = {}
     resources = {}
+    integrations = {}
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
@@ -648,6 +649,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         global_vars = global_config.pop("globals", {})
         resources = global_config.pop("resources", {})
+        for iname in ["arvados"]:
+            integrations[iname] = global_config.pop(iname, {})
         loaded = loaded["details"]
     if sample_names:
         loaded = [x for x in loaded if x["description"] in sample_names]
@@ -700,6 +703,13 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
                 item["resources"][prog] = {}
             for key, val in pkvs.iteritems():
                 item["resources"][prog][key] = val
+        for iname, ivals in integrations.items():
+            if ivals:
+                if iname not in item:
+                    item[iname] = {}
+                for k, v in ivals.iteritems():
+                    item[iname][k] = v
+
         run_details.append(item)
     _check_sample_config(run_details, run_info_yaml, config)
     return run_details

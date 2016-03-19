@@ -166,11 +166,12 @@ To run an analysis:
      arv-put --portable-data-hash --name input-testdata --project-uuid qr1hi-j7d0g-7t73h4hrau3l063 testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
 
 4. Create an Arvados section in a ``bcbio_system.yaml`` file specifying
-   locations to look for reference and input data ::
+   locations to look for reference and input data. ``input`` can be one or more
+   collections containing files or associated files in the original sample YAML::
 
      arvados:
        reference: a84e575534ef1aa756edf1bfb4cad8ae+1927
-       input: a1d976bc7bcba2b523713fa67695d715+464
+       input: [a1d976bc7bcba2b523713fa67695d715+464]
      resources:
           default:
             cores: 4
