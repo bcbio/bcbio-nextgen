@@ -26,9 +26,9 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
     options = " ".join(config_utils.get_resources("macs2", config).get("options", ""))
     if genome_build not in HS and options.find("-g") == -1:
         raise ValueError("This %s genome doesn't have a pre-set value."
-                          "You an add specific values using resources"
-                          "option in the YAML file."
-                          "Check Chip-seq configuration in"
+                          "You can add specific values using resources "
+                          "option for macs2 in the YAML file (-g genome_size)."
+                          "Check Chip-seq configuration in "
                           "bcbio-nextgen documentation.")
     genome_size = HS[genome_build]
     with utils.chdir(out_dir):
