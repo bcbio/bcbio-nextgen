@@ -35,34 +35,16 @@ resources:
   snap:
     cores: 16
     memory: 4G
-  kraken:
-    cores: 4
-    memory: 2g
-  qsignature:
-    cores: 1
-    memory: 2g
   qualimap:
     memory: 8g
-  qsnp:
-    jvm_opts: ["-Xms750m", "-Xmx6g"]
   gatk:
-    jvm_opts: ["-Xms500m", "-Xmx3500m"]
-  gatk-haplotype:
-    jvm_opts: ["-Xms500m", "-Xmx3500m"]
-  gatk-vqsr:
     jvm_opts: ["-Xms500m", "-Xmx3500m"]
   picard:
     jvm_opts: ["-Xms750m", "-Xmx3500m"]
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx6g"]
-  bcbio_variation:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
-  mutect:
-    jvm_opts: ["-Xms750m", "-Xmx2500m"]
   miraligner:
     jvm_opts: ["-Xms750m", "-Xmx4500m"]
-  varscan:
-    jvm_opts: ["-Xms750m", "-Xmx2000m"]
   vardict:
     jvm_opts: ["-Xms750m", "-Xmx3000m"]
   oncofuse:
