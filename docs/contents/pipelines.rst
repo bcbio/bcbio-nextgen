@@ -267,7 +267,7 @@ point for performing differential expression calling using any count-based
 method such as EdgeR, DESeq2 or voom+limma, etc.
 
 single-cell RNA-seq
--------------------
+~~~~~~~~~~~~~~~~~~~
 bcbio-nextgen supports universal molecular identifiers (UMI) based single-cell
 RNA-seq analyses. If your single-cell prep does not use universal molecular
 identifiers (UMI), you can most likely just run the standard RNA-seq pipeline
