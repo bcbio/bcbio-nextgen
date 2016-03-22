@@ -37,6 +37,8 @@ def process(args):
     if len(fnargs) > 0 and fnargs[0] == "cwl":
         fnargs, parallel = _world_from_cwl(fnargs[1:], work_dir)
         argfile = os.path.join(work_dir, "cwl.output.json")
+    else:
+        parallel = None
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
         try:
