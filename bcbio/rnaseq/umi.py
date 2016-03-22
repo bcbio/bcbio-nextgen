@@ -13,10 +13,16 @@ from bcbio.provenance import do
 from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 from bcbio.distributed.transaction import file_transaction
 
+
 transforms = {"harvard-indrop":
               {"json": {
                   "read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
                   "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
+               "dual": True},
+              "harvard-indrop-v2":
+              {"json": {
+                  "read2": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
+                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
                "dual": True},
               "CEL-seq":
               {"json": {

@@ -655,7 +655,7 @@ Single-cell RNA sequencing
 ==========================
 
 - ``umi_type`` The UMI/cellular barcode scheme used for your data. Supports
-  [harvard-indrop, cel-seq].
+  [harvard-indrop, harvard-indrop-v2, cel-seq].
 - ``minimum_barcode_depth`` Cellular barcodes with less than this many reads
   assigned to them are discarded (default 100,000).
 - ``cellular_barcodes`` An optional list of one or two files which have the
