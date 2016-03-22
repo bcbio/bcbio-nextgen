@@ -56,6 +56,33 @@ Sample directories
 ~~~~~~~~~~~~~~~~~~
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
 
+RNA-seq
+===============
+
+Project directory
+~~~~~~~~~~~~~~~~~
+
+- ``annotated_combined.counts`` -- featureCounts counts matrix
+  with gene symbol as an extra column.
+- ``combined.counts`` -- featureCounts counts matrix
+  with gene symbol as an extra column.
+- ``combined.dexseq`` -- DEXseq counts matrix with 
+  exonID as first column. 
+- ``combined.gene.sf.tmp`` -- Sailfish gene count
+  matrix normalized to TPM.
+- ``combined.isoform.sf.tpm`` -- Sailfish transcript
+  count matix normalized to TPM.
+- ``combined.sf`` -- Sailfish raw output, all samples
+  files are pasted one after another.
+- ``tx2gene.csv`` -- Annotation file needed for DESeq2
+  to use Sailfish output.
+
+Sample directories
+~~~~~~~~~~~~~~~~~~
+- ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
+- ``SAMPLE-ready.counts`` -- featureCounts gene counts output.
+- ``sailfish`` -- Sailfish output.
+
 Downstream analysis
 ===================
 
