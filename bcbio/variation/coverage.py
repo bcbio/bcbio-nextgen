@@ -304,8 +304,10 @@ def priority_coverage(data):
                                                 from_string=True).saveas().fn
                 coord_string = " ".join(coord_batch)
                 awk_string = r"""'BEGIN {OFS="\t"} {print $1,$2+$5,$2+$5,$4,$6"\t%s"}'""" % sample
-                cmd = ("samtools view -b {in_bam} {coord_string} | "
-                        "bedtools coverage -d -a {region_file} -b - | "
+                samtools = config_utils.get_program("samtools", data["config"])
+                bedtools = config_utils.get_program("bedtools", data["config"])
+                cmd = ("{samtools} view -b {in_bam} {coord_string} | "
+                        "{bedtools} coverage -d -a {region_file} -b - | "
                         "awk {awk_string} >> {tx_out_file}")
                 _silence_run(cmd.format(**locals()))
         data['priority_coverage'] = os.path.abspath(out_file)

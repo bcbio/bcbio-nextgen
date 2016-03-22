@@ -112,7 +112,7 @@ def by_regions(items):
         breakpoints = breakpoints_by_caller(bed_files)
         if merged:
             priority_merged = _prioritize_plot_regions(merged, items[0])
-            out_file = plot_multiple_regions_coverage(items, out_file,
+            out_file = plot_multiple_regions_coverage(items, out_file, items[0],
                                                       priority_merged, breakpoints)
             items = _add_regional_coverage_plot(items, out_file)
     return items
