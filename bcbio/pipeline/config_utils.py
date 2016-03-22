@@ -203,6 +203,7 @@ def _get_check_program_cmd(fn):
         program = expand_path(fn(name, pconfig, config, default))
         if is_ok(program):
             return program
+        # search the PATH now
         for adir in os.environ['PATH'].split(":"):
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
