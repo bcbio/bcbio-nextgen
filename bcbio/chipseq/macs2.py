@@ -31,7 +31,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
                           "Check Chip-seq configuration in "
                           "bcbio-nextgen documentation.")
 
-    genome_size = "" if options.find("-g") > -1 else HS[genome_build]
+    genome_size = "" if options.find("-g") > -1 else "-g %s" % HS[genome_build]
     with utils.chdir(out_dir):
         cmd = _macs2_cmd()
         try:
@@ -49,5 +49,5 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
 def _macs2_cmd():
     """Main command for macs2 tool."""
     cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam}"
-            " -g {genome_size} -n {name} -B {options}")
+            " {genome_size} -n {name} -B {options}")
     return cmd
