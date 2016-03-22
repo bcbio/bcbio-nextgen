@@ -68,13 +68,14 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     """
     samblaster = config_utils.get_program("samblaster", data["config"])
     samtools = config_utils.get_program("samtools", data["config"])
+    sambamba = config_utils.get_program("sambamba", data["config"])
     cores, mem = _get_cores_memory(data, downscale=3)
     tmp_prefix = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     for ext in ["spl", "disc", "full"]:
         utils.safe_makedir("%s-%s" % (tmp_prefix, ext))
     sort_opt = "-N" if data.get("align_split") else ""
-    full_tobam_cmd = ("samtools view -b -S -u - | "
-                      "sambamba sort {sort_opt} -t {cores} -m {mem} "
+    full_tobam_cmd = ("{samtools} view -b -S -u - | "
+                      "{sambamba} sort {sort_opt} -t {cores} -m {mem} "
                       "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
     tobam_cmd = ("{samtools} sort -@ {cores} -m {mem} "
                  "-T {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
