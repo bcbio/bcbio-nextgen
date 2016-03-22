@@ -11,6 +11,7 @@ import toolz as tz
 import yaml
 
 from bcbio import log, utils
+from bcbio.log import logger
 from bcbio.distributed import multitasks
 from bcbio.pipeline import config_utils, run_info
 
@@ -38,22 +39,35 @@ def process(args):
         argfile = os.path.join(work_dir, "cwl.output.json")
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
-        out = fn(fnargs)
+        try:
+            out = fn(fnargs)
+        except:
+            logger.exception()
+            raise
     if argfile:
-        with open(argfile, "w") as out_handle:
-            if argfile.endswith(".json"):
-                if parallel in ["single-split", "multi-combined", "batch-split"]:
-                    json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
-                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
-                elif parallel in ["multi-batch"]:
-                    json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
-                                                   fnargs),
-                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
-                else:
-                    json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
-                              out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
+        try:
+            _write_out_argfile(argfile, out, fnargs, parallel, work_dir)
+        except:
+            logger.exception()
+            raise
+
+def _write_out_argfile(argfile, out, fnargs, parallel, work_dir):
+    """Write output argfile, preparing a CWL ready JSON or YAML representation of the world.
+    """
+    with open(argfile, "w") as out_handle:
+        if argfile.endswith(".json"):
+            if parallel in ["single-split", "multi-combined", "batch-split"]:
+                json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
+                            out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
+            elif parallel in ["multi-batch"]:
+                json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
+                                               fnargs),
+                            out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             else:
-                yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+                json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
+                            out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
+        else:
+            yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
 def _add_resources(data, runtime):
     if "config" in data:
