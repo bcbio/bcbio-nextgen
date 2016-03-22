@@ -190,16 +190,16 @@ def get_program(name, config, ptype="cmd", default=None):
 def _get_check_program_cmd(fn):
     def wrap(name, pconfig, config, default):
         is_ok = lambda f: os.path.isfile(f) and os.access(f, os.X_OK)
-        # support bioconda installed programs
-        if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
-            return (os.path.join(os.path.dirname(sys.executable), name))
-        # find system bioconda installed programs if using private code install
         bcbio_system = config.get("bcbio_system", None)
         if bcbio_system:
             system_bcbio_path = os.path.join(os.path.dirname(bcbio_system),
                                              os.pardir, "anaconda", "bin", name)
             if is_ok(system_bcbio_path):
                 return system_bcbio_path
+        # support bioconda installed programs
+        if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
+            return (os.path.join(os.path.dirname(sys.executable), name))
+        # find system bioconda installed programs if using private code install
         program = expand_path(fn(name, pconfig, config, default))
         if is_ok(program):
             return program
