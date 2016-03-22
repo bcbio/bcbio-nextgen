@@ -189,13 +189,7 @@ def get_program(name, config, ptype="cmd", default=None):
 
 def _get_check_program_cmd(fn):
     def wrap(name, pconfig, config, default):
-        program = expand_path(fn(name, pconfig, config, default))
         is_ok = lambda f: os.path.isfile(f) and os.access(f, os.X_OK)
-        if is_ok(program): return program
-
-        for adir in os.environ['PATH'].split(":"):
-            if is_ok(os.path.join(adir, program)):
-                return os.path.join(adir, program)
         # support bioconda installed programs
         if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
             return (os.path.join(os.path.dirname(sys.executable), name))
@@ -206,6 +200,12 @@ def _get_check_program_cmd(fn):
                                              os.pardir, "anaconda", "bin", name)
             if is_ok(system_bcbio_path):
                 return system_bcbio_path
+        program = expand_path(fn(name, pconfig, config, default))
+        if is_ok(program):
+            return program
+        for adir in os.environ['PATH'].split(":"):
+            if is_ok(os.path.join(adir, program)):
+                return os.path.join(adir, program)
         raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
     return wrap
 
