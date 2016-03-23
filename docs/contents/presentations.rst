@@ -1,6 +1,17 @@
 Presentations
 =============
 
+- Statistical Genetics and Network Science Meeting at `Channing Division of
+  Network Medicine
+  <http://www.brighamandwomens.org/Research/depts/Medicine/Channing/default.aspx>`_
+  (23 March 2016): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/cdnm2016_bcbio/cdnm2016_bcbio.pdf>`_
+
+- Presentation at `Curoverse <https://curoverse.com/>`_ Brown Bag Seminar on
+  bcbio and in progress integration work with `Common Workflow Language
+  <http://www.commonwl.org/>`_ and `Arvados <https://arvados.org/>`_
+  (11 January 2016):
+  `slides <https://github.com/chapmanb/bcbb/blob/master/talks/curoverse2016bb_bcbio/curoverse2016bb_bcbio.pdf>`_
+
 - Materials from :ref:`teaching` oriented example at Cold Spring Harbor
   Laboratory's `Advanced Sequencing Technology and Applications course
   <http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15>`_.
