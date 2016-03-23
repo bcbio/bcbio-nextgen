@@ -62,8 +62,13 @@ def umi_transform(data):
         data["files"] = [out_file]
         return [[data]]
     index_option = "--dual_index" if transform_data["dual"] else ""
+    if len(dd.get_cellular_barcodes(data)) == 2:
+        split_option = "--separate_cb"
+    else:
+        split_option = ""
     umis = config_utils.get_program("umis", data, default="umis")
-    cmd = ("{umis} fastqtransform {index_option} {transform_file} {fq1} {fq2} "
+    cmd = ("{umis} fastqtransform {index_option} {split_option} {transform_file} "
+           "{fq1} {fq2} "
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
     message = ("Inserting UMI and barcode information into the read name of %s"
                % fq1)
