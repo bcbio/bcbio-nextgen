@@ -112,7 +112,7 @@ LOOKUPS = {
     "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
-    "cellular_barcodes": {"keys": ["config", "algorithm", "barcodes"],
+    "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
                           "default": []},
     "minimum_barcode_depth": {"keys": ["config", "algorithm", "depth"],
                               "default": 100000},
