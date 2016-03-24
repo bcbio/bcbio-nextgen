@@ -228,9 +228,11 @@ def _update_nested(key, val, data):
         for sub_key, sub_val in val.items():
             data = _update_nested(key + [sub_key], sub_val, data)
     else:
-        if tz.get_in(key, data) is not None:
-            raise ValueError("Duplicated key %s" % key)
-        data = tz.update_in(data, key, lambda x: val)
+        already_there = tz.get_in(key, data) is not None
+        if already_there and val:
+            raise ValueError("Duplicated key %s: %s and %s" % (key, val, tz.get_in(key, data)))
+        if val or not already_there:
+            data = tz.update_in(data, key, lambda x: val)
     return data
 
 def add_subparser(subparsers):

@@ -293,8 +293,14 @@ def concat_batch_variantcalls(items):
     variantcaller = _get_batch_variantcaller(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
     utils.safe_makedir(os.path.dirname(out_file))
-    regions = [_region_to_coords(r) for r in cwl_extras["region"]]
-    out_file = vcfutils.concat_variant_files(cwl_extras["vrn_file_region"], out_file, regions,
+    if "region" in cwl_extras and "vrn_file_region" in cwl_extras:
+        regions = cwl_extras["region"]
+        vrn_file_regions = cwl_extras["vrn_file_region"]
+    else:
+        regions = [x["region"] for x in items]
+        vrn_file_regions = [x["vrn_file_region"] for x in items]
+    regions = [_region_to_coords(r) for r in regions]
+    out_file = vcfutils.concat_variant_files(vrn_file_regions, out_file, regions,
                                              dd.get_ref_file(items[0]), items[0]["config"])
     return {"vrn_file": out_file}
 
