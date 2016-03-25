@@ -1100,10 +1100,12 @@ def report_summary(*samples):
             with open(run_file, "w") as out_handle:
                 out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
             cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
-            try:
-                do.run(cmd, "Prepare coverage summary", log_error=False)
-            except subprocess.CalledProcessError, msg:
-                logger.info("Skipping generation of coverage report: %s" % (str(msg)))
+            # Skip automated generation of coverage report to avoid error
+            # messages. We need to generalize coverage reporting and re-include.
+            # try:
+            #     do.run(cmd, "Prepare coverage summary", log_error=False)
+# except subprocess.CalledProcessError, msg:
+            #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)
         out = []

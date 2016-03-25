@@ -53,8 +53,6 @@ bcbio:
 
 Optional requirements:
 
-- `pandoc <http://pandoc.org/>`_ (version >= 1.12.3) for generating coverage
-  output reports.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
