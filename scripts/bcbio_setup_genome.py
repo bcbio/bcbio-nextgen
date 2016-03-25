@@ -14,6 +14,7 @@ from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPOR
                            _get_data_dir)
 from bcbio.pipeline.run_info import ALLOWED_CONTIG_NAME_CHARS
 from bcbio.galaxy import loc
+from bcbio.log import logger
 from fabric.api import *
 import subprocess
 import sys
@@ -45,8 +46,17 @@ def gff3_to_gtf(gff3_file):
     if file_exists(out_file):
         return out_file
 
-    print "Converting %s to %s." %(gff3_file, out_file)
+    logger.info("Converting %s to %s." %(gff3_file, out_file))
 
+    if _is_from_ncbi(gff3_file):
+        logger.info("NCBI format detected by the presence of the %s key."
+                    % _is_from_ncbi(gff3_file))
+        _output_ncbi_gff3(gff3_file, out_file, dialect)
+    else:
+        _output_gff3(gff3_file, out_file, dialect)
+    return out_file
+
+def _output_gff3(gff3_file, out_file, dialect):
     db = gffutils.create_db(gff3_file, ":memory:")
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
@@ -57,8 +67,42 @@ def gff3_to_gtf(gff3_file):
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
                 print >> out_handle, feature
-    return out_file
 
+def _output_ncbi_gff3(gff3_file, out_file, dialect):
+    gene_key = "gene"
+    id_spec = {"gene": gene_key}
+    db = gffutils.create_db(gff3_file, ":memory:", id_spec=id_spec)
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for feature in DataIterator(db.features_of_type("exon"), dialect=dialect):
+                # Gnomon features are often missing a transcript id
+                # some malformed features are also missing the gene key
+                try:
+                    transcript_id = feature["transcript_id"]
+                except KeyError:
+                    try:
+                        transcript_id = feature[gene_key]
+                    except KeyError:
+                        continue
+                gene_id = feature[gene_key]
+                try:
+                    biotype = feature["gene_biotype"]
+                except KeyError:
+                    biotype = "unknown"
+                attr = {"transcript_id": transcript_id, "gene_id": gene_id,
+                        "gene_biotype": biotype}
+                attributes = gffutils.attributes.Attributes(attr)
+                feature.attributes = attributes
+                print >> out_handle, feature
+
+def _is_from_ncbi(gff3_file):
+    with open(gff3_file) as in_handle:
+        for line in tz.take(10000, in_handle):
+            if "Dbxref" in line:
+                return "Dbxref"
+            if "db_xref" in line:
+                return "db_xref"
+    return None
 
 def _index_w_command(dir_name, command, ref_file, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
