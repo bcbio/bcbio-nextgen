@@ -41,7 +41,8 @@ def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
     samples = run_parallel("pipeline_summary", samples)
-    samples = run_parallel("coverage_report", samples)
+    if samples[0][0]["analysis"].lower().startswith(("standard", "variant2")):
+        samples = run_parallel("coverage_report", samples)
     samples = run_parallel("qc_report_summary", [samples])
     qsign_info = run_parallel("qsignature_summary", [samples])
     if "multiqc" in tz.get_in(("config", "algorithm", "tools_on"), samples[0][0], []):
