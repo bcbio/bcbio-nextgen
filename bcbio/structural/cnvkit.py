@@ -172,9 +172,7 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
-            local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                            "lib", "R", "site-library")
-            cmd = [_get_cmd(), "segment", "-o", tx_out_file, "--rlibpath", local_sitelib, cnr_file]
+            cmd = [_get_cmd(), "segment", "-o", tx_out_file, cnr_file]
             if cov_interval == "genome":
                 cmd += ["--threshold", "0.00001"]
             # preferentially use conda installed Rscript
