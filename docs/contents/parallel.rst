@@ -13,6 +13,45 @@ The pipeline runs in parallel in two different ways:
    Machine to machine communication occurs via messaging, using the
    `IPython parallel`_ framework.
 
+.. _tuning-cores:
+
+Tuning core and memory usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio has two ways to specify core usage, helping provide options for
+parallelizing different types of processes:
+
+- Total available cores: specified with ``-n`` on the commandline, this tells
+  bcbio how many total cores to use. This applies either to a local multicore
+  run or a distributed job.
+
+- Maximum cores to use for multicore processing of individual jobs. You specify
+  this in the ``resource`` section of either a sample YAML file
+  (:ref:`sample-resources`) or ``bcbio_system.yaml``. Ideally you specify this
+  in the ``default`` section (along with memory usage). For example, this would
+  specify that processes using multiple cores can get up to 16 cores::
+
+    resources:
+      default:
+        memory: 2G
+        cores: 16
+        jvm_opts: ["-Xms750m", "-Xmx2000m"]
+
+bcbio uses these settings, along with memory requests, to determine how to
+partition jobs. For example, if you had ``-n 32`` and ``cores: 16`` for a run on
+a single 32 core machine, this would run two simultaneous bwa mapping jobs using
+16 cores each.
+
+For single machine runs with a small number of samples, you generally want to
+set ``cores`` close to or equal the number of total cores you're allocating to
+the job with ``-n``. This will allow individual samples to process as fast as
+possible and take advantage of multicore software.
+
+For distributed jobs, you want to set ``cores`` to match the available cores on
+a single node in your cluster, then use ``-n`` as a multiple of this to
+determine how many nodes to spin up. For example, ``cores: 16`` and ``-n 64``
+would try to make four 16 core machines available for analysis.
+
 Multiple cores
 ~~~~~~~~~~~~~~
 Running using multiple cores only requires setting the ``-n``

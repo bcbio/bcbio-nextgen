@@ -73,7 +73,7 @@ additional genome data, and the section on :ref:`toolplus-install` describes how
 to add commercially restricted software like GATK and MuTect. Following installation, you
 should edit the pre-created system configuration file in
 ``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
-system or cluster configuration.
+system or cluster configuration (see :ref:`tuning-cores`).
 
 .. _Docker: http://www.docker.io/
 

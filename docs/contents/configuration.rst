@@ -6,16 +6,16 @@ Configuration
 Two configuration files, in easy to write `YAML format`_, specify
 details about your system and samples to run:
 
-- ``bcbio_system.yaml`` High level information about the system,
-  including locations of installed programs like Picard and GATK.
-  These apply across multiple runs. The automated installer creates
-  a ready to go system configuration file that can be manually
-  edited to match the system. Find the file in the galaxy sub-directory
-  within your installation data location
-  (ie. ``/usr/local/share/bcbio-nextgen/galaxy``). By default, the
-  pipeline uses the standard pre-created configuration file but
-  multiple system configurations can be independently maintained
-  and passed as the first argument to ``bcbio_nextgen.py`` commands.
+- ``bcbio_system.yaml`` High level information about the system, including
+  locations of installed programs like GATK and cores and memory usage (see
+  :ref:`tuning-cores`). These apply across multiple runs. The automated
+  installer creates a ready to go system configuration file that can be manually
+  edited to match the system. Find the file in the galaxy sub-directory within
+  your installation data location (ie.
+  ``/usr/local/share/bcbio-nextgen/galaxy``). By default, the pipeline uses the
+  standard pre-created configuration file but multiple system configurations can
+  be independently maintained and passed as the first argument to
+  ``bcbio_nextgen.py`` commands.
 
 - ``bcbio_sample.yaml`` Details about a set of samples to process,
   including input files and analysis options. You configure these for
@@ -869,8 +869,10 @@ variable, bcbio will resolve environmental variables like::
       tmp:
         dir: $YOUR_SCRATCH_LOCATION
 
-Sample specific resources
-=========================
+.. _sample-resources:
+
+Sample or run specific resources
+================================
 
 To override any of the global resource settings in a sample specific manner, you
 write a resource section within your sample YAML configuration. For example, to
@@ -884,6 +886,15 @@ novoalign, write a sample resource specification like::
           options: [-o, FullNW]
         tmp:
           dir: tmp/sampletmpdir
+
+To adjust resources for an entire run, you can add this resources specification
+at the top level of your sample YAML::
+
+     details:
+       - description: Example
+     resources:
+       default:
+         cores: 16
 
 .. _bcbio.variation: https://github.com/chapmanb/bcbio.variation
 .. _bcbio.variation.recall: https://github.com/chapmanb/bcbio.variation.recall
