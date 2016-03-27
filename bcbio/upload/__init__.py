@@ -186,6 +186,14 @@ def _maybe_add_sv(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], plot_name),
                                 "variantcaller": svcall["variantcaller"]})
+            for extra in ["subclones", "contamination"]:
+                svfile = svcall.get(extra)
+                if svfile and os.path.exists(svfile):
+                    ext = os.path.splitext(svfile)[-1].replace(".", "")
+                    out.append({"path": svfile,
+                                "type": ext,
+                                "ext": "%s-%s" % (svcall["variantcaller"], extra),
+                                "variantcaller": svcall["variantcaller"]})
         if "sv-validate" in sample:
             for vkey in ["csv", "plot", "df"]:
                 vfile = tz.get_in(["sv-validate", vkey], sample)

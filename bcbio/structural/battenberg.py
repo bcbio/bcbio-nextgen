@@ -30,7 +30,7 @@ def run(items, background=None):
         batout["variantcaller"] = "battenberg"
     out = []
     for data in items:
-        if batout:
+        if batout and dd.get_sample_name(data) == paired.tumor_name:
             if "sv" not in data:
                 data["sv"] = []
             data["sv"].append(batout)
@@ -72,6 +72,7 @@ def _do_run(paired):
                "-assembly {genome_build} -species Human -platform {platform}")
         do.run(cmd.format(**locals()), "Battenberg CNV calling")
     assert len(_missing_files(out)) == 0, "Missing Battenberg output: %s" % _missing_files(out)
+    out["plot"] = _get_battenberg_out_plots(paired, work_dir)
     out["ignore"] = ignore_file
     return out
 
@@ -112,6 +113,16 @@ def _get_battenberg_out(paired, work_dir):
                      ("subclones", "subclones.txt"),
                      ("contamination", "normal_contamination.txt")]:
         out[key] = os.path.join(work_dir, "%s_%s" % (paired.tumor_name, ext))
+    return out
+
+def _get_battenberg_out_plots(paired, work_dir):
+    out = {}
+    for key, ext in [("copynumberprofile", "copynumberprofile"),
+                     ("sunrise_plot", "distance"),
+                     ("freq_plot", "Tumor")]:
+        plot_file = os.path.join(work_dir, "%s_%s.png" % (paired.tumor_name, ext))
+        if os.path.exists(plot_file):
+            out[key] = plot_file
     return out
 
 def _sv_workdir(data):
