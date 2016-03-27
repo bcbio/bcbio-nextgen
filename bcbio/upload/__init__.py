@@ -64,6 +64,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_oncofuse(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     out = _maybe_add_sailfish_files(algorithm, sample, out)
+    out = _maybe_add_salmon_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -260,6 +261,14 @@ def _maybe_add_sailfish_files(algorithm, sample, out):
                     "ext": os.path.join("sailfish", dd.get_sample_name(sample))})
     return out
 
+def _maybe_add_salmon_files(algorithm, sample, out):
+    salmon_dir = os.path.join(dd.get_work_dir(sample), "salmon", dd.get_sample_name(sample), "quant")
+    if os.path.exists(salmon_dir):
+        out.append({"path": salmon_dir,
+                    "type": "directory",
+                    "ext": os.path.join("salmon", dd.get_sample_name(sample))})
+    return out
+
 def _maybe_add_summary(algorithm, sample, out):
     out = []
     if "summary" in sample:
@@ -329,9 +338,11 @@ def _maybe_add_transcriptome_alignment(sample, out):
     return out
 
 def _maybe_add_counts(algorithm, sample, out):
+    if not dd.get_count_file(sample):
+        return out
     out.append({"path": sample["count_file"],
-                "type": "counts",
-                "ext": "ready"})
+             "type": "counts",
+             "ext": "ready"})
     stats_file = os.path.splitext(sample["count_file"])[0] + ".stats"
     if utils.file_exists(stats_file):
         out.append({"path": stats_file,
