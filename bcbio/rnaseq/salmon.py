@@ -47,9 +47,10 @@ def run_salmon_reads(data):
     return [[data]]
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
-    safe_makedir(salmon_dir)
     samplename = dd.get_sample_name(data)
-    out_file = os.path.join(salmon_dir, "quant.sf")
+    quant_dir = os.path.join(salmon_dir, "quant")
+    safe_makedir(salmon_dir)
+    out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
     gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
@@ -69,17 +70,19 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
         fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
-    cmd += "--numBootstraps 30 --useVBOpt "
-    with file_transaction(data, salmon_dir) as tx_out_dir:
+    # skip --useVBOpt for now, it can cause segfaults
+    cmd += "--numBootstraps 30 "
+    with file_transaction(data, quant_dir) as tx_out_dir:
         message = ("Quantifying transcripts in %s and %s with Salmon."
                    %(fq1, fq2))
         do.run(cmd.format(**locals()), message, None)
     return out_file
 
 def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
-    safe_makedir(salmon_dir)
     samplename = dd.get_sample_name(data)
-    out_file = os.path.join(salmon_dir, "quant.sf")
+    quant_dir = os.path.join(salmon_dir, "quant")
+    safe_makedir(salmon_dir)
+    out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
     gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
@@ -91,7 +94,7 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     cmd = ("{salmon} quant {libtype} -p {num_cores} -t {gtf_fa} "
            "-o {tx_out_dir} -a {bam_file} ")
     cmd += "--numBootstraps 30 "
-    with file_transaction(data, salmon_dir) as tx_out_dir:
+    with file_transaction(data, quant_dir) as tx_out_dir:
         message = "Quantifying transcripts in %s with Salmon." % bam_file
         do.run(cmd.format(**locals()), message, None)
     return out_file
@@ -109,7 +112,9 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
     num_cores = dd.get_num_cores(data)
     gtf_fa = sailfish.create_combined_fasta(data, out_dir)
     tmpdir = dd.get_tmp_dir(data)
-    ### TODO PUT MEMOZATION HERE
+    out_file = os.path.join(out_dir, "versionInfo.json")
+    if file_exists(out_file):
+        return out_dir
     with file_transaction(out_dir) as tx_out_dir:
         cmd = "{salmon} index -k 31 -p {num_cores} -i {tx_out_dir} -t {gtf_fa}"
         message = "Creating Salmon index for {gtf_fa}."
