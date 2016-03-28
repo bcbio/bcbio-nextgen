@@ -36,6 +36,8 @@
 - Migrate bowtie and bowtie2 to handle split input alignments, bgzipped inputs,
   and produce sorted, de-duplicated BAM files. This allows use in additional
   standard pipelines. Thanks to Luca Beltrame.
+- Switch final upload directories for salmon and sailfish results to be of the
+  form samplename/salmon instead of samplename/salmon/samplename.
 
 ## 0.9.6 (12 February 2016)
 
