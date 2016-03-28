@@ -258,7 +258,7 @@ def _maybe_add_sailfish_files(algorithm, sample, out):
     if dd.get_sailfish_dir(sample):
         out.append({"path": dd.get_sailfish_dir(sample),
                     "type": "directory",
-                    "ext": os.path.join("sailfish", dd.get_sample_name(sample))})
+                    "ext": "sailfish"})
     return out
 
 def _maybe_add_salmon_files(algorithm, sample, out):
@@ -266,7 +266,7 @@ def _maybe_add_salmon_files(algorithm, sample, out):
     if os.path.exists(salmon_dir):
         out.append({"path": salmon_dir,
                     "type": "directory",
-                    "ext": os.path.join("salmon", dd.get_sample_name(sample))})
+                    "ext": "salmon"})
     return out
 
 def _maybe_add_summary(algorithm, sample, out):
