@@ -32,7 +32,7 @@ def classifyplot_from_plotfiles(plot_files, out_csv, outtype="png", title=None, 
     return classifyplot_from_valfile(out_csv, outtype, title, size, samples)
 
 def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None,
-                              samples=None):
+                              samples=None, callers=None):
     """Create a plot from a summarized validation file.
 
     Does new-style plotting of summarized metrics of
@@ -45,7 +45,7 @@ def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None,
     df = grouped.apply(_calculate_fnr_fdr)
     df = df.reset_index()
     out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
-    _do_classifyplot(df, out_file, title, size, samples)
+    _do_classifyplot(df, out_file, title, size, samples, callers)
     return [out_file]
 
 def _calculate_fnr_fdr(group):
@@ -57,7 +57,7 @@ def _calculate_fnr_fdr(group):
                           "tpr": "TP: %s FN: %s" % (data["tp"], data["fn"]),
                           "spc": "FP: %s" % (data["fp"])}])
 
-def _do_classifyplot(df, out_file, title=None, size=None, samples=None):
+def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=None):
     """Plot using classification-based plot using seaborn.
     """
     metric_labels = {"fdr": "False discovery rate",
@@ -68,7 +68,8 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None):
     plt.ioff()
     sns.set(style='white')
     vtypes = sorted(df["vtype"].unique(), reverse=True)
-    callers = sorted(df["caller"].unique())
+    if not callers:
+        callers = sorted(df["caller"].unique())
     if not samples:
         samples = sorted(df["sample"].unique())
     if len(samples) >= len(callers):
