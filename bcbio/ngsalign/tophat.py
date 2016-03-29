@@ -21,7 +21,6 @@ from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio import bam
 from bcbio import broad
