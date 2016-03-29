@@ -35,4 +35,4 @@ sh>=1.07
 tabulate>=0.7.3
 scikit-learn>=0.15.2
 seaborn>=0.5.0
-bcbio-nextgen==0.9.6
+bcbio-nextgen==0.9.7

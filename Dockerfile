@@ -1,7 +1,7 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# v0.9.7a -- https://github.com/chapmanb/bcbio-nextgen/commit/ee18f80
+# v0.9.7 -- https://github.com/chapmanb/bcbio-nextgen/commit/52cda3e
 
 # Setup a base system 
 RUN apt-get update && \

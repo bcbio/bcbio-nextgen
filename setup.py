@@ -5,7 +5,7 @@ import sys
 import os
 from setuptools import setup, find_packages
 
-version = "0.9.7a"
+version = "0.9.7"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
