@@ -57,7 +57,7 @@ Sample directories
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
 
 RNA-seq
-===============
+=======
 
 Project directory
 ~~~~~~~~~~~~~~~~~
@@ -85,7 +85,7 @@ Sample directories
 - ``sailfish`` -- Sailfish output.
 
 small RNA-seq
-===============
+=============
 
 Project directory
 ~~~~~~~~~~~~~~~~~

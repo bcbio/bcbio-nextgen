@@ -35,6 +35,7 @@ Contents:
    contents/internals
    contents/presentations
    contents/teaching
+   contents/citations
 
 
 Indices and tables
