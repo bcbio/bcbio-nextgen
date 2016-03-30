@@ -30,7 +30,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import realign
+from bcbio.variation import bedutils, realign
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, data):
@@ -76,12 +76,14 @@ def _group_by_ctype(bed_file, depth, region, region_file, out_file, data):
     """
     with file_transaction(data, out_file) as tx_out_file:
         min_cov = depth["min"]
+        sort_cmd = bedutils.get_sort_cmd()
         cmd = (r"""cat {bed_file} | awk '{{if ($4 == 0) {{print $0"\tNO_COVERAGE"}} """
                r"""else if ($4 < {min_cov}) {{print $0"\tLOW_COVERAGE"}} """
                r"""else {{print $0"\tCALLABLE"}} }}' | """
                "bedtools groupby -prec 21 -g 1,5 -c 1,2,3,5 -o first,first,max,first | "
                "cut -f 3-6 | "
-               "bedtools intersect -nonamecheck -a - -b {region_file} > {tx_out_file}")
+               "bedtools intersect -nonamecheck -a - -b {region_file} | "
+               "{sort_cmd} -k1,1 -k2,2n  > {tx_out_file}")
         do.run(cmd.format(**locals()), "bedtools groupby coverage: %s" % (str(region)), data)
 
 def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, data):
