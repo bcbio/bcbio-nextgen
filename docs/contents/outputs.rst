@@ -79,9 +79,42 @@ Project directory
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
+
 - ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
 - ``SAMPLE-ready.counts`` -- featureCounts gene counts output.
 - ``sailfish`` -- Sailfish output.
+
+small RNA-seq
+===============
+
+Project directory
+~~~~~~~~~~~~~~~~~
+
+- ``counts_mirna.tsv`` -- miRBase miRNA
+  count matrix.
+- ``counts.tsv`` -- miRBase isomiRs count matrix.
+- ``counts_mirna_novel.tsv`` -- miRDeep2 miRNA
+  count matrix.
+- ``counts_novel.tsv`` -- miRDeep2 isomiRs
+  count matrix.
+- ``seqcluster`` -- output of `seqcluster`_ tool.
+  Inside this folder, counts.tsv has count matrix
+  for all clusters found over the genome.
+- ``seqclusterViz`` -- input file for interactive 
+  browser at https://github.com/lpantano/seqclusterViz
+- ``report`` -- Rmd template to help with downstream
+  analysis like QC metrics, differential expression, and
+  clustering.
+
+Sample directories
+~~~~~~~~~~~~~~~~~~
+
+- ``SAMPLE-mirbase-ready.counts`` -- counts for miRBase miRNAs.
+- ``SAMPLE-novel-ready`` -- counts for miRDeep2 novel miRNAs.
+- ``tRNA`` -- output for `tdrmapper`_.
+
+.. _seqcluster: https://github.com/lpantano/seqcluster
+.. _tdrmapper: https://github.com/sararselitsky/tDRmapper
 
 Downstream analysis
 ===================
