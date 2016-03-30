@@ -47,6 +47,12 @@ def _get_samples_to_process(fn, out_dir, config):
             if len(cols) < 2:
                 raise ValueError("Line needs 2 values: file and name.")
             if utils.file_exists(cols[0]):
+                if cols[0].find(" ") > -1:
+                    new_name = os.path.abspath(cols[0].replace(" ", "_"))
+                    logger.warning("Space finds in %s. Linked to %s." % (cols[0], new_name))
+                    logger.warning("Please, avoid names with spaces in the future.")
+                    utils.symlink_plus(os.path.abspath(cols[0]), new_name)
+                    cols[0] = new_name
                 samples[cols[1]].append(cols)
             else:
                 logger.info("skipping %s, File doesn't exist." % cols[0])
