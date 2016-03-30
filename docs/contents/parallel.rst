@@ -42,6 +42,14 @@ partition jobs. For example, if you had ``-n 32`` and ``cores: 16`` for a run on
 a single 32 core machine, this would run two simultaneous bwa mapping jobs using
 16 cores each.
 
+Memory specifications (both in ``memory`` and ``jvm_opts``) are per-core. bcbio
+takes care of adjusting this memory to match the cores used. In the example
+above, if bcbio was running a 16 core java proecess, it would use 32Gb of memory
+for the JVM, adjusting ``Xmx`` and ``Xms`` to match cores used. Internally bcbio
+looks at the memory and CPU usage on a machine and matches your configuration
+options to the available system resources. It will scale down core requests if
+memory is limiting, avoiding over-scheduling resources during the run.
+
 For single machine runs with a small number of samples, you generally want to
 set ``cores`` close to or equal the number of total cores you're allocating to
 the job with ``-n``. This will allow individual samples to process as fast as

@@ -1,3 +1,5 @@
+## 0.9.8 (in progress)
+
 ## 0.9.7 (29 March 2016)
 
 - Use MultiQC (github.com/ewels/MultiQC) as main package to process all

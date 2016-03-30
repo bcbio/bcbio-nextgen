@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """Setup file and install script for NextGen sequencing analysis scripts.
 """
-import sys
 import os
 from setuptools import setup, find_packages
 
-version = "0.9.7"
+version = "0.9.8a0"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',

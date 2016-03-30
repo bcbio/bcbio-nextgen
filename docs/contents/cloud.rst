@@ -76,7 +76,7 @@ Extra software
 We're not able to automatically install some useful tools in pre-built docker
 containers due to licensing restrictions. Variant calling with GATK requires a
 manual download from the `GATK download`_ site for academic users.  Commercial
-users `need a license`_ for GTAK and for somatic calling with muTect. To make these jars available,
+users `need a license`_ for GATK and for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
 include the correct GATK and muTect directives during your run.  Alternatively,
 you can also manually specify the path to the jars using a global
