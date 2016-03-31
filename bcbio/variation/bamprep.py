@@ -36,12 +36,11 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             args += ["-BQSR", data["prep_recal"]]
     elif prep_params["recal"]:
         raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
-    memscale = {"direction": "decrease", "magnitude": 3}
     if requires_gatkfull:
         runner = broad.runner_from_config(data["config"])
-        return runner.cl_gatk(args, tmp_dir, memscale=memscale)
+        return runner.cl_gatk(args, tmp_dir)
     else:
-        jvm_opts = broad.get_gatk_framework_opts(data["config"], memscale=memscale)
+        jvm_opts = broad.get_gatk_framework_opts(data["config"])
         return [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + args
 
 def _recal_has_reads(in_file):

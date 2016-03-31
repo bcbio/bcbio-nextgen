@@ -1,5 +1,8 @@
 ## 0.9.8 (in progress)
 
+- Avoid downscaling memory when recalibrating/realigning with GATK, since we
+  should not longer need to work around Java issues. Thanks to Luca Beltrame.
+
 ## 0.9.7 (29 March 2016)
 
 - Use MultiQC (github.com/ewels/MultiQC) as main package to process all
