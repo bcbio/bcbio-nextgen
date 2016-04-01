@@ -148,6 +148,10 @@ There are also special ``-r`` resources parameters to support pipeline configura
 - ``-r conmem=4`` -- Specify the memory for the controller process, in Gb. This
   currently applies to SLURM processing and defaults to 4Gb.
 
+- ``-r minconcores=2`` -- The minimum number of cores to use for the controller
+  process. The controller one works on a single core but this can help in
+  queues where you can only specify multicore jobs.
+
 - ``-r mincores=16`` -- Specify the minimum number of cores to batch together
   for parallel single core processes like variant calling. This will run
   multiple processes together under a single submission to allow sharing of

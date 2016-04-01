@@ -449,6 +449,8 @@ class AmazonS3(StorageManager):
                 raise
 
         s3_key = s3_bucket.get_key(file_info.key)
+        if s3_key is None:
+            raise ValueError("Did not find S3 key: %s" % filename)
         return S3Handle(s3_key)
 
 
