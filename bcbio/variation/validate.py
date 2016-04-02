@@ -189,13 +189,21 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         # handle CWL where we have a reference to a single file in the RTG directory
         if os.path.isfile(rtg_ref):
             rtg_ref = os.path.dirname(rtg_ref)
+        # get core and memory usage from standard configuration
         threads = min(dd.get_num_cores(data), 6)
-        mem = "%sg" % max(threads, 2)
+        resources = config_utils.get_resources("rtg", data["config"])
+        memory = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms500m", "-Xmx1500m"]),
+                                          {"algorithm": {"memory_adjust": {"magnitude": threads,
+                                                                           "direction": "increase"}}})
+        jvm_stack = [x for x in memory if x.startswith("-Xms")]
+        jvm_mem = [x for x in memory if x.startswith("-Xmx")]
+        jvm_stack = jvm_stack[0] if len(jvm_stack) > 0 else "-Xms500m"
+        jvm_mem = jvm_mem[0].replace("-Xmx", "") if len(jvm_mem) > 0 else "3g"
         cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
         cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
-        mem_export = "export RTG_JAVA_OPTS='-Xms1g' && export RTG_MEM=%s" % mem
+        mem_export = "export RTG_JAVA_OPTS='%s' && export RTG_MEM=%s" % (jvm_stack, jvm_mem)
         cmd = mem_export + " && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     out = {"fp": os.path.join(out_dir, "fp.vcf.gz"),
