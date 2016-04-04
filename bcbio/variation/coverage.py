@@ -50,13 +50,16 @@ def assign_interval(data):
             else:
                 with open(offtarget_stat_file) as in_handle:
                     stats = yaml.safe_load(in_handle)
-                offtarget_pct = stats["offtarget"] / float(stats["mapped"])
+                if float(stats["mapped"]) > 0:
+                    offtarget_pct = stats["offtarget"] / float(stats["mapped"])
+                else:
+                    offtarget_pct = 0.0
             if offtarget_pct > offtarget_thresh:
                 cov_interval = "regional"
             else:
                 cov_interval = "amplicon"
-        logger.info("Assigned coverage as '%s' with %.1f%% genome coverage and %.1f%% offtarget coverage"
-                    % (cov_interval, genome_cov_pct * 100.0, offtarget_pct * 100.0))
+        logger.info("%s: Assigned coverage as '%s' with %.1f%% genome coverage and %.1f%% offtarget coverage"
+                    % (dd.get_sample_name(data), cov_interval, genome_cov_pct * 100.0, offtarget_pct * 100.0))
         data["config"]["algorithm"]["coverage_interval"] = cov_interval
     return data
 
