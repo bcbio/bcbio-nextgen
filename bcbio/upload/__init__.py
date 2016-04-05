@@ -438,8 +438,9 @@ def _get_files_project(sample, upload_config):
         out.append({"path": report,
             "type": "directory", "ext": "report"})
 
-    if sample.get("multiqc", None):
-        out.append({"path": sample["multiqc"],
+    multiqc = tz.get_in(["summary", "multiqc"], sample)
+    if multiqc:
+        out.append({"path": multiqc,
             "type": "directory", "ext": "multiqc"})
 
     if sample.get("seqcluster", None):

@@ -45,7 +45,7 @@ def generate_parallel(samples, run_parallel):
         samples = run_parallel("coverage_report", samples)
     samples = run_parallel("qc_report_summary", [samples])
     qsign_info = run_parallel("qsignature_summary", [samples])
-    multiqc_info = run_parallel("multiqc_summary", [samples])
+    multiqc_file = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
@@ -54,6 +54,8 @@ def generate_parallel(samples, run_parallel):
         data[0]["summary"]["project"] = summary_file
         if qsign_info:
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
+        if multiqc_file:
+            data[0]["summary"]["multiqc"] = multiqc_file[0]
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
     return out
@@ -879,19 +881,18 @@ def multiqc_summary(*samples):
         logger.debug("multiqc not found. Update bcbio_nextge.py tools to fix this issue.")
     input_dir = ""
     folders = ["aling", "trimmed", "qc", "htseq-count/*summary"]
+    out_dir = os.path.join(work_dir, "multiqc")
+    out_file = os.path.join(out_dir, "multiqc_report.html")
     with utils.chdir(work_dir):
         input_dir = " ".join([_check_multiqc_input(d) for d in folders])
-        out_dir = os.path.join(work_dir, "multiqc")
-        out_file = os.path.join(out_dir, "multiqc_report.html")
         if not utils.file_exists(out_file):
             cmd = "{multiqc} {input_dir} -o {tx_out} "
             with tx_tmpdir() as tx_out:
                 do.run(cmd.format(**locals()), "Run multiqc")
                 shutil.move(tx_out, out_dir)
-
-    for sample in samples:
-        sample[0]["multiqc"] = out_dir
-    return [[samples]]
+    if utils.file_exists(out_dir):
+        return [out_dir]
+    return []
 
 ## qsignature
 
