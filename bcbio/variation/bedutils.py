@@ -36,9 +36,9 @@ def check_bed_contigs(in_file, data):
     """Ensure BED file contigs match the reference genome.
     """
     contigs = set([])
-    with open(in_file) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
-            if not line.startswith(("#", "track", "browser")):
+            if not line.startswith(("#", "track", "browser")) and line.strip():
                 contigs.add(line.split()[0])
     ref_contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
     if len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
