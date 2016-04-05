@@ -45,8 +45,7 @@ def generate_parallel(samples, run_parallel):
         samples = run_parallel("coverage_report", samples)
     samples = run_parallel("qc_report_summary", [samples])
     qsign_info = run_parallel("qsignature_summary", [samples])
-    if "multiqc" in tz.get_in(("config", "algorithm", "tools_on"), samples[0][0], []):
-        multiqc_info = run_parallel("multiqc_summary", [samples])
+    multiqc_info = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
@@ -889,7 +888,10 @@ def multiqc_summary(*samples):
             with tx_tmpdir() as tx_out:
                 do.run(cmd.format(**locals()), "Run multiqc")
                 shutil.move(tx_out, out_dir)
-        return out_file
+
+    for sample in samples:
+        sample[0]["multiqc"] = out_dir
+    return [[samples]]
 
 ## qsignature
 
@@ -1164,6 +1166,7 @@ def _merge_metrics(samples):
             if s['description'] in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
+            sample_file = os.path.join("metrics", "%s_bcbio.tsv" % s['description'])
             if m:
                 for me in m:
                     if isinstance(m[me], list):
@@ -1174,6 +1177,7 @@ def _merge_metrics(samples):
                 # dt = pd.DataFrame.from_dict(m)
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = s['description']
+                dt.transpose().to_csv(sample_file, sep="\t", header=False)
                 dt_together.append(dt)
         if len(dt_together) > 0:
             dt_together = utils.rbind(dt_together)
