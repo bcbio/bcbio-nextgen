@@ -12,7 +12,7 @@ def decomment(bed_file, out_file):
 
     with utils.open_gzipsafe(bed_file) as in_handle, open(out_file, "w") as out_handle:
         for line in in_handle:
-            if line.startswith("#"):
+            if line.startswith("#") or line.startswith("browser") or line.startswith("track"):
                 continue
             else:
                 out_handle.write(line)

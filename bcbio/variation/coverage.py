@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 import bcbio.bed as bed
-from bcbio.utils import (file_exists, chdir, max_command_length,
+from bcbio.utils import (file_exists, chdir, max_command_length, safe_makedir,
                          robust_partition_all, append_stem, is_gzipped,
                          open_gzipsafe)
 from bcbio.bam import ref
@@ -198,12 +198,13 @@ def coverage(data):
     for region in coverage option.
     """
     bed_file = dd.get_coverage(data)
+    sambamba = config_utils.get_program("sambamba", data["config"])
+    work_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "report", "coverage"))
     if not bed_file:
         return data
-    cleaned_bed = os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed"
+    cleaned_bed = os.path.join(work_dir, os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed")
+    bed_file = bed.decomment(bed_file, cleaned_bed)
 
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    work_dir = os.path.join(dd.get_work_dir(data), "report", "coverage")
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         sample = dd.get_sample_name(data)
@@ -213,8 +214,6 @@ def coverage(data):
         cores = dd.get_num_cores(data)
         if not file_exists(parse_file):
             with tx_tmpdir(data, work_dir) as tmp_dir:
-                cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file)).replace(".bed.gz", ".bed")
-                cleaned_bed = bed.decomment(bed_file, cleaned_bed)
                 with file_transaction(parse_file) as out_tx:
                     cmd = ("{sambamba} depth region -F \"not unmapped\" -t {cores} "
                            "%s -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
