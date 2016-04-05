@@ -112,6 +112,9 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 # Recommended options from 1000 genomes low-complexity evaluation
                 # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
                 opts += " --min-repeat-entropy 1"
+                # Remove partial observations, which cause a preference for heterozygote calls
+                # https://github.com/ekg/freebayes/issues/234#issuecomment-205331765
+                opts += " --no-partial-observations"
                 if somatic:
                     opts = _add_somatic_opts(opts, somatic)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
@@ -158,6 +161,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             else:
                 opts = " ".join(opts)
                 opts += " --min-repeat-entropy 1"
+                opts += " --no-partial-observations"
                 opts = _add_somatic_opts(opts, paired)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
