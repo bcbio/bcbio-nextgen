@@ -19,9 +19,6 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     awk changes spaces to underscores since SNAP only takes the initial name.
     SNAP requires /1 and /2 at the end of read names. If these are not present
     in the initial fastq may need to expand awk code to do this.
-
-    Uses stdbuf (from GNU coreutils) to avoid buffering issues with streaming
-    inputs to SNAP. Without this SNAP will complain about partially truncated lines.
     """
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
@@ -37,12 +34,12 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
             pair_file = pair_file[2:-1]
             stream_input = (r"paste <({fastq_file} | paste - - - -) "
                             r"<({pair_file} | paste - - - -) | "
-                            r"""stdbuf -o0 awk 'BEGIN {{FS="\t"; OFS="\n"}} """
+                            r"""awk 'BEGIN {{FS="\t"; OFS="\n"}} """
                             r"""{{ """
                             r"""split($1, P1, " "); split($5, P5, " "); """
                             r"""if ($1 !~ /\/1$/) $1 = P1[1]"/1"; if ($5 !~ /\/2$/) $5 = P5[1]"/2"; """
                             r"""gsub(" ", "_", $1); gsub(" ", "_", $5); """
-                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' """)
+                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' | sponge """)
         else:
             stream_input = fastq_file[2:-1]
     else:
@@ -51,12 +48,12 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
         if pair_file:
             stream_input = (r"paste <(zcat {fastq_file} | paste - - - -) "
                             r"<(zcat {pair_file} | paste - - - -) | "
-                            r"""stdbuf -o0 awk 'BEGIN {{FS="\t"; OFS="\n"}} """
+                            r"""awk 'BEGIN {{FS="\t"; OFS="\n"}} """
                             r"""{{ """
                             r"""split($1, P1, " "); split($5, P5, " "); """
                             r"""if ($1 !~ /\/1$/) $1 = P1[1]"/1"; if ($5 !~ /\/2$/) $5 = P5[1]"/2"; """
                             r"""gsub(" ", "_", $1); gsub(" ", "_", $5); """
-                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' """)
+                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' | sponge """)
         else:
             stream_input = "zcat {fastq_file}"
 
@@ -71,7 +68,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
                 input_cmd = "-fastq -"
             stream_input = stream_input.format(**locals())
             tmp_dir = os.path.dirname(tx_out_file)
-            cmd = ("export TMPDIR={tmp_dir} && {stream_input} | stdbuf -i0 snap-aligner {sub_cmd} {index_dir} {input_cmd} "
+            cmd = ("export TMPDIR={tmp_dir} && {stream_input} | snap-aligner {sub_cmd} {index_dir} {input_cmd} "
                    "-R '{rg_info}' -t {num_cores} -M -o -sam - | ")
             do.run(cmd.format(**locals()) + tobam_cl, "SNAP alignment: %s" % names["sample"])
     data["work_bam"] = out_file
