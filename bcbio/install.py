@@ -419,6 +419,11 @@ def _install_toolplus(args):
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     toolplus_manifest = os.path.join(manifest_dir, "toolplus-packages.yaml")
     system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    # Handle toolplus installs inside Docker container
+    if not os.path.exists(system_config):
+        docker_system_config = os.path.join(_get_data_dir(), "config", "bcbio_system.yaml")
+        if os.path.exists(docker_system_config):
+            system_config = docker_system_config
     toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
     for tool in args.toolplus:
         if tool.name in set(["gatk", "mutect"]):
@@ -460,10 +465,14 @@ def _update_manifest(manifest_file, name, version):
 def _update_system_file(system_file, name, new_kvs):
     """Update the bcbio_system.yaml file with new resource information.
     """
-    bak_file = system_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    shutil.copyfile(system_file, bak_file)
-    with open(system_file) as in_handle:
-        config = yaml.load(in_handle)
+    if os.path.exists(system_file):
+        bak_file = system_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        shutil.copyfile(system_file, bak_file)
+        with open(system_file) as in_handle:
+            config = yaml.load(in_handle)
+    else:
+        utils.safe_makedir(os.path.dirname(system_file))
+        config = {}
     new_rs = {}
     for rname, r_kvs in config.get("resources", {}).iteritems():
         if rname == name:
