@@ -9,4 +9,4 @@ def run(args):
     dirs, config, run_info_yaml = run_info.prep_system(args.sample_config, args.systemconfig)
     integrations = args.integrations if hasattr(args, "integrations") else {}
     world = run_info.organize(dirs, config, run_info_yaml, add_provenance=False, integrations=integrations)
-    create.from_world(world, run_info_yaml)
+    create.from_world(world, run_info_yaml, integrations=integrations)

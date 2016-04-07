@@ -12,7 +12,7 @@ from bcbio import utils
 from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 
-def from_world(world, run_info_file):
+def from_world(world, run_info_file, integrations=None):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
     out_file = os.path.join(out_dir, "main-%s.cwl" % (base))
@@ -23,7 +23,7 @@ def from_world(world, run_info_file):
         workflow_fn = defs.workflows[analyses[0]]
     except KeyError:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
-    prep_cwl(samples, workflow_fn, out_dir, out_file)
+    prep_cwl(samples, workflow_fn, out_dir, out_file, integrations)
 
 def _cwl_workflow_template(inputs):
     """Retrieve CWL inputs shared amongst different workflows.
@@ -48,15 +48,23 @@ def _cwl_workflow_template(inputs):
             "outputs": [],
             "steps": []}
 
-def _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples):
+def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estimates, disk, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
-    cores, mem_gb_per_core = resources.cpu_and_memory(programs if programs else ["default"], samples)
+    cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
+    cwl_res = {"class": "ResourceRequirement",
+               "coresMin": cores, "ramMin": mem_mb_total}
+    if file_estimates and disk:
+        total_estimate = 0
+        for key, multiplier in disk.items():
+            if key in file_estimates:
+                total_estimate += int(multiplier * file_estimates[key])
+        if total_estimate:
+            cwl_res["tmpdirMin"] = total_estimate
     out = {"class": "CommandLineTool",
            "cwlVersion": "cwl:draft-3",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
-           "hints": [{"class": "ResourceRequirement",
-                      "coresMin": cores, "ramMin": mem_mb_total}],
+           "hints": [cwl_res],
            "arguments": [],
            "inputs": [],
            "outputs": []}
@@ -151,18 +159,20 @@ def _step_template(name, run_file, inputs, outputs, parallel):
                     "scatter": scatter_inputs})
     return out
 
-def prep_cwl(samples, workflow_fn, out_dir, out_file):
+def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
-    sample_json, variables = _flatten_samples(samples, out_file)
+    sample_json, variables, keyvals = _flatten_samples(samples, out_file)
+    file_estimates = _calc_input_estimates(keyvals, integrations)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
     steps, wfoutputs = workflow_fn()
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
-            _, name, parallel, inputs, outputs, programs = cur
-            step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs, samples)
+            _, name, parallel, inputs, outputs, programs, disk = cur
+            step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs,
+                                    file_estimates, disk, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
         elif cur[0] == "upload":
             out["outputs"] = cur[1]
@@ -191,7 +201,7 @@ def _flatten_samples(samples, base_file):
     for data in samples:
         cur_flat = {}
         for key_path in [["analysis"], ["description"], ["rgnames"], ["config", "algorithm"],
-                         ["metadata"], ["genome_build"],
+                         ["metadata"], ["genome_build"], ["resources"],
                          ["files"], ["reference"], ["genome_resources"], ["vrn_file"]]:
             cur_key = "__".join(key_path)
             for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data)):
@@ -208,7 +218,7 @@ def _flatten_samples(samples, base_file):
         del out["reference__fasta"]
     with open(out_file, "w") as out_handle:
         json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
-        return out_file, _samplejson_to_inputs(out)
+        return out_file, _samplejson_to_inputs(out), out
 
 def _add_avro_type(inp, val):
     inp["type"] = _get_avro_type(val)
@@ -314,3 +324,28 @@ def _item_to_cwldata(x):
         return out
     else:
         return x
+
+def _calc_input_estimates(keyvals, integrations=None):
+    """Calculate estimations of input file sizes for disk usage approximation.
+
+    These are current dominated by fastq/BAM sizes, so estimate based on that.
+    """
+    input_sizes = []
+    for sample_files in keyvals["files"]:
+        sample_inputs = 0
+        for cwl_file in sample_files:
+            file_size = _get_file_size(cwl_file["path"], integrations)
+            if file_size:
+                sample_inputs += file_size
+        if sample_inputs > 0:
+            input_sizes.append(sample_inputs)
+    if len(input_sizes) > 0:
+        return {"files": max(input_sizes)}
+
+def _get_file_size(path, integrations):
+    """Return file size in megabytes, including querying remote integrations
+    """
+    if path.startswith("keep:") and "arvados" in integrations:
+        return integrations["arvados"].file_size(path)
+    elif os.path.exists(path):
+        return os.path.getsize(path) / (1024.0 * 1024.0)

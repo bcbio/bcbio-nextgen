@@ -13,7 +13,7 @@ for each of the defined workflows.
 """
 import collections
 
-def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
+def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None):
     """Represent a step in a workflow.
 
     name -- The run function name, which must match a definition in distributed/multitasks
@@ -23,6 +23,9 @@ def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
       specified in noinputs.
     outputs -- List of outputs with information about file type. Use cwlout functions
     programs -- Required programs for this step, used to define resource usage.
+    disk -- Information about disk usage requirements, specified as multipliers of
+            input files. Ensures enough disk present when that is a limiting factor
+            when selecting cloud node resources.
     noinputs -- Non-file variables to not pass to this step
     parallel -- Parallelization approach. There are three different levels of parallelization,
       each with subcomponents:
@@ -41,10 +44,10 @@ def s(name, parallel, inputs, outputs, programs=None, noinputs=None):
         - batch-merge -- Merge sub-components back into a single batch.
         - batch-single -- Run on a single batch.
     """
-    Step = collections.namedtuple("Step", "name parallel inputs outputs programs noinputs")
+    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk noinputs")
     if programs is None: programs = []
     if noinputs is None: noinputs = []
-    return Step(name, parallel, inputs, outputs, programs, noinputs)
+    return Step(name, parallel, inputs, outputs, programs, disk, noinputs)
 
 def w(name, parallel, workflow, internal, noinputs=None):
     """A workflow, allowing specification of sub-workflows for nested parallelization.
@@ -73,7 +76,9 @@ def variant():
                [["files"]],
                [cwlout(["files"], "File", [".gbi"]),
                 cwlout(["config", "algorithm", "quality_format"], "string"),
-                cwlout(["align_split"], ["string", "null"])]),
+                cwlout(["align_split"], ["string", "null"])],
+               ["bgzip", "pbgzip"],
+               {"files": 1.5}),
              s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "base"],
                 ["reference", "aligner", "indexes"]],
@@ -82,7 +87,8 @@ def variant():
                 cwlout(["hla", "fastq"], ["File", "null"]),
                 cwlout(["work_bam-plus", "disc"], "File", [".bai"]),
                 cwlout(["work_bam-plus", "sr"], "File", [".bai"])],
-               ["aligner", "samtools", "sambamba"]),
+               ["aligner", "samtools", "sambamba"],
+               {"files": 1.5}),
              s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["hla", "fastq"]],
@@ -91,6 +97,7 @@ def variant():
                 cwlout(["work_bam-plus", "sr"], "File", [".bai"]),
                 cwlout(["hla", "fastq"], ["File", "null"])],
                ["biobambam"],
+               {"files": 3},
                noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
     vc = [s("get_parallel_regions", "batch-split",
             [["batch_rec"]],
