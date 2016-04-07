@@ -309,7 +309,7 @@ def priority_coverage(data):
                 samtools = config_utils.get_program("samtools", data["config"])
                 bedtools = config_utils.get_program("bedtools", data["config"])
                 cmd = ("{samtools} view -b {in_bam} {coord_string} | "
-                        "{bedtools} coverage -d -a {region_file} -b - | "
+                        "{bedtools} coverage -sorted -d -a {region_file} -b - | "
                         "awk {awk_string} >> {tx_out_file}")
                 _silence_run(cmd.format(**locals()))
         data['priority_coverage'] = os.path.abspath(out_file)

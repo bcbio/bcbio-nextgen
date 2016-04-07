@@ -9,6 +9,7 @@ import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared as pshared
 from bcbio.provenance import do
@@ -26,11 +27,22 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
                    "--bamFiles=%s" % ",".join(align_bams),
                    "--refFile=%s" % dd.get_ref_file(items[0]), "--output=-",
                    "--logFileName", "/dev/null", "--verbosity=1"]
-            cmd += ["--assemble=1"]
+            resources = config_utils.get_resources("platypus", items[0]["config"])
+            if resources.get("options"):
+                # normalize options so we can set defaults without overwriting user specified
+                for opt in resources["options"]:
+                    if "=" in opt:
+                        key, val = opt.split("=")
+                        cmd.extend([key, val])
+                    else:
+                        cmd.append(opt)
             # Adjust default filter thresholds to achieve similar sensitivity/specificity to other callers
-            cmd += ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
-                    "--rmsmqThreshold", "20", "--qdThreshold", "0", "--abThreshold", "0.0001",
-                    "--minVarFreq", "0.0"]
+            tuned_opts = ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
+                          "--rmsmqThreshold", "20", "--qdThreshold", "0", "--abThreshold", "0.0001",
+                          "--minVarFreq", "0.0", "--assemble", "1"]
+            for okey, oval in utils.partition_all(2, tuned_opts):
+                if okey not in cmd:
+                    cmd.extend([okey, oval])
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
             if any(not tz.get_in(["config", "algorithm", "mark_duplicates"], data, True)
                    for data in items):

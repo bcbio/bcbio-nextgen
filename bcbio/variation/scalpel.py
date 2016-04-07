@@ -105,7 +105,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             opts += " --dir %s" % tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
-            perl_exports = utils.get_perl_exports()
+            perl_exports = utils.get_perl_exports(os.path.dirname(tx_out_file))
             cmd = ("{perl_exports} && "
                    "scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
@@ -141,7 +141,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                                                assoc_files, region, out_file)
                 return ann_file
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            perl_exports = utils.get_perl_exports()
+            perl_exports = utils.get_perl_exports(os.path.dirname(tx_out_file))
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
             db_file = os.path.join(tmp_path, "main", "somatic.db")
             if not os.path.exists(db_file + ".dir"):

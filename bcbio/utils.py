@@ -664,11 +664,14 @@ def perl_cmd():
     else:
         return which("perl")
 
-def get_perl_exports(tooldir=None):
+def get_perl_exports(tmpdir=None):
     """Environmental exports to use conda installed perl.
     """
     perl_path = os.path.dirname(perl_cmd())
-    return "unset PERL5LIB && export PATH=%s:$PATH" % (perl_path)
+    out = "unset PERL5LIB && export PATH=%s:$PATH" % (perl_path)
+    if tmpdir:
+        out += " && export TMPDIR=%s" % (tmpdir)
+    return out
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
