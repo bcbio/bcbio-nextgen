@@ -312,3 +312,39 @@ def is_qualimap_compatible(gtf):
         if qualimap_compatible(feature):
             return True
     return False
+
+def canonical_transcripts(gtf, out_file):
+    """
+    given a GTF file, produce a new GTF file with only the longest transcript
+    for each gene
+    function lifted from:
+    https://pythonhosted.org/gffutils/_modules/gffutils/helpers.html
+    """
+    if file_exists(out_file):
+        return out_file
+    db = get_gtf_db(gtf)
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for gene in db.features_of_type('gene'):
+                exon_list = []
+                for ti, transcript in enumerate(db.children(gene, level=1)):
+                    cds_len = 0
+                    total_len = 0
+                    exons = list(db.children(transcript, level=1))
+                    for exon in exons:
+                        exon_length = len(exon)
+                        if exon.featuretype == 'CDS':
+                            cds_len += exon_length
+                        total_len += exon_length
+
+                    exon_list.append((cds_len, total_len, transcript, exons))
+
+                # If we have CDS, then use the longest coding transcript
+                if max(i[0] for i in exon_list) > 0:
+                    best = sorted(exon_list)[0]
+                # Otherwise, just choose the longest
+                else:
+                    best = sorted(exon_list, key=lambda x: x[1])[0]
+                for exon in db.children(best[2], level=1):
+                    out_handle.write(str(exon) + "\n")
+    return out_file
