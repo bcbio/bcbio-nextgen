@@ -36,6 +36,7 @@ def process(args):
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
         fnargs, parallel = _world_from_cwl(fnargs[1:], work_dir)
+        fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
         parallel = None
