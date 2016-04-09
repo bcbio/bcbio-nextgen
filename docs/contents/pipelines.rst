@@ -266,6 +266,15 @@ directory is also a ``combined.counts`` file which can be used as a starting
 point for performing differential expression calling using any count-based
 method such as EdgeR, DESeq2 or voom+limma, etc.
 
+fast RNA-seq
+~~~~~~~~~~~~
+This mode of ``bcbio-nextgen`` quantitates transcript expression using
+`Salmon <http://salmon.readthedocs.org/en/latest/>`_ and does nothing else.
+It is an order of magnitude faster or more than running the full RNA-seq analysis.
+The cost of the increased speed is that you will have much less information
+about your samples at the end of the run, which can make troubleshooting
+trickier.
+
 single-cell RNA-seq
 ~~~~~~~~~~~~~~~~~~~
 bcbio-nextgen supports universal molecular identifiers (UMI) based single-cell
