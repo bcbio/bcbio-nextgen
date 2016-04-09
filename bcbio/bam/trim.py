@@ -41,10 +41,14 @@ def _trim_adapters(fastq_files, out_dir, name, config):
     quality_format = _get_quality_format(config)
     to_trim = _get_sequences_to_trim(config, SUPPORTED_ADAPTERS)
     out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
-    out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, config)
+    log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
+    out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, log_file, config)
+    if file_exists(log_file):
+        content = open(log_file).read().replace(fastq_files[0], name)
+        open(log_file, 'w').write(content)
     return out_files
 
-def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
+def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, config):
     """Trimming with cutadapt, using version installed with bcbio-nextgen.
 
     Uses the system executable to find the version next to our Anaconda Python.
@@ -54,7 +58,6 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
         return out_files
     cmd = _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files)
     cmd = "%s | tee > {log_tx}" % cmd
-    log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
     if len(fastq_files) == 1:
         of = [out_files[0], log_file]
         message = "Trimming %s in single end mode with cutadapt." % (fastq_files[0])

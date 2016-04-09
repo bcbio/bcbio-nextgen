@@ -722,7 +722,7 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
     metrics.update(_detect_rRNA(data))
-    metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
+    # metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
     return metrics
 
@@ -880,7 +880,7 @@ def multiqc_summary(*samples):
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextge.py tools to fix this issue.")
     input_dir = ""
-    folders = ["aling", "trimmed", "qc", "htseq-count/*summary"]
+    folders = ["aling", "trimmed", "qc", "htseq-count/*summary", "report/*/*bcbio*"]
     out_dir = os.path.join(work_dir, "multiqc")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     with utils.chdir(work_dir):
@@ -1145,7 +1145,7 @@ def _get_coverage_per_region(name):
     """
     Parse coverage file if it exists to get average value.
     """
-    fn = os.path.join("coverage", name + "_coverage.bed")
+    fn = os.path.join("coverage", name + "_coverage_fixed.bed")
     if utils.file_exists(fn):
         try:
             dt = pd.read_csv(fn, sep="\t", index_col=False)
@@ -1167,7 +1167,7 @@ def _merge_metrics(samples):
             if s['description'] in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
-            sample_file = os.path.join("metrics", "%s_bcbio.tsv" % s['description'])
+            sample_file = os.path.join("metrics", "%s_bcbio.txt" % s['description'])
             if m:
                 for me in m:
                     if isinstance(m[me], list):

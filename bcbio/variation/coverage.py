@@ -4,6 +4,8 @@ Provides estimates of coverage intervals based on callable regions
 """
 import os
 import yaml
+import shutil
+
 import pybedtools
 import pandas as pd
 import numpy as np
@@ -11,7 +13,7 @@ import numpy as np
 import bcbio.bed as bed
 from bcbio.utils import (file_exists, chdir, max_command_length, safe_makedir,
                          robust_partition_all, append_stem, is_gzipped,
-                         open_gzipsafe)
+                         open_gzipsafe, symlink_plus)
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
@@ -154,6 +156,12 @@ def _calculate_percentiles(in_file, sample):
             print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
             for k in pct:
                 print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
+    # To move metrics to multiqc, will remove older files
+    # when bcbreport accepts these one, to avoid errors
+    # while porting everything to multiqc
+    # These files will be copied to final
+    symlink_plus(out_file, os.path.join(os.path.dirname(out_file), "%s_bcbio_coverage.txt" % sample))
+    symlink_plus(out_total_file, os.path.join(os.path.dirname(out_file), "%s_bcbio_coverage_avg.txt" % sample))
     return out_file
 
 def _read_regions(fn):
@@ -203,7 +211,7 @@ def coverage(data):
     if not bed_file:
         return data
     cleaned_bed = os.path.join(work_dir, os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed")
-    bed_file = bed.decomment(bed_file, cleaned_bed)
+    cleaned_bed = bed.decomment(bed_file, cleaned_bed)
 
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -220,10 +228,24 @@ def coverage(data):
                            "-T 80 -T 100 -L {cleaned_bed} {in_bam} | sed 's/# "
                            "chrom/chrom/' > {out_tx}")
                     do.run(cmd.format(**locals()) % "-C 1000", "Run coverage for {}".format(sample))
-        parse_file = _add_high_covered_regions(parse_file, bed_file, sample)
-        _calculate_percentiles(parse_file, sample)
+        parse_file = _add_high_covered_regions(parse_file, cleaned_bed,  sample)
+        _calculate_percentiles(os.path.abspath(parse_file), sample)
         data['coverage'] = os.path.abspath(parse_file)
-        return data
+    return data
+
+def _summary_variants(in_file, out_file):
+    """Parse GC and depth variant file
+       to be ready for multiqc.
+    """
+    dt = pd.read_csv(in_file, sep="\t", index_col=False)
+    depth = list()
+    cg = list()
+    with file_transaction(out_file) as out_tx:
+        for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
+            q_d = np.percentile(dt['depth'], p_point)
+            q_cg = np.percentile(dt['CG'], p_point)
+            depth.append([p_point, q_d, q_cg])
+        pd.DataFrame(depth).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
 def variants(data):
     if "vrn_file" not in data:
@@ -232,16 +254,19 @@ def variants(data):
         return data
 
     in_vcf = data['vrn_file']
+    sample = dd.get_sample_name(data)
+    cg_file = os.path.join(sample + "_with-gc.vcf.gz")
+    parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
+    qc_file = os.path.join(sample + "_bcbio_variants.txt")
     work_dir = os.path.join(dd.get_work_dir(data), "report", "variants")
     with chdir(work_dir):
+        if file_exists(qc_file):
+            return data
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         ref_file = dd.get_ref_file(data)
         assert ref_file, "Need the reference genome fasta file."
         bed_file = dd.get_variant_regions(data)
-        sample = dd.get_sample_name(data)
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-        cg_file = os.path.join(sample + "_with-gc.vcf.gz")
-        parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
         num_cores = dd.get_num_cores(data)
         broad_runner = broad.runner_from_config_safe(data["config"])
         if in_bam and broad_runner and broad_runner.has_gatk():
@@ -267,6 +292,11 @@ def variants(data):
                     do.run(cmd.format(**locals()),
                             "Calculating GC content and depth for %s" % in_vcf)
                     logger.debug('parsing coverage: %s' % sample)
+            if not file_exists(qc_file):
+                # This files will be copied to final
+                _summary_variants(parse_file, qc_file)
+            if file_exists(qc_file) and file_exists(parse_file):
+                os.remove(cg_file)
         return data
 
 def priority_coverage(data):
