@@ -57,11 +57,10 @@ matched normal::
       sex: female
 
 Next it defines parameters for running the analysis. First we pick our aligner
-(bwa mem) and allow parallelization by splitting into 5 million read chunks::
+(bwa mem)::
 
     algorithm:
       aligner: bwa
-      align_split_size: 5000000
 
 Post-alignment, we mark duplicates but do not perform recalibration and realignment::
 

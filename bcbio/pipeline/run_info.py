@@ -401,7 +401,7 @@ ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
                           "recalibrate", "realign", "cwl_reporting"])
-ALG_ALLOW_FALSE = set(["aligner", "bam_clean", "bam_sort",
+ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
                        "variantcaller"])
 

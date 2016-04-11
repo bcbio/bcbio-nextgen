@@ -1,5 +1,7 @@
 ## 0.9.8 (in progress)
 
+- Set `align_split_size` automatically based on input file sizes, trying to
+  provide reasonable splits and avoid too many splits for large files.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
 

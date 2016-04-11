@@ -44,6 +44,7 @@ def create_inputs(data):
         data["files"] = _prep_grabix_indexes(data["files"], data["dirs"], data)
     # preparation converts illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
+    data = _set_align_split_size(data)
     if tz.get_in(["config", "algorithm", "align_split_size"], data):
         out = []
         if approach == "rtg":
@@ -57,6 +58,40 @@ def create_inputs(data):
         return out
     else:
         return [[data]]
+
+def _set_align_split_size(data):
+    """Set useful align_split_size, generating an estimate if it doesn't exist.
+
+    We try to split on larger inputs and avoid too many pieces, aiming for size
+    chunks of 5Gb or at most 50 maximum splits.
+
+    The size estimate used in calculations is 20 million reads for ~5Gb.
+    """
+    target_size = 5  # Gb
+    target_size_reads = 20  # million reads
+    max_splits = 50  # Avoid too many pieces, causing merge memory problems
+    val = tz.get_in(["config", "algorithm", "align_split_size"], data)
+    if val is None:
+        total_size = 0  # Gb
+        for fname in data.get("files", []):
+            if os.path.exists(fname):
+                total_size += os.path.getsize(fname) / (1024.0 * 1024.0 * 1024.0)
+        # Only set if we have files and are bigger than the target size
+        if total_size > target_size:
+            data["config"]["algorithm"]["align_split_size"] = \
+              int(1e6 * _pick_align_split_size(total_size, target_size,
+                                               target_size_reads, max_splits))
+    return data
+
+def _pick_align_split_size(total_size, target_size, target_size_reads, max_splits):
+    """Do the work of picking an alignment split size for the given criteria.
+    """
+    # Too many pieces, increase our target size to get max_splits pieces
+    if total_size // target_size > max_splits:
+        piece_size = total_size // max_splits
+        return int(piece_size * target_size_reads / target_size)
+    else:
+        return int(target_size_reads)
 
 def _has_grabix_indices(data):
     """Back compatibility with existing runs, look for grabix indexes.
@@ -394,7 +429,7 @@ def _grabix_index(data):
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
-    if tz.get_in(["algorithm", "align_split_size"], config):
+    if tz.get_in(["algorithm", "align_split_size"], config) is not False:
         if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
             do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
     return [gbi_file]

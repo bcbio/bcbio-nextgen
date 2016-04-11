@@ -11,6 +11,7 @@ from nose.plugins.attrib import attr
 from bcbio import utils
 from bcbio.bam import fastq
 from bcbio.distributed import prun
+from bcbio.ngsalign import alignprep
 from bcbio.pipeline.config_utils import load_config
 from bcbio.provenance import programs
 from bcbio.variation import vcfutils
@@ -31,6 +32,18 @@ class RunInfoTest(unittest.TestCase):
         with make_workdir() as workdir:
             config = load_config(get_post_process_yaml(self.automated_dir, workdir))
             print programs._get_versions(config)
+
+class MiscTest(unittest.TestCase):
+    """Additional unit test cases to run regularly to confirm code logic.
+    """
+    @attr(speed=1)
+    def test_align_split_size(self):
+        """Checks on logic for estimating align split size.
+        """
+        assert alignprep._pick_align_split_size(10, 5, 20, 50) == 20
+        assert alignprep._pick_align_split_size(250, 5, 20, 50) == 20
+        assert alignprep._pick_align_split_size(500, 5, 20, 50) == 40
+        assert alignprep._pick_align_split_size(750, 5, 20, 50) == 60
 
 class VCFUtilTest(unittest.TestCase):
     """Test various utilities for dealing with VCF files.
