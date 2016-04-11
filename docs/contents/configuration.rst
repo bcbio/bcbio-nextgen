@@ -405,9 +405,6 @@ Alignment
   and combining split outputs. The tradeoff makes sense when you have large
   files and lots of distributed compute. When you have fewer large multicore
   machines this parameter may not help speed up processing.
--  ``quality_bin``: Perform binning of quality scores with CRAM to
-   reduce file sizes. Uses the Illumina 8-bin approach. Supply a list
-   of times to perform binning: [prealignment, postrecal]
 -  ``quality_format`` Quality format of fastq or BAM inputs [standard, illumina]
 -  ``merge_bamprep`` Merge regional BAM prepped files into a final
    prepared BAM. false avoids the time consuming merge when you only

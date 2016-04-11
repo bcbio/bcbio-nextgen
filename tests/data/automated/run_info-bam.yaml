@@ -20,7 +20,6 @@ details:
       validate_batch: b1
       validate_sample: test-val
   - algorithm:
-      #quality_bin: [prealignment, postrecal]
       #archive: cram
       align_split_size: 15000
       #align_prep_method: grabix

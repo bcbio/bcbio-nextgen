@@ -91,13 +91,6 @@ def _convert_bam_to_fastq(in_file, work_dir, data, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
     out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
-
-    qual_bin_method = config["algorithm"].get("quality_bin")
-    if (qual_bin_method == "prealignment" or
-         (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
-        out_bindir = safe_makedir(os.path.join(out_dir, "qualbin"))
-        in_file = cram.illumina_qual_bin(in_file, data["sam_ref"], out_bindir, config)
-
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))
                  for x in ["1", "2"]]
