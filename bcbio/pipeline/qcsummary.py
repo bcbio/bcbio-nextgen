@@ -595,6 +595,7 @@ def _parse_metrics(metrics):
                       "Intronic pct": "Intronic Rate",
                       "Exonic pct": "Exonic Rate",
                       "Duplication Rate of Mapped": 1,
+                      "Average insert size": 1,
                       })
     total = ["Not aligned", "Aligned to genes", "No feature assigned"]
 
@@ -720,7 +721,7 @@ def _rnaseq_qualimap(bam_file, data, out_dir):
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
     metrics.update(_detect_rRNA(data))
-    # metrics.update({"Fragment Length Mean": bam.estimate_fragment_size(bam_file)})
+    metrics.update({"Average insert size": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
     return metrics
 

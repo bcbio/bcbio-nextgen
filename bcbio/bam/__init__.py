@@ -437,13 +437,16 @@ def estimate_read_length(bam_file, nreads=1000):
         lengths = [len(x.seq) for x in reads]
     return int(numpy.median(lengths))
 
-def estimate_fragment_size(bam_file, nreads=1000):
+def estimate_fragment_size(bam_file, nreads=5000):
     """
     estimate median fragment size of a SAM/BAM file
     """
     with open_samfile(bam_file) as bam_handle:
         reads = tz.itertoolz.take(nreads, bam_handle)
-        lengths = [x.tlen for x in reads]
+        # it would be good to skip spliced paired reads.
+        lengths = [x.template_length for x in reads if x.template_length > 0]
+    if not lengths:
+        return 0
     return int(numpy.median(lengths))
 
 def filter_stream_cmd(bam_file, data, filter_flag):

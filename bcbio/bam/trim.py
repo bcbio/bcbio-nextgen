@@ -57,7 +57,6 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, c
     if all([file_exists(x) for x in out_files]):
         return out_files
     cmd = _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files)
-    cmd = "%s | tee > {log_tx}" % cmd
     if len(fastq_files) == 1:
         of = [out_files[0], log_file]
         message = "Trimming %s in single end mode with cutadapt." % (fastq_files[0])
@@ -113,6 +112,7 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     fq1 = objectstore.cl_input(fastq_files[0])
     of1 = out_files[0]
     cmd += " -o {of1_tx} " + str(fq1)
+    cmd = "%s | tee > {log_tx}" % cmd
     return cmd
 
 def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
@@ -126,7 +126,7 @@ def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
     base_cmd += " --minimum-length={min_length} ".format(min_length=MINIMUM_LENGTH)
     first_cmd = base_cmd + " -o {tmp_fq1} -p {tmp_fq2} " + fq1 + " " + fq2
     second_cmd = base_cmd + " -o {of2_tx} -p {of1_tx} {tmp_fq2} {tmp_fq1}"
-    return first_cmd + ";" + second_cmd + "; rm {tmp_fq1} {tmp_fq2} "
+    return first_cmd + "| tee > {log_tx};" + second_cmd + "; rm {tmp_fq1} {tmp_fq2} "
 
 def _get_sequences_to_trim(config, builtin):
     builtin_adapters = _get_builtin_adapters(config, builtin)
