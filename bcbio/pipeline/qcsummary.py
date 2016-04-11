@@ -594,17 +594,15 @@ def _parse_metrics(metrics):
     to_change = dict({"5'-3' bias": 1, "Intergenic pct": "Intergenic Rate",
                       "Intronic pct": "Intronic Rate",
                       "Exonic pct": "Exonic Rate",
-                      "Not aligned": 0, 'Aligned to genes': 0,
-                      'Non-unique alignment': 0, "No feature assigned": 0,
-                      "Duplication Rate of Mapped": 1, "Fragment Length Mean": 1,
-                      "Ambiguou alignment": 0})
+                      "Duplication Rate of Mapped": 1,
+                      })
     total = ["Not aligned", "Aligned to genes", "No feature assigned"]
 
     out = {}
     total_reads = sum([int(metrics[name]) for name in total])
     out['Mapped'] = sum([int(metrics[name]) for name in total[1:]])
     out['Mapping Rate'] = 1.0 * int(out['Mapped']) / total_reads
-    [out.update({name: 0}) for name in missing]
+    # [out.update({name: 0}) for name in missing]
     out.update({key: val for key, val in metrics.iteritems() if key in correct})
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
