@@ -406,9 +406,6 @@ Alignment
   files and lots of distributed compute. When you have fewer large multicore
   machines this parameter may not help speed up processing.
 -  ``quality_format`` Quality format of fastq or BAM inputs [standard, illumina]
--  ``merge_bamprep`` Merge regional BAM prepped files into a final
-   prepared BAM. false avoids the time consuming merge when you only
-   want variant calls [true, false]
 -  ``strandedness`` For RNA-seq libraries, if your library is strand
    specific, set the appropriate flag form [unstranded, firststrand, secondstrand].
    Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for

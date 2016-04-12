@@ -141,13 +141,7 @@ def parallel_prep_region(samples, run_parallel):
 def delayed_bamprep_merge(samples, run_parallel):
     """Perform a delayed merge on regional prepared BAM files.
     """
-    needs_merge = False
-    for data in samples:
-        if (data[0]["config"]["algorithm"].get("merge_bamprep", True) and
-              "combine" in data[0]):
-            needs_merge = True
-            break
-    if needs_merge:
+    if any("combine" in data[0] for data in samples):
         return run_parallel("delayed_bam_merge", samples)
     else:
         return samples

@@ -408,8 +408,7 @@ def _get_peak_file(x, fn_name):
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate") or algorithm.get("bam_clean")
-              or algorithm.get("mark_duplicates")) and
-              algorithm.get("merge_bamprep", True)) and
+              or algorithm.get("mark_duplicates"))) and
               sample.get("work_bam") is not None)
 
 # ## File information from full project
