@@ -9,8 +9,7 @@ from bcbio.bam import cram
 def to_cram(data):
     """Convert BAM archive files into indexed CRAM.
     """
-    ref_file = utils.get_in(data, ("reference", "fasta", "base"))
-    cram_file = cram.compress(data["work_bam"], ref_file, data["config"])
+    cram_file = cram.compress(data["work_bam"], data)
     data["work_bam"] = cram_file
     return [[data]]
 

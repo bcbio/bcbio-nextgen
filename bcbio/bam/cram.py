@@ -3,29 +3,29 @@
 http://www.ebi.ac.uk/ena/about/cram_toolkit
 """
 import os
-import subprocess
 
 from bcbio import utils
-from bcbio.pipeline import config_utils
+from bcbio.provenance import do
+from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
 
-def compress(in_bam, ref_file, config):
-    """Compress a BAM file to CRAM, binning quality scores. Indexes CRAM file.
+def compress(in_bam, data):
+    """Compress a BAM file to CRAM, providing indexed CRAM file.
+
+    XXX Does not 8-bin quality scores on output. We switched to samtools
+    CRAM support due to problems with cramtools 3.0, and samtools does not yet
+    support quality binning.
     """
     out_file = "%s.cram" % os.path.splitext(in_bam)[0]
-    resources = config_utils.get_resources("cram", config)
-    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1500m", "-Xmx3g"]))
+    cores = dd.get_num_cores(data)
+    ref_file = dd.get_ref_file(data)
     if not utils.file_exists(out_file):
-        with file_transaction(config, out_file) as tx_out_file:
-            cmd = ("cramtools {jvm_opts} cram "
-                   "--input-bam-file {in_bam} "
-                   "--capture-all-tags "
-                   "--ignore-tags 'BD:BI' "
-                   "--reference-fasta-file {ref_file} "
-                   "--lossy-quality-score-spec '*8' "
-                   "--output-cram-file {tx_out_file}")
-            subprocess.check_call(cmd.format(**locals()), shell=True)
-    index(out_file, config)
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = ("samtools view -T {ref_file} -@ {cores} "
+                   "-C -x BD -x BI "
+                   "-o {tx_out_file} {in_bam}")
+            do.run(cmd.format(**locals()), "Compress BAM to CRAM")
+    index(out_file, data["config"])
     return out_file
 
 def index(in_cram, config):
@@ -37,5 +37,5 @@ def index(in_cram, config):
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_cram, tx_in_file)
             cmd = "samtools index {tx_in_file}"
-            subprocess.check_call(cmd.format(**locals()), shell=True)
+            do.run(cmd.format(**locals()), "Index CRAM file")
     return out_file

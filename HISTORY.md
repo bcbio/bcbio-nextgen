@@ -4,6 +4,8 @@
   provide reasonable splits and avoid too many splits for large files.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
+- Move to samtools for output CRAM support, which does not do 8-bin quality
+  binning.
 - Remove `merge_bamprep` option and always merge realigned BAM files if run.
 
 ## 0.9.7 (29 March 2016)
