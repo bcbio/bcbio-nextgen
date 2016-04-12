@@ -222,7 +222,7 @@ def _ready_gzip_fastq(in_files, data):
     """
     all_gzipped = all([not x or x.endswith(".gz") for x in in_files])
     needs_convert = tz.get_in(["config", "algorithm", "quality_format"], data, "").lower() == "illumina"
-    do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data)
+    do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data) is not False
     return all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
 
 def _prep_grabix_indexes(in_files, dirs, data):
