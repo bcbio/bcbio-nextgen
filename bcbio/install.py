@@ -52,14 +52,16 @@ def upgrade_bcbio(args):
     """
     args = add_install_defaults(args)
     if args.upgrade in ["stable", "system", "deps", "development"]:
-        anaconda_dir = _update_conda_packages()
-        print("Upgrade of bcbio-nextgen code complete.")
         if args.upgrade == "development":
+            anaconda_dir = _update_conda_devel()
             print("Upgrading bcbio-nextgen to latest development version")
             pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
             _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
                             "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]]], anaconda_dir)
             print("Upgrade of bcbio-nextgen development code complete.")
+        else:
+            _update_conda_packages()
+            print("Upgrade of bcbio-nextgen code complete.")
 
     try:
         _set_matplotlib_default_backend()
@@ -209,11 +211,23 @@ def _update_conda_packages():
     """
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
-    subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([conda_bin, "install", "--quiet", "--yes", "-c", "bioconda",
-                           "--file", os.path.basename(REMOTES["requirements"])])
-    if os.path.exists(os.path.basename(REMOTES["requirements"])):
-        os.remove(os.path.basename(REMOTES["requirements"]))
+    req_file = "bcbio-update-requirements.txt"
+    if os.path.exists(req_file):
+        os.remove(req_file)
+    subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
+    subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
+                           "-c", "bioconda", "--file", req_file])
+    if os.path.exists(req_file):
+        os.remove(req_file)
+    return os.path.dirname(os.path.dirname(conda_bin))
+
+def _update_conda_devel():
+    """Update to the latest development conda package.
+    """
+    conda_bin = _get_conda_bin()
+    assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
+    subprocess.check_call([conda_bin, "install", "--update-deps",
+                           "--quiet", "--yes", "-c", "bioconda", "bcbio-nextgen"])
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def get_genome_dir(gid, galaxy_dir, data):
