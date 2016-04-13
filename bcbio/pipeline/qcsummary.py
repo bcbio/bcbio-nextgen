@@ -668,12 +668,12 @@ def _detect_duplicates(bam_file, out_dir, data):
             sambamba = config_utils.get_program("sambamba", data, default="sambamba")
             dup_count = ("{sambamba} view --nthreads {num_cores} --count "
                          "-F 'duplicate and not unmapped' "
-                         "{bam_file} >> {tx_out_file}")
+                         "{dup_align_bam} >> {tx_out_file}")
             message = "Counting duplicates in {bam_file}.".format(bam_file=bam_file)
             do.run(dup_count.format(**locals()), message)
             tot_count = ("{sambamba} view --nthreads {num_cores} --count "
                          "-F 'not unmapped' "
-                         "{bam_file} >> {tx_out_file}")
+                         "{dup_align_bam} >> {tx_out_file}")
             message = "Counting reads in {bam_file}.".format(bam_file=bam_file)
             do.run(tot_count.format(**locals()), message)
     with open(out_file) as in_handle:
