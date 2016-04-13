@@ -461,7 +461,7 @@ def _combine_sample_regions_batch(batch, items):
         else:
             with file_transaction(items[0], analysis_file, no_analysis_file) as (tx_afile, tx_noafile):
                 def intersect_two(a, b):
-                    return a.intersect(b, u=True, nonamecheck=True)
+                    return a.intersect(b, nonamecheck=True)
                 nblock_regions = reduce(intersect_two, bed_regions).saveas(
                     "%s-nblock%s" % utils.splitext_plus(tx_afile))
                 ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
