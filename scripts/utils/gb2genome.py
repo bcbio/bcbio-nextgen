@@ -48,6 +48,9 @@ def gb2gtf( gbk_fn, gtf_fn, source='gb2gtf', allowedTypes=set(['gene','CDS','tRN
                 #use locul tag as gene_id/transcript_id
                 gene_id = f.qualifiers['locus_tag'][0].replace(" ", ".").replace("'","")
                 transcript_id = 'T' + gene_id
+              elif 'protein_id' in f.qualifiers:
+                gene_id = f.qualifiers['protein_id'][0].replace(" ", ".").replace("'","")
+                transcript_id = 'T' + gene_id
               elif 'gene' in f.qualifiers:
                 gene_id = f.qualifiers['gene'][0].replace(" ", ".").replace("'","")
                 transcript_id = 'T' + gene_id
