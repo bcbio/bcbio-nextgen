@@ -43,8 +43,8 @@ def generate_parallel(samples, run_parallel):
     samples = run_parallel("pipeline_summary", samples)
     if any(x[0].get("analysis", "").lower().startswith(("standard", "variant")) for x in samples):
         samples = run_parallel("coverage_report", samples)
-    samples = run_parallel("qc_report_summary", [samples])
     qsign_info = run_parallel("qsignature_summary", [samples])
+    samples = run_parallel("qc_report_summary", [samples])
     multiqc_file = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
@@ -121,16 +121,26 @@ def _run_qc_tools(bam_file, data):
         to_run += [("samtools", _run_samtools_stats)]
     elif not data["analysis"].lower().startswith("smallrna-seq"):
         to_run += [("samtools", _run_samtools_stats), ("gemini", _run_gemini_stats)]
-    if data["analysis"].lower().startswith(("standard", "variant2")):
+
+    if data["analysis"].lower().startswith(("standard", "variant", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
         if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, []) for tool in ["qualimap", "qualimap_full"]]):
             to_run.append(("qualimap", _run_qualimap))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
+    qc_out = {}
     for program_name, qc_fn in to_run:
         cur_qc_dir = os.path.join(qc_dir, program_name)
-        cur_metrics = qc_fn(bam_file, data, cur_qc_dir)
-        metrics.update(cur_metrics)
+        out = qc_fn(bam_file, data, cur_qc_dir)
+        qc_files = None
+        if out and isinstance(out, dict):
+            metrics.update(out)
+        elif out and isinstance(out, basestring) and os.path.exists(out):
+            qc_files = [out]
+        if not qc_files:
+            qc_files = _organize_qc_files(program_name, cur_qc_dir)
+        if qc_files:
+            qc_out[program_name] = qc_files
     if data['config']["algorithm"].get("kraken", None):
         if data["analysis"].lower().startswith("smallrna-seq"):
             logger.info("Kraken is not compatible with srnaseq pipeline yet.")
@@ -142,11 +152,36 @@ def _run_qc_tools(bam_file, data):
     bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
     metrics["Name"] = dd.get_sample_name(data)
-    metrics["Quality format"] = utils.get_in(data,
-                                             ("config", "algorithm",
-                                              "quality_format"),
-                                             "standard").lower()
-    return {"qc": qc_dir, "metrics": metrics}
+    metrics["Quality format"] = dd.get_quality_format(data).lower()
+    return {"qc": qc_out, "metrics": metrics}
+
+def _organize_qc_files(program, qc_dir):
+    """Organize outputs from quality control runs into a base file and secondary outputs.
+
+    Provides compatibility with CWL output. Returns None if no files created during processing.
+    """
+    base_files = {"fastqc": "fastqc_report.html", "qualimap": "qualimapReport.html"}
+    if os.path.exists(qc_dir):
+        out_files = []
+        for fname in [os.path.join(qc_dir, x) for x in os.listdir(qc_dir)]:
+            if os.path.isfile(fname):
+                out_files.append(fname)
+            elif os.path.isdir(fname) and not fname == "tx":
+                out_files.extend([os.path.join(fname, x) for x in os.listdir(fname)])
+        if len(out_files) > 0:
+            if len(out_files) == 1:
+                base = out_files[0]
+                secondary = []
+            else:
+                base = None
+                if program in base_files:
+                    base_choices = [x for x in out_files if x.endswith("/%s" % base_files[program])]
+                    if len(base_choices) == 1:
+                        base = base_choices[0]
+                if not base:
+                    base = out_files[0]
+                secondary = [x for x in out_files if x != base]
+            return {"base": base, "secondary": secondary}
 
 # ## Generate project level QC summary for quickly assessing large projects
 
@@ -877,9 +912,9 @@ def multiqc_summary(*samples):
     qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc"))
     multiqc = config_utils.get_program("multiqc", samples[0][0]["config"])
     if not multiqc:
-        logger.debug("multiqc not found. Update bcbio_nextge.py tools to fix this issue.")
+        logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
     input_dir = ""
-    folders = ["aling", "trimmed", "qc", "htseq-count/*summary", "report/*/*bcbio*"]
+    folders = ["align", "trimmed", "qc", "htseq-count/*summary", "report/*/*bcbio*"]
     out_dir = os.path.join(work_dir, "multiqc")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     with utils.chdir(work_dir):
@@ -908,16 +943,16 @@ def _run_qsignature_generator(bam_file, data, out_dir):
     qsig = config_utils.get_program("qsignature", data["config"])
     if not qsig:
         logger.info("There is no qsignature tool. Skipping...")
-        return {}
+        return None
 
-    utils.safe_makedir(out_dir)
     position = dd.get_qsig_file(data)
     mixup_check = dd.get_mixup_check(data)
     if mixup_check and mixup_check.startswith("qsignature"):
+        utils.safe_makedir(out_dir)
         if not position:
             logger.info("There is no qsignature for this species: %s"
                         % tz.get_in(['genome_build'], data))
-            return {}
+            return None
         jvm_opts = "-Xms750m -Xmx2g"
         if mixup_check == "qsignature_full":
             jvm_opts = "-Xms750m -Xmx8g"
@@ -943,8 +978,8 @@ def _run_qsignature_generator(bam_file, data, out_dir):
                     shutil.move(file_qsign_out, file_txt_out)
             else:
                 raise IOError("File doesn't exist %s" % file_qsign_out)
-        return {'qsig_vcf': out_file}
-    return {}
+        return out_file
+    return None
 
 def qsignature_summary(*samples):
     """Run SignatureCompareRelatedSimple module from qsignature tool.

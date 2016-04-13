@@ -277,9 +277,16 @@ def _maybe_add_summary(algorithm, sample, out):
                        "type": "pdf",
                        "ext": "summary"})
         if sample["summary"].get("qc"):
-            out.append({"path": sample["summary"]["qc"],
-                        "type": "directory",
-                        "ext": "qc"})
+            for program, finfo in sample["summary"]["qc"].iteritems():
+                orig_dir = os.path.dirname(finfo["base"])
+                for finfo in [finfo["base"]] + finfo["secondary"]:
+                    cur_dir = os.path.dirname(finfo)
+                    if cur_dir != orig_dir and cur_dir.startswith(orig_dir):
+                        extra_dir = os.path.join(program, cur_dir.replace(orig_dir + "/", ""))
+                    else:
+                        extra_dir = program
+                    out.append({"path": finfo,
+                                "dir": os.path.join("qc", extra_dir)})
         if utils.get_in(sample, ("summary", "researcher")):
             out.append({"path": sample["summary"]["researcher"],
                         "type": "tsv",

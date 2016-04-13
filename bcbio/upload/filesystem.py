@@ -10,7 +10,7 @@ from bcbio.upload import shared
 def copy_finfo(finfo, storage_dir, pass_uptodate=False):
     """Copy a file into the output storage directory.
     """
-    if "sample" in finfo:
+    if "sample" in finfo and "ext" in finfo and "type" in finfo:
         out_file = os.path.join(storage_dir, "%s-%s%s%s" % (finfo["sample"], finfo["ext"],
                                                             "-" if (".txt" in finfo["type"]) else ".",
                                                             finfo["type"]))
@@ -51,6 +51,10 @@ def update_file(finfo, sample_info, config, pass_uptodate=False):
         storage_dir = utils.safe_makedir(os.path.join(config["dir"], finfo["run"]))
     else:
         raise ValueError("Unexpected input file information: %s" % finfo)
+
+    if "dir" in finfo:
+        storage_dir = utils.safe_makedir(os.path.join(storage_dir, finfo["dir"]))
+
     if finfo.get("type") == "directory":
         return copy_finfo_directory(finfo, storage_dir)
     else:
