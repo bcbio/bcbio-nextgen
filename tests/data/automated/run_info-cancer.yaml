@@ -60,6 +60,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
+        use_filtered: true
       min_allele_fraction: 5.0
       #tools_on: [svplots]
       #svcaller: [cnvkit]

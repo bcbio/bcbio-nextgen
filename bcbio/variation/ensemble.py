@@ -190,8 +190,9 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
         cmd = [config_utils.get_program("bcbio-variation-recall", edata["config"]),
                "ensemble", "--cores=%s" % edata["config"]["algorithm"].get("num_cores", 1),
                "--numpass", str(num_pass), "--names", ",".join(callers)]
-        # Remove filtered calls, do not try to rescue
-        cmd += ["--nofiltered"]
+        # Remove filtered calls, do not try to rescue, unless configured
+        if not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata):
+            cmd += ["--nofiltered"]
         cmd += [out_vcf_file, dd.get_ref_file(edata)] + vrn_files
         do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
     in_data = utils.deepish_copy(edata)

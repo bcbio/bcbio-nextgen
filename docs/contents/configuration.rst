@@ -750,8 +750,10 @@ selects variants represented in at least a specified number of callers::
     variantcaller: [mutect2, varscan, freebayes, vardict]
     ensemble:
       numpass: 2
+      use_filtered: false
 
-This example selects variants present in 2 out of the 4 callers.
+This example selects variants present in 2 out of the 4 callers and does not use
+filtered calls (the default behavior).
 `bcbio.variation.recall`_ implements this approach, which handles speed and file
 sorting limitations in the `bcbio.variation`_ approach.
 
