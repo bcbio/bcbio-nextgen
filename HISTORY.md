@@ -1,5 +1,7 @@
 ## 0.9.8 (in progress)
 
+- Use yamllint to find wrong syntaxes in the YAML file that are ignored
+  by pyyaml package and can affect the analysis.
 - Improve choosing split regions for batch analysis to use the unionized
   intersection of non-callable regions. This enables better use of batches
   with different callable regions. Thanks to Neill Gibson.

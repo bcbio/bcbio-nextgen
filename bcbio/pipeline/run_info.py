@@ -13,7 +13,6 @@ import string
 
 import toolz as tz
 import yaml
-
 from bcbio import install, utils
 from bcbio.bam import ref
 from bcbio.log import logger
@@ -626,9 +625,28 @@ def _sanity_check_files(item, files):
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
+def _check_yaml_file(yaml_fn):
+    """Check with yamllint the yaml syntaxes
+    Looking for duplicate keys."""
+    try:
+        import yamllint.linter as linter
+        from yamllint.config import YamlLintConfig
+        out = linter.run(open(yaml_fn), YamlLintConfig('extends: relaxed'))
+        for problem in out:
+            msg = '%(fn)s:%(line)s:%(col)s: [%(level)s] %(msg)s' % {'fn': yaml_fn,
+                                                                    'line': problem.line,
+                                                                    'col': problem.column,
+                                                                    'level': problem.level,
+                                                                    'msg': problem.message}
+            if problem.level == "error":
+                raise ValueError(msg)
+    except ImportError:
+        pass
+
 def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
     """Read run information from a passed YAML file.
     """
+    _check_yaml_file(run_info_yaml)
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
     fc_name, fc_date = None, None
