@@ -212,7 +212,15 @@ def _to_cwl(val):
     elif isinstance(val, (list, tuple)):
         val = [_to_cwl(x) for x in val]
     elif isinstance(val, dict):
-        val = json.dumps(val, sort_keys=True, separators=(',', ':'))
+        # File representation with secondary files
+        if "base" in val and "secondary" in val:
+            out = {"class": "File", "path": val["base"]}
+            secondary = [{"class": "File", "path": x} for x in val["secondary"]]
+            if secondary:
+                out["secondaryFiles"] = secondary
+            val = out
+        else:
+            val = json.dumps(val, sort_keys=True, separators=(',', ':'))
     return val
 
 def _dissoc_in(d, key_parts):
