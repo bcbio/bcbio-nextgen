@@ -172,13 +172,16 @@ def variant():
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [cwlout(["coverage", "all"], ["File", "null"]),
                 cwlout(["coverage", "problems"], ["File", "null"])]),
+             s("multiqc_summary", "multi-combined",
+               [["summary", "qc", "samtools"], ["summary", "qc", "fastqc"]],
+               [cwlout(["summary", "multiqc"], ["File", "null"])])
              # s("qc_report_summary", "multi-combined",
              #   [["align_bam"],
              #    ["reference", "fasta", "base"],
              #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
              #   [cwlout(["coverage", "report"], ["File", "null"])])
              ]
-    final_outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"]]
+    final_outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"], ["summary", "multiqc"]]
     return steps, final_outputs
 
 workflows = \

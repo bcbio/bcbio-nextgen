@@ -914,25 +914,28 @@ def multiqc_summary(*samples):
     folders = []
     for data in samples:
         for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
-            folders.append(os.path.dirname(pfiles["base"]))
+            if isinstance(pfiles, dict):
+                pfiles = pfiles["base"]
+            folders.append(os.path.dirname(pfiles))
     # Back compatible -- to migrate to explicit specifications in input YAML
     folders += ["align", "trimmed", "htseq-count/*summary", "report/*/*bcbio*"]
     out_dir = os.path.join(work_dir, "multiqc")
     out_file = os.path.join(out_dir, "multiqc_report.html")
-    with utils.chdir(work_dir):
-        input_dir = " ".join([_check_multiqc_input(d) for d in folders])
-        if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file):
+        with utils.chdir(work_dir):
+            input_dir = " ".join([_check_multiqc_input(d) for d in folders])
             cmd = "{multiqc} {input_dir} -o {tx_out} "
             with tx_tmpdir() as tx_out:
                 do.run(cmd.format(**locals()), "Run multiqc")
                 shutil.move(tx_out, out_dir)
-    data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
     out = []
     if utils.file_exists(out_file):
-        for data in samples:
-            if "summary" not in data:
-                data["summary"] = {}
-            data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
+        data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
+        for i, data in enumerate(samples):
+            if i == 0:
+                if "summary" not in data:
+                    data["summary"] = {}
+                data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
             out.append(data)
     return [[d] for d in out]
 
