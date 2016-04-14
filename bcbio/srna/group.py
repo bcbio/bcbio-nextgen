@@ -154,18 +154,6 @@ def _guess_group(info):
             return ",".join(info["metadata"].values())
     return value
 
-    """Create relatie path files for Rmd report"""
-    root_path, fn = op.split(os.path.abspath(summary_fn))
-    out_file = op.join(root_path, fn.replace(".csv", "_re.csv"))
-    with open(summary_fn) as in_handle:
-        with open(out_file, 'w') as out_handle:
-            for line in in_handle:
-                cols = line.strip().split(",")
-                fix_line = ",".join([op.relpath(c, root_path) if op.exists(c) else c for c in cols])
-                print >>out_handle, fix_line
-
-    return out_file, report_file
-
 def _modify_report(summary_path, out_dir):
     """Read Rmd template and dump with project path."""
     summary_path = op.abspath(summary_path)
