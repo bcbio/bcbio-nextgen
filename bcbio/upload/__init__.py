@@ -269,24 +269,30 @@ def _maybe_add_salmon_files(algorithm, sample, out):
                     "ext": "salmon"})
     return out
 
+def _flatten_file_with_secondary(input, out_dir):
+    """Flatten file representation with secondary indices (CWL-like)
+    """
+    out = []
+    orig_dir = os.path.dirname(input["base"])
+    for finfo in [input["base"]] + input["secondary"]:
+        cur_dir = os.path.dirname(finfo)
+        if cur_dir != orig_dir and cur_dir.startswith(orig_dir):
+            cur_out_dir = os.path.join(out_dir, cur_dir.replace(orig_dir + "/", ""))
+        else:
+            cur_out_dir = out_dir
+        out.append({"path": finfo, "dir": cur_out_dir})
+    return out
+
 def _maybe_add_summary(algorithm, sample, out):
     out = []
     if "summary" in sample:
         if sample["summary"].get("pdf"):
             out.append({"path": sample["summary"]["pdf"],
-                       "type": "pdf",
-                       "ext": "summary"})
+                        "type": "pdf",
+                        "ext": "summary"})
         if sample["summary"].get("qc"):
             for program, finfo in sample["summary"]["qc"].iteritems():
-                orig_dir = os.path.dirname(finfo["base"])
-                for finfo in [finfo["base"]] + finfo["secondary"]:
-                    cur_dir = os.path.dirname(finfo)
-                    if cur_dir != orig_dir and cur_dir.startswith(orig_dir):
-                        extra_dir = os.path.join(program, cur_dir.replace(orig_dir + "/", ""))
-                    else:
-                        extra_dir = program
-                    out.append({"path": finfo,
-                                "dir": os.path.join("qc", extra_dir)})
+                out.extend(_flatten_file_with_secondary(finfo, os.path.join("qc", program)))
         if utils.get_in(sample, ("summary", "researcher")):
             out.append({"path": sample["summary"]["researcher"],
                         "type": "tsv",
@@ -442,12 +448,11 @@ def _get_files_project(sample, upload_config):
     report = os.path.join(dd.get_work_dir(sample), "report")
     if utils.file_exists(report):
         out.append({"path": report,
-            "type": "directory", "ext": "report"})
+                    "type": "directory", "ext": "report"})
 
     multiqc = tz.get_in(["summary", "multiqc"], sample)
     if multiqc:
-        out.append({"path": multiqc,
-            "type": "directory", "ext": "multiqc"})
+        out.extend(_flatten_file_with_secondary(multiqc, "multiqc"))
 
     if sample.get("seqcluster", None):
         out.append({"path": sample["seqcluster"],

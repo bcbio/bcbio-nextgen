@@ -45,7 +45,7 @@ def generate_parallel(samples, run_parallel):
         samples = run_parallel("coverage_report", samples)
     qsign_info = run_parallel("qsignature_summary", [samples])
     samples = run_parallel("qc_report_summary", [samples])
-    multiqc_file = run_parallel("multiqc_summary", [samples])
+    samples = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
@@ -54,8 +54,6 @@ def generate_parallel(samples, run_parallel):
         data[0]["summary"]["project"] = summary_file
         if qsign_info:
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
-        if multiqc_file:
-            data[0]["summary"]["multiqc"] = multiqc_file[0]
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
     return out
@@ -228,7 +226,7 @@ def _save_fields(sample):
     to_save = ["dirs", "genome_resources", "genome_build", "sam_ref", "metadata",
                "description"]
     saved = {k: sample[k] for k in to_save if k in sample}
-    if "summary" in sample:
+    if "summary" in sample and "metrics" in sample["summary"]:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
         # check if disambiguation was run
         if "disambiguate" in sample:
@@ -907,14 +905,18 @@ def _check_multiqc_input(path):
     return ""
 
 def multiqc_summary(*samples):
-    """Summrize all quality metrics together"""
-    work_dir = dd.get_work_dir(samples[0][0])
-    qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc"))
-    multiqc = config_utils.get_program("multiqc", samples[0][0]["config"])
+    """Summarize all quality metrics together"""
+    samples = utils.unpack_worlds(samples)
+    work_dir = dd.get_work_dir(samples[0])
+    multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    input_dir = ""
-    folders = ["align", "trimmed", "qc", "htseq-count/*summary", "report/*/*bcbio*"]
+    folders = []
+    for data in samples:
+        for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
+            folders.append(os.path.dirname(pfiles["base"]))
+    # Back compatible -- to migrate to explicit specifications in input YAML
+    folders += ["align", "trimmed", "htseq-count/*summary", "report/*/*bcbio*"]
     out_dir = os.path.join(work_dir, "multiqc")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     with utils.chdir(work_dir):
@@ -924,9 +926,15 @@ def multiqc_summary(*samples):
             with tx_tmpdir() as tx_out:
                 do.run(cmd.format(**locals()), "Run multiqc")
                 shutil.move(tx_out, out_dir)
-    if utils.file_exists(out_dir):
-        return [out_dir]
-    return []
+    data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
+    out = []
+    if utils.file_exists(out_file):
+        for data in samples:
+            if "summary" not in data:
+                data["summary"] = {}
+            data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
+            out.append(data)
+    return [[d] for d in out]
 
 ## qsignature
 
