@@ -242,7 +242,14 @@ def _summary_variants(in_file, out_file):
     cg = list()
     with file_transaction(out_file) as out_tx:
         for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
-            q_d = np.percentile(dt['depth'], p_point)
+            if dt['depth'].dtypes == "int64":
+                depth_clean = np.array(dt['depth'])
+            else:
+                depth_clean = dt[dt['depth'] != "."]
+                depth_clean = np.array(pd.to_numeric(depth_clean['depth']))
+            q_d = [0, 0, 0, 0, 0, 0, 0, 0]
+            if len(depth_clean) > 0:
+                q_d = np.percentile(depth_clean, p_point)
             q_cg = np.percentile(dt['CG'], p_point)
             depth.append([p_point, q_d, q_cg])
         pd.DataFrame(depth).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
