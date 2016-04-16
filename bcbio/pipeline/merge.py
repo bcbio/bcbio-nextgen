@@ -88,7 +88,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
 def _biobambam_merge_dedup():
     """Combine query sorted BAM files, de-duplicate and sort. Handles split prepped files.
     """
-    return ("bammerge IL={tx_bam_file_list} SO=queryname level=0 tmpfile={tx_out_file}-bammerge | "
+    return ("bamcat level=0 tmpfile={tx_out_file}-bammerge `cat {tx_bam_file_list}` | "
             "bamsormadup threads={num_cores} tmpfile={tx_out_file}-bamsormaduptmp > {tx_out_file}")
 
 def _sambamba_merge(bam_files):

@@ -69,7 +69,7 @@ def _set_align_split_size(data):
     """
     target_size = 5  # Gb
     target_size_reads = 20  # million reads
-    max_splits = 50  # Avoid too many pieces, causing merge memory problems
+    max_splits = 100  # Avoid too many pieces, causing merge memory problems
     val = tz.get_in(["config", "algorithm", "align_split_size"], data)
     if val is None:
         total_size = 0  # Gb
