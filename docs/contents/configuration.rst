@@ -430,8 +430,9 @@ Coverage information
    low-depth calling options for GATK.
 - ``coverage`` A BED file of regions to check for coverage. Coverage
   and completeness are calculated over these regions and a Rmarkdown
-  report is generated in the `report` directory.
-
+  report is generated in the `report` directory. See the section on
+  :ref:`input-file-preparation` for tips on ensuring this file matches
+  your reference genome.
 
 Experimental information
 ========================
@@ -456,6 +457,28 @@ Variant calling
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
       tumor-only mode.
+-  ``variant_regions`` BED file of regions to call variants in. See the section on
+   :ref:`input-file-preparation` for tips on ensuring this file matches
+   your reference genome.
+-  ``mark_duplicates`` Identify and remove variants [true, false]
+   If true, will perform streaming duplicate marking with `samblaster`_ for
+   paired reads and `biobambam's bammarkduplicates`_ for single end reads.
+-  ``recalibrate`` Perform base quality score recalibration on the
+   aligned BAM file. Defaults to gatk. [false, gatk]
+-  ``realign`` Perform realignment around indels on the aligned BAM
+   file. Defaults to no realignment since realigning callers like FreeBayes and
+   GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
+- ``effects`` Method used to calculate expected variant effects. Defaults to
+  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
+  with support for `dbNSFP`_ annotation, when downloaded using
+  :ref:`datatarget-install`. [snpeff, vep, false]
+-  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
+   for human variant calling. `Heng Li's variant artifacts paper`_ provides
+   these regions, which cover ~2% of the genome but contribute to a large
+   fraction of problematic calls due to the difficulty of resolving variants
+   in repetitive regions. Removal can help facilitate comparisons between
+   methods and reduce false positives if you don't need calls in LCRs for your
+   biological analysis. [false, true]
 - ``indelcaller`` For the MuTect SNP only variant caller it is possible to add
    calls from an indelcaller such as scalpel, pindel and somatic indel detector
    (for Appistry MuTect users only). Currently an experimental option that adds
@@ -463,7 +486,8 @@ Variant calling
    Omit to ignore. [scalpel, pindel, sid, false]
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
-   match with appropriate ``variantcaller``
+   match with appropriate ``variantcaller``. Joint calling is only needed for
+   larger input sample sizes (>100 samples), otherwise use standard pooled :ref:`population-calling`:
 
      - ``gatk-haplotype-joint`` `GATK incremental joint discovery
        <http://www.broadinstitute.org/gatk/guide/article?id=3893>`_ with
@@ -479,32 +503,12 @@ Variant calling
      - ``samtools-joint`` Combine platypus calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``samtools`` variant calling.
--  ``variant_regions`` BED file of regions to call variants in.
--  ``mark_duplicates`` Identify and remove variants [true, false]
-   If true, will perform streaming duplicate marking with `samblaster`_ for
-   paired reads and `biobambam's bammarkduplicates`_ for single end reads.
--  ``recalibrate`` Perform base quality score recalibration on the
-   aligned BAM file. Defaults to gatk. [false, gatk]
--  ``realign`` Perform realignment around indels on the aligned BAM
-   file. Defaults to no realignment since realigning callers like FreeBayes and
-   GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
-- ``effects`` Method used to calculate expected variant effects. Defaults to
-  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
-  with support for `dbNSFP`_ annotation, when downloaded using
-  :ref:`datatarget-install`. [snpeff, vep, false]
--  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
-   no phasing [false, gatk]
--  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
-   for human variant calling. `Heng Li's variant artifacts paper`_ provides
-   these regions, which cover ~2% of the genome but contribute to a large
-   fraction of problematic calls due to the difficulty of resolving variants
-   in repetitive regions. Removal can help facilitate comparisons between
-   methods and reduce false positives if you don't need calls in LCRs for your
-   biological analysis. [false, true]
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
   joint calling. Currently applies to GATK HaplotypeCaller joint calling and
   defaults to the GATK recommendation of 200. Larger numbers of samples will
   first get combined prior to genotyping.
+-  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
+   no phasing [false, gatk]
 - ``clinical_reporting`` Tune output for clinical reporting.
   Modifies snpEff parameters to use HGVS notational on canonical
   transcripts [false, true].
@@ -527,7 +531,8 @@ Structural variant calling
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
   structural variant calls to highlight changes in known genes. This can be
-  either the path to a BED file (with ``chrom start end gene_name``) or the name
+  either the path to a BED file (with ``chrom start end gene_name``, see
+  :ref:`input-file-preparation`) or the name
   of one of the pre-installed prioritization files:
 
      - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
@@ -903,6 +908,29 @@ at the top level of your sample YAML::
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
 .. _GATK phone home: http://gatkforums.broadinstitute.org/discussion/1250/what-is-phone-home-and-how-does-it-affect-me
 
+.. _input-file-preparation:
+
+Input file preparation
+~~~~~~~~~~~~~~~~~~~~~~
+
+Input files for supplementing analysis, like ``variant_regions`` need to match
+the specified reference genome. A common cause of confusion is the two
+chromosome naming schemes for human genome build 37: UCSC-style in hg19 (chr1,
+chr2) and Ensembl/NCBI style in GRCh37 (1, 2). To help avoid some of this
+confusion, in build 38 we only support the commonly agreed on chr1, chr2 style.
+
+It's important to ensure that the chromosome naming in your input files match
+those in the reference genome selected. bcbio will try to detect this and
+provide helpful errors if you miss it.
+
+To convert chromosome names, you can use `Devon Ryan's collection of chromosome
+mappings <https://github.com/dpryan79/ChromosomeMappings>`_ as an input to sed.
+For instance, to convert hg19 chr-style coordinates to GRCh37::
+
+      wget --no-check-certificate -qO- http://raw.githubusercontent.com/dpryan79/ChromosomeMappings/master/GRCh37_UCSC2ensembl.txt \
+         | awk '{if($1!=$2) print "s/^"$1"/"$2"/g"}' > remap.sed
+      sed -f remap.sed original.bed > final.bed
+
 Genome configuration files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 Each genome build has an associated ``buildname-resources.yaml``
@@ -932,6 +960,7 @@ The major sections of the file are:
 - ``srnaseq`` -- Supporting data files for smallRNA-seq analysis. Same as in
   rnaseq, the automated installer and updater handle this for supported genome
   builds.
+
 
 By default, we place the ``buildname-resources.yaml`` files next to
 the genome FASTA files in the reference directory. For custom setups,

@@ -92,6 +92,8 @@ population where you are especially concerned about sensitivity. Single
 caller detection with FreeBayes or GATK HaplotypeCaller provide good resolution
 of events.
 
+.. _population-calling:
+
 Population calling
 ==================
 
@@ -110,7 +112,7 @@ Batching samples results in output VCFs and GEMINI databases containing
 all merged sample calls. bcbio has two methods to call samples together:
 
 - Batch or pooled calling -- This calls all samples simultaneously by feeding
-  them to the variant caller. This works for smaller batch sizes (< 50 samples)
+  them to the variant caller. This works for smaller batch sizes (< 100 samples)
   as memory requirements become limiting in larger pools. This is the default
   approach taken when you specify a ``variantcaller`` in the
   :ref:`variant-config` configuration.
