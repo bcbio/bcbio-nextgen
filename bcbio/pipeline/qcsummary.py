@@ -134,7 +134,7 @@ def _run_qc_tools(bam_file, data):
         if out and isinstance(out, dict):
             metrics.update(out)
         elif out and isinstance(out, basestring) and os.path.exists(out):
-            qc_files = [out]
+            qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
         if qc_files:
@@ -1010,7 +1010,7 @@ def qsignature_summary(*samples):
     count = 0
     for data in samples:
         data = data[0]
-        vcf = tz.get_in(["summary", "metrics", "qsig_vcf"], data)
+        vcf = tz.get_in(["summary", "qc", "qsignature", "base"], data)
         if vcf:
             count += 1
             vcf_name = dd.get_sample_name(data) + ".qsig.vcf"
