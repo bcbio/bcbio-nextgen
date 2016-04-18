@@ -71,7 +71,7 @@ def _cmd_cutadapt():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{cutadapt} --adapter={adapter} --minimum-length=8 --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file}"
+    cmd = "{cutadapt} --adapter={adapter} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file}"
     return cmd
 
 def _collapse(in_file):
