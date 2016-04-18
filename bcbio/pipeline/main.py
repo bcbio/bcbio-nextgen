@@ -132,9 +132,6 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
             ww.report("combine_sample_regions", samples)
-        with profile.report("structural variation initial", dirs):
-            samples = structural.run(samples, run_parallel, "initial")
-            ww.report("sv_initial", samples)
         with profile.report("hla typing", dirs):
             samples = hla.run(samples, run_parallel)
             ww.report("call_hla", samples)
@@ -169,7 +166,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
         with profile.report("validation summary", dirs):
             samples = validate.summarize_grading(samples)
-        with profile.report("structural variation final", dirs):
+        with profile.report("structural variation", dirs):
             samples = structural.run(samples, run_parallel, "standard")
         with profile.report("structural variation ensemble", dirs):
             samples = structural.run(samples, run_parallel, "ensemble")
