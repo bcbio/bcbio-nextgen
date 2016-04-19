@@ -7,6 +7,6 @@ details:
       aligner: tophat2
     description: Test1
     files:
-      - ../data/Harvard-inDrop/r1.fq
-      - ../data/Harvard-inDrop/r2.fq
+      - ../data/Harvard-inDrop/r1.fq.gz
+      - ../data/Harvard-inDrop/r2.fq.gz
     genome_build: mm9

@@ -85,7 +85,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 29),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
                          DlInfo("100326_FC6107FAAXX.tar.gz", None, 10),
-                         DlInfo("tcga_benchmark.tar.gz", None, 3)]
+                         DlInfo("tcga_benchmark.tar.gz", None, 3),
+                         DlInfo("singlecell-rnaseq-test-data.tar.gz", "Harvard-inDrop", 1)]
         for dl in download_data:
             url = "http://chapmanb.s3.amazonaws.com/{fname}".format(fname=dl.fname)
             dirname = os.path.join(data_dir, os.pardir,
@@ -204,6 +205,8 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-fastrnaseq.yaml")]
             subprocess.check_call(cl)
 
+    # XXX Turned off until umis library installed via conda
+    @expected_failure
     @attr(rnaseq=True)
     @attr(scrnaseq=True)
     def test_2_scrnaseq(self):
