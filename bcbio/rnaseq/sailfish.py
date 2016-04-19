@@ -6,6 +6,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition
                          R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
 from bcbio.rnaseq import gtf
+from bcbio.log import logger
 import pandas as pd
 import numpy as np
 
@@ -162,6 +163,7 @@ def combine_sailfish(samples):
     tx2gene = os.path.join(sailfish_dir, "tx2gene.csv")
     if not all([file_exists(x) for x in [gene_tpm_file, tidy_file,
                                          transcript_tpm_file, tx2gene]]):
+        logger.info("Combining count files into %s." % tidy_file)
         df = pd.DataFrame()
         for data in to_combine:
             sailfish_file = dd.get_sailfish(data)
@@ -187,6 +189,7 @@ def combine_sailfish(samples):
             pivot = pivot.groupby("gene_id").agg(np.sum)
             pivot.to_csv(tx_out_file, sep="\t")
         tx2gene = gtf.tx2genefile(gtf_file, tx2gene)
+        logger.info("Finished combining count files into %s." % tidy_file)
 
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
