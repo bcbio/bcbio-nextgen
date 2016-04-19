@@ -924,19 +924,20 @@ def multiqc_summary(*samples):
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
             input_dir = " ".join([_check_multiqc_input(d) for d in folders])
-            cmd = "{multiqc} {input_dir} -o {tx_out} "
-            with tx_tmpdir() as tx_out:
-                do.run(cmd.format(**locals()), "Run multiqc")
-                shutil.move(tx_out, out_dir)
+            if input_dir.strip():
+                cmd = "{multiqc} {input_dir} -o {tx_out} "
+                with tx_tmpdir() as tx_out:
+                    do.run(cmd.format(**locals()), "Run multiqc")
+                    shutil.move(tx_out, out_dir)
     out = []
-    if utils.file_exists(out_file):
-        data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
-        for i, data in enumerate(samples):
-            if i == 0:
+    for i, data in enumerate(samples):
+        if i == 0:
+            if utils.file_exists(out_file):
+                data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
                 if "summary" not in data:
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
-            out.append(data)
+        out.append(data)
     return [[d] for d in out]
 
 ## qsignature
