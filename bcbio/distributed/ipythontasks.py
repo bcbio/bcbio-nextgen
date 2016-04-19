@@ -200,6 +200,12 @@ def delayed_bam_merge(*args):
         return ipython.zip_args(apply(sample.delayed_bam_merge, *args))
 
 @require(sample)
+def merge_split_alignments(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(sample.merge_split_alignments, *args))
+
+@require(sample)
 def recalibrate_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

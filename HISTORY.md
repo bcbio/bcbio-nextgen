@@ -5,6 +5,8 @@
 - Improve choosing split regions for batch analysis to use the unionized
   intersection of non-callable regions. This enables better use of batches
   with different callable regions. Thanks to Neill Gibson.
+- Fix HLA typing issues and handle HLA typing on split alignments.
+  Thanks to Miika Ahdesmaki.
 - Set `align_split_size` automatically based on input file sizes, trying to
   provide reasonable splits and avoid too many splits for large files.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we

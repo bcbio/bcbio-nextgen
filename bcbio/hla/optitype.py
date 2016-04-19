@@ -5,6 +5,7 @@ https://github.com/FRED-2/OptiType
 import csv
 import glob
 import os
+import re
 import sys
 import shutil
 
@@ -24,7 +25,7 @@ def run(data):
     """
     hlas = []
     for hla_fq in tz.get_in(["hla", "fastq"], data, []):
-        hla_type = os.path.splitext(os.path.splitext(os.path.basename(hla_fq))[0])[1].replace(".", "")
+        hla_type = re.search("[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
         if hla_type in SUPPORTED_HLAS:
             hlas.append((hla_type, hla_fq))
     if len(hlas) > 0:

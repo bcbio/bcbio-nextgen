@@ -172,18 +172,36 @@ def merge_split_alignments(samples, run_parallel):
         else:
             ready.append([data])
     ready_merge = []
+    hla_merges = []
     for mgroup in to_merge.itervalues():
         cur_data = mgroup[0]
         del cur_data["align_split"]
         for x in mgroup[1:]:
             cur_data["combine"][file_key]["extras"].append(x[file_key])
         ready_merge.append([cur_data])
+        cur_hla = None
+        for d in mgroup:
+            hla_files = tz.get_in(["hla", "fastq"], d)
+            if hla_files:
+                if not cur_hla:
+                    cur_hla = {"rgnames": {"sample": dd.get_sample_name(cur_data)},
+                               "config": cur_data["config"], "dirs": cur_data["dirs"],
+                               "hla": {"fastq": []}}
+                cur_hla["hla"]["fastq"].append(hla_files)
+        if cur_hla:
+            hla_merges.append([cur_hla])
     merged = run_parallel("delayed_bam_merge", ready_merge)
+    hla_merge_raw = run_parallel("merge_split_alignments", hla_merges)
+    hla_merges = {}
+    for hla_merge in [x[0] for x in hla_merge_raw]:
+        hla_merges[dd.get_sample_name(hla_merge)] = tz.get_in(["hla", "fastq"], hla_merge)
     # Add stable 'align_bam' target to use for retrieving raw alignment
     out = []
     for data in [x[0] for x in merged + ready]:
         if data.get("work_bam"):
             data["align_bam"] = data["work_bam"]
+        if dd.get_sample_name(data) in hla_merges:
+            data["hla"]["fastq"] = hla_merges[dd.get_sample_name(data)]
         out.append([data])
     return out
 
