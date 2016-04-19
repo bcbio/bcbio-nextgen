@@ -1,3 +1,6 @@
+resources:
+  bcbio_prioritize:
+    jvm_opts: [-Xms1g, -Xmx3g]
 upload:
   dir: upload
 fc_date: '130728'
@@ -19,6 +22,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
+      svcaller: [lumpy]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -39,6 +43,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
+      svcaller: [lumpy]
       #svcaller: [cnvkit]
       #tools_on: [svplots]
       tools_off: [vardict_somatic_filter]
@@ -62,6 +67,7 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
+      svcaller: [lumpy]
       #tools_on: [svplots]
       #svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed

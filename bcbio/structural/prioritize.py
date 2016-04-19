@@ -9,6 +9,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
@@ -47,7 +48,9 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
         if not utils.file_exists(priority_vcf):
             with file_transaction(data, priority_vcf) as tx_out_file:
-                cmd = ("bcbio-prioritize known -i {vcf_file} -o {tx_out_file} -k {prioritize_by}")
+                resources = config_utils.get_resources("bcbio_prioritize", data["config"])
+                jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx2g"]))
+                cmd = ("bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} -k {prioritize_by}")
                 do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
         if post_prior_fn:
             priority_vcf = post_prior_fn(priority_vcf, work_dir, data)
