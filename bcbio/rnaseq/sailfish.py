@@ -32,7 +32,8 @@ def run_sailfish(data):
 def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     safe_makedir(sailfish_dir)
     samplename = dd.get_sample_name(data)
-    out_file = os.path.join(sailfish_dir, "quant.sf")
+    quant_dir = os.path.join(sailfish_dir, "quant")
+    out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
     sailfish_idx = sailfish_index(gtf_file, ref_file, data, sailfish_dir)
@@ -51,9 +52,9 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     cmd += "--useVBOpt --numBootstraps 30 "
     cmd += "-o {tx_out_dir}"
     message = "Quantifying transcripts in {fq1} and {fq2}."
-    with file_transaction(data, sailfish_dir) as tx_out_dir:
+    with file_transaction(data, quant_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-    _sleuthify_sailfish(sailfish_dir)
+    _sleuthify_sailfish(quant_dir)
     return out_file
 
 def _sleuthify_sailfish(sailfish_dir):
