@@ -36,7 +36,7 @@ resources:
     cores: 16
     memory: 4G
   qualimap:
-    memory: 8g
+    memory: 4g
   gatk:
     jvm_opts: ["-Xms500m", "-Xmx3500m"]
   picard:
