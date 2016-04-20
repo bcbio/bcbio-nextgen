@@ -14,6 +14,7 @@ import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
@@ -41,9 +42,12 @@ def identify(data):
                    "--window-size {window_size} {work_bam} "
                    "| head -n {sample_size} "
                    """| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l if not x.startswith("mean")])'""")
+            median_depth_out = subprocess.check_output(cmd.format(**locals()), shell=True)
             try:
-                median_cov = float(subprocess.check_output(cmd.format(**locals()), shell=True))
+                median_cov = float(median_depth_out)
             except ValueError:
+                logger.info("Skipping high coverage region detection; problem calculating median depth: %s" %
+                            median_depth_out)
                 median_cov = None
             if median_cov and not numpy.isnan(median_cov):
                 high_thresh = int(high_multiplier * median_cov)
