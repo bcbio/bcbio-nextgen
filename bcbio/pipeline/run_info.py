@@ -741,12 +741,14 @@ def _add_algorithm_defaults(algorithm):
     """Central location specifying defaults for algorithm inputs.
 
     Converts allowed multiple inputs into lists if specified as a single item.
+    Converts required single items into string if specified as a list
     """
     defaults = {"archive": [],
                 "tools_off": [],
                 "tools_on": [],
                 "variant_regions": None}
-    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller"])
+    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller"])
+    convert_to_single = set(["hlacaller", "indelcaller"])
     for k, v in defaults.items():
         if k not in algorithm:
             algorithm[k] = v
@@ -756,6 +758,12 @@ def _add_algorithm_defaults(algorithm):
                 algorithm[k] = [v]
             elif v is None:
                 algorithm[k] = []
+        elif k in convert_to_single:
+            if v and not isinstance(v, basestring):
+                if isinstance(v, (list, tuple)) and len(v) == 1:
+                    algorithm[k] = v[0]
+                else:
+                    raise ValueError("Unexpected input in sample YAML; need a single item for %s: %s" % (k, v))
     return algorithm
 
 def _replace_global_vars(xs, global_vars):
