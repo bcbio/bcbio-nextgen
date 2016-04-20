@@ -18,6 +18,10 @@ from bcbio.pipeline import config_utils, run_info
 def process(args):
     """Run the function in args.name given arguments in args.argfile.
     """
+    # Set environment to standard to use periods for decimals and avoid localization
+    os.environ["LC_ALL"] = "C"
+    os.environ["LC"] = "C"
+    os.environ["LANG"] = "C"
     try:
         fn = getattr(multitasks, args.name)
     except AttributeError:

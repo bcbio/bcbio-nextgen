@@ -1,6 +1,7 @@
 """Ipython parallel ready entry points for parallel execution
 """
 import contextlib
+import os
 
 try:
     from ipyparallel import require
@@ -25,6 +26,10 @@ from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
 def _setup_logging(args):
+    # Set environment to standard to use periods for decimals and avoid localization
+    os.environ["LC_ALL"] = "C"
+    os.environ["LC"] = "C"
+    os.environ["LANG"] = "C"
     config = None
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         args = args[0]
