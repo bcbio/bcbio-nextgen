@@ -9,6 +9,8 @@
   Thanks to Miika Ahdesmaki.
 - Set `align_split_size` automatically based on input file sizes, trying to
   provide reasonable splits and avoid too many splits for large files.
+- Fix high depth identification for whole genome runs, correctly calculating
+  it when also inferring coverage estimations. Thanks to Neill Gibson.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
 - Move to samtools for output CRAM support, which does not do 8-bin quality

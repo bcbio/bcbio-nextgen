@@ -182,13 +182,14 @@ def postprocess_alignment(data):
         bam.index(bam_file_ready, data["config"])
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(bam_file_ready, ref_file, data)
-        highdepth_bed = highdepth.identify(data)
         sample_callable = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         offtarget_stats = callable.calculate_offtarget(bam_file_ready, ref_file, data)
-        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed, "highdepth": highdepth_bed,
+        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed,
                            "sample_callable": sample_callable,
                            "offtarget_stats": offtarget_stats}
         data = coverage.assign_interval(data)
+        highdepth_bed = highdepth.identify(data)
+        data["regions"]["highdepth"] = highdepth_bed
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
