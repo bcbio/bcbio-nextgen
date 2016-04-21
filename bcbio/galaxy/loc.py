@@ -76,7 +76,7 @@ def update_loc_file(galaxy_base, loc_type, genome_build, ref_loc):
                     out_handle.write(line)
                 else:
                     parts = line.strip().split()
-                    build = parts[1]
+                    build = parts[1] if len(parts) > 2 else None
                     builds.append(build)
                     if build != genome_build:
                         out_handle.write(line)
