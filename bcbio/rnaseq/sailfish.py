@@ -6,6 +6,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition
                          R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
 from bcbio.rnaseq import gtf
+from bcbio.bam import fastq
 from bcbio.log import logger
 import pandas as pd
 import numpy as np
@@ -36,7 +37,12 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
-    sailfish_idx = sailfish_index(gtf_file, ref_file, data, sailfish_dir)
+    kmer_size = int(fastq.estimate_read_length(fq1))
+    if kmer_size < 30:
+        kmer_size = kmer_size - 5
+    else:
+        kmer_size = 25
+    sailfish_idx = sailfish_index(gtf_file, ref_file, data, sailfish_dir, kmer_size)
     num_cores = dd.get_num_cores(data)
     sailfish = config_utils.get_program("sailfish", data["config"])
     cmd = "{sailfish} quant -i {sailfish_idx} -p {num_cores} "
@@ -101,7 +107,7 @@ def create_combined_fasta(data, out_dir):
         do.run(cmd.format(**locals()), "Combining transcriptome FASTA files.")
     return combined_file
 
-def sailfish_index(gtf_file, ref_file, data, out_dir):
+def sailfish_index(gtf_file, ref_file, data, out_dir, kmer_size):
     out_dir = os.path.join(out_dir, "index", dd.get_genome_build(data))
     if dd.get_disambiguate(data):
         out_dir = "-".join([out_dir] + dd.get_disambiguate(data))
@@ -111,7 +117,8 @@ def sailfish_index(gtf_file, ref_file, data, out_dir):
     if file_exists(out_dir + "versionInfo.json"):
         return out_dir
     with file_transaction(out_dir) as tx_out_dir:
-        cmd = "{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} -k 25"
+        cmd = ("{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} "
+               "-k {kmer_size}")
         message = "Creating sailfish index for {gtf_fa}."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
