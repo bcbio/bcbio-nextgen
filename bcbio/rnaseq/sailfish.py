@@ -39,6 +39,8 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
         return out_file
     kmer_size = int(fastq.estimate_read_length(fq1))
     if kmer_size < 30:
+        # kmer size must be odd
+        kmer_size = kmer_size if kmer_size % 2 else kmer_size - 1
         kmer_size = kmer_size - 5
     else:
         kmer_size = 25
