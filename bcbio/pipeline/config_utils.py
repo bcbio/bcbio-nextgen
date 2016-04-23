@@ -44,7 +44,7 @@ def update_w_custom(config, lane_info):
 
 # ## Retrieval functions
 
-def load_system_config(config_file=None, work_dir=None):
+def load_system_config(config_file=None, work_dir=None, allow_missing=False):
     """Load bcbio_system.yaml configuration file, handling standard defaults.
 
     Looks for configuration file in default location within
@@ -59,11 +59,13 @@ def load_system_config(config_file=None, work_dir=None):
         test_config = os.path.join(base_dir, "galaxy", config_file)
         if os.path.exists(test_config):
             config_file = test_config
+        elif allow_missing:
+            config_file = None
         else:
             raise ValueError("Could not find input system configuration file %s, "
                              "including inside standard directory %s" %
                              (config_file, os.path.join(base_dir, "galaxy")))
-    config = load_config(config_file)
+    config = load_config(config_file) if config_file else {}
     if docker_config:
         assert work_dir is not None, "Need working directory to merge docker config"
         config_file = os.path.join(work_dir, "%s-merged%s" % os.path.splitext(os.path.basename(config_file)))
