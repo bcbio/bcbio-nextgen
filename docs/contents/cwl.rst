@@ -88,8 +88,9 @@ your machine:
 
 2. Run the analysis using ``cwltool``. If you have Docker, cwltool will
    download the ``bcbio/bcbio`` container and you don't need to install
-   anything else to get started. You can use the ``run_cwl.sh`` script
-   or run directly from the command line::
+   anything else to get started. If you have an old version of the container you
+   want to update to the latest with ``docker pull bcbio/bcbio``.
+   You can use the ``run_cwl.sh`` script or run directly from the command line::
 
      cwltool --verbose run_info-cwl-workflow/main-run_info-cwl.cwl run_info-cwl-workflow/main-run_info-cwl-samples.json
 

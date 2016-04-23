@@ -147,9 +147,9 @@ def _check_sample(in_bam, rgnames):
     warnings = []
     if len(rg) > 1:
         warnings.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
-    elif len(rg) == 0:
+    if len(rg) == 0:
         msgs.append("No read groups found in input BAM. Expect single RG per BAM.")
-    elif rg[0].get("SM") != rgnames["sample"]:
+    if len(rg) > 0 and rg[0].get("SM") != rgnames["sample"]:
         msgs.append("Read group sample name (SM) does not match configuration `description`: %s vs %s"
                     % (rg[0].get("SM"), rgnames["sample"]))
     if len(msgs) > 0:
