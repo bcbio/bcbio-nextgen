@@ -13,6 +13,8 @@
   it when also inferring coverage estimations. Thanks to Neill Gibson.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
+- Do not use samblaster on genomes with greater than 32768 contigs, the
+  samblaster maximum. Thanks to morten (@mattingsdal).
 - Move to samtools for output CRAM support, which does not do 8-bin quality
   binning.
 - Remove `merge_bamprep` option and always merge realigned BAM files if run.
