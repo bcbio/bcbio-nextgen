@@ -168,6 +168,6 @@ def _trna_annotation(data):
 def _check_java_version(config, items):
     msg = java(config, items)
     if msg:
-        logger.debug("miraligner is only compatible with jave 1.7")
+        logger.warning("miraligner is only compatible with java 1.7")
         return False
     return True
