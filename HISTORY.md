@@ -18,6 +18,8 @@
 - Move to samtools for output CRAM support, which does not do 8-bin quality
   binning.
 - Remove `merge_bamprep` option and always merge realigned BAM files if run.
+- Correctly clean up additional problem characters in sample descriptions that
+  can confuse shell commands.
 
 ## 0.9.7 (29 March 2016)
 
