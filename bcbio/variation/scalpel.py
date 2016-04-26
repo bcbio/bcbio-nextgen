@@ -11,7 +11,7 @@ try:
 except ImportError:
     vcf = None
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions

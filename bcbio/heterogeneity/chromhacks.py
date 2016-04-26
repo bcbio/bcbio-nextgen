@@ -23,10 +23,13 @@ def is_autosomal(chrom):
 def is_autosomal_or_x(chrom):
     return is_autosomal(chrom) or chrom in ["X", "chrX"]
 
+def is_autosomal_or_sex(chrom):
+    return is_autosomal_or_x(chrom) or chrom in ["Y", "chrY"]
+
 def is_nonalt(chrom):
     """Check that a chromosome is on 1-22, X, Y, MT.
     """
-    return is_autosomal_or_x(chrom) or chrom in ["MT", "chrM", "chrMT", "Y", "chrY"]
+    return is_autosomal_or_sex(chrom) or chrom in ["MT", "chrM", "chrMT"]
 
 def autosomal_or_x_coords(ref_file):
     out = []

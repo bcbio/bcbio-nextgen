@@ -133,7 +133,7 @@ def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,
             out_file_mutect = _fix_mutect_output(out_file_orig, config, out_file_mutect, is_paired)
         indelcaller = vcfutils.get_indelcaller(base_config)
         if ("scalpel" in indelcaller.lower() and region and isinstance(region, (tuple, list))
-              and chromhacks.is_nonalt(region[0])):
+              and chromhacks.is_autosomal_or_sex(region[0])):
             # Scalpel InDels
             out_file_indels = (out_file.replace(".vcf", "-somaticIndels.vcf")
                                if "vcf" in out_file else out_file + "-somaticIndels.vcf")
