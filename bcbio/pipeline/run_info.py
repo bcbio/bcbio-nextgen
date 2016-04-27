@@ -631,17 +631,20 @@ def _check_yaml_file(yaml_fn):
     try:
         import yamllint.linter as linter
         from yamllint.config import YamlLintConfig
-        out = linter.run(open(yaml_fn), YamlLintConfig('extends: relaxed'))
-        for problem in out:
-            msg = '%(fn)s:%(line)s:%(col)s: [%(level)s] %(msg)s' % {'fn': yaml_fn,
-                                                                    'line': problem.line,
-                                                                    'col': problem.column,
-                                                                    'level': problem.level,
-                                                                    'msg': problem.message}
-            if problem.level == "error":
-                raise ValueError(msg)
     except ImportError:
-        pass
+        return
+    conf = """{"extends": "relaxed",
+               "rules": {"trailing-spaces": {"level": "warning"},
+                         "new-line-at-end-of-file": {"level": "warning"}}}"""
+    out = linter.run(open(yaml_fn), YamlLintConfig(conf))
+    for problem in out:
+        msg = '%(fn)s:%(line)s:%(col)s: [%(level)s] %(msg)s' % {'fn': yaml_fn,
+                                                                'line': problem.line,
+                                                                'col': problem.column,
+                                                                'level': problem.level,
+                                                                'msg': problem.message}
+        if problem.level == "error":
+            raise ValueError(msg)
 
 def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
     """Read run information from a passed YAML file.
