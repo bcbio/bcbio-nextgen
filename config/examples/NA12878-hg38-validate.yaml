@@ -4,7 +4,7 @@
 # Uses two build 38 reference genomes
 #  - hg38 -- full reference with alternative alleles and HLA
 #  - hg38-noalt -- no alternative alleles
-#  
+#
 # Uses 3 validation sets:
 #  - Genome in a Bottle converted to build 38 with NCBI remap
 #  - Genome in a Bottle converted to build 38 with CrossMap and a UCSC chain file
