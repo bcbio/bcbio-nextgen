@@ -488,11 +488,14 @@ def _update_system_file(system_file, name, new_kvs):
         utils.safe_makedir(os.path.dirname(system_file))
         config = {}
     new_rs = {}
+    added = False
     for rname, r_kvs in config.get("resources", {}).iteritems():
         if rname == name:
             for k, v in new_kvs.iteritems():
                 r_kvs[k] = v
         new_rs[rname] = r_kvs
+    if not added:
+        new_rs[name] = new_kvs
     config["resources"] = new_rs
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)

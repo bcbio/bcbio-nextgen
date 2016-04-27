@@ -11,6 +11,8 @@
   provide reasonable splits and avoid too many splits for large files.
 - Fix high depth identification for whole genome runs, correctly calculating
   it when also inferring coverage estimations. Thanks to Neill Gibson.
+- Fix installation of mutect jar via toolplus when mutect not previously
+  present in configuration.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
 - Do not use samblaster on genomes with greater than 32768 contigs, the
