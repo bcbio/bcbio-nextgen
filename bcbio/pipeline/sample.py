@@ -111,7 +111,7 @@ def process_alignment(data, alt_input=None):
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         data = _add_supplemental_bams(data)
-    elif fastq1 and os.path.exists(fastq1) and fastq1.endswith(".bam"):
+    elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
         bamclean = config["algorithm"].get("bam_clean")
         if bamclean is True or bamclean == "picard":

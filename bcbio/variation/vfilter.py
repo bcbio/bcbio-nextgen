@@ -142,8 +142,11 @@ def _freebayes_hard(in_file, data):
 
     if _do_high_depth_filter(data):
         stats = _calc_vcf_stats(in_file)
-        depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
-        qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
+        if stats["avg_depth"] > 0:
+            depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
+            qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
+        else:
+            depth_thresh = None
     else:
         depth_thresh = None
     filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
@@ -183,7 +186,10 @@ def _average_called_depth(in_file):
         d = rec.INFO.get("DP")
         if d is not None:
             depths.append(int(d))
-    return int(math.ceil(numpy.mean(depths)))
+    if len(depths) > 0:
+        return int(math.ceil(numpy.mean(depths)))
+    else:
+        return 0
 
 def platypus(in_file, data):
     """Filter Platypus calls, removing Q20 hard filter and replacing with depth and quality based filter.

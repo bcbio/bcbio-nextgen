@@ -135,6 +135,8 @@ def compare_to_rm(data):
         elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
+        elif vmethod == "hap.py":
+            data["validate"] = _run_happy_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
         elif vmethod == "bcbio.variation":
             data["validate"] = _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir,
                                                     sample, caller, toval_data)
@@ -166,6 +168,21 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
     eval_files["summary"] = out_file
     return eval_files
 
+def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
+    """Prepare input VCF and BED files for validation.
+    """
+    if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
+        rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
+    if len(vcfutils.get_samples(vrn_file)) > 1:
+        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+        sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
+        vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
+    if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
+        vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
+
+    interval_bed = _get_merged_intervals(rm_interval_file, base_dir, data)
+    return vrn_file, rm_file, interval_bed
+
 def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
     """Run evaluation of a caller against the truth set using rtg vcfeval.
     """
@@ -173,22 +190,15 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
     if not utils.file_exists(os.path.join(out_dir, "done")):
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
-        if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
-            rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
-        if len(vcfutils.get_samples(vrn_file)) > 1:
-            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
-            vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
-        if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
-            vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
+        vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
 
-        interval_bed = _get_merged_intervals(rm_interval_file, base_dir, data)
         rtg_ref = tz.get_in(["reference", "rtg"], data)
         assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
                                                      "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
         # handle CWL where we have a reference to a single file in the RTG directory
         if os.path.isfile(rtg_ref):
             rtg_ref = os.path.dirname(rtg_ref)
+
         # get core and memory usage from standard configuration
         threads = min(dd.get_num_cores(data), 6)
         resources = config_utils.get_resources("rtg", data["config"])
@@ -311,6 +321,32 @@ def get_analysis_intervals(data):
         return tz.get_in(["config", "algorithm", "callable_regions"], data)
     elif tz.get_in(["config", "algorithm", "variant_regions"], data):
         return tz.get_in(["config", "algorithm", "variant_regions"], data)
+
+# ## hap.py
+
+def _run_happy_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
+    """Validation with hap.py: https://github.com/Illumina/hap.py
+
+    XXX Does not yet parse out metrics for plotting.
+    """
+    out_dir = utils.safe_makedir(os.path.join(base_dir, "happy"))
+    out_prefix = os.path.join(out_dir, "val")
+    if not utils.file_exists(out_prefix + ".summary.csv"):
+        vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
+        cmd = ["hap.py", "-V", "-f", interval_bed, "-r", dd.get_ref_file(data),
+               "-l", ",".join(_get_location_list(interval_bed)),
+               "-o", out_prefix, rm_file, vrn_file]
+        do.run(cmd, "Validate calls using hap.py", data)
+    return {"vcf": out_prefix + ".vcf.gz"}
+
+def _get_location_list(interval_bed):
+    """Retrieve list of locations to analyze from input BED file.
+    """
+    import pybedtools
+    regions = collections.OrderedDict()
+    for region in pybedtools.BedTool(interval_bed):
+        regions[str(region.chrom)] = None
+    return regions.keys()
 
 # ## bcbio.variation comparison -- deprecated approach
 
@@ -440,7 +476,7 @@ def summarize_grading(samples):
                             for row in _get_validate_plotdata_yaml(variant, data):
                                 writer.writerow(row)
                                 plot_data.append(row)
-                        else:
+                        elif tz.get_in(["validate", "summary"], variant):
                             plot_files.append(variant["validate"]["summary"])
         if plot_files:
             plots = validateplot.classifyplot_from_plotfiles(plot_files, out_csv)

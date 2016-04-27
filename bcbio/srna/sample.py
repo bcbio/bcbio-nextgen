@@ -12,6 +12,7 @@ except ImportError:
 
 from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
 from bcbio.provenance import do
+from bcbio.provenance.versioncheck import java
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
@@ -59,6 +60,8 @@ def sample_annotation(data):
     if dd.get_mirbase_hairpin(data):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
         data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
+    else:
+        logger.debug("No annotation file from miRBase.")
 
     sps = dd.get_species(data) if dd.get_species(data) else "None"
     if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
@@ -112,6 +115,8 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     Run miraligner tool (from seqcluster suit) with default
     parameters.
     """
+    if not _check_java_version(config, {}):
+        return None
     resources = config_utils.get_resources("miraligner", config)
     miraligner = config_utils.get_program("miraligner", config)
     jvm_opts =  "-Xms750m -Xmx4g"
@@ -159,3 +164,10 @@ def _trna_annotation(data):
                 for filename in glob.glob("*mapped*"):
                     shutil.move(filename, work_dir)
     return out_file
+
+def _check_java_version(config, items):
+    msg = java(config, items)
+    if msg:
+        logger.warning("miraligner is only compatible with java 1.7")
+        return False
+    return True

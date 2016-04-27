@@ -104,8 +104,8 @@ def setup_directories(work_dir, fc_dir, config, config_file):
                                                         config, config_file)
     # check default install for tool data if not found locally
     if not os.path.exists(os.path.join(galaxy_dir, "tool-data")):
-        _, config_file = config_utils.load_system_config(work_dir=work_dir)
-        if os.path.exists(os.path.join(os.path.dirname(config_file), "tool-data")):
+        _, config_file = config_utils.load_system_config(work_dir=work_dir, allow_missing=True)
+        if config_file and os.path.exists(os.path.join(os.path.dirname(config_file), "tool-data")):
             galaxy_dir = os.path.dirname(config_file)
     return {"fastq": fastq_dir, "galaxy": galaxy_dir,
             "work": work_dir, "flowcell": fc_dir, "config": config_dir}
@@ -268,7 +268,7 @@ def _clean_algorithm(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    for problem in [" ", "."]:
+    for problem in [" ", ".", "/", "\\", "[", "]", "&", ";"]:
         x = x.replace(problem, "_")
     return x
 
@@ -748,7 +748,7 @@ def _add_algorithm_defaults(algorithm):
                 "tools_on": [],
                 "variant_regions": None}
     convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller"])
-    convert_to_single = set(["hlacaller", "indelcaller"])
+    convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
         if k not in algorithm:
             algorithm[k] = v

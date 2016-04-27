@@ -12,6 +12,7 @@ from distutils.version import LooseVersion
 import os
 
 from bcbio import bam, utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
@@ -30,7 +31,7 @@ def tobam_cl(data, out_file, is_paired=False):
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
-        elif is_paired:
+        elif is_paired and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
             with file_transaction(data, sr_file) as tx_sr_file:
@@ -39,6 +40,12 @@ def tobam_cl(data, out_file, is_paired=False):
                            tx_out_file)
         else:
             yield (_biobambam_dedup_sort(data, tx_out_file), tx_out_file)
+
+def _too_many_contigs(ref_file):
+    """Check for more contigs than the maximum samblaster deduplication supports.
+    """
+    max_contigs = 32768
+    return len(list(ref.file_contigs(ref_file))) >= max_contigs
 
 def _get_cores_memory(data, downscale=2):
     """Retrieve cores and memory, using samtools as baseline.
