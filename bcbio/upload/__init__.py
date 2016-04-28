@@ -73,6 +73,7 @@ def _get_files_srnaseq(sample):
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_trimming(algorithm, sample, out)
     out = _maybe_add_seqbuster(algorithm, sample, out)
+    out = _maybe_add_trna(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -398,6 +399,16 @@ def _maybe_add_seqbuster(algorithm, sample, out):
         out.append({"path": fn,
                     "type": "counts",
                     "ext": "novel-ready"})
+    return out
+
+def _maybe_add_trna(algorithm, sample, out):
+    if "trna" not in sample:
+        return out
+    fn = sample["trna"]
+    if utils.file_exists(fn):
+        out.append({"path": fn,
+                    "type": "directory",
+                    "ext": "tdrmapper"})
     return out
 
 def _maybe_add_peaks(algorithm, sample, out):

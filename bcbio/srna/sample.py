@@ -153,7 +153,7 @@ def _trna_annotation(data):
     perl_export = utils.get_perl_exports()
     if not file_exists(trna_ref) or not file_exists(tdrmapper):
         logger.info("There is no tRNA annotation to run TdrMapper.")
-        return None
+        return work_dir
     out_file = op.join(work_dir, in_file + ".hq_cs.mapped")
     if not file_exists(out_file):
         with tx_tmpdir(data) as txdir:
@@ -163,7 +163,7 @@ def _trna_annotation(data):
                 do.run(cmd, "tRNA for %s" % name)
                 for filename in glob.glob("*mapped*"):
                     shutil.move(filename, work_dir)
-    return out_file
+    return work_dir
 
 def _check_java_version(config, items):
     msg = java(config, items)
