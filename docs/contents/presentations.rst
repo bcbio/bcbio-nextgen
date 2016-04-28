@@ -1,6 +1,12 @@
 Presentations
 =============
 
+- Materials from :ref:`teaching` from the `Spring 2016 NGS Data Analysis Course
+  at Harvard Chan School
+  <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2016>`_
+  (28 April 2016): `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/ngscourse2016_teaching/ngscourse2016_teaching.pdf>`_
+
 - Statistical Genetics and Network Science Meeting at `Channing Division of
   Network Medicine
   <http://www.brighamandwomens.org/Research/depts/Medicine/Channing/default.aspx>`_
