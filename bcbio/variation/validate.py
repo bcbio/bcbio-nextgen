@@ -134,7 +134,7 @@ def compare_to_rm(data):
             pass
         # empty validation file, every call is a false positive
         elif not vcfutils.vcf_has_variants(rm_file):
-            eval_files = _setup_call_fps(vrn_file, base_dir, toval_data)
+            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
@@ -148,13 +148,13 @@ def compare_to_rm(data):
 
 # ## Empty truth sets
 
-def _setup_call_fps(vrn_file, base_dir, data):
+def _setup_call_fps(vrn_file, rm_bed, base_dir, data):
     """Create set of false positives for inputs with empty truth sets.
     """
     out_file = os.path.join(base_dir, "fp.vcf.gz")
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = ("bcftools view -f 'PASS,.' {vrn_file} -O z -o {tx_out_file}")
+            cmd = ("bcftools view -R {rm_bed} -f 'PASS,.' {vrn_file} -O z -o {tx_out_file}")
             do.run(cmd.format(**locals()), "Prepare false positives with empty reference", data)
     return {"fp": out_file}
 
