@@ -76,6 +76,7 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     """
     parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
+    logger.info("System YAML configuration: %s" % os.path.abspath(config_file))
     dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     pipelines, config = _pair_samples_with_pipelines(run_info_yaml, config)
