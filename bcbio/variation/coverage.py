@@ -250,11 +250,11 @@ def _summary_variants(in_file, out_file):
             if len(depth_clean) > 0:
                 q_d = np.percentile(depth_clean, p_point)
             else:
-                q_d = [0, 0, 0, 0, 0, 0, 0, 0]
+                q_d = 0
             if len(dt["CG"]) > 0:
                 q_cg = np.percentile(dt['CG'], p_point)
             else:
-                q_cg = [0, 0, 0, 0, 0, 0, 0, 0]
+                q_cg = 0
             depth.append([p_point, q_d, q_cg])
         pd.DataFrame(depth).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
