@@ -87,10 +87,8 @@ def _run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files,
             opts = _pindel_options(items, config, out_file, region, tmp_path)
             tmp_input = _create_tmp_input(paired_bam, paired_name, tmp_path, config)
             cmd = ("{pindel} -f {ref_file} -i {tmp_input} -o {root_pindel} " +
-                   "{opts} --report_inversions false --report_duplications false "
-                   "--report_long_insertions false --report_breakpoints false "
-                   "--report_interchromosomal_events false "
-                   "--max_range_index 2")
+                   "{opts} --max_range_index 2 --IndelCorrection "
+                   "--report_breakpoints false --report_interchromosomal_events false")
             do.run(cmd.format(**locals()), "Genotyping with pindel", {})
             out_file = _create_vcf(root_pindel, out_file, ref_file,
                                    items, paired)

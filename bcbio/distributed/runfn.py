@@ -34,7 +34,7 @@ def process(args):
     if not work_dir:
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
-        fnargs, multisample = _world_from_cwl(fnargs[1:], work_dir)
+        fnargs, parallel = _world_from_cwl(fnargs[1:], work_dir)
         argfile = os.path.join(work_dir, "cwl-%s-world.json" % args.name)
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
@@ -42,9 +42,10 @@ def process(args):
     if argfile:
         with open(argfile, "w") as out_handle:
             if argfile.endswith(".json"):
-                if multisample:
+                if parallel in ["single-split", "multi-combined"]:
                     json.dump([_remove_work_dir(xs[0], work_dir + "/") for xs in out], out_handle)
                 else:
+                    assert len(out) == 1, pprint.pformat(out)
                     json.dump(_remove_work_dir(out[0][0], work_dir + "/"), out_handle)
             else:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -57,17 +58,18 @@ def _world_from_cwl(fnargs, work_dir):
     Handles single sample inputs (returning a single world object) and multi-sample
     runs (returning a list of individual samples to get processed together).
     """
-    multisample = False
+    parallel = None
     out = []
     data = {}
     passed_keys = []
     for fnarg in fnargs:
         key, val = fnarg.split("=")
-        if key == "sentinel":
-            if val == "multisample":
-                multisample = True
-            else:
-                raise ValueError("Unexpected sentinel %s" % fnarg)
+        # extra values pulling in nested indexes
+        if key == "ignore":
+            continue
+        if key == "sentinel-parallel":
+            parallel = val
+            continue
         # starting a new record -- duplicated key
         if key in passed_keys:
             data["dirs"] = {"work": work_dir}
@@ -90,11 +92,11 @@ def _world_from_cwl(fnargs, work_dir):
         data["config"]["resources"] = {}
         data = run_info.normalize_world(data)
         out.append(data)
-    if multisample:
+    if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
-    return out, multisample
+    return out, parallel
 
 def _update_nested(key, val, data):
     """Update the data object, avoiding over-writing with nested dictionaries.

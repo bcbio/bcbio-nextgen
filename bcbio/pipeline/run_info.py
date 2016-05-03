@@ -372,7 +372,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "min_allele_fraction",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "priority_regions", "expression_caller"] +
+                      "mixup_check", "expression_caller"] +
                      # development
                      ["cwl_reporting"] +
                      # back compatibility
@@ -689,7 +689,6 @@ def _add_algorithm_defaults(algorithm):
     defaults = {"archive": [],
                 "tools_off": [],
                 "tools_on": [],
-                "priority_regions": None,
                 "variant_regions": None}
     convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller"])
     for k, v in defaults.items():

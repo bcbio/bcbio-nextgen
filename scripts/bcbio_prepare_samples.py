@@ -43,9 +43,13 @@ def _get_samples_to_process(fn, out_dir, config):
     samples = defaultdict(list)
     with open(fn) as handle:
         for l in handle:
-            if not l.startswith("samplename"):
-                cols = l.strip().split(",")
+            cols = l.strip().split(",")
+            if len(cols) < 2:
+                raise ValueError("Line needs 2 values: file and name.")
+            if utils.file_exists(cols[0]):
                 samples[cols[1]].append(cols)
+            else:
+                logger.info("skipping %s, File doesn't exist." % cols[0])
     for sample, items in samples.iteritems():
         if is_fastq(items[0][0], True):
             fn = "fq_merge"

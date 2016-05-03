@@ -250,7 +250,13 @@ The sample configuration file defines ``details`` of each sample to process::
    - ``platform_unit`` -- Unique identifier for sample. Optional, defaults to
      ``lane`` if not specified.
 
-   - ``library`` -- Name of library preparation used. Optional, empty if not present.
+   - ``library`` -- Name of library preparation used. Optional, empty if not
+     present.
+
+   - ``validate_batch`` -- Specify a batch name to group samples together for
+     preparing validation plots. This is useful if you want to process samples
+     in specific batches, but include multiple batches into the same
+     validation plot.
 
 .. _upload-configuration:
 
@@ -641,6 +647,8 @@ RNA sequencing
 - ``expression_caller`` A list of optional expression callers to turn on.
   Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
   expression estimation are run by default.
+-  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data.
+  Supports [gatk] or [vardict].
 
 smallRNA sequencing
 ===================

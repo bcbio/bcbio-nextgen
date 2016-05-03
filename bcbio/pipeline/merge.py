@@ -42,8 +42,7 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
     file handle limits.
     """
     if len(bam_files) == 1 and bam.bam_already_sorted(bam_files[0], config, "coordinate"):
-        bam.index(bam_files[0], config)
-        return bam_files[0]
+        shutil.copy(bam_files[0], out_file)
     else:
         if out_file is None:
             out_file = os.path.join(work_dir, os.path.basename(sorted(bam_files)[0]))
@@ -83,8 +82,8 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                     subprocess.check_call(["touch", out_file + ext])
             for b in bam_files:
                 utils.save_diskspace(b, "BAM merged to %s" % out_file, config)
-        bam.index(out_file, config)
-        return out_file
+    bam.index(out_file, config)
+    return out_file
 
 def _biobambam_merge_dedup():
     """Combine query sorted BAM files, de-duplicate and sort. Handles split prepped files.

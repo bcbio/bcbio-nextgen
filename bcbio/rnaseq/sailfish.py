@@ -150,19 +150,19 @@ def _clean_gtf_fa(gtf_fa, out_file):
 
 def combine_sailfish(samples):
     work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    sailfish_dir = os.path.join(work_dir, "sailfish")
     gtf_file = dd.get_in_samples(samples, dd.get_gtf_file)
     dont_combine, to_combine = partition(dd.get_sailfish,
                                          dd.sample_data_iterator(samples), True)
     if not to_combine:
         return samples
 
-    tidy_file = os.path.join(work_dir, "sailfish", "combined.sf")
-    transcript_tpm_file = os.path.join(work_dir, "sailfish",
-                                       "combined.isoform.sf.tpm")
-    gene_tpm_file = os.path.join(work_dir, "sailfish",
-                                 "combined.gene.sf.tpm")
+    tidy_file = os.path.join(sailfish_dir, "combined.sf")
+    transcript_tpm_file = os.path.join(sailfish_dir, "combined.isoform.sf.tpm")
+    gene_tpm_file = os.path.join(sailfish_dir, "combined.gene.sf.tpm")
+    tx2gene = os.path.join(sailfish_dir, "tx2gene.csv")
     if not all([file_exists(x) for x in [gene_tpm_file, tidy_file,
-                                         transcript_tpm_file]]):
+                                         transcript_tpm_file, tx2gene]]):
         df = pd.DataFrame()
         for data in to_combine:
             sailfish_file = dd.get_sailfish(data)
@@ -187,12 +187,14 @@ def combine_sailfish(samples):
             pivot = pivot.join(tdf)
             pivot = pivot.groupby("gene_id").agg(np.sum)
             pivot.to_csv(tx_out_file, sep="\t")
+        tx2gene = gtf.tx2genefile(gtf_file, tx2gene)
 
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         data = dd.set_sailfish_tidy(data, tidy_file)
         data = dd.set_sailfish_transcript_tpm(data, transcript_tpm_file)
         data = dd.set_sailfish_gene_tpm(data, gene_tpm_file)
+        data = dd.set_tx2gene(data, tx2gene)
         updated_samples.append([data])
     return updated_samples
 

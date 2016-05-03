@@ -30,7 +30,7 @@ def run(data):
     if len(hlas) > 0:
         hla_dir = os.path.dirname(os.path.commonprefix([xs[1] for xs in hlas]))
         out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
-        hla_fq = _combine_hla_fqs(hlas, out_dir + "-input.fq", data)
+        hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
         out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
         if len(out_file) > 0:
             out_file = out_file[0]
@@ -41,7 +41,7 @@ def run(data):
                             "hlacaller": "optitype"})
     return data
 
-def _combine_hla_fqs(hlas, out_file, data):
+def combine_hla_fqs(hlas, out_file, data):
     """OptiType performs best on a combination of all extracted HLAs.
     """
     if not utils.file_exists(out_file):

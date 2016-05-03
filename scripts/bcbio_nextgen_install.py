@@ -67,7 +67,7 @@ def bootstrap_bcbionextgen(anaconda, args):
 
 def install_conda_pkgs(anaconda):
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
-        subprocess.check_call(["wget", REMOTES["requirements"]])
+        subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "-c", "bioconda",
                            "--file", os.path.basename(REMOTES["requirements"])])
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")

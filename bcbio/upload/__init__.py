@@ -176,8 +176,8 @@ def _maybe_add_heterogeneity(algorithm, sample, out):
 def _maybe_add_sv(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         for svcall in sample["sv"]:
-            for key in ["vrn_file", "cnr", "cns", "cnr_bed", "cnr_bedgraph", "seg",
-                        "gainloss", "segmetrics", "vrn_bed", "vrn_bedpe"]:
+            for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
+                        "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,)))
             if "plot" in svcall:
                 for plot_name, fname in svcall["plot"].items():
@@ -211,7 +211,7 @@ def _sample_variant_file_in_population(x):
     if "population" in x:
         a = _get_variant_file(x, ("population", "vcf"))
         b = _get_variant_file(x, ("vrn_file",))
-        if os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
+        if a and b and len(a) > 0 and len(b) > 0 and os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
             return True
     return False
 
@@ -480,4 +480,6 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_sailfish_transcript_tpm(sample)})
     if dd.get_sailfish_gene_tpm(sample):
         out.append({"path": dd.get_sailfish_gene_tpm(sample)})
+    if dd.get_tx2gene(sample):
+        out.append({"path": dd.get_tx2gene(sample)})
     return _add_meta(out, config=upload_config)

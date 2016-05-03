@@ -14,7 +14,7 @@ from bcbio.cwl import workflow
 def from_world(world, run_info_file):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
-    out_file = os.path.join(out_dir, "%s-main.cwl" % (base))
+    out_file = os.path.join(out_dir, "main-%s.cwl" % (base))
     samples = [xs[0] for xs in world]  # unpack world data objects
     analyses = list(set([x["analysis"] for x in samples]))
     assert len(analyses) == 1, "Currently support writing CWL for a single analysis type"
@@ -23,18 +23,17 @@ def from_world(world, run_info_file):
     else:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
 
-def _standard_bcbio_cwl(samples, inputs):
+def _cwl_workflow_template(inputs):
     """Retrieve CWL inputs shared amongst different workflows.
-
-    ToDo: calculate system requirements (cores/memory) from input configuration.
     """
     return {"class": "Workflow",
             "hints": [{"class": "DockerRequirement",
-                       "dockerImport": "bcbio/bcbio",
+                       "dockerPull": "bcbio/bcbio",
                        "dockerImageId": "bcbio/bcbio"}],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
                              {"class": "ScatterFeatureRequirement"},
+                             {"class": "SubworkflowFeatureRequirement"},
                              {"class": "InlineJavascriptRequirement"}],
             "inputs": inputs,
             "outputs": [],
@@ -46,23 +45,18 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "inputs": [],
            "outputs": []}
-    if not parallel:
-        inputs = [{"id": "#sentinel", "type": {"type": "array", "items": "string"},
-                   "default": ["multisample"]}] + inputs
+    pinputs = [{"id": "#sentinel-parallel", "type": "string",
+                "default": parallel}]
+    inputs = pinputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
         inp_tool["id"] = "#%s" % base_id
         inp_binding = {"prefix": "%s=" % base_id, "separate": False,
                        "itemSeparator": ";;", "position": i}
-        if "secondaryFiles" in inp_tool:
-            inp_binding["secondaryFiles"] = inp_tool.pop("secondaryFiles")
-        if parallel:
-            inp_tool["inputBinding"] = inp_binding
-        else:
-            inp_tool["type"]["inputBinding"] = inp_binding
+        inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
+        inp_tool = _place_secondary_files(inp_tool, inp_binding)
         out["inputs"].append(inp_tool)
-    # XXX Need to generalize outputs, just a hack for now to test align_prep
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
         outp_tool["id"] = "#%s" % workflow.get_base_id(outp["id"])
@@ -76,19 +70,59 @@ def _write_tool(step_dir, name, inputs, outputs, parallel):
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
 
-def _step_template(name, step_dir, inputs, outputs, parallel):
+def _place_input_binding(inp_tool, inp_binding, parallel):
+    """Check nesting of variables to determine where to place the input binding.
+
+    We want to allow having multiple files together (like fasta_indices), combined
+    with the itemSeparator, but also support having multiple samples where we pass
+    things independently.
+    """
+    if parallel == "multi-combined" and tz.get_in(["type", "type"], inp_tool) == "array":
+        inp_tool["type"]["inputBinding"] = inp_binding
+    else:
+        inp_tool["inputBinding"] = inp_binding
+    return inp_tool
+
+def _place_secondary_files(inp_tool, inp_binding):
+    """Put secondaryFiles at the level of the File item to ensure indexes get passed.
+
+    This involves using a second input binding to get the secondaryFiles, that
+    we ignore downstream. Ideally we could use `valueFrom: null` but that doesn't
+    seem to work right now.
+    """
+    secondary_files = inp_tool.pop("secondaryFiles", None)
+    if secondary_files:
+        key = []
+        while tz.get_in(key + ["type"], inp_tool) != "File" and tz.get_in(key + ["items"], inp_tool) != "File":
+            key.append("type")
+        secondary_key = key + ["inputBinding"]
+        if tz.get_in(secondary_key, inp_tool):
+            inp_tool = tz.update_in(inp_tool, secondary_key + ["secondaryFiles"], lambda x: secondary_files)
+        else:
+            nested_inp_binding = copy.deepcopy(inp_binding)
+            nested_inp_binding["prefix"] = "ignore="
+            nested_inp_binding["secondaryFiles"] = secondary_files
+            inp_tool = tz.update_in(inp_tool, secondary_key, lambda x: nested_inp_binding)
+    return inp_tool
+
+def _step_template(name, run_file, inputs, outputs, parallel):
     """Templating function for writing a step to avoid repeating namespaces.
     """
-    step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
-    inputs = [{"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
-              for inp in inputs]
-    out = {"run": {"import": step_file},
+    scatter_inputs = []
+    sinputs = []
+    for inp in inputs:
+        step_inp = {"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
+        sinputs.append(step_inp)
+        # scatter on inputs from previous processes that have been arrayed
+        if parallel == "multi-parallel" or len(inp["id"].split(".")) > 1:
+            scatter_inputs.append(step_inp["id"])
+    out = {"run": {"import": run_file},
            "id": "#%s" % name,
-           "inputs": inputs,
+           "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
-    if parallel:
+    if parallel in ["single-parallel", "multi-parallel"]:
         out.update({"scatterMethod": "dotproduct",
-                    "scatter": [x["id"] for x in inputs]})
+                    "scatter": scatter_inputs})
     return out
 
 def prep_variant_cwl(samples, out_dir, out_file):
@@ -96,13 +130,28 @@ def prep_variant_cwl(samples, out_dir, out_file):
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     sample_json, variables = _flatten_samples(samples, out_file)
-    out = _standard_bcbio_cwl(samples, variables)
-    out["steps"] = []
-    for name, parallel, inputs, outputs in workflow.variant(variables):
-        if name == "upload":
-            out["outputs"] = outputs
+    out = _cwl_workflow_template(variables)
+    parent_wfs = []
+    for cur in workflow.variant(variables):
+        if cur[0] == "step":
+            _, name, parallel, inputs, outputs = cur
+            step_file = _write_tool(step_dir, name, inputs, outputs, parallel)
+            out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
+        elif cur[0] == "upload":
+            out["outputs"] = cur[1]
+        elif cur[0] == "wf_start":
+            parent_wfs.append(out)
+            out = _cwl_workflow_template(cur[1])
+        elif cur[0] == "wf_finish":
+            _, name, parallel, inputs, outputs = cur
+            wf_out_file = "wf-%s.cwl" % name
+            with open(os.path.join(out_dir, wf_out_file), "w") as out_handle:
+                yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+            out = parent_wfs.pop(-1)
+            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel))
         else:
-            out["steps"].append(_step_template(name, step_dir, inputs, outputs, parallel))
+            raise ValueError("Unexpected workflow value %s" % str(cur))
+
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json

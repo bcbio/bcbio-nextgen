@@ -79,6 +79,10 @@ def delayed_bam_merge(*args):
     return sample.delayed_bam_merge(*args)
 
 @utils.map_wrap
+def merge_split_alignments(*args):
+    return sample.merge_split_alignments(*args)
+
+@utils.map_wrap
 def piped_bamprep(*args):
     return bamprep.piped_bamprep(*args)
 

@@ -5,6 +5,7 @@ to identify discordant variants. This provides a baseline for ensuring the
 validity of pipeline updates and algorithm changes.
 """
 import collections
+import contextlib
 import csv
 import os
 import shutil
@@ -104,7 +105,10 @@ def compare_to_rm(data):
                                                    data["genome_build"], base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
-        if vmethod == "rtg":
+        if not vcfutils.vcf_has_variants(vrn_file):
+            # RTG can fail on totally empty files. Skip these since we have nothing.
+            pass
+        elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "bcbio.variation":
@@ -188,9 +192,16 @@ def _pick_best_quality_score(vrn_file):
 
     For MuTect, it's not clear how to get t_lod_fstar, the right quality score, into VCF cleanly.
     """
+    # pysam fails on checking reference contigs if input is empty
+    if not vcfutils.vcf_has_variants(vrn_file):
+        return "DP"
     to_check = 25
     scores = collections.defaultdict(int)
-    with VariantFile(vrn_file) as val_in:
+    try:
+        in_handle = VariantFile(vrn_file)
+    except ValueError:
+        raise ValueError("Failed to parse input file in preparation for validation: %s" % vrn_file)
+    with contextlib.closing(in_handle) as val_in:
         for i, rec in enumerate(val_in):
             if i > to_check:
                 break

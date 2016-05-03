@@ -14,7 +14,6 @@ import collections
 import fnmatch
 import subprocess
 import sys
-import subprocess
 
 import toolz as tz
 import yaml
@@ -141,6 +140,17 @@ def memoize_outfile(ext=None, stem=None):
         return transform_to(ext)
     if stem:
         return filter_to(stem)
+
+def to_single_data(input):
+    """Convert an input to a single bcbio data/world object.
+
+    Handles both single sample cases (CWL) and all sample cases (standard bcbio).
+    """
+    if (isinstance(input, (list, tuple)) and len(input) == 1):
+        return input[0]
+    else:
+        assert isinstance(input, dict), input
+        return input
 
 def unpack_worlds(items):
     """Handle all the ways we can pass multiple samples for back-compatibility.

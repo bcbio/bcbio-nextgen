@@ -36,7 +36,6 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
 from bcbio.install import _get_data_dir
 from bcbio.provenance import do
-import bcbio.rnaseq.qc
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import bedutils
 from bcbio.variation import coverage as cov
@@ -67,6 +66,7 @@ def generate_parallel(samples, run_parallel):
 def pipeline_summary(data):
     """Provide summary information on processing sample.
     """
+    data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
@@ -465,29 +465,6 @@ def _run_fastqc(bam_file, data, fastqc_out):
     parser.save_sections_into_file()
     return stats
 
-def _run_complexity(bam_file, data, out_dir):
-    try:
-        import pandas as pd
-        import statsmodels.formula.api as sm
-    except ImportError:
-        return {"Unique Starts Per Read": "NA"}
-
-    SAMPLE_SIZE = 1000000
-    base, _ = os.path.splitext(os.path.basename(bam_file))
-    utils.safe_makedir(out_dir)
-    out_file = os.path.join(out_dir, base + ".pdf")
-    df = bcbio.rnaseq.qc.starts_by_depth(bam_file, data["config"], SAMPLE_SIZE)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tmp_out_file:
-            df.plot(x='reads', y='starts', title=bam_file + " complexity")
-            fig = plt.gcf()
-            fig.savefig(tmp_out_file)
-
-    print "file saved as", out_file
-    print "out_dir is", out_dir
-    return bcbio.rnaseq.qc.estimate_library_complexity(df)
-
-
 # ## Qualimap
 
 def _parse_num_pct(k, v):
@@ -881,6 +858,12 @@ def _run_qsignature_generator(bam_file, data, out_dir):
 
     :returns: (dict) dict with the normalize vcf file
     """
+    qsig = config_utils.get_program("qsignature", data["config"])
+    if not qsig:
+        logger.info("There is no qsignature tool. Skipping...")
+        return {}
+
+    utils.safe_makedir(out_dir)
     position = dd.get_qsig_file(data)
     mixup_check = dd.get_mixup_check(data)
     if mixup_check and mixup_check.startswith("qsignature"):
@@ -894,13 +877,14 @@ def _run_qsignature_generator(bam_file, data, out_dir):
             slice_bam = bam_file
             jvm_opts = "-Xms750m -Xmx8g"
             limit_reads = 100000000
+            down_file = bam.downsample(slice_bam, data, limit_reads)
+            if not down_file:
+                down_file = slice_bam
         else:
-            slice_bam = _slice_chr22(bam_file, data)
-        qsig = config_utils.get_program("qsignature", data["config"])
-        if not qsig:
-            return {}
-        utils.safe_makedir(out_dir)
-        out_name = os.path.basename(slice_bam).replace("bam", "qsig.vcf")
+            down_bam = _slice_bam_chr21(bam_file, data)
+            position = _slice_vcf_chr21(position, out_dir)
+
+        out_name = os.path.basename(down_bam).replace("bam", "qsig.vcf")
         out_file = os.path.join(out_dir, out_name)
         log_file = os.path.join(out_dir, "qsig.log")
         cores = dd.get_cores(data)
@@ -908,12 +892,9 @@ def _run_qsignature_generator(bam_file, data, out_dir):
                     "org.qcmg.sig.SignatureGenerator "
                     "--noOfThreads {cores} "
                     "-log {log_file} -i {position} "
-                    "-i {down_file} ")
+                    "-i {down_bam} ")
         if not os.path.exists(out_file):
-            down_file = bam.downsample(slice_bam, data, limit_reads)
-            if not down_file:
-                down_file = slice_bam
-            file_qsign_out = "{0}.qsig.vcf".format(down_file)
+            file_qsign_out = "{0}.qsig.vcf".format(down_bam)
             do.run(base_cmd.format(**locals()), "qsignature vcf generation: %s" % dd.get_sample_name(data))
             if os.path.exists(file_qsign_out):
                 with file_transaction(data, out_file) as file_txt_out:
@@ -1014,9 +995,9 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
                                 warn_handle.write(msg % pair)
     return error, warnings, similar
 
-def _slice_chr22(in_bam, data):
+def _slice_bam_chr21(in_bam, data):
     """
-    return only one BAM file with only chromosome 22
+    return only one BAM file with only chromosome 21
     """
     sambamba = config_utils.get_program("sambamba", data["config"])
     out_file = "%s-chr%s" % os.path.splitext(in_bam)
@@ -1024,13 +1005,23 @@ def _slice_chr22(in_bam, data):
         bam.index(in_bam, data['config'])
         with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
             bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
-        chromosome = "22"
-        if "chr22" in bam_contigs:
-            chromosome = "chr22"
+        chromosome = "21"
+        if "chr21" in bam_contigs:
+            chromosome = "chr21"
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{sambamba} slice -o {tx_out_file} {in_bam} {chromosome}").format(**locals())
             out = subprocess.check_output(cmd, shell=True)
     return out_file
+
+def _slice_vcf_chr21(vcf_file, out_dir):
+    """
+    Slice chr21 of qsignature SNPs to reduce computation time
+    """
+    tmp_file = os.path.join(out_dir, "chr21_qsignature.vcf")
+    if not utils.file_exists(tmp_file):
+        cmd = ("grep chr21 {vcf_file} > {tmp_file}").format(**locals())
+        out = subprocess.check_output(cmd, shell=True)
+    return tmp_file
 
 ## report and coverage
 def report_summary(*samples):
@@ -1091,6 +1082,7 @@ def coverage_report(data):
     """
     Run heavy coverage and variants process in parallel
     """
+    data = utils.to_single_data(data)
     data = cov.coverage(data)
     data = cov.variants(data)
     data = cov.priority_coverage(data)
@@ -1103,7 +1095,6 @@ def coverage_report(data):
         if problem_regions and coverage:
             annotated = cov.decorate_problem_regions(coverage, problem_regions)
         data['coverage'] = {'all': coverage, 'problems': annotated}
-
     return [[data]]
 
 def _get_coverage_per_region(name):

@@ -100,7 +100,7 @@ def get_affected_status(data):
     """
     affected = set(["tumor", "affected"])
     unaffected = set(["normal", "unaffected"])
-    phenotype = tz.get_in(["metadata", "phenotype"], data, "").lower()
+    phenotype = str(tz.get_in(["metadata", "phenotype"], data, "")).lower()
     if phenotype in affected:
         return 2
     elif phenotype in unaffected:
@@ -116,9 +116,9 @@ def create_ped_file(samples, base_vcf):
     """
     def _code_gender(data):
         g = dd.get_gender(data)
-        if g and g.lower() == "male":
+        if g and str(g).lower() in ["male", "m"]:
             return 1
-        elif g and g.lower() == "female":
+        elif g and str(g).lower() in ["female", "f"]:
             return 2
         else:
             return 0

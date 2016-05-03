@@ -49,9 +49,10 @@ conflict, it's useful to understand the design approaches:
   isolates debugging to individual functions rather than globally
   mutable state.
 
-- Make sure your changes integrate correctly by running the test suite before submitting a pull request.
-  the pipeline is automatically tested in `Travis-CI`_, and a red label will appear in the pull request if
-  the former causes any issue.
+- Make sure your changes integrate correctly by running the test suite before
+  submitting a pull request. the pipeline is automatically tested in
+  `Travis-CI`_, and a red label will appear in the pull request if the former
+  causes any issue.
 
 Overview
 ========
@@ -85,42 +86,54 @@ bcbio-nextgen uses GitHub for code development, and we welcome
 pull requests. GitHub makes it easy to establish custom forks of the
 code and contribute those back. The Biopython documentation has great
 information on `using git and GitHub`_ for a community developed
-project.
+project. In short, make a fork of the `bcbio code
+<https://github.com/chapmanb/bcbio-nextgen>`_ by clicking the ``Fork`` button in
+the upper right corner of the GitHub page, commit your changes to this custom
+fork and keep it up to date with the main bcbio repository as you develop, then
+click ``New Pull Request`` from your fork when you'd like to submit your changes
+for integration in bcbio.
 
-The automated bcbio-nextgen installer creates an isolated Python
-environment using `Anaconda`_. This will be a subdirectory of your
-installation root, like ``/usr/local/share/bcbio-nextgen/anaconda``.
-You can manually use the ``bin/python`` within this subdirectory, or
-setup a Python virtual environment management system like
-`virtualenv-burrito`_ or `Python Env Wrapper`_ to switch in and out of
-this environment. Typically we alias this and then use ``bcbio_python`` to run
-``setup.py`` when installing a local development version::
+For developing and testing changes locally, you can install directly into a
+bcbio-nextgen installation. The automated bcbio-nextgen
+installer creates an isolated Python environment using `Anaconda`_. This will be
+a subdirectory of your installation root, like
+``/usr/local/share/bcbio-nextgen/anaconda``. The installer also includes a
+``bcbio_python`` executable target which is the python in this isolated anaconda
+directory. You generally will want to make changes to your local copy of the
+bcbio-nextgen code and then install these into the code directory.
+To install from your bcbio-nextgen source tree for testing do::
 
-    alias bcbio_python='/usr/local/share/bcbio-nextgen/anaconda/bin/python'
+    bcbio_python setup.py install
 
-You generally will want to make changes to your local copy of the
-bcbio-nextgen code and then install these into the code directory
-using ``/path/to/anaconda/bin/python setup.py install``. One tricky
-part that I don't yet know how to work around is that pip and standard
-``setup.py install`` have different ideas about how to write Python
-eggs. ``setup.py install`` will create an isolated python egg
-directory like ``bcbio_nextgen-0.7.5a-py2.7.egg``, while pip creates
-an egg pointing to a top level ``bcbio`` directory. Where this gets
-tricky is that the top level ``bcbio`` directory takes precedence. The
-best way to work around this problem is to manually remove the current
-pip installed bcbio-nextgen code (``rm -rf /path/to/anaconda/lib/python2.7/site-packages/bcbio*``)
-before managing it manually with ``python setup.py install``. We'd
-welcome tips about ways to force consistent installation across
-methods.
+One tricky part that we don't yet know how to work around is that pip and
+standard ``setup.py install`` have different ideas about how to write Python
+eggs. ``setup.py install`` will create an isolated python egg directory like
+``bcbio_nextgen-0.7.5a-py2.7.egg``, while pip creates an egg pointing to a top
+level ``bcbio`` directory. Where this gets tricky is that the top level
+``bcbio`` directory takes precedence. The best way to work around this problem
+is to manually remove the current pip installed bcbio-nextgen code (``rm -rf
+/path/to/anaconda/lib/python2.7/site-packages/bcbio*``) before managing it
+manually with ``bcbio_python setup.py install``. We'd welcome tips about ways to
+force consistent installation across methods.
+
+If you want to test with bcbio_nextgen code in a separate environment from your
+work directory, we recommend using the installer to install only
+the bcbio code into a separate directory::
+
+    python bcbio_nextgen_install.py /path/to/testbcbio --nodata --isolate
+
+Then add this directory to your ``PATH`` before your bcbio installation with the
+tools: ``export PATH=/path/to/testbcbio/anaconda/bin:$PATH``, or directly
+calling the testing bcbio ``/path/to/testbcbio/anaconda/bin/bcbio_nextgen.py``.
 
 .. _using git and GitHub: http://biopython.org/wiki/GitUsage
 .. _Anaconda: http://docs.continuum.io/anaconda/index.html
-.. _virtualenv-burrito: https://github.com/brainsik/virtualenv-burrito
-.. _Python Env Wrapper: https://github.com/berdario/invewrapper
 
 Building the documentation locally
 ==================================
-If you have added or modified this documentation, to build it locally and see how it looks like you can do so by running::
+
+If you have added or modified this documentation, to build it locally and see
+how it looks like you can do so by running::
 
     cd docs
     make html
