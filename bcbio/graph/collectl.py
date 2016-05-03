@@ -305,6 +305,8 @@ def load_collectl(pattern, start_time, end_time):
 
     df = pd.DataFrame(rows, columns=cols)
     df = df.convert_objects(convert_numeric=True)
+    #print(df.keys())
+    #df = pd.to_numeric(df)
     df['tstamp'] = df['tstamp'].astype('datetime64[s]')
     df.set_index('tstamp', inplace=True)
     df = df.tz_localize('UTC')
