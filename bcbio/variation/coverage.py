@@ -237,9 +237,9 @@ def _summary_variants(in_file, out_file):
     """Parse GC and depth variant file
        to be ready for multiqc.
     """
-    dt = pd.read_csv(in_file, sep="\t", index_col=False)
+    dt = pd.read_csv(in_file, sep="\t", index_col=False,
+                     dtype={"CG": np.float64, "depth": np.int64}, na_values=["."]).dropna()
     depth = list()
-    cg = list()
     with file_transaction(out_file) as out_tx:
         for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
             if dt['depth'].dtypes == "int64":
