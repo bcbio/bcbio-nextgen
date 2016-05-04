@@ -1,5 +1,7 @@
 ## 0.9.8 (in progress)
 
+- Correctly install all datatargets on new installation. Previously we'd
+  skipped installing default additional data unless specified.
 - Use yamllint to find wrong syntaxes in the YAML file that are ignored
   by pyyaml package and can affect the analysis.
 - Improve choosing split regions for batch analysis to use the unionized

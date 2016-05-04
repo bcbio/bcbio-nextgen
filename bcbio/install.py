@@ -588,9 +588,10 @@ def add_install_defaults(args):
         args.install_data = True
     install_config = _get_install_config()
     if install_config is None or not utils.file_exists(install_config):
-        return args
-    with open(install_config) as in_handle:
-        default_args = yaml.load(in_handle)
+        default_args = {}
+    else:
+        with open(install_config) as in_handle:
+            default_args = yaml.load(in_handle)
     # if we are upgrading to development, also upgrade the tools
     if args.upgrade in ["development"]:
         args.tools = True
