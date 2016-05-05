@@ -19,8 +19,8 @@
   should not longer need to work around Java issues. Thanks to Luca Beltrame.
 - Do not use samblaster on genomes with greater than 32768 contigs, the
   samblaster maximum. Thanks to morten (@mattingsdal).
-- Move to samtools for output CRAM support, which does not do 8-bin quality
-  binning.
+- Move to samtools for output CRAM support, using bamUtils for 8-bin compression
+  of read quality scores.
 - Remove `merge_bamprep` option and always merge realigned BAM files if run.
 - Correctly clean up additional problem characters in sample descriptions that
   can confuse shell commands.
