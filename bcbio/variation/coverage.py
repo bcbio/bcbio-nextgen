@@ -238,25 +238,22 @@ def _summary_variants(in_file, out_file):
        to be ready for multiqc.
     """
     dt = pd.read_csv(in_file, sep="\t", index_col=False,
-                     dtype={"CG": np.float64, "depth": np.int64}, na_values=["."]).dropna()
-    depth = list()
+                     dtype={"CG": np.float64, "depth": np.float64}, na_values=["."]).dropna()
+    row = list()
     with file_transaction(out_file) as out_tx:
+        cg = dt["CG"]
+        d = dt["depth"]
         for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
-            if dt['depth'].dtypes == "int64":
-                depth_clean = np.array(dt['depth'])
-            else:
-                depth_clean = dt[dt['depth'] != "."]
-                depth_clean = np.array(pd.to_numeric(depth_clean['depth']))
-            if len(depth_clean) > 0:
-                q_d = np.percentile(depth_clean, p_point)
-            else:
-                q_d = 0
-            if len(dt["CG"]) > 0:
-                q_cg = np.percentile(dt['CG'], p_point)
+            if len(cg) > 0:
+                q_cg = np.percentile(cg, p_point)
             else:
                 q_cg = 0
-            depth.append([p_point, q_d, q_cg])
-        pd.DataFrame(depth).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
+            if len(d) > 0:
+                q_d = np.percentile(d, p_point)
+            else:
+                q_d = 0
+            row.append([p_point, q_d, q_cg])
+        pd.DataFrame(row).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
 def variants(data):
     if "vrn_file" not in data:
@@ -281,7 +278,7 @@ def variants(data):
         num_cores = dd.get_num_cores(data)
         broad_runner = broad.runner_from_config_safe(data["config"])
         if in_bam and broad_runner and broad_runner.has_gatk():
-            if not file_exists(cg_file):
+            if not file_exists(parse_file):
                 with file_transaction(cg_file) as tx_out:
                     params = ["-T", "VariantAnnotator",
                               "-R", ref_file,
@@ -292,7 +289,7 @@ def variants(data):
                               "--variant", in_vcf,
                               "--out", tx_out]
                     broad_runner.run_gatk(params)
-            cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
+                cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
                 with file_transaction(parse_file) as out_tx:
@@ -306,7 +303,7 @@ def variants(data):
             if not file_exists(qc_file):
                 # This files will be copied to final
                 _summary_variants(parse_file, qc_file)
-            if file_exists(qc_file) and file_exists(parse_file):
+            if file_exists(qc_file) and file_exists(parse_file) and file_exists(cg_file):
                 os.remove(cg_file)
         return data
 
