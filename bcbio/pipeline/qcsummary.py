@@ -917,6 +917,10 @@ def multiqc_summary(*samples):
             if isinstance(pfiles, dict):
                 pfiles = pfiles["base"]
             folders.append(os.path.dirname(pfiles))
+    # XXX temporary workaround until we can handle larger inputs through MultiQC
+    if len(folders) > 250:
+        logger.warning("Too many samples for MultiQC, only using first 250 entries.")
+        folders = folders[:250]
     # Back compatible -- to migrate to explicit specifications in input YAML
     folders += ["align", "trimmed", "htseq-count/*summary", "report/*/*bcbio*"]
     out_dir = os.path.join(work_dir, "multiqc")
