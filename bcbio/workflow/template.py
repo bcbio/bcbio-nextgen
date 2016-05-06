@@ -292,6 +292,7 @@ def _add_ped_metadata(name, metadata):
 
     http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped
     """
+    ignore = set(["-9", "undefined", "unknown", "."])
     def _ped_mapping(x, valmap):
         try:
             x = int(x)
@@ -304,12 +305,19 @@ def _add_ped_metadata(name, metadata):
     def _ped_to_gender(x):
         return _ped_mapping(x, {1: "male", 2: "female"})
     def _ped_to_phenotype(x):
-        return _ped_mapping(x, {1: "unaffected", 2: "affected"})
+        known_phenotypes = set(["unaffected", "affected", "tumor", "normal"])
+        if x in known_phenotypes:
+            return x
+        else:
+            return _ped_mapping(x, {1: "unaffected", 2: "affected"})
+    def _ped_to_batch(x):
+        if x not in ignore and x != "0":
+            return x
     with open(metadata["ped"]) as in_handle:
         for line in in_handle:
             parts = line.split("\t")[:6]
             if parts[1] == str(name):
-                for index, key, convert_fn in [(4, "sex", _ped_to_gender), (0, "batch", lambda x: x),
+                for index, key, convert_fn in [(4, "sex", _ped_to_gender), (0, "batch", _ped_to_batch),
                                                (5, "phenotype", _ped_to_phenotype)]:
                     val = convert_fn(parts[index])
                     if val is not None and key not in metadata:
