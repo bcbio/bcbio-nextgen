@@ -39,7 +39,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
                             r"""split($1, P1, " "); split($5, P5, " "); """
                             r"""if ($1 !~ /\/1$/) $1 = P1[1]"/1"; if ($5 !~ /\/2$/) $5 = P5[1]"/2"; """
                             r"""gsub(" ", "_", $1); gsub(" ", "_", $5); """
-                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' | sponge """)
+                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' """)
         else:
             stream_input = fastq_file[2:-1]
     else:
@@ -53,7 +53,7 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
                             r"""split($1, P1, " "); split($5, P5, " "); """
                             r"""if ($1 !~ /\/1$/) $1 = P1[1]"/1"; if ($5 !~ /\/2$/) $5 = P5[1]"/2"; """
                             r"""gsub(" ", "_", $1); gsub(" ", "_", $5); """
-                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' | sponge """)
+                            r"""print $1, $2, "+", $4, $5, $6, "+", $8}}' """)
         else:
             stream_input = "zcat {fastq_file}"
 
