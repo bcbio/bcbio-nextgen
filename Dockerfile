@@ -30,7 +30,7 @@ RUN apt-get update && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
-      --isolate --nodata -u development && \
+      --isolate --nodata -u development --tooldir=/usr/local && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate --tooldir=/usr/local --tools && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools && \
