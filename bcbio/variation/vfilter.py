@@ -229,7 +229,7 @@ def gatk_snp_hard(in_file, data):
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"), "gatk")
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    return hard_w_expression(in_file, " || ".join(filters), data, "GATKHardSNP", "SNP")
+    return hard_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKHardSNP", "SNP")
 
 def gatk_indel_hard(in_file, data):
     """Perform hard filtering on GATK indels using best-practice recommendations.
@@ -237,4 +237,4 @@ def gatk_indel_hard(in_file, data):
     filters = ["ReadPosRankSum < -20.0"]
     if "gvcf" not in dd.get_tools_on(data):
         filters += ["QD < 2.0", "FS > 200.0"]
-    return hard_w_expression(in_file, " || ".join(filters), data, "GATKHardIndel", "INDEL")
+    return hard_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKHardIndel", "INDEL")

@@ -16,19 +16,30 @@ from bcbio.variation import gatkjoint, vcfutils, vfilter
 
 def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
+
+    For VQSR, need to split the file to apply. For hard filters can run on the original
+    filter, filtering by bcftools type.
     """
-    snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, data["config"])
-    snp_filter_file = _variant_filtration(snp_file, ref_file, vrn_files, data, "SNP",
-                                          vfilter.gatk_snp_hard)
-    indel_filter_file = _variant_filtration(indel_file, ref_file, vrn_files, data, "INDEL",
-                                            vfilter.gatk_indel_hard)
-    orig_files = [snp_filter_file, indel_filter_file]
-    out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
-    if "gvcf" in dd.get_tools_on(data):
-        return gatkjoint.run_combine_gvcfs(orig_files, None, ref_file, out_file, data)
-    else:
+    algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
+    if config_utils.use_vqsr(algs):
+        assert "gvcf" not in dd.get_tools_on(data), \
+            ("Cannot force gVCF output and use VQSR. Try using hard filtering with tools_off: [vqsr]")
+        snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, data["config"])
+        snp_filter_file = _variant_filtration(snp_file, ref_file, vrn_files, data, "SNP",
+                                              vfilter.gatk_snp_hard)
+        indel_filter_file = _variant_filtration(indel_file, ref_file, vrn_files, data, "INDEL",
+                                                vfilter.gatk_indel_hard)
+        orig_files = [snp_filter_file, indel_filter_file]
+        out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
         combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
         return _filter_nonref(combined_file, data)
+    else:
+        snp_filter = vfilter.gatk_snp_hard(call_file, data)
+        indel_filter = vfilter.gatk_indel_hard(snp_filter, data)
+        if "gvcf" not in dd.get_tools_on(data):
+            return _filter_nonref(indel_filter, data)
+        else:
+            return indel_filter
 
 _MISSING_HEADERS = """##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another">
 ##FORMAT=<ID=PID,Number=1,Type=String,Description="Physical phasing ID information, where each unique ID within a given sample (but not across samples) connects records within a phasing group">
