@@ -231,6 +231,8 @@ if __name__ == "__main__":
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
+    args.srna_gtf = os.path.abspath(args.srna_gtf) if args.srna_gtf else None
+
     if args.gff3:
         args.gtf = gff3_to_gtf(args.gtf)
 
