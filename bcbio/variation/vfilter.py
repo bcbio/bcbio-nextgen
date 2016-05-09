@@ -12,6 +12,7 @@ import yaml
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
@@ -216,9 +217,13 @@ def gatk_snp_hard(in_file, data):
     We have a more lenient mapping quality (MQ) filter compared to GATK defaults.
     The recommended filter (MQ < 40) is too stringent, so we adjust to 30: 
     http://imgur.com/a/oHRVB
+
+    QD and FS are not calculated when generating gVCF output:
+    https://github.com/broadgsa/gatk-protected/blob/e91472ddc7d58ace52db0cab4d70a072a918d64c/protected/gatk-tools-protected/src/main/java/org/broadinstitute/gatk/tools/walkers/haplotypecaller/HaplotypeCaller.java#L300
     """
-    filters = ["QD < 2.0", "MQ < 30.0", "FS > 60.0",
-               "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
+    filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
+    if "gvcf" not in dd.get_tools_on(data):
+        filters += ["QD < 2.0", "FS > 60.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"), "gatk")
@@ -229,5 +234,7 @@ def gatk_snp_hard(in_file, data):
 def gatk_indel_hard(in_file, data):
     """Perform hard filtering on GATK indels using best-practice recommendations.
     """
-    filters = ["QD < 2.0", "ReadPosRankSum < -20.0", "FS > 200.0"]
+    filters = ["ReadPosRankSum < -20.0"]
+    if "gvcf" not in dd.get_tools_on(data):
+        filters += ["QD < 2.0", "FS > 200.0"]
     return hard_w_expression(in_file, " || ".join(filters), data, "GATKHardIndel", "INDEL")

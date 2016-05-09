@@ -56,17 +56,18 @@ def _batch_gvcfs(data, region, vrn_files, ref_file, out_file=None):
         for i, batch_vrn_files in enumerate(tz.partition_all(max(max_batch, 200), vrn_files)):
             base, ext = utils.splitext_plus(out_file)
             batch_out_file = "%s-b%s%s" % (base, i, ext)
-            out.append(_run_combine_gvcfs(batch_vrn_files, region, ref_file, batch_out_file, data))
+            out.append(run_combine_gvcfs(batch_vrn_files, region, ref_file, batch_out_file, data))
         return _batch_gvcfs(data, region, out, ref_file)
     else:
         return vrn_files
 
-def _run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
+def run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
         with file_transaction(data, out_file) as tx_out_file:
-            params = ["-T", "CombineGVCFs", "-R", ref_file, "-o", tx_out_file,
-                      "-L", bamprep.region_to_gatk(region)]
+            params = ["-T", "CombineGVCFs", "-R", ref_file, "-o", tx_out_file]
+            if region:
+                params += ["-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
             cores = dd.get_cores(data)

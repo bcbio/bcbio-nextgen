@@ -12,7 +12,7 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import vcfutils, vfilter
+from bcbio.variation import gatkjoint, vcfutils, vfilter
 
 def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
@@ -24,8 +24,11 @@ def run(call_file, ref_file, vrn_files, data):
                                             vfilter.gatk_indel_hard)
     orig_files = [snp_filter_file, indel_filter_file]
     out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
-    combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
-    return _filter_nonref(combined_file, data)
+    if "gvcf" in dd.get_tools_on(data):
+        return gatkjoint.run_combine_gvcfs(orig_files, None, ref_file, out_file, data)
+    else:
+        combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
+        return _filter_nonref(combined_file, data)
 
 _MISSING_HEADERS = """##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another">
 ##FORMAT=<ID=PID,Number=1,Type=String,Description="Physical phasing ID information, where each unique ID within a given sample (but not across samples) connects records within a phasing group">

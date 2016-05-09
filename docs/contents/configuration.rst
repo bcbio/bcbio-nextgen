@@ -723,7 +723,9 @@ Post-processing
   numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full
   bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
   samples with less than 70bp reads.  ``bnd-genotype`` enables genotyping
-  of breakends in Lumpy calls, which improves accuracy but can be slow.
+  of breakends in Lumpy calls, which improves accuracy but can be slow. `gvcf`
+  forces gVCF output for callers that support it (GATK HaplotypeCaller,
+  FreeBayes, Platypus).
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini

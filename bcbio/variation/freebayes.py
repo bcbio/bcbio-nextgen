@@ -38,6 +38,9 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
 
     variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
                                               items[0])
+    # Produce gVCF output
+    if any("gvcf" in dd.get_tools_on(d) for d in items):
+        opts += ["--gvcf", "--gvcf-chunk", "50000"]
     no_target_regions = False
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:

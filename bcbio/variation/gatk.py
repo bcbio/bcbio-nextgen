@@ -95,7 +95,8 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             # Enable non-diploid calling in GATK 3.3+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
                 params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
-            if _joint_calling(items):  # Prepare gVCFs if doing joint calling
+            # Prepare gVCFs if doing joint calling
+            if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
                 params += ["--emitRefConfidence", "GVCF", "--variant_index_type", "LINEAR",
                            "--variant_index_parameter", "128000"]
             resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
