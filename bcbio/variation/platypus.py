@@ -36,16 +36,16 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
                         cmd.extend([key, val])
                     else:
                         cmd.append(opt)
-            # Produce gVCF output
-            if any("gvcf" in dd.get_tools_on(d) for d in items):
-                cmd += ["--outputRefCalls", "1", "--refCallBlockSize", "50000"]
             # Adjust default filter thresholds to achieve similar sensitivity/specificity to other callers
-            tuned_opts = ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
-                          "--rmsmqThreshold", "20", "--qdThreshold", "0", "--abThreshold", "0.0001",
-                          "--minVarFreq", "0.0", "--assemble", "1"]
-            for okey, oval in utils.partition_all(2, tuned_opts):
-                if okey not in cmd:
-                    cmd.extend([okey, oval])
+            # Currently not used after doing more cross validation as they increase false positives
+            # which seems to be a major advantage for Platypus users.
+            # tuned_opts = ["--hapScoreThreshold", "10", "--scThreshold", "0.99", "--filteredReadsFrac", "0.9",
+            #               "--rmsmqThreshold", "20", "--qdThreshold", "0", "--abThreshold", "0.0001",
+            #               "--minVarFreq", "0.0", "--assemble", "1"]
+            # for okey, oval in utils.partition_all(2, tuned_opts):
+            #     if okey not in cmd:
+            #         cmd.extend([okey, oval])
+
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
             if any(not tz.get_in(["config", "algorithm", "mark_duplicates"], data, True)
                    for data in items):

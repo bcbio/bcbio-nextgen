@@ -15,6 +15,8 @@
   it when also inferring coverage estimations. Thanks to Neill Gibson.
 - Fix installation of mutect jar via toolplus when mutect not previously
   present in configuration.
+- Platypus: revert filtering back to defaults after additional cross-validation:
+  http://i.imgur.com/szSo5M6.png
 - Enable gVCF output with tools_on: [gvcf] for users who need gVCF output
   for downstream analyses.
 - Avoid downscaling memory when recalibrating/realigning with GATK, since we
