@@ -1243,7 +1243,7 @@ def _merge_metrics(samples):
                 dt['avg_coverage_per_region'] = _get_coverage_per_region(sample_name)
                 cov[sample_name] = dt['avg_coverage_per_region'][0]
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
-                # dt['sample'] = s['description']
+                dt['sample'] = sample_name
                 dt.transpose().to_csv(sample_file, sep="\t", header=False)
                 dt_together.append(dt)
                 s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
