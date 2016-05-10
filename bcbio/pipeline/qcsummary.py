@@ -940,6 +940,7 @@ def multiqc_summary(*samples):
         if i == 0:
             if utils.file_exists(out_file):
                 data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
+                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.bed"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.txt"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
