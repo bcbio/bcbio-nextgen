@@ -1,5 +1,4 @@
-"""Quality control and summary metrics for next-gen alignments and analysis.
-"""
+"""Quality control and summary metrics for next-gen alignments and analysis.  """
 import collections
 import contextlib
 import csv
@@ -41,10 +40,7 @@ def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
     samples = run_parallel("pipeline_summary", samples)
-    if any(x[0].get("analysis", "").lower().startswith(("standard", "variant")) for x in samples):
-        samples = run_parallel("coverage_report", samples)
     qsign_info = run_parallel("qsignature_summary", [samples])
-    samples = run_parallel("qc_report_summary", [samples])
     samples = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
@@ -122,6 +118,8 @@ def _run_qc_tools(bam_file, data):
 
     if data["analysis"].lower().startswith(("standard", "variant", "variant2")):
         to_run.append(["qsignature", _run_qsignature_generator])
+        to_run.append(["coverage", _run_coverage_qc])
+        to_run.append(["variants", _run_variants_qc])
         if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, []) for tool in ["qualimap", "qualimap_full"]]):
             to_run.append(("qualimap", _run_qualimap))
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
@@ -885,7 +883,6 @@ def _run_gemini_stats(bam_file, data, out_dir):
                 for line in in_handle:
                     if line.startswith("SN") and line.find("records") > -1:
                         cols = line.split()
-                        print line
                         out["Variations (total)"] = cols[-1]
 
     res = {}
@@ -912,6 +909,11 @@ def multiqc_summary(*samples):
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
     folders = []
+    opts = ""
+    out_dir = os.path.join(work_dir, "multiqc")
+    out_data = os.path.join(work_dir, "multiqc", "multiqc_data")
+    out_file = os.path.join(out_dir, "multiqc_report.html")
+    samples = report_summary(samples, os.path.join(out_dir, "report"))
     for data in samples:
         for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
             if isinstance(pfiles, dict):
@@ -921,23 +923,26 @@ def multiqc_summary(*samples):
     if len(folders) > 250:
         logger.warning("Too many samples for MultiQC, only using first 250 entries.")
         folders = folders[:250]
+        opts = "--flat"
     # Back compatible -- to migrate to explicit specifications in input YAML
-    folders += ["align", "trimmed", "htseq-count/*summary", "report/*/*bcbio*"]
-    out_dir = os.path.join(work_dir, "multiqc")
-    out_file = os.path.join(out_dir, "multiqc_report.html")
+    folders += ["trimmed", "htseq-count/*summary", "multiqc/raw/*/*bcbio*"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
             input_dir = " ".join([_check_multiqc_input(d) for d in folders])
             if input_dir.strip():
-                cmd = "{multiqc} {input_dir} -o {tx_out} "
+                cmd = "{multiqc} -f {input_dir} -o {tx_out} {opts}"
                 with tx_tmpdir() as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
-                    shutil.move(tx_out, out_dir)
+                    shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
+                    shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
     out = []
     for i, data in enumerate(samples):
         if i == 0:
             if utils.file_exists(out_file):
                 data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
+                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.txt"))
+                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
+                data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
                 if "summary" not in data:
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
@@ -1117,7 +1122,7 @@ def _slice_vcf_chr21(vcf_file, out_dir):
     return tmp_file
 
 ## report and coverage
-def report_summary(*samples):
+def report_summary(samples, out_dir):
     """
     Run coverage report with bcbiocov package
     """
@@ -1126,26 +1131,47 @@ def report_summary(*samples):
     except ImportError:
         logger.info("skipping report. No bcbreport installed.")
         return samples
-    samples = utils.unpack_worlds(samples)
+    # samples = utils.unpack_worlds(samples)
     work_dir = dd.get_work_dir(samples[0])
-    parent_dir = utils.safe_makedir(os.path.join(work_dir, "report"))
+    parent_dir = utils.safe_makedir(out_dir)
     with utils.chdir(parent_dir):
         logger.info("copy qsignature")
         qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
-        if qsignature_fn:
+        if qsignature_fn: # this need to be inside summary/qc dict
             if utils.file_exists(qsignature_fn) and not utils.file_exists("qsignature.ma"):
-                shutil.copy(qsignature_fn, "qsignature.ma")
+                shutil.copy(qsignature_fn, "bcbio_qsignature.ma")
 
         out_dir = utils.safe_makedir("fastqc")
         logger.info("summarize fastqc")
         with utils.chdir(out_dir):
             _merge_fastqc(samples)
 
-        out_dir = utils.safe_makedir("variants")
-
         logger.info("summarize metrics")
         samples = _merge_metrics(samples)
 
+        out_dir = utils.safe_makedir("coverage")
+        logger.info("summarize coverage")
+        for data in samples:
+            pfiles = tz.get_in(["summary", "qc", "coverage"], data, [])
+            if isinstance(pfiles, dict):
+                pfiles = [pfiles["base"]] + pfiles["secondary"]
+            elif pfiles:
+                pfiles = [pfiles]
+            for fn in pfiles:
+                if os.path.basename(fn).find("coverage_fixed") > -1:
+                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
+
+        out_dir = utils.safe_makedir("variants")
+        logger.info("summarize variants")
+        for data in samples:
+            pfiles = tz.get_in(["summary", "qc", "variants"], data, [])
+            if isinstance(pfiles, dict):
+                pfiles = [pfiles["base"]] + pfiles["secondary"]
+            elif pfiles:
+                pfiles = [pfiles]
+            for fn in pfiles:
+                if os.path.basename(fn).find("gc-depth-parse.tsv") > -1:
+                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
         bcbreport.report(parent_dir)
         out_report = os.path.join(parent_dir, "qc-coverage-report.html")
         if not utils.file_exists(out_report):
@@ -1162,34 +1188,22 @@ def report_summary(*samples):
             #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)
-        out = []
-        for d in samples:
-            if "coverage" not in d:
-                d["coverage"] = {}
-            if utils.file_exists(out_report):
-                d["coverage"]["report"] = out_report
-            out.append(d)
-        samples = out
-    return [[d] for d in samples]
+    return samples
 
-def coverage_report(data):
-    """Run heavy coverage and variant processing in parallel
-    """
-    data = utils.to_single_data(data)
-    data = cov.coverage(data)
-    data = cov.variants(data)
-    data = cov.priority_coverage(data)
-    data = cov.priority_total_coverage(data)
+def _run_coverage_qc(bam_file, data, out_dir):
+    """Run coverage QC analysis"""
+    priority = cov.priority_coverage(data, out_dir)
+    cov.priority_total_coverage(data, out_dir)
+    coverage = cov.coverage(data, out_dir)
     problem_regions = dd.get_problem_region_dir(data)
-    if "coverage" in data:
-        coverage = data['coverage']
-        annotated = None
-        if problem_regions and coverage:
-            annotated = cov.decorate_problem_regions(coverage, problem_regions)
-        data['coverage'] = {'all': coverage, 'problems': annotated}
-    else:
-        data["coverage"] = {}
-    return [[data]]
+    annotated = None
+    if problem_regions and priority:
+        annotated = cov.decorate_problem_regions(priority, problem_regions)
+    return None
+
+def _run_variants_qc(bam_file, data, out_dir):
+    """Run variants QC analysis"""
+    return cov.variants(data, out_dir)
 
 def _get_coverage_per_region(name):
     """
@@ -1214,30 +1228,33 @@ def _merge_metrics(samples):
     cov = {}
     with file_transaction(out_file) as out_tx:
         for s in samples:
-            if s['description'] in cov:
+            sample_name = dd.get_sample_name(s)
+            if sample_name in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
-            sample_file = os.path.join("metrics", "%s_bcbio.txt" % s['description'])
+            sample_file = os.path.abspath(os.path.join("metrics", "%s_bcbio.txt" % sample_name))
+            if not tz.get_in(['summary', 'qc'], s):
+                s['summary'] = {"qc": {}}
             if m:
                 for me in m:
-                    if isinstance(m[me], list):
-                        m[me] = ":".join(m[me])
+                    if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
+                        continue
                 dt = pd.DataFrame(m, index=['1'])
-                dt['avg_coverage_per_region'] = _get_coverage_per_region(s['description'])
-                cov[s['description']] = dt['avg_coverage_per_region'][0]
-                # dt = pd.DataFrame.from_dict(m)
+                dt['avg_coverage_per_region'] = _get_coverage_per_region(sample_name)
+                cov[sample_name] = dt['avg_coverage_per_region'][0]
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
-                dt['sample'] = s['description']
+                # dt['sample'] = s['description']
                 dt.transpose().to_csv(sample_file, sep="\t", header=False)
                 dt_together.append(dt)
+                s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
         if len(dt_together) > 0:
             dt_together = utils.rbind(dt_together)
             dt_together.to_csv(out_tx, index=False, sep="\t")
 
     out = []
     for s in samples:
-        if s['description'] in cov:
-            s['summary']['metrics']['avg_coverage_per_region'] = cov[s['description']]
+        if sample_name in cov:
+            s['summary']['metrics']['avg_coverage_per_region'] = cov[sample_name]
         out.append(s)
     return samples
 
