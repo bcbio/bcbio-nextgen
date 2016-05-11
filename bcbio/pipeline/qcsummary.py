@@ -925,7 +925,7 @@ def multiqc_summary(*samples):
         folders = folders[:250]
         opts = "--flat"
     # Back compatible -- to migrate to explicit specifications in input YAML
-    folders += ["trimmed", "htseq-count/*summary", "multiqc/raw/*/*bcbio*"]
+    folders += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
             input_dir = " ".join([_check_multiqc_input(d) for d in folders])
