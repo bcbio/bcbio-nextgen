@@ -19,7 +19,8 @@ install:
   - conda install --yes -c bioconda -c r bcbio-nextgen-vm -q
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
-  # Update to bcbio-nextgen latest code within the container
+  # Update to latest bcbio-nextgen code externally and within the container
+  - ~/install/bcbio-vm/anaconda/bin/python setup.py install
   - bcbio_vm.py devel setup_install
   - pip install cwl_runner
 
