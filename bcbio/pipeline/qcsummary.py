@@ -931,7 +931,7 @@ def multiqc_summary(*samples):
             input_dir = " ".join([_check_multiqc_input(d) for d in folders])
             if input_dir.strip():
                 cmd = "{multiqc} -f {input_dir} -o {tx_out} {opts}"
-                with tx_tmpdir() as tx_out:
+                with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
                     shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
