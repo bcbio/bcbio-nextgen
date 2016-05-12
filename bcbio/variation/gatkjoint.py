@@ -3,7 +3,7 @@
 Handles merging of large batch sizes using CombineGVCFs and
 joint variant calling with GenotypeGVCFs.
 """
-
+import math
 import toolz as tz
 
 from bcbio import broad, utils
@@ -49,11 +49,12 @@ def _batch_gvcfs(data, region, vrn_files, ref_file, out_file=None):
     """
     if out_file is None:
         out_file = vrn_files[0]
+    # group to get below the maximum batch size, using 200 as the baseline
     max_batch = int(dd.get_joint_group_size(data))
     if len(vrn_files) > max_batch:
         out = []
-        # group to get below the maximum batch size, using 200 as the baseline
-        for i, batch_vrn_files in enumerate(tz.partition_all(max(max_batch, 200), vrn_files)):
+        num_batches = int(math.ceil(float(len(vrn_files)) / max_batch))
+        for i, batch_vrn_files in enumerate(tz.partition_all(num_batches, vrn_files)):
             base, ext = utils.splitext_plus(out_file)
             batch_out_file = "%s-b%s%s" % (base, i, ext)
             out.append(run_combine_gvcfs(batch_vrn_files, region, ref_file, batch_out_file, data))
