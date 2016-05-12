@@ -177,6 +177,9 @@ def _check_ref_files(ref_info, data):
     problems = []
     if not data["genome_build"]:
         problems.append("Did not find 'genome_build' for sample: %s" % dd.get_sample_name(data))
+    elif not tz.get_in(["fasta", "base"], ref_info):
+        problems.append("Did not find fasta reference file for genome %s.\n" % (data["genome_build"]) +
+                        "Check tool-data/*.loc files to ensure paths to reference data are correct.")
     else:
         for contig in ref.file_contigs(ref_info["fasta"]["base"], data["config"]):
             cur_problems = set([])
