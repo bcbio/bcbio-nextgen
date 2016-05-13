@@ -7,7 +7,7 @@ https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/plink_to_vcf.py
 Requires:
 
 plink: http://pngu.mgh.harvard.edu/~purcell/plink/
-PLINK/SEQ: http://atgu.mgh.harvard.edu/plinkseq/
+PLINK/SEQ: https://atgu.mgh.harvard.edu/plinkseq/
 bx-python: https://bitbucket.org/james_taylor/bx-python/wiki/Home
 
 You also need the genome reference file in 2bit format:
