@@ -8,7 +8,7 @@ Requires:
 
 plink: http://pngu.mgh.harvard.edu/~purcell/plink/
 PLINK/SEQ: http://atgu.mgh.harvard.edu/plinkseq/
-bx-python: https://bitbucket.org/james_taylor/bx-python/wiki/Home
+bx-python: https://github.com/bxlab/bx-python
 
 You also need the genome reference file in 2bit format:
 http://genome.ucsc.edu/FAQ/FAQformat.html#format7
