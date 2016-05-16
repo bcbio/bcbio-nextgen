@@ -36,8 +36,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     opts = ["--genotype-qualities"]
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
-    variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
-                                              items[0])
+    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
     # Produce gVCF output
     if any("gvcf" in dd.get_tools_on(d) for d in items):
         opts += ["--gvcf", "--gvcf-chunk", "50000"]

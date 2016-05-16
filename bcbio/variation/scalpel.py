@@ -16,11 +16,11 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
 from bcbio.provenance import do
-from bcbio.variation import annotation, vcfutils
+from bcbio.variation import annotation, bedutils, vcfutils
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
 def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
-    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
+    variant_regions = bedutils.population_variant_regions(items)
     target = subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):

@@ -115,6 +115,29 @@ def merge_overlaps(in_file, data, distance=None, out_dir=None):
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
         return out_file
 
+def population_variant_regions(items):
+    """Retrieve the variant region BED file from a population of items.
+
+    If tumor/normal, return the tumor BED file. If a population, return
+    the BED file covering the most bases.
+    """
+    import pybedtools
+    if len(items) == 1:
+        return dd.get_variant_regions(items[0])
+    else:
+        paired = vcfutils.get_paired(items)
+        if paired:
+            return dd.get_variant_regions(paired.tumor_data)
+        else:
+            vrs = []
+            for data in items:
+                vr_bed = dd.get_variant_regions(data)
+                if vr_bed:
+                    vrs.append((pybedtools.BedTool(vr_bed).total_coverage(), vr_bed))
+            vrs.sort(reverse=True)
+            if vrs:
+                return vrs[0][1]
+
 def clean_inputs(data):
     """Clean BED input files to avoid overlapping segments that cause downstream issues.
 

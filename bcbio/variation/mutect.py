@@ -12,7 +12,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation import bamprep, vcfutils, scalpel
+from bcbio.variation import bamprep, bedutils, vcfutils, scalpel
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger
@@ -43,7 +43,7 @@ def _check_mutect_version(broad_runner):
                        "Java 7).")
             raise ValueError(message)
 
-def _config_params(base_config, assoc_files, region, out_file):
+def _config_params(base_config, assoc_files, region, out_file, items):
     """Add parameters based on configuration variables, associated files and genomic regions.
     """
     params = []
@@ -53,7 +53,7 @@ def _config_params(base_config, assoc_files, region, out_file):
     cosmic = assoc_files.get("cosmic")
     if cosmic:
         params += ["--cosmic", cosmic]
-    variant_regions = base_config["algorithm"].get("variant_regions")
+    variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
@@ -100,7 +100,7 @@ def _mutect_call_prep(align_bams, items, ref_file, assoc_files,
         params += ["--normal_sample_name", paired.normal_name]
     if paired.normal_panel is not None:
         params += ["--normal_panel", paired.normal_panel]
-    params += _config_params(base_config, assoc_files, region, out_file)
+    params += _config_params(base_config, assoc_files, region, out_file, items)
     return broad_runner, params
 
 def mutect_caller(align_bams, items, ref_file, assoc_files, region=None,

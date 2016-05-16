@@ -12,7 +12,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, vcfutils, ploidy
+from bcbio.variation import annotation, bamprep, bedutils, vcfutils, ploidy
 
 def _add_tumor_params(paired):
     """Add tumor/normal BAM input parameters to command line.
@@ -34,7 +34,7 @@ def _add_region_params(region, out_file, items):
     """Add parameters for selecting by region to command line.
     """
     params = []
-    variant_regions = tz.get_in(["config", "algorithm", "variant_regions"], items[0])
+    variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]

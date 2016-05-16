@@ -9,7 +9,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import annotation, bamprep, ploidy
+from bcbio.variation import annotation, bamprep, bedutils, ploidy
 
 def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
     """Shared preparation work for GATK variant calling.
@@ -32,7 +32,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
         params += ["-I", x]
     if dbsnp:
         params += ["--dbsnp", dbsnp]
-    variant_regions = tz.get_in(["algorithm", "variant_regions"], config)
+    variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]

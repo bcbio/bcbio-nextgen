@@ -24,7 +24,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, vcfutils
+from bcbio.variation import annotation, bamprep, bedutils, vcfutils
 
 def _is_bed_file(target):
     return target and isinstance(target, basestring) and os.path.isfile(target)
@@ -104,8 +104,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
-            target = shared.subset_variant_regions(dd.get_variant_regions(items[0]), region,
-                                                   out_file, do_merge=False)
+            vrs = bedutils.population_variant_regions(items)
+            target = shared.subset_variant_regions(vrs, region, out_file, do_merge=False)
             num_bams = len(align_bams)
             sample_vcf_names = []  # for individual sample names, given batch calling may be required
             for bamfile, item in itertools.izip(align_bams, items):

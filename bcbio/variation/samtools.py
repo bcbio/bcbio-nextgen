@@ -28,8 +28,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     if not file_exists(out_file):
         logger.debug("Genotyping with {name}: {region} {fname}".format(
               name=name, region=region, fname=os.path.basename(align_bams[0])))
-        variant_regions = bedutils.merge_overlaps(tz.get_in(["config", "algorithm", "variant_regions"], items[0]),
-                                                  items[0])
+        variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
         target_regions = subset_variant_regions(variant_regions, region, out_file)
         if (variant_regions is not None and isinstance(target_regions, basestring)
               and not os.path.isfile(target_regions)):

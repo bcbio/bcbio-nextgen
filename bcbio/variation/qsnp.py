@@ -83,8 +83,7 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
 
 def _clean_regions(items, region):
     """Intersect region with target file if it exists"""
-    config = items[0]["config"]
-    variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "varaint_regions")), items[0])
+    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
     with utils.tmpfile() as tx_out_file:
         target = subset_variant_regions(variant_regions, region, tx_out_file, items)
         if target:
