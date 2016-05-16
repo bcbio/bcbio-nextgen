@@ -12,7 +12,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation import bamprep, bedutils, vcfutils, scalpel
+from bcbio.variation import bamprep, bedutils, gatk, vcfutils, scalpel
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger
@@ -70,6 +70,8 @@ def _config_params(base_config, assoc_files, region, out_file, items):
     # Output quality scores
     if "--enable_qscore_output" not in params:
         params.append("--enable_qscore_output")
+    # drf not currently supported in MuTect to turn off duplicateread filter
+    # params += gatk.standard_cl_params(items)
     return params
 
 def _mutect_call_prep(align_bams, items, ref_file, assoc_files,

@@ -11,6 +11,18 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, bedutils, ploidy
 
+def standard_cl_params(items):
+    """Shared command line parameters for GATK programs.
+
+    Handles no removal of duplicate reads for amplicon or non mark duplicate experiments.
+    """
+    out = []
+    def _skip_duplicates(data):
+        return dd.get_coverage_interval(data) == "amplicon" or not dd.get_mark_duplicates(data)
+    if any(_skip_duplicates(d) for d in items):
+        out += ["-drf", "DuplicateRead"]
+    return out
+
 def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
     """Shared preparation work for GATK variant calling.
     """
@@ -36,6 +48,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+    params += standard_cl_params(items)
     broad_runner = broad.runner_from_config(config)
     return broad_runner, params
 

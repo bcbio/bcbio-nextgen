@@ -13,6 +13,8 @@
   provide reasonable splits and avoid too many splits for large files.
 - Fix high depth identification for whole genome runs, correctly calculating
   it when also inferring coverage estimations. Thanks to Neill Gibson.
+- Do not remove duplicates for GATK variant calling when mark_duplicates
+  is False or running amplicon sequencing.
 - Fix installation of mutect jar via toolplus when mutect not previously
   present in configuration.
 - Platypus: revert filtering back to defaults after additional cross-validation:

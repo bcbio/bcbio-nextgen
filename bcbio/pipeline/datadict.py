@@ -47,6 +47,7 @@ LOOKUPS = {
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "batch": {"keys": ["metadata", "batch"]},
+    "mark_duplicates": {"keys": ["config", "algorithm", "mark_duplicates"], "default": True},
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},

@@ -12,7 +12,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, bedutils, vcfutils, ploidy
+from bcbio.variation import annotation, bamprep, bedutils, gatk, vcfutils, ploidy
 
 def _add_tumor_params(paired):
     """Add tumor/normal BAM input parameters to command line.
@@ -38,6 +38,7 @@ def _add_region_params(region, out_file, items):
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+    params += gatk.standard_cl_params(items)
     return params
 
 def _add_assoc_params(assoc_files):
@@ -108,7 +109,8 @@ def fix_mutect2_output(line, tumor_name, normal_name):
         base_header = parts[:9]
         old_samples = parts[9:]
         if len(old_samples) > 0:
-            mapping = {"NORMAL": normal_name, "TUMOR": tumor_name}
+            mapping = {"NORMAL": normal_name, "TUMOR": tumor_name,
+                       tumor_name: tumor_name, normal_name: normal_name}
             samples = [mapping[sample_name] for sample_name in old_samples]
             samples = [x for x in samples if x]
             assert len(old_samples) == len(samples)
