@@ -67,14 +67,17 @@ def run_cluster(*data):
     Run seqcluster cluster to detect smallRNA clusters
     """
     sample = data[0][0]
+    tools_off = dd.get_tools_off(data[0])
     work_dir = dd.get_work_dir(sample)
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
-    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
-    sample["report"] = _report(sample, dd.get_ref_file(sample))
-    sample["seqcluster"] = out_dir
+    if "seqcluster" not in tools_off:
+        logger.debug("Skipping seqcluster")
+        cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+        sample["report"] = _report(sample, dd.get_ref_file(sample))
+        sample["seqcluster"] = out_dir
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:
