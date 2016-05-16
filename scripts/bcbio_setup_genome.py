@@ -306,7 +306,7 @@ if __name__ == "__main__":
                                      lambda x: "../rnaseq/rRNA.fa")
     if args.mirbase:
         srna_gtf = ["srnaseq", "srna-transcripts"]
-        srna_mirbase = ["srnaseq", "mirbase"]
+        srna_mirbase = ["srnaseq", "mirbase-hairpin"]
         resource_dict = tz.update_in(resource_dict, srna_gtf,
                                      lambda x: "../srnaseq/srna-transcripts.gtf")
         resource_dict = tz.update_in(resource_dict, srna_mirbase,
