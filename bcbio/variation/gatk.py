@@ -112,6 +112,11 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
                 params += ["--emitRefConfidence", "GVCF", "--variant_index_type", "LINEAR",
                            "--variant_index_parameter", "128000"]
+                # Set GQ banding to not be single GQ resolution
+                # No recommended default but try to balance resolution and size
+                # http://gatkforums.broadinstitute.org/gatk/discussion/7051/recommendation-best-practices-gvcf-gq-bands
+                for boundary in [10, 20, 30, 40, 60, 80]:
+                    params += ["-GQB", str(boundary)]
             resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
