@@ -98,6 +98,7 @@ def filter_multimappers(align_file, data):
                '> {tx_out_file}')
         message = "Removing multimapped reads from %s." % align_file
         do.run(cmd.format(**locals()), message)
+    bam.index(out_file, config)
     return out_file
 
 ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
