@@ -33,7 +33,7 @@ def bam_needs_processing(data):
     return ((data.get("work_bam") or data.get("align_bam")) and
             any(tz.get_in(["config", "algorithm", x], data) for x in
                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
-                 "jointcaller"]))
+                 "jointcaller", "variant_regions"]))
 
 def get_batch_for_key(data):
     """Retrieve batch information useful as a unique key for the sample.

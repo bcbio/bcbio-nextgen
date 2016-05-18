@@ -5,6 +5,8 @@ import pprint
 
 import toolz as tz
 
+ALWAYS_AVAILABLE = ["#description"]
+
 def generate(variables, steps, final_outputs):
     """Generate all of the components of a CWL workflow from input steps.
 
@@ -174,7 +176,7 @@ def _clean_record(var):
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if step.parallel in ["multi-batch"]:
-        file_output = [_create_record(outputs, step.inputs, step.noinputs, file_vs, std_vs)]
+        file_output = [_create_record(outputs, step.inputs, step.noinputs, step.unlist, file_vs, std_vs)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
@@ -276,13 +278,14 @@ def _get_upload_output(vid, variables):
     v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
 
-def _create_record(name, inputs, noinputs, file_vs, std_vs):
+def _create_record(name, inputs, noinputs, unlist, file_vs, std_vs):
     """Create an input record created from rearranging inputs.
 
     Batching processes create records that reformat the inputs for
     parallelization.
     """
     skip_inputs = set([_get_string_vid(x) for x in noinputs])
+    unlist = set([_get_string_vid(x) for x in unlist])
     fields = []
     input_vids = set([_get_string_vid(v) for v in inputs])
     for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
@@ -290,6 +293,8 @@ def _create_record(name, inputs, noinputs, file_vs, std_vs):
             cur_v = {}
             cur_v["name"] = get_base_id(orig_v["id"])
             cur_v["type"] = orig_v["type"]
+            if cur_v["name"] in unlist:
+                cur_v = _flatten_nested_input(cur_v)
             fields.append(_nest_variable(cur_v))
 
     return {"id": "#%s" % name,
@@ -350,10 +355,11 @@ def _convert_to_step_id(v, step):
     return v
 
 def _split_variables(variables):
-    """Split variables passed into file-based and non-file.
+    """Split variables into always passed (std) and specified (file).
 
-    We always pass non-file variables to each step but need to
-    explicitly define file variables so they can be linked in.
+    We always pass some variables to each step but need to
+    explicitly define file and algorithm variables so they can
+    be linked in as needed.
     """
     file_vs = []
     std_vs = []
@@ -365,6 +371,8 @@ def _split_variables(variables):
               (isinstance(cur_type, (list, tuple)) and
                ("File" in cur_type or {'items': 'File', 'type': 'array'} in cur_type))):
             file_vs.append(v)
-        else:
+        elif v["id"] in ALWAYS_AVAILABLE:
             std_vs.append(v)
+        else:
+            file_vs.append(v)
     return file_vs, std_vs

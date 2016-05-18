@@ -13,7 +13,7 @@ for each of the defined workflows.
 """
 import collections
 
-def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None):
+def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None, unlist=None):
     """Represent a step in a workflow.
 
     name -- The run function name, which must match a definition in distributed/multitasks
@@ -27,6 +27,8 @@ def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None):
             input files. Ensures enough disk present when that is a limiting factor
             when selecting cloud node resources.
     noinputs -- Non-file variables to not pass to this step
+    unlist -- Variables being unlisted by this process. Useful for parallelization splitting and
+      batching from multiple variables, like variant calling.
     parallel -- Parallelization approach. There are three different levels of parallelization,
       each with subcomponents:
 
@@ -44,10 +46,11 @@ def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None):
         - batch-merge -- Merge sub-components back into a single batch.
         - batch-single -- Run on a single batch.
     """
-    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk noinputs")
+    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk noinputs unlist")
     if programs is None: programs = []
     if noinputs is None: noinputs = []
-    return Step(name, parallel, inputs, outputs, programs, disk, noinputs)
+    if unlist is None: unlist = []
+    return Step(name, parallel, inputs, outputs, programs, disk, noinputs, unlist)
 
 def w(name, parallel, workflow, internal, noinputs=None):
     """A workflow, allowing specification of sub-workflows for nested parallelization.
@@ -73,7 +76,9 @@ def variant():
     """Variant calling workflow definition for CWL generation.
     """
     align = [s("prep_align_inputs", "single-split",
-               [["files"]],
+               [["files"],
+                ["config", "algorithm", "align_split_size"],
+                ["config", "algorithm", "aligner"]],
                [cwlout(["files"], "File", [".gbi"]),
                 cwlout(["config", "algorithm", "quality_format"], "string"),
                 cwlout(["align_split"], ["string", "null"])],
@@ -81,7 +86,11 @@ def variant():
                {"files": 1.5}),
              s("process_alignment", "single-parallel",
                [["files"], ["reference", "fasta", "base"],
-                ["reference", "aligner", "indexes"]],
+                ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
+                ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
+                ["reference", "aligner", "indexes"],
+                ["config", "algorithm", "aligner"],
+                ["config", "algorithm", "mark_duplicates"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
                 cwlout(["hla", "fastq"], ["File", "null"]),
@@ -103,11 +112,11 @@ def variant():
             [["batch_rec"]],
             [cwlout(["region"], "string")]),
           s("variantcall_batch_region", "batch-parallel",
-            [["batch_rec"]],
+            [["batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], "File", [".tbi"]),
              cwlout(["region"], "string")]),
           s("concat_batch_variantcalls", "batch-merge",
-            [["batch_rec"], ["vrn_file_region"]],
+            [["batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file"], "File", [".tbi"])]),
           s("postprocess_variants", "batch-single",
             [["batch_rec"], ["vrn_file"]],
@@ -130,6 +139,7 @@ def variant():
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "variant_regions_merged"],
+                ["config", "algorithm", "recalibrate"],
                 ["reference", "fasta", "base"]],
                [cwlout(["config", "algorithm", "coverage_interval"], "string"),
                 cwlout(["config", "algorithm", "variant_regions"], "File"),
@@ -145,23 +155,26 @@ def variant():
              #    cwlout(["hla", "call_file"], ["File", "null"])]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
+                ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
                 ["reference", "fasta", "base"]],
                [cwlout(["config", "algorithm", "callable_regions"], "File"),
                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
                 cwlout(["config", "algorithm", "callable_count"], "int")]),
              s("batch_for_variantcall", "multi-batch",
-               [["align_bam"], ["config", "algorithm", "callable_regions"], ["regions", "callable"],
+               [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
+                ["regions", "callable"], ["config", "algorithm", "variantcaller"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
                 ["reference", "fasta", "base"], ["reference", "rtg"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
                "batch_rec",
+               unlist=[["config", "algorithm", "variantcaller"]],
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
              w("variantcall", "multi-parallel", vc,
                [["region"], ["vrn_file_region"]],
                noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
              s("pipeline_summary", "multi-parallel",
-               [["align_bam"], ["reference", "fasta", "base"],
+               [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
                 ["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]],
                [cwlout(["summary", "qc", "samtools"], "File"),

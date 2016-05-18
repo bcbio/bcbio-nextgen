@@ -148,7 +148,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if parallel == "multi-parallel" or len(inp["id"].split(".")) > 1:
+        if parallel in "multi-parallel" or len(inp["id"].split(".")) > 1:
             scatter_inputs.append(step_inp["id"])
     out = {"run": {"import": run_file},
            "id": "#%s" % name,
@@ -239,9 +239,22 @@ def _get_avro_type(val):
                     types.append(ctype)
             elif ctype not in types:
                 types.append(ctype)
+        # handle empty types
+        if len(types) == 0:
+            types = ["null"]
+        # collapse arrays for multiple types
+        if len(types) > 1 and all(isinstance(t, dict) and t["type"] == "array" for t in types):
+            types = [{"type": "array", "items": [t["items"] for t in types]}]
         return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
         return "null"
+    # encode booleans as string True/False and unencode on other side
+    elif isinstance(val, bool):
+        return "string"
+    elif isinstance(val, int):
+        return "long"
+    elif isinstance(val, float):
+        return "double"
     else:
         return "string"
 
@@ -269,7 +282,7 @@ def _to_cwldata(key, val):
                 cwl_nval = _item_to_cwldata(nval)
                 if isinstance(cwl_nval, dict):
                     out.extend(_to_cwldata(cur_nkey, nval))
-                elif cwl_nval == nval:
+                elif "#%s" % (key) in workflow.ALWAYS_AVAILABLE:
                     remain_val[nkey] = nval
                 else:
                     out.append((cur_nkey, cwl_nval))
@@ -322,6 +335,8 @@ def _item_to_cwldata(x):
             else:
                 out = None
         return out
+    elif isinstance(x, bool):
+        return str(x)
     else:
         return x
 

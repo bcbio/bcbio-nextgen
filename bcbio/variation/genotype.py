@@ -3,6 +3,7 @@
 import os
 import collections
 import copy
+import pprint
 
 import toolz as tz
 
@@ -149,7 +150,7 @@ def _collapse_by_bam_variantcaller(samples):
     return out
 
 def _dup_samples_by_variantcaller(samples, require_bam=True):
-    """Prepare samples vy variant callers, duplicating any with multiple callers.
+    """Prepare samples by variant callers, duplicating any with multiple callers.
     """
     to_process = []
     extras = []
@@ -183,7 +184,16 @@ def batch_for_variantcall(samples):
     """
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
-    for data in [utils.to_single_data(x) for x in to_process]:
+    to_process = [utils.to_single_data(x) for x in to_process]
+    all_keys = set([])
+    for data in to_process:
+        all_keys.update(set(data["cwl_keys"]))
+    for data in to_process:
+        for raw_key in sorted(list(all_keys)):
+            key = raw_key.split("__")
+            if tz.get_in(key, data) is None:
+                data = tz.update_in(data, key, lambda x: None)
+                data["cwl_keys"].append(raw_key)
         vc = get_variantcaller(data, require_bam=False)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
@@ -240,7 +250,8 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
         return out
 
 def get_variantcallers():
-    from bcbio.variation import freebayes, cortex, samtools, varscan, mutect, mutect2, platypus, scalpel, vardict, qsnp
+    from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
+                                 platypus, scalpel, vardict, qsnp)
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "mutect2": mutect2.mutect2_caller,
@@ -310,10 +321,14 @@ def split_data_cwl_items(items):
     Handles cases where we're arrayed on multiple things, like a set of regional
     VCF calls and data objects.
     """
+    max_keys = []
+    for data in items:
+        if len(data["cwl_keys"]) > len(max_keys):
+            max_keys = data["cwl_keys"]
     data_out = []
     extra_out = []
     for data in items:
-        if "config" in data:
+        if len(data["cwl_keys"]) == len(max_keys):
             data_out.append(data)
         else:
             extra_out.append(data)
@@ -356,7 +371,7 @@ def _get_batch_name(items):
 
 def _get_batch_variantcaller(items):
     variantcaller = list(set([get_variantcaller(x) for x in items]))
-    assert len(variantcaller) == 1
+    assert len(variantcaller) == 1, (variantcaller, pprint.pformat(items))
     return variantcaller[0]
 
 def variantcall_batch_region(items):

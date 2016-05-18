@@ -113,34 +113,60 @@ def _world_from_cwl(fnargs, work_dir):
             continue
         # starting a new record -- duplicated key
         if key in passed_keys:
-            data["dirs"] = {"work": work_dir}
-            data["cwl_keys"] = passed_keys
-            data["output_cwl_keys"] = output_cwl_keys
-            data = _add_resources(data, runtime)
-            data = run_info.normalize_world(data)
-            out.append(data)
+            out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
             data = {}
             passed_keys = []
         passed_keys.append(key)
         key = key.split("__")
-        if val.startswith(("{", "[")):
-            val = json.loads(val)
-        elif val.find(";;") >= 0:
-            val = val.split(";;")
-        data = _update_nested(key, val, data)
+        data = _update_nested(key, _convert_value(val), data)
     if data:
-        data["dirs"] = {"work": work_dir}
-        data["cwl_keys"] = passed_keys
-        data["output_cwl_keys"] = output_cwl_keys
-        data = _add_resources(data, runtime)
-        data = run_info.normalize_world(data)
-        out.append(data)
+        out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel
+
+def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
+    """Finalize data object with inputs from CWL.
+    """
+    data["dirs"] = {"work": work_dir}
+    if not tz.get_in(["config", "algorithm"], data):
+        if "config" not in data:
+            data["config"] = {}
+        data["config"]["algorithm"] = {}
+    if "rgnames" not in data and "description" in data:
+        data["rgnames"] = {"sample": data["description"]}
+    data["cwl_keys"] = passed_keys
+    data["output_cwl_keys"] = output_cwl_keys
+    data = _add_resources(data, runtime)
+    data = run_info.normalize_world(data)
+    return data
+
+def _convert_value(val):
+    """Handle multiple input type values.
+    """
+    def _is_number(x, op):
+        try:
+            op(x)
+            return True
+        except ValueError:
+            return False
+    if _is_number(val, int):
+        return int(val)
+    elif _is_number(val, float):
+        return float(val)
+    elif val.startswith(("{", "[")):
+        return json.loads(val)
+    elif val.find(";;") >= 0:
+        return [_convert_value(v) for v in val.split(";;")]
+    elif val.lower() == "true":
+        return True
+    elif val.lower() == "false":
+        return False
+    else:
+        return val
 
 def _convert_to_cwl_json(data, fnargs):
     """Convert world data object (or list of data objects) into outputs for CWL ingestion.
