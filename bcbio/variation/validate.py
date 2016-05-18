@@ -30,7 +30,7 @@ from bcbio.variation import bedutils, validateplot, vcfutils, multi, naming
 def _get_validate(data):
     """Retrieve items to validate, from single samples or from combined joint calls.
     """
-    if data.get("vrn_file") and "validate" in data["config"]["algorithm"]:
+    if data.get("vrn_file") and tz.get_in(["config", "algorithm", "validate"], data):
         return data
     elif "group_orig" in data:
         for sub in multi.get_orig_items(data):
