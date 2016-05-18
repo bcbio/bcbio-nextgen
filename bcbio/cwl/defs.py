@@ -165,6 +165,7 @@ def variant():
                 ["regions", "callable"], ["config", "algorithm", "variantcaller"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
+                ["config", "algorithm", "tools_on"],
                 ["reference", "fasta", "base"], ["reference", "rtg"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
                "batch_rec",

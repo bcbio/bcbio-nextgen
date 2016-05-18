@@ -182,6 +182,7 @@ def batch_for_variantcall(samples):
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
     """
+    convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
@@ -194,6 +195,11 @@ def batch_for_variantcall(samples):
             if tz.get_in(key, data) is None:
                 data = tz.update_in(data, key, lambda x: None)
                 data["cwl_keys"].append(raw_key)
+            if raw_key in convert_to_list:
+                val = tz.get_in(key, data)
+                if not val: val = []
+                elif not isinstance(val, (list, tuple)): val = [val]
+                data = tz.update_in(data, key, lambda x: val)
         vc = get_variantcaller(data, require_bam=False)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
