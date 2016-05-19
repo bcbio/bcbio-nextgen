@@ -319,6 +319,7 @@ def prepare_bcbio_samples(sample):
     """
     Function that will use specific function to merge input files
     """
+    logger.info("Preparing %s files %s to merge into %s." % (sample['name'], sample['files'], sample['out_file']))
     if sample['fn'] == "fq_merge":
         out_file = fq_merge(sample['files'], sample['out_file'], sample['config'])
     elif sample['fn'] == "bam_merge":
