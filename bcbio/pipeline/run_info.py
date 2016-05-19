@@ -39,6 +39,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     sample_names is a list of samples to include from the overall file, for cases
     where we are running multiple pipelines from the same configuration file.
     """
+    from bcbio.pipeline import qcsummary
     if integrations is None: integrations = {}
     logger.info("Using input YAML configuration: %s" % run_info_yaml)
     assert run_info_yaml and os.path.exists(run_info_yaml), \
@@ -62,6 +63,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
         item["resources"] = _add_remote_resources(item["resources"])
         item["config"] = config_utils.update_w_custom(config, item)
         item.pop("algorithm", None)
+        item["config"]["algorithm"]["qc"] = qcsummary.get_qc_tools(item)
         item = add_reference_resources(item, remote_retriever)
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
@@ -394,7 +396,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "cellular_barcodes",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "expression_caller"] +
+                      "mixup_check", "expression_caller", "qc"] +
                      # development
                      ["cwl_reporting"] +
                      # back compatibility
@@ -708,6 +710,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
                                                   ignore_keys=ALGORITHM_NOPATH_KEYS)
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
+        item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         if item.get("files"):
             item["files"] = [genome.abs_file_paths(f) for f in item["files"]]
@@ -743,6 +746,16 @@ def _item_is_bam(item):
     files = item.get("files", [])
     return len(files) == 1 and files[0].endswith(".bam")
 
+def add_metadata_defaults(md):
+    """Central location for defaults for algorithm inputs.
+    """
+    defaults = {"batch": None,
+                "phenotype": ""}
+    for k, v in defaults.items():
+        if k not in md:
+            md[k] = v
+    return md
+
 def _add_algorithm_defaults(algorithm):
     """Central location specifying defaults for algorithm inputs.
 
@@ -752,7 +765,12 @@ def _add_algorithm_defaults(algorithm):
     defaults = {"archive": [],
                 "tools_off": [],
                 "tools_on": [],
+                "qc": [],
+                "nomap_split_size": None,
+                "nomap_split_targets": None,
                 "mark_duplicates": True,
+                "recalibrate": True,
+                "realign": True,
                 "variant_regions": None,
                 "validate": None,
                 "validate_regions": None}

@@ -182,6 +182,7 @@ def batch_for_variantcall(samples):
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
     """
+    from bcbio.pipeline import run_info
     convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
@@ -201,6 +202,7 @@ def batch_for_variantcall(samples):
                 elif not isinstance(val, (list, tuple)): val = [val]
                 data = tz.update_in(data, key, lambda x: val)
         vc = get_variantcaller(data, require_bam=False)
+        data = run_info.add_metadata_defaults(data)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
