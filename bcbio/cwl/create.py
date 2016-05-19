@@ -35,6 +35,7 @@ def _cwl_workflow_template(inputs):
             cur_inp.pop(attr, None)
         ready_inputs.append(cur_inp)
     return {"class": "Workflow",
+            "cwlVersion": "cwl:draft-3",
             "hints": [{"class": "DockerRequirement",
                        "dockerPull": "bcbio/bcbio",
                        "dockerImageId": "bcbio/bcbio"}],
@@ -126,14 +127,13 @@ def _place_secondary_files(inp_tool, inp_binding):
         key = []
         while tz.get_in(key + ["type"], inp_tool) != "File" and tz.get_in(key + ["items"], inp_tool) != "File":
             key.append("type")
-        secondary_key = key + ["inputBinding"]
-        if tz.get_in(secondary_key, inp_tool):
-            inp_tool = tz.update_in(inp_tool, secondary_key + ["secondaryFiles"], lambda x: secondary_files)
+        if tz.get_in(key, inp_tool):
+            inp_tool = tz.update_in(inp_tool, key + ["secondaryFiles"], lambda x: secondary_files)
         else:
             nested_inp_binding = copy.deepcopy(inp_binding)
             nested_inp_binding["prefix"] = "ignore="
             nested_inp_binding["secondaryFiles"] = secondary_files
-            inp_tool = tz.update_in(inp_tool, secondary_key, lambda x: nested_inp_binding)
+            inp_tool = tz.update_in(inp_tool, key, lambda x: nested_inp_binding)
     return inp_tool
 
 def _step_template(name, run_file, inputs, outputs, parallel):
@@ -150,7 +150,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
         # scatter on inputs from previous processes that have been arrayed
         if parallel in "multi-parallel" or len(inp["id"].split(".")) > 1:
             scatter_inputs.append(step_inp["id"])
-    out = {"run": {"import": run_file},
+    out = {"run": run_file,
            "id": "#%s" % name,
            "inputs": sinputs,
            "outputs": [{"id": output["id"]} for output in outputs]}
