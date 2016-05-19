@@ -11,6 +11,8 @@ import pysam
 import toolz as tz
 
 from bcbio import bam, broad, utils
+from bcbio.bam import ref
+from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.utils import file_exists, safe_makedir, save_diskspace
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -68,14 +70,24 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
 
 def _get_alt_chroms(data):
     """Retrieve alternative contigs as defined in bwa *.alts files.
+
+    If no alt files present (when we're not aligning with bwa), work around
+    with standard set of alts based on hg38 -- anything with HLA, _alt or
+    _decoy in the name.
     """
-    alt_files = [f for f in tz.get_in(["reference", "bwa", "indexes"], data, []) if f.endswith("alt")]
     alts = []
-    for alt_file in alt_files:
-        with open(alt_file) as in_handle:
-            for line in in_handle:
-                if not line.startswith("@"):
-                    alts.append(line.split()[0].strip())
+    alt_files = [f for f in tz.get_in(["reference", "bwa", "indexes"], data, []) if f.endswith("alt")]
+    if alt_files:
+        for alt_file in alt_files:
+            with open(alt_file) as in_handle:
+                for line in in_handle:
+                    if not line.startswith("@"):
+                        alts.append(line.split()[0].strip())
+    else:
+        for contig in ref.file_contigs(dd.get_ref_file(data)):
+            if ("_alt" in contig.name or "_decoy" in contig.name or
+                  contig.name.startswith("HLA-") or ":" in contig.name):
+                alts.append(contig.name)
     return alts
 
 def write_nochr_reads(in_file, out_file, config):
