@@ -59,40 +59,35 @@ def pipeline_summary(data):
     """
     data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
-    if data["analysis"].lower().startswith("smallrna-seq"):
-        work_bam = data["clean_fastq"]
-        data["summary"] = _run_qc_tools(work_bam, data)
-    elif data["analysis"].lower().startswith("chip-seq"):
-        work_bam = data["raw_bam"]
-        data["summary"] = _run_qc_tools(work_bam, data)
-    elif dd.get_ref_file(data) is not None and work_bam and work_bam.endswith(".bam"):
+    if dd.get_ref_file(data) is not None and work_bam and work_bam.endswith(".bam"):
         logger.info("Generating summary files: %s" % dd.get_sample_name(data))
+        if data["analysis"].lower().startswith("smallrna-seq"):
+            work_bam = data["clean_fastq"]
+        elif data["analysis"].lower().startswith("chip-seq"):
+            work_bam = data["raw_bam"]
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
 
-def prep_pdf(qc_dir, config):
-    """Create PDF from HTML summary outputs in QC directory.
-
-    Requires wkhtmltopdf installed: http://www.msweet.org/projects.php?Z1
-    Thanks to: https://www.biostars.org/p/16991/
-
-    Works around issues with CSS conversion on CentOS by adjusting CSS.
+def get_qc_tools(data):
+    """Retrieve a list of QC tools to use based on configuration and analysis type.
     """
-    html_file = os.path.join(qc_dir, "fastqc", "fastqc_report.html")
-    html_fixed = "%s-fixed%s" % os.path.splitext(html_file)
-    try:
-        topdf = config_utils.get_program("wkhtmltopdf", config)
-    except config_utils.CmdNotFound:
-        topdf = None
-    if topdf and utils.file_exists(html_file):
-        out_file = "%s.pdf" % os.path.splitext(html_file)[0]
-        if not utils.file_exists(out_file):
-            cmd = ("sed 's/div.summary/div.summary-no/' %s | sed 's/div.main/div.main-no/' > %s"
-                   % (html_file, html_fixed))
-            do.run(cmd, "Fix fastqc CSS to be compatible with wkhtmltopdf")
-            cmd = [topdf, html_fixed, out_file]
-            do.run(cmd, "Convert QC HTML to PDF")
-        return out_file
+    analysis = data["analysis"].lower()
+    to_run = ["samtools"]
+    if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
+        to_run.append("fastqc")
+    if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, [])
+            for tool in ["qualimap", "qualimap_full"]]):
+        to_run.append("qualimap")
+    if analysis.startswith("rna-seq"):
+        if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
+            to_run.apend("qualimap_rnaseq")
+    if not analysis.startswith("smallrna-seq"):
+        to_run.append("gemini")
+        if tz.get_in(["config", "algorithm", "kraken"], data):
+            to_run.append("kraken")
+    if analysis.startswith(("standard", "variant", "variant2")):
+        to_run += ["qsignature", "coverage", "variants"]
+    return to_run
 
 def _run_qc_tools(bam_file, data):
     """Run a set of third party quality control tools, returning QC directory and metrics.
@@ -102,30 +97,20 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    metrics = {}
-    to_run = []
-    if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
-        to_run.append(("fastqc", _run_fastqc))
-    if data["analysis"].lower().startswith("rna-seq"):
-        to_run += [("samtools", _run_samtools_stats)]
-        if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
-            to_run.append(("qualimap", _rnaseq_qualimap))
-    elif data["analysis"].lower().startswith("chip-seq"):
-        bam_file = bam_file.replace(".unique", "")
-        to_run += [("samtools", _run_samtools_stats)]
-    elif not data["analysis"].lower().startswith("smallrna-seq"):
-        to_run += [("samtools", _run_samtools_stats), ("gemini", _run_gemini_stats)]
-
-    if data["analysis"].lower().startswith(("standard", "variant", "variant2")):
-        to_run.append(["qsignature", _run_qsignature_generator])
-        to_run.append(["coverage", _run_coverage_qc])
-        to_run.append(["variants", _run_variants_qc])
-        if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, []) for tool in ["qualimap", "qualimap_full"]]):
-            to_run.append(("qualimap", _run_qualimap))
+    tools = {"fastqc": _run_fastqc,
+             "samtools": _run_samtools_stats,
+             "qualimap": _run_qualimap,
+             "qualimap_rnaseq": _rnaseq_qualimap,
+             "gemini": _run_gemini_stats,
+             "qsignature": _run_qsignature_generator,
+             "coverage": _run_coverage_qc,
+             "variants": _run_variants_qc,
+             "kraken": _run_kraken}
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}
-    for program_name, qc_fn in to_run:
+    for program_name in tz.get_in(["config", "algorithm", "qc"], data):
+        qc_fn = tools[program_name]
         cur_qc_dir = os.path.join(qc_dir, program_name)
         out = qc_fn(bam_file, data, cur_qc_dir)
         qc_files = None
@@ -137,13 +122,6 @@ def _run_qc_tools(bam_file, data):
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
         if qc_files:
             qc_out[program_name] = qc_files
-    if data['config']["algorithm"].get("kraken", None):
-        if data["analysis"].lower().startswith("smallrna-seq"):
-            logger.info("Kraken is not compatible with srnaseq pipeline yet.")
-        else:
-            ratio = bam.get_aligned_reads(bam_file, data)
-            cur_metrics = _run_kraken(data, ratio)
-            metrics.update(cur_metrics)
 
     bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
@@ -355,6 +333,8 @@ class FastQCParser:
         dt['sample'] = self.sample
         return dt
 
+# ## QC running tools
+
 def _run_gene_coverage(bam_file, data, out_dir):
     out_file = os.path.join(out_dir, "gene_coverage.pdf")
     ref_file = utils.get_in(data, ("genome_resources", "rnaseq", "transcripts"))
@@ -365,14 +345,13 @@ def _run_gene_coverage(bam_file, data, out_dir):
         plot_gene_coverage(bam_file, ref_file, count_file, tx_out_file)
     return {"gene_coverage": out_file}
 
-def _run_kraken(data, ratio):
+def _run_kraken(bam_file, data, out_dir):
     """Run kraken, generating report in specified directory and parsing metrics.
        Using only first paired reads.
     """
     # logger.info("Number of aligned reads < than 0.60 in %s: %s" % (dd.get_sample_name(data), ratio))
     logger.info("Running kraken to determine contaminant: %s" % dd.get_sample_name(data))
-    qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
-    kraken_out = os.path.join(qc_dir, "kraken")
+    ratio = bam.get_aligned_reads(bam_file, data)
     out = out_stats = None
     db = data['config']["algorithm"]["kraken"]
     kraken_cmd = config_utils.get_program("kraken", data["config"])
@@ -383,8 +362,8 @@ def _run_kraken(data, ratio):
         logger.info("kraken: no database found %s, skipping" % db)
         return {"kraken_report": "null"}
 
-    if not os.path.exists(os.path.join(kraken_out, "kraken_out")):
-        work_dir = os.path.dirname(kraken_out)
+    if not os.path.exists(os.path.join(out_dir, "kraken_out")):
+        work_dir = os.path.dirname(out_dir)
         utils.safe_makedir(work_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         fn_file = data["files"][0]
@@ -401,10 +380,10 @@ def _run_kraken(data, ratio):
                       "--threads {num_cores} "
                       "--out {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
                 do.run(cl, "kraken: %s" % dd.get_sample_name(data))
-                if os.path.exists(kraken_out):
-                    shutil.rmtree(kraken_out)
-                shutil.move(tx_tmp_dir, kraken_out)
-    metrics = _parse_kraken_output(kraken_out, db, data)
+                if os.path.exists(out_dir):
+                    shutil.rmtree(out_dir)
+                shutil.move(tx_tmp_dir, out_dir)
+    metrics = _parse_kraken_output(out_dir, db, data)
     return metrics
 
 def _parse_kraken_output(out_dir, db, data):
@@ -1285,3 +1264,29 @@ def _merge_fastqc(samples):
         dt = utils.rbind(dt_by_sample)
         dt.to_csv(metric, sep="\t", index=False, mode ='w')
     return samples
+
+# ## Galaxy functionality
+
+def prep_pdf(qc_dir, config):
+    """Create PDF from HTML summary outputs in QC directory.
+
+    Requires wkhtmltopdf installed: http://www.msweet.org/projects.php?Z1
+    Thanks to: https://www.biostars.org/p/16991/
+
+    Works around issues with CSS conversion on CentOS by adjusting CSS.
+    """
+    html_file = os.path.join(qc_dir, "fastqc", "fastqc_report.html")
+    html_fixed = "%s-fixed%s" % os.path.splitext(html_file)
+    try:
+        topdf = config_utils.get_program("wkhtmltopdf", config)
+    except config_utils.CmdNotFound:
+        topdf = None
+    if topdf and utils.file_exists(html_file):
+        out_file = "%s.pdf" % os.path.splitext(html_file)[0]
+        if not utils.file_exists(out_file):
+            cmd = ("sed 's/div.summary/div.summary-no/' %s | sed 's/div.main/div.main-no/' > %s"
+                   % (html_file, html_fixed))
+            do.run(cmd, "Fix fastqc CSS to be compatible with wkhtmltopdf")
+            cmd = [topdf, html_fixed, out_file]
+            do.run(cmd, "Convert QC HTML to PDF")
+        return out_file

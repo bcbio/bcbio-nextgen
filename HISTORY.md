@@ -1,3 +1,8 @@
+## 0.9.9 (in progress)
+
+- Quality control back end revamped to support better parallelization
+  and pluggability of new QC metrics.
+
 ## 0.9.8 (20 May 2016)
 
 - Correctly install all datatargets on new installation. Previously we'd
