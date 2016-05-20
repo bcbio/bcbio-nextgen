@@ -301,6 +301,8 @@ def is_qualimap_compatible(gtf):
     Qualimap needs a very specific GTF format or it fails, so skip it if
     the GTF is not in that format
     """
+    if not gtf:
+        return False
     db = get_gtf_db(gtf)
     def qualimap_compatible(feature):
         gene_id = feature.attributes.get('gene_id', [None])[0]

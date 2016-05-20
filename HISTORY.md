@@ -1,4 +1,4 @@
-## 0.9.8 (in progress)
+## 0.9.8 (20 May 2016)
 
 - Correctly install all datatargets on new installation. Previously we'd
   skipped installing default additional data unless specified.
