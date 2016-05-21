@@ -13,14 +13,14 @@ from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
-from bcbio import rnaseq
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
-from bcbio.variation import (bamprep, coverage, genotype, ensemble, joint,
+from bcbio.qc import multiqc, qsignature
+from bcbio.variation import (bamprep, genotype, ensemble, joint,
                              multi, population, recalibrate, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
@@ -246,17 +246,17 @@ def pipeline_summary(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(qcsummary.pipeline_summary, *args))
 
-@require(qcsummary)
+@require(qsignature)
 def qsignature_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(qcsummary.qsignature_summary, *args))
+        return ipython.zip_args(apply(qsignature.summary, *args))
 
-@require(qcsummary)
+@require(multiqc)
 def multiqc_summary(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
-        return ipython.zip_args(apply(qcsummary.multiqc_summary, *args))
+        return ipython.zip_args(apply(multiqc.summary, *args))
 
 @require(rnaseq)
 def generate_transcript_counts(*args):

@@ -10,6 +10,7 @@ from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
+from bcbio.qc import multiqc, qsignature
 from bcbio.variation import (bamprep, bedutils, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
                              vcfutils)
@@ -132,11 +133,11 @@ def pipeline_summary(*args):
 
 @utils.map_wrap
 def qsignature_summary(*args):
-    return qcsummary.qsignature_summary(*args)
+    return qsignature.summary(*args)
 
 @utils.map_wrap
 def multiqc_summary(*args):
-    return qcsummary.multiqc_summary(*args)
+    return multiqc.summary(*args)
 
 @utils.map_wrap
 def generate_transcript_counts(*args):

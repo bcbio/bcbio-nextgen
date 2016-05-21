@@ -37,6 +37,7 @@ details:
       #svcaller: [lumpy, cnvkit, manta, metasv]
       #svcaller: cnvkit
       #remove_lcr: true
+      tools_on: [qualimap]
       tools_off: [gemini]
       mixup_check: qsignature
       #variantcaller: [gatk, gatk-haplotype]
