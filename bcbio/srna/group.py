@@ -145,7 +145,7 @@ def _guess_header(info):
     value = "group"
     if "metadata" in info:
         if info["metadata"]:
-            return ",".join(info["metadata"].keys())
+            return ",".join(map(str, info["metadata"].keys()))
     return value
 
 def _guess_group(info):
@@ -153,7 +153,7 @@ def _guess_group(info):
     value = "fake"
     if "metadata" in info:
         if info["metadata"]:
-            return ",".join(info["metadata"].values())
+            return ",".join(map(str, info["metadata"].values()))
     return value
 
 def _modify_report(summary_path, out_dir):
