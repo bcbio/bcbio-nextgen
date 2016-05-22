@@ -162,7 +162,7 @@ def variant():
                 cwlout(["config", "algorithm", "callable_count"], "int")]),
              s("batch_for_variantcall", "multi-batch",
                [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
-                #["metadata", "batch"], ["metadata", "phenotype"],
+                ["metadata", "batch"], ["metadata", "phenotype"],
                 ["regions", "callable"], ["config", "algorithm", "variantcaller"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],

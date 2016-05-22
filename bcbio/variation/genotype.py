@@ -184,12 +184,14 @@ def batch_for_variantcall(samples):
     """
     from bcbio.pipeline import run_info
     convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
+    default_keys = set(["metadata__batch"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
     all_keys = set([])
     for data in to_process:
         all_keys.update(set(data["cwl_keys"]))
+    all_keys.update(default_keys)
     for data in to_process:
         for raw_key in sorted(list(all_keys)):
             key = raw_key.split("__")
@@ -202,7 +204,7 @@ def batch_for_variantcall(samples):
                 elif not isinstance(val, (list, tuple)): val = [val]
                 data = tz.update_in(data, key, lambda x: val)
         vc = get_variantcaller(data, require_bam=False)
-        data = run_info.add_metadata_defaults(data)
+        data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
@@ -329,24 +331,24 @@ def split_data_cwl_items(items):
     Handles cases where we're arrayed on multiple things, like a set of regional
     VCF calls and data objects.
     """
-    max_keys = []
+    all_keys = set([])
     for data in items:
-        if len(data["cwl_keys"]) > len(max_keys):
-            max_keys = data["cwl_keys"]
+        all_keys.add(len(data["cwl_keys"]))
+    extra_key_len = min(list(all_keys)) if len(all_keys) > 1 else None
     data_out = []
     extra_out = []
     for data in items:
-        if len(data["cwl_keys"]) == len(max_keys):
-            data_out.append(data)
-        else:
+        if extra_key_len and len(data["cwl_keys"]) == extra_key_len:
             extra_out.append(data)
+        else:
+            data_out.append(data)
     if len(extra_out) == 0:
         return data_out, {}
     else:
         cwl_keys = extra_out[0]["cwl_keys"]
         for extra in extra_out[1:]:
             cur_cwl_keys = extra["cwl_keys"]
-            assert cur_cwl_keys == cwl_keys
+            assert cur_cwl_keys == cwl_keys, pprint.pformat(extra_out)
         cwl_extras = collections.defaultdict(list)
         for data in items:
             for key in cwl_keys:
