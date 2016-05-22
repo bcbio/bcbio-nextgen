@@ -713,7 +713,8 @@ Post-processing
   ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this,
   we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality
   control FastQC usage. ``pbgzip`` turns off use of parallel bgzip
-  during preparation of alignment inputs.
+  during preparation of alignment inputs. ``seqcluster`` turns off use of
+  seqcluster tool in srnaseq pipeline.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
