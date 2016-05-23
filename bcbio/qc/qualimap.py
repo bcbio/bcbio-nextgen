@@ -34,7 +34,7 @@ def run(bam_file, data, out_dir):
             logger.info("Full qualimap analysis for %s may be slow." % bam_file)
             ds_bam = bam_file
         else:
-            ds_bam = bam.downsample(bam_file, data, 1e7)
+            ds_bam = bam.downsample(bam_file, data, 1e7, work_dir=out_dir)
             bam_file = ds_bam if ds_bam else bam_file
         if options.find("PDF") > -1:
             options = "%s -outfile %s" % (options, pdf_file)
