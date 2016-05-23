@@ -87,6 +87,8 @@ def _get_files_chipseq(sample):
 def _add_meta(xs, sample=None, config=None):
     out = []
     for x in xs:
+        if not isinstance(x["path"], basestring) or not os.path.exists(x["path"]):
+            raise ValueError("Unexpected path for upload: %s" % x)
         x["mtime"] = shared.get_file_timestamp(x["path"])
         if sample and "sample" not in x:
             if isinstance(sample["name"], (tuple, list)):
