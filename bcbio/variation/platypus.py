@@ -36,6 +36,8 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
                         cmd.extend([key, val])
                     else:
                         cmd.append(opt)
+            if any("gvcf" in dd.get_tools_on(d) for d in items):
+                cmd += ["--outputRefCalls", "1", "--refCallBlockSize", "50000"]
             # Adjust default filter thresholds to achieve similar sensitivity/specificity to other callers
             # Currently not used after doing more cross validation as they increase false positives
             # which seems to be a major advantage for Platypus users.
