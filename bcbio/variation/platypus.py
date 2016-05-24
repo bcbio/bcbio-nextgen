@@ -5,8 +5,6 @@ https://github.com/andyrimmer/Platypus
 """
 import os
 
-import toolz as tz
-
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -49,8 +47,7 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
             #         cmd.extend([okey, oval])
 
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
-            if any(not tz.get_in(["config", "algorithm", "mark_duplicates"], data, True)
-                   for data in items):
+            if any(not dd.get_mark_duplicates(data) for data in items):
                 cmd += ["--filterDuplicates=0"]
             post_process_cmd = (" | %s | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | "
                                 "vcfstreamsort | bgzip -c > %s" % (vcfutils.fix_ambiguous_cl(), tx_out_file))

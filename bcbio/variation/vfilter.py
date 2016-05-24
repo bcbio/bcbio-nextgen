@@ -29,10 +29,11 @@ def hard_w_expression(vcf_file, expression, data, name="+", filterext="",
             if vcfutils.vcf_has_variants(vcf_file):
                 bcftools = config_utils.get_program("bcftools", data["config"])
                 bgzip_cmd = "| bgzip -c" if out_file.endswith(".gz") else ""
-                variant_regions = (utils.get_in(data, ("config", "algorithm", "variant_regions"))
-                                   if limit_regions == "variant_regions" else None)
-                intervals = ("-T %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
-                             if variant_regions else "")
+                intervals = ""
+                if limit_regions == "variant_regions":
+                    variant_regions = dd.get_variant_regions(data)
+                    if variant_regions:
+                        intervals = "-T %s" % vcfutils.bgzip_and_index(variant_regions, data["config"])
                 cmd = ("{bcftools} filter -O v {intervals} --soft-filter '{name}' "
                        "-e '{expression}' -m '+' {vcf_file} {extra_cmd} {bgzip_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Hard filtering %s with %s" % (vcf_file, expression), data)
@@ -196,12 +197,17 @@ def platypus(in_file, data):
     """Filter Platypus calls, removing Q20 hard filter and replacing with depth and quality based filter.
 
     Platypus uses its own VCF nomenclature: TC == DP, FR == AF
+
+    Platypus gVCF output appears to have an 0/1 index problem so the reference block
+    regions are 1 base outside regions of interest. We avoid limiting regions during
+    filtering when using it.
     """
     filters = ('(FR[0] <= 0.5 && TC < 4 && %QUAL < 20) || '
                '(TC < 13 && %QUAL < 10) || '
                '(FR[0] > 0.5 && TC < 4 && %QUAL < 50)')
+    limit_regions = "variant_regions" if "gvcf" not in dd.get_tools_on(data) else None
     return hard_w_expression(in_file, filters, data, name="PlatQualDepth",
-                             extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'")
+                             extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'", limit_regions=limit_regions)
 
 def samtools(in_file, data):
     """Filter samtools calls based on depth and quality, using similar approaches to FreeBayes.

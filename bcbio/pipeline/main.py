@@ -152,7 +152,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
 
     ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
-                                     "gemini", "samtools", "fastqc", "bamtools",
+                                     "gemini", "samtools", "fastqc",
                                      "bcbio-variation-recall", "qsignature",
                                      "svcaller"]),
                     samples, config, dirs, "multicore2",
@@ -220,7 +220,7 @@ def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
     ## Quality control
-    with prun.start(_wres(parallel, ["fastqc", "bamtools", "qsignature", "kraken", "gatk", "samtools"]),
+    with prun.start(_wres(parallel, ["fastqc", "qsignature", "kraken", "gatk", "samtools"]),
                     samples, config, dirs, "multicore2") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
