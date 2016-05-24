@@ -54,7 +54,7 @@ def get_qc_tools(data):
     """Retrieve a list of QC tools to use based on configuration and analysis type.
     """
     analysis = data["analysis"].lower()
-    to_run = ["samtools"]
+    to_run = []
     if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
         to_run.append("fastqc")
     if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, [])
@@ -64,6 +64,7 @@ def get_qc_tools(data):
         if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
             to_run.apend("qualimap_rnaseq")
     if not analysis.startswith("smallrna-seq"):
+        to_run.append("samtools")
         to_run.append("gemini")
         if tz.get_in(["config", "algorithm", "kraken"], data):
             to_run.append("kraken")
