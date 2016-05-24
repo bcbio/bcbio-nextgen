@@ -429,9 +429,10 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        cmd = [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
+        Rpath = os.path.dirname(utils.Rscript_cmd())
+        cmd = ["export", "PATH=%s:$PATH" % Rpath, "&&"] + [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
-        do.run(cmd, "Picard: %s" % subcmd)
+        do.run(" ".join(cmd), "Picard: %s" % subcmd)
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.

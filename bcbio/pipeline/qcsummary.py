@@ -55,21 +55,21 @@ def get_qc_tools(data):
     """
     analysis = data["analysis"].lower()
     to_run = []
-    if "fastqc" not in tz.get_in(("config", "algorithm", "tools_off"), data, []):
+    if "fastqc" not in dd.get_tools_off(data):
         to_run.append("fastqc")
-    if any([tool in tz.get_in(("config", "algorithm", "tools_on"), data, [])
+    if any([tool in dd.get_tools_on(data)
             for tool in ["qualimap", "qualimap_full"]]):
         to_run.append("qualimap")
     if analysis.startswith("rna-seq"):
         if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
-            to_run.apend("qualimap_rnaseq")
+            to_run.append("qualimap_rnaseq")
     if not analysis.startswith("smallrna-seq"):
         to_run.append("samtools")
         to_run.append("gemini")
         if tz.get_in(["config", "algorithm", "kraken"], data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
-        to_run += ["qsignature", "coverage", "variants"]
+        to_run += ["qsignature", "coverage", "variants", "picard"]
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -80,7 +80,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard
     tools = {"fastqc": fastqc.run,
              "samtools": samtools.run,
              "qualimap": qualimap.run,
@@ -89,7 +89,8 @@ def _run_qc_tools(bam_file, data):
              "qsignature": qsignature.run,
              "coverage": _run_coverage_qc,
              "variants": _run_variants_qc,
-             "kraken": kraken.run}
+             "kraken": kraken.run,
+             "picard": picard.run}
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}
