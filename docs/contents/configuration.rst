@@ -432,7 +432,8 @@ Coverage information
   and completeness are calculated over these regions and a Rmarkdown
   report is generated in the `report` directory. See the section on
   :ref:`input-file-preparation` for tips on ensuring this file matches
-  your reference genome.
+  your reference genome. This can also be a shorthand for a BED file installed
+  by bcbio (see :ref:`sv-config` for options).
 
 Experimental information
 ========================
@@ -522,6 +523,8 @@ Variant calling
 .. _samblaster: https://github.com/GregoryFaust/samblaster
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
+
+.. _sv-config:
 
 Structural variant calling
 ==========================

@@ -216,13 +216,13 @@ def _fill_prioritization_targets(data):
     """Fill in globally installed files for prioritization.
     """
     ref_file = dd.get_ref_file(data)
-    for target in [["svprioritize"]]:
+    for target in [["svprioritize"], ["coverage"]]:
         val = tz.get_in(["config", "algorithm"] + target, data)
         if val and not os.path.exists(val):
             installed_vals = glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
                                                                      "coverage", "prioritize", val + "*.bed.gz")))
             if len(installed_vals) == 0:
-                raise ValueError("Configuration problem. Prioritization file not found for %s: %s" %
+                raise ValueError("Configuration problem. BED file not found for %s: %s" %
                                  (target, val))
             elif len(installed_vals) == 1:
                 installed_val = installed_vals[0]
@@ -774,7 +774,7 @@ def _add_algorithm_defaults(algorithm):
                 "variant_regions": None,
                 "validate": None,
                 "validate_regions": None}
-    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller"])
+    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller", "qc"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
         if k not in algorithm:
