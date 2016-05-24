@@ -271,7 +271,7 @@ def run_rnaseq(bam_file, data, out_dir):
     if not utils.file_exists(report_file):
         utils.safe_makedir(out_dir)
         bam.index(bam_file, config)
-        cmd = _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file, single_end, library)
+        cmd = _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file, single_end, library)
         do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
@@ -280,14 +280,15 @@ def run_rnaseq(bam_file, data, out_dir):
     metrics = _parse_metrics(metrics)
     return metrics
 
-def _rnaseq_qualimap_cmd(config, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
+def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
     """
     Create command lines for qualimap
     """
+    config = data["config"]
     qualimap = config_utils.get_program("qualimap", config)
     resources = config_utils.get_resources("qualimap", config)
-    num_cores = resources.get("cores", 1)
-    max_mem = config_utils.adjust_memory(resources.get("memory", "4G"),
+    num_cores = resources.get("cores", dd.get_num_cores(data))
+    max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
     cmd = ("unset DISPLAY && {qualimap} rnaseq -outdir {out_dir} -a proportional -bam {bam_file} -p {library} "
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
