@@ -35,6 +35,7 @@ def summary(*samples):
                 pfiles = pfiles["base"]
             folders.append(os.path.dirname(pfiles))
     # XXX temporary workaround until we can handle larger inputs through MultiQC
+    folders = list(set(folders))
     if len(folders) > 250:
         logger.warning("Too many samples for MultiQC, only using first 250 entries.")
         folders = folders[:250]
@@ -48,8 +49,9 @@ def summary(*samples):
                 cmd = "{multiqc} -f {input_dir} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
-                    shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
-                    shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
+                    if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
+                        shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
+                        shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
     out = []
     for i, data in enumerate(samples):
         if i == 0:
