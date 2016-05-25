@@ -17,7 +17,7 @@ def fixrg(in_bam, names, ref_file, dirs, data):
     """Fix read group in a file, using samtools addreplacerg.
     """
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", dd.get_sample_name(data)))
-    out_file = os.path.join(work_dir, "%s-fix_rgs.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    out_file = os.path.join(work_dir, "%s-fixrg.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
             rg_info = novoalign.get_rg_info(names)
