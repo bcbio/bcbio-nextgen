@@ -149,13 +149,14 @@ def _check_sample(in_bam, rgnames):
         warnings.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
     if len(rg) == 0:
         msgs.append("No read groups found in input BAM. Expect single RG per BAM.")
-    if len(rg) > 0 and rg[0].get("SM") != rgnames["sample"]:
+    if len(rg) > 0 and any(x.get("SM") != rgnames["sample"] for x in rg):
         msgs.append("Read group sample name (SM) does not match configuration `description`: %s vs %s"
                     % (rg[0].get("SM"), rgnames["sample"]))
     if len(msgs) > 0:
         raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
                          + "\n".join(msgs) +
-                         "\nSetting `bam_clean: picard` in the configuration can often fix this issue.")
+                         "\nSetting `bam_clean: picard` or `bam_clean: fixrg`\n"
+                         "in the configuration can often fix this issue.")
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
               "\n".join(warnings))
