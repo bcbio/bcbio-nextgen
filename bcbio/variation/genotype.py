@@ -184,7 +184,8 @@ def batch_for_variantcall(samples):
     """
     from bcbio.pipeline import run_info
     convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
-    default_keys = set(["metadata__batch"])
+    default_keys = set(["metadata__batch", "config__algorithm__validate",
+                        "config__algorithm__validate_regions"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
