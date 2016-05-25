@@ -1,5 +1,7 @@
-"""Quality control and summary metrics for next-gen alignments and analysis.  """
+"""Quality control and summary metrics for next-gen alignments and analysis.
+"""
 import collections
+import copy
 import csv
 import os
 
@@ -21,7 +23,9 @@ from bcbio.rnaseq import gtf
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
     """
-    samples = run_parallel("pipeline_summary", samples)
+    to_analyze, extras = _split_samples_by_qc(samples)
+    qced = run_parallel("pipeline_summary", to_analyze)
+    samples = _combine_qc_samples(qced) + extras
     qsign_info = run_parallel("qsignature_summary", [samples])
     samples = run_parallel("multiqc_summary", [samples])
     summary_file = write_project_summary(samples, qsign_info)
@@ -42,7 +46,7 @@ def pipeline_summary(data):
     data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
     if dd.get_ref_file(data) is not None and work_bam and work_bam.endswith(".bam"):
-        logger.info("Generating summary files: %s" % dd.get_sample_name(data))
+        logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
         if data["analysis"].lower().startswith("smallrna-seq"):
             work_bam = data["clean_fastq"]
         elif data["analysis"].lower().startswith("chip-seq"):
@@ -52,7 +56,11 @@ def pipeline_summary(data):
 
 def get_qc_tools(data):
     """Retrieve a list of QC tools to use based on configuration and analysis type.
+
+    Uses defaults if previously set.
     """
+    if dd.get_algorithm_qc(data):
+        return dd.get_algorithm_qc(data)
     analysis = data["analysis"].lower()
     to_run = []
     if "fastqc" not in dd.get_tools_off(data):
@@ -141,6 +149,46 @@ def _organize_qc_files(program, qc_dir):
                     base = out_files[0]
                 secondary = [x for x in out_files if x != base]
             return {"base": base, "secondary": secondary}
+
+# ## Allow parallelization for separate QC runs
+
+def _split_samples_by_qc(samples):
+    """Split data into individual quality control steps for a run.
+    """
+    to_process = []
+    extras = []
+    for data in [utils.to_single_data(x) for x in samples]:
+        qcs = dd.get_algorithm_qc(data)
+        if not dd.get_align_bam(data) or not qcs:
+            extras.append([data])
+        else:
+            for qc in qcs:
+                add = copy.deepcopy(data)
+                add["config"]["algorithm"]["qc"] = [qc]
+                to_process.append([add])
+    return to_process, extras
+
+def _combine_qc_samples(samples):
+    """Combine split QC analyses into single samples based on BAM files.
+    """
+    by_bam = collections.defaultdict(list)
+    for data in [utils.to_single_data(x) for x in samples]:
+        by_bam[dd.get_align_bam(data)].append(data)
+    out = []
+    for data_group in by_bam.values():
+        data = data_group[0]
+        alg_qc = []
+        qc = {}
+        metrics = {}
+        for d in data_group:
+            qc.update(dd.get_summary_qc(d))
+            metrics.update(dd.get_summary_metrics(d))
+            alg_qc.extend(dd.get_algorithm_qc(d))
+        data["config"]["algorithm"]["qc"] = alg_qc
+        data["summary"]["qc"] = qc
+        data["summary"]["metrics"] = metrics
+        out.append([data])
+    return out
 
 # ## Generate project level QC summary for quickly assessing large projects
 
