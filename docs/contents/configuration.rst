@@ -365,9 +365,14 @@ Alignment
    problematic input BAMs.
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
    handles adding read groups, sorting to a reference genome and
-   filtering problem records that cause problems with GATK. Set to
-   ``picard`` to do Picard/GATK based cleaning. To fix misencoded input BAMs
-   with non-standard scores, set ``quality_format`` to ``illumina``.
+   filtering problem records that cause problems with GATK. Options:
+
+     - ``fixrg`` -- only adjust read groups, assuming everything else if BAM
+       file is compatible.
+     - ``picard`` -- Picard/GATK based cleaning. Includes read group changes,
+       fixing of problematic reads and re-ordering chromosome order to match the
+       reference genome. To fix misencoded input BAMs with non-standard scores,
+       set ``quality_format`` to ``illumina``.
 -  ``bam_sort`` Allow sorting of input BAMs when skipping alignment
    step (``aligner`` set to false). Options are coordinate or
    queryname. For additional processing through standard pipelines

@@ -2,6 +2,8 @@
 
 - Quality control back end revamped to support better parallelization
   and pluggability of new QC metrics.
+- Add `fixrg` target to `bam_clean` to accept BAM inputs with correct
+  sorting and reads but that need an updated read group.
 
 ## 0.9.8 (20 May 2016)
 

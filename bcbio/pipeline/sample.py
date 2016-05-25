@@ -118,8 +118,10 @@ def process_alignment(data, alt_input=None):
             if sort_method and sort_method != "coordinate":
                 raise ValueError("Cannot specify `bam_clean: picard` with `bam_sort` other than coordinate: %s"
                                  % sort_method)
-            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], data["sam_ref"], data["dirs"],
+            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], dd.get_ref_file(data), data["dirs"],
                                            data)
+        elif bamclean == "fixrg":
+            out_bam = cleanbam.fixrg(fastq1, data["rgnames"], dd.get_ref_file(data), data["dirs"], data)
         elif sort_method:
             runner = broad.runner_from_path("picard", config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
@@ -129,7 +131,7 @@ def process_alignment(data, alt_input=None):
             out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
                                                          data["rgnames"]["sample"]))
         bam.index(out_bam, data["config"])
-        bam.check_header(out_bam, data["rgnames"], data["sam_ref"], data["config"])
+        bam.check_header(out_bam, data["rgnames"], dd.get_ref_file(data), data["config"])
         dedup_bam = postalign.dedup_bam(out_bam, data)
         bam.index(dedup_bam, data["config"])
         data["work_bam"] = dedup_bam
