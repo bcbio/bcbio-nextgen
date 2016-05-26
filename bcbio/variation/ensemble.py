@@ -163,7 +163,7 @@ def _write_config_file(batch_id, caller_names, base_dir, data):
     econfig = {"ensemble": algorithm["ensemble"],
                "names": caller_names,
                "prep-inputs": False}
-    intervals = validate.get_analysis_intervals(data)
+    intervals = validate.get_analysis_intervals(data, None, base_dir)
     if intervals:
         econfig["intervals"] = os.path.abspath(intervals)
     with open(config_file, "w") as out_handle:

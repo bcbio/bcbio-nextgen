@@ -199,7 +199,7 @@ def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
     if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
         vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
 
-    interval_bed = _get_merged_intervals(rm_interval_file, base_dir, data)
+    interval_bed = _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data)
     return vrn_file, rm_file, interval_bed
 
 def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
@@ -285,10 +285,10 @@ def _pick_best_quality_score(vrn_file):
             return key
     raise ValueError("Did not find quality score for validation from %s" % vrn_file)
 
-def _get_merged_intervals(rm_interval_file, base_dir, data):
+def _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data):
     """Retrieve intervals to run validation on, merging reference and callable BED files.
     """
-    a_intervals = get_analysis_intervals(data)
+    a_intervals = get_analysis_intervals(data, vrn_file, base_dir)
     if a_intervals:
         final_intervals = shared.remove_lcr_regions(a_intervals, [data])
         if rm_interval_file:
@@ -323,9 +323,32 @@ def _get_merged_intervals(rm_interval_file, base_dir, data):
         final_intervals = shared.remove_lcr_regions(rm_interval_file, [data])
     return final_intervals
 
-def get_analysis_intervals(data):
+def _callable_from_gvcf(data, vrn_file, out_dir):
+    """Retrieve callable regions based on ref call regions in gVCF.
+
+    Uses https://github.com/lijiayong/gvcf_regions
+    """
+    methods = {"freebayes": "freebayes", "platypus": "platypus",
+               "gatk-haplotype": "gatk"}
+    gvcf_type = methods.get(dd.get_variantcaller(data))
+    if gvcf_type:
+        out_file = os.path.join(out_dir, "%s-gcvf-coverage.bed" %
+                                utils.splitext_plus(os.path.basename(vrn_file))[0])
+        if not utils.file_uptodate(out_file, vrn_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = ("gvcf_regions.py --gvcf_type {gvcf_type} {vrn_file} "
+                       "| bedtools merge -d 1 > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Convert gVCF to BED file of callable regions")
+        return out_file
+
+def get_analysis_intervals(data, vrn_file, base_dir):
     """Retrieve analysis regions for the current variant calling pipeline.
     """
+    if vrn_file and "gvcf" in dd.get_tools_on(data):
+        callable_bed = _callable_from_gvcf(data, vrn_file, base_dir)
+        if callable_bed:
+            return callable_bed
+
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
     elif dd.get_callable_regions(data):
@@ -412,7 +435,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, base_dir, data)
     """
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "fix-sample-header": True, "remove-refcalls": True}
-    a_intervals = get_analysis_intervals(data)
+    a_intervals = get_analysis_intervals(data, vrn_file, base_dir)
     if a_intervals:
         a_intervals = shared.remove_lcr_regions(a_intervals, [data])
     if rm_interval_file:
