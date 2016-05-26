@@ -117,10 +117,6 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
 
 def _place_secondary_files(inp_tool, inp_binding):
     """Put secondaryFiles at the level of the File item to ensure indexes get passed.
-
-    This involves using a second input binding to get the secondaryFiles, that
-    we ignore downstream. Ideally we could use `valueFrom: null` but that doesn't
-    seem to work right now.
     """
     secondary_files = inp_tool.pop("secondaryFiles", None)
     if secondary_files:
@@ -199,6 +195,7 @@ def _flatten_samples(samples, base_file):
     out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
     flat_data = []
     for data in samples:
+        data["reference"] = _indexes_to_secondary_files(data["reference"])
         cur_flat = {}
         for key_path in [["analysis"], ["description"], ["rgnames"], ["config", "algorithm"],
                          ["metadata"], ["genome_build"], ["resources"],
@@ -219,6 +216,23 @@ def _flatten_samples(samples, base_file):
     with open(out_file, "w") as out_handle:
         json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
         return out_file, _samplejson_to_inputs(out), out
+
+def _indexes_to_secondary_files(gresources):
+    """Convert a list of genome indexes into a single file plus secondary files.
+
+    This ensures that all indices are staged together in a single directory.
+    """
+    out = {}
+    for refname, val in gresources.items():
+        if isinstance(val, dict) and "indexes" in val:
+            assert len(val.keys()) == 1, val
+            indexes = val["indexes"]
+            if len(indexes) == 1:
+                val = {"indexes": indexes[0]}
+            else:
+                val = {"indexes": {"base": indexes[0], "indexes": indexes[1:]}}
+        out[refname] = val
+    return out
 
 def _add_avro_type(inp, val):
     inp["type"] = _get_avro_type(val)
