@@ -225,12 +225,19 @@ def _indexes_to_secondary_files(gresources):
     out = {}
     for refname, val in gresources.items():
         if isinstance(val, dict) and "indexes" in val:
-            assert len(val.keys()) == 1, val
-            indexes = val["indexes"]
-            if len(indexes) == 1:
-                val = {"indexes": indexes[0]}
-            else:
-                val = {"indexes": {"base": indexes[0], "indexes": indexes[1:]}}
+            # list of indexes -- aligners
+            if len(val.keys()) == 1:
+                indexes = val["indexes"]
+                if len(indexes) == 1:
+                    val = {"indexes": indexes[0]}
+                else:
+                    val = {"indexes": {"base": indexes[0], "indexes": indexes[1:]}}
+            # directory plus indexes -- snpEff
+            elif "base" in val and os.path.isdir(val["base"]) and len(val["indexes"]) > 1:
+                indexes = val["indexes"]
+                val = {"base": indexes[0]}
+                if len(indexes) > 1:
+                    val["indexes"] = indexes[1:]
         out[refname] = val
     return out
 
