@@ -87,7 +87,7 @@ class FileHandle(object):
         pass
 
     @abc.abstractmethod
-    def read(self, size):
+    def read(self, size=sys.maxint):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -122,7 +122,7 @@ class S3Handle(FileHandle):
         for chunk in self._key:
             yield self._decompress(chunk)
 
-    def read(self, size):
+    def read(self, size=sys.maxint):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -206,7 +206,7 @@ class BlobHandle(FileHandle):
             blob_name=self._blob_name,
             x_ms_range=range_id)
 
-    def read(self, size):
+    def read(self, size=sys.maxint):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
