@@ -195,7 +195,7 @@ def _flatten_samples(samples, base_file):
     out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
     flat_data = []
     for data in samples:
-        data["reference"] = _indexes_to_secondary_files(data["reference"])
+        data["reference"] = _indexes_to_secondary_files(data["reference"], data["genome_build"])
         cur_flat = {}
         for key_path in [["analysis"], ["description"], ["rgnames"], ["config", "algorithm"],
                          ["metadata"], ["genome_build"], ["resources"],
@@ -217,7 +217,7 @@ def _flatten_samples(samples, base_file):
         json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
         return out_file, _samplejson_to_inputs(out), out
 
-def _indexes_to_secondary_files(gresources):
+def _indexes_to_secondary_files(gresources, genome_build):
     """Convert a list of genome indexes into a single file plus secondary files.
 
     This ensures that all indices are staged together in a single directory.
@@ -233,11 +233,13 @@ def _indexes_to_secondary_files(gresources):
                 else:
                     val = {"indexes": {"base": indexes[0], "indexes": indexes[1:]}}
             # directory plus indexes -- snpEff
-            elif "base" in val and os.path.isdir(val["base"]) and len(val["indexes"]) > 1:
+            elif "base" in val and os.path.isdir(val["base"]) and len(val["indexes"]) > 0:
                 indexes = val["indexes"]
                 val = {"base": indexes[0]}
                 if len(indexes) > 1:
                     val["indexes"] = indexes[1:]
+        elif isinstance(val, dict) and genome_build in val:
+            val = _indexes_to_secondary_files(val, genome_build)
         out[refname] = val
     return out
 
