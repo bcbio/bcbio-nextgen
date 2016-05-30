@@ -24,6 +24,7 @@ from bcbio.distributed import objectstore
 from bcbio.upload import s3
 from bcbio.pipeline import config_utils, run_info
 from bcbio.workflow.xprize import HelpArgParser
+from bcbio.log import setup_script_logging
 
 def parse_args(inputs):
     parser = HelpArgParser(
@@ -39,6 +40,7 @@ def setup_args(parser):
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     parser.add_argument("--only-metadata", help="Ignore samples not present in metadata CSV file",
                         action="store_true", default=False)
+    setup_script_logging()
     return parser
 
 # ## Prepare sequence data inputs
