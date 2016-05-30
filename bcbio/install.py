@@ -16,7 +16,6 @@ import subprocess
 import sys
 import glob
 import urllib
-from fabric.api import env
 
 import requests
 import toolz as tz
@@ -267,6 +266,7 @@ def get_gemini_dir(data=None):
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
+    from fabric.api import env
     data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
