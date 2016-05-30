@@ -138,3 +138,17 @@ def setup_local_logging(config=None, parallel=None):
         handler = _create_log_handler(config, direct_hostname=wrapper is not None)
     handler.push_thread()
     return handler
+
+def setup_script_logging():
+    """
+    Use this logger for standalone scripts, or script-like subcommands,
+    such as bcbio_prepare_samples and bcbio_nextgen.py -w template.
+    """
+    handlers = [logbook.NullHandler()]
+    format_str = ("[{record.time:%Y-%m-%dT%H:%MZ}] "
+                  "{record.level_name}: {record.message}")
+
+    handler = logbook.StreamHandler(sys.stderr, format_string=format_str,
+                                    level="DEBUG")
+    handler.push_thread()
+    return handler
