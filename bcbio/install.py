@@ -76,7 +76,7 @@ def upgrade_bcbio(args):
             _symlink_bcbio(args, script="bcbio_prepare_samples.py")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
-    if args.toolplus and (args.tooldir or args.upgrade != "skip"):
+    if args.toolplus:
         print("Installing additional tools")
         _install_toolplus(args)
     if args.install_data:
@@ -442,6 +442,7 @@ def _install_toolplus(args):
     toolplus_dir = os.path.join(_get_data_dir(), "toolplus")
     for tool in args.toolplus:
         if tool.name in set(["gatk", "mutect"]):
+            print("Installing %s" % tool.name)
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" % (tool.name, tool.fname))
@@ -494,6 +495,7 @@ def _update_system_file(system_file, name, new_kvs):
         if rname == name:
             for k, v in new_kvs.iteritems():
                 r_kvs[k] = v
+            added = True
         new_rs[rname] = r_kvs
     if not added:
         new_rs[name] = new_kvs
