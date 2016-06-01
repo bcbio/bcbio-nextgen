@@ -309,49 +309,28 @@ def variants(data, out_dir):
         return qc_file
 
 def priority_coverage(data, out_dir):
-    AVERAGE_REGION_STRING_LENGTH = 100
     bed_file = dd.get_svprioritize(data)
     if not bed_file or not file_exists(bed_file):
         return data
 
     work_dir = safe_makedir(out_dir)
-    batch_size = max_command_length() / AVERAGE_REGION_STRING_LENGTH
-
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, sample + "_priority_depth.bed")
     if file_exists(out_file):
-        # data['priority_coverage'] = os.path.abspath(out_file)
         return out_file
-    with chdir(work_dir):
-        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-        logger.debug("Calculating priority coverage for %s" % sample)
-        region_bed = pybedtools.BedTool(bed_file)
+    nthreads = dd.get_num_cores(data)
+    in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
+    sambamba = config_utils.get_program("sambamba", data, default="sambamba")
+    with tx_tmpdir(data, work_dir) as tmp_dir:
+        cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
+        cleaned_bed = bed.decomment(bed_file, cleaned_bed)
         with file_transaction(out_file) as tx_out_file:
-            lcount = 0
-            for chunk in robust_partition_all(batch_size, region_bed):
-                coord_batch = []
-                line_batch = ""
-                for line in chunk:
-                    lcount += 1
-                    chrom = line.chrom
-                    start = max(line.start, 0)
-                    end = line.end
-                    coords = "%s:%s-%s" % (chrom, start, end)
-                    coord_batch.append(coords)
-                    line_batch += "%s\t%s\t%s\n" % (chrom, start, end)
-                if not coord_batch:
-                    continue
-                region_file = pybedtools.BedTool(line_batch,
-                                                from_string=True).saveas().fn
-                coord_string = " ".join(coord_batch)
-                awk_string = r"""'BEGIN {OFS="\t"} {print $1,$2+$5,$2+$5,$4,$6"\t%s"}'""" % sample
-                samtools = config_utils.get_program("samtools", data["config"])
-                bedtools = config_utils.get_program("bedtools", data["config"])
-                cmd = ("{samtools} view -b {in_bam} {coord_string} | "
-                        "{bedtools} coverage -sorted -d -a {region_file} -b - | "
-                        "awk {awk_string} >> {tx_out_file}")
-                _silence_run(cmd.format(**locals()))
-        # data['priority_coverage'] = os.path.abspath(out_file)
+            parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
+            cmd = ("{sambamba} depth base -t {nthreads} -L {cleaned_bed} "
+                   "-F \"not unmapped\" "
+                   "{in_bam} | {parse_cmd} > {tx_out_file}")
+            message = "Calculating coverage of {bed_file} regions in {in_bam}"
+            do.run(cmd.format(**locals()), message.format(**locals()))
     return out_file
 
 def priority_total_coverage(data, out_dir):
