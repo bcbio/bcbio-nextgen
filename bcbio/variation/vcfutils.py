@@ -441,9 +441,11 @@ def move_vcf(orig_file, new_file):
         if os.path.exists(to_move):
             shutil.move(to_move, new_file + ext)
 
-def bgzip_and_index(in_file, config, remove_orig=True, prep_cmd="", tabix_args=None, out_dir=None):
+def bgzip_and_index(in_file, config=None, remove_orig=True, prep_cmd="", tabix_args=None, out_dir=None):
     """bgzip and tabix index an input file, handling VCF and BED.
     """
+    if config is None:
+        config = {}
     out_file = in_file if in_file.endswith(".gz") else in_file + ".gz"
     if out_dir:
         remove_orig = False

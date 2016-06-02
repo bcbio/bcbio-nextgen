@@ -593,9 +593,9 @@ def _read_call_freqs(in_file, sample_name):
             if rec.filter.keys() == ["PASS"]:
                 for name, sample in rec.samples.items():
                     if name == sample_name:
-                        alt, depth = bubbletree.sample_alt_and_depth(sample)
-                        if depth > 0:
-                            out[_get_key(rec)] = float(alt) / float(depth)
+                        alt, depth, freq = bubbletree.sample_alt_and_depth(rec, sample)
+                        if freq is not None:
+                            out[_get_key(rec)] = freq
     return out
 
 def _read_truth_freqs(in_file):
