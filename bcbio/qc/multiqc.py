@@ -147,14 +147,19 @@ def _get_coverage_per_region(name):
     """
     Parse coverage file if it exists to get average value.
     """
-    fn = os.path.join("coverage", name + "_coverage_fixed.bed")
-    if utils.file_exists(fn):
-        try:
-            dt = pd.read_csv(fn, sep="\t", index_col=False)
-            if len(dt["meanCoverage"]) > 0:
-                return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
-        except TypeError:
-            logger.debug("%s has no lines in coverage.bed" % name)
+    fns = tz.get_in(["summary", "qc", "coverage"], name, {})
+    if fns:
+        fns = utils.flatten(fns.values())
+        fn = [fn for fn in fns if fn.find("coverage_fixed") > -1]
+        if fn:
+            fn = fn[0]
+            if utils.file_exists(fn):
+                try:
+                    dt = pd.read_csv(fn, sep="\t", index_col=False)
+                    if len(dt["meanCoverage"]) > 0:
+                        return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
+                except TypeError:
+                    logger.debug("%s has no lines in coverage.bed" % name)
     return "NA"
 
 def _merge_metrics(samples):
@@ -178,7 +183,7 @@ def _merge_metrics(samples):
                     if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                         continue
                 dt = pd.DataFrame(m, index=['1'])
-                dt['avg_coverage_per_region'] = _get_coverage_per_region(sample_name)
+                dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
                 cov[sample_name] = dt['avg_coverage_per_region'][0]
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = sample_name
