@@ -301,7 +301,7 @@ def _is_possible_loh(rec, vcf_rec, params, somatic_info):
                     return stats["tumor"]["freq"]
             elif (tumor_freq >= params["tumor_only"]["min_freq"] and
                     tumor_freq <= params["tumor_only"]["max_freq"]):
-                if not _has_population_germline(vcf_rec) or _is_population_germline(rec):
+                if not _has_population_germline(vcf_rec) or is_population_germline(rec):
                     return stats["tumor"]["freq"]
 
 def _has_population_germline(rec):
@@ -312,7 +312,7 @@ def _has_population_germline(rec):
             return True
     return False
 
-def _is_population_germline(rec):
+def is_population_germline(rec):
     """Identify a germline calls based on annoations with ExAC or other population databases.
     """
     min_count = 50
