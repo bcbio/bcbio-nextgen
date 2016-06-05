@@ -302,8 +302,10 @@ def _merge_hla_fastq_inputs(data):
         out_files = collections.defaultdict(list)
         for hla_files in hla_sample_files:
             for hla_file in hla_files:
-                hlatype = re.search(".hla.(?P<hlatype>[\w-]+).fq", hla_file).group("hlatype")
-                out_files[hlatype].append(hla_file)
+                rehla = re.search(".hla.(?P<hlatype>[\w-]+).fq", hla_file)
+                if rehla:
+                    hlatype = rehla.group("hlatype")
+                    out_files[hlatype].append(hla_file)
         if len(out_files) > 0:
             hla_outdir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                          dd.get_sample_name(data), "hla"))
