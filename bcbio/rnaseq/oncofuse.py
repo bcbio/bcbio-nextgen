@@ -38,10 +38,10 @@ def run(data):
     tissue_type = _oncofuse_tissue_arg_from_config(data)
     resources = config_utils.get_resources("oncofuse", config)
     if not file_exists(out_file):
-        cl = ["java"]
+        cl = [oncofuse]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         with file_transaction(data, out_file) as tx_out_file:
-            cl += ["-jar", oncofuse, input_file, input_type, tissue_type, tx_out_file]
+            cl += [input_file, input_type, tissue_type, tx_out_file]
             cmd = " ".join(cl)
             try:
                 do.run(cmd, "oncofuse fusion detection", data)
