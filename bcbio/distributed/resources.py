@@ -53,7 +53,7 @@ def _parent_prefix(prefix):
             if vcs:
                 if not isinstance(vcs, (list, tuple)):
                     vcs = [vcs]
-                return any(vc.startswith(prefix) for vc in vcs)
+                return any(vc.startswith(prefix) for vc in vcs if vc)
     return run
 
 def _ensure_min_resources(progs, cores, memory, min_memory):
