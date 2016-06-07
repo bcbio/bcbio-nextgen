@@ -12,11 +12,17 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+import bcbio.pipeline.datadict as dd
+from bcbio.log import logger
 
 # ## oncofuse fusion trancript detection
 
 def run(data):
-    #cmd line: java -Xmx1G -jar Oncofuse.jar input_file input_type tissue_type output_file
+    if not aligner_supports_fusion(data):
+        aligner = dd.get_aligner(data)
+        logger.warning("Fusion mode is not supported for the %s aligner, "
+                       "skipping. " % aligner)
+        return None
     config = data["config"]
     genome_build = data.get("genome_build", "")
     input_type, input_dir, input_file = _get_input_para(data)
@@ -52,6 +58,11 @@ def run(data):
 
 def is_non_zero_file(fpath):
     return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
+
+def aligner_supports_fusion(data):
+    SUPPORTED_ALIGNERS = ["tophat2", "tophat", "star"]
+    aligner = dd.get_aligner(data).lower()
+    return aligner in SUPPORTED_ALIGNERS
 
 def _get_input_para(data):
     TOPHAT_FUSION_OUTFILE = "fusions.out"
