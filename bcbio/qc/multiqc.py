@@ -150,14 +150,16 @@ def _get_coverage_per_region(name):
     fns = tz.get_in(["summary", "qc", "coverage"], name, {})
     if fns:
         fns = utils.flatten(fns.values())
-        fn = [fn for fn in fns if fn.find("coverage_fixed") > -1]
+        fn = [fn for fn in fns if fn.find("coverage_fixed.bed") > -1]
         if fn:
             fn = fn[0]
             if utils.file_exists(fn):
+                logger.debug("Reading meanCoverage for: %s" % fn)
                 try:
                     dt = pd.read_csv(fn, sep="\t", index_col=False)
-                    if len(dt["meanCoverage"]) > 0:
-                        return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
+                    if "meanCoverage" in dt:
+                        if len(dt["meanCoverage"]) > 0:
+                            return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
                 except TypeError:
                     logger.debug("%s has no lines in coverage.bed" % name)
     return "NA"
