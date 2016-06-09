@@ -131,17 +131,15 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     we split previously and are merging now, then we only nest those
     combing from the split process.
     """
-    skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
-    if wf:
-        skip_inputs = skip_inputs | set([_get_string_vid(x) for x in wf.noinputs])
     inputs = []
+    skip_inputs = set([])
     for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
         is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
         if is_record_input:
-            unpack_inputs = _unpack_record(orig_input, skip_inputs)
+            unpack_inputs = _unpack_record(orig_input)
             inputs.extend(unpack_inputs)
             skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in unpack_inputs])
-        elif get_base_id(orig_input["id"]) not in skip_inputs:
+        else:
             inputs.append(orig_input)
     inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
@@ -156,14 +154,13 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
         inputs = [_nest_variable(x) for x in inputs]
     return inputs, parallel_ids, nested_inputs
 
-def _unpack_record(rec, noinputs):
+def _unpack_record(rec):
     """Unpack a record object, extracting individual elements.
     """
     out = []
     for field in rec["type"]["fields"]:
-        if field["name"] not in noinputs:
-            out.append({"id": "#%s" % field["name"], "type": field["type"],
-                        "source": rec["id"], "valueFrom": "$(self.%s)" % field["name"]})
+        out.append({"id": "#%s" % field["name"], "type": field["type"],
+                    "source": rec["id"], "valueFrom": "$(self.%s)" % field["name"]})
     return out
 
 def _clean_record(var):
@@ -176,7 +173,7 @@ def _clean_record(var):
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if step.parallel in ["multi-batch"]:
-        file_output = [_create_record(outputs, step.inputs, step.noinputs, step.unlist, file_vs, std_vs)]
+        file_output = [_create_record(outputs, step.inputs, step.unlist, file_vs, std_vs)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
@@ -278,24 +275,22 @@ def _get_upload_output(vid, variables):
     v.pop("secondaryFiles", None)
     return _clean_output_extras(v)
 
-def _create_record(name, inputs, noinputs, unlist, file_vs, std_vs):
-    """Create an input record created from rearranging inputs.
+def _create_record(name, inputs, unlist, file_vs, std_vs):
+    """Create an input record by rearranging inputs.
 
     Batching processes create records that reformat the inputs for
     parallelization.
     """
-    skip_inputs = set([_get_string_vid(x) for x in noinputs])
     unlist = set([_get_string_vid(x) for x in unlist])
     fields = []
     input_vids = set([_get_string_vid(v) for v in inputs])
     for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
-        if get_base_id(orig_v["id"]) not in skip_inputs:
-            cur_v = {}
-            cur_v["name"] = get_base_id(orig_v["id"])
-            cur_v["type"] = orig_v["type"]
-            if cur_v["name"] in unlist:
-                cur_v = _flatten_nested_input(cur_v)
-            fields.append(_nest_variable(cur_v))
+        cur_v = {}
+        cur_v["name"] = get_base_id(orig_v["id"])
+        cur_v["type"] = orig_v["type"]
+        if cur_v["name"] in unlist:
+            cur_v = _flatten_nested_input(cur_v)
+        fields.append(_nest_variable(cur_v))
 
     return {"id": "#%s" % name,
             "type": {"name": name,

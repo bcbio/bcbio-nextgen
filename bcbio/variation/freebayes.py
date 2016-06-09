@@ -231,7 +231,9 @@ def _check_freqs(parts):
     except ValueError:
         af_index = None
     if af_index is None and ao_index is None:
-        raise NotImplementedError("Unexpected format annotations: %s" % parts[0])
+        # okay to skip if a gVCF record
+        if parts[4].find("<*>") == -1:
+            raise NotImplementedError("Unexpected format annotations: %s" % parts[8])
     def _calc_freq(item):
         try:
             if ao_index is not None and ro_index is not None:
@@ -240,6 +242,8 @@ def _check_freqs(parts):
                 freq = ao / float(ao + ro)
             elif af_index is not None:
                 freq = float(item.split(":")[af_index])
+            else:
+                freq = 0.0
         except (IndexError, ValueError, ZeroDivisionError):
             freq = 0.0
         return freq
