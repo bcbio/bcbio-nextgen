@@ -45,12 +45,14 @@ def pipeline_summary(data):
     """
     data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
-    if dd.get_ref_file(data) is not None and work_bam and work_bam.endswith(".bam"):
+    if data["analysis"].lower().startswith("smallrna-seq"):
+        work_bam = data["clean_fastq"]
+    elif data["analysis"].lower().startswith("chip-seq"):
+        work_bam = data["raw_bam"]
+    elif not work_bam.endswith(".bam"):
+        work_bam = None
+    if dd.get_ref_file(data) is not None and work_bam:
         logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
-        if data["analysis"].lower().startswith("smallrna-seq"):
-            work_bam = data["clean_fastq"]
-        elif data["analysis"].lower().startswith("chip-seq"):
-            work_bam = data["raw_bam"]
         data["summary"] = _run_qc_tools(work_bam, data)
     return [[data]]
 
