@@ -13,20 +13,17 @@ for each of the defined workflows.
 """
 import collections
 
-def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None, unlist=None):
+def s(name, parallel, inputs, outputs, programs=None, disk=None, unlist=None):
     """Represent a step in a workflow.
 
     name -- The run function name, which must match a definition in distributed/multitasks
     inputs -- List of input keys required for the function. Each key is of the type:
       ["toplevel", "sublevel"] -- an argument you could pass to toolz.get_in.
-      You only define file based inputs, non-file inputs are always passed unless
-      specified in noinputs.
     outputs -- List of outputs with information about file type. Use cwlout functions
     programs -- Required programs for this step, used to define resource usage.
     disk -- Information about disk usage requirements, specified as multipliers of
             input files. Ensures enough disk present when that is a limiting factor
             when selecting cloud node resources.
-    noinputs -- Non-file variables to not pass to this step
     unlist -- Variables being unlisted by this process. Useful for parallelization splitting and
       batching from multiple variables, like variant calling.
     parallel -- Parallelization approach. There are three different levels of parallelization,
@@ -46,22 +43,20 @@ def s(name, parallel, inputs, outputs, programs=None, disk=None, noinputs=None, 
         - batch-merge -- Merge sub-components back into a single batch.
         - batch-single -- Run on a single batch.
     """
-    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk noinputs unlist")
+    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk unlist")
     if programs is None: programs = []
-    if noinputs is None: noinputs = []
     if unlist is None: unlist = []
-    return Step(name, parallel, inputs, outputs, programs, disk, noinputs, unlist)
+    return Step(name, parallel, inputs, outputs, programs, disk, unlist)
 
-def w(name, parallel, workflow, internal, noinputs=None):
+def w(name, parallel, workflow, internal):
     """A workflow, allowing specification of sub-workflows for nested parallelization.
 
-    name, parallel and noinputs are documented under the Step (s) function.
+    name and parallel are documented under the Step (s) function.
     workflow -- a list of Step tuples defining the sub-workflow
     internal -- variables used in the sub-workflow but not exposed to subsequent steps
     """
-    Workflow = collections.namedtuple("Workflow", "name parallel workflow internal noinputs")
-    if noinputs is None: noinputs = []
-    return Workflow(name, parallel, workflow, internal, noinputs)
+    Workflow = collections.namedtuple("Workflow", "name parallel workflow internal")
+    return Workflow(name, parallel, workflow, internal)
 
 def cwlout(key, valtype, extensions=None):
     """Definition of an output variable, defining the type and associated secondary files.
@@ -85,12 +80,13 @@ def variant():
                ["bgzip", "pbgzip"],
                {"files": 1.5}),
              s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "base"],
+               [["files"], ["reference", "fasta", "base"], ["align_split"],
                 ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
                 ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
                 ["reference", "aligner", "indexes"],
                 ["config", "algorithm", "aligner"],
-                ["config", "algorithm", "mark_duplicates"]],
+                ["config", "algorithm", "mark_duplicates"],
+                ["config", "algorithm", "quality_format"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
                 cwlout(["hla", "fastq"], ["File", "null"]),
@@ -106,8 +102,7 @@ def variant():
                 cwlout(["work_bam-plus", "sr"], "File", [".bai"]),
                 cwlout(["hla", "fastq"], ["File", "null"])],
                ["biobambam"],
-               {"files": 3},
-               noinputs=[["align_split"], ["config", "algorithm", "quality_format"]])]
+               {"files": 3})]
     vc = [s("get_parallel_regions", "batch-split",
             [["batch_rec"]],
             [cwlout(["region"], "string")]),
@@ -120,15 +115,13 @@ def variant():
             [cwlout(["vrn_file"], "File", [".tbi"])]),
           s("postprocess_variants", "batch-single",
             [["batch_rec"], ["vrn_file"]],
-            [cwlout(["vrn_file"], "File", [".tbi"])],
-            noinputs=[["region"]]),
+            [cwlout(["vrn_file"], "File", [".tbi"])]),
           s("compare_to_rm", "batch-single",
             [["batch_rec"], ["vrn_file"]],
             [cwlout(["validate", "summary"], ["File", "null"]),
              cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
              cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
-             cwlout(["validate", "fn"], ["File", "null"], [".tbi"])],
-            noinputs=[["region"]])]
+             cwlout(["validate", "fn"], ["File", "null"], [".tbi"])])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
@@ -170,11 +163,9 @@ def variant():
                 ["reference", "fasta", "base"], ["reference", "rtg"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
                "batch_rec",
-               unlist=[["config", "algorithm", "variantcaller"]],
-               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
+               unlist=[["config", "algorithm", "variantcaller"]]),
              w("variantcall", "multi-parallel", vc,
-               [["region"], ["vrn_file_region"]],
-               noinputs=[["hla", "hlacaller"], ["config", "algorithm", "callable_count"]]),
+               [["region"], ["vrn_file_region"]]),
              s("pipeline_summary", "multi-parallel",
                [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
                 ["config", "algorithm", "coverage"],

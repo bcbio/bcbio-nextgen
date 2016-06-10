@@ -337,7 +337,7 @@ def _callable_from_gvcf(data, vrn_file, out_dir):
         if not utils.file_uptodate(out_file, vrn_file):
             with file_transaction(data, out_file) as tx_out_file:
                 cmd = ("gvcf_regions.py --gvcf_type {gvcf_type} {vrn_file} "
-                       "| bedtools merge -d 1 > {tx_out_file}")
+                       "| bedtools merge > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Convert gVCF to BED file of callable regions")
         return out_file
 

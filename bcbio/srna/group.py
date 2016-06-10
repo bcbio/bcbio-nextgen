@@ -60,6 +60,8 @@ def run_align(*data):
         shutil.move(bam_file, new_bam_file)
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
+    for sample in data:
+        sample[0]["align_bam"] = sample[0]["clean_fastq"]
     return data
 
 def run_cluster(*data):

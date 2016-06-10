@@ -382,7 +382,7 @@ def _get_batch_name(items):
 
 def _get_batch_variantcaller(items):
     variantcaller = list(set([get_variantcaller(x) for x in items]))
-    assert len(variantcaller) == 1, (variantcaller, pprint.pformat(items))
+    assert len(variantcaller) == 1, "%s\n%s" % (variantcaller, pprint.pformat(items))
     return variantcaller[0]
 
 def variantcall_batch_region(items):
