@@ -27,6 +27,11 @@ def run_prepare(*data):
     out_dir = os.path.join(dd.get_work_dir(data[0][0]), "seqcluster", "prepare")
     out_dir = os.path.abspath(safe_makedir(out_dir))
     prepare_dir = os.path.join(out_dir, "prepare")
+    tools = dd.get_expression_caller(data[0][0])
+    if len(tools) == 0:
+        logger.info("You didn't specify any other expression caller tool."
+                       "You can add to the YAML file:"
+                       "expression_caller:[trna, seqcluster, mirdeep2]")
     fn = []
     for sample in data:
         name = sample[0]["rgnames"]['sample']
@@ -54,6 +59,7 @@ def run_align(*data):
     seq_out = op.join(out_dir, "seqs.fastq")
     bam_dir = op.join(work_dir, "align")
     new_bam_file = op.join(bam_dir, "seqs.bam")
+    tools = dd.get_expression_caller(data[0][0])
     if not file_exists(new_bam_file):
         sample = process_alignment(data[0][0], [seq_out, None])
         bam_file = dd.get_work_bam(sample[0][0])
@@ -62,6 +68,9 @@ def run_align(*data):
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
     for sample in data:
         sample[0]["align_bam"] = sample[0]["clean_fastq"]
+
+    if "mirdeep2" in tools:
+        novel_db = mirdeep.run(data)
     return data
 
 def run_cluster(*data):
@@ -69,13 +78,13 @@ def run_cluster(*data):
     Run seqcluster cluster to detect smallRNA clusters
     """
     sample = data[0][0]
-    tools_off = dd.get_tools_off(data[0][0])
+    tools = dd.get_expression_caller(data[0][0])
     work_dir = dd.get_work_dir(sample)
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = op.join(work_dir, "align", "seqs.bam")
-    if "seqcluster" not in tools_off:
+    if "seqcluster" in tools:
         cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
         sample["report"] = _report(sample, dd.get_ref_file(sample))
         sample["seqcluster"] = out_dir
@@ -86,7 +95,6 @@ def run_cluster(*data):
         sample = dd.set_isomir_counts(sample, out_mirna[1])
 
     out_novel = _make_isomir_counts(data, "seqbuster_novel", op.join(work_dir, "mirdeep2"), "_novel")
-    novel_db = mirdeep.run(data)
     if out_novel:
         sample = dd.set_novel_mirna_counts(sample, out_novel[0])
         sample = dd.set_novel_isomir_counts(sample, out_novel[1])

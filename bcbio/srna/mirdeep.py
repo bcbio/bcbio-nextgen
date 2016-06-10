@@ -4,6 +4,7 @@ import os.path as op
 
 import pysam
 
+from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir, chdir, get_perl_exports
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
@@ -24,6 +25,7 @@ def run(data):
         hairpin = dd.get_mirbase_hairpin(data[0][0])
         mature = dd.get_mirbase_mature(data[0][0])
 
+    logger.debug("Preparing for mirdeep2 analysis.")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     seqs_dir = op.join(work_dir, "seqcluster", "prepare")
     collapsed = op.join(seqs_dir, "seqs.ma")

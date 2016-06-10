@@ -678,6 +678,7 @@ smallRNA sequencing
 - ``adapter`` The 3' end adapter that needs to be remove.
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
+- ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2
 
 ChIP sequencing
 ===============
