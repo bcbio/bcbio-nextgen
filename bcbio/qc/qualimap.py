@@ -226,6 +226,8 @@ def _detect_rRNA(data):
     rrna_exp = map(float, sample_table[sample_table["id"].isin(transcripts)]["numreads"])
     total_exp = map(float, sample_table["numreads"])
     rrna = sum(rrna_exp)
+    if sum(total_exp) == 0:
+        return {'rRNA': str(rrna), 'rRNA_rate': "NA"}
     rrna_rate = float(rrna) / sum(total_exp)
     return {'rRNA': str(rrna), 'rRNA_rate': str(rrna_rate)}
 
