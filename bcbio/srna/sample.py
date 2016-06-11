@@ -53,6 +53,7 @@ def sample_annotation(data):
     Annotate miRNAs using miRBase database with seqbuster tool
     """
     names = data["rgnames"]['sample']
+    tools = dd.get_expression_caller(data)
     work_dir = os.path.join(dd.get_work_dir(data), "mirbase")
     out_dir = os.path.join(work_dir, names)
     utils.safe_makedir(out_dir)
@@ -64,10 +65,12 @@ def sample_annotation(data):
         logger.debug("No annotation file from miRBase.")
 
     sps = dd.get_species(data) if dd.get_species(data) else "None"
+    logger.debug("Looking for mirdeep2 database for %s" % names)
     if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
         data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, sps,  op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
 
-    data['trna'] = _trna_annotation(data)
+    if "trna" in tools:
+        data['trna'] = _trna_annotation(data)
     return [[data]]
 
 def _cmd_cutadapt():
