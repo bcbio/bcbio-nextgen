@@ -98,7 +98,7 @@ def create_combined_fasta(data, out_dir):
             fasta_files.append(out_file)
     out_stem = os.path.join(out_dir, dd.get_genome_build(data))
     if dd.get_disambiguate(data):
-        out_stem = "-".join([out_stem] + dd.get_disambiguate(data))
+        out_stem = "-".join([out_stem] + (dd.get_disambiguate(data) or []))
     combined_file = out_stem + ".fa"
     if file_exists(combined_file):
         return combined_file
@@ -112,7 +112,7 @@ def create_combined_fasta(data, out_dir):
 def sailfish_index(gtf_file, ref_file, data, out_dir, kmer_size):
     out_dir = os.path.join(out_dir, "index", dd.get_genome_build(data))
     if dd.get_disambiguate(data):
-        out_dir = "-".join([out_dir] + dd.get_disambiguate(data))
+        out_dir = "-".join([out_dir] + (dd.get_disambiguate(data) or []))
     sailfish = config_utils.get_program("sailfish", data["config"])
     num_cores = dd.get_num_cores(data)
     gtf_fa = create_combined_fasta(data, out_dir)
