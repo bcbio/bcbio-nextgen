@@ -36,7 +36,7 @@ def finalize_vcf(in_file, variantcaller, items):
     out_file = "%s-annotated%s" % utils.splitext_plus(in_file)
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(items[0], out_file) as tx_out_file:
-            cl = _add_vcf_header_sample_cl(in_file, items, tx_out_file)
+            cl = _add_vcf_header_sample_cl(in_file, items, out_file)
             if cl:
                 cmd = "{cl} | bgzip -c > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Annotate")
@@ -44,6 +44,21 @@ def finalize_vcf(in_file, variantcaller, items):
         return vcfutils.bgzip_and_index(out_file, items[0]["config"])
     else:
         return in_file
+
+def _fix_generic_tn_names(paired):
+    """Convert TUMOR/NORMAL names in output into sample IDs.
+    """
+    def run(line):
+        parts = line.rstrip("\n\r").split("\t")
+        if "TUMOR" in parts:
+            parts[parts.index("TUMOR")] = paired.tumor_name
+        if "TUMOUR" in parts:
+            parts[parts.index("TUMOUR")] = paired.tumor_name
+        if "NORMAL" in parts:
+            assert paired.normal_name
+            parts[parts.index("NORMAL")] = paired.normal_name
+        return "\t".join(parts) + "\n"
+    return run
 
 def _add_vcf_header_sample_cl(in_file, items, base_file):
     """Add phenotype information to a VCF header.
@@ -57,11 +72,17 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
         if paired.normal_name:
             toadd.append("##SAMPLE=<ID=%s,Genomes=Germline>" % paired.normal_name)
             toadd.append("##PEDIGREE=<Derived=%s,Original=%s>" % (paired.tumor_name, paired.normal_name))
-        new_header = _add_lines_to_header(in_file, base_file, toadd)
-        cmd = "bcftools reheader -h {new_header} {in_file} | bcftools view "
+        new_header = _update_header(in_file, base_file, toadd, _fix_generic_tn_names(paired))
+        if vcfutils.vcf_has_variants(in_file):
+            cmd = "bcftools reheader -h {new_header} {in_file} | bcftools view "
+        # bcftools reheader does not work with empty VCF files as of samtools 1.3
+        else:
+            cmd = "cat {new_header}"
         return cmd.format(**locals())
 
-def _add_lines_to_header(orig_vcf, base_file, new_lines):
+def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
+    """Fix header with additional lines and remapping of generic sample names.
+    """
     new_header = "%s-header.txt" % utils.splitext_plus(base_file)[0]
     with open(new_header, "w") as out_handle:
         chrom_line = None
@@ -75,6 +96,8 @@ def _add_lines_to_header(orig_vcf, base_file, new_lines):
         assert chrom_line is not None
         for line in new_lines:
             out_handle.write(line + "\n")
+        if chrom_process_fn:
+            chrom_line = chrom_process_fn(chrom_line)
         out_handle.write(chrom_line)
     return new_header
 

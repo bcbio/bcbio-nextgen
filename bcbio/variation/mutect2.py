@@ -87,32 +87,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                 "Require full version of GATK 3.5+ for mutect2 calling"
             broad_runner.new_resources("mutect2")
             gatk_cmd = " ".join(broad_runner.cl_gatk(params, os.path.dirname(tx_out_file)))
-            pp_cmd = _post_process_cl(paired)
-            cmd = "{gatk_cmd} | {pp_cmd} | bgzip -c > {tx_out_file}"
+            cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "MuTect2")
     out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
     return out_file
-
-def _post_process_cl(paired):
-    py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-    normal_name = paired.normal_name or ""
-    tumor_name = paired.tumor_name or ""
-    cmd = ("{py_cl} -x 'bcbio.variation.mutect2.fix_mutect2_output(x,"
-           """ "{tumor_name}", "{normal_name}")' """)
-    return cmd.format(**locals())
-
-def fix_mutect2_output(line, tumor_name, normal_name):
-    """Provide corrective fixes for mutect2 output.
-    """
-    if line.startswith("#CHROM") and (tumor_name or normal_name):
-        parts = line.split("\t")
-        base_header = parts[:9]
-        old_samples = parts[9:]
-        if len(old_samples) > 0:
-            mapping = {"NORMAL": normal_name, "TUMOR": tumor_name,
-                       tumor_name: tumor_name, normal_name: normal_name}
-            samples = [mapping[sample_name] for sample_name in old_samples]
-            samples = [x for x in samples if x]
-            assert len(old_samples) == len(samples)
-            line = "\t".join(base_header + samples)
-    return line
