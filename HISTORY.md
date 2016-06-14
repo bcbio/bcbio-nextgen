@@ -4,6 +4,10 @@
   and pluggability of new QC metrics.
 - Add `fixrg` target to `bam_clean` to accept BAM inputs with correct
   sorting and reads but that need an updated read group.
+- Add SAMPLE and PEDIGREE tags to tumor/normal VCF outputs to enable
+  easier post-analysis parsing of results.
+- Add single point for annotation following variant calling to improve
+  pluggability of new annotation types.
 
 ## 0.9.8 (20 May 2016)
 

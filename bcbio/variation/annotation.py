@@ -2,6 +2,7 @@
 
 - GATK variant annotation with snpEff predicted effects.
 """
+import gzip
 import os
 
 from bcbio import broad, utils
@@ -28,6 +29,54 @@ def get_gatk_annotations(config, include_depth=True):
         else:
             anns += ["DepthOfCoverage"]
     return anns
+
+def finalize_vcf(in_file, variantcaller, items):
+    """Perform cleanup and annotation of the final VCF.
+    """
+    out_file = "%s-annotated%s" % utils.splitext_plus(in_file)
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(items[0], out_file) as tx_out_file:
+            cl = _add_vcf_header_sample_cl(in_file, items, tx_out_file)
+            if cl:
+                cmd = "{cl} | bgzip -c > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Annotate")
+    if utils.file_exists(out_file):
+        return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+    else:
+        return in_file
+
+def _add_vcf_header_sample_cl(in_file, items, base_file):
+    """Add phenotype information to a VCF header.
+
+    Encode tumor/normal relationships in VCF header.
+    Could also eventually handle more complicated pedigree information if useful.
+    """
+    paired = vcfutils.get_paired(items)
+    if paired:
+        toadd = ["##SAMPLE=<ID=%s,Genomes=Tumor>" % paired.tumor_name]
+        if paired.normal_name:
+            toadd.append("##SAMPLE=<ID=%s,Genomes=Germline>" % paired.normal_name)
+            toadd.append("##PEDIGREE=<Derived=%s,Original=%s>" % (paired.tumor_name, paired.normal_name))
+        new_header = _add_lines_to_header(in_file, base_file, toadd)
+        cmd = "bcftools reheader -h {new_header} {in_file} | bcftools view "
+        return cmd.format(**locals())
+
+def _add_lines_to_header(orig_vcf, base_file, new_lines):
+    new_header = "%s-header.txt" % utils.splitext_plus(base_file)[0]
+    with open(new_header, "w") as out_handle:
+        chrom_line = None
+        with gzip.open(orig_vcf) as in_handle:
+            for line in in_handle:
+                if line.startswith("##"):
+                    out_handle.write(line)
+                else:
+                    chrom_line = line
+                    break
+        assert chrom_line is not None
+        for line in new_lines:
+            out_handle.write(line + "\n")
+        out_handle.write(chrom_line)
+    return new_header
 
 def add_dbsnp(orig_file, dbsnp_file, config):
     """Annotate a VCF file with dbSNP.

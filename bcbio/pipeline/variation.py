@@ -7,7 +7,7 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import effects, genotype, germline, prioritize
+from bcbio.variation import annotation, effects, genotype, germline, prioritize
 from bcbio.variation import multi as vmulti
 
 # ## Genotyping
@@ -28,8 +28,10 @@ def postprocess_variants(items):
             data["vrn_file"] = ann_vrn_file
         if vrn_stats:
             data["vrn_stats"] = vrn_stats
-        logger.info("Filtering for %s" % cur_name)
         orig_items = _get_orig_items(items)
+        logger.info("Annotate VCF file: %s" % cur_name)
+        data["vrn_file"] = annotation.finalize_vcf(data["vrn_file"], get_variantcaller(data), orig_items)
+        logger.info("Filtering for %s" % cur_name)
         data["vrn_file"] = variant_filtration(data["vrn_file"], dd.get_ref_file(data),
                                               tz.get_in(("genome_resources", "variation"), data, {}),
                                               data, orig_items)
