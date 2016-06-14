@@ -184,15 +184,10 @@ def batch_for_variantcall(samples):
     """
     from bcbio.pipeline import run_info
     convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
-    default_keys = set(["metadata__batch", "config__algorithm__validate",
-                        "config__algorithm__validate_regions"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
-    all_keys = set([])
-    for data in to_process:
-        all_keys.update(set(data["cwl_keys"]))
-    all_keys.update(default_keys)
+    all_keys = _get_all_cwlkeys(to_process)
     for data in to_process:
         for raw_key in sorted(list(all_keys)):
             key = raw_key.split("__")
@@ -326,20 +321,34 @@ def concat_batch_variantcalls(items):
                                              dd.get_ref_file(items[0]), items[0]["config"])
     return {"vrn_file": out_file}
 
+def _get_all_cwlkeys(items):
+    """Retrieve cwlkeys from inputs, handling defaults which can be null.
+
+    When inputs are null in some and present in others, this creates unequal
+    keys in each sample, confusing decision making about which are primary and extras.
+    """
+    default_keys = set(["metadata__batch", "config__algorithm__validate",
+                        "config__algorithm__validate_regions"])
+    all_keys = set([])
+    for data in items:
+        all_keys.update(set(data["cwl_keys"]))
+    all_keys.update(default_keys)
+    return all_keys
+
 def split_data_cwl_items(items):
     """Split a set of CWL output dictionaries into data samples and CWL items.
 
     Handles cases where we're arrayed on multiple things, like a set of regional
     VCF calls and data objects.
     """
-    all_keys = set([])
+    key_lens = set([])
     for data in items:
-        all_keys.add(len(data["cwl_keys"]))
-    extra_key_len = min(list(all_keys)) if len(all_keys) > 1 else None
+        key_lens.add(len(_get_all_cwlkeys([data])))
+    extra_key_len = min(list(key_lens)) if len(key_lens) > 1 else None
     data_out = []
     extra_out = []
     for data in items:
-        if extra_key_len and len(data["cwl_keys"]) == extra_key_len:
+        if extra_key_len and len(_get_all_cwlkeys([data])) == extra_key_len:
             extra_out.append(data)
         else:
             data_out.append(data)

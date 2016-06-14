@@ -31,9 +31,10 @@ def bam_needs_processing(data):
     """Check if a work input needs processing for parallelization.
     """
     return ((data.get("work_bam") or data.get("align_bam")) and
-            any(tz.get_in(["config", "algorithm", x], data) for x in
-                ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
-                 "jointcaller", "variant_regions"]))
+            (any(tz.get_in(["config", "algorithm", x], data) for x in
+                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
+                  "jointcaller", "variant_regions"])
+             or any(k in data for k in ["cwl_keys", "output_cwl_keys"])))
 
 def get_batch_for_key(data):
     """Retrieve batch information useful as a unique key for the sample.

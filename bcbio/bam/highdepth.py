@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 import numpy
+import toolz as tz
 import yaml
 
 from bcbio import utils
@@ -20,7 +21,9 @@ from bcbio.provenance import do
 
 def _get_files(data):
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    out_file = "%s-highdepth.bed" % utils.splitext_plus(work_bam)[0]
+    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                              "align", dd.get_sample_name(data)))
+    out_file = "%s-highdepth.bed" % os.path.join(out_dir, utils.splitext_plus(os.path.basename(work_bam))[0])
     stats_file = "%s-stats.yaml" % utils.splitext_plus(out_file)[0]
     return work_bam, out_file, stats_file
 

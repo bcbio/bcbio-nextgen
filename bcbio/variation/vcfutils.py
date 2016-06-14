@@ -301,7 +301,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                 do.run(cmd, "Concat variant files", log_error=False)
             except subprocess.CalledProcessError, msg:
                 if ("We require all VCFs to have complete VCF headers" in str(msg) or
-                      "Features added out of order" in str(msg)):
+                      "Features added out of order" in str(msg) or
+                      "The reference allele cannot be missing" in str(msg)):
                     os.remove(tx_out_file)
                     failed = True
                 else:
