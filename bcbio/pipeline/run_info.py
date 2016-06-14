@@ -63,8 +63,8 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
         item["resources"] = _add_remote_resources(item["resources"])
         item["config"] = config_utils.update_w_custom(config, item)
         item.pop("algorithm", None)
-        item["config"]["algorithm"]["qc"] = qcsummary.get_qc_tools(item)
         item = add_reference_resources(item, remote_retriever)
+        item["config"]["algorithm"]["qc"] = qcsummary.get_qc_tools(item)
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
         if tmp_dir:
