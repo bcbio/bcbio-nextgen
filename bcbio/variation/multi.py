@@ -9,6 +9,7 @@ import os
 import toolz as tz
 
 from bcbio import utils
+from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 
 # ## Group batches to process together
@@ -47,9 +48,9 @@ def get_batch_for_key(data):
 
 def _get_batches(data, require_bam=True):
     if bam_needs_processing(data) or not require_bam:
-        batches = tz.get_in(("metadata", "batch"), data, data["description"])
+        batches = dd.get_batch(data) or dd.get_sample_name(data)
     else:
-        batches = data["description"]
+        batches = dd.get_sample_name(data)
     if not isinstance(batches, (list, tuple)):
         batches = [batches]
     return batches
