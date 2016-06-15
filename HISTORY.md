@@ -8,6 +8,9 @@
   easier post-analysis parsing of results.
 - Add single point for annotation following variant calling to improve
   pluggability of new annotation types.
+- Add support for running germline and somatic calling with Sentieon
+  callers (https://peerj.com/preprints/1672/). Requires license from
+  Sentieon.
 
 ## 0.9.8 (20 May 2016)
 
