@@ -33,7 +33,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     Checks for empty sets of target regions after filtering for high depth,
     in which case we should skip the FreeBayes run.
     """
-    opts = ["--genotype-qualities"]
+    opts = ["--genotype-qualities", "--strict-vcf"]
     opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
 
     variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
@@ -125,10 +125,10 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
                        """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                        "| {fix_ambig} | "
-                       "bcftools view -a - 2> /dev/null | "
+                       "bcftools annotate -x FMT/DPR | bcftools view -a - | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                        "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                       "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -172,10 +172,10 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                       "{paired.tumor_bam} {paired.normal_bam} "
                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                       "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
-                      "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
+                      "| {fix_ambig} | bcftools annotate -x FMT/DPR | bcftools view -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                      "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                      "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "
                       "{compress_cmd} > {tx_out_file}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
