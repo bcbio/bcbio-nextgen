@@ -48,6 +48,9 @@ def run_prepare(*data):
                 with open(seq_out, 'w') as seq_handle:
                     prepare._create_matrix_uniq_seq(sample_l, seq_l, ma_handle, seq_handle, min_shared)
 
+    for sample in data:
+        sample[0]["seqcluster_prepare_ma"] = ma_out
+        sample[0]["seqcluster_prepare_fastq"] = seq_out
     return data
 
 def run_align(*data):
@@ -68,6 +71,7 @@ def run_align(*data):
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
     for sample in data:
         sample[0]["align_bam"] = sample[0]["clean_fastq"]
+        sample[0]["work_bam"] = new_bam_file
 
     if "mirdeep2" in tools:
         novel_db = mirdeep.run(data)
@@ -83,9 +87,9 @@ def run_cluster(*data):
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
-    bam_file = op.join(work_dir, "align", "seqs.bam")
+    bam_file = data[0][0]["work_bam"]
     if "seqcluster" in tools:
-        cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+        cluster_dir = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"], out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
         sample["report"] = _report(sample, dd.get_ref_file(sample))
         sample["seqcluster"] = out_dir
 
@@ -101,12 +105,11 @@ def run_cluster(*data):
     data[0][0] = sample
     return data
 
-def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
+def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
     seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
-    ma_file = op.join(prepare_dir, "seqs.ma")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
         annotation_file = "-g " + annotation_file
