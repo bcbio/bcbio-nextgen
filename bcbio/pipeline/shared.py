@@ -30,15 +30,13 @@ def combine_bam(in_files, out_file, config):
     bam.index(out_file, config)
     return out_file
 
-def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ext_fn=None,
-                              remove_alts=False):
+def process_bam_by_chromosome(output_ext, file_key, default_targets=None, remove_alts=False):
     """Provide targets to process a BAM file by individual chromosome regions.
 
     output_ext: extension to supply to output files
     file_key: the key of the BAM file in the input data map
     default_targets: a list of extra chromosome targets to process, beyond those specified
                      in the BAM file. Useful for retrieval of non-mapped reads.
-    dir_ext_fn: A function to retrieve a directory naming extension from input data map.
     remove_alts: Do not process alternative alleles.
     """
     if default_targets is None:
@@ -46,10 +44,7 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, dir_ex
     def _do_work(data):
         ignore_chroms = set(_get_alt_chroms(data) if remove_alts else [])
         bam_file = data[file_key]
-        out_dir = os.path.dirname(bam_file)
-        if dir_ext_fn:
-            out_dir = os.path.join(out_dir, dir_ext_fn(data))
-
+        out_dir = tz.get_in(["dirs", "out"], data, os.path.dirname(bam_file))
         out_file = os.path.join(out_dir, "{base}{ext}".format(
                 base=os.path.splitext(os.path.basename(bam_file))[0],
                 ext=output_ext))

@@ -36,8 +36,9 @@ from bcbio.variation import multi as vmulti
 def parallel_callable_loci(in_bam, ref_file, data):
     config = copy.deepcopy(data["config"])
     num_cores = config["algorithm"].get("num_cores", 1)
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
     data = {"work_bam": in_bam, "config": config,
-            "reference": data["reference"]}
+            "reference": data["reference"], "dirs": {"out": out_dir}}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     items = [[data]]
     with prun.start(parallel, items, config, multiplier=int(num_cores)) as runner:
