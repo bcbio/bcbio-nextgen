@@ -267,6 +267,8 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
         if not os.path.exists(ref_dir):
             if target in INPLACE_INDEX:
                 ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
+                # Need to add genome resources so we can retrieve GTF files for STAR
+                data["genome_resources"] = get_resources(data["genome_build"], ref_file, data)
                 INPLACE_INDEX[target](ref_file, ref_dir, data)
             else:
                 # XXX Currently only supports genomes from S3 us-east-1 bucket.
