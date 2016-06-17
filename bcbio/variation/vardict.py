@@ -122,7 +122,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
                 var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
+                fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+                fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
@@ -130,7 +131,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                         "-N {sample} -b {bamfile} {opts} "
                         "| {strandbias}"
                         "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                        "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -257,7 +258,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
                 var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
+                fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+                fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
                 if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                        for data in items):
@@ -281,7 +283,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "{freq_filter} "
-                       "{somatic_filter} | {fix_ambig} | {remove_dup} | {vcfstreamsort} "
+                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
     out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
