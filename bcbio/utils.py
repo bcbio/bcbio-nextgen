@@ -306,6 +306,13 @@ def file_plus_index(fname):
     else:
         return [fname]
 
+def remove_plus(orig):
+    """Remove a fils, including biological index files.
+    """
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+        if os.path.exists(orig + ext):
+             remove_safe(orig + ext)
+
 def copy_plus(orig, new):
     """Copy a fils, including biological index files.
     """

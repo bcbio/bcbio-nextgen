@@ -12,8 +12,8 @@ import numpy as np
 
 import bcbio.bed as bed
 from bcbio.utils import (file_exists, chdir, max_command_length, safe_makedir,
-                         robust_partition_all, append_stem, is_gzipped,
-                         open_gzipsafe, symlink_plus, copy_plus)
+                         robust_partition_all, append_stem, is_gzipped, remove_plus,
+                         open_gzipsafe, symlink_plus, copy_plus, splitext_plus)
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
@@ -211,7 +211,7 @@ def coverage(data, out_dir):
     sambamba = config_utils.get_program("sambamba", data["config"])
     work_dir = safe_makedir(out_dir)
     if not bed_file:
-        return {}
+        return None
     cleaned_bed = os.path.join(work_dir, os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed")
     cleaned_bed = bed.decomment(bed_file, cleaned_bed)
 
@@ -256,19 +256,61 @@ def _summary_variants(in_file, out_file):
             row.append([p_point, q_d, q_cg])
         pd.DataFrame(row).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
+def _read_bcffile(out_file):
+    out = {}
+    with open(out_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("SN") and line.find("records") > -1:
+                out["Variations (total)"] = line.split()[-1]
+            elif line.startswith("SN") and line.find("SNPs") > -1:
+                out["Variations (SNPs)"] = line.split()[-1]
+            elif line.startswith("SN") and line.find("indels") > -1:
+                out["Variations (indels)"] = line.split()[-1]
+            elif line.startswith("TSTV"):
+                out["Variations (ts/tv)"] = line.split()[4]
+    return out
+
+def _run_bcftools(data, out_dir):
+    """Get variants stats"""
+    vcf_file = data['vrn_file']
+    opts = "-f PASS"
+    out = {}
+    if vcf_file:
+        name = dd.get_sample_name(data)
+        stem = os.path.join(out_dir, os.path.basename(splitext_plus(vcf_file)[0]))
+        out_file = "%s-%s-bcfstats.tsv" % (stem, name)
+        bcftools = config_utils.get_program("bcftools", data["config"])
+        if not file_exists(out_file):
+            cmd = ("{bcftools} stats -s {name} {opts} {vcf_file} > {out_file}")
+            do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
+        out[name] = _read_bcffile(out_file)
+        normal_sample = vcfutils.get_normal_sample(vcf_file)
+        if normal_sample:
+            out_file = "%s-%s-bcfstats.tsv" % (stem, normal_sample)
+            if not file_exists(out_file):
+                cmd = ("{bcftools} stats -s {normal_sample} {vcf_file} > {out_file}")
+                do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
+            out[normal_sample] = _read_bcffile(out_file)
+    return out
+
 def variants(data, out_dir):
     if "vrn_file" not in data:
-        return {}
-    if not dd.get_coverage(data):
-        return {}
+        return None
 
     in_vcf = data['vrn_file']
+    work_dir = safe_makedir(out_dir)
     sample = dd.get_sample_name(data)
+    bcfstats = _run_bcftools(data, work_dir)
+    bcf_out = os.path.join(sample + "_bcbio_variants_stats.txt")
     cg_file = os.path.join(sample + "_with-gc.vcf.gz")
     parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
     qc_file = os.path.join(sample + "_bcbio_variants.txt")
-    work_dir = safe_makedir(out_dir)
     with chdir(work_dir):
+        if not file_exists(bcf_out):
+            with open(bcf_out, "w") as out_handle:
+                yaml.safe_dump(bcfstats, out_handle, default_flow_style=False, allow_unicode=False)
+        if not dd.get_coverage(data):
+            return None
         if file_exists(qc_file):
             return qc_file
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -304,9 +346,8 @@ def variants(data, out_dir):
             if not file_exists(qc_file):
                 # This files will be copied to final
                 _summary_variants(parse_file, qc_file)
-            if file_exists(qc_file) and file_exists(parse_file) and file_exists(cg_file):
-                os.remove(cg_file)
-        return qc_file
+            if file_exists(qc_file) and file_exists(parse_file):
+                remove_plus(cg_file)
 
 def priority_coverage(data, out_dir):
     bed_file = dd.get_svprioritize(data)

@@ -320,7 +320,8 @@ def _run_coverage_qc(bam_file, data, out_dir):
 
 def _run_variants_qc(bam_file, data, out_dir):
     """Run variants QC analysis"""
-    return cov.variants(data, out_dir)
+    cov.variants(data, out_dir)
+    return None
 
 # ## Galaxy functionality
 

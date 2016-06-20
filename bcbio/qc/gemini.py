@@ -18,8 +18,9 @@ def run(bam_file, data, out_dir):
     gemini_dbs = [d for d in
                   [tz.get_in(["population", "db"], x) for x in data.get("variants", [])] if d]
     if len(gemini_dbs) > 0:
+        out_dir = utils.safe_makedir(out_dir)
         gemini_db = gemini_dbs[0]
-        gemini_stat_file = "%s-stats.yaml" % os.path.splitext(gemini_db)[0]
+        gemini_stat_file = os.path.join(out_dir, "%s-stats.yaml" % os.path.splitext(os.path.basename(gemini_db))[0])
         if not utils.file_uptodate(gemini_stat_file, gemini_db):
             gemini = config_utils.get_program("gemini", data["config"])
             tstv = subprocess.check_output([gemini, "stats", "--tstv", gemini_db])
@@ -45,21 +46,6 @@ def run(bam_file, data, out_dir):
         else:
             with open(gemini_stat_file) as in_handle:
                 out = yaml.safe_load(in_handle)
-    else:
-        vcf_file = dd.get_vrn_file(data)
-        if isinstance(vcf_file, list):
-            vcf_file = vcf_file[0]
-        if vcf_file:
-            out_file = "%s-bcfstats.tsv" % utils.splitext_plus(vcf_file)[0]
-            bcftools = config_utils.get_program("bcftools", data["config"])
-            if not utils.file_exists(out_file):
-                cmd = ("{bcftools} stats -f PASS {vcf_file} > {out_file}")
-                do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
-            with open(out_file) as in_handle:
-                for line in in_handle:
-                    if line.startswith("SN") and line.find("records") > -1:
-                        cols = line.split()
-                        out["Variations (total)"] = cols[-1]
 
     res = {}
     for k, v in out.iteritems():

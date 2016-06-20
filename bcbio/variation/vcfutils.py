@@ -139,6 +139,15 @@ def split_snps_indels(orig_file, ref_file, config):
             bgzip_and_index(out_file, config)
     return snp_file, indel_file
 
+def get_normal_sample(in_file):
+    """Retrieve normal sample if normal/turmor
+    """
+    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        for line in in_handle:
+            if line.startswith("##PEDIGREE"):
+                parts = line.strip().split("Original=")[1][:-1]
+                return parts
+
 def get_samples(in_file):
     """Retrieve samples present in a VCF file
     """
