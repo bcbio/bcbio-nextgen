@@ -4,6 +4,8 @@
   and pluggability of new QC metrics.
 - Add `fixrg` target to `bam_clean` to accept BAM inputs with correct
   sorting and reads but that need an updated read group.
+- More robust file transactions across network filesystems, avoiding failures
+  from partially transferred files. Thanks to Sven-Eric Schelhorn.
 - Add SAMPLE and PEDIGREE tags to tumor/normal VCF outputs to enable
   easier post-analysis parsing of results.
 - Add single point for annotation following variant calling to improve

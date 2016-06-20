@@ -88,17 +88,43 @@ def file_transaction(*data_and_files):
             for safe, orig in zip(safe_names, orig_names):
                 if os.path.exists(safe):
                     utils.safe_makedir(os.path.dirname(orig))
-                    # if we are rolling back a directory and it already exists
+                    # If we are rolling back a directory and it already exists
                     # this will avoid making a nested set of directories
                     if os.path.isdir(orig) and os.path.isdir(safe):
                         shutil.rmtree(orig)
-                    shutil.move(safe, orig)
+
+                    _move_file_with_sizecheck(safe, orig)
+                    # Move additional, associated files in the same manner
                     for check_ext, check_idx in exts.iteritems():
                         if safe.endswith(check_ext):
                             safe_idx = safe + check_idx
                             if os.path.exists(safe_idx):
-                                shutil.move(safe_idx, orig + check_idx)
+                                _move_file_with_sizecheck(safe_idx, orig + check_idx)
             _remove_tmpdirs(safe_names)
+
+def _move_file_with_sizecheck(tx_file, final_file):
+    """Move transaction file to final location, with size checks avoiding failed transfers.
+    """
+    tmp_file = final_file + ".bcbiotmp"
+    # Remove any partially transferred directories or files
+    if os.path.exists(tmp_file):
+        if os.path.isdir(tmp_file):
+            _remove_tmpdirs([tmp_file])
+        else:
+            _remove_files([tmp_file])
+    want_size = os.path.getsize(tx_file)
+    # Move files from temporary storage to shared storage under a temporary name
+    shutil.move(tx_file, tmp_file)
+
+    # Validate that file sizes of file before and after transfer are identical
+    transfer_size = os.path.getsize(tmp_file)
+    assert want_size == transfer_size, \
+        ('distributed.transaction.file_transaction: File copy error: '
+         'file or directory on temporary storage ({}) size {} bytes '
+         'does not equal size of file or directory after transfer to '
+         'shared storage ({}) size {} bytes'.format(tx_file, want_size, tmp_file, transfer_size))
+    # Atomically move temporary file on shared storage to final file on shared storage
+    os.rename(tmp_file, final_file)
 
 def _remove_tmpdirs(fnames):
     for x in fnames:
