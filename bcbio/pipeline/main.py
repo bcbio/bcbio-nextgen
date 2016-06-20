@@ -171,6 +171,8 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = ensemble.combine_calls_parallel(samples, run_parallel)
         with profile.report("validation summary", dirs):
             samples = validate.summarize_grading(samples)
+        with profile.report("structural variation precall", dirs):
+            samples = structural.run(samples, run_parallel, "precall")
         with profile.report("structural variation", dirs):
             samples = structural.run(samples, run_parallel, "standard")
         with profile.report("structural variation ensemble", dirs):

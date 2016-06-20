@@ -11,7 +11,7 @@ import pybedtools
 import numpy as np
 import toolz as tz
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
@@ -77,7 +77,7 @@ def _run_cnvkit_single(data, background=None):
         background_bams = []
         background_name = None
     ckouts = _run_cnvkit_shared([data], test_bams, background_bams, work_dir,
-                               background_name=background_name)
+                                background_name=background_name)
     if not ckouts:
         return [data]
     else:
@@ -257,7 +257,8 @@ def _cnvkit_coverage(bam_file, bed_info, input_type, work_dir, data):
     """
     bed_file = bed_info["file"]
     exts = {".target.bed": ("target", "targetcoverage.cnn"),
-            ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn")}
+            ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn"),
+            ".bed": ("", "cnn")}
     assert bed_file.endswith(tuple(exts.keys())), "Unexpected BED file extension for coverage %s" % bed_file
     for orig, (cnntype, ext) in exts.items():
         if bed_file.endswith(orig):

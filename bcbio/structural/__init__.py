@@ -8,14 +8,16 @@ import toolz as tz
 
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly,
-                              lumpy, manta, metasv, prioritize, plot, validate, wham)
+                              lumpy, manta, metasv, prioritize, plot,
+                              seq2c, validate, wham)
 from bcbio.variation import vcfutils
 
 # Stratify callers by stage -- see `run` documentation below for definitions
 _CALLERS = {
+  "precall": {"seq2c": seq2c.precall},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
-               "cnvkit": cnvkit.run, "battenberg": battenberg.run},
+               "cnvkit": cnvkit.run, "battenberg": battenberg.run, "seq2c": seq2c.run},
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
@@ -92,6 +94,7 @@ def run(samples, run_parallel, stage):
     """Run structural variation detection.
 
     The stage indicates which level of structural variant calling to run.
+      - precall, perform initial sample based assessment of samples
       - standard, regular batch calling
       - ensemble, post-calling, combine other callers or prioritize results
     """
@@ -105,7 +108,7 @@ def run(samples, run_parallel, stage):
             for x in ready_data:
                 svcaller = x["config"]["algorithm"].get("svcaller_active")
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
-                if stage == "ensemble":  # no batching for ensemble methods
+                if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
                     batch = "%s-%s" % (dd.get_sample_name(x), batch)
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
                 for b in batches:
