@@ -257,12 +257,15 @@ def _cnvkit_coverage(bam_file, bed_info, input_type, work_dir, data):
     """
     bed_file = bed_info["file"]
     exts = {".target.bed": ("target", "targetcoverage.cnn"),
-            ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn"),
-            ".bed": ("", "cnn")}
-    assert bed_file.endswith(tuple(exts.keys())), "Unexpected BED file extension for coverage %s" % bed_file
-    for orig, (cnntype, ext) in exts.items():
+            ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn")}
+    cnntype = None
+    for orig, (cur_cnntype, ext) in exts.items():
         if bed_file.endswith(orig):
+            cnntype = cur_cnntype
             break
+    if cnntype is None:
+        assert bed_file.endswith(".bed"), "Unexpected BED file extension for coverage %s" % bed_file
+        cnntype = ""
     base = _bam_to_outbase(bam_file, work_dir)
     merged_out_file = "%s.%s" % (base, ext)
     out_file = "%s-%s.%s" % (base, bed_info["i"], ext) if "i" in bed_info else merged_out_file
