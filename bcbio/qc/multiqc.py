@@ -181,9 +181,9 @@ def _merge_metrics(samples):
             if not tz.get_in(['summary', 'qc'], s):
                 s['summary'] = {"qc": {}}
             if m:
-                for me in m:
+                for me in m.keys():
                     if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
-                        continue
+                        m.pop(me, None)
                 dt = pd.DataFrame(m, index=['1'])
                 dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
                 cov[sample_name] = dt['avg_coverage_per_region'][0]
