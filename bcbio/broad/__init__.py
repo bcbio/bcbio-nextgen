@@ -241,10 +241,8 @@ class BroadRunner:
                 params.extend(["-nt", str(cores)])
             elif prog in support_nct:
                 params.extend(["-nct", str(cores)])
-                if config["algorithm"].get("memory_adjust") is None:
-                    config = utils.deepish_copy(config)
-                    config["algorithm"]["memory_adjust"] = {"direction": "increase",
-                                                            "magnitude": int(cores) // 2}
+                memscale = config["algorithm"]["memory_adjust"] = {"direction": "increase",
+                                                                   "magnitude": max(1, int(cores) // 2)}
         if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
