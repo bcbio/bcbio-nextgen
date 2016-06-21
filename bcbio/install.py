@@ -709,7 +709,8 @@ def add_subparser(subparsers):
 def get_cloudbiolinux(remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")
     if not os.path.exists(base_dir):
-        subprocess.check_call("wget --no-check-certificate -O- %s | tar xz && mv cloudbiolinux-master cloudbiolinux"
+        subprocess.check_call("wget --no-check-certificate -O- %s | tar xz && "
+                              "(mv master cloudbiolinux || mv cloudbiolinux-master cloudbiolinux)"
                               % remotes["cloudbiolinux"], shell=True)
     return {"biodata": os.path.join(base_dir, "config", "biodata.yaml"),
             "dir": base_dir}
