@@ -534,6 +534,8 @@ def _add_loh_plot(out, data):
     if len(vrn_files) > 0:
         out_file = "%s-loh.pdf" % os.path.splitext(out["cnr"])[0]
         cns = _remove_haplotype_chroms(out["cns"], data)
+        if _cnx_is_empty(cns):
+            return None
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
                 cmd = [_get_cmd(), "loh", "-t", "-s", cns,
