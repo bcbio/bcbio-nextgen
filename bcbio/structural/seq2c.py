@@ -10,13 +10,51 @@ import os
 import subprocess
 from collections import defaultdict
 
+from bcbio.variation.vcfutils import get_paired_phenotype
+
 from bcbio import utils
-from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import datadict as dd, config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
-from pipeline import config_utils
 
+
+def run(items):
+    """Normalization and log2 ratio calculation plus CNV calling for full cohort.
+
+    - Prepare coverage file in correct format
+    - Prepare read counts for each sample
+    - lr2gene.pl -- call amplifications and deletions
+    """
+
+    items = [utils.to_single_data(x) for x in items]
+    work_dir = _sv_workdir(items[0])
+    normal_sample_names = [dd.get_sample_name(x) for x in items if get_paired_phenotype(x) == 'normal']
+
+    coverage_file = _combine_coverages(items, work_dir)
+    read_mapping_file = _calculate_mapping_reads(items, work_dir)
+    seq2c_calls_file = _call_seq2c(items, work_dir, read_mapping_file, coverage_file, normal_sample_names)
+
+    return items
+
+def _call_seq2c(items, work_dir, read_mapping_file, coverage_file, control_sample_names):
+    cov2lr = 'cov2lr.pl'
+    lr2gene = 'lr2gene.pl'
+
+    output_fpath = os.path.join(work_dir, 'seq2c.tsv')
+    controls = ''
+    lr2gene_opt = ''
+    seq2c_opts = ''
+    if control_sample_names:  # if controls present
+        controls = '-c ' + ':'.join(control_sample_names)
+        lr2gene_opt = '-c'
+
+    if not utils.file_exists(output_fpath):
+        with file_transaction(items[0], output_fpath) as tx_out_file:
+            cmd = ("{cov2lr} -a {controls} {read_mapping_file} {coverage_file} | " +
+                   "{lr2gene} {lr2gene_opt} {seq2c_opts} > {output_fpath}")
+            do.run(cmd.format(**locals()), "Seq2C CNV calling")
+    return output_fpath
 
 def precall(items):
     """Perform initial pre-calling steps -- coverage calcuation by sample.
@@ -25,15 +63,15 @@ def precall(items):
     """
     items = [utils.to_single_data(x) for x in items]
     assert len(items) == 1, "Expect one item to Seq2C coverage calculation"
-    data = items[0]
+    data = utils.to_single_data(items)
     assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
     bed_file = dd.get_variant_regions(data)
     bam_file = dd.get_align_bam(data)
-    sample_name = data['name'][1]
+    sample_name = dd.get_sample_name(data)
 
     work_dir = _sv_workdir(data)
-    sambamba_depth_file = os.path.join(work_dir, sample_name + '.sambamba_depth.txt')
+    sambamba_depth_file = os.path.join(work_dir, sample_name + '.sambamba_depth.tsv')
     sambamba = config_utils.get_program("sambamba", data["config"])
     num_cores = dd.get_cores(data)
     if not utils.file_exists(sambamba_depth_file):
@@ -43,7 +81,7 @@ def precall(items):
     logger.debug('Saved to ' + sambamba_depth_file)
 
     logger.debug('Converting sambamba depth output to cov2lr.pl input')
-    out_file = os.path.join(work_dir, os.path.splitext(os.path.basename(bam_file))[0] + '.seq2cov.txt')
+    out_file = os.path.join(work_dir, os.path.splitext(os.path.basename(bam_file))[0] + '.seq2cov.tsv')
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             sambabma_depth_to_seq2cov(sambamba_depth_file, tx_out_file, sample_name)
@@ -55,24 +93,27 @@ def precall(items):
                        "cov": out_file})
     return [data]
 
-''' sambamba_depth_output_fpath:
-# chrom chromStart  chromEnd  F3       readCount  minDepth  meanCoverage  stdDev   percentage1  percentage5  percentage10  ...  sampleName
-chr20   68345       68413     DEFB125  56         28        32.5          1.66716  100          100          100           ...  chr20_tumor
-chr20   76640       77301     DEFB125  279        24        36.9213       5.74231  100          100          100           ...  chr20_tumor
-'''
-''' seq2cov:
-chr20_tumor_1   DEFB125   chr20   68346   68413   Amplicon    68   28.0
-chr20_tumor_1   DEFB125   chr20   76641   77301   Amplicon    661  24.0
-chr20_tumor_1   DEFB125   chr20   68346   77301   Whole-Gene  729  24.3731138546
-chr20_tumor_1   DEFB126   chr20   123247  123332  Amplicon    86   40.0
-'''
 def sambabma_depth_to_seq2cov(input_fpath, output_fpath, sample_name):
-    with open(input_fpath) as f:
-        ave_depth_col = next(f).split('\t').index('meanCoverage')
+    """
+    Args:
+        input_fpath: output of "sambabma depth region":
+            # chrom chromStart  chromEnd  F3       readCount  meanCoverage  sampleName
+            chr20   68345       68413     DEFB125  56         32.5          chr20_tumor_1
+            chr20   76640       77301     DEFB125  279        36.9213       chr20_tumor_1
 
-    # first round: collecting gene ends
+        output_fpath: path to write results - input for Seq2C's cov2lr.pl, e.g.:
+            seq2cov:
+            chr20_tumor_1   DEFB125   chr20   68346   68413   Amplicon    68   28.0
+            chr20_tumor_1   DEFB125   chr20   76641   77301   Amplicon    661  24.0
+            chr20_tumor_1   DEFB125   chr20   68346   77301   Whole-Gene  729  24.3731138546
+
+        sample_name:
+            sample name (e.g. chr20_tumor_1)
+    """
+    # First round: collecting gene ends
     gene_end_by_gene = defaultdict(lambda: -1)
     with open(input_fpath) as f:
+        ave_depth_col = next(f).split('\t').index('meanCoverage')
         for l in f:
             if l.startswith('#'): continue
             fs = l.replace('\n', '').split('\t')
@@ -81,7 +122,7 @@ def sambabma_depth_to_seq2cov(input_fpath, output_fpath, sample_name):
             gene_name = fs[3]
             gene_end_by_gene[gene_name] = max(gene_end_by_gene[gene_name], end)
 
-    # second round: calculating coverage
+    # Second round: calculating gene level coverage, and writing file for Seq2C
     total_cov_by_gene = dict()
     gene_start_by_gene = dict()
     total_size_by_gene = dict()
@@ -123,20 +164,6 @@ def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "seq2c"))
 
-def run(items, background=None):
-    """Normalization and log2 ratio calculation plus CNV calling for full cohort.
-
-    - Prepare coverage file in correct format
-    - Prepare read counts for each sample
-    - cov2lr.pl -- log2 ratio calculation (do we need this with CNNs from CNVkit?)
-    - lr2gene.pl -- call amplifications and deletions
-    """
-    items = [utils.to_single_data(x) for x in items]
-    work_dir = _sv_workdir(items[0])
-    coverage_file = _combine_coverages(items, work_dir)
-    read_mapping_file = _calculate_mapping_reads(items, work_dir)
-    return items
-
 def _combine_coverages(items, work_dir):
     """Combine coverage cnns calculated for individual inputs into single file.
     """
@@ -146,13 +173,15 @@ def _combine_coverages(items, work_dir):
             for data in items:
                 svouts = [x for x in data["sv"] if x["variantcaller"] == "seq2c"]
                 assert len(svouts) == 1
-                cnn_file = svouts[0]["cnn"]
-                print cnn_file
+                cov_file = svouts[0]["cov"]
+                with open(cov_file) as cov_f, open(tx_out_file, 'w') as out_f:
+                    out_f.write(cov_f.read())
     return out_file
 
 def _calculate_mapping_reads(items, work_dir):
     """Calculate read counts from samtools idxstats for each sample.
     """
+    # TODO: either parse from somewhere, or run in parallel
     out_file = os.path.join(work_dir, "mapping_reads.txt")
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
