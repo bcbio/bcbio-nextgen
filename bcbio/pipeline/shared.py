@@ -181,7 +181,9 @@ def remove_lcr_regions(orig_bed, items):
     if lcr_bed:
         nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
         with file_transaction(items[0], nolcr_bed) as tx_nolcr_bed:
-            pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed), nonamecheck=True).saveas(tx_nolcr_bed)
+            with bedtools_tmpdir(items[0]):
+                pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed), nonamecheck=True).\
+                    saveas(tx_nolcr_bed)
         # If we have a non-empty file, convert to the LCR subtracted for downstream analysis
         if utils.file_exists(nolcr_bed):
             orig_bed = nolcr_bed
