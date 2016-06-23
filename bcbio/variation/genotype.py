@@ -21,7 +21,8 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
     caller = data["config"]["algorithm"].get("variantcaller")
-    call_file = ploidy.filter_vcf_by_sex(call_file, items)
+    if not "gvcf" in dd.get_tools_on(data):
+        call_file = ploidy.filter_vcf_by_sex(call_file, items)
     if caller in ["freebayes"]:
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
     elif caller in ["platypus"]:
