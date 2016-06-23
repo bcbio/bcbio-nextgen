@@ -32,8 +32,9 @@ def trim_srna_sample(data):
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
-    if trim_reads:
-        adapter = dd.get_adapters(data)[0]
+    adapter = dd.get_adapters(data)
+    if trim_reads and adapter:
+        adapter = adapter[0]
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
@@ -42,6 +43,7 @@ def trim_srna_sample(data):
             with file_transaction(out_file) as tx_out_file:
                 do.run(cmd.format(**locals()), "remove adapter")
     else:
+        logger.debug("Skip trimming for: %s" % names)
         symlink_plus(in_file, out_file)
     data["clean_fastq"] = out_file
     data["collapse"] = _collapse(data["clean_fastq"])
