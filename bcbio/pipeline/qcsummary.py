@@ -131,7 +131,9 @@ def _organize_qc_files(program, qc_dir):
 
     Provides compatibility with CWL output. Returns None if no files created during processing.
     """
-    base_files = {"fastqc": "fastqc_report.html", "qualimap": "qualimapReport.html"}
+    base_files = {"fastqc": "fastqc_report.html",
+                  "qualimap_rnaseq": "qualimapReport.html",
+                  "qualimap": "qualimapReport.html"}
     if os.path.exists(qc_dir):
         out_files = []
         for fname in [os.path.join(qc_dir, x) for x in os.listdir(qc_dir)]:

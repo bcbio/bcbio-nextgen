@@ -266,6 +266,7 @@ def run_rnaseq(bam_file, data, out_dir):
                     "secondstrand": "strand-specific-forward",
                     "unstranded": "non-strand-specific"}
     report_file = os.path.join(out_dir, "qualimapReport.html")
+    raw_file = os.path.join(out_dir, "rnaseq_qc_results.txt")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
     single_end = not bam.is_paired(bam_file)
@@ -275,6 +276,8 @@ def run_rnaseq(bam_file, data, out_dir):
         bam.index(bam_file, config)
         cmd = _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file, single_end, library)
         do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
+        cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
+        do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, out_dir, data))
     metrics.update(_detect_rRNA(data))
