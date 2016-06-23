@@ -10,10 +10,11 @@ import pybedtools
 import pandas as pd
 import numpy as np
 
-import bcbio.bed as bed
+from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, max_command_length, safe_makedir,
                          robust_partition_all, append_stem, is_gzipped, remove_plus,
-                         open_gzipsafe, symlink_plus, copy_plus, splitext_plus)
+                         open_gzipsafe, symlink_plus, copy_plus, splitext_plus,
+                         append_stem)
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
@@ -212,8 +213,7 @@ def coverage(data, out_dir):
     work_dir = safe_makedir(out_dir)
     if not bed_file:
         return None
-    cleaned_bed = os.path.join(work_dir, os.path.splitext(os.path.basename(bed_file))[0] + ".cleaned.bed")
-    cleaned_bed = bed.decomment(bed_file, cleaned_bed)
+    cleaned_bed = clean_file(bed_file, data)
 
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -268,11 +268,17 @@ def _read_bcffile(out_file):
                 out["Variations (indels)"] = line.split()[-1]
             elif line.startswith("TSTV"):
                 out["Variations (ts/tv)"] = line.split()[4]
+            elif line.startswith("PSC"):
+                out["Variations (homozygous)"] = line.split()[3]
+                out["Variations (alt homozygous)"] = line.split()[4]
+                out["Variations (heterozygous)"] = line.split()[5]
     return out
 
 def _run_bcftools(data, out_dir):
     """Get variants stats"""
-    vcf_file = data['vrn_file']
+    vcf_file = data.get("vrn_file")
+    if not vcf_file:
+        vcf_file = data['variants'][0].get("germline", None)
     opts = "-f PASS"
     out = {}
     if vcf_file:
@@ -284,23 +290,16 @@ def _run_bcftools(data, out_dir):
             cmd = ("{bcftools} stats -s {name} {opts} {vcf_file} > {out_file}")
             do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
         out[name] = _read_bcffile(out_file)
-        normal_sample = vcfutils.get_normal_sample(vcf_file)
-        if normal_sample:
-            out_file = "%s-%s-bcfstats.tsv" % (stem, normal_sample)
-            if not file_exists(out_file):
-                cmd = ("{bcftools} stats -s {normal_sample} {vcf_file} > {out_file}")
-                do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
-            out[normal_sample] = _read_bcffile(out_file)
     return out
 
 def variants(data, out_dir):
-    if "vrn_file" not in data:
+    """Variants QC metrics"""
+    if not "variants" in data:
         return None
-
-    in_vcf = data['vrn_file']
     work_dir = safe_makedir(out_dir)
     sample = dd.get_sample_name(data)
     bcfstats = _run_bcftools(data, work_dir)
+    bed_file = dd.get_coverage(data)
     bcf_out = os.path.join(sample + "_bcbio_variants_stats.txt")
     cg_file = os.path.join(sample + "_with-gc.vcf.gz")
     parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
@@ -309,8 +308,11 @@ def variants(data, out_dir):
         if not file_exists(bcf_out):
             with open(bcf_out, "w") as out_handle:
                 yaml.safe_dump(bcfstats, out_handle, default_flow_style=False, allow_unicode=False)
-        if not dd.get_coverage(data):
+        if "vrn_file" not in data or not bed_file:
             return None
+
+        in_vcf = data['vrn_file']
+        cleaned_bed = clean_file(bed_file, data)
         if file_exists(qc_file):
             return qc_file
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -325,7 +327,7 @@ def variants(data, out_dir):
                 with file_transaction(cg_file) as tx_out:
                     params = ["-T", "VariantAnnotator",
                               "-R", ref_file,
-                              "-L", bed_file,
+                              "-L", cleaned_bed,
                               "-I", in_bam,
                               "-A", "GCContent",
                               "-A", "Coverage",
@@ -363,8 +365,7 @@ def priority_coverage(data, out_dir):
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
     with tx_tmpdir(data, work_dir) as tmp_dir:
-        cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
-        cleaned_bed = bed.decomment(bed_file, cleaned_bed)
+        cleaned_bed = clean_file(bed_file, data)
         with file_transaction(out_file) as tx_out_file:
             parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
             cmd = ("{sambamba} depth base -t {nthreads} -L {cleaned_bed} "
@@ -391,8 +392,7 @@ def priority_total_coverage(data, out_dir):
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
     with tx_tmpdir(data, work_dir) as tmp_dir:
-        cleaned_bed = os.path.join(tmp_dir, os.path.basename(bed_file))
-        cleaned_bed = bed.decomment(bed_file, cleaned_bed)
+        cleaned_bed = clean_file(bed_file, data)
         with file_transaction(out_file) as tx_out_file:
             cmd = ("{sambamba} depth region -t {nthreads} -L {cleaned_bed} "
                    "-F \"not unmapped\" "

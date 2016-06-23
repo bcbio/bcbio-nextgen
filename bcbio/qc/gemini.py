@@ -18,26 +18,33 @@ def run(bam_file, data, out_dir):
     gemini_dbs = [d for d in
                   [tz.get_in(["population", "db"], x) for x in data.get("variants", [])] if d]
     if len(gemini_dbs) > 0:
+        name = dd.get_sample_name(data)
         out_dir = utils.safe_makedir(out_dir)
         gemini_db = gemini_dbs[0]
-        gemini_stat_file = os.path.join(out_dir, "%s-stats.yaml" % os.path.splitext(os.path.basename(gemini_db))[0])
+        gemini_stat_file = os.path.join(out_dir, "%s-%s-stats.yaml" % (os.path.splitext(os.path.basename(gemini_db))[0], name))
         if not utils.file_uptodate(gemini_stat_file, gemini_db):
             gemini = config_utils.get_program("gemini", data["config"])
-            tstv = subprocess.check_output([gemini, "stats", "--tstv", gemini_db])
-            gt_counts = subprocess.check_output([gemini, "stats", "--gts-by-sample", gemini_db])
-            dbsnp_count = subprocess.check_output([gemini, "query", gemini_db, "-q",
-                                                   "SELECT count(*) FROM variants WHERE in_dbsnp==1"])
-            out["Transition/Transversion"] = tstv.split("\n")[1].split()[-1]
-            for line in gt_counts.split("\n"):
-                parts = line.rstrip().split()
-                if len(parts) > 0 and parts[0] != "sample":
-                    name, hom_ref, het, hom_var, _, total = parts
-                    out[name] = {}
-                    out[name]["Variations (heterozygous)"] = int(het)
-                    out[name]["Variations (homozygous)"] = int(hom_var)
-                    # same total variations for all samples, keep that top level as well.
-                    out["Variations (total)"] = int(total)
-            out["Variations (in dbSNP)"] = int(dbsnp_count.strip())
+            cmd = [gemini, "query", gemini_db, "-q",
+                   "SELECT count(*) FROM variants",
+                   "--gt-filter",
+                   "gt_types.%s != HOM_REF" % name]
+            gt_counts = subprocess.check_output(cmd)
+            cmd = [gemini, "query", gemini_db, "-q",
+                   "SELECT count(*) FROM variants WHERE in_dbsnp==1",
+                   "--gt-filter", "gt_types.%s != HOM_REF" % name]
+            dbsnp_counts = subprocess.check_output(cmd)
+            cmd = [gemini, "query", gemini_db, "-q",
+                   "SELECT count(*) FROM variants ",
+                   "--gt-filter", "gt_types.%s == HET" % name]
+            het_counts = subprocess.check_output(cmd)
+            cmd = [gemini, "query", gemini_db, "-q",
+                   "SELECT count(*) FROM variants ",
+                   "--gt-filter", "gt_types.%s == HOM_ALT" % name]
+            hom_alt_counts = subprocess.check_output(cmd)
+            out["Variations (heterozygous)"] = int(het_counts.strip()) if het_counts else 0
+            out["Variations (homozygous)"] = int(hom_alt_counts.strip()) if hom_alt_counts else 0
+            out["Variations (total)"] = int(gt_counts.strip()) if gt_counts else 0
+            out["Variations (in dbSNP)"] = int(dbsnp_counts.strip()) if dbsnp_counts else 0
             if out.get("Variations (total)") > 0:
                 out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
                                                                float(out["Variations (total)"]) * 100.0)
@@ -46,11 +53,4 @@ def run(bam_file, data, out_dir):
         else:
             with open(gemini_stat_file) as in_handle:
                 out = yaml.safe_load(in_handle)
-
-    res = {}
-    for k, v in out.iteritems():
-        if not isinstance(v, dict):
-            res.update({k: v})
-        if k == dd.get_sample_name(data):
-            res.update(v)
-    return res
+    return out

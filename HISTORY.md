@@ -1,5 +1,7 @@
 ## 0.9.9 (in progress)
 
+- Re-organization of variants stats using bcftools and
+  cleaning gemini queries to get individual samples metrics.
 - Quality control back end revamped to support better parallelization
   and pluggability of new QC metrics.
 - Add `fixrg` target to `bam_clean` to accept BAM inputs with correct

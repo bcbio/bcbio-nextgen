@@ -25,6 +25,7 @@ def run(bam_file, data, out_dir):
     path = os.path.dirname(bam_fname)
     utils.safe_makedir(out_dir)
     hsmetric_file = os.path.join(out_dir, "%s-sort.hs_metrics" % sample)
+    hsinsert_file = os.path.join(out_dir, "%s-sort.insert_metrics" % sample)
     if utils.file_exists(hsmetric_file):
         return hsmetric_file
     with utils.chdir(out_dir):
@@ -37,6 +38,7 @@ def run(bam_file, data, out_dir):
                                bam.is_paired(bam_fname),
                                target_file, target_file, None, config)
     do.run("sed -i 's/-sort.bam//g' %s" % hsmetric_file, "")
+    do.run("sed -i 's/-sort.bam//g' %s" % hsinsert_file, "")
     return hsmetric_file
 
 
