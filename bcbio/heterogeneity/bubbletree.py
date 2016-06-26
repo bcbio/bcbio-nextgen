@@ -24,7 +24,7 @@ from bcbio.variation import bedutils
 
 population_keys = ['AC_AFR', 'AC_AMR', 'AC_EAS', 'AC_FIN', 'AC_NFE', 'AC_OTH', 'AC_SAS']
 
-def run(vrn_info, calls_by_name, somatic_info, do_plots=True):
+def run(vrn_info, calls_by_name, somatic_info, do_plots=True, handle_failures=True):
     """Run BubbleTree given variant calls, CNVs and somatic
     """
     if "seq2c" in calls_by_name:
@@ -39,9 +39,11 @@ def run(vrn_info, calls_by_name, somatic_info, do_plots=True):
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], work_dir,
                              somatic_info.tumor_data)
     wide_lrr = cnv_info["variantcaller"] == "cnvkit" and somatic_info.normal_bam is None
-    return _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data, wide_lrr, do_plots)
+    return _run_bubbletree(vcf_csv, cnv_csv, somatic_info.tumor_data, wide_lrr, do_plots,
+                           handle_failures)
 
-def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True):
+def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
+                    handle_failures=True):
     """Create R script and run on input data
 
     BubbleTree has some internal hardcoded paramters that assume a smaller
@@ -66,7 +68,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True):
         try:
             do.run([utils.Rscript_cmd(), r_file], "Assess heterogeneity with BubbleTree")
         except subprocess.CalledProcessError, msg:
-            if _allowed_bubbletree_errorstates(str(msg)):
+            if handle_failures and _allowed_bubbletree_errorstates(str(msg)):
                 with open(freqs_out, "w") as out_handle:
                     out_handle.write('bubbletree failed:\n %s"\n' % (str(msg)))
             else:
@@ -110,8 +112,8 @@ def _prep_vrn_file(in_file, vcaller, seg_file, work_dir, somatic_info):
     data = somatic_info.tumor_data
     params = {"min_freq": 0.4,
               "max_freq": 0.6,
-              "tumor_only": {"min_freq": 0.20, "max_freq": 0.80},
-              "min_depth": 15,
+              "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
+              "min_depth": 20,
               "hetblock": {"min_alleles": 25,
                            "allowed_misses": 2}}
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
