@@ -1,5 +1,7 @@
 ## 0.9.9 (in progress)
 
+- Use conda installed Java instead of requiring external installation
+  for most tools.
 - Re-organization of variants stats using bcftools and
   cleaning gemini queries to get individual samples metrics.
 - Quality control back end revamped to support better parallelization

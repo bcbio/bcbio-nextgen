@@ -43,7 +43,8 @@ def run(bam_file, data, out_dir):
         qualimap = config_utils.get_program("qualimap", data["config"])
         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                              num_cores)
-        cmd = ("unset DISPLAY && {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
+        export = utils.local_path_export()
+        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
                "-nt {num_cores} --java-mem-size={max_mem} {options}")
         species = tz.get_in(("genome_resources", "aliases", "ensembl"), data, "")
         if species in ["HUMAN", "MOUSE"]:
@@ -295,6 +296,8 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
     num_cores = resources.get("cores", dd.get_num_cores(data))
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
-    cmd = ("unset DISPLAY && {qualimap} rnaseq -outdir {out_dir} -a proportional -bam {bam_file} -p {library} "
+    export = utils.local_path_export()
+    cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
+           "-a proportional -bam {bam_file} -p {library} "
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
     return cmd

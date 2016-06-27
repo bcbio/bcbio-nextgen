@@ -119,7 +119,8 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
                 remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
-                varscan_cmd = ("varscan {jvm_opts} somatic "
+                export = utils.local_path_export()
+                varscan_cmd = ("{export} varscan {jvm_opts} somatic "
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
                                "--output-snp {tx_snp} --output-indel {tx_indel} "
@@ -299,7 +300,8 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
         fix_ambig_ref = vcfutils.fix_ambiguous_cl()
         fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-        cmd = ("{mpileup} | {remove_zerocoverage} | "
+        export = utils.local_path_export()
+        cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
                 "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 "
                 "  --vcf-sample-list {sample_list} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "

@@ -132,6 +132,7 @@ def _bcbio_variation_ensemble(vrn_files, out_file, ref_file, config_file, base_d
     cmd = ["bcbio-variation"] + jvm_opts + java_args + \
           ["variant-ensemble", config_file, ref_file, out_file] + vrn_files
     with utils.chdir(base_dir):
+        cmd = "%s %s" % (utils.local_path_export(), " ".join(str(x) for x in cmd))
         do.run(cmd, "Ensemble calling: %s" % os.path.basename(base_dir))
 
 def _run_ensemble(batch_id, vrn_files, config_file, base_dir, ref_file, data):
@@ -194,6 +195,7 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
         if not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata):
             cmd += ["--nofiltered"]
         cmd += [out_vcf_file, dd.get_ref_file(edata)] + vrn_files
+        cmd = "%s %s" % (utils.local_path_export(), " ".join(str(x) for x in cmd))
         do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
     in_data = utils.deepish_copy(edata)
     in_data["vrn_file"] = out_vcf_file

@@ -31,7 +31,7 @@ def _is_variant(items):
     return any(item.get("analysis", "").lower().startswith("variant") for item in items)
 
 def java(config, items):
-    """GATK and derived tools requires Java 1.7.
+    """Check for presence of Java 1.7. Back compatible for tools that require it.
     """
     want_version = "1.7" if _is_variant(items) else "1.6"
     try:
@@ -59,7 +59,7 @@ def testall(items):
     config = items[0]["config"]
     msgs = []
     if _has_pipeline(items):
-        for fn in [samtools, java]:
+        for fn in [samtools]:
             out = fn(config, items)
             if out:
                 msgs.append(out)

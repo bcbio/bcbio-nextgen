@@ -276,7 +276,8 @@ def get_cmd(cmd_name, datadir, config, out_file):
     memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
     snpeff = config_utils.get_program("snpEff", config)
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    cmd = "{snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
+    export = utils.local_path_export()
+    cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, out_format, data):

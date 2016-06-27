@@ -50,7 +50,9 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
             with file_transaction(data, priority_vcf) as tx_out_file:
                 resources = config_utils.get_resources("bcbio_prioritize", data["config"])
                 jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
-                cmd = ("bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} -k {prioritize_by}")
+                export = utils.local_path_export()
+                cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
+                       " -k {prioritize_by}")
                 do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
         if post_prior_fn:
             priority_vcf = post_prior_fn(priority_vcf, work_dir, data)

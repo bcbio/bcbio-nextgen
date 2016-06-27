@@ -232,7 +232,8 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
         cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
-        mem_export = "export RTG_JAVA_OPTS='%s' && export RTG_MEM=%s" % (jvm_stack, jvm_mem)
+        mem_export = "%s export RTG_JAVA_OPTS='%s' && export RTG_MEM=%s" % (utils.local_path_export(),
+                                                                            jvm_stack, jvm_mem)
         cmd = mem_export + " && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     out = {"fp": os.path.join(out_dir, "fp.vcf.gz"),
