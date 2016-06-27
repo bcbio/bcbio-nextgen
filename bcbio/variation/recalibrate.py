@@ -21,7 +21,7 @@ from bcbio.variation.realign import has_aligned_reads
 def prep_recal(data):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
     """
-    if data["config"]["algorithm"].get("recalibrate", True) in [True, "gatk"]:
+    if dd.get_recalibrate(data) in [True, "gatk"]:
         logger.info("Recalibrating %s with GATK" % str(dd.get_sample_name(data)))
         ref_file = data["sam_ref"]
         config = data["config"]

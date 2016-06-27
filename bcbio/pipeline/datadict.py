@@ -51,6 +51,8 @@ LOOKUPS = {
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
+    "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "work_bam": {"keys": ["work_bam"]},
     "count_file": {"keys": ["count_file"]},

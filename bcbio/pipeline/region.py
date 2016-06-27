@@ -128,8 +128,7 @@ def parallel_prep_region(samples, run_parallel):
     for data in [x[0] for x in samples]:
         if data.get("work_bam"):
             data["align_bam"] = data["work_bam"]
-        a = data["config"]["algorithm"]
-        if (not a.get("recalibrate") and not a.get("realign") and not a.get("variantcaller", "gatk")):
+        if (not dd.get_recalibrate(data) and not dd.get_realign(data) and not dd.get_variantcaller(data)):
             extras.append([data])
         elif not data.get(file_key):
             extras.append([data])

@@ -106,10 +106,9 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
 def _get_prep_params(data):
     """Retrieve configuration parameters with defaults for preparing BAM files.
     """
-    algorithm = data["config"]["algorithm"]
-    recal_param = algorithm.get("recalibrate", True)
+    recal_param = dd.get_recalibrate(data)
     recal_param = "gatk" if recal_param is True else recal_param
-    realign_param = algorithm.get("realign", True)
+    realign_param = dd.get_realign(data)
     realign_param = "gatk" if realign_param is True else realign_param
     return {"recal": recal_param, "realign": realign_param}
 

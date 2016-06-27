@@ -1,5 +1,8 @@
 ## 0.9.9 (in progress)
 
+- Change defaults for recalibration and realignment to False. These have been
+  the recommended settings (http://bit.ly/bcbio-minimal) and no realignment now
+  matches Broad recommendations.
 - Use conda installed Java instead of requiring external installation
   for most tools.
 - Re-organization of variants stats using bcftools and

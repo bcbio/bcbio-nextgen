@@ -769,8 +769,8 @@ def _add_algorithm_defaults(algorithm):
                 "nomap_split_size": 250,
                 "nomap_split_targets": 200,
                 "mark_duplicates": True,
-                "recalibrate": True,
-                "realign": True,
+                "recalibrate": False,
+                "realign": False,
                 "variant_regions": None,
                 "validate": None,
                 "validate_regions": None}
