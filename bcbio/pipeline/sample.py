@@ -298,6 +298,7 @@ def _merge_hla_fastq_inputs(data):
     """
     hla_key = ["hla", "fastq"]
     hla_sample_files = [x for x in tz.get_in(hla_key, data, []) if x and x != "None"]
+    merged_hlas = None
     if hla_sample_files:
         out_files = collections.defaultdict(list)
         for hla_files in hla_sample_files:
@@ -314,9 +315,7 @@ def _merge_hla_fastq_inputs(data):
                 out_file = os.path.join(hla_outdir, "%s-%s.fq" % (dd.get_sample_name(data), hlatype))
                 optitype.combine_hla_fqs([(hlatype, f) for f in files], out_file, data)
                 merged_hlas.append(out_file)
-        data = tz.update_in(data, hla_key, lambda x: merged_hlas)
-    else:
-        data = tz.update_in(data, hla_key, lambda x: None)
+    data = tz.update_in(data, hla_key, lambda x: merged_hlas)
     return data
 
 def prepare_bcbio_samples(sample):
