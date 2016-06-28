@@ -68,7 +68,7 @@ def _prep_priority_filter(gemini_db, data):
     """
     from gemini import GeminiQuery
     out_file = "%s-priority.tsv" % utils.splitext_plus(gemini_db)[0]
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         ref_chroms = set([x.name for x in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         with file_transaction(data, out_file) as tx_out_file:
             gq = GeminiQuery(gemini_db)
