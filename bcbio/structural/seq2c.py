@@ -16,6 +16,7 @@ from bcbio.variation.vcfutils import get_paired_phenotype
 from bcbio.pipeline import datadict as dd, config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
+from bcbio.structural import annotate
 from bcbio.log import logger
 
 
@@ -29,11 +30,11 @@ def precall(items):
     data = utils.to_single_data(items)
     assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
+    work_dir = _sv_workdir(data)
     bed_file = dd.get_variant_regions(data)
-    bed_file = _prep_bed(data, bed_file)
+    bed_file = _prep_bed(data, bed_file, work_dir)
     bam_file = dd.get_align_bam(data)
     sample_name = dd.get_sample_name(data)
-    work_dir = _sv_workdir(data)
 
     cov_file = _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name)
 
@@ -63,19 +64,19 @@ def run(items):
 
     return items
 
-def _prep_bed(data, bed_fpath):
-    out_file = "%s-clean.bed" % utils.splitext_plus(bed_fpath)[0]
+def _prep_bed(data, bed_fpath, work_dir):
+    out_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(bed_fpath))[0]))
     if utils.file_exists(out_file):
         return out_file
 
-    cols = _count_bed_cols(bed_fpath)
-    if cols < 4: bed_fpath = _annotate_bed(bed_fpath, data)
-    bed = bt.BedTool(bed_fpath)
-    if 8 > cols > 4: bed = bed.cut(range(4))
-    elif cols > 8: bed = bed.cut(range(8))
-    bed = bed.filter(lambda x: x.name not in ["", ".", "-"])
-
-    bed.moveto(out_file)
+    with file_transaction(data, out_file) as tx_out_file:
+        cols = _count_bed_cols(bed_fpath)
+        if cols < 4: bed_fpath = _annotate_bed(bed_fpath, data, work_dir)
+        bed = bt.BedTool(bed_fpath)
+        if 8 > cols > 4: bed = bed.cut(range(4))
+        elif cols > 8: bed = bed.cut(range(8))
+        bed = bed.filter(lambda x: x.name not in ["", ".", "-"])
+        bed.moveto(tx_out_file)
     logger.debug("Saved Seq2C input BED into " + out_file)
     return out_file
 
@@ -86,9 +87,13 @@ def _count_bed_cols(bed_fpath):
                 return len(l.split('\t'))
     return None
 
-def _annotate_bed(bed_fpath, data):
-    logger.exception("BED file for Seq2C must be annotated with gene names, however the input BED is 3-columns: " + bed_fpath)
-    return bed_fpath
+def _annotate_bed(bed_fpath, data, work_dir):
+    annotate_bed = annotate.add_genes(bed_fpath, data, work_dir=work_dir)
+    if annotate_bed == bed_fpath:
+        raise ValueError("BED file for Seq2C must be annotated with gene names, "
+                         "however the input BED is 3-columns and we have no transcript "
+                         "data to annotate with" + bed_fpath)
+    return annotate_bed
 
 def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_names):
     output_fpath = os.path.join(work_dir, "calls_combined.tsv")
@@ -102,7 +107,8 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
 
     if not utils.file_exists(output_fpath):
         with file_transaction(items[0], output_fpath) as tx_out_file:
-            cmd = ("{cov2lr} -a {control_opt} {read_mapping_file} {coverage_file} | " +
+            export = utils.local_path_export()
+            cmd = ("{export} {cov2lr} -a {control_opt} {read_mapping_file} {coverage_file} | " +
                    "{lr2gene} {lr2gene_opt} > {output_fpath}")
             do.run(cmd.format(**locals()), "Seq2C CNV calling")
     return output_fpath

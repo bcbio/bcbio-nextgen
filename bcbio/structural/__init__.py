@@ -21,6 +21,7 @@ _CALLERS = {
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
+_GLOBAL_BATCHING = set(["seq2c"])
 
 def _get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -110,6 +111,8 @@ def run(samples, run_parallel, stage):
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
                 if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
                     batch = "%s-%s" % (dd.get_sample_name(x), batch)
+                elif svcaller in _GLOBAL_BATCHING:  # All samples batched together for analyses
+                    batch = "all"
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
                 for b in batches:
                     try:
