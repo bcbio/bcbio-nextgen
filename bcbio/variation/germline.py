@@ -33,7 +33,7 @@ def _remove_prioritization(in_file, data):
     out_file = "%s-germline.vcf" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
-            reader = cyvcf2.VCF(in_file)
+            reader = cyvcf2.VCF(str(in_file))
             reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
             # with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
             with open(tx_out_file, "w") as out_handle:
@@ -54,7 +54,7 @@ def _extract_germline(in_file, data):
     out_file = "%s-germline.vcf" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
-            reader = cyvcf2.VCF(in_file)
+            reader = cyvcf2.VCF(str(in_file))
             reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
             #with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
             with open(tx_out_file, "w") as out_handle:

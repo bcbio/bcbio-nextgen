@@ -142,15 +142,12 @@ def _freebayes_hard(in_file, data):
             out_file = vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
 
+    depth_thresh, qual_thresh = None, None
     if _do_high_depth_filter(data):
         stats = _calc_vcf_stats(in_file)
         if stats["avg_depth"] > 0:
             depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
             qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD hard filter
-        else:
-            depth_thresh = None
-    else:
-        depth_thresh = None
     filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
                '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50))')
     if depth_thresh:
@@ -160,7 +157,6 @@ def _freebayes_hard(in_file, data):
 def _do_high_depth_filter(data):
     """Check if we should do high depth filtering -- only on germline non-regional calls.
     """
-    return True
     is_genome = tz.get_in(["config", "algorithm", "coverage_interval"], data, "").lower() == "genome"
     is_paired = vcfutils.get_paired_phenotype(data)
     return is_genome and not is_paired
@@ -184,7 +180,7 @@ def _average_called_depth(in_file):
     """
     import cyvcf2
     depths = []
-    for rec in cyvcf2.VCF(in_file):
+    for rec in cyvcf2.VCF(str(in_file)):
         d = rec.INFO.get("DP")
         if d is not None:
             depths.append(int(d))
