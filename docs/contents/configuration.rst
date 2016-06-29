@@ -546,7 +546,10 @@ Structural variant calling
      - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
        `CIViC <https://civic.genome.wustl.edu>`_.
      - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
-       contributed by `AstraZeneca oncology <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
+       contributed by `AstraZeneca oncology
+       <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
+     - ``ACMG56`` -- Medically actionalbe genes from the `The American College
+       of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_
 - ``sv_regions`` -- A specification of regions to target during structural
   variant calling. By default, bcbio uses regions specified in
   ``variant_regions`` but this allows custom specification for structural

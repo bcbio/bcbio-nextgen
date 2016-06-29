@@ -219,8 +219,11 @@ def _fill_prioritization_targets(data):
     for target in [["svprioritize"], ["coverage"]]:
         val = tz.get_in(["config", "algorithm"] + target, data)
         if val and not os.path.exists(val):
-            installed_vals = glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
-                                                                     "coverage", "prioritize", val + "*.bed.gz")))
+            installed_vals = []
+            for ext in [".bed", ".bed.gz"]:
+                installed_vals += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                                          "coverage", "prioritize",
+                                                                          val + "*%s" % ext)))
             if len(installed_vals) == 0:
                 raise ValueError("Configuration problem. BED file not found for %s: %s" %
                                  (target, val))
@@ -230,7 +233,7 @@ def _fill_prioritization_targets(data):
                 # check for partial matches
                 installed_val = None
                 for v in installed_vals:
-                    if v.endswith(val + ".bed.gz"):
+                    if v.endswith(val + ".bed.gz") or v.endswith(val + ".bed"):
                         installed_val = v
                         break
                 # handle date-stamped inputs
