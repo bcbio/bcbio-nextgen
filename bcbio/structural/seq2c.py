@@ -16,7 +16,7 @@ from bcbio.variation.vcfutils import get_paired_phenotype
 from bcbio.pipeline import datadict as dd, config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.structural import annotate
+from bcbio.structural import annotate, regions
 from bcbio.log import logger
 
 
@@ -31,7 +31,7 @@ def precall(items):
     assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
     work_dir = _sv_workdir(data)
-    bed_file = dd.get_variant_regions(data)
+    bed_file = regions.get_sv_bed(data) or dd.get_variant_regions(data)
     bed_file = _prep_bed(data, bed_file, work_dir)
     bam_file = dd.get_align_bam(data)
     sample_name = dd.get_sample_name(data)

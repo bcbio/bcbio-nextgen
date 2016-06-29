@@ -9,6 +9,8 @@
   cleaning gemini queries to get individual samples metrics.
 - Quality control back end revamped to support better parallelization
   and pluggability of new QC metrics.
+- Support CNV calling with Seq2C for exome, targeted or amplicon experiments.
+  Thanks to Vlad Saveliev.
 - Add `fixrg` target to `bam_clean` to accept BAM inputs with correct
   sorting and reads but that need an updated read group.
 - More robust file transactions across network filesystems, avoiding failures
