@@ -23,6 +23,7 @@
 - Add support for running germline and somatic calling with Sentieon
   callers (https://peerj.com/preprints/1672/). Requires license from
   Sentieon.
+- Fix fusion calling using Tophat2. Thanks to @csardas for raising the issue.
 
 ## 0.9.8 (20 May 2016)
 

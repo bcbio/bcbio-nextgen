@@ -65,7 +65,10 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
             else:
                 cl += [fastq_file]
             cl = [str(i) for i in cl]
-            fix_rg_cmd = r"samtools addreplacerg -r '%s' -" % novoalign.get_rg_info(names)
-            cmd = " ".join(cl) + " | " + fix_rg_cmd + " | " + tobam_cl
+            fix_rg_cmd = r"samtools addreplacerg -r '%s' -" % novoalign.get_rg_info(data["rgnames"])
+            if fix_rg_cmd:
+                cmd = " ".join(cl) + " | " + fix_rg_cmd + " | " + tobam_cl
+            else:
+                cmd = " ".join(cl) + " | " + tobam_cl
             do.run(cmd, "Running Bowtie on %s and %s." % (fastq_file, pair_file), data)
     return out_file
