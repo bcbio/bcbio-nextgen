@@ -205,18 +205,15 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
         return "\t".join(line)
 
     if len(line) > 10:
-        #print line
         Ifreq = line[8].split(":").index("FREQ")
-        #print repr(Ifreq)
         ndat = line[9].split(":")
         tdat = line[10].split(":")
-        #print ndat
-        #print tdat
-        somatic_status = line[7].split(";")  # SS=<number>
         # HACK: The position of the SS= changes, so we just search for it
-        somatic_status = [item for item in somatic_status
-                          if item.startswith("SS=")][0]
-        somatic_status = int(somatic_status.split("=")[1])  # Get the number
+        ss_vals = [item for item in line[7].split(";") if item.startswith("SS=")]
+        if len(ss_vals) > 0:
+            somatic_status = int(ss_vals[0].split("=")[1])  # Get the number
+        else:
+            somatic_status = None
 
         try:
             ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
