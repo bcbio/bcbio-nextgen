@@ -177,31 +177,47 @@ def parallel_variantcall_region(samples, run_parallel):
                                        "vrn_file", ["region", "sam_ref", "config"]))
     return extras + samples
 
+
+def vc_output_record(samples):
+    """Prepare output record from variant calling to feed into downstream analysis.
+
+    Prep work handles reformatting so we return generated dictionaries.
+    """
+    return [[d] for d in _samples_to_records([utils.to_single_data(x) for x in samples])]
+
+def _samples_to_records(samples):
+    """Convert samples into output CWL records.
+    """
+    from bcbio.pipeline import run_info
+    RECORD_CONVERT_TO_LIST = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
+    all_keys = _get_all_cwlkeys(samples)
+    out = []
+    for data in samples:
+        for raw_key in sorted(list(all_keys)):
+            key = raw_key.split("__")
+            if tz.get_in(key, data) is None:
+                data = tz.update_in(data, key, lambda x: None)
+                data["cwl_keys"].append(raw_key)
+            if raw_key in RECORD_CONVERT_TO_LIST:
+                val = tz.get_in(key, data)
+                if not val: val = []
+                elif not isinstance(val, (list, tuple)): val = [val]
+                data = tz.update_in(data, key, lambda x: val)
+        data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
+        out.append(data)
+    return out
+
 def batch_for_variantcall(samples):
     """Prepare a set of samples for parallel variant calling.
 
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
     """
-    from bcbio.pipeline import run_info
-    convert_to_list = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
-    all_keys = _get_all_cwlkeys(to_process)
-    for data in to_process:
-        for raw_key in sorted(list(all_keys)):
-            key = raw_key.split("__")
-            if tz.get_in(key, data) is None:
-                data = tz.update_in(data, key, lambda x: None)
-                data["cwl_keys"].append(raw_key)
-            if raw_key in convert_to_list:
-                val = tz.get_in(key, data)
-                if not val: val = []
-                elif not isinstance(val, (list, tuple)): val = [val]
-                data = tz.update_in(data, key, lambda x: val)
+    for data in _samples_to_records(to_process):
         vc = get_variantcaller(data, require_bam=False)
-        data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]

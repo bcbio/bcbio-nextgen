@@ -39,7 +39,7 @@ def process(args):
     if not work_dir:
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
-        fnargs, parallel = _world_from_cwl(fnargs[1:], work_dir)
+        fnargs, parallel, out_keys = _world_from_cwl(fnargs[1:], work_dir)
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
@@ -53,28 +53,33 @@ def process(args):
             raise
     if argfile:
         try:
-            _write_out_argfile(argfile, out, fnargs, parallel, work_dir)
+            _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir)
         except:
             logger.exception()
             raise
 
-def _write_out_argfile(argfile, out, fnargs, parallel, work_dir):
+def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
     """Write output argfile, preparing a CWL ready JSON or YAML representation of the world.
     """
     with open(argfile, "w") as out_handle:
         if argfile.endswith(".json"):
-            if parallel in ["single-split", "multi-combined", "batch-split"]:
-                json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
-                            out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
-            elif parallel in ["multi-batch"]:
+            if _is_record_output(out_keys):
                 json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
-                                               fnargs),
+                                               fnargs, parallel),
+                            out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
+            elif parallel in ["single-split", "multi-combined", "batch-split"]:
+                json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             else:
                 json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
         else:
             yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+
+def _is_record_output(out_keys):
+    """Cheap way to check if we're outputting a record, by the name.
+    """
+    return len(out_keys) == 1 and out_keys[0].endswith("_rec")
 
 def _add_resources(data, runtime):
     if "config" in data:
@@ -126,7 +131,7 @@ def _world_from_cwl(fnargs, work_dir):
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
-    return out, parallel
+    return out, parallel, output_cwl_keys
 
 def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     """Finalize data object with inputs from CWL.
@@ -191,12 +196,19 @@ def _get_output_cwl_keys(fnargs):
                 return d["output_cwl_keys"]
     raise ValueError("Did not find output_cwl_keys in %s" % (pprint.pformat(fnargs)))
 
-def _combine_cwl_records(recs, fnargs):
+def _combine_cwl_records(recs, fnargs, parallel):
     """Provide a list of nexted CWL records keyed by output key.
+
+    Handles batches, where we return a list of records, and single items
+    where we return one record.
     """
     output_keys = _get_output_cwl_keys(fnargs)
     assert len(output_keys) == 1, output_keys
-    return {output_keys[0]: recs}
+    if parallel != "multi-batch":
+        assert len(recs) == 1
+        return {output_keys[0]: recs[0]}
+    else:
+        return {output_keys[0]: recs}
 
 def _collapse_to_cwl_record(samples, work_dir):
     """Convert nested samples from batches into a CWL record, based on input keys.

@@ -176,6 +176,10 @@ def batch_for_variantcall(*args):
     return genotype.batch_for_variantcall(*args)
 
 @utils.map_wrap
+def vc_output_record(*args):
+    return genotype.vc_output_record(*args)
+
+@utils.map_wrap
 def variantcall_batch_region(*args):
     return genotype.variantcall_batch_region(*args)
 
@@ -246,6 +250,10 @@ def combine_sample_regions(*args):
 @utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
+
+@utils.map_wrap
+def summarize_grading_vc(*args):
+    return validate.summarize_grading(*args)
 
 @utils.map_wrap
 def run_disambiguate(*args):

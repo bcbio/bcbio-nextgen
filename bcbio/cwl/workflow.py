@@ -172,8 +172,8 @@ def _clean_record(var):
     return out
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
-    if step.parallel in ["multi-batch"]:
-        file_output = [_create_record(outputs, step.inputs, step.unlist, file_vs, std_vs)]
+    if len(outputs) == 1 and outputs[0]["type"] == "record":
+        file_output = [_create_record(outputs[0]["id"], step.inputs, step.unlist, file_vs, std_vs)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
@@ -284,14 +284,23 @@ def _create_record(name, inputs, unlist, file_vs, std_vs):
     unlist = set([_get_string_vid(x) for x in unlist])
     fields = []
     input_vids = set([_get_string_vid(v) for v in inputs])
-    for orig_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
-        cur_v = {}
-        cur_v["name"] = get_base_id(orig_v["id"])
-        cur_v["type"] = orig_v["type"]
-        if cur_v["name"] in unlist:
-            cur_v = _flatten_nested_input(cur_v)
-        fields.append(_nest_variable(cur_v))
-
+    added = set([])
+    for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
+        # unpack record inside this record and un-nested inputs to avoid double nested
+        if tz.get_in(["type", "type"], raw_v) == "record":
+            nested_vs = _unpack_record(raw_v)
+            unlist = unlist | set([get_base_id(x["id"]) for x in nested_vs])
+        else:
+            nested_vs = [raw_v]
+        for orig_v in nested_vs:
+            if orig_v["id"] not in added:
+                cur_v = {}
+                cur_v["name"] = get_base_id(orig_v["id"])
+                cur_v["type"] = orig_v["type"]
+                if cur_v["name"] in unlist:
+                    cur_v = _flatten_nested_input(cur_v)
+                fields.append(_nest_variable(cur_v))
+                added.add(orig_v["id"])
     return {"id": "#%s" % name,
             "type": {"name": name,
                      "type": "record",
@@ -361,8 +370,11 @@ def _split_variables(variables):
     for v in variables:
         cur_type = v["type"]
         while isinstance(cur_type, dict):
-            cur_type = cur_type["items"]
-        if (cur_type == "File" or cur_type == "null" or
+            if "items" in cur_type:
+                cur_type = cur_type["items"]
+            else:
+                cur_type = cur_type["type"]
+        if (cur_type in ["File", "null", "record"] or
               (isinstance(cur_type, (list, tuple)) and
                ("File" in cur_type or {'items': 'File', 'type': 'array'} in cur_type))):
             file_vs.append(v)

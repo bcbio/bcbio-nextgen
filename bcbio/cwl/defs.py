@@ -121,7 +121,10 @@ def variant():
             [cwlout(["validate", "summary"], ["File", "null"]),
              cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
              cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
-             cwlout(["validate", "fn"], ["File", "null"], [".tbi"])])]
+             cwlout(["validate", "fn"], ["File", "null"], [".tbi"])]),
+          s("vc_output_record", "batch-single",
+            [["batch_rec"], ["vrn_file"], ["validate", "summary"]],
+            [cwlout("vc_rec", "record")])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples", "multi-parallel",
@@ -131,6 +134,7 @@ def variant():
                 cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"])]),
              s("postprocess_alignment", "multi-parallel",
                [["align_bam"], ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "variant_regions_merged"],
                 ["config", "algorithm", "recalibrate"],
                 ["reference", "fasta", "base"]],
@@ -157,15 +161,20 @@ def variant():
                [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
                 ["regions", "callable"], ["config", "algorithm", "variantcaller"],
+                ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
                 ["config", "algorithm", "tools_on"],
                 ["reference", "fasta", "base"], ["reference", "rtg"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
-               "batch_rec",
+               [cwlout("batch_rec", "record")],
                unlist=[["config", "algorithm", "variantcaller"]]),
              w("variantcall", "multi-parallel", vc,
-               [["region"], ["vrn_file_region"]]),
+               [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
+             # s("summarize_grading_vc", "multi-combined",
+             #   [["vc_rec"]],
+             #   [cwlout(["validate", "grading_summary"], ["File", "null"]),
+             #    cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})]),
              s("pipeline_summary", "multi-parallel",
                [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
                 ["config", "algorithm", "coverage"],
@@ -185,7 +194,7 @@ def variant():
              #    ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]],
              #   [cwlout(["coverage", "report"], ["File", "null"])])
              ]
-    final_outputs = [["align_bam"], ["vrn_file"], ["validate", "summary"], ["summary", "multiqc"]]
+    final_outputs = [["align_bam"], ["summary", "multiqc"]]
     return steps, final_outputs
 
 workflows = \
