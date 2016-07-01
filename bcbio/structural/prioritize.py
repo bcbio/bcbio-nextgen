@@ -73,16 +73,16 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
                    "print CALLER,SNAME,$1,$2,I$END,"
                    """I$SVTYPE=="BND" ? I$SVTYPE":"$3":"I$MATEID : I$SVTYPE,"""
-                   "I$KNOWN,I$END_GENE,I$LOF,I$SIMPLE_ANN,"
-                   "S${sample}$SR,S${sample}$PE}}' > {tx_out_file}")
+                   "I$LOF,I$SIMPLE_ANN,"
+                   "S${sample}$SR,S${sample}$PE,S${sample}$PR}}' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Prioritize: convert to tab delimited")
     return out_file
 
 def _combine_files(tsv_files, work_dir, data):
     """Combine multiple priority tsv files into a final sorted output.
     """
-    header = "\t".join(["caller", "sample", "chrom", "start", "end", "svtype", "known", "end_gene",
-                        "lof", "annotation", "split_read_support", "paired_end_support"])
+    header = "\t".join(["caller", "sample", "chrom", "start", "end", "svtype",
+                        "lof", "annotation", "split_read_support", "paired_end_support", "paired_read_support"])
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-prioritize.tsv" % (sample))
     if not utils.file_exists(out_file):
