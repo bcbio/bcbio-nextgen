@@ -43,7 +43,7 @@ def process(args):
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
-        parallel = None
+        parallel, out_keys = None, []
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
         try:
