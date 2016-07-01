@@ -45,8 +45,11 @@ def summary(*samples):
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
             input_dir = " ".join([_check_multiqc_input(d) for d in folders])
+            export_tmp = ""
+            if dd.get_tmp_dir(samples[0]):
+                export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
             if input_dir.strip():
-                cmd = "{multiqc} -f {input_dir} -o {tx_out} {opts}"
+                cmd = "{export_tmp} {multiqc} -f {input_dir} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
