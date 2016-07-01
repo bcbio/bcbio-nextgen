@@ -243,30 +243,7 @@ def _save_fields(sample):
     saved = {k: sample[k] for k in to_save if k in sample}
     if "summary" in sample and "metrics" in sample["summary"]:
         saved["summary"] = {"metrics": sample["summary"]["metrics"]}
-        # check if disambiguation was run
-        if "disambiguate" in sample:
-            if utils.file_exists(sample["disambiguate"]["summary"]):
-                disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
-                saved["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
-                disambigGenome = (sample["config"]["algorithm"]["disambiguate"][0]
-                                  if isinstance(sample["config"]["algorithm"]["disambiguate"], (list, tuple))
-                                  else sample["config"]["algorithm"]["disambiguate"])
-                saved["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
-                saved["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return saved
-
-def _parse_disambiguate(disambiguatestatsfilename):
-    """Parse disambiguation stats from given file.
-    """
-    disambig_stats = [0, 0, 0]
-    with open(disambiguatestatsfilename, "r") as in_handle:
-        for i, line in enumerate(in_handle):
-            fields = line.strip().split("\t")
-            if i == 0:
-                assert fields == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']
-            else:
-                disambig_stats = [x + int(y) for x, y in zip(disambig_stats, fields[1:])]
-    return disambig_stats
 
 # ## Generate researcher specific summaries
 

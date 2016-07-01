@@ -167,6 +167,32 @@ def _get_coverage_per_region(name):
                     logger.debug("%s has no lines in coverage.bed" % name)
     return "NA"
 
+def _parse_disambiguate(disambiguatestatsfilename):
+    """Parse disambiguation stats from given file.
+    """
+    disambig_stats = [0, 0, 0]
+    with open(disambiguatestatsfilename, "r") as in_handle:
+        for i, line in enumerate(in_handle):
+            fields = line.strip().split("\t")
+            if i == 0:
+                assert fields == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']
+            else:
+                disambig_stats = [x + int(y) for x, y in zip(disambig_stats, fields[1:])]
+    return disambig_stats
+
+def _add_disambiguate(sample):
+    # check if disambiguation was run
+    if "disambiguate" in sample:
+        if utils.file_exists(sample["disambiguate"]["summary"]):
+            disambigStats = _parse_disambiguate(sample["disambiguate"]["summary"])
+            sample["summary"]["metrics"]["Disambiguated %s reads" % str(sample["genome_build"])] = disambigStats[0]
+            disambigGenome = (sample["config"]["algorithm"]["disambiguate"][0]
+                              if isinstance(sample["config"]["algorithm"]["disambiguate"], (list, tuple))
+                              else sample["config"]["algorithm"]["disambiguate"])
+            sample["summary"]["metrics"]["Disambiguated %s reads" % disambigGenome] = disambigStats[1]
+            sample["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
+    return sample
+
 def _merge_metrics(samples):
     """
     parse project.yaml file to get metrics for each bam
@@ -177,6 +203,7 @@ def _merge_metrics(samples):
     with file_transaction(out_file) as out_tx:
         for s in samples:
             sample_name = dd.get_sample_name(s)
+            s = _add_disambiguate(s)
             if sample_name in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
@@ -205,7 +232,7 @@ def _merge_metrics(samples):
         if sample_name in cov:
             s['summary']['metrics']['avg_coverage_per_region'] = cov[sample_name]
         out.append(s)
-    return samples
+    return out
 
 def _merge_fastqc(samples):
     """
