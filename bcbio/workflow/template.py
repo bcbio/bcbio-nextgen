@@ -405,6 +405,20 @@ def _check_all_metadata_found(metadata, items):
         if not seen:
             print "WARNING: sample not found %s" % name
 
+def _copy_to_configdir(items, out_dir):
+    """Copy configuration files like PED inputs to working config directory.
+    """
+    out = []
+    for item in items:
+        ped_file = tz.get_in(["metadata", "ped"], item)
+        if ped_file and os.path.exists(ped_file):
+            ped_config_file = os.path.join(out_dir, "config", os.path.basename(ped_file))
+            if not os.path.exists(ped_config_file):
+                shutil.copy(ped_file, ped_config_file)
+            item["metadata"]["ped"] = ped_config_file
+        out.append(item)
+    return out
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
     base_item = template["details"][0]
@@ -427,6 +441,7 @@ def setup(args):
     out_config_file = _write_template_config(template_txt, project_name, out_dir)
     if md_file:
         shutil.copyfile(md_file, os.path.join(out_dir, "config", os.path.basename(md_file)))
+    items = _copy_to_configdir(items, out_dir)
     if len(items) == 0:
         print
         print "Template configuration file created at: %s" % out_config_file
