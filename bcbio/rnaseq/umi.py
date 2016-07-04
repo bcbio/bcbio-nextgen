@@ -43,6 +43,14 @@ def write_transform_file(transform_data, out_file):
             json.dump(transform_data["json"], out_handle)
     return out_file
 
+def is_dual_index(transform):
+    if file_exists(transform):
+        transform = json.load(open(transform))
+        if "CB1" in transform["read1"] or "CB1" in transform["read2"]:
+            return True
+    else:
+        return transforms[transform]["dual"]
+
 def umi_transform(data):
     """
     transform each read by identifying the barcode and UMI for each read
@@ -51,17 +59,20 @@ def umi_transform(data):
     fq1, fq2 = dd.get_input_sequence_files(data)
     fq2 = fq2 if fq2 else ""
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
-    transform = dd.get_umi_type(data)
-    transform_data = transforms[transform]
     safe_makedir(umi_dir)
-    transform_file = os.path.join(umi_dir, transform + ".json")
-    transform_file = write_transform_file(transform_data, transform_file)
+    transform = dd.get_umi_type(data)
+    if file_exists(transform):
+        transform_file = transform
+    else:
+        transform_data = transforms[transform]
+        transform_file = os.path.join(umi_dir, transform + ".json")
+        transform_file = write_transform_file(transform_data, transform_file)
     out_base = dd.get_sample_name(data) + ".umitransformed.fq.gz"
     out_file = os.path.join(umi_dir, out_base)
     if file_exists(out_file):
         data["files"] = [out_file]
         return [[data]]
-    index_option = "--dual_index" if transform_data["dual"] else ""
+    index_option = "--dual_index" if is_dual_index(transform) else ""
     if len(dd.get_cellular_barcodes(data)) == 2:
         split_option = "--separate_cb"
     else:
