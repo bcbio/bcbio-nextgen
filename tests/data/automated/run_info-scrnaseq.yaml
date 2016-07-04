@@ -4,7 +4,8 @@ details:
   - analysis: scRNA-seq
     algorithm:
       umi_type: harvard-indrop
-      aligner: tophat2
+      singlecell_quantifier: kallisto
+      minimum_barcode_depth: 500
     description: Test1
     files:
       - ../data/Harvard-inDrop/r1.fq.gz

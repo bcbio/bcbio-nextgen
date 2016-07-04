@@ -399,7 +399,8 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "cellular_barcodes",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "expression_caller", "qc"] +
+                      "mixup_check", "expression_caller", "qc",
+                      "singlecell_quantifier"] +
                      # development
                      ["cwl_reporting"] +
                      # back compatibility

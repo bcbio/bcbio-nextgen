@@ -674,6 +674,11 @@ Single-cell RNA sequencing
   valid cellular barcodes. Provide one file if there is only one barcode and
   two files if the barcodes are split. If no file is provided, all cellular
   barcodes passing the ``minimum_barcode_depth`` filter are kept.
+- ``transcriptome_fasta`` An optional FASTA file of transcriptome sequences to
+  quantitate rather than the bcbio installed version.
+- ``singlecell_quantifier`` Quantifier to use for single-cell RNA-sequencing.
+  Non-academic users without a kallisto license should choose ``rapmap``.
+  Supports ``rapmap`` or ``kallisto``.
 
 smallRNA sequencing
 ===================

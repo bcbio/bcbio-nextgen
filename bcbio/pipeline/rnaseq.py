@@ -16,11 +16,20 @@ def fast_rnaseq(samples, run_parallel):
     return samples
 
 def singlecell_rnaseq(samples, run_parallel):
+    quantifier = dd.get_in_samples(samples, dd.get_singlecell_quantifier)
+    quantifier = quantifier.lower()
     samples = run_parallel("run_umi_transform", samples)
     samples = run_parallel("run_barcode_histogram", samples)
     samples = run_parallel("run_filter_barcodes", samples)
-    samples = run_parallel("run_rapmap_align", samples)
-    samples = run_parallel("run_tagcount", samples)
+    if quantifier == "rapmap":
+        samples = run_parallel("run_rapmap_align", samples)
+        samples = run_parallel("run_tagcount", samples)
+    elif quantifier == "kallisto":
+        samples = run_parallel("run_kallisto_singlecell", samples)
+    else:
+        logger.error(("%s is not supported for singlecell RNA-seq "
+                      "quantification." % quantifier))
+        sys.exit(1)
     return samples
 
 def rnaseq_variant_calling(samples, run_parallel):

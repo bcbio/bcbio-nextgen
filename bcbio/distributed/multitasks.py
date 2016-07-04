@@ -6,7 +6,7 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -30,6 +30,10 @@ def run_barcode_histogram(*args):
 @utils.map_wrap
 def run_umi_transform(*args):
     return umi.umi_transform(*args)
+
+@utils.map_wrap
+def run_kallisto_singlecell(*args):
+    return kallisto.run_kallisto_singlecell(*args)
 
 @utils.map_wrap
 def run_salmon_reads(*args):

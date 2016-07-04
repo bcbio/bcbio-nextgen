@@ -158,3 +158,31 @@ def get_barcode_metadata(data):
     barcode_file = dd.get_barcode_file(data)
     df = pd.read_csv(barcode_file, sep=",", header=0)
     barcodes = df["barcodes"]
+
+def convert_to_kallisto(data):
+    files = dd.get_input_sequence_files(data)
+    if len(files) == 2:
+        fq1, fq2 = files
+    else:
+        fq1, fq2 = files[0], None
+    samplename = dd.get_sample_name(data)
+    work_dir = dd.get_work_dir(data)
+    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "fastq")
+    out_file = os.path.join(kallisto_dir, "barcodes.batch")
+    umis = config_utils.get_program("umis", dd.get_config(data))
+    if file_exists(out_file):
+        return out_file
+    if dd.get_minimum_barcode_depth(data):
+        cb_histogram = os.path.join(work_dir, "umis", samplename, "cb-histogram.txt")
+        cb_cutoff = dd.get_minimum_barcode_depth(data)
+        cb_options = "--cb_histogram {cb_histogram} --cb_cutoff {cb_cutoff}"
+        cb_options = cb_options.format(**locals())
+    else:
+        cb_options = ""
+    cmd = ("{umis} kallisto {cb_options} --out_dir {tx_kallisto_dir} {fq1}")
+    with file_transaction(data, kallisto_dir) as tx_kallisto_dir:
+        safe_makedir(tx_kallisto_dir)
+        message = ("Transforming %s to Kallisto singlecell format. "
+                   % fq1)
+        do.run(cmd.format(**locals()), message)
+    return out_file

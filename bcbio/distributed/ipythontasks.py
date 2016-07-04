@@ -10,7 +10,7 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
@@ -155,6 +155,16 @@ def run_barcode_histogram(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(umi.barcode_histogram, *args))
+
+@utils.map_wrap
+def run_kallisto_singlecell(*args):
+    return kallisto.run_kallisto_singlecell(*args)
+
+@require(kallisto)
+def run_kallisto_singlecell(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(kallisto.run_kallisto_singlecell, *args))
 
 @require(salmon)
 def run_salmon_bam(*args):
