@@ -156,10 +156,6 @@ def run_barcode_histogram(*args):
     with _setup_logging(args):
         return ipython.zip_args(apply(umi.barcode_histogram, *args))
 
-@utils.map_wrap
-def run_kallisto_singlecell(*args):
-    return kallisto.run_kallisto_singlecell(*args)
-
 @require(kallisto)
 def run_kallisto_singlecell(*args):
     args = ipython.unzip_args(args)
