@@ -24,6 +24,10 @@
   callers (https://peerj.com/preprints/1672/). Requires license from
   Sentieon.
 - Fix fusion calling using Tophat2. Thanks to @csardas for raising the issue.
+- Add support for kallisto quantification of single-cell RNA-seq data.
+- Add `transcriptome_fasta` option to single-cell RNA-seq. This allows 
+  the user to provide a transcriptome FASTA file to quantitate against rather
+  than use the `bcbio` provided annotation.
 
 ## 0.9.8 (20 May 2016)
 
