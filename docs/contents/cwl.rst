@@ -23,7 +23,7 @@ control. It generates a `CWL draft
 workflow. The actual biological code execution during runs works with
 either the bcbio docker container
 (`bcbio/bcbio <https://hub.docker.com/r/bcbio/bcbio/>`_) or a local
-installation.
+installation of bcbio.
 
 The implementation includes bcbio's approaches to splitting and batching
 analyses. At the top level workflow, we parallelize by samples. Using
@@ -49,31 +49,35 @@ bcbio supports these CWL-compatible tools:
   <https://cloud.curoverse.com/>`_ instance running on
   `Microsoft Azure <https://azure.microsoft.com>`_.
 
+- `toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
+  distributed cluster runs. Distributed runs on clusters like SLURM and SGE are
+  still under development.
+
 We plan to continue to expand CWL support to include more components of bcbio,
 and also need to evaluate the workflow on larger, real life analyses. This
-includes supporting additional CWL runners. We're evaluating `toil
-<https://github.com/BD2KGenomics/toil>`_ as an approach for running on local
-clusters with a minimal install and `Galaxy/Planemo
+includes supporting additional CWL runners. We're evaluating `Galaxy/Planemo
 <https://github.com/galaxyproject/planemo>`_ for integration with the Galaxy
 community.
 
-Running
-~~~~~~~
+Getting started
+~~~~~~~~~~~~~~~
 
-To prepare your system for running you first need to install cwltool
-from the `common workflow language reference
-implementation <https://github.com/common-workflow-language/cwltool>`_.
-The easiest way is to use conda. You can install
-`Miniconda <http://conda.pydata.org/miniconda.html>`_ if you don't have
-conda present, and cwltool is also included with
-`bcbio-vm installation <https://github.com/chapmanb/bcbio-nextgen-vm>`_::
+`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ organizes all
+dependencies required to run bcbio with supported CWL runners. To install with
+`Miniconda <http://conda.pydata.org/miniconda.html>`_ and
+`bioconda packages <https://bioconda.github.io/>`_::
 
-    conda install -c bioconda cwltool
+    wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+    bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
+    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+    ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
-cwltool uses javascript for data manipulation and requires either a
-local installation of `nodejs <https://nodejs.org>`_ or having
-`Docker <https://www.docker.com/>`_ installed and running
-``docker pull node:slim``.
+If you have `Docker <https://www.docker.com/>`_ present on your system this is
+all you need to get started running examples. Alternatively,
+`install bcbio
+<https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
+and make it available in your path.
 
 To make it easy to get started, we have a pre-built CWL description that
 uses test data. This will run in under 5 minutes on a local machine and
@@ -82,9 +86,9 @@ your machine:
 
 1. Download and unpack the test data::
 
-    wget https://s3.amazonaws.com/bcbio/cwl/test_bcbio_cwl.tar.gz
-    tar -xzvpf test_bcbio_cwl.tar.gz
-    cd test_bcbio_cwl
+     wget https://s3.amazonaws.com/bcbio/cwl/test_bcbio_cwl.tar.gz
+     tar -xzvpf test_bcbio_cwl.tar.gz
+     cd test_bcbio_cwl
 
 2. Run the analysis using ``cwltool``. If you have Docker, cwltool will
    download the ``bcbio/bcbio`` container and you don't need to install
@@ -92,26 +96,20 @@ your machine:
    want to update to the latest with ``docker pull bcbio/bcbio``.
    You can use the ``run_cwl.sh`` script or run directly from the command line::
 
-     cwltool --verbose run_info-cwl-workflow/main-run_info-cwl.cwl run_info-cwl-workflow/main-run_info-cwl-samples.json
+     bcbio_vm.py cwlrun cwltool run_info-cwl-workflow
+
 
    If you don't have Docker, you can also use a `local installation of
    bcbio <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_.
    You don't need to install genome data since the tests use small local
    data. Then run with::
 
-     cwltool --verbose --preserve-environment PATH HOME --no-container \
-       run_info-cwl-workflow/main-run_info-cwl.cwl \
-       run_info-cwl-workflow/main-run_info-cwl-samples.json
+     bcbio_vm.py cwlrun cwltool run_info-cwl-workflow --no-container
 
 Generating CWL from bcbio
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To generate CWL for a different bcbio sample YAML file, you need to
-install `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_,
-which generates the CWL command line wrapper::
-
-    conda install -c bioconda bcbio-nextgen-vm
-
+You can generate CWL from any `standard bcbio sample configuration file <https://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_.
 As an example, to generate the test data show above, clone the `bcbio
 GitHub repository locally <https://github.com/chapmanb/bcbio-nextgen>`_
 to get the test suite and run a minimal CWL workflow generated
@@ -136,13 +134,9 @@ Running bcbio CWL on Arvados
 We're actively testing bcbio generated CWL workflows on
 `Arvados <https://arvados.org/>`_. These instructions detail how to run
 this on the `Arvdos public instance <https://cloud.curoverse.com/>`_.
-
 `Arvados cwl-runner <https://github.com/curoverse/arvados>`_ comes
 pre-installed with
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_.
-If you don't have it you can install using conda::
-
-    conda install -c bioconda arvados-cwl-runner
 
 Retrieve API keys from the `Arvados public
 instance <https://cloud.curoverse.com/>`_. Login, then go to `'User
@@ -196,7 +190,27 @@ To run an analysis:
 
 6. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
 
-     arvados-cwl-runner --project-uuid qr1hi-your-projectuuid --enable-reuse testcwl-workflow/main-testcwl.cwl testcwl-workflow/main-testcwl-samples.json
+     bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
+
+Running bcbio CWL on Toil
+-------------------------
+
+The `Toil pipeline management system <https://github.com/BD2KGenomics/toil>`_
+runs CWL workflows on local systems in parallel, on a cluster or on AWS. We're
+currently at the early stage of testing bcbio runs on this architecture but have
+successfully run bcbio CWL workflows across these platforms and have versions of
+Toil that work with bcbio integrated.
+
+To run a bcbio CWL workflow locally with Toil::
+
+    bcbio_vm.py cwlrun toil run_info-cwl-workflow
+
+This uses a Docker installation. If you want to run from a locally installed
+bcbio add ``--nocontainer`` to the commandline.
+
+To run distributed on a Slurm cluster::
+
+    bcbio_vm.py cwlrun toil run_info-cwl-workflow -- --batchSystem slurm
 
 Development notes
 ~~~~~~~~~~~~~~~~~
@@ -250,5 +264,5 @@ ToDo
    if not needed based on the configuration.
 
 -  Replace the custom python code in the `bcbio step
-   definitions <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/cwl/workflow.py>`_
+   definitions <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/cwl/defs.py>`_
    with a higher level DSL in YAML we can parse and translate to CWL.

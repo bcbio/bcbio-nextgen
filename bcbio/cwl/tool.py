@@ -61,7 +61,8 @@ def _run_toil(args):
     if "--batchSystem" in args.toolargs and "--disableSharedCache" not in args.toolargs:
         flags += ["--disableSharedCache"]
     cmd = ["cwltoil"] + flags + args.toolargs + [main_file, json_file]
-    _run_tool(cmd)
+    with utils.chdir(work_dir):
+        _run_tool(cmd)
 
 _TOOLS = {"cwltool": _run_cwltool,
           "arvados": _run_arvados,
