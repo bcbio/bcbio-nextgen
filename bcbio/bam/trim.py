@@ -45,6 +45,8 @@ def _trim_adapters(fastq_files, out_dir, name, config):
     out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, log_file, config)
     if file_exists(log_file):
         content = open(log_file).read().replace(fastq_files[0], name)
+        if len(fastq_files) > 1:
+            content = content.replace(fastq_files[1], name)
         open(log_file, 'w').write(content)
     return out_files
 
