@@ -28,6 +28,7 @@
 - Add `transcriptome_fasta` option to single-cell RNA-seq. This allows 
   the user to provide a transcriptome FASTA file to quantitate against rather
   than use the `bcbio` provided annotation.
+- Fix naming of vardict RNA-seq variant calls. Thanks to @csardas.
 
 ## 0.9.8 (20 May 2016)
 
