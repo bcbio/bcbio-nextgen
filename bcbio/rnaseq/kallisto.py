@@ -4,14 +4,16 @@ kallisto
 https://github.com/pachterlab/kallisto
 """
 import os
+import pandas as pd
 
-from bcbio.rnaseq import sailfish
 import bcbio.pipeline.datadict as dd
+from bcbio.rnaseq import sailfish
 from bcbio.utils import (file_exists, safe_makedir, chdir)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.rnaseq import umi
+from bcbio.bam import fasta
 
 def run_kallisto_singlecell(data):
     samplename = dd.get_sample_name(data)
@@ -47,6 +49,7 @@ def kallisto_singlecell(fq1, kallisto_dir, gtf_file, fasta_file, data):
         with file_transaction(data, quant_dir) as tx_out_dir:
             message = ("Quantifying transcripts with Kallisto.")
             do.run(cmd.format(**locals()), message, None)
+    kallisto_table(kallisto_dir, index)
     return quant_dir
 
 def kallisto_index(gtf_file, ref_file, data, out_dir):
@@ -68,3 +71,45 @@ def kallisto_index(gtf_file, ref_file, data, out_dir):
         message = "Creating Kallisto index for {gtf_fa}."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_file
+
+def kallisto_table(kallisto_dir, index):
+    """
+    convert kallisto output to a count table where the rows are
+    equivalence classes and the columns are cells
+    """
+    quant_dir = os.path.join(kallisto_dir, "quant")
+    out_file = os.path.join(quant_dir, "matrix.csv")
+    if file_exists(out_file):
+        return out_file
+    tsvfile = os.path.join(quant_dir, "matrix.tsv")
+    ecfile = os.path.join(quant_dir, "matrix.ec")
+    cellsfile = os.path.join(quant_dir, "matrix.cells")
+    fastafile = os.path.splitext(index)[0] + ".fa"
+    fasta_names = fasta.sequence_names(fastafile)
+    ec_names = get_ec_names(ecfile, fasta_names)
+    df = pd.read_table(tsvfile, header=None, names=["ec", "cell", "count"])
+    df["ec"] = [ec_names[x] for x in df["ec"]]
+    df = df.pivot(index='ec', columns='cell', values='count')
+    cellnames = get_cell_names(cellsfile)
+    colnames = [cellnames[x] for x in df.columns]
+    df.columns = colnames
+    df.to_csv(out_file)
+    return out_file
+
+def get_ec_names(ecfile, fasta_names):
+    """
+    convert equivalence classes to their set of transcripts
+    """
+    df = pd.read_table(ecfile, header=None, names=["ec", "transcripts"])
+    transcript_groups = [x.split(",") for x in df["transcripts"]]
+    transcripts = []
+    for group in transcript_groups:
+        transcripts.append(":".join([fasta_names[int(x)] for x in group]))
+    return transcripts
+
+def get_cell_names(cellsfile):
+    """
+    get barcode identifies of cells
+    """
+    with open(cellsfile) as in_handle:
+        return [x.strip() for x in in_handle]
