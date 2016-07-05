@@ -129,10 +129,11 @@ def _maybe_add_validate(algorith, sample, out):
     return out
 
 def _maybe_add_rnaseq_variant_file(algorithm, sample, out):
-    if sample.get("vrn_file"):
-        out.append({"path": sample.get("vrn_file"),
-                    "type": "vcf",
-                    "ext": "vcf"})
+    vfile = sample.get("vrn_file")
+    if vfile:
+        ftype = "vcf.gz" if vfile.endswith(".gz") else "vcf"
+        out.append({"path": vfile,
+                    "type": ftype})
     return out
 
 def _maybe_add_variant_file(algorithm, sample, out):
