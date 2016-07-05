@@ -12,6 +12,7 @@ from bcbio import utils
 def _get_main_and_json(directory):
     """Retrieve the main CWL and sample JSON files from a bcbio generated directory.
     """
+    directory = os.path.normpath(os.path.abspath(directory))
     main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
     assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
     main_json = glob.glob(os.path.join(directory, "main-*-samples.json"))
