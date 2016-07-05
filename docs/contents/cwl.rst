@@ -42,7 +42,7 @@ on coverage calculations.
 bcbio supports these CWL-compatible tools:
 
 - `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
-  core analysis engine, primarily used for testing
+  core analysis engine, primarily used for testing.
 
 - `Arvados <https://arvados.org/>`_ -- fully parallel distributed analyses. We
   include an example below of running on the `public Curoverse
@@ -50,8 +50,8 @@ bcbio supports these CWL-compatible tools:
   `Microsoft Azure <https://azure.microsoft.com>`_.
 
 - `toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
-  distributed cluster runs. Distributed runs on clusters like SLURM and SGE are
-  still under development.
+  distributed cluster runs. Distribution on cluster schedulers like SLURM and
+  SGE is still under development.
 
 We plan to continue to expand CWL support to include more components of bcbio,
 and also need to evaluate the workflow on larger, real life analyses. This
@@ -63,7 +63,7 @@ Getting started
 ~~~~~~~~~~~~~~~
 
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ organizes all
-dependencies required to run bcbio with supported CWL runners. To install with
+dependencies required to run bcbio with supported CWL runners. To install using
 `Miniconda <http://conda.pydata.org/miniconda.html>`_ and
 `bioconda packages <https://bioconda.github.io/>`_::
 
@@ -90,14 +90,14 @@ your machine:
      tar -xzvpf test_bcbio_cwl.tar.gz
      cd test_bcbio_cwl
 
-2. Run the analysis using ``cwltool``. If you have Docker, cwltool will
-   download the ``bcbio/bcbio`` container and you don't need to install
-   anything else to get started. If you have an old version of the container you
-   want to update to the latest with ``docker pull bcbio/bcbio``.
-   You can use the ``run_cwl.sh`` script or run directly from the command line::
+2. Run the analysis using ``cwltool``. If you have Docker available on your
+   machine, cwltool will download the ``bcbio/bcbio`` container and you don't
+   need to install anything else to get started. If you have an old version of
+   the container you want to update to the latest with ``docker pull
+   bcbio/bcbio``. You can use the ``run_cwl.sh`` script or run directly from the
+   command line::
 
      bcbio_vm.py cwlrun cwltool run_info-cwl-workflow
-
 
    If you don't have Docker, you can also use a `local installation of
    bcbio <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_.
@@ -133,7 +133,7 @@ Running bcbio CWL on Arvados
 
 We're actively testing bcbio generated CWL workflows on
 `Arvados <https://arvados.org/>`_. These instructions detail how to run
-this on the `Arvdos public instance <https://cloud.curoverse.com/>`_.
+on the `Arvdos public instance <https://cloud.curoverse.com/>`_.
 `Arvados cwl-runner <https://github.com/curoverse/arvados>`_ comes
 pre-installed with
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_.
@@ -193,20 +193,20 @@ To run an analysis:
      bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
 
 Running bcbio CWL on Toil
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The `Toil pipeline management system <https://github.com/BD2KGenomics/toil>`_
-runs CWL workflows on local systems in parallel, on a cluster or on AWS. We're
-currently at the early stage of testing bcbio runs on this architecture but have
-successfully run bcbio CWL workflows across these platforms and have versions of
-Toil that work with bcbio integrated.
+runs CWL workflows in parallel on a local machine, on a cluster or at AWS. We're
+at the early stage of testing bcbio runs on this architecture but have
+successfully run bcbio CWL workflows across these environments. Toil comes
+pre-installed with bcbio-vm.
 
-To run a bcbio CWL workflow locally with Toil::
+To run a bcbio CWL workflow locally with Toil using Docker::
 
     bcbio_vm.py cwlrun toil run_info-cwl-workflow
 
-This uses a Docker installation. If you want to run from a locally installed
-bcbio add ``--nocontainer`` to the commandline.
+If you want to run from a locally installed bcbio add ``--nocontainer`` to the
+commandline.
 
 To run distributed on a Slurm cluster::
 
