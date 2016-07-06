@@ -5,7 +5,6 @@ http://tophat.cbcb.umd.edu
 import os
 import shutil
 import sys
-from contextlib import closing
 import glob
 import subprocess
 
@@ -199,7 +198,7 @@ def _fix_mates(orig_file, out_file, ref_file, config):
 
 def _fix_unmapped(unmapped_file, config, names):
     """
-    the unmapped.bam file from Tophat 2.0.9 is missing some things
+    unmapped.bam file up until at least Tophat 2.1.1 is missing some things
     1) the RG tag is missing from the reads
     2) MAPQ is set to 255 instead of 0
     3) for reads where both are unmapped, the mate_is_unmapped flag is not set correctly
@@ -210,32 +209,31 @@ def _fix_unmapped(unmapped_file, config, names):
     picard = broad.runner_from_path("picard", config)
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
     fixed = bam.sort(rg_fixed, config, "queryname")
-    with closing(pysam.Samfile(fixed)) as work_sam:
+    with pysam.Samfile(fixed) as work_sam:
         with file_transaction(config, out_file) as tx_out_file:
-            tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
-            for read1 in work_sam:
-                if not read1.is_paired:
-                    if read1.is_unmapped:
+            with pysam.Samfile(tx_out_file, "wb", template=work_sam) as tx_out:
+                for read1 in work_sam:
+                    if not read1.is_paired:
+                        if read1.is_unmapped:
+                            read1.mapq = 0
+                        tx_out.write(read1)
+                        continue
+                    read2 = work_sam.next()
+                    if read1.qname != read2.qname:
+                        continue
+                    if read1.is_unmapped and not read2.is_unmapped:
                         read1.mapq = 0
+                        read1.tid = read2.tid
+                    if not read1.is_unmapped and read2.is_unmapped:
+                        read2.mapq = 0
+                        read2.tid = read1.tid
+                    if read1.is_unmapped and read2.is_unmapped:
+                        read1.mapq = 0
+                        read2.mapq = 0
+                        read1.mate_is_unmapped = True
+                        read2.mate_is_unmapped = True
                     tx_out.write(read1)
-                    continue
-                read2 = work_sam.next()
-                if read1.qname != read2.qname:
-                    continue
-                if read1.is_unmapped and not read2.is_unmapped:
-                    read1.mapq = 0
-                    read1.tid = read2.tid
-                if not read1.is_unmapped and read2.is_unmapped:
-                    read2.mapq = 0
-                    read2.tid = read1.tid
-                if read1.is_unmapped and read2.is_unmapped:
-                    read1.mapq = 0
-                    read2.mapq = 0
-                    read1.mate_is_unmapped = True
-                    read2.mate_is_unmapped = True
-                tx_out.write(read1)
-                tx_out.write(read2)
-            tx_out.close()
+                    tx_out.write(read2)
 
     return out_file
 
@@ -273,7 +271,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, {"lane": out_base},
                                   work_dir, data, extra_args)
     dists = []
-    with closing(pysam.Samfile(out_sam)) as work_sam:
+    with pysam.Samfile(out_sam) as work_sam:
         for read in work_sam:
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
@@ -290,7 +288,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
         return None, None
 
 def _calculate_average_read_length(sam_file):
-    with closing(pysam.Samfile(sam_file)) as work_sam:
+    with pysam.Samfile(sam_file) as work_sam:
         count = 0
         read_lengths = []
         for read in work_sam:
