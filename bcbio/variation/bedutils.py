@@ -51,6 +51,8 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     """
     if simple:
         simple = "iconv -c -f utf-8 -t ascii | sed 's/ //g' |"
+    else:
+        simple = ""
     if in_file:
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
