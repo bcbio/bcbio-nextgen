@@ -213,7 +213,7 @@ def coverage(data, out_dir):
     work_dir = safe_makedir(out_dir)
     if not bed_file:
         return None
-    cleaned_bed = clean_file(bed_file, data)
+    cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
 
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -269,7 +269,7 @@ def _read_bcffile(out_file):
             elif line.startswith("TSTV"):
                 out["Variations (ts/tv)"] = line.split()[4]
             elif line.startswith("PSC"):
-                out["Variations (homozygous)"] = line.split()[3]
+                # out["Variations (homozygous)"] = line.split()[3]
                 out["Variations (alt homozygous)"] = line.split()[4]
                 out["Variations (heterozygous)"] = line.split()[5]
     return out
@@ -365,7 +365,7 @@ def priority_coverage(data, out_dir):
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
     with tx_tmpdir(data, work_dir) as tmp_dir:
-        cleaned_bed = clean_file(bed_file, data)
+        cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
         with file_transaction(out_file) as tx_out_file:
             parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
             cmd = ("{sambamba} depth base -t {nthreads} -L {cleaned_bed} "

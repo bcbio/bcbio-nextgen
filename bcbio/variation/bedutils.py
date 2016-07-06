@@ -46,9 +46,11 @@ def check_bed_contigs(in_file, data):
                          % (in_file, list(contigs - ref_contigs)) +
                          "This is typically due to chr1 versus 1 differences in BED file and reference.")
 
-def clean_file(in_file, data, prefix="", bedprep_dir=None):
+def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     """Prepare a clean sorted input BED file without headers
     """
+    if simple:
+        simple = "iconv -c -f utf-8 -t ascii | sed 's/ //g' |"
     if in_file:
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
@@ -60,7 +62,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None):
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 sort_cmd = get_sort_cmd()
                 cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
-                       "grep -v ^# | "
+                       "grep -v ^# | {simple} "
                        "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
                        "{sort_cmd} -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
