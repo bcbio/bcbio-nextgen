@@ -3,7 +3,6 @@
 http://varscan.sourceforge.net/
 """
 
-import contextlib
 import os
 import sys
 
@@ -268,7 +267,7 @@ def _create_sample_list(in_bams, vcf_file):
     out_file = "%s-sample_list.txt" % os.path.splitext(vcf_file)[0]
     with open(out_file, "w") as out_handle:
         for in_bam in in_bams:
-            with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+            with pysam.Samfile(in_bam, "rb") as work_bam:
                 for rg in work_bam.header.get("RG", []):
                     out_handle.write("%s\n" % rg["SM"])
     return out_file

@@ -1,7 +1,6 @@
 """Functionality to query and extract information from aligned BAM files.
 """
 import collections
-import contextlib
 import os
 import itertools
 import signal
@@ -97,7 +96,7 @@ def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+    with pysam.Samfile(in_bam, "rb") as work_bam:
         n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
@@ -141,7 +140,7 @@ def check_header(in_bam, rgnames, ref_file, config):
 def _check_sample(in_bam, rgnames):
     """Ensure input sample name matches expected run group names.
     """
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+    with pysam.Samfile(in_bam, "rb") as bamfile:
         rg = bamfile.header.get("RG", [{}])
     msgs = []
     warnings = []
@@ -165,7 +164,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
     """
     ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+    with pysam.Samfile(in_bam, "rb") as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
     problems = []
     warnings = []
@@ -422,7 +421,7 @@ def _get_sort_stem(in_bam, order):
 def sample_name(in_bam):
     """Get sample name from BAM file.
     """
-    with contextlib.closing(pysam.AlignmentFile(in_bam, "rb", check_sq=False)) as in_pysam:
+    with pysam.AlignmentFile(in_bam, "rb", check_sq=False) as in_pysam:
         try:
             if "RG" in in_pysam.header:
                 return in_pysam.header["RG"][0]["SM"]

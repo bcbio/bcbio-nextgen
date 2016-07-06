@@ -9,7 +9,6 @@ import os
 import csv
 import glob
 import collections
-import contextlib
 
 import yaml
 import pysam
@@ -156,7 +155,7 @@ def _generate_metrics(bam_fname, config_file, ref_file,
     return out_dir
 
 def _bam_is_paired(bam_fname):
-    with contextlib.closing(pysam.Samfile(bam_fname, "rb")) as work_bam:
+    with pysam.Samfile(bam_fname, "rb") as work_bam:
         for read in work_bam:
             if not read.is_unmapped:
                 return read.is_paired
