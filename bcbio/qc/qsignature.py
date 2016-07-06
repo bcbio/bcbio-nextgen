@@ -2,7 +2,6 @@
 
 https://sourceforge.net/p/adamajava/wiki/qSignature/
 """
-import contextlib
 import os
 import shutil
 import subprocess
@@ -168,7 +167,7 @@ def _slice_bam_chr21(in_bam, data):
     out_file = "%s-chr%s" % os.path.splitext(in_bam)
     if not utils.file_exists(out_file):
         bam.index(in_bam, data['config'])
-        with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+        with pysam.Samfile(in_bam, "rb") as bamfile:
             bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
         chromosome = "21"
         if "chr21" in bam_contigs:

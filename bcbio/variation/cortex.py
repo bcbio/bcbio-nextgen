@@ -12,7 +12,6 @@ import glob
 import subprocess
 import itertools
 import shutil
-from contextlib import closing
 
 import pysam
 from Bio import Seq
@@ -284,7 +283,7 @@ def _get_local_ref(region, ref_file, out_vcf_base):
     """
     out_file = "{0}.fa".format(out_vcf_base)
     if not file_exists(out_file):
-        with closing(pysam.Fastafile(ref_file)) as in_pysam:
+        with pysam.Fastafile(ref_file) as in_pysam:
             contig, start, end = region
             seq = in_pysam.fetch(contig, int(start), int(end))
             with open(out_file, "w") as out_handle:
@@ -302,7 +301,7 @@ def _get_fastq_in_region(region, align_bam, out_base):
     """
     out_file = "{0}.fastq".format(out_base)
     if not file_exists(out_file):
-        with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
+        with pysam.Samfile(align_bam, "rb") as in_pysam:
             with file_transaction(out_file) as tx_out_file:
                 with open(tx_out_file, "w") as out_handle:
                     contig, start, end = region
@@ -327,6 +326,6 @@ def _count_fastq_reads(in_fastq, min_reads):
     return len(items)
 
 def get_sample_name(align_bam):
-    with closing(pysam.Samfile(align_bam, "rb")) as in_pysam:
+    with pysam.Samfile(align_bam, "rb") as in_pysam:
         if "RG" in in_pysam.header:
             return in_pysam.header["RG"][0]["SM"]

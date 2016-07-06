@@ -2,8 +2,6 @@
 """
 import os
 import shutil
-from contextlib import closing
-
 import pysam
 
 from bcbio import bam, broad
@@ -87,7 +85,7 @@ def has_aligned_reads(align_bam, region=None):
             regions = [tuple(r) for r in pybedtools.BedTool(region)]
         else:
             regions = [region]
-    with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
+    with pysam.Samfile(align_bam, "rb") as cur_bam:
         if region is not None:
             for region in regions:
                 if isinstance(region, basestring):

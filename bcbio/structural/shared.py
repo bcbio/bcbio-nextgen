@@ -3,7 +3,6 @@
 Handles exclusion regions and preparing discordant regions.
 """
 import collections
-from contextlib import closing
 import os
 
 import numpy
@@ -204,7 +203,7 @@ def get_sv_chroms(items, exclude_file):
         if int(region.start) == 0:
             exclude_regions[region.chrom] = int(region.end)
     out = []
-    with closing(pysam.Samfile(items[0]["work_bam"], "rb")) as pysam_work_bam:
+    with pysam.Samfile(items[0]["work_bam"], "rb") as pysam_work_bam:
         for chrom, length in zip(pysam_work_bam.references, pysam_work_bam.lengths):
             exclude_length = exclude_regions.get(chrom, 0)
             if exclude_length < length:
@@ -302,7 +301,7 @@ def calc_paired_insert_stats(in_bam, nsample=1000000):
     """
     dists = []
     n = 0
-    with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+    with pysam.Samfile(in_bam, "rb") as in_pysam:
         for read in in_pysam:
             if read.is_proper_pair and read.is_read1:
                 n += 1

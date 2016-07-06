@@ -1,7 +1,7 @@
 """Pipeline functionality shared amongst multiple analysis types.
 """
 import os
-from contextlib import closing, contextmanager
+from contextlib import contextmanager
 import fileinput
 import functools
 import tempfile
@@ -52,7 +52,7 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, remove
         if not file_exists(out_file):
             work_dir = safe_makedir(
                 "{base}-split".format(base=os.path.splitext(out_file)[0]))
-            with closing(pysam.Samfile(bam_file, "rb")) as work_bam:
+            with pysam.Samfile(bam_file, "rb") as work_bam:
                 for chr_ref in list(work_bam.references) + default_targets:
                     if chr_ref not in ignore_chroms:
                         chr_out = os.path.join(work_dir,
@@ -127,13 +127,13 @@ def subset_bam_by_region(in_file, region, config, out_file_base=None):
         base, ext = os.path.splitext(in_file)
     out_file = "%s-subset%s%s" % (base, region, ext)
     if not file_exists(out_file):
-        with closing(pysam.Samfile(in_file, "rb")) as in_bam:
+        with pysam.Samfile(in_file, "rb") as in_bam:
             target_tid = in_bam.gettid(region)
             assert region is not None, \
                    "Did not find reference region %s in %s" % \
                    (region, in_file)
             with file_transaction(config, out_file) as tx_out_file:
-                with closing(pysam.Samfile(tx_out_file, "wb", template=in_bam)) as out_bam:
+                with pysam.Samfile(tx_out_file, "wb", template=in_bam) as out_bam:
                     for read in in_bam:
                         if read.tid == target_tid:
                             out_bam.write(read)

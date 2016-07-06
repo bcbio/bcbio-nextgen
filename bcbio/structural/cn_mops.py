@@ -2,7 +2,6 @@
 
 http://www.bioconductor.org/packages/release/bioc/html/cn.mops.html
 """
-from contextlib import closing
 import os
 import re
 import shutil
@@ -33,7 +32,7 @@ def run(items, background=None):
                                                "cn_mops"))
     parallel = {"type": "local", "cores": data["config"]["algorithm"].get("num_cores", 1),
                 "progs": ["delly"]}
-    with closing(pysam.Samfile(work_bams[0], "rb")) as pysam_work_bam:
+    with pysam.Samfile(work_bams[0], "rb") as pysam_work_bam:
         chroms = [None] if _get_regional_bed_file(items[0]) else pysam_work_bam.references
         out_files = run_multicore(_run_on_chrom, [(chrom, work_bams, names, work_dir, items)
                                                   for chrom in chroms],

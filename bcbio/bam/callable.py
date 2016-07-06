@@ -9,7 +9,6 @@ Regions are split to try to maintain relative uniformity across the
 genome and avoid extremes of large blocks or large numbers of
 small blocks.
 """
-import contextlib
 import copy
 import os
 import shutil
@@ -206,7 +205,7 @@ def get_ref_bedtool(ref_file, config, chrom=None):
     broad_runner = broad.runner_from_path("picard", config)
     ref_dict = broad_runner.run_fn("picard_index_ref", ref_file)
     ref_lines = []
-    with contextlib.closing(pysam.Samfile(ref_dict, "r")) as ref_sam:
+    with pysam.Samfile(ref_dict, "r") as ref_sam:
         for sq in ref_sam.header["SQ"]:
             if not chrom or sq["SN"] == chrom:
                 ref_lines.append("%s\t%s\t%s" % (sq["SN"], 0, sq["LN"]))
