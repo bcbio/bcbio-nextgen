@@ -124,9 +124,9 @@ def compare_to_rm(data):
                                    toval_data)
         rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data,
                                                bedprep_dir=utils.safe_makedir(os.path.join(base_dir, "bedprep")))
-        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data["genome_build"], base_dir, data)
+        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data.get("genome_build"), base_dir, data)
         rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),
-                                                   data["genome_build"], base_dir, data)
+                                                   data.get("genome_build"), base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
         if not vcfutils.vcf_has_variants(vrn_file):
@@ -469,7 +469,9 @@ def _flatten_grading(stats):
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 
 def _has_grading_info(samples):
-    for data in (x[0] for x in samples):
+    for data in samples:
+        if data.get("validate"):
+            return True
         for variant in data.get("variants", []):
             if variant.get("validate"):
                 return True
@@ -478,7 +480,7 @@ def _has_grading_info(samples):
 def _group_validate_samples(samples):
     extras = []
     validated = collections.defaultdict(list)
-    for data in (x[0] for x in samples):
+    for data in samples:
         is_v = False
         for variant in data.get("variants", []):
             if variant.get("validate"):
@@ -499,9 +501,10 @@ def _group_validate_samples(samples):
 def summarize_grading(samples):
     """Provide summaries of grading results across all samples.
     """
+    samples = [utils.to_single_data(d) for d in samples]
     if not _has_grading_info(samples):
-        return samples
-    validate_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "validate"))
+        return [[d] for d in samples]
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))
     header = ["sample", "caller", "variant.type", "category", "value"]
     validated, out = _group_validate_samples(samples)
     for vname, vitems in validated.iteritems():
