@@ -75,6 +75,8 @@ def get_qc_tools(data):
             to_run.append("qualimap_rnaseq")
         else:
             logger.debug("GTF not compatible with Qualimap, skipping.")
+    if analysis.startswith("smallrna-seq"):
+        to_run.append("small-rna")
     if not analysis.startswith("smallrna-seq"):
         to_run.append("samtools")
         to_run.append("gemini")
@@ -92,8 +94,9 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna
     tools = {"fastqc": fastqc.run,
+             "small-rna": srna.run,
              "samtools": samtools.run,
              "qualimap": qualimap.run,
              "qualimap_rnaseq": qualimap.run_rnaseq,
