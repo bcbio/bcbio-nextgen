@@ -193,6 +193,12 @@ def _add_disambiguate(sample):
             sample["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return sample
 
+def _fix_duplicated_rate(dt):
+    """Get RNA duplicated rate if exists and replace by samtools metric"""
+    if "Duplication_Rate_of_Mapped" in dt:
+        dt["Duplicates_pct"] = dt["Duplication_Rate_of_Mapped"]
+    return dt
+
 def _merge_metrics(samples):
     """
     parse project.yaml file to get metrics for each bam
@@ -220,6 +226,7 @@ def _merge_metrics(samples):
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = sample_name
                 dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
+                df = _fix_duplicated_rate(dt)
                 dt.transpose().to_csv(sample_file, sep="\t", header=False)
                 dt_together.append(dt)
                 s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
