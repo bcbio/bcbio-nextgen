@@ -37,11 +37,15 @@ def trim_srna_sample(data):
         adapter = adapter[0]
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
+        log_out = os.path.join(out_dir, "%s.log" % names)
         cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
         cmd = _cmd_cutadapt()
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 do.run(cmd.format(**locals()), "remove adapter")
+                if utils.file_exists(log_out):
+                    content = open(log_out).read().replace(out_short_file, names)
+                    open(log_out, 'w').write(content)
     else:
         logger.debug("Skip trimming for: %s" % names)
         symlink_plus(in_file, out_file)
@@ -79,7 +83,7 @@ def _cmd_cutadapt():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{cutadapt} --adapter={adapter} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file}"
+    cmd = "{cutadapt} --adapter={adapter} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
