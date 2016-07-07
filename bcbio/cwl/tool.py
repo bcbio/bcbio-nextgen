@@ -54,13 +54,11 @@ def _run_toil(args):
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltoil_work"))
     log_file = os.path.join(work_dir, "cwltoil.log")
     jobstore = os.path.join(work_dir, "cwltoil_jobstore")
-    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", work_dir]
+    flags = ["--jobStore", "file:%s" % jobstore, "--logFile", log_file, "--workDir", work_dir]
     if os.path.exists(jobstore):
         flags += ["--restart"]
     if args.no_container:
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
-    if "--batchSystem" in args.toolargs and "--disableSharedCache" not in args.toolargs:
-        flags += ["--disableSharedCache"]
     cmd = ["cwltoil"] + flags + args.toolargs + [main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd)
