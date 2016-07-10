@@ -64,8 +64,12 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
     with open(argfile, "w") as out_handle:
         if argfile.endswith(".json"):
             if _is_record_output(out_keys):
-                json.dump(_combine_cwl_records([_collapse_to_cwl_record(xs, work_dir) for xs in out],
-                                               fnargs, parallel),
+                if parallel == "multi-batch":
+                    recs = [_collapse_to_cwl_record(xs, work_dir) for xs in out]
+                else:
+                    samples = [utils.to_single_data(xs) for xs in out]
+                    recs = [_collapse_to_cwl_record(samples, work_dir)]
+                json.dump(_combine_cwl_records(recs, fnargs, parallel),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             elif parallel in ["single-split", "multi-combined", "batch-split"]:
                 json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
@@ -205,7 +209,7 @@ def _combine_cwl_records(recs, fnargs, parallel):
     output_keys = _get_output_cwl_keys(fnargs)
     assert len(output_keys) == 1, output_keys
     if parallel != "multi-batch":
-        assert len(recs) == 1
+        assert len(recs) == 1, pprint.pformat(recs)
         return {output_keys[0]: recs[0]}
     else:
         return {output_keys[0]: recs}

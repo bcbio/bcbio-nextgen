@@ -182,8 +182,23 @@ def vc_output_record(samples):
     """Prepare output record from variant calling to feed into downstream analysis.
 
     Prep work handles reformatting so we return generated dictionaries.
+
+    For any shared keys that are calculated only once for a batch, like variant calls
+    for the batch, we assign to every sample.
     """
-    return [[d] for d in _samples_to_records([utils.to_single_data(x) for x in samples])]
+    shared_keys = [["vrn_file"], ["validate", "summary"]]
+    raw = _samples_to_records([utils.to_single_data(x) for x in samples])
+    shared = {}
+    for key in shared_keys:
+        cur = [x for x in [tz.get_in(key, d) for d in raw] if x]
+        assert len(cur) == 1, (key, cur)
+        shared[tuple(key)] = cur[0]
+    out = []
+    for d in raw:
+        for key, val in shared.items():
+            d = tz.update_in(d, key, lambda x: val)
+        out.append([d])
+    return out
 
 def _samples_to_records(samples):
     """Convert samples into output CWL records.
