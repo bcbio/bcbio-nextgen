@@ -96,8 +96,7 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                 opts = ""
                 if os.path.exists(fusion_file):
                     opts += " --known_fusion_pairs %s" % fusion_file
-                # Back compatible -- use az-cancer-panel for older BED based specifications
-                if not gene_list or os.path.basename(prioritize_by).startswith("az"):
+                if not gene_list:
                     opts += " --gene_list %s" % os.path.join(data_dir, "az-cancer-panel.txt")
                 else:
                     opts += " --gene_list %s" % gene_list
