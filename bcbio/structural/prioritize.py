@@ -13,7 +13,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
-from bcbio.structural import lumpy, regions
+from bcbio.structural import lumpy
 
 POST_PRIOR_FNS = {"lumpy": lumpy.run_svtyper_prioritize}
 
@@ -39,6 +39,24 @@ def run(items):
         data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv})
     return [data]
 
+def _find_gene_list_from_bed(bed_file, base_file, data):
+    """Retrieve list of gene names from input BED file.
+    """
+    out_file = "%s-genes.txt" % utils.splitext_plus(base_file)[0]
+    if not os.path.exists(out_file):
+        genes = set([])
+        import pybedtools
+        for r in pybedtools.BedTool(bed_file):
+            if r.name:
+                if not r.name.startswith("{"):
+                    genes.add(r.name)
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                if len(genes) > 0:
+                    out_handle.write("\n".join(sorted(list(genes))) + "\n")
+    if utils.file_exists(out_file):
+        return out_file
+
 def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, data):
     """Provide prioritized tab delimited output for a single caller.
     """
@@ -59,13 +77,17 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         simple_vcf = "%s-simple.vcf.gz" % utils.splitext_plus(priority_vcf)[0]
         if not utils.file_exists(simple_vcf):
             with file_transaction(data, simple_vcf) as tx_out_file:
-                transcript_file = regions.get_sv_bed(data, "transcripts1000", work_dir)
-                if transcript_file:
-                    transcript_file = vcfutils.bgzip_and_index(transcript_file, data["config"])
-                    ann_opt = "--gene_bed %s" % transcript_file
+                data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
+                fusion_file = os.path.join(data_dir, "fusion_pairs.txt")
+                opts = ""
+                if os.path.exists(fusion_file):
+                    opts += " --known_fusion_pairs %s" % fusion_file
+                gene_list = _find_gene_list_from_bed(prioritize_by, simple_vcf, data)
+                if gene_list and not os.path.basename(prioritize_by).startswith("az"):
+                    opts += " --gene_list %s" % gene_list
                 else:
-                    ann_opt = ""
-                cmd = "simple_sv_annotation.py {ann_opt} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
+                    opts += " --gene_list %s" % os.path.join(data_dir, "az-cancer-panel.txt")
+                cmd = "simple_sv_annotation.py {opts} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
         simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
         with file_transaction(data, out_file) as tx_out_file:
@@ -82,7 +104,7 @@ def _combine_files(tsv_files, work_dir, data):
     """Combine multiple priority tsv files into a final sorted output.
     """
     header = "\t".join(["caller", "sample", "chrom", "start", "end", "svtype",
-                        "lof", "annotation", "split_read_support", "paired_end_support", "paired_read_support"])
+                        "lof", "annotation", "split_read_support", "paired_support_PE", "paired_support_PR"])
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-prioritize.tsv" % (sample))
     if not utils.file_exists(out_file):
