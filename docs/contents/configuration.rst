@@ -547,6 +547,9 @@ Structural variant calling
        `CIViC <https://civic.genome.wustl.edu>`_.
      - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
        contributed by `AstraZeneca oncology
+     - ``cancer/az-cancer-panel`` (hg19, GRCh37, hg38) -- A text file of genes in the
+       AstraZeneca cancer panel. This is only usable for ``svprioritize`` which
+       can take a list of gene names instead of a BED file.
        <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
      - ``actionable/ACMG56`` -- Medically actionalbe genes from the `The American College
        of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_

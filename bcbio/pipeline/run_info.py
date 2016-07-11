@@ -220,10 +220,16 @@ def _fill_prioritization_targets(data):
         val = tz.get_in(["config", "algorithm"] + target, data)
         if val and not os.path.exists(val):
             installed_vals = []
+            # Check prioritize directory
             for ext in [".bed", ".bed.gz"]:
                 installed_vals += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
                                                                           "coverage", "prioritize",
                                                                           val + "*%s" % ext)))
+            # Check sv-annotation directory for prioritize gene name lists
+            if target[-1] == "svprioritize":
+                installed_vals += glob.glob(os.path.join(
+                    os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py"))),
+                    "%s*" % os.path.basename(val)))
             if len(installed_vals) == 0:
                 raise ValueError("Configuration problem. BED file not found for %s: %s" %
                                  (target, val))

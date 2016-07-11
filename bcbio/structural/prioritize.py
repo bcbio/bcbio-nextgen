@@ -42,6 +42,13 @@ def run(items):
 def _find_gene_list_from_bed(bed_file, base_file, data):
     """Retrieve list of gene names from input BED file.
     """
+    # Check for a gene list, we can just return that.
+    with open(bed_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                if len(line.split()) == 1:
+                    return bed_file
+                break
     out_file = "%s-genes.txt" % utils.splitext_plus(base_file)[0]
     if not os.path.exists(out_file):
         genes = set([])
@@ -63,30 +70,37 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-%s-prioritize.tsv" % (sample, caller))
     if not utils.file_exists(out_file):
-        priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
-        if not utils.file_exists(priority_vcf):
-            with file_transaction(data, priority_vcf) as tx_out_file:
-                resources = config_utils.get_resources("bcbio_prioritize", data["config"])
-                jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
-                export = utils.local_path_export()
-                cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
-                       " -k {prioritize_by}")
-                do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
+        data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
+        gene_list = _find_gene_list_from_bed(prioritize_by, out_file, data)
+        # If we have a standard gene list we can skip BED based prioritization
+        if gene_list:
+            priority_vcf = os.path.join(work_dir, os.path.basename(vcf_file))
+            utils.symlink_plus(vcf_file, priority_vcf)
+        # otherwise prioritize based on BED and proceed
+        else:
+            priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
+            if not utils.file_exists(priority_vcf):
+                with file_transaction(data, priority_vcf) as tx_out_file:
+                    resources = config_utils.get_resources("bcbio_prioritize", data["config"])
+                    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
+                    export = utils.local_path_export()
+                    cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
+                        " -k {prioritize_by}")
+                    do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
         if post_prior_fn:
             priority_vcf = post_prior_fn(priority_vcf, work_dir, data)
         simple_vcf = "%s-simple.vcf.gz" % utils.splitext_plus(priority_vcf)[0]
         if not utils.file_exists(simple_vcf):
             with file_transaction(data, simple_vcf) as tx_out_file:
-                data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
                 fusion_file = os.path.join(data_dir, "fusion_pairs.txt")
                 opts = ""
                 if os.path.exists(fusion_file):
                     opts += " --known_fusion_pairs %s" % fusion_file
-                gene_list = _find_gene_list_from_bed(prioritize_by, simple_vcf, data)
-                if gene_list and not os.path.basename(prioritize_by).startswith("az"):
-                    opts += " --gene_list %s" % gene_list
-                else:
+                # Back compatible -- use az-cancer-panel for older BED based specifications
+                if not gene_list or os.path.basename(prioritize_by).startswith("az"):
                     opts += " --gene_list %s" % os.path.join(data_dir, "az-cancer-panel.txt")
+                else:
+                    opts += " --gene_list %s" % gene_list
                 cmd = "simple_sv_annotation.py {opts} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
         simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
