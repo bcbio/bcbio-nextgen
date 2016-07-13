@@ -291,7 +291,9 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-        exist_files = [x for x in sorted_files if os.path.exists(x)]
+        exist_files = [x for x in sorted_files if os.path.exists(x) and vcf_has_variants(x)]
+        if len(exist_files) == 0:  # no non-empty inputs, merge the empty ones
+            exist_files = [x for x in sorted_files if os.path.exists(x)]
         ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
         input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
         with open(input_file_list, "w") as out_handle:
