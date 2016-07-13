@@ -145,7 +145,7 @@ def run_vep(in_file, data):
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
-                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--ccds",
+                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
                        "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + \
                        prediction_args + dbnsfp_args + loftee_args
 
