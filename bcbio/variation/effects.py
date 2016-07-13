@@ -145,7 +145,7 @@ def run_vep(in_file, data):
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
-                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--ccds",
+                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
                        "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + \
                        prediction_args + dbnsfp_args + loftee_args
 
@@ -183,7 +183,7 @@ def _get_dbnsfp(data):
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
     if dbnsfp_file and os.path.exists(dbnsfp_file):
-        annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred",
+        annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred", "MutationTaster_score", "MutationTaster_pred", "FATHMM_score", "FATHMM_pred", "PROVEAN_score", "PROVEAN_pred", "MetaSVM_score", "MetaSVM_pred",
                        "CADD_raw", "CADD_phred", "Reliability_index"]
         return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
     else:
