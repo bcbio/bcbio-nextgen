@@ -64,36 +64,44 @@ def run(items):
 
     return items
 
-def _prep_bed(data, bed_fpath, work_dir):
-    out_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(bed_fpath))[0]))
-    if utils.file_exists(out_file):
-        return out_file
+def _prep_bed(data, bed_file, work_dir):
+    clean_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
+    bed = bt.BedTool(bed_file)
+    col_num = bed.field_count()
 
-    with file_transaction(data, out_file) as tx_out_file:
-        cols = _count_bed_cols(bed_fpath)
-        if cols < 4: bed_fpath = _annotate_bed(bed_fpath, data, work_dir)
-        bed = bt.BedTool(bed_fpath)
-        if 8 > cols > 4: bed = bed.cut(range(4))
-        elif cols > 8: bed = bed.cut(range(8))
+    if not utils.file_uptodate(clean_file, bed_file):
+        bed = bed.filter(lambda x: x.chrom and
+                         not any(x.chrom.startswith(e) for e in ['#', ' ', 'track', 'browser']))
+        bed = bed.remove_invalid()
+        with file_transaction(data, clean_file) as tx_out_file:
+            bed.saveas(tx_out_file)
+        logger.debug("Saved Seq2C clean BED file into " + clean_file)
+
+    if col_num < 4:
+        annotated_file = annotate.add_genes(clean_file, data, max_distance=0, work_dir=work_dir)
+        if annotated_file == clean_file:
+            raise ValueError("BED file for Seq2C must be annotated with gene names, "
+                             "however the input BED is 3-columns and we have no transcript "
+                             "data to annotate with " + bed_file)
+    else:
+        annotated_file = clean_file
+
+    ready_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(annotated_file))[0]))
+    if not utils.file_uptodate(ready_file, annotated_file):
+        bed = bt.BedTool(annotated_file)
+        if col_num > 4 and col_num != 8:
+            bed = bed.cut(range(4))
         bed = bed.filter(lambda x: x.name not in ["", ".", "-"])
-        bed.moveto(tx_out_file)
-    logger.debug("Saved Seq2C input BED into " + out_file)
-    return out_file
 
-def _count_bed_cols(bed_fpath):
-    with open(bed_fpath) as f:
-        for l in f:
-            if l and l.strip() and not l.startswith('#'):
-                return len(l.split('\t'))
-    return None
+        # Report all duplicated annotations one-per-line
+        with file_transaction(data, ready_file) as tx_out_file:
+            with open(tx_out_file, 'w') as out:
+                for r in bed:
+                    for g in r.name.split(','):
+                        out.write('\t'.join(map(str, [r.chrom, r.start, r.end, g])) + '\n')
+        logger.debug("Saved Seq2C clean annotated ready input BED into " + ready_file)
 
-def _annotate_bed(bed_fpath, data, work_dir):
-    annotate_bed = annotate.add_genes(bed_fpath, data, work_dir=work_dir)
-    if annotate_bed == bed_fpath:
-        raise ValueError("BED file for Seq2C must be annotated with gene names, "
-                         "however the input BED is 3-columns and we have no transcript "
-                         "data to annotate with" + bed_fpath)
-    return annotate_bed
+    return ready_file
 
 def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_names):
     output_fpath = os.path.join(work_dir, "calls_combined.tsv")
