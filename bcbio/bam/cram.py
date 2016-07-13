@@ -25,7 +25,7 @@ def compress(in_bam, data):
         with file_transaction(data, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", data["config"])
             bam = config_utils.get_program("bam", data["config"])
-            cmd = ("{bam} squeeze --in {in_bam} --out -.ubam --keepDups --readName "
+            cmd = ("{bam} squeeze --in {in_bam} --out -.ubam --keepDups "
                    "--binQualS=2,10,20,25,30,35,70 --binMid | "
                    "{samtools} view -T {ref_file} -@ {cores} "
                    "-C -x BD -x BI "
