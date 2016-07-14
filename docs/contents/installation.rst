@@ -140,12 +140,12 @@ other analyses. The available targets are:
   files are also used for annotating and prioritizing structural variants.
 - ``smallrna`` -- Data files for doing small RNA analysis.
 - ``gemini`` -- The `GEMINI <http://gemini.readthedocs.org/>`_ framework
-  associated publicly available metadata with called variants, and provides
+  associates publicly available metadata with called variants, and provides
   utilities for query and analysis. This target installs the required GEMINI
   data files.
 - ``cadd`` -- `CADD <http://cadd.gs.washington.edu/home>`_ evaluates the
   potential impact of variations. It is freely available for non-commercial
-  research, but require licensing for commercial usage. The download is 30Gb and
+  research, but requires licensing for commercial usage. The download is 30Gb and
   GEMINI will include CADD annotations if present.
 - ``vep`` -- Data files for the `Variant Effects Predictor (VEP)
   <http://www.ensembl.org/info/docs/tools/vep/index.html>`_. To use VEP as an
@@ -155,7 +155,7 @@ other analyses. The available targets are:
   provides integrated and generalized metrics from multiple sources to help with
   prioritizing variations for follow up. The files are large: dbNSFP is 10Gb,
   expanding to 100Gb during preparation. VEP will use dbNSFP for annotation of
-  VCFs in included.
+  VCFs if included.
 - ``battenberg`` Data files for `Battenberg
   <https://github.com/cancerit/cgpBattenberg>`_, which detects subclonality and
   copy number changes in whole genome cancer samples.
@@ -216,7 +216,7 @@ on clusters or multicore machines.
 Disk space requirements for the tools, including all system packages are under
 4Gb. Biological data requirements will depend on the genomes and aligner indices
 used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses
-appromximately 35Gb of storage during preparation and ~25Gb after::
+approximately 35Gb of storage during preparation and ~25Gb after::
 
     $ du -shc genomes/Hsapiens/GRCh37/*
     3.8G  bowtie2
@@ -323,7 +323,7 @@ Manual process
 ==============
 
 The manual process does not allow the in-place updates and management
-of third party tools that the automated installer make possible. It's
+of third party tools that the automated installer makes possible. It's
 a more error-prone and labor intensive process. If you find you can't
 use the installer we'd love to hear why to make it more amenable to
 your system.
