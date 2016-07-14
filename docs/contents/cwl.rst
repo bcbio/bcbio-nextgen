@@ -210,7 +210,7 @@ commandline.
 
 To run distributed on a Slurm cluster::
 
-    bcbio_vm.py cwlrun toil run_info-cwl-workflow -- --batchSystem slurm
+    bcbio_vm.py cwlrun toil `pwd`/run_info-cwl-workflow -- --batchSystem slurm
 
 Development notes
 ~~~~~~~~~~~~~~~~~
