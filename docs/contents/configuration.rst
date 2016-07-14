@@ -54,7 +54,7 @@ multiple samples using the template workflow command::
   template command tries to identify the ``samplename`` from read group
   information in a BAM file, or uses the base filename if no read group
   information is present. For BAM files, this would be the filename without the
-  extension and path (``/path/to/yourfile.bam => yourfile``). For fastq
+  extension and path (``/path/to/yourfile.bam => yourfile``). For FASTQ
   files, the template functionality will identify pairs using standard
   conventions (``_1`` and ``_2``, including Illumina extensions like ``_R1``),
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
@@ -92,8 +92,8 @@ multiple samples using the template workflow command::
   ``project1`` directory containing the sample configuration in
   ``project1/config/project1.yaml``.
 
-- The remaining arguments are input BAM or fastq files. The script
-  pairs fastq files (identified by ``_1`` and ``_2``) and extracts
+- The remaining arguments are input BAM or FASTQ files. The script
+  pairs FASTQ files (identified by ``_1`` and ``_2``) and extracts
   sample names from input BAMs, populating the ``files`` and
   ``description`` field in the final configuration file. Specify the
   full path to sample files on your current machine.
@@ -113,7 +113,7 @@ samples, pointing to this custom configuration file::
 
     bcbio_nextgen -w template project1/config/project1-template.yaml project1.csv folder/*
 
-If your sample folder contains additional BAM or fastq files you do not wish to
+If your sample folder contains additional BAM or FASTQ files you do not wish to
 include in the sample YAML configuration, you can restrict the output to only
 include samples in the metadata CSV with ``--only-metadata``. The output will
 print warnings about samples not present in the metadata file, then leave these
@@ -215,7 +215,7 @@ The sample configuration file defines ``details`` of each sample to process::
   ``SM`` parameter in the BAM read group. Required.
 
 - ``files`` A list of files to process. This currently supports either a single
-  end or two paired end fastq files, or a single BAM file. It does not yet
+  end or two paired-end FASTQ files, or a single BAM file. It does not yet
   handle merging BAM files or more complicated inputs.
 
 - ``genome_build`` Genome build to align to, which references a genome
@@ -367,7 +367,7 @@ Alignment
    handles adding read groups, sorting to a reference genome and
    filtering problem records that cause problems with GATK. Options:
 
-     - ``fixrg`` -- only adjust read groups, assuming everything else if BAM
+     - ``fixrg`` -- only adjust read groups, assuming everything else in BAM
        file is compatible.
      - ``picard`` -- Picard/GATK based cleaning. Includes read group changes,
        fixing of problematic reads and re-ordering chromosome order to match the
@@ -400,8 +400,8 @@ Alignment
    for example: [AAAATTTT, GGGGCCCC]
 - ``align_split_size``: Increase parallelization of alignment. As of 0.9.8,
   bcbio will try to determine a useful parameter and you don't need to set this.
-  If you manually set it, bcbio will respect for you specification. Set to false
-  to avoid splitting entirely. If setting, this defines the number of records to
+  If you manually set it, bcbio will respect your specification. Set to false
+  to avoid splitting entirely. If set, this defines the number of records to
   feed into each independent parallel step (for example, 5000000 = 5 million
   reads per chunk). It converts the original inputs into bgzip grabix indexed
   FASTQ files, and then retrieves chunks for parallel alignment. Following
@@ -410,9 +410,9 @@ Alignment
   and combining split outputs. The tradeoff makes sense when you have large
   files and lots of distributed compute. When you have fewer large multicore
   machines this parameter may not help speed up processing.
--  ``quality_format`` Quality format of fastq or BAM inputs [standard, illumina]
+-  ``quality_format`` Quality format of FASTQ or BAM inputs [standard, illumina]
 -  ``strandedness`` For RNA-seq libraries, if your library is strand
-   specific, set the appropriate flag form [unstranded, firststrand, secondstrand].
+   specific, set the appropriate flag from [unstranded, firststrand, secondstrand].
    Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
    Scriptseq prepared libraries, secondstrand is correct.
 
@@ -516,7 +516,7 @@ Variant calling
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 - ``clinical_reporting`` Tune output for clinical reporting.
-  Modifies snpEff parameters to use HGVS notational on canonical
+  Modifies snpEff parameters to use HGVS notation on canonical
   transcripts [false, true].
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to
@@ -551,12 +551,12 @@ Structural variant calling
        AstraZeneca cancer panel. This is only usable for ``svprioritize`` which
        can take a list of gene names instead of a BED file.
        <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
-     - ``actionable/ACMG56`` -- Medically actionalbe genes from the `The American College
+     - ``actionable/ACMG56`` -- Medically actionable genes from the `The American College
        of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_
 - ``sv_regions`` -- A specification of regions to target during structural
   variant calling. By default, bcbio uses regions specified in
   ``variant_regions`` but this allows custom specification for structural
-  variant calling. This can be a pointer to a bed file or special inputs:
+  variant calling. This can be a pointer to a BED file or special inputs:
   ``exons`` for only exon regions, ``transcripts`` for transcript regions (the
   min start and max end of exons) or ``transcriptsXXXX`` for transcripts plus a
   window of XXXX size around it. The size can be an integer (``transcripts1000``)

@@ -96,6 +96,7 @@ Contributors
 
 - `Miika Ahdesmaki`_, AstraZeneca
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
+- `Christian Brueffer`_, Lund University, Lund, Sweden
 - `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Nick Carriero <http://www.simonsfoundation.org/about-us/staff/staff-bios/#nick-carriero-ph-d>`_, Simons Foundation
@@ -123,6 +124,7 @@ Contributors
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
+.. _Christian Brueffer: https://github.com/cbrueffer
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Alla Bushoy: https://github.com/abushoy
 .. _Brad Chapman: https://github.com/chapmanb
