@@ -59,19 +59,19 @@ def disambiguate(humanlist, mouselist, disambalgo):
         dv = 2**13 # a high quality score to replace missing quality scores (no real quality score should be this high)
         sa = array('i',(dv for i in range(0,4))) # score array, with [human_1_QS, human_2_QS, mouse_1_QS, mouse_2_QS]
         for read in humanlist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if read.is_unmapped:
                 continue
             QScore = read.opt('XO') + read.opt('NM') + read.opt('NH')
            # directionality (_1 or _2)
-            d12 = 0 if 0x40&read.flag else 1
+            d12 = 0 if read.is_read1 else 1
             if sa[d12]>QScore:
                 sa[d12]=QScore # update to lowest (i.e. 'best') quality score
         for read in mouselist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if read.is_unmapped:
                 continue
             QScore = read.opt('XO') + read.opt('NM') + read.opt('NH')
            # directionality (_1 or _2)
-            d12 = 2 if 0x40&read.flag else 3
+            d12 = 2 if read.is_read1 else 3
             if sa[d12]>QScore:
                 sa[d12]=QScore # update to lowest (i.e. 'best') quality score
         if min(sa[0:2])==min(sa[2:4]) and max(sa[0:2])==max(sa[2:4]): # ambiguous
@@ -91,10 +91,10 @@ def disambiguate(humanlist, mouselist, disambalgo):
             AS.append(array('i',(dv for i in range(0,4)))) # alignment score array, with [human_1_Score, human_2_Score, mouse_1_Score, mouse_2_Score]
         #
         for read in humanlist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if read.is_unmapped:
                 continue
             # directionality (_1 or _2)
-            d12 = 0 if 0x40&read.flag else 1
+            d12 = 0 if read.is_read1 else 1
             for x in range(0, len(bwatagsigns)):
                 try:
                     QScore = bwatagsigns[x]*read.opt(bwatags[x])
@@ -109,10 +109,10 @@ def disambiguate(humanlist, mouselist, disambalgo):
                     AS[x][d12]=QScore # update to highest (i.e. 'best') quality score
         #
         for read in mouselist:
-            if 0x4&read.flag: # flag 0x4 means unaligned
+            if read.is_unmapped:
                 continue
            # directionality (_1 or _2)
-            d12 = 2 if 0x40&read.flag else 3
+            d12 = 2 if read.is_read1 else 3
             for x in range(0, len(bwatagsigns)):
                 try:
                     QScore = bwatagsigns[x]*read.opt(bwatags[x])
