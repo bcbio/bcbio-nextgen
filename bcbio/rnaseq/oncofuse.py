@@ -167,7 +167,7 @@ def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, d
             fusiondict[my_line_split[9]] = my_line.strip("\n")
     with pysam.Samfile(contamination_bam, "rb") as samfile:
         for my_read in samfile:
-            if 0x4 & my_read.flag or my_read.is_secondary:  # flag 0x4 means unaligned
+            if my_read.is_unmapped or my_read.is_secondary:
                 continue
             if my_read.qname in fusiondict:
                 fusiondict.pop(my_read.qname)
