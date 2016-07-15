@@ -352,8 +352,9 @@ def variants(data, out_dir):
                 remove_plus(cg_file)
 
 def priority_coverage(data, out_dir):
+    from bcbio.structural import prioritize
     bed_file = dd.get_svprioritize(data)
-    if not bed_file or not file_exists(bed_file):
+    if not bed_file or not file_exists(bed_file) or prioritize.is_gene_list(bed_file):
         return data
 
     work_dir = safe_makedir(out_dir)
@@ -379,8 +380,9 @@ def priority_total_coverage(data, out_dir):
     """
     calculate coverage at 10 depth intervals in the priority regions
     """
+    from bcbio.structural import prioritize
     bed_file = dd.get_svprioritize(data)
-    if not bed_file and not file_exists(bed_file):
+    if not bed_file and not file_exists(bed_file) or prioritize.is_gene_list(bed_file):
         return {}
     work_dir = safe_makedir(out_dir)
     sample = dd.get_sample_name(data)

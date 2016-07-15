@@ -39,16 +39,24 @@ def run(items):
         data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv})
     return [data]
 
+def is_gene_list(bed_file):
+    """Check if the file is only a list of genes, not a BED
+    """
+    with open(bed_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                print line.split()
+                if len(line.split()) == 1:
+                    return True
+                else:
+                    return False
+
 def _find_gene_list_from_bed(bed_file, base_file, data):
     """Retrieve list of gene names from input BED file.
     """
     # Check for a gene list, we can just return that.
-    with open(bed_file) as in_handle:
-        for line in in_handle:
-            if not line.startswith("#"):
-                if len(line.split()) == 1:
-                    return bed_file
-                break
+    if is_gene_list(bed_file):
+        return bed_file
     out_file = "%s-genes.txt" % utils.splitext_plus(base_file)[0]
     if not os.path.exists(out_file):
         genes = set([])
