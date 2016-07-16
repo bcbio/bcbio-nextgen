@@ -736,6 +736,7 @@ Post-processing
   during preparation of alignment inputs. ``seqcluster`` turns off use of
   seqcluster tool in srnaseq pipeline.
   ``vqsr`` turns off variant quality score recalibration for all samples.
+  ``upload_alignment`` turns off final upload of large alignment files.
   Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and detected

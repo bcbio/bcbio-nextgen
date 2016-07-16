@@ -332,7 +332,7 @@ def _maybe_add_alignment(algorithm, sample, out):
     return out
 
 def _maybe_add_disambiguate(algorithm, sample, out):
-    if "disambiguate" in sample:
+    if "disambiguate" in sample and _has_alignment_file(algorithm, sample):
         for extra_name, fname in sample["disambiguate"].items():
             ftype = os.path.splitext(fname)[-1].replace(".", "")
             fext = ".bai" if ftype == "bam" else ""
@@ -439,7 +439,8 @@ def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate") or algorithm.get("bam_clean")
               or algorithm.get("mark_duplicates"))) and
-              sample.get("work_bam") is not None)
+              sample.get("work_bam") is not None and
+              "upload_alignment" not in dd.get_tools_off(sample))
 
 # ## File information from full project
 
