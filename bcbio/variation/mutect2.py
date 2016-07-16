@@ -77,7 +77,9 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             paired = vcfutils.get_paired_bams(align_bams, items)
             params += _add_tumor_params(paired)
             params += _add_region_params(region, out_file, items)
-            params += _add_assoc_params(assoc_files)
+            # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
+            # Not yet clear how this helps or hurts in a general case.
+            #params += _add_assoc_params(assoc_files)
             params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             resources = config_utils.get_resources("mutect2", items[0]["config"])
             if "options" in resources:
