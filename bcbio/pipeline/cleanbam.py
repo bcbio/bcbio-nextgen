@@ -68,7 +68,6 @@ def _filter_bad_reads(in_bam, ref_file, data):
                 if dd.get_quality_format(data, "").lower() == "illumina":
                     params.append("--fix_misencoded_quality_scores")
                 jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
-                cmd = [config_utils.get_program("gatk-framework", data["config"])] + jvm_opts + params
-                do.run(cmd, "Filter problem reads")
+                do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter problem reads")
     bam.index(out_file, data["config"])
     return out_file

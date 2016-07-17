@@ -33,14 +33,14 @@ details:
       #realign: gatk
       #recalibrate: gatk
       variantcaller: freebayes
+      #variantcaller: [gatk, gatk-haplotype]
       #effects: vep
       #svcaller: [lumpy, cnvkit, manta, metasv]
-      #svcaller: cnvkit
+      svcaller: [cnvkit, seq2c]
       #remove_lcr: true
       tools_on: [qualimap]
       tools_off: [gemini]
       mixup_check: qsignature
-      #variantcaller: [gatk, gatk-haplotype]
       quality_format: standard
       nomap_split_size: 50
       nomap_split_targets: 100

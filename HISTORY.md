@@ -5,6 +5,8 @@
   matches Broad recommendations.
 - Use conda installed Java instead of requiring external installation
   for most tools.
+- Support GATK 3.6 with Java 8 installed as part of anaconda. Older GATK
+  versions for calling and recalibration/realignment require external Java 7.
 - Re-organization of variants stats using bcftools and
   cleaning gemini queries to get individual samples metrics.
 - Quality control back end revamped to support better parallelization

@@ -88,7 +88,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
                 "Require full version of GATK 3.5+ for mutect2 calling"
             broad_runner.new_resources("mutect2")
-            gatk_cmd = " ".join(broad_runner.cl_gatk(params, os.path.dirname(tx_out_file)))
+            gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "MuTect2")
     out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])

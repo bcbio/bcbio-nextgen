@@ -307,9 +307,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                       "-out", tx_out_file,
                       "-assumeSorted"]
             jvm_opts = broad.get_gatk_framework_opts(config, include_gatk=False)
-            cmd = [config_utils.get_program("gatk-framework", config)] + params + jvm_opts
             try:
-                do.run(cmd, "Concat variant files", log_error=False)
+                do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Concat variant files", log_error=False)
             except subprocess.CalledProcessError, msg:
                 if ("We require all VCFs to have complete VCF headers" in str(msg) or
                       "Features added out of order" in str(msg) or
@@ -392,8 +391,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
                 params += ["-nt", min(cores, 4)]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             jvm_opts = broad.get_gatk_framework_opts(config, memscale=memscale)
-            cmd = [config_utils.get_program("gatk-framework", config)] + jvm_opts + params
-            do.run(cmd, "Combine variant files")
+            do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     if in_pipeline:
