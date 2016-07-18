@@ -31,7 +31,7 @@ def rapmap_pseudoalign(fq1, fq2, rapmap_dir, gtf_file, ref_file, data):
     out_file = os.path.join(rapmap_dir, samplename + ".bam")
     if file_exists(out_file):
         return out_file
-    rapmap_idx = rapmap_index(gtf_file, ref_file, data, sailfish_dir)
+    rapmap_idx = rapmap_index(gtf_file, ref_file, data, rapmap_dir)
     num_cores = dd.get_num_cores(data)
     rapmap = config_utils.get_program("rapmap", data["config"])
     cmd = ("{rapmap} pseudomap -i {rapmap_idx} -t {num_cores} ")

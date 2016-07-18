@@ -4,6 +4,7 @@ Most of this either uses Valentine Svennson's umis repository or adapts
 code written from it.
 https://github.com/vals/umis
 """
+import pandas as pd
 import json
 import os
 
