@@ -4,7 +4,7 @@
 import os
 from setuptools import setup, find_packages
 
-version = "0.9.9a"
+version = "0.9.9"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
@@ -27,8 +27,8 @@ scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts
 write_version_py()
 setup(name="bcbio-nextgen",
       version=version,
-      author="Brad Chapman and bcbio-nextgen contributors",
-      author_email="chapmanb@50mail.com",
+      author="bcbio community",
+      author_email="biovalidation@googlegroups.com",
       description="Best-practice pipelines for fully automated high throughput sequencing analysis",
       long_description=(open('README.rst').read()),
       license="MIT",

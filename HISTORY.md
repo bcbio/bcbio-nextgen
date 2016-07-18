@@ -1,4 +1,4 @@
-## 0.9.9 (in progress)
+## 0.9.9 (18 July 2016)
 
 - Change defaults for recalibration and realignment to False. These have been
   the recommended settings (http://bit.ly/bcbio-minimal) and no realignment now
