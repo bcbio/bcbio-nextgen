@@ -3,14 +3,18 @@ import sys
 import glob
 import os.path as op
 import shutil
+import subprocess
+import yaml
 from collections import Counter
+from contextlib import closing
+from distutils.version import LooseVersion
 
 try:
     from seqcluster.libs.fastq import collapse, write_output
 except ImportError:
     pass
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
+from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus, local_path_export)
 from bcbio.provenance import do
 from bcbio.provenance.versioncheck import java
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -124,15 +128,13 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     Run miraligner tool (from seqcluster suit) with default
     parameters.
     """
-    if not _check_java_version(config, {}):
-        return None
     resources = config_utils.get_resources("miraligner", config)
     miraligner = config_utils.get_program("miraligner", config)
     jvm_opts =  "-Xms750m -Xmx4g"
     if resources and resources.get("jvm_opts"):
         jvm_opts = " ".join(resources.get("jvm_opts"))
-
-    cmd = ("{miraligner} {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
+    export = _get_env()
+    cmd = ("{export} {miraligner} {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
@@ -141,6 +143,17 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
                                  "bcbio_nextgen.py upgrade -u deps --tools.")
             shutil.move(tx_out_file + ".mirna", out_file + ".mirna")
     return out_file + ".mirna"
+
+def _get_env():
+    conda = os.path.join(os.path.dirname(sys.executable), "conda")
+    anaconda = os.path.join(os.path.dirname(sys.executable), "..")
+    cl = ("{conda} list --json -f seqbuster").format(**locals())
+    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
+        version = yaml.load(stdout.read())[0].split("-")[1]
+        if LooseVersion(version) >= LooseVersion("3"):
+            return "JAVA_HOME=%s && " % anaconda
+    return ""
 
 def _old_version(fn):
     """Check if miraligner is old version."""
