@@ -44,7 +44,7 @@ class IOSafeMultiProcessingSubscriber(logbook.queues.MultiProcessingSubscriber):
     def recv(self, timeout=None):
         try:
             return super(IOSafeMultiProcessingSubscriber, self).recv(timeout)
-        except IOError, e:
+        except IOError as e:
             if "Interrupted system call" in str(e):
                 return None
             else:

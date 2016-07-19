@@ -140,7 +140,7 @@ def _report_summary(samples, out_dir):
             # messages. We need to generalize coverage reporting and re-include.
             # try:
             #     do.run(cmd, "Prepare coverage summary", log_error=False)
-# except subprocess.CalledProcessError, msg:
+# except subprocess.CalledProcessError as msg:
             #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)

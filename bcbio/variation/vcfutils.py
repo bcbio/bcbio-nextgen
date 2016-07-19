@@ -309,7 +309,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             jvm_opts = broad.get_gatk_framework_opts(config, include_gatk=False)
             try:
                 do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Concat variant files", log_error=False)
-            except subprocess.CalledProcessError, msg:
+            except subprocess.CalledProcessError as msg:
                 if ("We require all VCFs to have complete VCF headers" in str(msg) or
                       "Features added out of order" in str(msg) or
                       "The reference allele cannot be missing" in str(msg)):

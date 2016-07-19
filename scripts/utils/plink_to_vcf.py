@@ -146,7 +146,7 @@ def fix_nonref_positions(in_file, ref_file):
                     if parts[0] not in ignore_chrs:
                         try:
                             ref_base = ref2bit[parts[0]].get(pos-1, pos).upper()
-                        except Exception, msg:
+                        except Exception as msg:
                             print "Skipping line. Failed to retrieve reference base for %s\n%s" % (str(parts), msg)
                     parts = fix_vcf_line(parts, ref_base)
                     if parts is not None:

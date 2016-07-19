@@ -28,7 +28,7 @@ class GalaxyApiAccess:
             try:
                 out = json.loads(response.read())
                 break
-            except ValueError, msg:
+            except ValueError as msg:
                 if num_tries > self._max_tries:
                     raise
                 time.sleep(3)

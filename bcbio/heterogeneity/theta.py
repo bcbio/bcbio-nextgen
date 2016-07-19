@@ -189,7 +189,7 @@ def _safe_run_theta(input_file, out_dir, output_ext, args, data):
                    "--FORCE", "-d", tx_out_dir]
             try:
                 do.run(cmd, "Run THetA to calculate purity", log_error=False)
-            except subprocess.CalledProcessError, msg:
+            except subprocess.CalledProcessError as msg:
                 if ("Number of intervals must be greater than 1" in str(msg) or
                       "This sample isn't a good candidate for THetA analysis" in str(msg)):
                     with open(os.path.join(tx_out_dir, os.path.basename(skip_file)), "w") as out_handle:

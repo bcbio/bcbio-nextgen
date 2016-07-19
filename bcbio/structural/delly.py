@@ -65,7 +65,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
                     # Delly will write nothing if no variants found
                     if not utils.file_exists(tx_out_file):
                         vcfutils.write_empty_vcf(tx_out_file, samples=names)
-                except subprocess.CalledProcessError, msg:
+                except subprocess.CalledProcessError as msg:
                     # delly returns an error exit code if there are no variants
                     if "No structural variants found" in str(msg):
                         vcfutils.write_empty_vcf(tx_out_file, samples=names)

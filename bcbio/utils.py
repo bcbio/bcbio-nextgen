@@ -652,7 +652,7 @@ def R_package_path(package):
     cmd = """{rscript} -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
-    except subprocess.CalledProcessError, e:
+    except subprocess.CalledProcessError as e:
         return None
     for line in output.split("\n"):
         if "[1]" not in line:

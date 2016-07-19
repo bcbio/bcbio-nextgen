@@ -25,7 +25,7 @@ def _hmmer(endpoint, args1, args2):
                               data = params,
                               headers={"Accept" : "application/json"})
         v = urllib2.urlopen(req)
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
         raise Exception("HTTP Error 400: %s" % e.read())
 
     results_url = v['location']

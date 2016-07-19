@@ -427,7 +427,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
                 do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
                        checks=[do.file_reasonable_size(tx_out_file, bam_file)],
                        log_error=False)
-            except subprocess.CalledProcessError, msg:
+            except subprocess.CalledProcessError as msg:
                 if not is_retry and "deflate failed" in str(msg):
                     logger.info("bamtofastq deflate IO failure preparing %s. Retrying with single core."
                                 % (bam_file))
