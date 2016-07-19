@@ -57,6 +57,7 @@ LOOKUPS = {
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
+    "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "work_bam": {"keys": ["work_bam"]},
     "count_file": {"keys": ["count_file"]},
     "combined_counts": {"keys": ["combined_counts"]},

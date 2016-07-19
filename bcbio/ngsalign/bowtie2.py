@@ -81,7 +81,7 @@ def filter_multimappers(align_file, data):
     out_file = base + ".unique" + ext
     if utils.file_exists(out_file):
         return out_file
-    base_filter = '-F "[XS] == null and not unmapped {paired_filter}"'
+    base_filter = '-F "[XS] == null and not unmapped {paired_filter} and not duplicate" '
     if bam.is_paired(align_file):
         paired_filter = "and paired and proper_pair"
     else:

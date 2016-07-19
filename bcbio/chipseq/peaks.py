@@ -21,10 +21,10 @@ def peakcall_prepare(data, run_parallel):
     for sample in data:
         mimic = copy.copy(sample[0])
         for caller in dd.get_peakcaller(sample[0]):
-            if caller in caller_fns and dd.get_phenotype(mimic) == "chip":
+            if caller in caller_fns:
                 mimic["peak_fn"] = caller
                 name = dd.get_sample_name(mimic)
-                mimic = _get_paired_samples(mimic, data)
+                mimic = _check(mimic, data)
                 if mimic:
                     to_process.append(mimic)
                 else:
@@ -37,11 +37,12 @@ def peakcall_prepare(data, run_parallel):
 def calling(data):
     """Main function to parallelize peak calling."""
     chip_bam = dd.get_work_bam(data)
-    input_bam = data["work_bam_input"]
+    input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name ))
-    out_file = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir, data["config"])
+    out_file = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
+                         dd.get_chip_method(data), data["config"])
     data["peaks_file"] = out_file
     return [[data]]
 
@@ -59,20 +60,27 @@ def _sync(original, processed):
                     original_sample[0]["peaks_file"].append(processs_sample[0]["peaks_file"])
     return original
 
-def _get_paired_samples(sample, data):
+def _check(sample, data):
     """Get input sample for each chip bam file."""
-    dd.get_phenotype(sample)
+    if dd.get_chip_method(sample).lower() == "atac":
+        return [sample]
     for origin in data:
         if  dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
             sample["work_bam_input"] = dd.get_work_bam(origin[0])
             return [sample]
+    return [sample]
 
 def _get_multiplier(samples):
     """Get multiplier to get jobs
        only for samples that have input
     """
     to_process = 1.0
+    to_skip = 1.0
     for sample in samples:
         if dd.get_phenotype(sample[0]) == "chip":
             to_process += 1.0
-    return to_process / len(samples)
+        elif dd.get_chip_method(sample[0]).lower() == "atac":
+            to_process += 1.0
+        else:
+            to_skip += 1.0
+    return (to_process - to_skip) / len(samples)
