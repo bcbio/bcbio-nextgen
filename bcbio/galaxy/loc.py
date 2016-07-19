@@ -48,7 +48,7 @@ def get_genome_refs(loc_file, loc_type):
     get dictionary of genome: location for all genomes of type in a .loc file
     for example: {'hg19': '/genomedir/Hsapiens/hg19/seq/hg19.fa'}
     """
-    if not file_exists(out_file):
+    if not file_exists(loc_file):
         return None
     refs = {}
     with open(loc_file) as in_handle:

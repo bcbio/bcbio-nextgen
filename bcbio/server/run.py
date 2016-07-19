@@ -26,7 +26,7 @@ def run_bcbio_nextgen(**kwargs):
     else:
         # XXX Need to work on ways to prepare batch scripts for bcbio submission
         # when analysis server talks to an HPC cluster
-        raise ValueError("Do not yet support automated execution of this parallel config: %s" % parallel)
+        raise ValueError("Do not yet support automated execution of this parallel config: %s" % kwargs["parallel"])
     app.runmonitor.set_status(run_id, "running")
     if callback:
         callback(run_id)
