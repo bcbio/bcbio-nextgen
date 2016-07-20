@@ -1,3 +1,7 @@
+## 1.0.0 (in progress)
+
+- Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
+
 ## 0.9.9 (18 July 2016)
 
 - Change defaults for recalibration and realignment to False. These have been

@@ -111,10 +111,10 @@ def get_affected_status(data):
 def get_gender(data):
     """Retrieve gender from metadata, codified as male/female/unknown.
     """
-    g = dd.get_gender(data)
-    if g and str(g).lower() in ["male", "m"]:
+    g = str(dd.get_gender(data))
+    if g and str(g).lower() in ["male", "m", "1"]:
         return "male"
-    elif g and str(g).lower() in ["female", "f"]:
+    elif g and str(g).lower() in ["female", "f", "2"]:
         return "female"
     else:
         return "unknown"

@@ -18,7 +18,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
-from bcbio.variation import bedutils, effects, vcfutils
+from bcbio.variation import bedutils, effects, population, vcfutils
 from bcbio.provenance import do
 from bcbio.structural import annotate, shared, plot
 
@@ -342,7 +342,7 @@ def _add_variantcalls_to_output(out, data):
     """Call ploidy and convert into VCF and BED representations.
     """
     call_file = "%s-call%s" % os.path.splitext(out["cns"])
-    gender = dd.get_gender(data)
+    gender = population.get_gender(data)
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
@@ -523,7 +523,7 @@ def _add_diagram_plot(out, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "diagram", "-s", cns,
                    "-o", tx_out_file, cnr]
-            gender = dd.get_gender(data)
+            gender = population.get_gender(data)
             if gender and gender.lower() == "male":
                 cmd += ["--male-reference"]
             do.run(cmd, "CNVkit diagram plot")
