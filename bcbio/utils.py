@@ -680,9 +680,12 @@ def get_perl_exports(tmpdir=None):
         out += " && export TMPDIR=%s" % (tmpdir)
     return out
 
-def local_path_export():
+def local_path_export(at_start=True):
     path = os.path.dirname(os.path.realpath(sys.executable))
-    return "export PATH=%s:$PATH && " % (path)
+    if at_start:
+        return "export PATH=%s:$PATH && " % (path)
+    else:
+        return "export PATH=$PATH:%s && " % (path)
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)

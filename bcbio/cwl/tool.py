@@ -6,6 +6,7 @@ to run bcbio in a standard way in many environments.
 import glob
 import os
 import subprocess
+import sys
 
 from bcbio import utils
 
@@ -19,22 +20,38 @@ def _get_main_and_json(directory):
     assert len(main_json) == 1, "Did not find main json in %s" % directory
     return main_cwl[0], main_json[0]
 
-def _run_tool(cmd):
+def _run_tool(cmd, use_container=True):
+    """Run with injection of bcbio path.
+
+    Place at end for runs without containers to avoid overriding other
+    bcbio installations.
+    """
     if isinstance(cmd, (list, tuple)):
         cmd = " ".join([str(x) for x in cmd])
-    cmd = utils.local_path_export() + cmd
+    cmd = utils.local_path_export(at_start=use_container) + cmd
     subprocess.check_call(cmd, shell=True)
+
+def _remove_bcbiovm_path():
+    """Avoid referencing minimal bcbio_nextgen in bcbio_vm installation.
+    """
+    cur_path = os.path.dirname(os.path.realpath(sys.executable))
+    paths = os.environ["PATH"].split(":")
+    if cur_path in paths:
+        paths.remove(cur_path)
+        os.environ["PATH"] = ":".join(paths)
 
 def _run_cwltool(args):
     """Run with cwltool -- reference implementation.
     """
     main_file, json_file = _get_main_and_json(args.directory)
+    work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltool_work"))
+    os.environ["TMPDIR"] = work_dir
+    flags = ["--tmpdir-prefix", work_dir, "--tmp-outdir-prefix", work_dir]
     if args.no_container:
-        flags = ["--no-container", "--preserve-environment", "PATH", "HOME"]
-    else:
-        flags = []
-    cmd = ["cwltool"] + flags + args.toolargs + [main_file, json_file]
-    _run_tool(cmd)
+        _remove_bcbiovm_path()
+        flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
+    cmd = ["cwltool"] + flags + args.toolargs + ["--", main_file, json_file]
+    _run_tool(cmd, not args.no_container)
 
 def _run_arvados(args):
     """Run CWL on Aravdos.
@@ -54,14 +71,15 @@ def _run_toil(args):
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltoil_work"))
     log_file = os.path.join(work_dir, "cwltoil.log")
     jobstore = os.path.join(work_dir, "cwltoil_jobstore")
-    flags = ["--jobStore", "file:%s" % jobstore, "--logFile", log_file, "--workDir", work_dir]
+    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", work_dir]
     if os.path.exists(jobstore):
         flags += ["--restart"]
     if args.no_container:
+        _remove_bcbiovm_path()
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
-    cmd = ["cwltoil"] + flags + args.toolargs + [main_file, json_file]
+    cmd = ["cwltoil"] + flags + args.toolargs + ["--", main_file, json_file]
     with utils.chdir(work_dir):
-        _run_tool(cmd)
+        _run_tool(cmd, not args.no_container)
 
 _TOOLS = {"cwltool": _run_cwltool,
           "arvados": _run_arvados,
