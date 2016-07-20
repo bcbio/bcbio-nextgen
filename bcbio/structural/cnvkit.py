@@ -348,7 +348,7 @@ def _add_variantcalls_to_output(out, data):
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
                    "--ploidy", str(dd.get_ploidy(data)),
                    "-o", tx_call_file, out["cns"]]
-            if gender:
+            if gender and gender.lower() != "unknown":
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
                     cmd += ["--male-reference"]
