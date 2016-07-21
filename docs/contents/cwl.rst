@@ -127,7 +127,7 @@ described above.
 
 To generate CWL directly from a sample input and the test bcbio system file::
 
-    bcbio_vm.py cwl ../data/automated/run_info-cwl.yaml --systemconfig bcbio_system.yaml
+    bcbio_vm.py cwl ../data/automated/run_info-cwl.yaml --systemconfig ../data/automated/post_process-sample.yaml
 
 Running bcbio CWL on Arvados
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
