@@ -69,6 +69,7 @@ def _run_toil(args):
     """
     main_file, json_file = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltoil_work"))
+    os.environ["TMPDIR"] = work_dir
     log_file = os.path.join(work_dir, "cwltoil.log")
     jobstore = os.path.join(work_dir, "cwltoil_jobstore")
     flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", work_dir]
