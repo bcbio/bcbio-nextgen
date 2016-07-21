@@ -72,7 +72,6 @@ dependencies required to run bcbio with supported CWL runners. To install using
     ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
     ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
-    ln -s ~/install/bcbio-vm/anaconda/bin/cwltool /usr/local/bin/cwltool
 
 If you have `Docker <https://www.docker.com/>`_ present on your system this is
 all you need to get started running examples. Alternatively,
