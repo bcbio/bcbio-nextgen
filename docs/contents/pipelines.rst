@@ -167,7 +167,7 @@ processing parameters.
 
 Cancer calling handles both tumor-normal paired calls and tumor-only calling.
 For tumor-only samples, bcbio will try to remove likely germline variants
-present in the public databases like 1000 genome and ExAC, and not in COSMID.
+present in the public databases like 1000 genomes and ExAC, and not in COSMIC.
 This runs as long as you have a local GEMINI installation and marks likely
 germline variants with a ``LowPriority`` filter. `This post has more details
 <http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
@@ -242,7 +242,7 @@ Our current recommendation is to run adapter trimming only if using the Tophat2
 aligner. Adapter trimming is very slow, and aligners that soft clip the ends of
 reads such as STAR and hisat2, or algorithms using pseudoalignments like
 Sailfish handle contaminant sequences at the ends properly. This makes trimming
-unnecessary. Tophat2 does not perform soft clipping so if using Topat2,
+unnecessary. Tophat2 does not perform soft clipping so if using Tophat2,
 trimming must still be done.
 
 Sailfish, which is an extremely fast alignment-free method of quantitation, is
@@ -298,7 +298,7 @@ columns as the cellular barcodes for each input FASTQ file.
 
 To extract the UMI and cellular barcodes from the read, bcbio-nextgen
 needs to know where the UMI and the cellular barcode are expected to be
-in the read. Currently support for two schemes, the inDrop system from
+in the read. Currently there is support for two schemes, the inDrop system from
 the Harvard single-cell core facility and CEL-seq. If bcbio-nextgen does not
 support your UMI and barcoding scheme, please open up an issue and we will
 help implement support for it.
@@ -372,8 +372,8 @@ Standard
 This pipeline implements ``alignment`` and ``qc`` tools. Furthermore, it will
 run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It
 uses SNPs signature to create a distance matrix that helps easily to create
-groups. The project yaml file will show number of total samples analyzed, number
-of very similar samples, and samples that could be duplicated.
+groups. The project yaml file will show the number of total samples analyzed,
+the number of very similar samples, and samples that could be duplicated.
 
 .. _qsignature: http://sourceforge.net/p/adamajava/wiki/qSignature/
 

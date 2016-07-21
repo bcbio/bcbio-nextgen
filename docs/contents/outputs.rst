@@ -26,7 +26,7 @@ Project directory
 - ``programs.txt`` -- Program versions for bcbio-nextgen and software
   run in the pipeline. This enables reproduction of analyses.
 - ``multiqc`` run `MultiQC`_ to gather all QC metrics from different tools, such as,
-  cutadapt, featureCounts, samtools, STAR ... into an unique HTLM report.
+  cutadapt, featureCounts, samtools, STAR ... into an unique HTML report.
 
 .. _MultiQC: http://multiqc.info
 
