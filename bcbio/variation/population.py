@@ -98,8 +98,8 @@ def get_affected_status(data):
 
     http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped
     """
-    affected = set(["tumor", "affected"])
-    unaffected = set(["normal", "unaffected"])
+    affected = set(["tumor", "affected", "2"])
+    unaffected = set(["normal", "unaffected", "1"])
     phenotype = str(tz.get_in(["metadata", "phenotype"], data, "")).lower()
     if phenotype in affected:
         return 2

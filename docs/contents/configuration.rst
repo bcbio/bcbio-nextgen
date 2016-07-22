@@ -77,7 +77,10 @@ multiple samples using the template workflow command::
    -  :ref:`sample-configuration` metadata key/value pairs. Any columns not
       falling into the above cases will go into the metadata section. A ``ped``
       specification will allow bcbio to read family, gender and phenotype
-      information from a PED input file.
+      information from a PED input file and use it for batch, sex and phenotype,
+      respectively. The PED inputs supplement information from the standard
+      template file, so if you specify a value in the template CSV the PED
+      information will no overwrite it.
 
   Individual column items can contain booleans (true or false), integers, or
   lists (separated by semi-colons). These get converted into the expected time
@@ -236,16 +239,18 @@ The sample configuration file defines ``details`` of each sample to process::
      calling (``batch: [MatchWithTumor1, MatchWithTumor2]``).
 
    - ``sex`` specifies the sample gender used to correctly prepare X/Y
-     chromosomes.
+     chromosomes. Use ``male`` and ``female`` or PED style inputs (1=male, 2=female).
 
    -  ``phenotype`` stratifies cancer samples into ``tumor`` and ``normal`` or
-      case/controls into ``affected`` and ``unaffected``.
+      case/controls into ``affected`` and ``unaffected``. Also accepts PED style
+      specifications (1=unaffected, 2=affected). CNVkit uses case/control
+      status to determine how to set background samples for CNV calling.
 
    - ``ped`` provides a `PED phenotype file
      <http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped>`_
      containing sample phenotype and family information. Template creation uses
-     this to extract ``sex`` and ``phenotype`` information. GEMINI database
-     creation uses the PED file.
+     this to supplement ``batch``, ``sex`` and ``phenotype`` information
+     provided in the template CSV. GEMINI database creation uses the PED file as input.
 
    - ``platform_unit`` -- Unique identifier for sample. Optional, defaults to
      ``lane`` if not specified.
