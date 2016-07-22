@@ -132,6 +132,8 @@ def name_to_config(template):
         with objectstore.open(template) as in_handle:
             txt_config = in_handle.read()
     elif os.path.isfile(template):
+        if template.endswith(".csv"):
+            raise ValueError("Expected YAML file for template and found CSV, are arguments switched? %s" % template)
         with open(template) as in_handle:
             txt_config = in_handle.read()
         with open(template) as in_handle:
