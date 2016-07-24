@@ -49,11 +49,16 @@ bcbio:
 - unzip
 - The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
+- Basic system fonts, for compatibility with Java outputs like FastQC. These
+  will be present on most non-minimal systems, but might need to be installed on
+  AWS or other cloud providers. On deb
+  systems, ``fonts-dejavu-core``; on rpm systems, ``dejavu-sans-fonts
+  dejavu-sans-mono-fonts dejavu-serif-fonts``.
 
 Optional requirements:
 
-- Java 1.7, when running GATK < 3.6. bcbio distributed Java 8 as part of the
-  distribution for recent versions of GATK.
+- Java 1.7, when running GATK < 3.6. bcbio distributes Java 8 as part of the
+  anaconda installation for recent versions of GATK.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for

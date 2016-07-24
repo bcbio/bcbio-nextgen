@@ -45,7 +45,6 @@ def is_gene_list(bed_file):
     with open(bed_file) as in_handle:
         for line in in_handle:
             if not line.startswith("#"):
-                print line.split()
                 if len(line.split()) == 1:
                     return True
                 else:

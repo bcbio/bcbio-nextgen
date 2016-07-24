@@ -59,9 +59,7 @@ def run(bam_file, data, fastqc_out):
                     if os.path.exists("%s.zip" % tx_fastqc_out):
                         shutil.move("%s.zip" % tx_fastqc_out, os.path.join(fastqc_out, "%s.zip" % fastqc_clean_name))
                 elif not os.path.exists(sentry_file):
-                    if os.path.exists(fastqc_out):
-                        shutil.rmtree(fastqc_out)
-                    shutil.move(tx_fastqc_out, fastqc_out)
+                    raise ValueError("FastQC failed to produce output HTML file: %s" % os.path.listdir(tx_tmp_dir))
     parser = FastQCParser(fastqc_out, dd.get_sample_name(data))
     stats = parser.get_fastqc_summary()
     parser.save_sections_into_file()
