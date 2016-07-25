@@ -12,7 +12,7 @@ import tempfile
 import yaml
 
 from bcbio import log, heterogeneity, hla, structural, utils
-from bcbio.cwl.inspect import WorldWatcher
+from bcbio.cwl.inspect import initialize_watcher
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.log import logger
@@ -118,8 +118,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("organize samples", dirs):
             samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                             [x[0]["description"] for x in samples]]])
-        ww = WorldWatcher(dirs["work"], is_on=any([dd.get_cwl_reporting(d[0]) for d in samples]))
-        ww.initialize(samples)
+        ww = initialize_watcher(samples)
         with profile.report("alignment preparation", dirs):
             samples = run_parallel("prep_align_inputs", samples)
             ww.report("prep_align_inputs", samples)
@@ -274,12 +273,15 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
 
 def fastrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
+    ww = initialize_watcher(samples)
     with prun.start(_wres(parallel, ["samtools"]), samples, config,
                     dirs, "fastrnaseq") as run_parallel:
         with profile.report("fastrnaseq", dirs):
             samples = rnaseq.fast_rnaseq(samples, run_parallel)
+            ww.report("fastrnaseq", samples)
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            ww.report("qcsummary", samples)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for samples in samples:
