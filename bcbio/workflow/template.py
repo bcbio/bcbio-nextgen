@@ -17,6 +17,7 @@ import urllib2
 
 import toolz as tz
 import yaml
+import sys
 
 from bcbio import utils
 from bcbio.bam import fastq, sample_name
@@ -30,6 +31,11 @@ def parse_args(inputs):
     parser = HelpArgParser(
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser = setup_args(parser)
+    args = parser.parse_args(inputs)
+    if args.template.endswith("csv"):
+        parser.print_help()
+        print "\nError: Looks like you've swapped the order of the metadata CSV and template YAML arguments, it should go YAML first, CSV second."
+        sys.exit(1)
     return parser.parse_args(inputs)
 
 def setup_args(parser):
