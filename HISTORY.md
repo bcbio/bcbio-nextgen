@@ -1,5 +1,7 @@
 ## 1.0.0 (in progress)
 
+- Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
+  versioning from bioconda and lack of specifically defined jar directory.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
 
 ## 0.9.9 (18 July 2016)

@@ -349,12 +349,16 @@ class BroadRunner:
         full_version = self.get_gatk_version()
         # Working with a recent version if using nightlies
         if full_version.startswith("nightly-"):
-            return "2.8"
+            return "3.6"
         parts = full_version.split("-")
         if len(parts) == 4:
             appistry_release, version, subversion, githash = parts
         elif len(parts) == 3:
             version, subversion, githash = parts
+        elif len(parts) == 2:
+            version, subversion = parts
+        elif len(parts) == 1:
+            version = parts[0]
         # version was not properly implemented in earlier GATKs
         else:
             version = "2.3"
@@ -426,9 +430,13 @@ def _get_picard_ref(config):
     return picard
 
 def runner_from_config(config, program="gatk"):
-    return BroadRunner(_get_picard_ref(config),
-                       config_utils.get_program(program, config, "dir"),
-                       config)
+    # Try to retrieve old style GATK
+    try:
+        pdir = config_utils.get_program(program, config, "dir")
+    # otherwise use new-style bioconda
+    except ValueError:
+        pdir = None
+    return BroadRunner(_get_picard_ref(config), pdir, config)
 
 def runner_from_config_safe(config):
     """Retrieve a runner, returning None if GATK is not available.
