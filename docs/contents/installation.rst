@@ -49,11 +49,6 @@ bcbio:
 - unzip
 - The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
-- Basic system fonts, for compatibility with Java outputs like FastQC. These
-  will be present on most non-minimal systems, but might need to be installed on
-  AWS or other cloud providers. On deb
-  systems, ``fonts-dejavu-core``; on rpm systems, ``dejavu-sans-fonts
-  dejavu-sans-mono-fonts dejavu-serif-fonts``.
 
 Optional requirements:
 
