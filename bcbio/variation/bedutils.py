@@ -35,6 +35,8 @@ def get_sort_cmd():
 def check_bed_contigs(in_file, data):
     """Ensure BED file contigs match the reference genome.
     """
+    if not dd.get_ref_file(data):
+        return
     contigs = set([])
     with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
