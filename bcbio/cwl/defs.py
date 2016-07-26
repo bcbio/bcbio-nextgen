@@ -12,6 +12,7 @@ The variable 'workflows' provides a dictionary to retrieve the steps and outputs
 for each of the defined workflows.
 """
 import collections
+from bcbio.pipeline import datadict as dd
 
 def s(name, parallel, inputs, outputs, programs=None, disk=None, unlist=None):
     """Represent a step in a workflow.
@@ -149,6 +150,7 @@ def variant():
              # s("call_hla", "multi-parallel",
              #   [["hla", "fastq"]],
              #   [cwlout(["hla", "hlacaller"], ["string", "null"]),
+
              #    cwlout(["hla", "call_file"], ["File", "null"])]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
@@ -197,5 +199,24 @@ def variant():
     final_outputs = [["align_bam"], ["summary", "multiqc"]]
     return steps, final_outputs
 
+def fastrnaseq():
+    prep = [s("prep_samples", "multi-parallel",
+              [["files"],
+               dd.get_keys("sample_name")],
+              [cwlout(["files"], "File")],
+              programs=["picard"])]
+    quant = [s("run_salmon_reads", "multi-parallel",
+               [["files"],
+                dd.get_keys("sample_name"),
+                dd.get_keys("gtf_file"),
+                dd.get_keys("ref_file"),
+                dd.get_keys("genome_build")],
+               [cwlout(dd.get_keys("sailfish"), "File")],
+               programs=["salmon"],
+               disk={"files": 1.5})]
+    steps = quant
+    final_outputs = [dd.get_keys('sailfish')]
+    return steps, final_outputs
+
 workflows = \
-  {"variant": variant, "variant2": variant}
+  {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq}

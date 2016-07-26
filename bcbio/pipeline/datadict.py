@@ -251,3 +251,9 @@ def get_in_samples(samples, fn):
         if fn(sample[0], None):
             return fn(sample[0])
     return None
+
+def get_keys(lookup):
+    """
+    return the keys used to look up a function in the datadict
+    """
+    return tz.get_in((lookup, "keys"), LOOKUPS, None)
