@@ -9,10 +9,8 @@ from bcbio.utils import filter_missing, flatten
 from bcbio.log import logger
 
 def fast_rnaseq(samples, run_parallel):
-#    samples = run_parallel("run_rapmap_pseudoalign", samples)
     samples = run_parallel("run_salmon_reads", samples)
     samples = sailfish.combine_sailfish(samples)
-#    samples = run_parallel("run_salmon_bam", samples)
     return samples
 
 def singlecell_rnaseq(samples, run_parallel):
