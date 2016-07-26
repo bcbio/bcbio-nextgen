@@ -5,10 +5,12 @@ http://biorxiv.org/content/early/2015/06/27/021592
 """
 
 import os
+import sys
 
 from bcbio.rnaseq import sailfish
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
+import bcbio.utils as utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
@@ -29,6 +31,7 @@ def run_salmon_bam(data):
     return [[data]]
 
 def run_salmon_reads(data):
+    data = utils.to_single_data(data)
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
@@ -61,12 +64,12 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     index = salmon_index(gtf_file, ref_file, data, salmon_dir)
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
            "-o {tx_out_dir} ")
-    fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
+    fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
         cmd += " -r {fq1_cmd} "
     else:
-        fq2_cmd = "{fq2}" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
+        fq2_cmd = "<(cat {fq2})" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
     # skip --useVBOpt for now, it can cause segfaults
