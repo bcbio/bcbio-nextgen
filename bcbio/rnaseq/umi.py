@@ -158,8 +158,9 @@ def tagcount(data):
     safe_makedir(sample_dir)
     cutoff = dd.get_minimum_barcode_depth(data)
     cb_histogram = os.path.join(sample_dir, "cb-histogram.txt")
+    positional = "--positional" if dd.get_positional_umi(data, True) else ""
     message = "Counting alignments of transcripts in %s." % bam
-    cmd = ("{umis} tagcount --positional --cb_cutoff {cutoff} --cb_histogram "
+    cmd = ("{umis} tagcount {positional} --cb_cutoff {cutoff} --cb_histogram "
            "{cb_histogram} {bam} {tx_out_file}")
     with file_transaction(out_file) as tx_out_file:
         do.run(cmd.format(**locals()), message)

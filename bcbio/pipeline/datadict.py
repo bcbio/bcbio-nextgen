@@ -23,6 +23,7 @@ LOOKUPS = {
     "singlecell_quantifier": {"keys": ["config", "algorithm",
                                        "singlecell_quantifier"],
                             "default": "rapmap"},
+    "positional_umi": {"keys": ["config", "algorithm", "positional_umi"]},
     "tx2gene": {"keys": ["tx2gene"]},
     "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna-transcripts'],
                       "checker": file_exists},
