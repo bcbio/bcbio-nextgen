@@ -45,8 +45,9 @@ def _run_cwltool(args):
     """
     main_file, json_file = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltool_work"))
-    os.environ["TMPDIR"] = work_dir
-    flags = ["--tmpdir-prefix", work_dir, "--tmp-outdir-prefix", work_dir]
+    tmp_dir = utils.safe_makedir(os.path.join(work_dir, "tmpcwl"))
+    os.environ["TMPDIR"] = tmp_dir
+    flags = ["--tmpdir-prefix", tmp_dir, "--tmp-outdir-prefix", tmp_dir]
     if args.no_container:
         _remove_bcbiovm_path()
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
@@ -78,6 +79,8 @@ def _run_toil(args):
     if args.no_container:
         _remove_bcbiovm_path()
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
+    if "--batchSystem" in args.toolargs:
+        flags += ["--disableCaching"]
     cmd = ["cwltoil"] + flags + args.toolargs + ["--", main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container)
