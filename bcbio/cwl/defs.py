@@ -211,11 +211,11 @@ def fastrnaseq():
                 dd.get_keys("gtf_file"),
                 dd.get_keys("ref_file"),
                 dd.get_keys("genome_build")],
-               [cwlout(dd.get_keys("sailfish"), "File")],
+               [cwlout(dd.get_keys("sailfish_dir"), "File")],
                programs=["salmon"],
                disk={"files": 1.5})]
     steps = quant
-    final_outputs = [dd.get_keys('sailfish')]
+    final_outputs = [dd.get_keys('sailfish_dir')]
     return steps, final_outputs
 
 workflows = \
