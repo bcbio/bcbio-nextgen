@@ -405,7 +405,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "cellular_barcodes",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "expression_caller", "qc",
+                      "mixup_check", "expression_caller", "qc", "positional_umi",
                       "singlecell_quantifier"] +
                      # development
                      ["cwl_reporting"] +
@@ -417,7 +417,7 @@ ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "recalibrate", "realign", "cwl_reporting"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
-                       "variantcaller"])
+                       "variantcaller", "positional_umi"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 
