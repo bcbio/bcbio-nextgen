@@ -43,10 +43,7 @@ The machine will need to have some basic requirements for installing and running
 bcbio:
 
 - Python 2.7, Python 3.x, or Python 2.6 plus the argparse dependency.
-- Basic system setup for unpacking files (tar, gunzip). This should be present
-  on most non-minimal systems. On minimal Ubuntu machines, ``build-essential``
-  provides this in one package.
-- unzip
+- Basic system setup for unpacking files: tar, gzip, unzip, bzip2, xz-utils.
 - The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 
