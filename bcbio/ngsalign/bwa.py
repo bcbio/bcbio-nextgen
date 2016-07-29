@@ -3,8 +3,6 @@
 import os
 import subprocess
 
-import toolz as tz
-
 from bcbio.pipeline import config_utils
 from bcbio import bam, utils
 from bcbio.distributed import objectstore

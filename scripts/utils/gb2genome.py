@@ -22,10 +22,9 @@ Version 0.2
 
 """
 
-import os, sys
+import sys
 from datetime import datetime
 from Bio import SeqIO
-import sys, re
 from argparse import ArgumentParser
 
 

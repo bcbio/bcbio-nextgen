@@ -2,7 +2,6 @@
 functions for finding, retrieving data from and updating the Galaxy .loc files
 """
 import os
-from bcbio.distributed.transaction import file_transaction
 from bcbio.utils import file_exists
 import tempfile
 import shutil

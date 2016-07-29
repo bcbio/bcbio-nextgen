@@ -9,7 +9,6 @@ from bcbio.utils import file_exists, safe_makedir, chdir, get_perl_exports
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import config_utils
 
 
 def run(data):

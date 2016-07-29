@@ -1,13 +1,8 @@
-import collections
-import glob
 import os
-import pandas as pd
-import shutil
-import toolz as tz
 
 from bcbio import utils
 from bcbio import broad
-from bcbio.broad.metrics import PicardMetricsParser, PicardMetrics
+from bcbio.broad.metrics import PicardMetrics
 from bcbio import bam
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.provenance import do

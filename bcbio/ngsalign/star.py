@@ -3,7 +3,6 @@ import sys
 import shutil
 import subprocess
 import contextlib
-from distutils.version import LooseVersion
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir

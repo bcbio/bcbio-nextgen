@@ -14,7 +14,7 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus, local_path_export)
+from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
 from bcbio.provenance import do
 from bcbio.provenance.versioncheck import java
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir

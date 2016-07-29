@@ -2,21 +2,13 @@
 Create log files to be parsed by multiqc
 """
 
-import collections
-import glob
 import os
 import pandas as pd
-import shutil
-import toolz as tz
-import numpy as np
 
 from bcbio import utils
 from bcbio.provenance.programs import get_version_manifest
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.log import logger
-from bcbio.provenance import do
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import config_utils
 
 def run(bam_file, data, out_dir):
     """Create several log files"""

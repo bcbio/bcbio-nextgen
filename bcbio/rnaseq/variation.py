@@ -9,7 +9,6 @@ from bcbio.variation import vardict
 from bcbio import broad, bam
 from bcbio.variation import vcfutils
 from bcbio.rnaseq import gtf
-from bcbio import bed
 
 def rnaseq_gatk_variant_calling(data):
     data = dd.set_deduped_bam(data, dedup_bam(dd.get_work_bam(data), data))

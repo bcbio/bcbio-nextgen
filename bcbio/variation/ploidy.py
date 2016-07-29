@@ -3,8 +3,6 @@
 Handles configured ploidy, with custom handling for sex chromosomes and pooled
 haploid mitochondrial DNA.
 """
-import re
-
 import toolz as tz
 
 from bcbio import utils

@@ -2,9 +2,6 @@
 """
 from distutils.version import LooseVersion
 import os
-import sys
-
-import toolz as tz
 
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
