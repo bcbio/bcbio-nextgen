@@ -35,7 +35,7 @@ def _cwl_workflow_template(inputs):
             cur_inp.pop(attr, None)
         ready_inputs.append(cur_inp)
     return {"class": "Workflow",
-            "cwlVersion": "cwl:draft-3",
+            "cwlVersion": "v1.0",
             "hints": [{"class": "DockerRequirement",
                        "dockerPull": "bcbio/bcbio",
                        "dockerImageId": "bcbio/bcbio"}],
@@ -63,23 +63,23 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
         if total_estimate:
             cwl_res["tmpdirMin"] = total_estimate
     out = {"class": "CommandLineTool",
-           "cwlVersion": "cwl:draft-3",
+           "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "hints": [cwl_res],
            "arguments": [],
            "inputs": [],
            "outputs": []}
     out["arguments"].append({"position": 0, "valueFrom": "sentinel-runtime=$(runtime)"})
-    std_inputs = [{"id": "#sentinel-parallel", "type": "string",
+    std_inputs = [{"id": "sentinel-parallel", "type": "string",
                    "default": parallel},
-                  {"id": "#sentinel-outputs", "type": "string",
+                  {"id": "sentinel-outputs", "type": "string",
                    "default": json.dumps([workflow.get_base_id(x["id"]) for x in outputs],
                                          sort_keys=True, separators=(',', ':'))}]
     inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
-        inp_tool["id"] = "#%s" % base_id
+        inp_tool["id"] = base_id
         for attr in ["source", "valueFrom"]:
             inp_tool.pop(attr, None)
         inp_binding = {"prefix": "%s=" % base_id, "separate": False,
@@ -89,7 +89,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
-        outp_tool["id"] = "#%s" % workflow.get_base_id(outp["id"])
+        outp_tool["id"] = workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
     with open(out_file, "w") as out_handle:
         def str_presenter(dumper, data):
@@ -138,18 +138,18 @@ def _step_template(name, run_file, inputs, outputs, parallel):
     scatter_inputs = []
     sinputs = []
     for inp in inputs:
-        step_inp = {"id": "#%s.%s" % (name, workflow.get_base_id(inp["id"])), "source": inp["id"]}
+        step_inp = {"id": workflow.get_base_id(inp["id"]), "source": inp["id"]}
         for attr in ["source", "valueFrom"]:
             if attr in inp:
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if parallel in "multi-parallel" or len(inp["id"].split(".")) > 1:
-            scatter_inputs.append(step_inp["id"])
+        if parallel in "multi-parallel" or len(inp["id"].split("/")) > 1:
+            scatter_inputs.append("%s/%s" % (name, step_inp["id"]))
     out = {"run": run_file,
-           "id": "#%s" % name,
-           "inputs": sinputs,
-           "outputs": [{"id": output["id"]} for output in outputs]}
+           "id": name,
+           "in": sinputs,
+           "out": [{"id": workflow.get_base_id(output["id"])} for output in outputs]}
     if parallel in ["single-parallel", "multi-parallel", "batch-parallel"]:
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
@@ -171,7 +171,11 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
                                     file_estimates, disk, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
         elif cur[0] == "upload":
-            out["outputs"] = cur[1]
+            for output in cur[1]:
+                wf_output = copy.deepcopy(output)
+                if "outputSource" not in wf_output:
+                    wf_output["outputSource"] = wf_output.pop("source")
+                out["outputs"].append(wf_output)
         elif cur[0] == "wf_start":
             parent_wfs.append(out)
             out = _cwl_workflow_template(cur[1])
@@ -286,7 +290,7 @@ def _samplejson_to_inputs(svals):
     """
     out = []
     for key, val in svals.items():
-        out.append(_add_avro_type({"id": "#%s" % key}, val))
+        out.append(_add_avro_type({"id": "%s" % key}, val))
     return out
 
 def _to_cwldata(key, val):
@@ -305,7 +309,7 @@ def _to_cwldata(key, val):
                 cwl_nval = _item_to_cwldata(nval)
                 if isinstance(cwl_nval, dict):
                     out.extend(_to_cwldata(cur_nkey, nval))
-                elif "#%s" % (key) in workflow.ALWAYS_AVAILABLE:
+                elif key in workflow.ALWAYS_AVAILABLE:
                     remain_val[nkey] = nval
                 else:
                     out.append((cur_nkey, cwl_nval))
