@@ -76,12 +76,13 @@ def _run_toil(args):
     flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", work_dir]
     if os.path.exists(jobstore):
         flags += ["--restart"]
+    if "--batchSystem" in args.toolargs:
+        flags += ["--disableCaching"]
+    flags += args.toolargs
     if args.no_container:
         _remove_bcbiovm_path()
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
-    if "--batchSystem" in args.toolargs:
-        flags += ["--disableCaching"]
-    cmd = ["cwltoil"] + flags + args.toolargs + ["--", main_file, json_file]
+    cmd = ["cwltoil"] + flags + ["--", main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container)
 
