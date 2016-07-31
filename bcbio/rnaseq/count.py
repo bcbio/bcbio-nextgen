@@ -3,16 +3,10 @@ count number of reads mapping to features of transcripts
 
 """
 import os
-import sys
-import itertools
 import pandas as pd
 import gffutils
 
 from bcbio.utils import file_exists
-from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
-from bcbio import bam
-import bcbio.pipeline.datadict as dd
 
 def combine_count_files(files, out_file=None, ext=".fpkm"):
     """

@@ -16,7 +16,6 @@ from bcbio.provenance import do
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.rnaseq import cufflinks, annotate_gtf
 import bcbio.pipeline.datadict as dd
 
 def _stringtie_expression(bam, data, out_dir="."):

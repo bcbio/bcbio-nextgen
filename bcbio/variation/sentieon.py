@@ -12,7 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, mutect2, vcfutils
+from bcbio.variation import bedutils, vcfutils
 
 def _license_export(data):
     """Retrieve export statement for sentieon license server.

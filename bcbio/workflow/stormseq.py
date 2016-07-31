@@ -2,7 +2,6 @@
 
 http://www.stormseq.org/
 """
-import argparse
 import json
 import os
 

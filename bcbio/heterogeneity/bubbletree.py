@@ -67,7 +67,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
     if not utils.file_exists(freqs_out):
         try:
             do.run([utils.Rscript_cmd(), r_file], "Assess heterogeneity with BubbleTree")
-        except subprocess.CalledProcessError, msg:
+        except subprocess.CalledProcessError as msg:
             if handle_failures and _allowed_bubbletree_errorstates(str(msg)):
                 with open(freqs_out, "w") as out_handle:
                     out_handle.write('bubbletree failed:\n %s"\n' % (str(msg)))

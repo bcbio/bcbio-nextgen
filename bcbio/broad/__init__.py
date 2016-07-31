@@ -396,7 +396,7 @@ class BroadRunner:
                 try:
                     check_file = config_utils.get_jar(check_cmd, dir_check)
                     return check_file
-                except ValueError, msg:
+                except ValueError as msg:
                     if str(msg).find("multiple") > 0:
                         raise
                     else:
@@ -443,7 +443,7 @@ def runner_from_config_safe(config):
     """
     try:
         return runner_from_config(config)
-    except ValueError, msg:
+    except ValueError as msg:
         if str(msg).find("Could not find directory in config for gatk") >= 0:
             return None
         else:

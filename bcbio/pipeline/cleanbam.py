@@ -5,12 +5,10 @@ chromosome order, run group information and other BAM formatting.
 This provides a pipeline to prepare and resort an input.
 """
 import os
-import subprocess
 
 from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.ngsalign import novoalign
-from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 

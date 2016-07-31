@@ -3,9 +3,7 @@ import os
 import subprocess
 
 from bcbio import utils
-from bcbio.log import logger
 from bcbio.provenance import do
-import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 
 HS = {"hg19": "2.7e9",

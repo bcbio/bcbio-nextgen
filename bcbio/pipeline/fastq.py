@@ -1,11 +1,9 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import sys
 
 from bcbio import bam, broad, utils
 from bcbio.bam import fastq
-from bcbio.bam import cram
 from bcbio.distributed import objectstore
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir, splitext_plus

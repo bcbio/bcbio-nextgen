@@ -5,8 +5,6 @@ variants.
 """
 import os
 
-import pybedtools
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd

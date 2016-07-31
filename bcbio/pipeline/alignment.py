@@ -9,7 +9,6 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.bam import cram
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, novoalign, snap, star,
                             hisat2)
 

@@ -4,17 +4,15 @@ Provides estimates of coverage intervals based on callable regions
 """
 import os
 import yaml
-import shutil
 
 import pybedtools
 import pandas as pd
 import numpy as np
 
 from bcbio.variation.bedutils import clean_file
-from bcbio.utils import (file_exists, chdir, max_command_length, safe_makedir,
-                         robust_partition_all, append_stem, is_gzipped, remove_plus,
-                         open_gzipsafe, symlink_plus, copy_plus, splitext_plus,
-                         append_stem)
+from bcbio.utils import (file_exists, chdir, safe_makedir,
+                         append_stem, is_gzipped, remove_plus,
+                         open_gzipsafe, copy_plus, splitext_plus)
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger

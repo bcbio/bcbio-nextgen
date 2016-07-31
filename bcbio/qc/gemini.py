@@ -7,7 +7,6 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
-from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 

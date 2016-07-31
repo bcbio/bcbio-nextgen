@@ -1,16 +1,11 @@
 """Perform realignment of BAM files around indels using the GATK toolkit.
 """
 import os
-import shutil
 import pysam
 
-from bcbio import bam, broad
-from bcbio.bam import ref
 from bcbio.log import logger
-from bcbio.utils import file_exists
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.pipeline.shared import subset_bam_by_region, subset_variant_regions
-from bcbio.provenance import do
+from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline.shared import subset_variant_regions
 
 # ## GATK realignment
 

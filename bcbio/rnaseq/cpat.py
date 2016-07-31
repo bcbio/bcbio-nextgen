@@ -6,7 +6,6 @@ import numpy
 import shutil
 import tempfile
 import os
-import sys
 
 from bcbio import utils
 from bcbio.rnaseq import gtf

@@ -4,7 +4,6 @@ Supported:
   snpEff: http://sourceforge.net/projects/snpeff/
   VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 """
-from distutils.version import LooseVersion
 import os
 import glob
 import shutil

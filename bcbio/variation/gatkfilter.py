@@ -4,15 +4,13 @@ Performs hard filtering when VQSR fails on smaller sets of variant calls.
 """
 import os
 
-import toolz as tz
-
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import gatkjoint, vcfutils, vfilter
+from bcbio.variation import vcfutils, vfilter
 
 def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.

@@ -5,8 +5,6 @@ http://www.htslib.org/workflow/#mapping_to_variant
 import os
 from distutils.version import LooseVersion
 
-import toolz as tz
-
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger

@@ -1,7 +1,6 @@
 import pybedtools as bt
 from bcbio.utils import file_exists
 from bcbio import utils
-import six
 
 def decomment(bed_file, out_file):
     """

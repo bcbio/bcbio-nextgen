@@ -4,9 +4,8 @@ import os
 import copy
 
 from bcbio.log import logger
-from bcbio import bam, utils
+from bcbio import utils
 from bcbio.pipeline import datadict as dd
-from bcbio.chipseq import macs2
 # from bcbio.pipeline import region
 
 

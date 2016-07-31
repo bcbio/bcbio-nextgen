@@ -7,7 +7,6 @@ import collections
 import csv
 from distutils.version import LooseVersion
 import os
-import subprocess
 
 import toolz as tz
 
