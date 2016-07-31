@@ -206,7 +206,8 @@ def _has_gemini(data):
             and os.path.exists(os.path.join(os.path.dirname(gemini_dir), "gemini-config.yaml")))
 
 def do_db_build(samples, need_bam=True, gresources=None):
-    """Confirm we should build a gemini database: need gemini + human samples + not in tool_skip.
+    """Confirm we should build a gemini database: need gemini + human samples +
+    hg19/GRCh37 + not in tools_off.
     """
     genomes = set()
     for data in samples:
@@ -218,6 +219,7 @@ def do_db_build(samples, need_bam=True, gresources=None):
         if not gresources:
             gresources = samples[0]["genome_resources"]
         return (tz.get_in(["aliases", "human"], gresources, False)
+                and genomes.issubset(("hg19", "GRCh37"))
                 and _has_gemini(samples[0]))
     else:
         return False
