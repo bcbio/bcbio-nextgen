@@ -3,13 +3,15 @@
 from distutils.version import LooseVersion
 import subprocess
 
+from bcbio import broad
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 
-def samtools(config, items):
+def samtools(items):
     """Ensure samtools has parallel processing required for piped analysis.
     """
-    samtools = config_utils.get_program("samtools", config)
+    samtools = config_utils.get_program("samtools", items[0]["config"])
     p = subprocess.Popen([samtools, "sort", "-h"], stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     output, stderr = p.communicate()
@@ -27,40 +29,54 @@ def _has_pipeline(items):
     """
     return any(item.get("analysis", "") != "" for item in items)
 
-def _is_variant(items):
-    return any(item.get("analysis", "").lower().startswith("variant") for item in items)
-
-def java(config, items):
-    """Check for presence of Java 1.7. Back compatible for tools that require it.
+def _needs_java(data):
+    """Check if a caller needs external java for MuTect or older GATK 3.6.
     """
-    want_version = "1.7" if _is_variant(items) else "1.6"
-    try:
-        java = config_utils.get_program("java", config)
-    except config_utils.CmdNotFound:
-        return ("java not found on PATH. Java %s required." % want_version)
-    p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
-                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output, _ = p.communicate()
-    p.stdout.close()
-    version = ""
-    for line in output.split("\n"):
-        if line.startswith(("java version", "openjdk version")):
-            version = line.strip().split()[-1]
-            if version.startswith('"'):
-                version = version[1:]
-            if version.endswith('"'):
-                version = version[:-1]
-    if not version or LooseVersion(version) < LooseVersion(want_version):
-        return ("java version %s required for running GATK and other tools. "
-                "Found version %s at %s" % (want_version, version, java))
+    vc = dd.get_variantcaller(data)
+    if not isinstance(vc, (list, tuple)):
+        vc = [vc]
+    if "mutect" in vc:
+        return True
+    if "gatk" in vc or "gatk-haplotype" in vc:
+        runner = broad.runner_from_config(data["config"])
+        version = runner.get_gatk_version()
+        if LooseVersion(version) < LooseVersion("3.6"):
+            return True
+    return False
+
+def java(items):
+    """Check for presence of external Java 1.7 for tools that require it.
+    """
+    if any([_needs_java(d) for d in items]):
+        min_version = "1.7"
+        max_version = "1.8"
+        try:
+            java = config_utils.get_program("java", items[0]["config"])
+        except config_utils.CmdNotFound:
+            return ("java not found on PATH. Java %s required for MuTect and GATK < 3.6." % min_version)
+        p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, _ = p.communicate()
+        p.stdout.close()
+        version = ""
+        for line in output.split("\n"):
+            if line.startswith(("java version", "openjdk version")):
+                version = line.strip().split()[-1]
+                if version.startswith('"'):
+                    version = version[1:]
+                if version.endswith('"'):
+                    version = version[:-1]
+        if (not version or LooseVersion(version) >= LooseVersion(max_version) or
+            LooseVersion(version) < LooseVersion(min_version)):
+            return ("java version %s required for running MuTect and GATK < 3.6. "
+                    "Found version %s at %s" % (min_version, version, java))
 
 def testall(items):
     logger.info("Testing minimum versions of installed programs")
-    config = items[0]["config"]
     msgs = []
     if _has_pipeline(items):
-        for fn in [samtools]:
-            out = fn(config, items)
+        for fn in [samtools, java]:
+            out = fn(items)
             if out:
                 msgs.append(out)
     if msgs:
