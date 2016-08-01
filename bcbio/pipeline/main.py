@@ -151,7 +151,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
 
     ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
-                                     "gemini", "samtools", "fastqc",
+                                     "gemini", "samtools", "fastqc", "sambamba",
                                      "bcbio-variation-recall", "qsignature",
                                      "svcaller"]),
                     samples, config, dirs, "multicore2",
