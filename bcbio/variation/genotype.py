@@ -37,7 +37,7 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
 
 # ## High level functionality to run genotyping in parallel
 
-def get_variantcaller(data, key="variantcaller", default="gatk", require_bam=True):
+def get_variantcaller(data, key="variantcaller", default=None, require_bam=True):
     if not require_bam or data.get("align_bam"):
         return tz.get_in(["config", "algorithm", key], data, default)
 
@@ -315,7 +315,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         sam_ref = data["sam_ref"]
         config = data["config"]
         caller_fns = get_variantcallers()
-        caller_fn = caller_fns[config["algorithm"].get("variantcaller", "gatk")]
+        caller_fn = caller_fns[config["algorithm"].get("variantcaller")]
         if len(align_bams) == 1:
             items = [data]
         else:

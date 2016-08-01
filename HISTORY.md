@@ -1,5 +1,7 @@
 ## 1.0.0 (in progress)
 
+- Default to no calling if `variantcaller` not specified, instead of old GATK
+  UnifiedGenotyper default.
 - Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
   versioning from bioconda and lack of specifically defined jar directory.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.

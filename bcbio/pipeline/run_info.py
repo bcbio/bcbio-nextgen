@@ -537,7 +537,7 @@ def _check_variantcaller(item):
     """Ensure specified variantcaller is a valid choice.
     """
     allowed = set(genotype.get_variantcallers().keys() + [None, False])
-    vcs = item["algorithm"].get("variantcaller", "gatk")
+    vcs = item["algorithm"].get("variantcaller")
     if not isinstance(vcs, (tuple, list)):
         vcs = [vcs]
     problem = [x for x in vcs if x not in allowed]

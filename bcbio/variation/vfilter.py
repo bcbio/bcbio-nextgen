@@ -227,7 +227,7 @@ def gatk_snp_hard(in_file, data):
         filters += ["QD < 2.0", "FS > 60.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
-    variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"), "gatk")
+    variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
     return hard_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKHardSNP", "SNP")

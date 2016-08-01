@@ -394,7 +394,7 @@ def use_vqsr(algs):
     vqsr_supported = collections.defaultdict(int)
     coverage_intervals = set([])
     for alg in algs:
-        callers = alg.get("variantcaller", "gatk")
+        callers = alg.get("variantcaller")
         if isinstance(callers, basestring):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR

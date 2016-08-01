@@ -144,7 +144,7 @@ def group_batches(xs):
     Only batches files if joint calling not specified.
     """
     def _caller_batches(data):
-        caller = tz.get_in(("config", "algorithm", "variantcaller"), data, "gatk")
+        caller = tz.get_in(("config", "algorithm", "variantcaller"), data)
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         batch = tz.get_in(("metadata", "batch"), data) if not jointcaller else None
         return caller, batch
