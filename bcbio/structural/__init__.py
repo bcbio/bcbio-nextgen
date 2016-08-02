@@ -136,8 +136,8 @@ def detect_sv(items, all_items, config, stage):
     if svcaller and caller_fn:
         if (svcaller in _NEEDS_BACKGROUND and
                 not vcfutils.is_paired_analysis([x.get("align_bam") for x in items], items)):
-            names = set([tz.get_in(["rgnames", "sample"], x) for x in items])
-            background = [x for x in all_items if tz.get_in(["rgnames", "sample"], x) not in names]
+            names = set([dd.get_sample_name(x) for x in items])
+            background = [x for x in all_items if dd.get_sample_name(x) not in names]
             for svdata in caller_fn(items, background):
                 out.append([svdata])
         else:
