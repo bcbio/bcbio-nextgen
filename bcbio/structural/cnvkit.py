@@ -68,16 +68,9 @@ def _associate_cnvkit_out(ckouts, items):
 def _run_cnvkit_single(data, background=None):
     """Process a single input file with BAM or uniform background.
     """
-    work_dir = _sv_workdir(data)
-    test_bams = [data["align_bam"]]
-    if background:
-        background_bams = [x["align_bam"] for x in background]
-        background_name = os.path.splitext(os.path.basename(background_bams[0]))[0]
-    else:
-        background_bams = []
-        background_name = None
-    ckouts = _run_cnvkit_shared([data], test_bams, background_bams, work_dir,
-                                background_name=background_name)
+    if not background:
+        background = []
+    ckouts = _run_cnvkit_shared([data], background)
     if not ckouts:
         return [data]
     else:
@@ -88,29 +81,37 @@ def _run_cnvkit_cancer(items, background):
     """Run CNVkit on a tumor/normal pair.
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
-    work_dir = _sv_workdir(paired.tumor_data)
-    ckouts = _run_cnvkit_shared([paired.tumor_data], [paired.tumor_bam], [paired.normal_bam],
-                               work_dir, background_name=paired.normal_name)
+    normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
+    ckouts = _run_cnvkit_shared([paired.tumor_data], normal_data)
     if not ckouts:
         return items
     assert len(ckouts) == 1
     tumor_data = _associate_cnvkit_out(ckouts, [paired.tumor_data])
-    normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
     return tumor_data + normal_data
 
 def _run_cnvkit_population(items, background):
     """Run CNVkit on a population of samples.
 
-    Tries to calculate background based on case/controls, otherwise uses
-    a flat background for each sample and calls independently.
+    Tries to calculate background based on case/controls, otherwise
+    uses samples from the same batch as background.
     """
-    assert not background
-    inputs, background = shared.find_case_control(items)
-    work_dir = _sv_workdir(inputs[0])
-    ckouts = _run_cnvkit_shared(inputs, [x["align_bam"] for x in inputs],
-                                [x["align_bam"] for x in background], work_dir,
-                                background_name=dd.get_sample_name(background[0]) if len(background) > 0 else None)
-    return _associate_cnvkit_out(ckouts, inputs) + background
+    if background and len(background) > 0:
+        inputs = items
+    else:
+        inputs, background = shared.find_case_control(items)
+
+    # if we have case/control organized background or a single sample
+    if len(inputs) == 1 or len(background) > 0:
+        ckouts = _run_cnvkit_shared(inputs, background)
+        return _associate_cnvkit_out(ckouts, inputs) + background
+    # otherwise run each sample with the others in the batch as background
+    else:
+        out = []
+        for cur_input in items:
+            background = [d for d in items if dd.get_sample_name(d) != dd.get_sample_name(cur_input)]
+            ckouts = _run_cnvkit_shared([cur_input], background)
+            out.extend(_associate_cnvkit_out(ckouts, [cur_input]))
+        return out
 
 def _get_cmd():
     return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
@@ -121,47 +122,47 @@ def _bam_to_outbase(bam_file, work_dir):
     out_base = os.path.splitext(os.path.basename(bam_file))[0].split(".")[0]
     return os.path.join(work_dir, out_base)
 
-def _run_cnvkit_shared(items, test_bams, background_bams, work_dir, background_name=None):
+def _run_cnvkit_shared(inputs, backgrounds):
     """Shared functionality to run CNVkit, parallelizing over multiple BAM files.
     """
+    work_dir = _sv_workdir(inputs[0])
     raw_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
-
-    background_cnn = os.path.join(raw_work_dir,
-                                  "%s_background.cnn" % (background_name if background_name else "flat"))
+    background_name = dd.get_sample_name(backgrounds[0]) if backgrounds else "flat"
+    background_cnn = os.path.join(raw_work_dir, "%s_background.cnn" % (background_name))
     ckouts = []
-    for test_bam in test_bams:
-        out_base = _bam_to_outbase(test_bam, raw_work_dir)
-        ckouts.append({"cnr": "%s.cns" % out_base,
+    for cur_input in inputs:
+        cur_raw_work_dir = utils.safe_makedir(os.path.join(_sv_workdir(cur_input), "raw"))
+        out_base = _bam_to_outbase(dd.get_align_bam(cur_input), cur_raw_work_dir)
+        ckouts.append({"cnr": "%s.cnr" % out_base,
                        "cns": "%s.cns" % out_base,
                        "back_cnn": background_cnn})
     if not utils.file_exists(ckouts[0]["cnr"]):
-        data = items[0]
-        cov_interval = dd.get_coverage_interval(data)
-        raw_target_bed, access_bed = _get_target_access_files(cov_interval, data, work_dir)
+        cov_interval = dd.get_coverage_interval(inputs[0])
+        raw_target_bed, access_bed = _get_target_access_files(cov_interval, inputs[0], work_dir)
         # bail out if we ended up with no regions
         if not utils.file_exists(raw_target_bed):
             return {}
-        raw_target_bed = annotate.add_genes(raw_target_bed, data)
-        parallel = {"type": "local", "cores": dd.get_cores(data), "progs": ["cnvkit"]}
-        target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval, raw_work_dir, data)
-        def _bam_to_itype(bam):
-            return "background" if bam in background_bams else "evaluate"
+        raw_target_bed = annotate.add_genes(raw_target_bed, inputs[0])
+        parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
+        target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval,
+                                                     raw_work_dir, inputs[0])
+        split_beds = _split_bed(target_bed, inputs[0]) + _split_bed(antitarget_bed, inputs[0])
+        samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
+                         zip(["evaluate"] * len(inputs), inputs)
         split_cnns = run_multicore(_cnvkit_coverage,
-                                   [(bam, bed, _bam_to_itype(bam), raw_work_dir, data)
-                                    for bam in test_bams + background_bams
-                                    for bed in _split_bed(target_bed, data) + _split_bed(antitarget_bed, data)],
-                                   data["config"], parallel)
-        coverage_cnns = _merge_coverage(split_cnns, data)
+                                   [(cdata, bed, itype) for itype, cdata in samples_to_run for bed in split_beds],
+                                   inputs[0]["config"], parallel)
+        coverage_cnns = _merge_coverage(split_cnns, inputs[0])
         background_cnn = _cnvkit_background([x["file"] for x in coverage_cnns if x["itype"] == "background"],
-                                            background_cnn, target_bed, antitarget_bed, data)
+                                            background_cnn, target_bed, antitarget_bed, inputs[0])
         fixed_cnrs = run_multicore(_cnvkit_fix,
-                                   [(cnns, background_cnn, data) for cnns in
+                                   [(cnns, background_cnn, inputs[0]) for cnns in
                                     tz.groupby("bam", [x for x in coverage_cnns
                                                        if x["itype"] == "evaluate"]).values()],
-                                      data["config"], parallel)
-        called_segs = run_multicore(_cnvkit_segment,
-                                    [(cnr, cov_interval, data) for cnr in fixed_cnrs],
-                                    data["config"], parallel)
+                                      inputs[0]["config"], parallel)
+        run_multicore(_cnvkit_segment,
+                      [(cnr, cov_interval, inputs[0]) for cnr in fixed_cnrs],
+                      inputs[0]["config"], parallel)
     return ckouts
 
 @utils.map_wrap
@@ -172,7 +173,11 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "segment", "-o", tx_out_file, cnr_file]
+            cmd = [_get_cmd(), "segment",
+                   "-o", tx_out_file, cnr_file]
+            small_vrn_files = _compatible_small_variants(data)
+            if len(small_vrn_files) > 0:
+                cmd += ["-v", small_vrn_files[0]]
             if cov_interval == "genome":
                 cmd += ["--threshold", "0.00001"]
             # preferentially use conda installed Rscript
@@ -252,9 +257,11 @@ def _merge_coverage(cnns, data):
 
 @utils.map_wrap
 @zeromq_aware_logging
-def _cnvkit_coverage(bam_file, bed_info, input_type, work_dir, data):
+def _cnvkit_coverage(data, bed_info, input_type):
     """Calculate coverage in a BED file for CNVkit.
     """
+    bam_file = dd.get_align_bam(data)
+    work_dir = utils.safe_makedir(os.path.join(_sv_workdir(data), "raw"))
     bed_file = bed_info["file"]
     exts = {".target.bed": ("target", "targetcoverage.cnn"),
             ".antitarget.bed": ("antitarget", "antitargetcoverage.cnn")}
@@ -338,6 +345,22 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
     out["cnr_bed"] = bed_file
     return out
 
+def _compatible_small_variants(data):
+    """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
+    """
+    supported = set(["vardict", "freebayes", "gatk-haplotype", "mutect2", "vardict"])
+    out = []
+    for v in data.get("variants", []):
+        vrn_file = v.get("vrn_file")
+        if vrn_file and v.get("variantcaller") in supported:
+            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+            sample_vrn_file = os.path.join(dd.get_work_dir(data), v["variantcaller"],
+                                           "%s-%s%s" % (base, dd.get_sample_name(data), ext))
+            sample_vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_vrn_file,
+                                                     data["config"])
+            out.append(sample_vrn_file)
+    return out
+
 def _add_variantcalls_to_output(out, data):
     """Call ploidy and convert into VCF and BED representations.
     """
@@ -348,6 +371,9 @@ def _add_variantcalls_to_output(out, data):
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
                    "--ploidy", str(dd.get_ploidy(data)),
                    "-o", tx_call_file, out["cns"]]
+            small_vrn_files = _compatible_small_variants(data)
+            if len(small_vrn_files) > 0:
+                cmd += ["-v", small_vrn_files[0], "-m", "clonal"]
             if gender and gender.lower() != "unknown":
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
@@ -530,7 +556,7 @@ def _add_diagram_plot(out, data):
     return out_file
 
 def _add_loh_plot(out, data):
-    vrn_files = filter(lambda x: x is not None, [x.get("vrn_file") for x in data.get("variants", [])])
+    vrn_files = _compatible_small_variants(data)
     if len(vrn_files) > 0:
         out_file = "%s-loh.pdf" % os.path.splitext(out["cnr"])[0]
         cns = _remove_haplotype_chroms(out["cns"], data)
