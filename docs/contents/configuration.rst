@@ -642,7 +642,7 @@ and for cancer validations:
   Truth sets: small_variants, regions, DEL, DUP, INV. Builds: hg38.
 
 For more information on the hg38 truth set preparation see the work on `validation on build
-38 and converstion of human build 37 truth sets to build 38
+38 and conversion of human build 37 truth sets to build 38
 <http://bcb.io/2015/09/17/hg38-validation/>`_. The `installation recipes
 <https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes>`_ contain
 provenance details about the origins of the installed files.
@@ -668,8 +668,7 @@ RNA sequencing
 - ``expression_caller`` A list of optional expression callers to turn on.
   Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
   expression estimation are run by default.
--  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data.
-  Supports [gatk] or [vardict].
+-  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
 
 Single-cell RNA sequencing
 ==========================
@@ -750,7 +749,7 @@ Post-processing
   numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full
   bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
   samples with less than 70bp reads.  ``bnd-genotype`` enables genotyping
-  of breakends in Lumpy calls, which improves accuracy but can be slow. `gvcf`
+  of breakends in Lumpy calls, which improves accuracy but can be slow. ``gvcf``
   forces gVCF output for callers that support it (GATK HaplotypeCaller,
   FreeBayes, Platypus).
 
