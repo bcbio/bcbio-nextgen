@@ -3,7 +3,7 @@
 from distutils.version import LooseVersion
 import subprocess
 
-from bcbio import broad
+from bcbio import broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
@@ -50,9 +50,8 @@ def java(items):
     if any([_needs_java(d) for d in items]):
         min_version = "1.7"
         max_version = "1.8"
-        try:
-            java = config_utils.get_program("java", items[0]["config"])
-        except config_utils.CmdNotFound:
+        java = utils.which("java")
+        if not java:
             return ("java not found on PATH. Java %s required for MuTect and GATK < 3.6." % min_version)
         p = subprocess.Popen([java, "-Xms250m", "-Xmx250m", "-version"],
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
