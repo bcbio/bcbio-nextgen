@@ -51,10 +51,7 @@ def check_bed_contigs(in_file, data):
 def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     """Prepare a clean sorted input BED file without headers
     """
-    if simple:
-        simple = "iconv -c -f utf-8 -t ascii | sed 's/ //g' |"
-    else:
-        simple = ""
+    simple = "iconv -c -f utf-8 -t ascii | sed 's/ //g' |" if simple else ""
     if in_file:
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
