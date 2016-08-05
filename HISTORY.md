@@ -4,6 +4,8 @@
   UnifiedGenotyper default.
 - Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
   versioning from bioconda and lack of specifically defined jar directory.
+- Unset JAVA_HOME when running gatk-framework and GATK > 3.6, forcing
+  use of bcbio installed Java 8. Thanks to Brad Wubbenhorst.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 

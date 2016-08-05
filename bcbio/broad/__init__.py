@@ -453,8 +453,9 @@ def gatk_cmd(name, jvm_opts, params):
     """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
-    return "export PATH=%s:$PATH && %s %s %s" % (os.path.dirname(gatk_cmd), gatk_cmd,
-                                                 " ".join(jvm_opts), " ".join([str(x) for x in params]))
+    return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
+        (os.path.dirname(gatk_cmd), gatk_cmd,
+         " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):
