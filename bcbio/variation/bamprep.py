@@ -39,7 +39,7 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
         return runner.cl_gatk(args, tmp_dir)
     else:
         jvm_opts = broad.get_gatk_framework_opts(data["config"])
-        return broad.gatk_cmd("gatk-framework", jvm_opts, prep_params)
+        return broad.gatk_cmd("gatk-framework", jvm_opts, args)
 
 def _recal_has_reads(in_file):
     with open(in_file) as in_handle:
@@ -59,7 +59,7 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
     if not utils.file_exists(pa_bam):
         with file_transaction(data, pa_bam) as tx_out_file:
             cmd = "{cl} -o {tx_out_file}".format(**locals())
-            do.run(cmd, "GATK pre-alignment {0}".format(region), data)
+            do.run(cmd, "GATK re-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
     recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"], data["config"],
                                                 region=region_to_gatk(region),

@@ -6,6 +6,7 @@
   versioning from bioconda and lack of specifically defined jar directory.
 - Unset JAVA_HOME when running gatk-framework and GATK > 3.6, forcing
   use of bcbio installed Java 8. Thanks to Brad Wubbenhorst.
+- Fix bug when running realignment without recalibration in GATK 3.6. Thanks to Pär Larsson.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 
