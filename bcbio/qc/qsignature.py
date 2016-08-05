@@ -25,9 +25,11 @@ def run(bam_file, data, out_dir):
                      for this sample
     :param out_dir: (str) path of the output
 
-    :returns: (dict) dict with the normalize vcf file
+    :returns: (string) output normalized vcf file
     """
     qsig = config_utils.get_program("qsignature", data["config"])
+    res_qsig = config_utils.get_resources("qsignature", data["config"])
+    jvm_opts = res_qsig.get("jvm_opts", ["-Xms750m", "-Xmx8g"])
     if not qsig:
         logger.info("There is no qsignature tool. Skipping...")
         return None
@@ -40,9 +42,7 @@ def run(bam_file, data, out_dir):
             logger.info("There is no qsignature for this species: %s"
                         % tz.get_in(['genome_build'], data))
             return None
-        jvm_opts = "-Xms750m -Xmx2g"
         if mixup_check == "qsignature_full":
-            jvm_opts = "-Xms750m -Xmx8g"
             down_bam = bam_file
         else:
             down_bam = _slice_bam_chr21(bam_file, data)
