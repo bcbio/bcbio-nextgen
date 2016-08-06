@@ -127,7 +127,7 @@ def _move_file_with_sizecheck(tx_file, final_file):
     shutil.move(tx_file, tmp_file)
 
     # Validate that file sizes of file before and after transfer are identical
-    transfer_size = _tx_size(tx_file)
+    transfer_size = _tx_size(tmp_file)
     assert want_size == transfer_size, \
         ('distributed.transaction.file_transaction: File copy error: '
          'file or directory on temporary storage ({}) size {} bytes '
