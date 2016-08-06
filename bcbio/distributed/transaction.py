@@ -102,6 +102,16 @@ def file_transaction(*data_and_files):
                                 _move_file_with_sizecheck(safe_idx, orig + check_idx)
             _remove_tmpdirs(safe_names)
 
+def _tx_size(orig):
+    """Retrieve transactional size of a file or directory.
+    """
+    if os.path.isdir(orig):
+        return sum([os.path.getsize(os.path.join(d, f))
+                    for (d, _, filenames) in os.walk(orig)
+                    for f in filenames])
+    else:
+        return os.path.getsize(orig)
+
 def _move_file_with_sizecheck(tx_file, final_file):
     """Move transaction file to final location, with size checks avoiding failed transfers.
     """
@@ -112,12 +122,12 @@ def _move_file_with_sizecheck(tx_file, final_file):
             _remove_tmpdirs([tmp_file])
         else:
             _remove_files([tmp_file])
-    want_size = os.path.getsize(tx_file)
+    want_size = _tx_size(tx_file)
     # Move files from temporary storage to shared storage under a temporary name
     shutil.move(tx_file, tmp_file)
 
     # Validate that file sizes of file before and after transfer are identical
-    transfer_size = os.path.getsize(tmp_file)
+    transfer_size = _tx_size(tx_file)
     assert want_size == transfer_size, \
         ('distributed.transaction.file_transaction: File copy error: '
          'file or directory on temporary storage ({}) size {} bytes '
