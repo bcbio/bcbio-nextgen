@@ -42,7 +42,7 @@ def _cnvkit_by_type(items, background):
     else:
         return _run_cnvkit_population(items, background)
 
-def _associate_cnvkit_out(ckouts, items):
+def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     """Associate cnvkit output with individual items.
     """
     assert len(ckouts) == len(items)
@@ -54,7 +54,7 @@ def _associate_cnvkit_out(ckouts, items):
             ckout = _add_seg_to_output(ckout, data)
             ckout = _add_gainloss_to_output(ckout, data)
             ckout = _add_segmetrics_to_output(ckout, data)
-            ckout = _add_variantcalls_to_output(ckout, data)
+            ckout = _add_variantcalls_to_output(ckout, data, is_somatic)
             # ckout = _add_coverage_bedgraph_to_output(ckout, data)
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
@@ -86,7 +86,7 @@ def _run_cnvkit_cancer(items, background):
     if not ckouts:
         return items
     assert len(ckouts) == 1
-    tumor_data = _associate_cnvkit_out(ckouts, [paired.tumor_data])
+    tumor_data = _associate_cnvkit_out(ckouts, [paired.tumor_data], is_somatic=True)
     return tumor_data + normal_data
 
 def _run_cnvkit_population(items, background):
@@ -160,14 +160,16 @@ def _run_cnvkit_shared(inputs, backgrounds):
                                     tz.groupby("bam", [x for x in coverage_cnns
                                                        if x["itype"] == "evaluate"]).values()],
                                       inputs[0]["config"], parallel)
+        pct_coverage = (pybedtools.BedTool(raw_target_bed).total_coverage() /
+                        float(pybedtools.BedTool(access_bed).total_coverage())) * 100.0
         run_multicore(_cnvkit_segment,
-                      [(cnr, cov_interval, inputs[0]) for cnr in fixed_cnrs],
+                      [(cnr, cov_interval, pct_coverage, inputs[0]) for cnr in fixed_cnrs],
                       inputs[0]["config"], parallel)
     return ckouts
 
 @utils.map_wrap
 @zeromq_aware_logging
-def _cnvkit_segment(cnr_file, cov_interval, data):
+def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
     """Perform segmentation and copy number calling on normalized inputs
     """
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
@@ -175,6 +177,9 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "segment",
                    "-o", tx_out_file, cnr_file]
+            # small target regions, use haar for more defined segments
+            if pct_coverage < 1.0:
+                cmd += ["-m", "haar", "-t", "0.0001"]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0:
                 cmd += ["-v", small_vrn_files[0]]
@@ -361,7 +366,7 @@ def _compatible_small_variants(data):
             out.append(sample_vrn_file)
     return out
 
-def _add_variantcalls_to_output(out, data):
+def _add_variantcalls_to_output(out, data, is_somatic=False):
     """Call ploidy and convert into VCF and BED representations.
     """
     call_file = "%s-call%s" % os.path.splitext(out["cns"])
@@ -373,7 +378,9 @@ def _add_variantcalls_to_output(out, data):
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0:
-                cmd += ["-v", small_vrn_files[0], "-m", "clonal"]
+                cmd += ["-v", small_vrn_files[0]]
+                if not is_somatic:
+                    cmd += ["-m", "clonal"]
             if gender and gender.lower() != "unknown":
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
@@ -405,8 +412,10 @@ def _add_segmetrics_to_output(out, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "segmetrics",
-                   "--iqr", "--ci", "--pi",
+                   "--ci", "--pi",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
+            if dd.get_coverage_interval(data) != "genome":
+                cmd += ["--alpha", "0.001", "--bootstrap", "2000"]
             do.run(cmd, "CNVkit segmetrics")
     out["segmetrics"] = out_file
     return out
