@@ -89,9 +89,8 @@ def run_cluster(*data):
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = data[0][0]["work_bam"]
     if "seqcluster" in tools:
-        cluster_dir = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"], out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+        sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"], out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
         sample["report"] = _report(sample, dd.get_ref_file(sample))
-        sample["seqcluster"] = out_dir
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:
@@ -119,7 +118,10 @@ def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):
     if not file_exists(op.join(out_dir, "counts.tsv")):
         cmd = ("{seqcluster} cluster -o {out_dir} -m {ma_file} -a {bam_file} -r {reference} {annotation_file}")
         do.run(cmd.format(**locals()), "Running seqcluster.")
-    return out_dir
+    counts = op.join(out_dir, "counts.tsv")
+    stats = op.join(out_dir, "read_stats.tsv")
+    json = op.join(out_dir, "seqcluster.json")
+    return {'out_dir': out_dir, 'count_file': counts, 'stat_file': stats, 'json': json}
 
 def _report(data, reference):
     """

@@ -13,7 +13,7 @@ from bcbio.pipeline import datadict as dd
 def run(bam_file, data, out_dir):
     """Create several log files"""
     _mirbase_stats(data, out_dir)
-    # _seqcluster_stats(data, out_dir)
+    _seqcluster_stats(data, out_dir)
 
 def _mirbase_stats(data, out_dir):
     """Create stats from miraligner"""
@@ -53,3 +53,16 @@ def _get_stats_from_miraligner(fn, out_file, name):
                         muts=sum(dfmut.mism), add=sum(dfadd["add"]))
                 print >>out_handle, ("iso_5-trimming\t{t5}\niso_3-trimming\t{t3}").format(
                         t5=sum(df5.t5), t3=sum(df3.t3))
+    return out_file
+
+def _seqcluster_stats(data, out_dir):
+    """Parse seqcluster output"""
+    name = dd.get_sample_name(data)
+    fn = data.get("seqcluster", {}).get("stat_file", None)
+    if not fn:
+        return None
+    out_file = os.path.join(out_dir, "%s.txt" % name)
+    df = pd.read_csv(fn, sep="\t", names = ["reads", "sample", "type"])
+    df_sample = df[df["sample"] == name]
+    df_sample.to_csv(out_file, sep="\t")
+

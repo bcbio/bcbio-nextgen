@@ -473,8 +473,8 @@ def _get_files_project(sample, upload_config):
     if multiqc:
         out.extend(_flatten_file_with_secondary(multiqc, "multiqc"))
 
-    if sample.get("seqcluster", None):
-        out.append({"path": sample["seqcluster"],
+    if sample.get("seqcluster", {}):
+        out.append({"path": sample["seqcluster"].get("out_dir"),
                     "type": "directory", "ext": "seqcluster"})
 
     if sample.get("report", None):
