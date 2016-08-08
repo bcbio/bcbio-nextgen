@@ -465,7 +465,8 @@ class PicardCmdRunner:
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
         Rpath = os.path.dirname(utils.Rscript_cmd())
-        cmd = ["export", "PATH=%s:$PATH" % Rpath, "&&"] + [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
+        cmd = ["unset", "JAVA_HOME", "&&", "export", "PATH=%s:$PATH" % Rpath, "&&"] + \
+              [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
         do.run(" ".join(cmd), "Picard: %s" % subcmd)
 
