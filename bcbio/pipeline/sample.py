@@ -26,6 +26,7 @@ from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
+from bcbio.pipeline.sra import query_gsm
 from bcbio.bam import skewer
 
 def prepare_sample(data):
@@ -327,5 +328,7 @@ def prepare_bcbio_samples(sample):
         out_file = fq_merge(sample['files'], sample['out_file'], sample['config'])
     elif sample['fn'] == "bam_merge":
         out_file = bam_merge(sample['files'], sample['out_file'], sample['config'])
+    elif sample['fn'] == "query_gsm":
+        out_file = query_gsm(sample['files'], sample['out_file'], sample['config'])
     sample['out_file'] = out_file
     return [sample]

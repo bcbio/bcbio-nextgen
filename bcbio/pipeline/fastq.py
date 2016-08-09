@@ -124,7 +124,7 @@ def _merge_list_fastqs(files, out_file, config):
         raise ValueError("Not all of the files to merge are fastq files: %s " % (files))
     assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
                                                 "exist: %s" % (files))
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         files = [_gzip_fastq(fn) for fn in files]
         if len(files) == 1:
             os.symlink(files[0], out_file)

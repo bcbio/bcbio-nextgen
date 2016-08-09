@@ -14,6 +14,7 @@ from bcbio.log import logger
 from bcbio.install import _get_data_dir
 from bcbio import utils
 from bcbio.bam import is_bam
+from bcbio.pipeline.sra import is_gsm
 from bcbio.bam.fastq import is_fastq, combine_pairs
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed import clargs, resources, prun
@@ -40,13 +41,14 @@ def _header(fn):
 def _get_samples_to_process(fn, out_dir, config):
     """parse csv file with one line per file. It will merge
     all files that have the same description name"""
+    out_dir = os.path.abspath(out_dir)
     samples = defaultdict(list)
     with open(fn) as handle:
         for l in handle:
             cols = l.strip().split(",")
             if len(cols) < 2:
                 raise ValueError("Line needs 2 values: file and name.")
-            if utils.file_exists(cols[0]):
+            if utils.file_exists(cols[0]) or is_gsm(cols[0]):
                 if cols[0].find(" ") > -1:
                     new_name = os.path.abspath(cols[0].replace(" ", "_"))
                     logger.warning("Space finds in %s. Linked to %s." % (cols[0], new_name))
@@ -63,7 +65,10 @@ def _get_samples_to_process(fn, out_dir, config):
         elif is_bam(items[0][0]):
             fn = "bam_merge"
             ext = ".bam"
-        files = [os.path.abspath(fn_file[0]) for fn_file in items]
+        elif is_gsm(items[0][0]):
+            fn = "query_gsm"
+            ext = ".fastq.gz"
+        files = [os.path.abspath(fn_file[0]) if not is_gsm(fn_file[0]) else fn_file[0] for fn_file in items]
         samples[sample] = [{'files': _check_paired(files), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
     return [samples[sample] for sample in samples]
 
@@ -71,6 +76,8 @@ def _get_samples_to_process(fn, out_dir, config):
 def _check_paired(files):
     """check if files are fastq(.gz) and paired"""
     if files[0].endswith(".bam"):
+        return files
+    elif is_gsm(files[0]):
         return files
     return combine_pairs(files)
 
