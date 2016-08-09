@@ -11,9 +11,6 @@ from bcbio import utils
 from bcbio.provenance import do
 from bcbio.bam.fastq import is_fastq, combine_pairs
 from bcbio.pipeline import fastq
-# curl https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra\&term=SRX1688440\&retmode=json
-# curl https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=sra\&id=2418823\&retmode=json
-
 
 def is_gsm(fn):
     p = re.compile("^GSM[0-9]+$")

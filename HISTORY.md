@@ -1,6 +1,6 @@
 ## 1.0.0 (in progress)
 
-- Get from GEO GSM samples using bcbio_prepare_samples.py script
+- Get from GEO server, GSM FASTQ samples using bcbio_prepare_samples.py script
 - Add seqcluster stats to QC folder
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
