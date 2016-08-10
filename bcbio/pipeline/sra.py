@@ -27,7 +27,8 @@ def _query_info(db, ids):
 
 def query_gsm(gsm, out_file, config = {}):
     gsm = gsm[0]
-    out_dir = os.path.dirname(out_file)
+    out_dir = os.path.dirname(os.path.abspath(out_file))
+    name = utils.splitext_plus(os.path.basename(out_file))[0]
     url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds\&term={0}\&retmode=json".format(gsm)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -45,7 +46,8 @@ def query_gsm(gsm, out_file, config = {}):
         logger.debug("Get FTP link for %s : %s" % (ids[-1], srxall))
         outs = []
         for srx in srxall:
-            srafiles = _download_srx(gsm, srx, out_dir)
+            sra_dir = utils.safe_makedir(os.path.join(out_dir, name))
+            srafiles = _download_srx(gsm, srx, sra_dir)
             logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
             if srafiles:
                 for sra in srafiles:
@@ -62,11 +64,12 @@ def _create_link(sraid):
     return url.format(**locals())
 
 def _download_srx(srxid, url, out_dir):
-    cmd = "wget -nc -r -nH -nd -np --reject \"index.html*\" {0}".format(url)
+    cmd = "wget -N -r -nH -nd -np -nv {0}".format(url)
     out_dir = os.path.abspath(utils.safe_makedir(out_dir))
     with utils.chdir(out_dir):
-        subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    return glob.glob(os.path.join(out_dir, "*.sra"))
+        do.run(cmd, "Download %s" % url )
+        # return [os.path.abspath(fn) for fn in glob.glob("*sra")]
+    return [os.path.join(out_dir, fn) for fn in os.listdir(out_dir)]
 
 def _download_sra(sraid, outdir):
     url = _create_link(sraid)
@@ -86,6 +89,8 @@ def _convert_fastq(srafn, outdir, single=False):
         if not utils.file_exists(out_file[0]):
             with utils.chdir(outdir):
                 do.run(cmd.format(**locals()), "Covert to fastq %s" % sraid)
+        if not utils.file_exists(out_file[0]):
+            raise IOError("SRA %s didn't convert, something happened." % srafn)
         return out_file
     else:
         raise ValueError("Not supported single-end sra samples for now.")
