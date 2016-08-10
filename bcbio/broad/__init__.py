@@ -225,9 +225,10 @@ class BroadRunner:
 
     def _has_gatk_conda_wrapper(self):
         cmd = gatk_cmd("gatk", [], ["--version"])
-        with closing(subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-            return stdout.read().find("GATK jar file not found") == -1
+        if cmd:
+            with closing(subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
+                return stdout.read().find("GATK jar file not found") == -1
 
     def has_gatk(self):
         if self._has_gatk_conda_wrapper():
@@ -242,7 +243,11 @@ class BroadRunner:
         if self._has_gatk_conda_wrapper():
             gatk_jar = None
         else:
-            gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+            gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"], allow_missing=True)
+            if not gatk_jar:
+                raise ValueError("GATK processing requested but gatk or older jar install not found: "
+                                 "http://bcbio-nextgen.readthedocs.io/en/latest/contents/"
+                                 "installation.html#gatk-and-mutect-mutect2")
         cores = self._config["algorithm"].get("num_cores", 1)
         config = self._config
         if cores and int(cores) > 1:
@@ -272,7 +277,13 @@ class BroadRunner:
         if gatk_jar:
             return " ".join(["java"] + jvm_opts + ["-jar", gatk_jar] + [str(x) for x in params])
         else:
-            return gatk_cmd("gatk", jvm_opts, params)
+            cmd = gatk_cmd("gatk", jvm_opts, params)
+            if cmd:
+                return cmd
+            else:
+                raise ValueError("GATK processing requested but gatk or older jar install not found: "
+                                 "http://bcbio-nextgen.readthedocs.io/en/latest/contents/"
+                                 "installation.html#gatk-and-mutect-mutect2")
 
     def cl_mutect(self, params, tmp_dir):
         """Define parameters to run the mutect paired algorithm.
@@ -453,9 +464,10 @@ def gatk_cmd(name, jvm_opts, params):
     """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
-    return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
-        (os.path.dirname(gatk_cmd), gatk_cmd,
-         " ".join(jvm_opts), " ".join([str(x) for x in params]))
+    if gatk_cmd:
+        return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
+            (os.path.dirname(gatk_cmd), gatk_cmd,
+            " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):
