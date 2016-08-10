@@ -415,7 +415,7 @@ def _add_segmetrics_to_output(out, data):
                    "--ci", "--pi",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
             if dd.get_coverage_interval(data) != "genome":
-                cmd += ["--alpha", "0.001", "--bootstrap", "2000"]
+                cmd += ["--alpha", "0.01", "--bootstrap", "500"]
             do.run(cmd, "CNVkit segmetrics")
     out["segmetrics"] = out_file
     return out
