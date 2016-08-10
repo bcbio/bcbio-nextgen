@@ -5,9 +5,11 @@ import copy
 
 from bcbio.log import logger
 from bcbio import bam, utils
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.chipseq import macs2
-# from bcbio.pipeline import region
+from bcbio.provenance import do
+from bcbio.distributed.transaction import file_transaction
 
 
 def get_callers():
@@ -41,10 +43,23 @@ def calling(data):
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name ))
+    # chip_bam = _prepare_bam(chip_bam, dd.get_variant_regions(data), data['config'])
+    # input_bam = _prepare_bam(input_bam, dd.get_variant_regions(data), data['config'])
     out_file = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
                          dd.get_chip_method(data), data["config"])
     data["peaks_file"] = out_file
     return [[data]]
+
+def _prepare_bam(bam_file, bed_file, config):
+    if not bam_file or not bed_file:
+        return bam_file
+    out_file = utils.append_stem(bam_file, '_filter')
+    samtools = config_utils.get_program("samtools", config)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out:
+            cmd = "{samtools} view -bh -L {bed_file} {bam_file} > {tx_out}"
+            do.run(cmd.format(**locals()), "Clean %s" % bam_file)
+    return out_file
 
 def _sync(original, processed):
     """
