@@ -120,7 +120,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     if file_exists(final_out):
         return final_out
 
-    out_file = os.path.join(out_dir, "accepted_hits.sam")
+    out_file = os.path.join(out_dir, "accepted_hits.bam")
     unmapped = os.path.join(out_dir, "unmapped.bam")
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
@@ -134,7 +134,6 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                 options["mate-std-dev"] = d_stdev
                 files.append(pair_file)
             options["output-dir"] = tx_out_dir
-            options["no-convert-bam"] = True
             options["no-coverage-search"] = True
             options["no-mixed"] = True
             tophat_runner = sh.Command(config_utils.get_program("tophat",
@@ -148,7 +147,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             cmd = "%s %s" % (sys.executable, str(tophat_ready.bake(*files)))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
     if pair_file and _has_alignments(out_file):
-        fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
+        fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
                            ref_file, config)
     else:
         fixed = out_file
@@ -164,9 +163,8 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
         symlink_plus(fixed, final_out)
     return final_out
 
-def merge_unmapped(mapped_sam, unmapped_bam, config):
-    merged_bam = os.path.join(os.path.dirname(mapped_sam), "merged.bam")
-    bam_file = bam.sam_to_bam(mapped_sam, config)
+def merge_unmapped(bam_file, unmapped_bam, config):
+    merged_bam = os.path.join(os.path.dirname(bam_file), "merged.bam")
     if not file_exists(merged_bam):
         merged_bam = bam.merge([bam_file, unmapped_bam], merged_bam, config)
     return merged_bam
@@ -192,7 +190,7 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     if not file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
-            cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
+            cmd = "{samtools} view -bS -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
