@@ -26,10 +26,6 @@ from bcbio import broad
 import bcbio.pipeline.datadict as dd
 
 
-_out_fnames = ["accepted_hits.sam", "junctions.bed",
-               "insertions.bed", "deletions.bed"]
-
-
 def _set_quality_flag(options, data):
     qual_format = dd.get_quality_format(data)
     if qual_format.lower() == "illumina":
