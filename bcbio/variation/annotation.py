@@ -9,6 +9,7 @@ from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+from bcbio.pipeline import config_utils
 
 def get_gatk_annotations(config, include_depth=True):
     """Retrieve annotations to use for GATK VariantAnnotator.
@@ -158,3 +159,18 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                 broad_runner.run_gatk(params)
         vcfutils.bgzip_and_index(out_file, config)
         return out_file
+
+def vcfanno(vcf, out_file, conffn, data, basepath=None, luafn=None):
+    """
+    annotate a VCF file using vcfanno (https://github.com/brentp/vcfanno)
+    """
+    if utils.file_exists(out_file):
+        return out_file
+    vcfanno = config_utils.get_program("vcfanno", data)
+    luaflag = "-lua {0}".format(luafn) if luafn else ""
+    basepathflag = "-base-path {0}".format(basepath) if basepath else ""
+    cmd = "{vcfanno} {luaflag} {basepathflag} {conffn} {vcf} > {tx_out_file}"
+    message = "Annotating {vcf} with vcfanno, using {conffn}".format(**locals())
+    with file_transaction(out_file) as tx_out_file:
+        do.run(cmd.format(**locals()), message)
+    return out_file
