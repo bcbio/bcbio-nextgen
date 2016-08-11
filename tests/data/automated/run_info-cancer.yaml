@@ -22,7 +22,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [lumpy]
+      svcaller: [lumpy, cnvkit]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -43,7 +43,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [lumpy]
+      svcaller: [lumpy, cnvkit]
       #svcaller: [cnvkit]
       #tools_on: [svplots]
       tools_off: [vardict_somatic_filter]
@@ -67,7 +67,7 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [lumpy]
+      svcaller: [lumpy, cnvkit]
       #tools_on: [svplots]
       #svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed

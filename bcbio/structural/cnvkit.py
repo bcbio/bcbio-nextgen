@@ -50,7 +50,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     for ckout, data in zip(ckouts, items):
         ckout = copy.deepcopy(ckout)
         ckout["variantcaller"] = "cnvkit"
-        if utils.file_exists(ckout["cns"]):
+        if utils.file_exists(ckout["cns"]) and _cna_has_values(ckout["cns"]):
             ckout = _add_seg_to_output(ckout, data)
             ckout = _add_gainloss_to_output(ckout, data)
             ckout = _add_segmetrics_to_output(ckout, data)
@@ -167,6 +167,13 @@ def _run_cnvkit_shared(inputs, backgrounds):
                       inputs[0]["config"], parallel)
     return ckouts
 
+def _cna_has_values(fname):
+    with open(fname) as in_handle:
+        for i, line in enumerate(in_handle):
+            if i > 0:
+                return True
+    return False
+
 @utils.map_wrap
 @zeromq_aware_logging
 def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
@@ -175,19 +182,23 @@ def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "segment",
-                   "-o", tx_out_file, cnr_file]
-            # small target regions, use haar for more defined segments
-            if pct_coverage < 1.0:
-                cmd += ["-m", "haar", "-t", "0.0001"]
-            small_vrn_files = _compatible_small_variants(data)
-            if len(small_vrn_files) > 0:
-                cmd += ["-v", small_vrn_files[0]]
-            if cov_interval == "genome":
-                cmd += ["--threshold", "0.00001"]
-            # preferentially use conda installed Rscript
-            export_cmd = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
-            do.run(export_cmd + " ".join(cmd), "CNVkit segment")
+            if not _cna_has_values(cnr_file):
+                with open(tx_out_file, "w") as out_handle:
+                    out_handle.write("chromosome\tstart\tend\tgene\tlog2\tprobes\tCN1\tCN2\tbaf\tweight\n")
+            else:
+                cmd = [_get_cmd(), "segment",
+                    "-o", tx_out_file, cnr_file]
+                # small target regions, use haar for more defined segments
+                if pct_coverage < 1.0:
+                    cmd += ["-m", "haar", "-t", "0.0001"]
+                small_vrn_files = _compatible_small_variants(data)
+                if len(small_vrn_files) > 0 and _cna_has_values(cnr_file):
+                    cmd += ["-v", small_vrn_files[0]]
+                if cov_interval == "genome":
+                    cmd += ["--threshold", "0.00001"]
+                # preferentially use conda installed Rscript
+                export_cmd = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+                do.run(export_cmd + " ".join(cmd), "CNVkit segment")
     return out_file
 
 @utils.map_wrap
@@ -359,11 +370,14 @@ def _compatible_small_variants(data):
         vrn_file = v.get("vrn_file")
         if vrn_file and v.get("variantcaller") in supported:
             base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            sample_vrn_file = os.path.join(dd.get_work_dir(data), v["variantcaller"],
-                                           "%s-%s%s" % (base, dd.get_sample_name(data), ext))
-            sample_vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_vrn_file,
-                                                     data["config"])
-            out.append(sample_vrn_file)
+            if vcfutils.get_paired_phenotype(data):
+                out.append(vrn_file)
+            else:
+                sample_vrn_file = os.path.join(dd.get_work_dir(data), v["variantcaller"],
+                                               "%s-%s%s" % (base, dd.get_sample_name(data), ext))
+                sample_vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_vrn_file,
+                                                         data["config"])
+                out.append(sample_vrn_file)
     return out
 
 def _add_variantcalls_to_output(out, data, is_somatic=False):
@@ -377,7 +391,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
                    "--ploidy", str(dd.get_ploidy(data)),
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
-            if len(small_vrn_files) > 0:
+            if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
                 cmd += ["-v", small_vrn_files[0]]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
