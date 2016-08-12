@@ -11,6 +11,8 @@
 - Fix bug when running realignment without recalibration in GATK 3.6. Thanks to Pär Larsson.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
+- Re-enable save_diskspace option to reduce disk usage during alignment
+  preparation and split alignments.
 
 ## 0.9.9 (18 July 2016)
 

@@ -386,7 +386,7 @@ def _check_for_misplaced(xs, subkey, other_keys):
 
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "adapters", "custom_trim", "species", "kraken",
-                      "align_split_size", "align_prep_method",
+                      "align_split_size", "align_prep_method", "save_diskspace",
                       "transcriptome_align",
                       "quality_format", "write_summary", "merge_bamprep",
                       "coverage", "coverage_interval", "ploidy", "indelcaller",
@@ -414,7 +414,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "recalibrate", "realign", "cwl_reporting"])
+                          "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
                        "variantcaller", "positional_umi"])

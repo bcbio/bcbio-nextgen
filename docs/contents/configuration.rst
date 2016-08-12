@@ -420,6 +420,10 @@ Alignment
    specific, set the appropriate flag from [unstranded, firststrand, secondstrand].
    Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for
    Scriptseq prepared libraries, secondstrand is correct.
+- ``save_diskspace`` Remove align prepped bgzip and split BAM files after
+  merging into final BAMs. Helps reduce space on limited filesystems during a
+  run. ``tools_off: [upload_alignment]`` may also be useful in conjunction with
+  this. [false, true]
 
 Coverage information
 ====================

@@ -252,7 +252,6 @@ def delayed_bam_merge(data):
                 cur_in_files, cur_out_file = in_files, out_file
             if cur_out_file:
                 config = copy.deepcopy(data["config"])
-                config["algorithm"]["save_diskspace"] = False
                 if len(cur_in_files) > 0:
                     merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
                                                   out_file=cur_out_file)

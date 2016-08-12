@@ -245,8 +245,10 @@ def save_diskspace(fname, reason, config):
     disk by replacing them with a short message.
     """
     if config["algorithm"].get("save_diskspace", False):
-        with open(fname, "w") as out_handle:
-            out_handle.write("File removed to save disk space: %s" % reason)
+        for ext in ["", ".bai"]:
+            if os.path.exists(fname + ext):
+                with open(fname + ext, "w") as out_handle:
+                    out_handle.write("File removed to save disk space: %s" % reason)
 
 def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.

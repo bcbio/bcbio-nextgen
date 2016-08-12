@@ -190,6 +190,7 @@ def merge_split_alignments(samples, run_parallel):
                 cur_hla["hla"]["fastq"].append(hla_files)
         if cur_hla:
             hla_merges.append([cur_hla])
+    _save_fastq_space(samples)
     merged = run_parallel("delayed_bam_merge", ready_merge)
     hla_merge_raw = run_parallel("merge_split_alignments", hla_merges)
     hla_merges = {}
@@ -204,6 +205,17 @@ def merge_split_alignments(samples, run_parallel):
             data["hla"]["fastq"] = hla_merges[dd.get_sample_name(data)]
         out.append([data])
     return out
+
+def _save_fastq_space(items):
+    """Potentially save fastq space prior to merging, since alignments done.
+    """
+    to_cleanup = {}
+    for data in (utils.to_single_data(x) for x in items):
+        for fname in data.get("files", []):
+            if os.path.realpath(fname).startswith(dd.get_work_dir(data)):
+                to_cleanup[fname] = data["config"]
+    for fname, config in to_cleanup.items():
+        utils.save_diskspace(fname, "Cleanup prep files after alignment finished", config)
 
 # ## determine file sections
 
