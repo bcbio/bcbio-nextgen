@@ -5,6 +5,7 @@ as defined by the input configuration. Tries to narrow structural variant calls
 based on potential biological targets.
 """
 import os
+import pandas as pd
 import toolz as tz
 
 from bcbio import utils
@@ -37,6 +38,7 @@ def run(items):
                           for vcaller, vfile, post_prior_fn in inputs]
         priority_tsv = _combine_files(priority_files, work_dir, data)
         data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv})
+    data = _cnv_prioritize(data)
     return [data]
 
 def is_gene_list(bed_file):
@@ -138,3 +140,53 @@ def _combine_files(tsv_files, work_dir, data):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "prioritize"))
+
+# ## CNV prioritization by genes of interest and confidence intervals
+
+def _cnvkit_prioritize(sample, genes, allele_file, metrics_file):
+    """Summarize non-diploid calls with copy numbers and confidence intervals.
+    """
+    mdf = pd.read_table(metrics_file)
+    mdf = mdf[mdf["gene"].str.contains("|".join(genes))]
+    mdf = mdf[["chromosome", "start", "end", "gene", "log2", "CI_hi", "CI_lo"]]
+    adf = pd.read_table(allele_file)
+    adf = adf[adf["gene"].str.contains("|".join(genes))]
+    adf = adf[["chromosome", "start", "end", "cn", "cn1", "cn2"]]
+    df = pd.merge(mdf, adf, on=["chromosome", "start", "end"])
+    df = df[df["cn"] != 2]
+    if len(df) > 0:
+        def passes(row):
+            return (((row["cn"] > 2 and row["CI_lo"] > 0) or
+                     (row["cn"] < 2 and row["CI_hi"] < 0)) and
+                    row["CI_hi"] > row["CI_lo"])
+        df["passes"] = df.apply(passes, axis=1)
+    df.insert(0, "sample", [sample] * len(df))
+    return df
+
+
+def _cnv_prioritize(data):
+    """Perform confidence interval based prioritization for CNVs.
+    """
+    supported = {"cnvkit": {"inputs": ["call_file", "segmetrics"], "fn": _cnvkit_prioritize}}
+    pcall = None
+    priority_files = None
+    for call in data.get("sv", []):
+        if call["variantcaller"] in supported:
+            priority_files = [call.get(x) for x in supported[call["variantcaller"]]["inputs"]]
+            priority_files = [x for x in priority_files if x is not None and utils.file_exists(x)]
+            if len(priority_files) == len(supported[call["variantcaller"]]["inputs"]):
+                pcall = call
+                break
+    prioritize_by = tz.get_in(["config", "algorithm", "svprioritize"], data)
+    if pcall and prioritize_by:
+        out_file = "%s-prioritize.tsv" % utils.splitext_plus(priority_files[0])[0]
+        gene_list = _find_gene_list_from_bed(prioritize_by, out_file, data)
+        if gene_list:
+            with open(gene_list) as in_handle:
+                genes = [x.strip() for x in in_handle]
+            args = [dd.get_sample_name(data), genes] + priority_files
+            df = supported[pcall["variantcaller"]]["fn"](*args)
+            with file_transaction(data, out_file) as tx_out_file:
+                df.to_csv(tx_out_file, sep="\t", index=False)
+            pcall["priority"] = out_file
+    return data

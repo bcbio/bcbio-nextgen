@@ -188,6 +188,7 @@ def _maybe_add_sv(algorithm, sample, out):
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,)))
             out.extend(_get_variant_file(svcall, ("call_file",), suffix="-call"))
+            out.extend(_get_variant_file(svcall, ("priority",), suffix="-priority"))
             if "plot" in svcall:
                 for plot_name, fname in svcall["plot"].items():
                     ext = os.path.splitext(fname)[-1].replace(".", "")
