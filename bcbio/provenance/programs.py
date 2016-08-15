@@ -220,6 +220,8 @@ def _get_versions_manifest(manifest_dir):
             if os.path.exists(pkg_file):
                 with open(pkg_file) as in_handle:
                     pkg_info = yaml.safe_load(in_handle)
+                if not pkg_info:
+                    continue
                 added = []
                 for pkg in all_pkgs:
                     if pkg in pkg_info:
