@@ -1,0 +1,57 @@
+# Launch analysis environment on Google Cloud with existing data volume.
+# For bcbio analyses, volume expected to contain bcbio installation
+# in /mnt/work/bcbio
+# Makes it easy to stop/start analyses that fit on a single node and disk.
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Launch instance
+      register: gce
+      local_action:
+        module: gce
+        machine_type: "{{ instance_type }}"
+        image: "{{ image_id }}"
+        name: "{{ run_name }}"
+        zone: "{{ zone }}"
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+        state: present
+    - name: Add new instance to host group
+      local_action: add_host hostname={{ item.public_ip }} groupname=launched
+      with_items: "{{ gce.instance_data }}"
+    - name: Wait for SSH
+      local_action: wait_for host={{ item.public_ip }} port=22 state=started
+      with_items: "{{ gce.instance_data }}"
+    - name: Attach working volume
+      local_action:
+        module: gce_pd
+        instance_name: "{{ item.name }}"
+        name: "{{ volume }}"
+        mode: "READ_WRITE"
+        zone: "{{ zone }}"
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+        state: present
+      with_items: "{{ gce.instance_data }}"
+    - name: Get rid of SSH "Are you sure you want to continue connecting (yes/no)?" query
+      shell: ssh-keyscan {{ item.public_ip }} >> $HOME/.ssh/known_hosts
+      with_items: "{{ gce.instance_data }}"
+
+- hosts: launched
+  remote_user: ubuntu
+  gather_facts: true
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Mount work volume
+      become: true
+      mount: name=/mnt/work src=/dev/disk/by-id/google-{{ volume }} fstype=ext4 state=mounted
+    - name: Add bcbio to path
+      lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
+    - apt: name="{{ item }}" update_cache=yes
+      become: true
+      with_items: [git, unzip, wget, tar, gzip, bzip2]
