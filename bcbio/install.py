@@ -16,6 +16,7 @@ import subprocess
 import sys
 import glob
 import urllib
+import json
 
 import requests
 import toolz as tz
@@ -32,6 +33,7 @@ REMOTES = {
     "gitrepo": "https://github.com/chapmanb/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/master.tar.gz",
     "genome_resources": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
+    "vcfanno": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/vcfanno/",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
 SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
@@ -295,6 +297,7 @@ def upgrade_bcbio_data(args, remotes):
         subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
+    upgrade_vcfanno_data(s["fabricrc_overrides"]["galaxy_home"])
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -354,6 +357,28 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                     dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
                     shutil.move(dl_dir, snpeff_db_dir)
                     os.rmdir(os.path.join(snpeff_base_dir, "data"))
+
+def upgrade_vcfanno_data(galaxy_dir):
+    vcfanno_files = _get_vcfanno_files()
+    vcfanno_remote = REMOTES["vcfanno"]
+    cmd = "wget --no-check-certificate -O {out_file} {remote_url}"
+    for dbkey, ref_file in genome.get_builds(galaxy_dir):
+        build_dir = os.path.abspath(os.path.join(os.path.dirname(ref_file),
+                                                 os.pardir))
+        vcfanno_dir = os.path.join(build_dir, "vcfanno")
+        utils.safe_makedir(vcfanno_dir)
+        build_files = [x for x in vcfanno_files if x.startswith(dbkey)]
+        for annofile in build_files:
+            out_file = os.path.join(vcfanno_dir, annofile)
+            remote_url = vcfanno_remote + annofile
+            print cmd.format(**locals())
+            subprocess.check_call(cmd.format(**locals()), shell=True)
+
+def _get_vcfanno_files():
+    url = "https://api.github.com/repos/chapmanb/bcbio-nextgen/contents/config/vcfanno"
+    lines = urllib.urlopen(url).readlines()
+    files = [x["name"] for x in json.loads(lines[0])]
+    return files
 
 def _is_old_database(db_dir, args):
     """Check for old database versions, supported in snpEff 4.1.

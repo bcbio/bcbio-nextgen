@@ -3,7 +3,7 @@ import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish)
 from bcbio.ngsalign import bowtie2, alignprep
-from bcbio.variation import vardict
+from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten
 from bcbio.log import logger
@@ -39,6 +39,10 @@ def rnaseq_variant_calling(samples, run_parallel):
     return samples
 
 def run_rnaseq_variant_calling(data):
+    """
+    run RNA-seq variant calling, variation file is stored in `vrn_file`
+    in the datadict
+    """
     variantcaller = dd.get_variantcaller(data)
     if isinstance(variantcaller, list) and len(variantcaller) > 1:
         logger.error("Only one variantcaller can be run for RNA-seq at "
@@ -51,6 +55,10 @@ def run_rnaseq_variant_calling(data):
         data = variation.rnaseq_gatk_variant_calling(data)
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
+    # annotate RNA-editing events with vcfanno
+    if dd.get_vrn_file(data):
+        vrn_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), "rnaedit", data)
+        data = dd.set_vrn_file(data, vrn_file)
     return [[data]]
 
 def run_rnaseq_joint_genotyping(*samples):
