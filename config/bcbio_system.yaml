@@ -12,63 +12,27 @@
 # - cores: Define cores that can be used for multicore programs. The indicated
 #          value is the maximum cores that should be allocated for a program.
 # - jvm_opts: specify details
-# - cmd: Command to launch the program, if not located on PATH.
 resources:
   # default options, used if other items below are not present
   # avoids needing to configure/adjust for every program
   default:
-    memory: 2G
+    memory: 3G
     cores: 16
-    jvm_opts: ["-Xms750m", "-Xmx2000m"]
-  bwa:
-    cmd: bwa
-    cores: 16
-  samtools:
-    memory: 2G
-    cores: 16
-  hisat2:
-    memory: 2G
-    cores: 16
-  star:
-    memory: 2g
-    cores: 16
-  snap:
-    cores: 16
-    memory: 4G
-  qualimap:
-    memory: 4g
+    jvm_opts: ["-Xms750m", "-Xmx3500m"]
   gatk:
     jvm_opts: ["-Xms500m", "-Xmx3500m"]
-  picard:
-    jvm_opts: ["-Xms750m", "-Xmx3500m"]
   snpeff:
-    jvm_opts: ["-Xms750m", "-Xmx6g"]
-  miraligner:
-    jvm_opts: ["-Xms750m", "-Xmx4500m"]
-  vardict:
-    jvm_opts: ["-Xms750m", "-Xmx3000m"]
-  oncofuse:
-    jvm_opts: ["-Xms750m", "-Xmx2000m"]
+    jvm_opts: ["-Xms750m", "-Xmx4g"]
+  qualimap:
+    memory: 4g
   express:
     memory: 8g
   dexseq:
     memory: 10g
-  sailfish:
-    cores: 16
-    memory: 1g
-  cufflinks:
-    cores: 16
-    memory: 3g
-  stringtie:
-    cores: 16
-    memory: 1g
   macs2:
-    cores: 1
     memory: 8g
   seqcluster:
     memory: 8g
-  wham:
-    memory: 3500m
 
 # Location of galaxy configuration file, which has pointers to reference data
 # https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#reference-genome-files
