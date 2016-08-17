@@ -72,7 +72,9 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
             # Apply custom resource specifications, allowing use of alternative annotation_dir
             resources = config_utils.get_resources("gemini", data["config"])
             gemini_opts = " ".join([str(x) for x in resources["options"]]) if resources.get("options") else ""
-            cmd = ("{gemini} {gemini_opts} load {load_opts} -v {gemini_vcf} {eanns} --cores {num_cores} "
+            exports = utils.local_path_export()
+            cmd = ("{exports} {gemini} {gemini_opts} load {load_opts} "
+                   "-v {gemini_vcf} {eanns} --cores {num_cores} "
                    "--tempdir {tmpdir} {tx_gemini_db}")
             cmd = cmd.format(**locals())
             do.run(cmd, "Create gemini database for %s" % gemini_vcf, data)
