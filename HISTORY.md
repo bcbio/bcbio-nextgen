@@ -13,6 +13,11 @@
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 - Re-enable save_diskspace option to reduce disk usage during alignment
   preparation and split alignments.
+- Offload fixing the unmapped Tophat file to tophat-recondition. Thanks to Christian Bruenner.
+- Add support for vcfanno (https://github.com/brentp/vcfanno) to annotate VCFs with other 
+  VCFs/BED files. 
+- Mark possible RNA-edits for GRCh37/hg19 using RADAR coordinates. Thanks to Sergey Naumenko
+  for the suggestion. 
 
 ## 0.9.9 (18 July 2016)
 
