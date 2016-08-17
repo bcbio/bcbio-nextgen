@@ -17,7 +17,7 @@ rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
   transcriptome_index:
-    tophat: ../rnaseq/tophat/hg19_transcriptome.ver
+    tophat: ../rnaseq/tophat/hg38-noalt_transcriptome.ver
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
