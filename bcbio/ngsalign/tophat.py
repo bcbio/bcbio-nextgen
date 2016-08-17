@@ -147,8 +147,9 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                            ref_file, config)
     else:
         fixed = out_file
-    fixed = merge_unmapped(fixed, unmapped, config)
-    fixed = _fix_unmapped(fixed, config, names)
+    fixed_unmapped = _fix_unmapped(fixed, unmapped, data)
+    fixed = merge_unmapped(fixed, fixed_unmapped, config)
+    fixed = _add_rg(fixed, config, names)
     fixed = bam.sort(fixed, config)
     picard = broad.runner_from_path("picard", config)
     # set the contig order to match the reference file so GATK works
@@ -190,44 +191,31 @@ def _fix_mates(orig_file, out_file, ref_file, config):
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
-def _fix_unmapped(unmapped_file, config, names):
-    """
-    unmapped.bam file up until at least Tophat 2.1.1 is missing some things
-    1) the RG tag is missing from the reads
-    2) MAPQ is set to 255 instead of 0
-    3) for reads where both are unmapped, the mate_is_unmapped flag is not set correctly
-    """
-    out_file = os.path.splitext(unmapped_file)[0] + "_fixed.bam"
-    if file_exists(out_file):
-        return out_file
+def _add_rg(unmapped_file, config, names):
+    """Add the missing RG header."""
     picard = broad.runner_from_path("picard", config)
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
-    fixed = bam.sort(rg_fixed, config, "queryname")
-    with pysam.Samfile(fixed) as work_sam:
-        with file_transaction(config, out_file) as tx_out_file:
-            with pysam.Samfile(tx_out_file, "wb", template=work_sam) as tx_out:
-                for read1 in work_sam:
-                    if not read1.is_paired:
-                        if read1.is_unmapped:
-                            read1.mapq = 0
-                        tx_out.write(read1)
-                        continue
-                    read2 = work_sam.next()
-                    if read1.qname != read2.qname:
-                        continue
-                    if read1.is_unmapped and not read2.is_unmapped:
-                        read1.mapq = 0
-                        read1.tid = read2.tid
-                    if not read1.is_unmapped and read2.is_unmapped:
-                        read2.mapq = 0
-                        read2.tid = read1.tid
-                    if read1.is_unmapped and read2.is_unmapped:
-                        read1.mapq = 0
-                        read2.mapq = 0
-                        read1.mate_is_unmapped = True
-                        read2.mate_is_unmapped = True
-                    tx_out.write(read1)
-                    tx_out.write(read2)
+    return rg_fixed
+
+def _fix_unmapped(mapped_file, unmapped_file, data):
+    """
+    The unmapped.bam file up until at least Tophat 2.1.1 is broken in various
+    ways, see https://github.com/cbrueffer/tophat-recondition for details.
+    Run TopHat-Recondition to fix these issues.
+    """
+    out_file = os.path.splitext(unmapped_file)[0] + "_fixup.bam"
+    if file_exists(out_file):
+        return out_file
+
+    assert os.path.dirname(mapped_file) == os.path.dirname(unmapped_file)
+
+    cmd = config_utils.get_program("tophat-recondition", data)
+    cmd += " -q"
+    cmd += " -m %s" % mapped_file
+    cmd += " -u %s" % unmapped_file
+    cmd += " %s" % os.path.dirname(mapped_file)
+
+    do.run(cmd, "Fixing unmapped reads with Tophat-Recondition.", None)
 
     return out_file
 
