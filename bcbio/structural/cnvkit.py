@@ -143,7 +143,7 @@ def _run_cnvkit_shared(inputs, backgrounds):
         if not utils.file_exists(raw_target_bed):
             return {}
         raw_target_bed = annotate.add_genes(raw_target_bed, inputs[0])
-        parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": []}
+        parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
         target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval,
                                                      raw_work_dir, inputs[0])
         split_beds = _split_bed(target_bed, inputs[0]) + _split_bed(antitarget_bed, inputs[0])
