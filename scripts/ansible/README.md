@@ -19,7 +19,7 @@ This assumes familiarity with the cloud platform you choose and offers minimal
 automation compared to other
 [Cloud integration](http://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html)
 within bcbio. The additional control over managing resources allows researchers
-to reduce costs and use spot or interruptable instances at the cost of requiring
+to reduce costs and use spot or preemptible instances at the cost of requiring
 more hands on attention during runs. If runs fail or need custom downstream
 analysis you can stop the larger run instances and work with a smaller, cheaper
 machine.
@@ -31,9 +31,10 @@ machine.
 Tools used on your local machine:
 
 - [Ansible](http://docs.ansible.com/ansible/intro_installation.html) with
-  [Dependencies and environmental variables set](http://docs.ansible.com/ansible/guide_aws.html)
+  [Dependencies and environmental variables for AWS access](http://docs.ansible.com/ansible/guide_aws.html)
   -- automate starting up instances
-- [saws](https://github.com/donnemartin/saws) -- manage and query running instances
+- [saws](https://github.com/donnemartin/saws) -- manage and query running
+  instances. You can install with `bcbio_pip install saws`
 
 You'll need to use the [AWS console](https://aws.amazon.com/) or saws to setup
 some basic infrastructure to do runs:
@@ -81,7 +82,66 @@ finished you can snapshot this for long term storage.
 
 ### Google Compute
 
+- [Ansible](http://docs.ansible.com/ansible/intro_installation.html) with
+  [dependencies and environmental variables for Google Compute access](http://docs.ansible.com/ansible/guide_gce.html)
+  -- automate starting up instances
+- [gloud from the Google Cloud SDK](https://cloud.google.com/sdk/) -- command
+  line interface to access and manage instances. You can install with
+  `bcbio_conda install -c bioconda google-cloud-sdk`
+
+[Console](https://console.cloud.google.com)
+
+Launch your instance with:
+
+    ansible-playbook -vvv launch_gce.yaml
+
+Then access the machine using your run name:
+
+    gcloud compute ssh ubuntu@giab-val-work
+
+When finished, you can terminate the instance with:
+
+    gcloud compute instances delete giab-val-work
+
 ### Microsoft Azure
+
+Tools used on your local machine:
+
+- [Ansible](http://docs.ansible.com/ansible/intro_installation.html) with
+  [dependencies and service principal based environmental variables for Azure access](https://docs.ansible.com/ansible/guide_azure.html).
+  -- automate starting up instances
+- [azure cross platform command line interface](https://github.com/Azure/azure-xplat-cli#features)
+  -- command line interface to access and manage instances. You can install with
+  `bcbio_conda install -c bioconda azure-cli`
+
+Create a file with your instance and run information called `project_vars.yaml`:
+
+    instance_type: Standard_DS1_v2
+    run_name: giab-val-work
+    storage_account_name: giabvalidation
+    resource_group: giab-validation
+    volume: giab-val-data
+    image_id:
+      publisher: Canonical
+      offer: UbuntuServer
+      sku: 16.04.0-LTS
+      version: latest
+    ssh_public_keys:
+      - path: '/home/ubuntu/.ssh/authorized_keys'
+        key_data: 'ssh-rsa Add your public key for connecting here'
+
+Launch your instance with:
+
+    ansible-playbook -vvv launch_azure.yaml
+
+Then access the machine by finding the IP address and using ssh to attach:
+
+    azure vm show giab-validation giab-val-work | grep Public
+    ssh -i /path/to/your/private.key ubuntu@52.186.126.145
+
+When finished, you can terminate the instance with:
+
+    azure vm delete giab-validation giab-val-work
 
 ## Running bcbio
 
