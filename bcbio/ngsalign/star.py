@@ -46,6 +46,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     gtf_file = dd.get_gtf_file(data)
 
     safe_makedir(align_dir)
+    if ref_file.endswith("chrLength"):
+        ref_file = os.path.dirname(ref_file)
+
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
            "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "

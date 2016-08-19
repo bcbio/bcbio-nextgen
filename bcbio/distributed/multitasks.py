@@ -148,6 +148,10 @@ def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
 
 @utils.map_wrap
+def rnaseq_quantitate(*args):
+    return rnaseq.quantitate(*args)
+
+@utils.map_wrap
 def run_cufflinks(*args):
     return rnaseq.run_cufflinks(*args)
 

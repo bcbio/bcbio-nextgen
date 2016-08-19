@@ -20,7 +20,7 @@ def from_world(world, run_info_file, integrations=None):
     analyses = list(set([x["analysis"] for x in samples]))
     assert len(analyses) == 1, "Only support writing CWL for a single analysis type: %s" % analyses
     try:
-        workflow_fn = defs.workflows[analyses[0]]
+        workflow_fn = defs.workflows[analyses[0].lower()]
     except KeyError:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
     prep_cwl(samples, workflow_fn, out_dir, out_file, integrations)

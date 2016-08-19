@@ -5,7 +5,7 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten
+from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
 
 def fast_rnaseq(samples, run_parallel):
@@ -79,6 +79,12 @@ def run_rnaseq_joint_genotyping(*samples):
             updated_samples.append([data])
         return updated_samples
     return samples
+
+def quantitate(data):
+    data = to_single_data(data)
+    data = generate_transcript_counts(data)[0][0]
+    data = sailfish.run_sailfish(data)[0][0]
+    return [[data]]
 
 def quantitate_expression_parallel(samples, run_parallel):
     """

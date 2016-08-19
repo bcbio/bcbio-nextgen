@@ -218,5 +218,50 @@ def fastrnaseq():
     final_outputs = [dd.get_keys('sailfish_dir')]
     return steps, final_outputs
 
+def rnaseq():
+    prep = [s("prep_samples", "multi-parallel",
+              [["files"],
+               dd.get_keys("sample_name")],
+              [cwlout(["files"], "File")],
+              programs=["picard"])]
+    align = [s("process_alignment", "multi-parallel",
+               [["files"], ["reference", "fasta", "base"],
+                ["analysis"],
+                ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
+                ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
+                ["reference", "aligner", "indexes"],
+                ["config", "algorithm", "aligner"],
+                ["genome_resources", "rnaseq", "transcripts"],
+                ["config", "algorithm", "quality_format"]],
+               [cwlout(["work_bam"], "File"),
+                cwlout(["align_bam"], "File")],
+               ["aligner", "samtools", "sambamba"],
+               {"files": 1.5})]
+    quantitate = [s("rnaseq_quantitate", "multi-parallel",
+                  [["files"],
+                   dd.get_keys("work_bam"),
+                   dd.get_keys("gtf_file"),
+                   dd.get_keys("ref_file"),
+                   dd.get_keys("genome_build")],
+                  [cwlout(dd.get_keys("count_file"), "File"),
+                   cwlout(dd.get_keys("sailfish_dir"), "File")],
+                  programs=["sailfish"],
+                  disk={"files": 1.5})]
+    qc = [s("pipeline_summary", "multi-parallel",
+            [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+             ["config", "algorithm", "qc"]],
+            [cwlout(["summary", "qc", "samtools"], "File"),
+             cwlout(["summary", "qc", "fastqc"], "File")],
+            ["samtools", "fastqc"]),
+          s("multiqc_summary", "multi-combined",
+            [["summary", "qc", "samtools"], ["summary", "qc", "fastqc"]],
+            [cwlout(["summary", "multiqc"], ["File", "null"])])]
+
+    steps = prep + align + quantitate + qc
+    final_outputs = [dd.get_keys("work_bam"), dd.get_keys("sailfish_dir"),
+                     ["summary", "multiqc"]]
+    return steps, final_outputs
+
 workflows = \
-  {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq}
+  {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq,
+   "rna-seq": rnaseq}
