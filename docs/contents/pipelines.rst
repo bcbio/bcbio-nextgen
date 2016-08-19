@@ -296,6 +296,13 @@ and the number of reads aligning to each transcript is counted for each cellular
 barcode. The output is a table of counts with transcripts as the rows and
 columns as the cellular barcodes for each input FASTQ file.
 
+Optionally the reads can be quantitated with ``kallisto`` to output transcript
+compatibility counts rather than counts per gene
+(`TCC paper <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0970-8>`_)
+``kallisto`` is free for academic use, but if you are a commerical entity,
+you need a `license <https://pachterlab.github.io/kallisto/download>`_ from
+UC Berkeley.
+
 To extract the UMI and cellular barcodes from the read, bcbio-nextgen
 needs to know where the UMI and the cellular barcode are expected to be
 in the read. Currently there is support for two schemes, the inDrop system from
@@ -303,7 +310,7 @@ the Harvard single-cell core facility and CEL-seq. If bcbio-nextgen does not
 support your UMI and barcoding scheme, please open up an issue and we will
 help implement support for it.
 
-Most of the heavy lifting for this part of bcbio-nextgen is implemented in
+Most of the heavy lifting for this part of `bcbio-nextgen` is implemented in
 the `umis <https://github.com/vals/umis>`_ repository.
 
 smallRNA-seq
