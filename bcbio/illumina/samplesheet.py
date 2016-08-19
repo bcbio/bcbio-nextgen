@@ -35,7 +35,7 @@ def _lane_detail_to_ss(fcid, ldetail):
     """Convert information about a lane into Illumina samplesheet output.
     """
     return [fcid, ldetail["lane"], ldetail["name"], ldetail["genome_build"],
-            ldetail["bc_index"], ldetail["description"], "N", "", "",
+            ldetail["bc_index"], ldetail["description"].encode("ascii", "ignore"), "N", "", "",
             ldetail["project_name"]]
 
 # ## Use samplesheets to create YAML files
@@ -47,7 +47,6 @@ def _organize_lanes(info_iter, barcode_ids):
     for (fcid, lane, sampleref), info in itertools.groupby(info_iter, lambda x: (x[0], x[1], x[1])):
         info = list(info)
         cur_lane = dict(flowcell_id=fcid, lane=lane, genome_build=info[0][3], analysis="Standard")
-        
         if not _has_barcode(info):
             cur_lane["description"] = info[0][1]
         else: # barcoded sample
