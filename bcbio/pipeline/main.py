@@ -173,6 +173,8 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("structural variation precall", dirs):
             samples = structural.run(samples, run_parallel, "precall")
         with profile.report("structural variation", dirs):
+            samples = structural.run(samples, run_parallel, "initial")
+        with profile.report("structural variation", dirs):
             samples = structural.run(samples, run_parallel, "standard")
         with profile.report("structural variation ensemble", dirs):
             samples = structural.run(samples, run_parallel, "ensemble")

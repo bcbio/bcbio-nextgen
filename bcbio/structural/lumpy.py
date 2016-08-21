@@ -15,13 +15,14 @@ from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
 from bcbio.variation import effects, vcfutils, vfilter
 
 # ## Lumpy main
 
-def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
+def _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence, work_dir, items):
     """Run lumpy-sv, using speedseq pipeline.
     """
     batch = sshared.get_cur_batch(items)
@@ -39,6 +40,8 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items):
                 ref_file = dd.get_ref_file(items[0])
                 # use our bcbio python for runs within lumpyexpress
                 curpython_dir = os.path.dirname(sys.executable)
+                # XXX Use previous_evidence from CNVkit as depth inputs to lumpyexpress
+                print previous_evidence
                 cmd = ("export PATH={curpython_dir}:$PATH && "
                        "lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
                        "{exclude} -T {tmpdir} -o {tx_out_file}")
@@ -116,13 +119,21 @@ def run(items):
         raise ValueError("Require bwa-mem alignment input for lumpy structural variation detection")
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     work_dir = _sv_workdir(paired.tumor_data if paired and paired.tumor_data else items[0])
+    previous_evidence = {}
     full_bams, sr_bams, disc_bams = [], [], []
     for data in items:
         dedup_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
         full_bams.append(dedup_bam)
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
-    lumpy_vcf, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, work_dir, items)
+        cur_dels, cur_dups = _bedpes_from_cnv_caller(data, work_dir)
+        previous_evidence[dd.get_sample_name(data)] = {}
+        if cur_dels:
+            previous_evidence[dd.get_sample_name(data)]["dels"] = cur_dels
+        if cur_dups:
+            previous_evidence[dd.get_sample_name(data)]["dups"] = cur_dups
+    lumpy_vcf, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence,
+                                         work_dir, items)
     gt_vcfs = {}
     for data in items:
         sample = dd.get_sample_name(data)
@@ -156,6 +167,35 @@ def run(items):
                            "exclude_file": exclude_file})
         out.append(data)
     return out
+
+def _bedpes_from_cnv_caller(data, work_dir):
+    """Retrieve BEDPEs deletion and duplications from CNV callers.
+
+    Currently integrates with CNVkit.
+    """
+    supported = set(["cnvkit"])
+    cns_file = None
+    for sv in data["sv"]:
+        if sv["variantcaller"] in supported and "cns" in sv:
+            cns_file = sv["cns"]
+            break
+    if not cns_file:
+        return None, None
+    else:
+        out_base = os.path.join(work_dir, utils.splitext_plus(os.path.basename(cns_file))[0])
+        out_dels = out_base + "-dels.bedpe"
+        out_dups = out_base + "-dups.bedpe"
+        if not os.path.exists(out_dels) or not os.path.exists(out_dups):
+            with file_transaction(data, out_dels, out_dups) as (tx_out_dels, tx_out_dups):
+                try:
+                    cnvanator_path = config_utils.get_program("cnvanator_to_bedpes.py", data)
+                except config_utils.CmdNotFound:
+                    return None, None
+                cmd = [cnvanator_path, "-c", cns_file, "--cnvkit",
+                        "--del_o=%s" % tx_out_dels, "--dup_o=%s" % tx_out_dups,
+                        "-b", "250"]  # XXX Uses default piece size for CNVkit. Right approach?
+                do.run(cmd, "Prepare CNVkit as input for lumpy", data)
+        return out_dels, out_dups
 
 def _split_breakends(in_file, data):
     """Skip genotyping on breakends. This is often slow in high depth regions with many breakends.

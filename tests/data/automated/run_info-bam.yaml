@@ -37,7 +37,7 @@ details:
       #variantcaller: [gatk, gatk-haplotype]
       #effects: vep
       #svcaller: [lumpy, cnvkit, manta, metasv]
-      svcaller: [cnvkit, seq2c]
+      svcaller: [cnvkit, seq2c, lumpy]
       #remove_lcr: true
       tools_on: [qualimap]
       tools_off: [gemini]

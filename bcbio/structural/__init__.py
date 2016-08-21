@@ -15,9 +15,10 @@ from bcbio.variation import vcfutils
 # Stratify callers by stage -- see `run` documentation below for definitions
 _CALLERS = {
   "precall": {"seq2c": seq2c.precall},
+  "initial": {"cnvkit": cnvkit.run},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
-               "cnvkit": cnvkit.run, "battenberg": battenberg.run, "seq2c": seq2c.run},
+               "battenberg": battenberg.run, "seq2c": seq2c.run},
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
@@ -96,6 +97,7 @@ def run(samples, run_parallel, stage):
 
     The stage indicates which level of structural variant calling to run.
       - precall, perform initial sample based assessment of samples
+      - initial, callers that can be used in subsequent structural variation steps (cnvkit -> lumpy)
       - standard, regular batch calling
       - ensemble, post-calling, combine other callers or prioritize results
     """
