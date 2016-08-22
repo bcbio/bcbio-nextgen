@@ -205,7 +205,7 @@ To run a bcbio CWL workflow locally with Toil using Docker::
 
     bcbio_vm.py cwlrun toil run_info-cwl-workflow
 
-If you want to run from a locally installed bcbio add ``--nocontainer`` to the
+If you want to run from a locally installed bcbio add ``--no-container`` to the
 commandline.
 
 To run distributed on a Slurm cluster::
