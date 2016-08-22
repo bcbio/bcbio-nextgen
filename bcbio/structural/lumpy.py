@@ -38,13 +38,17 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence, work_dir, items
                 disc_bams = ",".join(disc_bams)
                 exclude = "-x %s" % sv_exclude_bed if (sv_exclude_bed and utils.file_exists(sv_exclude_bed)) else ""
                 ref_file = dd.get_ref_file(items[0])
-                # use our bcbio python for runs within lumpyexpress
                 curpython_dir = os.path.dirname(sys.executable)
-                # XXX Use previous_evidence from CNVkit as depth inputs to lumpyexpress
-                print previous_evidence
+                depths = []
+                for sample, ev_files in previous_evidence.items():
+                    for ev_type, ev_file in ev_files.items():
+                        if utils.file_exists(ev_file):
+                            depths.append("%s:%s" % (sample, ev_file))
+                depth_arg = "-d %s" % ",".join(depths) if len(depths) > 0 else ""
+                # use our bcbio python for runs within lumpyexpress
                 cmd = ("export PATH={curpython_dir}:$PATH && "
                        "lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
-                       "{exclude} -T {tmpdir} -o {tx_out_file}")
+                       "{exclude} {depth_arg} -T {tmpdir} -o {tx_out_file}")
                 do.run(cmd.format(**locals()), "lumpyexpress", items[0])
     return vcfutils.sort_by_ref(out_file, items[0]), sv_exclude_bed
 
