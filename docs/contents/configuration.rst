@@ -444,7 +444,7 @@ Alignment
 Alignment postprocessing
 ========================
 
--  ``mark_duplicates`` Identify and remove variants [true, false]
+-  ``mark_duplicates`` Mark duplicated reads [true, false].
    If true, will perform streaming duplicate marking with
    `biobambam's bammarkduplicates or bamsormadup
    <https://github.com/gt1/biobambam>`_.
@@ -556,7 +556,7 @@ Variant calling
      - ``platypus-joint`` Combine platypus calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``platypus`` variant calling.
-     - ``samtools-joint`` Combine platypus calls using bcbio.variation.recall
+     - ``samtools-joint`` Combine samtools calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``samtools`` variant calling.
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into

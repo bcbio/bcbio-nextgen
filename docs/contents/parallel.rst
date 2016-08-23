@@ -45,7 +45,7 @@ a single 32 core machine, this would run two simultaneous bwa mapping jobs using
 
 Memory specifications (both in ``memory`` and ``jvm_opts``) are per-core. bcbio
 takes care of adjusting this memory to match the cores used. In the example
-above, if bcbio was running a 16 core java proecess, it would use 32Gb of memory
+above, if bcbio was running a 16 core java process, it would use 32Gb of memory
 for the JVM, adjusting ``Xmx`` and ``Xms`` to match cores used. Internally bcbio
 looks at the memory and CPU usage on a machine and matches your configuration
 options to the available system resources. It will scale down core requests if
