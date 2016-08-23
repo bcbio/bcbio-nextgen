@@ -4,7 +4,7 @@ details:
   - analysis: scRNA-seq
     algorithm:
       umi_type: harvard-indrop
-      singlecell_quantifier: kallisto
+      singlecell_quantifier: rapmap
       minimum_barcode_depth: 500
     description: Test1
     files:
