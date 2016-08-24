@@ -179,7 +179,7 @@ def _bedpes_from_cnv_caller(data, work_dir):
     """
     supported = set(["cnvkit"])
     cns_file = None
-    for sv in data["sv"]:
+    for sv in data.get("sv", []):
         if sv["variantcaller"] in supported and "cns" in sv:
             cns_file = sv["cns"]
             break

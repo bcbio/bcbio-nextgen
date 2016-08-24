@@ -53,10 +53,11 @@ def finalize_sv(samples, config):
     """
     by_bam = collections.OrderedDict()
     for x in samples:
+        batch = dd.get_batch(x) or [dd.get_sample_name(x)]
         try:
-            by_bam[x["align_bam"]].append(x)
+            by_bam[x["align_bam"], tuple(batch)].append(x)
         except KeyError:
-            by_bam[x["align_bam"]] = [x]
+            by_bam[x["align_bam"], tuple(batch)] = [x]
     by_batch = collections.OrderedDict()
     lead_batches = {}
     for grouped_calls in by_bam.values():
