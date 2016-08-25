@@ -14,11 +14,15 @@ from bcbio.variation import annotation, bamprep, bedutils, ploidy
 def standard_cl_params(items):
     """Shared command line parameters for GATK programs.
 
-    Handles no removal of duplicate reads for amplicon or non mark duplicate experiments.
+    Handles no removal of duplicate reads for amplicon or
+    non mark duplicate experiments. If we have pre-aligned inputs we
+    ignore the value or mark duplicates (since they may already be
+    marked in the input BAM).
     """
     out = []
     def _skip_duplicates(data):
-        return dd.get_coverage_interval(data) == "amplicon" or not dd.get_mark_duplicates(data)
+        return (dd.get_coverage_interval(data) == "amplicon" or
+                (dd.get_aligner(data) and not dd.get_mark_duplicates(data)))
     if any(_skip_duplicates(d) for d in items):
         broad_runner = broad.runner_from_config(items[0]["config"])
         if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
