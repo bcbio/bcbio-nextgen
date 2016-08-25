@@ -233,7 +233,7 @@ def _snpeff_args_from_config(data):
     # Skip HGVS if running structural variant calling due to errors
     # https://github.com/chapmanb/bcbio-nextgen/issues/1205
     # https://github.com/pcingola/SnpEff/issues/128
-    svcaller = tz.get_in(["config", "algorithm", "svcaller_active"], data)
+    svcaller = tz.get_in(["config", "algorithm", "svcaller"], data)
     if svcaller:
         args += ["-noHgvs"]
     # Provide options tuned to reporting variants in clinical environments

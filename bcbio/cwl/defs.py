@@ -68,9 +68,7 @@ def cwlout(key, valtype, extensions=None):
         out["secondaryFiles"] = extensions
     return out
 
-def variant():
-    """Variant calling workflow definition for CWL generation.
-    """
+def _variant_shared():
     align = [s("prep_align_inputs", "single-split",
                [["files"],
                 ["config", "algorithm", "align_split_size"],
@@ -104,6 +102,12 @@ def variant():
                 cwlout(["hla", "fastq"], ["File", "null"])],
                ["biobambam"],
                {"files": 3})]
+    return align
+
+def variant():
+    """Variant calling workflow definition for CWL generation.
+    """
+    align = _variant_shared()
     vc = [s("get_parallel_regions", "batch-split",
             [["batch_rec"]],
             [cwlout(["region"], "string")]),
@@ -199,6 +203,28 @@ def variant():
     final_outputs = [["align_bam"], ["summary", "multiqc"]]
     return steps, final_outputs
 
+def sv():
+    """Structural variant workflow, for development purposes.
+
+    Will eventually merge with variant workflow using selectors to determine
+    required steps, but this is an initial step for testing and to work on
+    understanding necessary steps for each process.
+    """
+    align = _variant_shared()
+    steps = [w("alignment", "multi-parallel", align,
+               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
+             s("batch_for_sv", "multi-batch",
+               [["analysis"], ["genome_build"], ["align_bam"],
+                ["metadata", "batch"], ["metadata", "phenotype"],
+                ["config", "algorithm", "svcaller"],
+                ["config", "algorithm", "tools_on"],
+                ["reference", "fasta", "base"]],
+               [cwlout("sv_batch_rec", "record")],
+               unlist=[["config", "algorithm", "variantcaller"]]),
+            ]
+    final_outputs = [["align_bam"]]
+    return steps, final_outputs
+
 def fastrnaseq():
     prep = [s("prep_samples", "multi-parallel",
               [["files"],
@@ -264,4 +290,4 @@ def rnaseq():
 
 workflows = \
   {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq,
-   "rna-seq": rnaseq}
+   "rna-seq": rnaseq, "sv": sv}

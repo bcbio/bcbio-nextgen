@@ -220,6 +220,10 @@ def call_hla(*args):
     return hla.call_hla(*args)
 
 @utils.map_wrap
+def batch_for_sv(*args):
+    return structural.batch_for_sv(*args)
+
+@utils.map_wrap
 def detect_sv(*args):
     return structural.detect_sv(*args)
 

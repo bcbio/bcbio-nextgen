@@ -8,6 +8,7 @@ import pprint
 import toolz as tz
 
 from bcbio import bam, utils
+from bcbio.cwl import cwlutils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
@@ -21,7 +22,7 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
     Newer GATK with Haplotype calling has combined SNP/indel filtering.
     """
     caller = data["config"]["algorithm"].get("variantcaller")
-    if not "gvcf" in dd.get_tools_on(data):
+    if "gvcf" not in dd.get_tools_on(data):
         call_file = ploidy.filter_vcf_by_sex(call_file, items)
     if caller in ["freebayes"]:
         return vfilter.freebayes(call_file, ref_file, vrn_files, data)
@@ -187,7 +188,7 @@ def vc_output_record(samples):
     for the batch, we assign to every sample.
     """
     shared_keys = [["vrn_file"], ["validate", "summary"]]
-    raw = _samples_to_records([utils.to_single_data(x) for x in samples])
+    raw = cwlutils.samples_to_records([utils.to_single_data(x) for x in samples])
     shared = {}
     for key in shared_keys:
         cur = [x for x in [tz.get_in(key, d) for d in raw] if x]
@@ -200,28 +201,6 @@ def vc_output_record(samples):
         out.append([d])
     return out
 
-def _samples_to_records(samples):
-    """Convert samples into output CWL records.
-    """
-    from bcbio.pipeline import run_info
-    RECORD_CONVERT_TO_LIST = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
-    all_keys = _get_all_cwlkeys(samples)
-    out = []
-    for data in samples:
-        for raw_key in sorted(list(all_keys)):
-            key = raw_key.split("__")
-            if tz.get_in(key, data) is None:
-                data = tz.update_in(data, key, lambda x: None)
-                data["cwl_keys"].append(raw_key)
-            if raw_key in RECORD_CONVERT_TO_LIST:
-                val = tz.get_in(key, data)
-                if not val: val = []
-                elif not isinstance(val, (list, tuple)): val = [val]
-                data = tz.update_in(data, key, lambda x: val)
-        data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
-        out.append(data)
-    return out
-
 def batch_for_variantcall(samples):
     """Prepare a set of samples for parallel variant calling.
 
@@ -231,7 +210,7 @@ def batch_for_variantcall(samples):
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
-    for data in _samples_to_records(to_process):
+    for data in cwlutils.samples_to_records(to_process):
         vc = get_variantcaller(data, require_bam=False)
         batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
@@ -339,7 +318,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
 def concat_batch_variantcalls(items):
     """CWL entry point: combine variant calls from regions into single VCF.
     """
-    items, cwl_extras = split_data_cwl_items(items)
+    items, cwl_extras = cwlutils.split_data_cwl_items(items)
     batch_name = _get_batch_name(items)
     variantcaller = _get_batch_variantcaller(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
@@ -354,55 +333,6 @@ def concat_batch_variantcalls(items):
     out_file = vcfutils.concat_variant_files(vrn_file_regions, out_file, regions,
                                              dd.get_ref_file(items[0]), items[0]["config"])
     return {"vrn_file": out_file}
-
-def _get_all_cwlkeys(items):
-    """Retrieve cwlkeys from inputs, handling defaults which can be null.
-
-    When inputs are null in some and present in others, this creates unequal
-    keys in each sample, confusing decision making about which are primary and extras.
-    """
-    default_keys = set(["metadata__batch", "config__algorithm__validate",
-                        "config__algorithm__validate_regions"])
-    all_keys = set([])
-    for data in items:
-        all_keys.update(set(data["cwl_keys"]))
-    all_keys.update(default_keys)
-    return all_keys
-
-def split_data_cwl_items(items):
-    """Split a set of CWL output dictionaries into data samples and CWL items.
-
-    Handles cases where we're arrayed on multiple things, like a set of regional
-    VCF calls and data objects.
-    """
-    key_lens = set([])
-    for data in items:
-        key_lens.add(len(_get_all_cwlkeys([data])))
-    extra_key_len = min(list(key_lens)) if len(key_lens) > 1 else None
-    data_out = []
-    extra_out = []
-    for data in items:
-        if extra_key_len and len(_get_all_cwlkeys([data])) == extra_key_len:
-            extra_out.append(data)
-        else:
-            data_out.append(data)
-    if len(extra_out) == 0:
-        return data_out, {}
-    else:
-        cwl_keys = extra_out[0]["cwl_keys"]
-        for extra in extra_out[1:]:
-            cur_cwl_keys = extra["cwl_keys"]
-            assert cur_cwl_keys == cwl_keys, pprint.pformat(extra_out)
-        cwl_extras = collections.defaultdict(list)
-        for data in items:
-            for key in cwl_keys:
-                cwl_extras[key].append(data[key])
-        data_final = []
-        for data in data_out:
-            for key in cwl_keys:
-                data.pop(key)
-            data_final.append(data)
-        return data_final, dict(cwl_extras)
 
 def _region_to_coords(region):
     """Split GATK region specification (chr1:1-10) into a tuple of chrom, start, end
