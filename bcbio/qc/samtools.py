@@ -42,6 +42,7 @@ def _parse_samtools_stats(stats_file):
                 if metric in ["reads duplicated"]:
                     out["%s pct" % want[metric]] = stat / out["Total reads"]
     out["Mapping Rate"] = 1.0 * out["Mapped"] / out["Total reads"]
+    out["Mapped reads"] = out["Mapped"] # remove after 1.0.0 release
     return out
 
 def _parse_offtargets(bam_file):
