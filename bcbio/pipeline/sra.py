@@ -91,6 +91,6 @@ def _convert_fastq(srafn, outdir, single=False):
                 do.run(cmd.format(**locals()), "Covert to fastq %s" % sraid)
         if not utils.file_exists(out_file[0]):
             raise IOError("SRA %s didn't convert, something happened." % srafn)
-        return out_file
+        return [out for out in out_file if utils.file_exists(out)]
     else:
         raise ValueError("Not supported single-end sra samples for now.")
