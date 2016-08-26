@@ -158,9 +158,6 @@ def _parse_metrics(metrics):
 
     out = {}
     total_reads = sum([int(metrics[name]) for name in total])
-    out['Mapped'] = sum([int(metrics[name]) for name in total[1:]])
-    out['Mapping Rate'] = 1.0 * int(out['Mapped']) / total_reads
-    # [out.update({name: 0}) for name in missing]
     out.update({key: val for key, val in metrics.iteritems() if key in correct})
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]

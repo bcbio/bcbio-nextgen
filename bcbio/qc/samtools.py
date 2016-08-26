@@ -27,7 +27,7 @@ def run(bam_file, data, out_dir):
 
 def _parse_samtools_stats(stats_file):
     out = {}
-    want = {"raw total sequences": "Total reads", "reads mapped": "Mapped reads",
+    want = {"raw total sequences": "Total reads", "reads mapped": "Mapped",
             "reads duplicated": "Duplicates", "insert size average": "Average insert size"}
     with open(stats_file) as in_handle:
         for line in in_handle:
@@ -39,8 +39,9 @@ def _parse_samtools_stats(stats_file):
             if metric in want:
                 stat = float(stat_str.strip())
                 out[want[metric]] = stat
-                if metric in ["reads mapped", "reads duplicated"]:
+                if metric in ["reads duplicated"]:
                     out["%s pct" % want[metric]] = stat / out["Total reads"]
+    out["Mapping Rate"] = 1.0 * out["Mapped"] / out["Total reads"]
     return out
 
 def _parse_offtargets(bam_file):
