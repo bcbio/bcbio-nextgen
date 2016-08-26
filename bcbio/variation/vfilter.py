@@ -221,6 +221,9 @@ def gatk_snp_hard(in_file, data):
 
     QD and FS are not calculated when generating gVCF output:
     https://github.com/broadgsa/gatk-protected/blob/e91472ddc7d58ace52db0cab4d70a072a918d64c/protected/gatk-tools-protected/src/main/java/org/broadinstitute/gatk/tools/walkers/haplotypecaller/HaplotypeCaller.java#L300
+
+    The extra command removes escaped quotes in the VCF output which
+    pyVCF fails on.
     """
     filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     if "gvcf" not in dd.get_tools_on(data):
@@ -230,7 +233,8 @@ def gatk_snp_hard(in_file, data):
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
     if variantcaller not in ["gatk-haplotype"]:
         filters.append("HaplotypeScore > 13.0")
-    return hard_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKHardSNP", "SNP")
+    return hard_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKHardSNP", "SNP",
+                             extra_cmd=r"""| sed 's/\\"//g'""")
 
 def gatk_indel_hard(in_file, data):
     """Perform hard filtering on GATK indels using best-practice recommendations.
@@ -238,4 +242,5 @@ def gatk_indel_hard(in_file, data):
     filters = ["ReadPosRankSum < -20.0"]
     if "gvcf" not in dd.get_tools_on(data):
         filters += ["QD < 2.0", "FS > 200.0"]
-    return hard_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKHardIndel", "INDEL")
+    return hard_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKHardIndel", "INDEL",
+                             extra_cmd=r"""| sed 's/\\"//g'""")
