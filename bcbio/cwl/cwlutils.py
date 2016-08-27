@@ -16,7 +16,7 @@ def _get_all_cwlkeys(items):
     keys in each sample, confusing decision making about which are primary and extras.
     """
     default_keys = set(["metadata__batch", "config__algorithm__validate",
-                        "config__algorithm__validate_regions"])
+                        "config__algorithm__validate_regions", "validate__summary"])
     all_keys = set([])
     for data in items:
         all_keys.update(set(data["cwl_keys"]))
