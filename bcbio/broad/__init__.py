@@ -74,6 +74,8 @@ def _clean_java_out(version_str):
     for line in version_str.split("\n"):
         if line.startswith("Picked up"):
             pass
+        if line.find("setlocale") > 0:
+            pass
         else:
             out.append(line)
     return "\n".join(out)
