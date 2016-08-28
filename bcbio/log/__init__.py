@@ -10,7 +10,6 @@ import logbook
 import logbook.queues
 
 from bcbio import utils
-from bcbio.log import logbook_zmqpush
 
 LOG_NAME = "bcbio-nextgen"
 
@@ -98,6 +97,7 @@ def create_base_logger(config=None, parallel=None):
     parallel_type = parallel.get("type", "local")
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
+        from bcbio.log import logbook_zmqpush
         ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
                if not ip.startswith("127.0.0")]
         if not ips:
@@ -131,6 +131,7 @@ def setup_local_logging(config=None, parallel=None):
     cores = parallel.get("cores", 1)
     wrapper = parallel.get("wrapper", None)
     if parallel_type == "ipython":
+        from bcbio.log import logbook_zmqpush
         handler = logbook_zmqpush.ZeroMQPushHandler(parallel["log_queue"])
     elif cores > 1:
         handler = logbook.queues.MultiProcessingHandler(mpq)
