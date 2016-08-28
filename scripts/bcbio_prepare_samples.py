@@ -8,7 +8,6 @@ import os
 import yaml
 from collections import defaultdict
 from argparse import ArgumentParser
-from cluster_helper import cluster as ipc
 from bcbio import log
 from bcbio.log import logger
 from bcbio.install import _get_data_dir
@@ -84,6 +83,7 @@ def _check_paired(files):
 
 def get_cluster_view(p):
     """get ipython running"""
+    from cluster_helper import cluster as ipc
     return ipc.cluster_view(p['scheduler'], p['queue'], p['num_jobs'], p['cores_per_job'], start_wait=p['timeout'], extra_params={"resources": p['resources'], "mem": p['mem'], "tag": p['tag'], "run_local": False})
 
 

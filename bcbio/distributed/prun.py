@@ -6,7 +6,7 @@ import os
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.provenance import system
-from bcbio.distributed import clusterk, ipython, multi, resources
+from bcbio.distributed import multi, resources
 
 @contextlib.contextmanager
 def start(parallel, items, config, dirs=None, name=None, multiplier=1,
@@ -50,15 +50,18 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
             parallel["checkpointed"] = True
             yield multi.runner(parallel, config)
         elif parallel["type"] == "ipython":
+            from bcbio.distributed import ipython
             with ipython.create(parallel, dirs, config) as view:
                 yield ipython.runner(view, parallel, dirs, config)
         elif parallel["type"] == "clusterk":
+            from bcbio.distributed import clusterk
             with clusterk.create(parallel) as queue:
                 yield clusterk.runner(queue, parallel)
         else:
             yield multi.runner(parallel, config)
     except:
         if view is not None:
+            from bcbio.distributed import ipython
             ipython.stop(view)
         raise
     else:
