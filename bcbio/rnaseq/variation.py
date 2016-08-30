@@ -76,11 +76,12 @@ def gatk_rnaseq_calling(data):
     data = dd.set_vrn_file(data, out_file)
     return data
 
-def gatk_joint_calling(data, vrn_files, ref_file, out_file=None):
-    if out_file is None:
-        out_file = os.path.join("variation", "combined.vcf")
+def gatk_joint_calling(data, vrn_files, ref_file):
+    joint_file = os.path.join("variation", "joint.vcf")
+    out_file = os.path.join("variation", "combined.vcf")
     if not file_exists(out_file):
-        out_file = _run_genotype_gvcfs(data, vrn_files, ref_file, out_file)
+        joint_file = _run_genotype_gvcfs(data, vrn_files, ref_file, joint_file)
+        out_file = gatk_filter_rnaseq(data, joint_file, out_file)
     return out_file
 
 def _run_genotype_gvcfs(data, vrn_files, ref_file, out_file):
@@ -136,3 +137,33 @@ def rnaseq_vardict_variant_calling(data):
         do.run(cmd.format(**locals()), message)
     data = dd.set_vrn_file(data, out_file)
     return data
+
+def gatk_filter_rnaseq(data, vrn_file, out_file):
+    """
+    this incorporates filters listed here, dropping clusters of variants
+    within a 35 nucleotide window, high fischer strand values and low
+    quality by depth
+    https://software.broadinstitute.org/gatk/guide/article?id=3891
+    java -jar GenomeAnalysisTK.jar -T VariantFiltration -R hg_19.fasta -V
+    input.vcf -window 35 -cluster 3 -filterName FS -filter "FS > 30.0"
+    -filterName QD -filter "QD < 2.0" -o output.vcf
+    """
+    broad_runner = broad.runner_from_config(dd.get_config(data))
+    ref_file = dd.get_ref_file(data)
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        params = ["-T", "VariantFiltration",
+                  "-R", ref_file,
+                  "-V", vrn_file,
+                  "--clusterWindowSize", "35",
+                  "--clusterSize", "3",
+                  "--filterExpression", "\"'FS > 30.0'\"",
+                  "--filterName", "FS",
+                  "--filterExpression", "\"'QD < 2.0'\"",
+                  "--filterName", "QD",
+                  "-o", tx_out_file]
+        jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data))
+        do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params),
+               "Filter variants.")
+    return out_file
