@@ -74,7 +74,7 @@ an ensemble method that combines results for any found in 2 out of 3::
 
       variant_regions: ../input/NGv3-chr6-hg38.bed
       min_allele_fraction: 2
-      variantcaller: [vardict, mutect, freebayes]
+      variantcaller: [vardict, freebayes, varscan]
       ensemble:
         numpass: 2
 
@@ -127,8 +127,8 @@ SNP and indel calls for 3 callers, plus combined ensemble calls::
     syn3-tumor-ensemble.vcf.gz.tbi
     syn3-tumor-freebayes.vcf.gz
     syn3-tumor-freebayes.vcf.gz.tbi
-    syn3-tumor-mutect.vcf.gz
-    syn3-tumor-mutect.vcf.gz.tbi
+    syn3-tumor-varscan.vcf.gz
+    syn3-tumor-varscan.vcf.gz.tbi
     syn3-tumor-vardict.vcf.gz
     syn3-tumor-vardict.vcf.gz.tbi
 
