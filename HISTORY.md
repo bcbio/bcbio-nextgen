@@ -1,7 +1,5 @@
 ## 1.0.0 (in progress)
 
-- Get from GEO server, GSM FASTQ samples using bcbio_prepare_samples.py script
-- Add seqcluster stats to QC folder
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
 - Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
@@ -9,7 +7,12 @@
 - Unset JAVA_HOME when running gatk-framework and GATK > 3.6, forcing
   use of bcbio installed Java 8. Thanks to Brad Wubbenhorst.
 - Fix bug when running realignment without recalibration in GATK 3.6. Thanks to Pär Larsson.
-- Allow PED based gender specifications (1=male, 2=female). Thanks to Brent Pedersen.
+- Get from GEO server, GSM FASTQ samples using bcbio_prepare_samples.py script
+- Add seqcluster stats to QC folder
+- Allow PED based gender specifications (1=male, 2=female). Thanks to Brent
+  Pedersen.
+- VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.
+  Thanks to Zhengqiu Cai.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 - Re-enable save_diskspace option to reduce disk usage during alignment
   preparation and split alignments.

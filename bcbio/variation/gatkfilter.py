@@ -150,14 +150,16 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
     base = utils.splitext_plus(in_file)[0]
     recal_file = "%s.recal" % base
     tranches_file = "%s.tranches" % base
+    plot_file = "%s-plots.R" % base
     if not utils.file_exists(recal_file):
-        with file_transaction(data, recal_file, tranches_file) as (tx_recal, tx_tranches):
+        with file_transaction(data, recal_file, tranches_file, plot_file) as (tx_recal, tx_tranches, tx_plot_file):
             params = ["-T", "VariantRecalibrator",
                       "-R", ref_file,
                       "--input", in_file,
                       "--mode", filter_type,
                       "--recal_file", tx_recal,
-                      "--tranches_file", tx_tranches]
+                      "--tranches_file", tx_tranches,
+                      "--rscript_file", tx_plot_file]
             params += _get_vqsr_training(filter_type, vrn_files)
             resources = config_utils.get_resources("gatk_variant_recalibrator", data["config"])
             opts = resources.get("options", [])

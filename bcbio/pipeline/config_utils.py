@@ -404,7 +404,10 @@ def use_vqsr(algs):
         for c in callers:
             if c in vqsr_callers:
                 vqsr_supported[c] += 1
-                coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+                if "vqsr" in alg.get("tools_on", []):  # VQSR turned on:
+                    coverage_intervals.add("genome")
+                else:
+                    coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
     if len(vqsr_supported) > 0:
         num_samples = max(vqsr_supported.values())
         if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:
