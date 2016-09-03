@@ -35,7 +35,7 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
         checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % name)
     else:
         checkpoint_file = None
-    sysinfo = system.get_info(dirs, parallel)
+    sysinfo = system.get_info(dirs, parallel, config.get("resources", {}))
     items = [x for x in items if x is not None] if items else []
     max_multicore = int(max_multicore or sysinfo.get("cores", 1))
     parallel = resources.calculate(parallel, items, sysinfo, config,

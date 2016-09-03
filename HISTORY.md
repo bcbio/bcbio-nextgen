@@ -9,6 +9,8 @@
 - Fix bug when running realignment without recalibration in GATK 3.6. Thanks to Pär Larsson.
 - Get from GEO server, GSM FASTQ samples using bcbio_prepare_samples.py script
 - Add seqcluster stats to QC folder
+- Allow manual specification of total memory and core usage for machines in
+  `resources`. Thanks to Juan Caballero.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent
   Pedersen.
 - VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.

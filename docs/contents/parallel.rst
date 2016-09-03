@@ -245,11 +245,7 @@ The memory information specified in the system configuration
 processes. The values are specified on a *memory-per-core* basis and
 thus bcbio-nextgen handles memory scheduling by:
 
-- Determining available cores and memory per machine. It uses the
-  local machine for multicore runs. For parallel runs, it spawns a job
-  on the schedule queue and extracts the system information from that
-  machine. This expects a homogeneous set of machines within a
-  cluster queue.
+- :ref:`parallel-machine`
 
 - Calculating the memory and core usage.
   The system configuration :ref:`config-resources` contains the
@@ -267,10 +263,35 @@ thus bcbio-nextgen handles memory scheduling by:
 
 As a result of these calculations, the cores used during processing
 will not always correspond to the maximum cores provided in the input
-`-n` parameter. The goal is rather to intelligently maximize cores and
+``-n`` parameter. The goal is rather to intelligently maximize cores and
 memory while staying within system resources. Note that memory
 specifications are for a single core, and the pipeline takes care of
 adjusting this to actual cores used during processing.
+
+.. _parallel-machine:
+
+Determining available cores and memory per machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio automatically tries to determine the total available memory and cores per
+machine for balancing resource usage. For multicore runs, it retrieves total
+memory from the current machine. For parallel runs, it spawns a job on the queue
+and extracts the system information from that machine. This expects a
+homogeneous set of machines within a cluster queue. You can see the determined
+cores and total memory in ``provenance/system-ipython-queue.yaml``.
+
+For heterogeneous clusters or other cases where bcbio does not correctly
+identify available system resources, you can manually set the machine cores and
+total memory in the ``resource`` section of either a sample YAML file
+(:ref:`sample-resources`) or ``bcbio_system.yaml``::
+
+    resources:
+      machine:
+        memory: 48.0
+        cores: 16
+
+The memory usage is total available on the machine in Gb, so this specifies that
+individual machines have 48Gb of total memory and 16 cores.
 
 Tuning systems for scale
 ~~~~~~~~~~~~~~~~~~~~~~~~
