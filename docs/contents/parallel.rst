@@ -170,8 +170,52 @@ There are also special ``-r`` resources parameters to support pipeline configura
 .. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
 
 Troubleshooting
-===============
-**IPython parallelization problems**:
+~~~~~~~~~~~~~~~
+Diagnosing job failures
+=======================
+
+Parallel jobs can often terminate with rather generic failures like any of the
+following:
+
+- ``joblib/parallel.py", ... TypeError: init() takes at least 3 arguments (2 given)``
+- ``Multiprocessing exception:``
+- ``CalledProcessError: Command '<command line that failed>``
+
+These errors unfortunately don't help diagnose the problem, and you'll likely
+see the actual error triggering this generic exception earlier in the run. This
+error can often be hard to find due to parallelization.
+
+If you run into a confusing failure like this, the best approach is to re-run
+with a single core::
+
+    bcbio_nextgen.py your_input.yaml -n 1
+
+which should produce a more helpful debug message right above the failure.
+
+It's also worth re-trying the failed command line outside of bcbio to look for
+errors. You can find the failing command by cross-referencing the error message
+with command lines in ``log/bcbio-nextgen-commands.log``. You may have to change
+temporary directories (``tx/tmp**``) in some of the job outputs. Reproducing the
+error outside of bcbio is a good first step to diagnosing and fixing the
+underlying issue.
+
+No parallelization where expected
+=================================
+
+This may occure if the current execution is a re-run of a previous project:
+
+- Files in ``checkpoints_parallel/*.done`` tell bcbio not to parallelize already
+  executed pipeline tasks. This makes restarts faster by avoiding re-starting a
+  cluster (when using distributed runs) for finished stages. If that behaviour
+  is not desired for a task, removing the checkpoint file will get things
+  parallelizing again.
+
+- If the processing of a task is nearly finished the last jobs of this task will be
+  running and bcbio will wait for those to finish.
+
+IPython parallelization problems
+================================
+
 Networking problems on clusters can prevent the IPython parallelization
 framework from working properly. Be sure that the compute nodes on your
 cluster are aware of IP addresses that they can use to communicate
@@ -190,17 +234,6 @@ where ``host-ip`` is replaced by the actual IP address of the machine
 and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
 cluster administrator.
-
-**No parallelization where expected**: This may occure if the current execution
-is a re-run of a previous project:
-
-- There will be a file in `checkpoints_parallel/full.done` that tells bcbio not
-  to parallelize at certain tasks of already executed tasks of the pipeline.
-  That tries to avoid re-starting a cluster (when using distributed runs) for
-  stages that have finished. If that behaviour is not desired for a task, removing
-  the checkpoint file will get things parallelizing again.
-- If the processing of a task is nearly finished the last jobs of this task will be
-  running and bcbio will wait for those to finish.
 
 .. _memory-management:
 
