@@ -44,7 +44,8 @@ def update_file(finfo, sample_info, config, pass_uptodate=False):
     """
     # skip if we have no directory to upload to
     if "dir" not in config:
-        return
+        raise ValueError("Expect `dir` in upload specification: "
+                         "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#upload")
     if "sample" in finfo:
         storage_dir = utils.safe_makedir(os.path.join(config["dir"], finfo["sample"]))
     elif "run" in finfo:
