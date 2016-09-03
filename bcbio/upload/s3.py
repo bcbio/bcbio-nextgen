@@ -37,7 +37,7 @@ def update_file(finfo, sample_info, config):
     conn = objectstore.connect(fname)
     bucket = conn.lookup(config["bucket"])
     if not bucket:
-        bucket = conn.create_bucket(config["bucket"])
+        bucket = conn.create_bucket(config["bucket"], location=config.get("region", "us-east-1"))
 
     for fname, orig_keyname in to_transfer:
         keyname = os.path.join(config.get("folder", ""), orig_keyname)
@@ -90,7 +90,7 @@ def upload_file_boto(fname, remote_fname, mditems=None):
     conn = objectstore.connect(remote_fname)
     bucket = conn.lookup(r_fname.bucket)
     if not bucket:
-        bucket = conn.create_bucket(r_fname.bucket)
+        bucket = conn.create_bucket(r_fname.bucket, location=objectstore.get_region(remote_fname))
     key = bucket.get_key(r_fname.key, validate=False)
     if mditems is None:
         mditems = {}
