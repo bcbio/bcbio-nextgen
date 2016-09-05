@@ -29,7 +29,7 @@ def run(bam_file, data, out_dir):
     """
     qsig = config_utils.get_program("qsignature", data["config"])
     res_qsig = config_utils.get_resources("qsignature", data["config"])
-    jvm_opts = res_qsig.get("jvm_opts", ["-Xms750m", "-Xmx8g"])
+    jvm_opts = " ".join(res_qsig.get("jvm_opts", ["-Xms750m", "-Xmx8g"]))
     if not qsig:
         logger.info("There is no qsignature tool. Skipping...")
         return None
@@ -81,7 +81,8 @@ def summary(*samples):
     qsig = config_utils.get_program("qsignature", samples[0][0]["config"])
     if not qsig:
         return [[]]
-    jvm_opts = "-Xms750m -Xmx8g"
+    res_qsig = config_utils.get_resources("qsignature", samples[0][0]["config"])
+    jvm_opts = " ".join(res_qsig.get("jvm_opts", ["-Xms750m", "-Xmx8g"]))
     work_dir = samples[0][0]["dirs"]["work"]
     count = 0
     for data in samples:
