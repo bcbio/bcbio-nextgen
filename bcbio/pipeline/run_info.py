@@ -271,7 +271,7 @@ def _clean_algorithm(data):
     """Clean algorithm keys, handling items that can be specified as lists or single items.
     """
     # convert single items to lists
-    for key in ["variantcaller", "jointcaller"]:
+    for key in ["variantcaller", "jointcaller", "svcaller"]:
         val = tz.get_in(["algorithm", key], data)
         if val:
             if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
