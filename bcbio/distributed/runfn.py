@@ -182,7 +182,13 @@ def _convert_to_cwl_json(data, fnargs):
     """
     out = {}
     for outvar in _get_output_cwl_keys(fnargs):
-        keys = outvar.split("__")
+        keys = []
+        for key in outvar.split("__"):
+            try:
+                key = int(key)
+            except ValueError:
+                pass
+            keys.append(key)
         if isinstance(data, dict):
             out[outvar] = _to_cwl(tz.get_in(keys, data))
         else:

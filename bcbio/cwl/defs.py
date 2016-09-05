@@ -212,6 +212,11 @@ def sv():
     understanding necessary steps for each process.
     """
     align = _variant_shared()
+    sv = [s("detect_sv", "batch-single",
+            [["sv_batch_rec"]],
+            [cwlout(["sv", "0", "variantcaller"], "string"),
+             cwlout(["sv", "0", "vrn_file"], "File", [".tbi"])]),
+         ]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("batch_for_sv", "multi-batch",
@@ -222,7 +227,8 @@ def sv():
                 ["config", "algorithm", "tools_off"],
                 ["reference", "fasta", "base"]],
                [cwlout("sv_batch_rec", "record")],
-               unlist=[["config", "algorithm", "variantcaller"]]),
+               unlist=[["config", "algorithm", "svcaller"]]),
+             w("svcall", "multi-parallel", sv, []),
             ]
     final_outputs = [["align_bam"]]
     return steps, final_outputs

@@ -62,8 +62,7 @@ def samples_to_records(samples):
     """Convert samples into output CWL records.
     """
     from bcbio.pipeline import run_info
-    RECORD_CONVERT_TO_LIST = set(["config__algorithm__tools_on", "config__algorithm__tools_off",
-                                  "config__algorithm__svcaller"])
+    RECORD_CONVERT_TO_LIST = set(["config__algorithm__tools_on", "config__algorithm__tools_off"])
     all_keys = _get_all_cwlkeys(samples)
     out = []
     for data in samples:

@@ -142,20 +142,20 @@ def run(samples, run_parallel, stage):
       - ensemble, post-calling, combine other callers or prioritize results
     """
     to_process, extras, background = _batch_split_by_sv(samples, stage)
-    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"], stage]
+    processed = run_parallel("detect_sv", ([xs, background, stage]
                                            for xs in to_process.values()))
     finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
                  if len(processed) > 0 else [])
     return extras + finalized
 
-def detect_sv(items, all_items, config, stage):
+def detect_sv(items, all_items=None, stage="standard"):
     """Top level parallel target for examining structural variation.
     """
-    svcaller = config["algorithm"].get("svcaller")
+    svcaller = items[0]["config"]["algorithm"].get("svcaller")
     caller_fn = _CALLERS[stage].get(svcaller)
     out = []
     if svcaller and caller_fn:
-        if (svcaller in _NEEDS_BACKGROUND and
+        if (all_items and svcaller in _NEEDS_BACKGROUND and
                 not vcfutils.is_paired_analysis([x.get("align_bam") for x in items], items)):
             names = set([dd.get_sample_name(x) for x in items])
             background = [x for x in all_items if dd.get_sample_name(x) not in names]
