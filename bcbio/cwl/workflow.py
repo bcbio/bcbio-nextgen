@@ -135,7 +135,7 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
         is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
         if is_record_input:
-            unpack_inputs = _unpack_record(orig_input)
+            unpack_inputs = _unpack_record(orig_input, is_combine=step.parallel in ["multi-combined"])
             inputs.extend(unpack_inputs)
             skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in unpack_inputs])
         else:
@@ -153,13 +153,20 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
         inputs = [_nest_variable(x) for x in inputs]
     return inputs, parallel_ids, nested_inputs
 
-def _unpack_record(rec):
+def _unpack_record(rec, is_combine=False):
     """Unpack a record object, extracting individual elements.
+
+    Handles standard single records (extract each member) and arrays of records
+    after parallelization (is_combine=True, extract each member into a list).
     """
     out = []
     for field in rec["type"]["fields"]:
+        if is_combine:
+            value_from = "$(self.map(function(x) { return x.%s; }))" % field["name"]
+        else:
+            value_from = "$(self.%s)" % field["name"]
         out.append({"id": "%s" % field["name"], "type": field["type"],
-                    "source": rec["id"], "valueFrom": "$(self.%s)" % field["name"]})
+                    "source": rec["id"], "valueFrom": value_from})
     return out
 
 def _clean_record(var):
