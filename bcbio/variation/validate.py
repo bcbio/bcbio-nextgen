@@ -482,6 +482,8 @@ def _group_validate_samples(samples):
     validated = collections.defaultdict(list)
     for data in samples:
         is_v = False
+        if data.get("validate"):
+            is_v = True
         for variant in data.get("variants", []):
             if variant.get("validate"):
                 is_v = True
@@ -500,6 +502,9 @@ def _group_validate_samples(samples):
 
 def summarize_grading(samples):
     """Provide summaries of grading results across all samples.
+
+    Handles both traditional pipelines (validation part of variants) and CWL
+    pipelines (validation at top level)
     """
     samples = [utils.to_single_data(d) for d in samples]
     if not _has_grading_info(samples):
@@ -515,15 +520,19 @@ def summarize_grading(samples):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                for variant in data.get("variants", []):
-                    if variant.get("validate"):
-                        variant["validate"]["grading_summary"] = out_csv
-                        if tz.get_in(["validate", "grading"], variant):
-                            for row in _get_validate_plotdata_yaml(variant, data):
+                if "validate" in data:
+                    validations = [data.get("validate")]
+                else:
+                    validations = [variant.get("validate") for variant in data.get("variants", [])]
+                for validate in validations:
+                    if validate:
+                        validate["grading_summary"] = out_csv
+                        if validate.get("grading"):
+                            for row in _get_validate_plotdata_yaml(validate["grading"], data):
                                 writer.writerow(row)
                                 plot_data.append(row)
-                        elif tz.get_in(["validate", "summary"], variant):
-                            plot_files.append(variant["validate"]["summary"])
+                        elif validate.get("summary"):
+                            plot_files.append(validate["summary"])
         if plot_files:
             plots = validateplot.classifyplot_from_plotfiles(plot_files, out_csv)
         elif plot_data:
@@ -532,16 +541,18 @@ def summarize_grading(samples):
         else:
             plots = None
         for data in vitems:
+            if data.get("validate"):
+                data["validate"]["grading_plots"] = plots
             for variant in data.get("variants", []):
                 if variant.get("validate"):
                     variant["validate"]["grading_plots"] = plots
             out.append([data])
     return out
 
-def _get_validate_plotdata_yaml(variant, data):
+def _get_validate_plotdata_yaml(grading_file, data):
     """Retrieve validation plot data from grading YAML file (old style).
     """
-    with open(variant["validate"]["grading"]) as in_handle:
+    with open(grading_file) as in_handle:
         grade_stats = yaml.load(in_handle)
     for sample_stats in grade_stats:
         sample = sample_stats["sample"]
