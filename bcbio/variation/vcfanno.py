@@ -17,7 +17,7 @@ def vcfanno(vcf, out_file, conffn, data, basepath=None, luafn=None):
     vcfanno = config_utils.get_program("vcfanno", data)
     luaflag = "-lua {0}".format(luafn) if luafn else ""
     basepathflag = "-base-path {0}".format(basepath) if basepath else ""
-    cmd = "{vcfanno} {luaflag} {basepathflag} {conffn} {vcf} > {tx_out_file}"
+    cmd = "{vcfanno} {luaflag} {basepathflag} {conffn} {vcf} | bgzip -c > {tx_out_file}"
     message = "Annotating {vcf} with vcfanno, using {conffn}".format(**locals())
     with file_transaction(out_file) as tx_out_file:
         do.run(cmd.format(**locals()), message)
