@@ -466,6 +466,9 @@ def gatk_cmd(name, jvm_opts, params):
     """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
+    # if we can't find via the local executable, fallback to being in the path
+    if not gatk_cmd:
+        gatk_cmd = utils.which(name)
     if gatk_cmd:
         return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
             (os.path.dirname(gatk_cmd), gatk_cmd,
