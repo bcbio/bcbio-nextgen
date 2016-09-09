@@ -147,8 +147,9 @@ def _cnvkit_prioritize(sample, genes, allele_file, metrics_file):
     """Summarize non-diploid calls with copy numbers and confidence intervals.
     """
     mdf = pd.read_table(metrics_file)
+    mdf.columns = [x.lower() for x in mdf.columns]
     mdf = mdf[mdf["gene"].str.contains("|".join(genes))]
-    mdf = mdf[["chromosome", "start", "end", "gene", "log2", "CI_hi", "CI_lo"]]
+    mdf = mdf[["chromosome", "start", "end", "gene", "log2", "ci_hi", "ci_lo"]]
     adf = pd.read_table(allele_file)
     adf = adf[adf["gene"].str.contains("|".join(genes))]
     adf = adf[["chromosome", "start", "end", "cn", "cn1", "cn2"]]
@@ -156,13 +157,11 @@ def _cnvkit_prioritize(sample, genes, allele_file, metrics_file):
     df = df[df["cn"] != 2]
     if len(df) > 0:
         def passes(row):
-            return (((row["cn"] > 2 and row["CI_lo"] > 0) or
-                     (row["cn"] < 2 and row["CI_hi"] < 0)) and
-                    row["CI_hi"] > row["CI_lo"])
+            spread = abs(row["ci_hi"] - row["ci_lo"])
+            return spread < 0.25
         df["passes"] = df.apply(passes, axis=1)
     df.insert(0, "sample", [sample] * len(df))
     return df
-
 
 def _cnv_prioritize(data):
     """Perform confidence interval based prioritization for CNVs.
