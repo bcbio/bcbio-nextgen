@@ -162,9 +162,9 @@ def _unpack_record(rec, is_combine=False):
     out = []
     for field in rec["type"]["fields"]:
         if is_combine:
-            value_from = "$(self.map(function(x) { return x.%s; }))" % field["name"]
+            value_from = "$(self.map(function(x) { return x['%s']; }))" % field["name"]
         else:
-            value_from = "$(self.%s)" % field["name"]
+            value_from = "$(self['%s'])" % field["name"]
         out.append({"id": "%s" % field["name"], "type": field["type"],
                     "source": rec["id"], "valueFrom": value_from})
     return out

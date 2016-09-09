@@ -147,6 +147,8 @@ LOOKUPS = {
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]},
+    "disc_bam": {"keys": ["work_bam-plus", "disc"]},
+    "sr_bam": {"keys": ["work_bam-plus", "sr"]},
     "align_prep_method": {"keys": ["config", "algorithm", "align_prep_method"], "default": "grabix"},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},

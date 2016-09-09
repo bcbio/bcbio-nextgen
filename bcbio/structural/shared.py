@@ -239,20 +239,26 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
         bam.index(fname, data["config"])
     return dedup_file, sr_file, disc_file
 
-def _find_existing_inputs(in_bam):
+def _find_existing_inputs(data):
     """Check for pre-calculated split reads and discordants done as part of alignment streaming.
     """
+    in_bam = dd.get_align_bam(data)
     sr_file = "%s-sr.bam" % os.path.splitext(in_bam)[0]
     disc_file = "%s-disc.bam" % os.path.splitext(in_bam)[0]
     if utils.file_exists(sr_file) and utils.file_exists(disc_file):
         return in_bam, sr_file, disc_file
     else:
-        return None, None, None
+        sr_file = dd.get_sr_bam(data)
+        disc_file = dd.get_disc_bam(data)
+        if sr_file and utils.file_exists(sr_file) and disc_file and utils.file_exists(disc_file):
+            return in_bam, sr_file, disc_file
+        else:
+            return None, None, None
 
 def get_split_discordants(data, work_dir):
     """Retrieve full, split and discordant reads, potentially calculating with samblaster as needed.
     """
-    dedup_bam, sr_bam, disc_bam = _find_existing_inputs(data["align_bam"])
+    dedup_bam, sr_bam, disc_bam = _find_existing_inputs(data)
     if not dedup_bam:
         work_dir = (work_dir if not os.access(os.path.dirname(data["align_bam"]), os.W_OK | os.X_OK)
                     else os.path.dirname(data["align_bam"]))

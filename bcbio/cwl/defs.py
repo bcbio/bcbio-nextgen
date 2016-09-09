@@ -221,6 +221,7 @@ def sv():
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("batch_for_sv", "multi-batch",
                [["analysis"], ["genome_build"], ["align_bam"],
+                ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
                 ["config", "algorithm", "svcaller"],
                 ["config", "algorithm", "tools_on"],
