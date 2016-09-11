@@ -58,56 +58,36 @@ def calc_callable_loci(data, region=None, out_file=None):
         ref_file = tz.get_in(["reference", "fasta", "base"], data)
         region_file, calc_callable = _regions_for_coverage(data, region, ref_file, out_file)
         if calc_callable:
-            _group_by_ctype(_get_coverage_file(data["work_bam"], ref_file, region, region_file, depth,
-                                               out_file, data),
-                            depth, region, region_file, out_file, data)
+            _depth_by_ctype(data["work_bam"], ref_file, region, region_file, depth, out_file, data)
         # special case, do not calculate if we are in a chromosome not covered by BED file
         else:
             with file_transaction(data, out_file) as tx_out_file:
                 shutil.move(region_file, tx_out_file)
     return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
 
-def _group_by_ctype(bed_file, depth, region, region_file, out_file, data):
+def _depth_by_ctype(in_bam, ref_file, region, region_file, depth, out_file, data):
     """Group adjacent callable/uncallble regions into defined intervals.
 
     Uses tips from bedtools discussion:
     https://groups.google.com/d/msg/bedtools-discuss/qYDE6XF-GRA/2icQtUeOX_UJ
     https://gist.github.com/arq5x/b67196a46db5b63bee06
+
+    Uses samtools depth to calculate regions, requiring positive non-zero
+    mapping quality at a position, matching GATK's CallableLoci defaults.
     """
     with file_transaction(data, out_file) as tx_out_file:
         min_cov = depth["min"]
         sort_cmd = bedutils.get_sort_cmd()
-        cmd = (r"""cat {bed_file} | awk '{{if ($4 == 0) {{print $0"\tNO_COVERAGE"}} """
-               r"""else if ($4 < {min_cov}) {{print $0"\tLOW_COVERAGE"}} """
-               r"""else {{print $0"\tCALLABLE"}} }}' | """
-               "bedtools groupby -prec 21 -g 1,5 -c 1,2,3,5 -o first,first,max,first | "
+        samtools = config_utils.get_program("samtools", data["config"])
+        cmd = ("{samtools} depth -a -Q 1 -b {region_file} --reference {ref_file} {in_bam} | "
+               r"""awk '{{if ($3 == 0) {{print $1"\t"$2-1"\t"$2"\tNO_COVERAGE"}} """
+               r"""else if ($3 < {min_cov}) {{print $1"\t"$2-1"\t"$2"\tLOW_COVERAGE"}} """
+               r"""else {{print $1"\t"$2-1"\t"$2"\tCALLABLE"}} }}' | """
+               "bedtools groupby -prec 21 -g 1,4 -c 1,2,3,4 -o first,min,max,first | "
                "cut -f 3-6 | "
                "bedtools intersect -nonamecheck -a - -b {region_file} | "
                "{sort_cmd} -k1,1 -k2,2n  > {tx_out_file}")
         do.run(cmd.format(**locals()), "bedtools groupby coverage: %s" % (str(region)), data)
-
-def _get_coverage_file(in_bam, ref_file, region, region_file, depth, base_file, data):
-    """Retrieve summary of coverage in a region.
-    Requires positive non-zero mapping quality at a position, matching GATK's
-    CallableLoci defaults.
-    """
-    out_file = "%s-genomecov.bed" % utils.splitext_plus(base_file)[0]
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            fai_file = ref.fasta_idx(ref_file, data["config"])
-            sambamba = config_utils.get_program("sambamba", data["config"])
-            bedtools = config_utils.get_program("bedtools", data["config"])
-            cmd = ("{sambamba} view -F 'mapping_quality > 0' -L {region_file} -f bam -l 1 {in_bam} | "
-                   "{bedtools} genomecov -split -ibam stdin -bga -g {fai_file} "
-                   "> {tx_out_file}")
-            do.run(cmd.format(**locals()), "bedtools genomecov: %s" % (str(region)), data)
-    # Empty output file, no coverage for the whole contig
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            with open(tx_out_file, "w") as out_handle:
-                for feat in get_ref_bedtool(ref_file, data["config"], region):
-                    out_handle.write("%s\t%s\t%s\t%s\n" % (feat.chrom, feat.start, feat.end, 0))
-    return out_file
 
 def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
