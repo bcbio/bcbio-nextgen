@@ -11,7 +11,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, bedutils, gatk, vcfutils, ploidy
 
-def _add_tumor_params(paired):
+def _add_tumor_params(paired, items):
     """Add tumor/normal BAM input parameters to command line.
     """
     params = []
@@ -72,7 +72,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             for a in annotation.get_gatk_annotations(items[0]["config"]):
                 params += ["--annotation", a]
             paired = vcfutils.get_paired_bams(align_bams, items)
-            params += _add_tumor_params(paired)
+            params += _add_tumor_params(paired, items)
             params += _add_region_params(region, out_file, items)
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
