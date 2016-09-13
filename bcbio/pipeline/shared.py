@@ -30,6 +30,15 @@ def combine_bam(in_files, out_file, config):
     bam.index(out_file, config)
     return out_file
 
+
+def get_chrom_reads(bam_file):
+    """Get the number of reads per chromosome from the bam index."""
+    try:
+        xstr = [x.split("\t") for x in pysam.idxstats(bam_file).strip().split("\n") if x.strip()]
+        return {x[0]: int(x[2]) for x in xstr}
+    except:
+        return {}
+
 def process_bam_by_chromosome(output_ext, file_key, default_targets=None, remove_alts=False):
     """Provide targets to process a BAM file by individual chromosome regions.
 
@@ -52,14 +61,20 @@ def process_bam_by_chromosome(output_ext, file_key, default_targets=None, remove
         if not file_exists(out_file):
             work_dir = safe_makedir(
                 "{base}-split".format(base=os.path.splitext(out_file)[0]))
+
+            stats = get_chrom_reads(bam_file)
             with pysam.Samfile(bam_file, "rb") as work_bam:
-                for chr_ref in list(work_bam.references) + default_targets:
+                for i, chr_ref in enumerate(list(work_bam.references) + default_targets):
                     if chr_ref not in ignore_chroms:
                         chr_out = os.path.join(work_dir,
                                                "{base}-{ref}{ext}".format(
                                                    base=os.path.splitext(os.path.basename(bam_file))[0],
                                                    ref=chr_ref, ext=output_ext))
-                        part_info.append((chr_ref, chr_out))
+                        # so we can sort by n-reads then by original index.
+                        part_info.append((stats.get(chr_ref, 0), -i,  chr_ref, chr_out))
+        # put chroms with most reads first to aid in parallelization.
+        part_info.sort(reverse=True)
+        part_info = [x[2:] for x in part_info]
         return out_file, part_info
     return _do_work
 
