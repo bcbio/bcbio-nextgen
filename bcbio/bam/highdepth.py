@@ -61,7 +61,9 @@ def bin_depths(min_cov, max_cov, window_size, callable_out, highdepth_out):
                     last = key
                     cache = cache[:0]
                 cache.append((chrom, pos, depth))
-            callable_handle.write("\t".join((chrom, str(int(cache[0][1]) - 1), str(cache[-1][1]), last[1])) + "\n")
+            if cache:
+                callable_handle.write("\t".join((chrom, str(int(cache[0][1]) - 1),
+                                                 str(cache[-1][1]), last[1])) + "\n")
 
 def get_stats_file(data):
     return _get_files(data)[-1]
