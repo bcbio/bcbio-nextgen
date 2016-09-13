@@ -13,6 +13,7 @@ import copy
 import os
 import shutil
 import subprocess
+import sys
 
 import numpy
 import pybedtools
@@ -21,7 +22,7 @@ import toolz as tz
 import yaml
 
 from bcbio import broad, utils
-from bcbio.bam import ref
+from bcbio.bam import ref, highdepth
 from bcbio.log import logger
 from bcbio.distributed import multi, prun
 from bcbio.distributed.split import parallel_split_combine
@@ -37,15 +38,16 @@ def parallel_callable_loci(in_bam, ref_file, data):
     num_cores = config["algorithm"].get("num_cores", 1)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
     data = {"work_bam": in_bam, "config": config,
-            "reference": data["reference"], "dirs": {"out": out_dir}}
+            "rgnames": {"sample": dd.get_sample_name(data)},
+            "reference": data["reference"], "dirs": {"out": out_dir, "work": dd.get_work_dir(data)}}
     parallel = {"type": "local", "cores": num_cores, "module": "bcbio.distributed"}
     items = [[data]]
     with prun.start(parallel, items, config, multiplier=int(num_cores)) as runner:
         split_fn = shared.process_bam_by_chromosome("-callable.bed", "work_bam", remove_alts=True)
         out = parallel_split_combine(items, split_fn, runner,
-                                     "calc_callable_loci", "combine_bed",
+                                     "calc_callable_loci", "combine_callable_bed",
                                      "callable_bed", ["config"])[0]
-    return out[0]["callable_bed"]
+    return out[0]["callable_bed"], highdepth.combine_file_rename(out[0]["callable_bed"])
 
 @multi.zeromq_aware_logging
 def calc_callable_loci(data, region=None, out_file=None):
@@ -53,41 +55,71 @@ def calc_callable_loci(data, region=None, out_file=None):
     """
     if out_file is None:
         out_file = "%s-callable.bed" % os.path.splitext(data["work_bam"])[0]
-    depth = {"min": dd.get_coverage_depth_min(data)}
+    high_depth_file = out_file.replace("-callable.bed", "-highdepth.bed")
+    params = {"window_size": 250, "sample_size": int(1e6), "min_coverage": 10, "high_multiplier": 20}
+    params["min"] = dd.get_coverage_depth_min(data)
+    params["max"] = _get_max_coverage(data, params)
     if not utils.file_exists(out_file):
         ref_file = tz.get_in(["reference", "fasta", "base"], data)
         region_file, calc_callable = _regions_for_coverage(data, region, ref_file, out_file)
         if calc_callable:
-            _depth_by_ctype(data["work_bam"], ref_file, region, region_file, depth, out_file, data)
+            _depth_by_ctype(data["work_bam"], ref_file, region, region_file, params, out_file,
+                            high_depth_file, data)
         # special case, do not calculate if we are in a chromosome not covered by BED file
         else:
             with file_transaction(data, out_file) as tx_out_file:
                 shutil.move(region_file, tx_out_file)
-    return [{"callable_bed": out_file, "config": data["config"], "work_bam": data["work_bam"]}]
+    return [{"callable_bed": out_file, "highdepth_bed": high_depth_file,
+             "config": data["config"], "work_bam": data["work_bam"]}]
 
-def _depth_by_ctype(in_bam, ref_file, region, region_file, depth, out_file, data):
+def _get_max_coverage(data, params):
+    """Retrieve maximum coverage for high depth region filtering.
+
+    For whole genome runs, identifies regions where we have excessive coverage
+    likely due to collapsed repeats.
+    """
+    stats_file = highdepth.get_stats_file(data)
+    if utils.file_exists(stats_file):
+        median_cov = highdepth.get_median_coverage(data)
+    else:
+        cores = dd.get_num_cores(data)
+        work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
+        py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+        cmd = ("sambamba depth window -t {cores} -c {params[min_coverage]} "
+                "--window-size {params[window_size]} {work_bam} "
+                "| head -n {params[sample_size]} "
+                """| cut -f 5 | {py_cl} -l 'numpy.median([float(x) for x in l if not x.startswith("mean")])'""")
+        median_depth_out = subprocess.check_output(cmd.format(**locals()), shell=True)
+        try:
+            median_cov = float(median_depth_out)
+        except ValueError:
+            logger.info("Skipping high coverage region detection; problem calculating median depth: %s" %
+                        median_depth_out)
+            median_cov = None
+        if median_cov and not numpy.isnan(median_cov):
+            with open(stats_file, "w") as out_handle:
+                yaml.safe_dump({"median_cov": median_cov}, out_handle,
+                                allow_unicode=False, default_flow_style=False)
+    if median_cov and not numpy.isnan(median_cov):
+        return int(params["high_multiplier"] * median_cov)
+    else:
+        return sys.maxint
+
+def _depth_by_ctype(in_bam, ref_file, region, region_file, params, out_file, highdepth_bed, data):
     """Group adjacent callable/uncallble regions into defined intervals.
-
-    Uses tips from bedtools discussion:
-    https://groups.google.com/d/msg/bedtools-discuss/qYDE6XF-GRA/2icQtUeOX_UJ
-    https://gist.github.com/arq5x/b67196a46db5b63bee06
 
     Uses samtools depth to calculate regions, requiring positive non-zero
     mapping quality at a position, matching GATK's CallableLoci defaults.
     """
-    with file_transaction(data, out_file) as tx_out_file:
-        min_cov = depth["min"]
+    with file_transaction(data, out_file, highdepth_bed) as (tx_out_file, tx_highdepth_bed):
         sort_cmd = bedutils.get_sort_cmd()
         samtools = config_utils.get_program("samtools", data["config"])
+        python_exe = sys.executable
         cmd = ("{samtools} depth -a -Q 1 -b {region_file} --reference {ref_file} {in_bam} | "
-               r"""awk '{{if ($3 == 0) {{print $1"\t"$2-1"\t"$2"\tNO_COVERAGE"}} """
-               r"""else if ($3 < {min_cov}) {{print $1"\t"$2-1"\t"$2"\tLOW_COVERAGE"}} """
-               r"""else {{print $1"\t"$2-1"\t"$2"\tCALLABLE"}} }}' | """
-               "bedtools groupby -prec 21 -g 1,4 -c 1,2,3,4 -o first,min,max,first | "
-               "cut -f 3-6 | "
-               "bedtools intersect -nonamecheck -a - -b {region_file} | "
-               "{sort_cmd} -k1,1 -k2,2n  > {tx_out_file}")
-        do.run(cmd.format(**locals()), "bedtools groupby coverage: %s" % (str(region)), data)
+               "{python_exe} -c 'import bcbio.bam.callable; "
+               """bcbio.bam.highdepth.bin_depths({params[min]}, {params[max]}, {params[window_size]}, """
+               """"{tx_out_file}", "{tx_highdepth_bed}")'""")
+        do.run(cmd.format(**locals()), "Calculate coverage bins by depth: %s" % (str(region)), data)
 
 def _regions_for_coverage(data, region, ref_file, out_file):
     """Retrieve BED file of regions we need to calculate coverage in.
@@ -142,7 +174,7 @@ def sample_callable_bed(bam_file, ref_file, data):
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed = parallel_callable_loci(bam_file, ref_file, data)
+        callable_bed, highdepth_bed = parallel_callable_loci(bam_file, ref_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -154,7 +186,7 @@ def sample_callable_bed(bam_file, ref_file, data):
                         filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
-    return out_file
+    return out_file, highdepth_bed
 
 def calculate_offtarget(bam_file, ref_file, data):
     """Generate file of offtarget read counts for inputs with variant regions.
@@ -307,7 +339,7 @@ def block_regions(in_bam, ref_file, data):
     config = data["config"]
     min_n_size = int(config["algorithm"].get("nomap_split_size", 250))
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed = parallel_callable_loci(in_bam, ref_file, data)
+        callable_bed, highdepth_bed = parallel_callable_loci(in_bam, ref_file, data)
         nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
         callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
         if not utils.file_uptodate(nblock_bed, callable_bed):

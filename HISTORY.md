@@ -2,8 +2,9 @@
 
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
-- Use samtools depth instead of bedtools genomecov for depth calculations,
-  improving speed by 6x. Thanks to Brent Pedersen.
+- Use samtools depth instead of bedtools genomecov for depth calculations, and
+  calculate high depth regions during initial depth calculations.
+  Improves speed by more than 6x. Thanks to Brent Pedersen.
 - Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
   versioning from bioconda and lack of specifically defined jar directory.
 - Unset JAVA_HOME when running gatk-framework and GATK > 3.6, forcing

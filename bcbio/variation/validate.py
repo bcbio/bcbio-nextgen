@@ -355,11 +355,11 @@ def get_analysis_intervals(data, vrn_file, base_dir):
     elif dd.get_callable_regions(data):
         return dd.get_callable_regions(data)
     elif data.get("align_bam"):
-        return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)
+        return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)[0]
     elif data.get("work_bam"):
-        return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)
+        return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)[0]
     elif data.get("work_bam_callable"):
-        return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)
+        return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)[0]
     elif tz.get_in(["config", "algorithm", "callable_regions"], data):
         return tz.get_in(["config", "algorithm", "callable_regions"], data)
     elif tz.get_in(["config", "algorithm", "variant_regions"], data):

@@ -198,7 +198,7 @@ def remove_highdepth_regions(in_file, items):
     around centromeres.
     """
     from bcbio.variation import bedutils
-    highdepth_beds = filter(lambda x: x is not None,
+    highdepth_beds = filter(lambda x: x is not None and utils.file_exists(x),
                             list(set([tz.get_in(["config", "algorithm", "highdepth_regions"], x) for x in items])))
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], items[0])
     if encode_bed and os.path.exists(encode_bed):
