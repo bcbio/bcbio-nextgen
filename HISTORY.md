@@ -25,8 +25,10 @@
 - Offload fixing the unmapped Tophat file to tophat-recondition. Thanks to Christian Brueffer.
 - Add support for vcfanno (https://github.com/brentp/vcfanno) to annotate VCFs with other
   VCFs/BED files.
-- Mark possible RNA-edits for GRCh37/hg19 using RADAR coordinates. Thanks to Sergey Naumenko
-  for the suggestion.
+- Mark possible RNA-edits for GRCh37/hg19 using RADAR coordinates. Thanks to
+  Sergey Naumenko for the suggestion.
+- Add `local_controller` option to run the controller alongside the main bcbio
+  process. Thanks to Brent Pederson and Sven-Eric Schelhorn.
 
 ## 0.9.9 (18 July 2016)
 
@@ -57,7 +59,7 @@
   Sentieon.
 - Fix fusion calling using Tophat2. Thanks to @csardas for raising the issue.
 - Add support for kallisto quantification of single-cell RNA-seq data.
-- Add `transcriptome_fasta` option to single-cell RNA-seq. This allows 
+- Add `transcriptome_fasta` option to single-cell RNA-seq. This allows
   the user to provide a transcriptome FASTA file to quantitate against rather
   than use the `bcbio` provided annotation.
 - Fix naming of vardict RNA-seq variant calls. Thanks to @csardas.
