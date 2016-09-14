@@ -44,7 +44,7 @@ def run(items):
 def is_gene_list(bed_file):
     """Check if the file is only a list of genes, not a BED
     """
-    with open(bed_file) as in_handle:
+    with utils.open_gzipsafe(bed_file) as in_handle:
         for line in in_handle:
             if not line.startswith("#"):
                 if len(line.split()) == 1:
