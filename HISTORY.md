@@ -18,6 +18,7 @@
   Pedersen.
 - VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.
   Thanks to Zhengqiu Cai.
+- Support for bzip2 input files during variant calling. Thanks to Paulo Silva.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 - Re-enable save_diskspace option to reduce disk usage during alignment
   preparation and split alignments.

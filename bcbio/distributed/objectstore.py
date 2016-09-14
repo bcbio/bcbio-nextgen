@@ -410,6 +410,8 @@ class AmazonS3(StorageManager):
         command = " ".join(command)
         if filename.endswith(".gz") and unpack:
             command = "%(command)s | gunzip -c" % {"command": command}
+        elif filename.endwith(".bz2") and unpack:
+            command = "%(command)s | bunzip2 -c" % {"command": command}
         if anonpipe:
             command = "<(%(command)s)" % {"command": command}
 

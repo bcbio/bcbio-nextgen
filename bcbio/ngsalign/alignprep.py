@@ -487,6 +487,8 @@ def _bgzip_from_fastq(data):
     needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
     if in_file.endswith(".gz") and not objectstore.is_remote(in_file):
         needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
+    elif in_file.endswith(".bz2"):
+        needs_bgzip, needs_gunzip = True, True
     elif objectstore.is_remote(in_file) and not tz.get_in(["algorithm", "align_split_size"], config):
         needs_bgzip, needs_gunzip = False, False
     else:
@@ -503,7 +505,7 @@ def _bgzip_from_fastq(data):
 def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert):
     """Handle bgzip of input file, potentially gunzipping an existing file.
     """
-    out_file = os.path.join(work_dir, os.path.basename(in_file) +
+    out_file = os.path.join(work_dir, os.path.basename(in_file).replace(".bz2", "") +
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
@@ -513,7 +515,10 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
             if needs_convert:
                 in_file = fastq_convert_pipe_cl(in_file, {"config": config})
             if needs_gunzip and not needs_convert:
-                gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
+                if in_file.endswith(".bz2"):
+                    gunzip_cmd = "bunzip2 -c {in_file} |".format(**locals())
+                else:
+                    gunzip_cmd = "gunzip -c {in_file} |".format(**locals())
                 bgzip_in = "/dev/stdin"
             else:
                 gunzip_cmd = ""
