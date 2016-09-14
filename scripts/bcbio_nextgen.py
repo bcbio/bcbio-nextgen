@@ -81,6 +81,10 @@ def parse_cl_args(in_args):
         parser.add_argument("-s", "--scheduler",
                             choices=["lsf", "sge", "torque", "slurm", "pbspro"],
                             help="Scheduler to use for ipython parallel")
+        parser.add_argument("--local_controller",
+                            default=False,
+                            action="store_true",
+                            help="run controller locally")
         parser.add_argument("-q", "--queue",
                             help=("Scheduler queue to run jobs on, for "
                                   "ipython parallel"))
@@ -224,4 +228,3 @@ if __name__ == "__main__":
             os.chdir(workdir)
             kwargs.update(new_kwargs)
         main(**kwargs)
-
