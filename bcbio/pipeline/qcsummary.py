@@ -294,11 +294,10 @@ def _run_coverage_qc(bam_file, data, out_dir):
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
     coverage = cov.coverage(data, out_dir)
-    problem_regions = dd.get_problem_region_dir(data)
-    annotated = None
-    if problem_regions and priority:
-        annotated = cov.decorate_problem_regions(priority, problem_regions)
-    return None
+    # Re-enable with annotations from internally installed
+    # problem region directory
+    # if priority:
+    #    annotated = cov.decorate_problem_regions(priority, problem_regions)
 
 def _run_variants_qc(bam_file, data, out_dir):
     """Run variants QC analysis"""
