@@ -32,24 +32,21 @@ def summary(*samples):
     for data in samples:
         for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
             if isinstance(pfiles, dict):
-                pfiles = pfiles["base"]
-            folders.append(os.path.dirname(pfiles))
+                pfiles = [pfiles["base"]] + pfiles["secondary"]
+            folders.extend(pfiles)
     # XXX temporary workaround until we can handle larger inputs through MultiQC
     folders = list(set(folders))
-    if len(folders) > 250:
-        logger.warning("Too many samples for MultiQC, only using first 250 entries.")
-        folders = folders[:250]
-        opts = "--flat"
     # Back compatible -- to migrate to explicit specifications in input YAML
     folders += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            input_dir = " ".join([_check_multiqc_input(d) for d in folders])
+            input_dir = [_check_multiqc_input(d) for d in folders]
+            input_dir = _create_list_file(input_dir)
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
             if input_dir.strip():
-                cmd = "{export_tmp} {multiqc} -f {input_dir} -o {tx_out} {opts}"
+                cmd = "{export_tmp} {multiqc} -f -l {input_dir} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
@@ -70,11 +67,20 @@ def summary(*samples):
         out.append(data)
     return [[d] for d in out]
 
+
+def _create_list_file(dirs):
+    out_file = "list_files.txt"
+    with open(out_file, "w") as outh:
+        for f in dirs:
+            if f:
+                print >>outh, f
+    return out_file
+
 def _check_multiqc_input(path):
     """Check if dir exists, and return empty if it doesn't"""
-    if len(glob.glob(path)) > 0:
+    if utils.file_exists(path) & path.find("bcfstats") > -1:
         return path
-    return ""
+    return None
 
 # ## report and coverage
 
