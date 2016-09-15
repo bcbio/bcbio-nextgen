@@ -78,7 +78,7 @@ def _create_list_file(dirs):
 
 def _check_multiqc_input(path):
     """Check if dir exists, and return empty if it doesn't"""
-    if utils.file_exists(path) & path.find("bcfstats") > -1:
+    if utils.file_exists(path):
         return path
     return None
 
