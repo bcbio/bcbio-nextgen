@@ -79,9 +79,11 @@ def filter_multimappers(align_file, data):
     type_flag = "" if bam.is_bam(align_file) else "S"
     base, ext = os.path.splitext(align_file)
     out_file = base + ".unique" + ext
+    bed_file = dd.get_variant_regions(data)
+    bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
     if utils.file_exists(out_file):
         return out_file
-    base_filter = '-F "[XS] == null and not unmapped {paired_filter}"'
+    base_filter = '-F "[XS] == null and not unmapped {paired_filter} and not duplicate" '
     if bam.is_paired(align_file):
         paired_filter = "and paired and proper_pair"
     else:
@@ -92,7 +94,7 @@ def filter_multimappers(align_file, data):
     with file_transaction(out_file) as tx_out_file:
         cmd = ('{sambamba} view -h{type_flag} '
                '--nthreads {num_cores} '
-               '-f bam '
+               '-f bam {bed_cmd} '
                '{filter_string} '
                '{align_file} '
                '> {tx_out_file}')

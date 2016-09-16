@@ -426,7 +426,7 @@ def _maybe_add_peaks(algorithm, sample, out):
             name, ext = utils.splitext_plus(fn)
             caller = _get_peak_file(sample, name)
             out.append({"path": fn,
-                        "type": ext,
+                        "type": ext[1:],
                         "ext": caller})
     return out
 

@@ -1,5 +1,7 @@
 ## 1.0.0 (in progress)
 
+- Support ATAC-seq for chipseq pipeline.
+- Remove duplicates after alignment for chipseq pipeline.
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
 - Use samtools depth instead of bedtools genomecov for depth calculations, and
