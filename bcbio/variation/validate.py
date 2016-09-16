@@ -23,7 +23,7 @@ from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, validateplot, vcfutils, multi, naming
+from bcbio.variation import annotation, bedutils, validateplot, vcfutils, multi, naming
 
 # ## Individual sample comparisons
 
@@ -138,6 +138,7 @@ def compare_to_rm(data):
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
+            eval_files = _annotate_validations(eval_files, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "hap.py":
             data["validate"] = _run_happy_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
@@ -145,6 +146,14 @@ def compare_to_rm(data):
             data["validate"] = _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir,
                                                     sample, caller, toval_data)
     return [[data]]
+
+def _annotate_validations(eval_files, data):
+    """Add annotations about potential problem regions to validation VCFs.
+    """
+    for key in ["tp", "fp", "fn"]:
+        if eval_files.get(key):
+            eval_files[key] = annotation.add_problem_regions(eval_files[key], data)
+    return eval_files
 
 # ## Empty truth sets
 

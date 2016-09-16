@@ -2,14 +2,15 @@
 
 - GATK variant annotation with snpEff predicted effects.
 """
+import glob
 import gzip
 import os
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
-from bcbio.pipeline import config_utils
 
 def get_gatk_annotations(config, include_depth=True):
     """Retrieve annotations to use for GATK VariantAnnotator.
@@ -159,3 +160,41 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                 broad_runner.run_gatk(params)
         vcfutils.bgzip_and_index(out_file, config)
         return out_file
+
+def get_problem_region_files(data):
+    """Retrieve pre-installed annotation files for annotating problem regions.
+    """
+    ref_file = dd.get_ref_file(data)
+    all_files = []
+    for ext in [".bed.gz"]:
+        print(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                            "coverage", "problem_regions", "*",
+                                            "*%s" % ext)))
+        all_files += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                             "coverage", "problem_regions", "*",
+                                                             "*%s" % ext)))
+    out = []
+    for fname in all_files:
+        dir, base = os.path.split(fname)
+        _, prefix = os.path.split(dir)
+        name = "%s/%s" % (prefix, utils.splitext_plus(base)[0])
+        out.append((name, fname))
+    return out
+
+def add_problem_regions(orig_file, data):
+    """Annotate a file with annotations of problematic regions using vcfanno.
+    """
+    out_file = "%s-pregions.vcf.gz" % utils.splitext_plus(orig_file)[0]
+    if not utils.file_uptodate(out_file, orig_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            config_file = "%s.toml" % (utils.splitext_plus(out_file)[0])
+            with open(config_file, "w") as out_handle:
+                for name, fname in get_problem_region_files(data):
+                    out_handle.write("[[annotation]]\n")
+                    out_handle.write('file = "%s"\n' % fname)
+                    out_handle.write("columns = [4]\n")
+                    out_handle.write('names = ["%s"]\n' % name)
+                    out_handle.write('ops = ["flag"]\n')
+            cmd = "vcfanno {config_file} {orig_file} | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Annotate with problem annotations", data)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
