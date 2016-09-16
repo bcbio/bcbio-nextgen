@@ -42,13 +42,14 @@ def summary(*samples):
     folders += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            input_dir = [_check_multiqc_input(d) for d in folders]
-            input_dir = _create_list_file(input_dir)
+            input_dir = (_check_multiqc_input(d) for d in folders)
+            input_dir = [f for f in input_dir if f]
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
             if input_dir:
-                cmd = "{export_tmp} {multiqc} -f -l {input_dir} -o {tx_out} {opts}"
+                input_file = _create_list_file(input_dir)
+                cmd = "{export_tmp} {multiqc} -f -l {input_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
@@ -71,14 +72,8 @@ def summary(*samples):
 
 def _create_list_file(dirs):
     out_file = "list_files.txt"
-    is_any = False
-    with open(out_file, "w") as outh:
-        for f in dirs:
-            if f:
-                is_any = True
-                print >>outh, f
-    if not is_any:
-        return None
+    with open(out_file, "w") as f:
+        f.write('\n'.join(dirs))
     return out_file
 
 def _check_multiqc_input(path):
@@ -146,7 +141,7 @@ def _report_summary(samples, out_dir):
             run_file = "%s-run.R" % (os.path.splitext(out_report)[0])
             with open(run_file, "w") as out_handle:
                 out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
-            cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
+            # cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
             # Skip automated generation of coverage report to avoid error
             # messages. We need to generalize coverage reporting and re-include.
             # try:
@@ -217,31 +212,33 @@ def _merge_metrics(samples):
     out_file = os.path.join("metrics", "metrics.tsv")
     dt_together = []
     cov = {}
-    with file_transaction(out_file) as out_tx:
-        for s in samples:
-            sample_name = dd.get_sample_name(s)
-            s = _add_disambiguate(s)
-            if sample_name in cov:
-                continue
-            m = tz.get_in(['summary', 'metrics'], s)
-            sample_file = os.path.abspath(os.path.join("metrics", "%s_bcbio.txt" % sample_name))
-            if not tz.get_in(['summary', 'qc'], s):
-                s['summary'] = {"qc": {}}
-            if m:
-                for me in m.keys():
-                    if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
-                        m.pop(me, None)
-                dt = pd.DataFrame(m, index=['1'])
-                dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
-                cov[sample_name] = dt['avg_coverage_per_region'][0]
-                dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
-                dt['sample'] = sample_name
-                dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-                df = _fix_duplicated_rate(dt)
-                dt.transpose().to_csv(sample_file, sep="\t", header=False)
-                dt_together.append(dt)
-                s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
-        if len(dt_together) > 0:
+    for s in samples:
+        sample_name = dd.get_sample_name(s)
+        s = _add_disambiguate(s)
+        if sample_name in cov:
+            continue
+        m = tz.get_in(['summary', 'metrics'], s)
+        if not m:
+            continue
+        sample_file = os.path.abspath(os.path.join("metrics", "%s_bcbio.txt" % sample_name))
+        if not tz.get_in(['summary', 'qc'], s):
+            s['summary'] = {"qc": {}}
+        for me in m.keys():
+            if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
+                m.pop(me, None)
+        dt = pd.DataFrame(m, index=['1'])
+        dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
+        cov[sample_name] = dt['avg_coverage_per_region'][0]
+        dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
+        dt['sample'] = sample_name
+        dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
+        dt = _fix_duplicated_rate(dt)
+        utils.safe_makedir(os.path.dirname(sample_file))
+        dt.transpose().to_csv(sample_file, sep="\t", header=False)
+        dt_together.append(dt)
+        s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
+    if len(dt_together) > 0:
+        with file_transaction(samples[0], out_file) as out_tx:
             dt_together = utils.rbind(dt_together)
             dt_together.to_csv(out_tx, index=False, sep="\t")
 

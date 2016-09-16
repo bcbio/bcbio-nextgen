@@ -27,6 +27,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.variation import coverage
 from bcbio.variation import multi as vmulti
 
+
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """

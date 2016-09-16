@@ -1,0 +1,38 @@
+upload:
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/fusion_tmp
+details:
+  - analysis: RNA-seq
+    algorithm:
+      # --- Alignment pre-processing
+      quality_format: Standard
+      align_split_size: 9000
+      strandedness: unstranded
+      # --- Alignment
+      platform: illumina
+      aligner: star
+      disambiguate:
+       - mm9
+      # --- Alignment post-processing
+      mark_duplicates: false
+      recalibrate: false
+      realign: false
+      remove_lcr: true
+      # --- Expression and fusion calling
+      expression_caller:
+       - sailfish
+      fusion_mode: true
+      # QC and archiving
+      tools_on: 
+       - qualimap
+       - multiqc
+       - pbgzip
+      mixup_check: false
+      kraken: minikraken
+      tools_off:
+       - upload_alignment
+    description: Test1
+    genome_build: hg19
+    files: ["1_1.fq.gz", "1_2.fq.gz"] 

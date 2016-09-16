@@ -1,8 +1,10 @@
 resources:
   bcbio_prioritize:
     jvm_opts: [-Xms1g, -Xmx3g]
+  tmp:
+    dir: /tmp/cancer_tmp
 upload:
-  dir: upload
+  dir: /data/upload
 fc_date: '130728'
 fc_name: tcancer
 details:

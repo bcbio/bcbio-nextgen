@@ -1,5 +1,8 @@
 upload:
-  dir: upload
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/chipseq_tmp
 details:
   - analysis: chip-seq
     files: ['Hsapiens_Mmusculus_1.fq']

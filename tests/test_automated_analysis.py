@@ -16,11 +16,16 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
+OUTPUT_DIR = "test_automated_output"
+DEFAULT_WORKDIR = os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
+
+
 @contextlib.contextmanager
 def make_workdir():
     remove_old_dir = True
-    #remove_old_dir = False
-    dirname = os.path.join(os.path.dirname(__file__), "test_automated_output")
+    # remove_old_dir = False
+    env_dirname = os.environ.get('BCBIO_WORKDIR', None)
+    dirname = env_dirname or DEFAULT_WORKDIR
     if remove_old_dir:
         if os.path.exists(dirname):
             shutil.rmtree(dirname)
@@ -31,6 +36,7 @@ def make_workdir():
         yield dirname
     finally:
         os.chdir(orig_dir)
+
 
 def expected_failure(test):
     """Small decorator to mark tests as expected failure.
@@ -57,7 +63,8 @@ def get_post_process_yaml(data_dir, workdir):
         system = None
     if system is None or not os.path.exists(system):
         try:
-            _, system = load_system_config("bcbio_system.yaml")
+            _, system = load_system_config(
+                config_file="bcbio_system.yaml", work_dir=workdir)
         except ValueError:
             system = None
     if system is None or not os.path.exists(system):
@@ -178,6 +185,18 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-fusion.yaml")]
             subprocess.check_call(cl)
 
+    @attr(sven=True)
+    def test_2_fusion_SVEN(self):
+        """Run an RNA-seq analysis and test fusion genes
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "test_fusion"),
+                  os.path.join(self.data_dir, "run_info-fusion_SVEN.yaml")]
+            subprocess.check_call(cl)
+
     @attr(rnaseq=True)
     @attr(rnaseq_standard=True)
     @attr(star=True)
@@ -205,8 +224,6 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-fastrnaseq.yaml")]
             subprocess.check_call(cl)
 
-    # XXX Turned off until umis library installed via conda
-    @expected_failure
     @attr(rnaseq=True)
     @attr(scrnaseq=True)
     def test_2_scrnaseq(self):
@@ -299,6 +316,30 @@ class AutomatedAnalysisTest(unittest.TestCase):
                   os.path.join(self.data_dir, "run_info-variantcall.yaml")]
             subprocess.check_call(cl)
 
+    @attr(sven=True)
+    def test_1_variantcall_SVEN1(self):
+        """Test variant calling with Sven's WGS pipeline.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-variantcall_SVEN1.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(sven=True)
+    def test_1_variantcall_SVEN2(self):
+        """Test variant calling with Sven's WES pipeline.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX"),
+                  os.path.join(self.data_dir, "run_info-variantcall_SVEN2.yaml")]
+            subprocess.check_call(cl)
+
     @attr(speed=1)
     @attr(devel=True)
     def test_5_bam(self):
@@ -355,7 +396,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         """
         self._install_test_files(self.data_dir)
         fc_dir = os.path.join(self.data_dir, os.pardir, "100326_FC6107FAAXX")
-        with make_workdir() as workdir:
+        with make_workdir():
             cl = ["bcbio_nextgen.py", "-w", "template", "--only-metadata",
                   "freebayes-variant",
                   os.path.join(fc_dir, "100326.csv"),

@@ -197,6 +197,7 @@ def _add_rg(unmapped_file, config, names):
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
     return rg_fixed
 
+
 def _fix_unmapped(mapped_file, unmapped_file, data):
     """
     The unmapped.bam file up until at least Tophat 2.1.1 is broken in various
@@ -211,13 +212,18 @@ def _fix_unmapped(mapped_file, unmapped_file, data):
 
     cmd = config_utils.get_program("tophat-recondition", data)
     cmd += " -q"
-    cmd += " -m %s" % mapped_file
-    cmd += " -u %s" % unmapped_file
-    cmd += " %s" % os.path.dirname(mapped_file)
+    tophat_out_dir = os.path.dirname(mapped_file)
+    tophat_logfile = os.path.join(tophat_out_dir, 'tophat-recondition.log')
 
-    do.run(cmd, "Fixing unmapped reads with Tophat-Recondition.", None)
+    with file_transaction(data, tophat_logfile) as tx_logfile:
+        cmd += ' --logfile %s' % tx_logfile
+        cmd += " -m %s" % mapped_file
+        cmd += " -u %s" % unmapped_file
+        cmd += " %s" % tophat_out_dir
+        do.run(cmd, "Fixing unmapped reads with Tophat-Recondition.", None)
 
     return out_file
+
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data,):
     out_files = tophat_align(fastq_file, pair_file, ref_file, names["lane"],
@@ -314,8 +320,11 @@ def _get_bowtie_with_reference(config, ref_file, version):
 
 
 def _tophat_major_version(config):
-    cmd =  [sys.executable, config_utils.get_program("tophat", config, default="tophat"),
-            "--version"]
+    cmd =  [
+        sys.executable,
+        config_utils.get_program("tophat", config, default="tophat"),
+        "--version"
+    ]
 
     # tophat --version returns strings like this: Tophat v2.0.4
     version_string = str(subprocess.check_output(cmd)).strip().split()[1]

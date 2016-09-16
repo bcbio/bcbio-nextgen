@@ -57,10 +57,10 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
         data = _align_from_bam(fastq1, aligner, aligner_index, ref_file,
-                               names, align_dir, data)
+                            names, align_dir, data)
     else:
         data = _align_from_fastq(fastq1, fastq2, aligner, aligner_index, ref_file,
-                                 names, align_dir, data)
+                                names, align_dir, data)
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
         if not data.get("align_split"):
             bam.index(data["work_bam"], data["config"])
@@ -99,6 +99,7 @@ def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data)
     align_fn = TOOLS[aligner].bam_align_fn
     if align_fn is None:
         raise NotImplementedError("Do not yet support BAM alignment with %s" % aligner)
+
     out = align_fn(fastq1, align_ref, names, align_dir, data)
     if isinstance(out, dict):
         assert "work_bam" in out

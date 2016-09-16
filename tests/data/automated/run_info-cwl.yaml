@@ -4,7 +4,10 @@
 # and SV calling.
 ---
 upload:
-  dir: upload
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/cwl_tmp
 details:
   - algorithm:
       aligner: snap

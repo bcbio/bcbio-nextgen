@@ -113,7 +113,7 @@ def index_transcriptome(gtf_file, ref_file, data):
     """
     use a GTF file and a reference FASTA file to index the transcriptome
     """
-    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file)
+    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file, data=data)
     bowtie2_index = os.path.splitext(gtf_fasta)[0]
     bowtie2_build = config_utils.get_program("bowtie2", data["config"]) + "-build"
     cmd = "{bowtie2_build} --offrate 1 {gtf_fasta} {bowtie2_index}".format(**locals())
@@ -139,7 +139,7 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     fastq_cmd = "-1 %s" % fastq_file if pair_file else "-U %s" % fastq_file
     pair_cmd = "-2 %s " % pair_file if pair_file else ""
     cmd = ("{bowtie2} -p {num_cores} -a -X 600 --rdg 6,5 --rfg 6,5 --score-min L,-.6,-.4 --no-discordant --no-mixed -x {gtf_index} {fastq_cmd} {pair_cmd} ")
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
         cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file, name_sort=True)
         do.run(cmd.format(**locals()), message)

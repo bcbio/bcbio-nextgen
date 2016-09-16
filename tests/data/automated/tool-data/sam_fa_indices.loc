@@ -1,3 +1,4 @@
 index	hg19	../../genomes-old-wrong-test/hg19/seq/hg19.fa
 index	hg19	../../genomes/hg19/seq/hg19.fa
 index	mm9	../../genomes/mm9/seq/mm9.fa
+index	mm10	../../genomes/mm10/seq/mm10.fa

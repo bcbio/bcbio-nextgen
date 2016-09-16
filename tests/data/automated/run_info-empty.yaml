@@ -1,5 +1,8 @@
 fc_date: 110221
 fc_name: 'FC withspace'
+resources:
+  tmp:
+    dir: /tmp/info-empty_tmp
 details:
   - analysis: variant2
     description: Test1

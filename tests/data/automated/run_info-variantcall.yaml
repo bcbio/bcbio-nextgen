@@ -1,5 +1,8 @@
 upload:
-  dir: upload
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/variantcall_tmp
 details:
   - analysis: variant2
     algorithm:
@@ -18,12 +21,12 @@ details:
       tools_off: [gemini]
       trim_reads: true
       align_split_size: 9000
-      variant_regions: ../data/automated/variant_regions-variantcall.bed
-      coverage: ../data/automated/variant_regions-variantcall.bed
-      validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
+      variant_regions: /bcbio-nextgen/tests/data/automated/variant_regions-variantcall.bed
+      coverage: /bcbio-nextgen/tests/data/automated/variant_regions-variantcall.bed
+      validate: /bcbio-nextgen/tests/data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     description: Test1
     metadata:
       batch: TestBatch1
     genome_build: hg19
-    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
+    files: [/bcbio-nextgen/tests/data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, /bcbio-nextgen/tests/data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     lane: 7

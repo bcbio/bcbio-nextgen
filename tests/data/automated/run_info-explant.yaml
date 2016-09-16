@@ -1,9 +1,12 @@
 upload:
-  dir: upload
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/explant_tmp
 details:
   # ## RNA-seq
   - analysis: RNA-seq
-    files: ['../data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
+    files: ['/bcbio-nextgen/tests/data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
     algorithm:
       transcriptome_align: True
       aligner: tophat2
@@ -17,7 +20,7 @@ details:
     genome_build: mm9
     lane: 1
   - analysis: RNA-seq
-    files: ['../data/1_explant/Hsapiens_Mmusculus_rep2.fq.gz']
+    files: ['/bcbio-nextgen/tests/data/1_explant/Hsapiens_Mmusculus_rep2.fq.gz']
     algorithm:
       transcriptome_align: True
       aligner: tophat2
@@ -32,7 +35,7 @@ details:
     lane: 2
   ## Variant calling
   # - analysis: variant2
-  #   files: ['../data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
+  #   files: ['/bcbio-nextgen/tests/data/1_explant/Hsapiens_Mmusculus_1.fq.gz']
   #   algorithm:
   #     aligner: bwa
   #     align_split_size: 50

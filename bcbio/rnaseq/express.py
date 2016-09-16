@@ -25,23 +25,23 @@ def run(data):
     if not file_exists(out_file):
         gtf_fasta = gtf.gtf_to_fasta(dd.get_gtf_file(data), dd.get_ref_file(data))
         with tx_tmpdir(data) as tmp_dir:
-            with file_transaction(out_dir) as tx_out_dir:
+            with file_transaction(data, out_dir) as tx_out_dir:
                 bam_file = _prepare_bam_file(in_bam, tmp_dir, config)
                 cmd = ("{express} --no-update-check -o {tx_out_dir} {strand} {gtf_fasta} {bam_file}")
                 do.run(cmd.format(**locals()), "Run express on %s." % in_bam, {})
             shutil.move(os.path.join(out_dir, "results.xprs"), out_file)
-    eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7)
-    tpm_file = _get_column(out_file, out_file.replace("xprs", "tpm"), 14)
-    fpkm_file = _get_column(out_file, out_file.replace("xprs", "fpkm"), 10)
+    eff_count_file = _get_column(out_file, out_file.replace(".xprs", "_eff.counts"), 7, data=data)
+    tpm_file = _get_column(out_file, out_file.replace("xprs", "tpm"), 14, data=data)
+    fpkm_file = _get_column(out_file, out_file.replace("xprs", "fpkm"), 10, data=data)
     data = dd.set_express_counts(data, eff_count_file)
     data = dd.set_express_tpm(data, tpm_file)
     data = dd.set_express_fpkm(data, fpkm_file)
     return data
 
-def _get_column(in_file, out_file, column):
+def _get_column(in_file, out_file, column, data=None):
     """Subset one column from a file
     """
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         with open(in_file) as in_handle:
             with open(tx_out_file, 'w') as out_handle:
                 for line in in_handle:
@@ -78,7 +78,7 @@ def _prepare_bam_file(bam_file, tmp_dir, config):
         bam_file = sort(bam_file, config, "queryname")
     return bam_file
 
-def isoform_to_gene_name(gtf_file, out_file=None):
+def isoform_to_gene_name(gtf_file, out_file, data):
     """
     produce a table of isoform -> gene mappings for loading into EBSeq
     """
@@ -88,7 +88,7 @@ def isoform_to_gene_name(gtf_file, out_file=None):
         return out_file
     db = gtf.get_gtf_db(gtf_file)
     line_format = "{transcript}\t{gene}\n"
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             for feature in db.features_of_type('transcript'):
                 transcript = feature['transcript_id'][0]

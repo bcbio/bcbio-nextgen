@@ -1,5 +1,8 @@
 upload:
-  dir: upload
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/star_tmp
 fc_date: '110907'
 fc_name: ERP000591
 details:
