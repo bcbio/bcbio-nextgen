@@ -27,7 +27,7 @@ from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
-ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate",
+ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
 
 def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,

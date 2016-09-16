@@ -22,7 +22,10 @@ def peakcall_prepare(data, run_parallel):
     to_process = []
     for sample in data:
         mimic = copy.copy(sample[0])
-        for caller in dd.get_peakcaller(sample[0]):
+        callers = dd.get_peakcaller(sample[0])
+        if not isinstance(callers, list):
+            callers = [callers]
+        for caller in callers:
             if caller in caller_fns:
                 mimic["peak_fn"] = caller
                 name = dd.get_sample_name(mimic)
@@ -79,6 +82,8 @@ def _check(sample, data):
     """Get input sample for each chip bam file."""
     if dd.get_chip_method(sample).lower() == "atac":
         return [sample]
+    if dd.get_phenotype(sample) == "input":
+        return None
     for origin in data:
         if  dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
             sample["work_bam_input"] = dd.get_work_bam(origin[0])
