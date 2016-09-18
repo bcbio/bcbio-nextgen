@@ -33,6 +33,8 @@ def summary(*samples):
         for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
+            elif isinstance(pfiles, basestring):
+                pfiles = [pfiles]
             folders.extend(pfiles)
     # XXX temporary workaround until we can handle larger inputs through MultiQC
     folders = list(set(folders))
