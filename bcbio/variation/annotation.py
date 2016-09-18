@@ -161,8 +161,8 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
         vcfutils.bgzip_and_index(out_file, config)
         return out_file
 
-def get_problem_region_files(data):
-    """Retrieve pre-installed annotation files for annotating problem regions.
+def get_context_files(data):
+    """Retrieve pre-installed annotation files for annotating genome context.
     """
     ref_file = dd.get_ref_file(data)
     all_files = []
@@ -177,24 +177,31 @@ def get_problem_region_files(data):
     for fname in all_files:
         dir, base = os.path.split(fname)
         _, prefix = os.path.split(dir)
-        name = "%s/%s" % (prefix, utils.splitext_plus(base)[0])
+        name = "%s_%s" % (prefix, utils.splitext_plus(base)[0])
         out.append((name, fname))
     return out
 
-def add_problem_regions(orig_file, data):
-    """Annotate a file with annotations of problematic regions using vcfanno.
+def add_genome_context(orig_file, data):
+    """Annotate a file with annotations of genome context using vcfanno.
     """
     out_file = "%s-pregions.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
         with file_transaction(data, out_file) as tx_out_file:
             config_file = "%s.toml" % (utils.splitext_plus(out_file)[0])
             with open(config_file, "w") as out_handle:
-                for name, fname in get_problem_region_files(data):
+                all_names = []
+                for name, fname in get_context_files(data):
                     out_handle.write("[[annotation]]\n")
                     out_handle.write('file = "%s"\n' % fname)
                     out_handle.write("columns = [4]\n")
                     out_handle.write('names = ["%s"]\n' % name)
-                    out_handle.write('ops = ["flag"]\n')
+                    out_handle.write('ops = ["self"]\n')
+                    all_names.append(name)
+                out_handle.write("[[postannotation]]\n")
+                out_handle.write("fields = [%s]\n" % (", ".join(['"%s"' % n for n in all_names])))
+                out_handle.write('name = "genome_context"\n')
+                out_handle.write('op = "concat"\n')
+                out_handle.write('type = "String"\n')
             cmd = "vcfanno {config_file} {orig_file} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Annotate with problem annotations", data)
     return vcfutils.bgzip_and_index(out_file, data["config"])

@@ -18,6 +18,8 @@
   `resources`. Thanks to Juan Caballero.
 - Allow PED based gender specifications (1=male, 2=female). Thanks to Brent
   Pedersen.
+- Annotate validation variants with genome context from GA4GH and other sources
+  for interpreting true/false positives/negatives.
 - VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.
   Thanks to Zhengqiu Cai.
 - Support for bzip2 input files during variant calling. Thanks to Paulo Silva.

@@ -152,7 +152,7 @@ def _annotate_validations(eval_files, data):
     """
     for key in ["tp", "fp", "fn"]:
         if eval_files.get(key):
-            eval_files[key] = annotation.add_problem_regions(eval_files[key], data)
+            eval_files[key] = annotation.add_genome_context(eval_files[key], data)
     return eval_files
 
 # ## Empty truth sets
