@@ -1,4 +1,4 @@
-version: 26
+version: 27
 
 aliases:
   human: true
@@ -14,7 +14,7 @@ variation:
   cosmic: ../variation/cosmic-v68-GRCh37.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
-  encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed
+  encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
