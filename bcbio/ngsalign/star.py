@@ -25,7 +25,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         max_hits = 1000
         srna_opts = "--alignIntronMax 1"
     config = data["config"]
-    out_prefix = os.path.join(align_dir, dd.get_lane(data))
+    out_prefix = os.path.join(align_dir, dd.get_lane(data), "star")
     out_file = out_prefix + "Aligned.out.sam"
     out_dir = os.path.join(align_dir, "%s_star" % dd.get_lane(data))
 
@@ -50,7 +50,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         ref_file = os.path.dirname(ref_file)
 
     cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
-           "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
+           "--runThreadN {num_cores} --outFileNamePrefix {tx_prefix_dir} "
            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
            "--outStd SAM {srna_opts} "
            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
@@ -71,17 +71,18 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if not srna:
         cmd += " --quantMode TranscriptomeSAM "
 
-    with file_transaction(data, final_out) as tx_final_out:
-        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
-        run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
-        do.run(cmd.format(**locals()), run_message, None)
+    with tx_tmpdir(data) as tx_prefix_dir:
+        with file_transaction(data, final_out) as tx_final_out:
+            cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
+            run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
+            do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(final_out, out_dir, names, data)
     return data
 
 def _add_sj_index_commands(fq1, ref_file, gtf_file):
     """
-    newer versions of STAR can generate splice junction databases on the fly
+    newer versions of STAR can generate splice junction databases on thephfly
     this is preferable since we can tailor it to the read lengths
     """
     if _has_sj_index(ref_file):
