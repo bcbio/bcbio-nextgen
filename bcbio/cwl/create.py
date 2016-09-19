@@ -118,10 +118,13 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
 def _place_secondary_files(inp_tool, inp_binding):
     """Put secondaryFiles at the level of the File item to ensure indexes get passed.
     """
+    def _is_file(val):
+        return (val == "File" or (isinstance(val, (list, tuple)) and "File" in val))
     secondary_files = inp_tool.pop("secondaryFiles", None)
     if secondary_files:
         key = []
-        while tz.get_in(key + ["type"], inp_tool) != "File" and tz.get_in(key + ["items"], inp_tool) != "File":
+        while (not _is_file(tz.get_in(key + ["type"], inp_tool))
+               and not _is_file(tz.get_in(key + ["items"], inp_tool))):
             key.append("type")
         if tz.get_in(key, inp_tool):
             inp_tool = tz.update_in(inp_tool, key + ["secondaryFiles"], lambda x: secondary_files)

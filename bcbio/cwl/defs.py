@@ -128,7 +128,8 @@ def variant():
              cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
              cwlout(["validate", "fn"], ["File", "null"], [".tbi"])]),
           s("vc_output_record", "batch-single",
-            [["batch_rec"], ["vrn_file"], ["validate", "summary"]],
+            [["batch_rec"], ["vrn_file"], ["validate", "summary"],
+             ["validate", "tp"], ["validate", "fp"], ["validate", "fn"]],
             [cwlout("vc_rec", "record")])]
     steps = [w("alignment", "multi-parallel", align,
                [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
@@ -172,7 +173,7 @@ def variant():
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
-                ["reference", "fasta", "base"], ["reference", "rtg"],
+                ["reference", "fasta", "base"], ["reference", "rtg"], ["reference", "genome_context"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
                [cwlout("batch_rec", "record")],
                unlist=[["config", "algorithm", "variantcaller"]]),

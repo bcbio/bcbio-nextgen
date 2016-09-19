@@ -187,7 +187,8 @@ def vc_output_record(samples):
     For any shared keys that are calculated only once for a batch, like variant calls
     for the batch, we assign to every sample.
     """
-    shared_keys = [["vrn_file"], ["validate", "summary"]]
+    shared_keys = [["vrn_file"], ["validate", "summary"],
+                   ["validate", "tp"], ["validate", "fp"], ["validate", "fn"]]
     raw = cwlutils.samples_to_records([utils.to_single_data(x) for x in samples])
     shared = {}
     for key in shared_keys:

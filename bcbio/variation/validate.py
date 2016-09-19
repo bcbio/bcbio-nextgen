@@ -540,7 +540,7 @@ def summarize_grading(samples):
                             for row in _get_validate_plotdata_yaml(validate["grading"], data):
                                 writer.writerow(row)
                                 plot_data.append(row)
-                        elif validate.get("summary"):
+                        elif validate.get("summary") and not validate.get("summary") == "None":
                             plot_files.append(validate["summary"])
         if plot_files:
             plots = validateplot.classifyplot_from_plotfiles(plot_files, out_csv)
