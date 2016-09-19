@@ -68,6 +68,7 @@ LOOKUPS = {
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
+    "genome_context_files": {"keys": ["reference", "genome_context"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "combined_fpkm": {"keys": ['combined_fpkm']},
     "combined_fpkm_isoform": {"keys": ['combined_fpkm_isoform']},

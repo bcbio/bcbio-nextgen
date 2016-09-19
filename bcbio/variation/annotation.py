@@ -167,30 +167,24 @@ def get_context_files(data):
     ref_file = dd.get_ref_file(data)
     all_files = []
     for ext in [".bed.gz"]:
-        print(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
-                                            "coverage", "problem_regions", "*",
-                                            "*%s" % ext)))
         all_files += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
                                                              "coverage", "problem_regions", "*",
                                                              "*%s" % ext)))
-    out = []
-    for fname in all_files:
-        dir, base = os.path.split(fname)
-        _, prefix = os.path.split(dir)
-        name = "%s_%s" % (prefix, utils.splitext_plus(base)[0])
-        out.append((name, fname))
-    return out
+    return sorted(all_files)
 
 def add_genome_context(orig_file, data):
     """Annotate a file with annotations of genome context using vcfanno.
     """
-    out_file = "%s-pregions.vcf.gz" % utils.splitext_plus(orig_file)[0]
+    out_file = "%s-context.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
         with file_transaction(data, out_file) as tx_out_file:
-            config_file = "%s.toml" % (utils.splitext_plus(out_file)[0])
+            config_file = "%s.toml" % (utils.splitext_plus(tx_out_file)[0])
             with open(config_file, "w") as out_handle:
                 all_names = []
-                for name, fname in get_context_files(data):
+                for fname in dd.get_genome_context_files(data):
+                    dir, base = os.path.split(fname)
+                    _, prefix = os.path.split(dir)
+                    name = "%s_%s" % (prefix, utils.splitext_plus(base)[0])
                     out_handle.write("[[annotation]]\n")
                     out_handle.write('file = "%s"\n' % fname)
                     out_handle.write("columns = [4]\n")
