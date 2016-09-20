@@ -61,8 +61,8 @@ def is_non_zero_file(fpath):
 
 def aligner_supports_fusion(data):
     SUPPORTED_ALIGNERS = ["tophat2", "tophat", "star"]
-    aligner = dd.get_aligner(data).lower()
-    return aligner in SUPPORTED_ALIGNERS
+    aligner = dd.get_aligner(data)
+    return aligner and aligner.lower() in SUPPORTED_ALIGNERS
 
 def _get_input_para(data):
     TOPHAT_FUSION_OUTFILE = "fusions.out"
