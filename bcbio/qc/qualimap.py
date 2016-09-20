@@ -217,7 +217,7 @@ def _detect_rRNA(data):
     tidy_file = dd.get_sailfish_tidy(data)
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
-    if not transcripts:
+    if not (transcripts and tidy_file):
         return {'rRNA': "NA", "rRNA_rate": "NA"}
     count_table = pd.read_csv(tidy_file, sep="\t")
     sample_table = count_table[count_table["sample"].isin([sample])]
