@@ -3,7 +3,9 @@
 import os
 import sys
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, safe_makedir, splitext_plus)
+from bcbio.utils import (file_exists, append_stem, replace_directory,
+                         safe_makedir, splitext_plus)
+from bcbio.bam.fastq import is_fastq
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.provenance import do
@@ -20,7 +22,10 @@ SUPPORTED_ADAPTERS = {
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
 def trim_adapters(data):
-    to_trim = [x for x in data["files"] if x is not None]
+    to_trim = [x for x in data["files"] if x is not None and is_fastq(x)]
+    if not to_trim:
+        return data["files"]
+
     logger.info("Trimming low quality ends and read through adapter "
                 "sequence from %s." % (", ".join(to_trim)))
     out_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed"))
