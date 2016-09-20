@@ -19,6 +19,8 @@ def run_sailfish(data):
         fq1, fq2 = files
     else:
         fq1, fq2 = files[0], None
+    if not fastq.is_fastq(fq1):
+        return [[data]]
     sailfish_dir = os.path.join(work_dir, "sailfish", samplename)
     gtf_file = dd.get_gtf_file(data)
     assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
