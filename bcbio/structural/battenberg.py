@@ -64,7 +64,8 @@ def _do_run(paired):
             gender_str = "-ge %s -gl %s" % (gender, gl_file)
         else:
             gender_str = "-ge %s" % (gender)
-        cmd = ("export R_LIBS_USER={local_sitelib} && "
+        r_export_cmd = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+        cmd = ("export R_LIBS_USER={local_sitelib} && {r_export_cmd}"
                "battenberg.pl -t {cores} -o {work_dir} -r {ref_file}.fai "
                "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/impute_info.txt "
                "-u {bat_datadir}/1000genomesloci -c {bat_datadir}/probloci.txt "
