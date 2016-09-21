@@ -158,16 +158,17 @@ def install_gtf_file(build_dir, gtf, build):
 def install_srna(species, gtf):
     out_file = os.path.join(SRNASEQ_DIR, "srna-transcripts.gtf")
     safe_makedir(SRNASEQ_DIR)
-    if not os.path.exists(out_file):
-        shutil.copyfile(gtf, out_file)
+    if gtf:
+        if not os.path.exists(out_file):
+            shutil.copyfile(gtf, out_file)
     try:
         from seqcluster import install
     except ImportError:
         raise ImportError("install seqcluster first, please.")
     with chdir(SRNASEQ_DIR):
         hairpin, miRNA = install._install_mirbase()
-        cmd = ("grep -A 2 {species} {hairpin} | grep -v '\-\-$' | tr U T  > hairpin.fa")
-        do.run(cmd.format(**locals()), "set precursor.")
+        cmd = ("cat %s |  awk '{if ($0~/>%s/){name=$0; print name} else if ($0~/^>/){name=0};if (name!=0 && $0!~/^>/){print $0;}}' | sed 's/U/T/g'  > hairpin.fa")
+        do.run(cmd % (hairpin, species), "set precursor.")
         cmd = ("grep -A 1 {species} {miRNA} > miRNA.str")
         do.run(cmd.format(**locals()), "set miRNA.")
         shutil.rmtree("mirbase")
@@ -212,8 +213,8 @@ if __name__ == "__main__":
     parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
 
     args = parser.parse_args()
-    if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
-        raise ValueError("--mirbase and --srna_gtf both need a value.")
+ #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
+ #       raise ValueError("--mirbase and --srna_gtf both need a value.")
 
     env.hosts = ["localhost"]
     env.cores = args.cores
