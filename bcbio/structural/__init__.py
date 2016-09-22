@@ -172,6 +172,9 @@ def detect_sv(items, all_items=None, stage="standard"):
 # ## configuration
 
 def parallel_multiplier(items):
-    """Use more resources (up to available limits) if we have multiple SV callers.
+    """Use more resources (up to available limits) if we have multiple QC samples/svcallers.
     """
-    return max([1] + [len(_get_svcallers(xs[0])) for xs in items])
+    machines = []
+    for data in (xs[0] for xs in items):
+        machines.append(max(1, len(_get_svcallers(data)), len(dd.get_algorithm_qc(data))))
+    return sum(machines)
