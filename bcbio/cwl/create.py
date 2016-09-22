@@ -127,7 +127,7 @@ def _place_secondary_files(inp_tool, inp_binding):
                and not _is_file(tz.get_in(key + ["items"], inp_tool))):
             key.append("type")
         if tz.get_in(key, inp_tool):
-            inp_tool = tz.update_in(inp_tool, key + ["secondaryFiles"], lambda x: secondary_files)
+            inp_tool["secondaryFiles"] = secondary_files
         else:
             nested_inp_binding = copy.deepcopy(inp_binding)
             nested_inp_binding["prefix"] = "ignore="

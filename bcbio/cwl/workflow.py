@@ -203,8 +203,6 @@ def _nest_variable(v):
     """
     v = copy.deepcopy(v)
     v["type"] = {"type": "array", "items": v["type"]}
-    if "secondaryFiles" in v:
-        v["type"]["secondaryFiles"] = v.pop("secondaryFiles")
     return v
 
 def _clean_output(v):
