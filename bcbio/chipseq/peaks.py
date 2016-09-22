@@ -95,7 +95,7 @@ def _get_multiplier(samples):
        only for samples that have input
     """
     to_process = 1.0
-    to_skip = 1.0
+    to_skip = 0
     for sample in samples:
         if dd.get_phenotype(sample[0]) == "chip":
             to_process += 1.0
