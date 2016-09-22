@@ -20,6 +20,7 @@
   Pedersen.
 - Annotate validation variants with genome context from GA4GH and other sources
   for interpreting true/false positives/negatives.
+- Limit GATK cores used for GenotypeGVCFs to avoid excessive memory usage.
 - VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.
   Thanks to Zhengqiu Cai.
 - Support for bzip2 input files during variant calling. Thanks to Paulo Silva.

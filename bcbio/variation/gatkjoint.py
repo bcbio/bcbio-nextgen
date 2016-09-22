@@ -20,6 +20,8 @@ def run_region(data, region, vrn_files, out_file):
 # ## gVCF joint genotype calling
 
 def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
+    """Performs genotyping of gVCFs into final VCF files.
+    """
     if not utils.file_exists(out_file):
         broad_runner = broad.runner_from_config(data["config"])
         with file_transaction(data, out_file) as tx_out_file:
@@ -35,7 +37,11 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
             broad_runner.new_resources("gatk-haplotype")
             cores = dd.get_cores(data)
             if cores > 1:
-                params += ["-nt", str(cores)]
+                # GATK performs poorly with memory usage when parallelizing
+                # with a large number of cores but makes use of extra memory,
+                # so we cap at 6 cores.
+                # See issue #1565 for discussion
+                params += ["-nt", str(min(6, cores))]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"}
             else:
                 memscale = None
