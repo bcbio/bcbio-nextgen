@@ -38,6 +38,7 @@ def create_inputs(data):
         if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner):
             return [[data]]
     approach = "grabix" if _has_grabix_indices(data) else dd.get_align_prep_method(data)
+    data["files_orig"] = data["files"]
     if approach == "rtg":
         data["files"] = [rtg.to_sdf(data["files"], data)]
     else:
