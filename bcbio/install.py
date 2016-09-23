@@ -212,7 +212,8 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = _get_conda_bin()
-    assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
+    assert conda_bin, ("Could not find anaconda distribution for upgrading bcbio.\n"
+                       "Using python at %s but could not find conda." % (os.path.realpath(sys.executable)))
     req_file = "bcbio-update-requirements.txt"
     if os.path.exists(req_file):
         os.remove(req_file)
