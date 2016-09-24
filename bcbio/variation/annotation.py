@@ -6,6 +6,8 @@ import glob
 import gzip
 import os
 
+import pybedtools
+
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -182,15 +184,17 @@ def add_genome_context(orig_file, data):
             with open(config_file, "w") as out_handle:
                 all_names = []
                 for fname in dd.get_genome_context_files(data):
-                    dir, base = os.path.split(fname)
-                    _, prefix = os.path.split(dir)
-                    name = "%s_%s" % (prefix, utils.splitext_plus(base)[0])
-                    out_handle.write("[[annotation]]\n")
-                    out_handle.write('file = "%s"\n' % fname)
-                    out_handle.write("columns = [4]\n")
-                    out_handle.write('names = ["%s"]\n' % name)
-                    out_handle.write('ops = ["self"]\n')
-                    all_names.append(name)
+                    bt = pybedtools.BedTool(fname)
+                    if bt.field_count() >= 4:
+                        d, base = os.path.split(fname)
+                        _, prefix = os.path.split(d)
+                        name = "%s_%s" % (prefix, utils.splitext_plus(base)[0])
+                        out_handle.write("[[annotation]]\n")
+                        out_handle.write('file = "%s"\n' % fname)
+                        out_handle.write("columns = [4]\n")
+                        out_handle.write('names = ["%s"]\n' % name)
+                        out_handle.write('ops = ["self"]\n')
+                        all_names.append(name)
                 out_handle.write("[[postannotation]]\n")
                 out_handle.write("fields = [%s]\n" % (", ".join(['"%s"' % n for n in all_names])))
                 out_handle.write('name = "genome_context"\n')
