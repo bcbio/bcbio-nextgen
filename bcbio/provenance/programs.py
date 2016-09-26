@@ -215,7 +215,7 @@ def _get_versions_manifest(manifest_dir):
     all_pkgs = _manifest_progs + [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     if os.path.exists(manifest_dir):
         out = []
-        for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
+        for plist in ["toolplus", "python", "r", "debian", "custom"]:
             pkg_file = os.path.join(manifest_dir, "%s-packages.yaml" % plist)
             if os.path.exists(pkg_file):
                 with open(pkg_file) as in_handle:
