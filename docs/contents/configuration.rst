@@ -942,6 +942,15 @@ at the top level of your sample YAML::
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
 .. _GATK phone home: http://gatkforums.broadinstitute.org/discussion/1250/what-is-phone-home-and-how-does-it-affect-me
 
+Logging directory
+=================
+
+By default, bcbio writes the :ref:`logging-output` directory to ``log`` in the
+main directory of the run. You can configure this to a different location in
+your ``bcbio-system.yaml`` with::
+
+    log_dir: /path/to/logs
+
 .. _input-file-preparation:
 
 Input file preparation

@@ -50,6 +50,8 @@ remove the ``work`` intermediates to cleanup disk space after confirming the
 results. All of these locations are configurable and this project structure is
 only a recommendation.
 
+.. _logging-output:
+
 Logging
 =======
 
