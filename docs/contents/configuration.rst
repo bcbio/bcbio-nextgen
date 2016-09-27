@@ -525,7 +525,7 @@ Variant calling
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 - ``clinical_reporting`` Tune output for clinical reporting.
-  Modifies snpEff parameters to use HGVS notation on canonical
+  Modifies snpEff and VEP parameters to use HGVS notation on canonical
   transcripts [false, true].
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to

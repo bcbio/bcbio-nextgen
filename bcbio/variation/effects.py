@@ -16,6 +16,7 @@ import yaml
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
@@ -136,6 +137,14 @@ def run_vep(in_file, data):
                     dbnsfp_args, dbnsfp_fields = [], []
                     loftee_args, loftee_fields = [], []
                     prediction_args, prediction_fields = [], []
+                if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
+                    # In case of clinical reporting, we need one and only one variant per gene
+                    # http://useast.ensembl.org/info/docs/tools/vep/script/vep_other.html#pick
+                    # Also use hgvs reporting but requires indexing the reference file
+                    clinical_args = ["--pick", "--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
+                    clinical_fields = ["HGVS"]
+                else:
+                    clinical_args, clinical_fields = [], []
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
                               "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
@@ -145,26 +154,9 @@ def run_vep(in_file, data):
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + \
-                       prediction_args + dbnsfp_args + loftee_args
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + clinical_fields)] + \
+                       prediction_args + dbnsfp_args + loftee_args + clinical_args
 
-                if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
-
-                    # In case of clinical reporting, we need one and only one
-                    # variant per gene
-                    # From the VEP docs:
-                    # "Pick once line of consequence data per variant,
-                    # including transcript-specific columns. Consequences are
-                    # chosen by the canonical, biotype status and length of the
-                    # transcript, along with the ranking of the consequence
-                    # type according to this table. This is the best method to
-                    # use if you are interested only in one consequence per
-                    #  variant.
-
-                    cmd += ["--pick"]
-
-                    # TODO investigate hgvs reporting but requires indexing the reference file
-                    # cmd += ["--hgvs", "--shift-hgvs", "--fasta", dd.get_ref_file(data)]
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
