@@ -382,8 +382,6 @@ def _get_vcfanno_files():
     files = [x["name"] for x in json.loads(lines)]
     return files
 
-print _get_vcfanno_files()
-
 def _is_old_database(db_dir, args):
     """Check for old database versions, supported in snpEff 4.1.
     """
