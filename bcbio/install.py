@@ -377,9 +377,12 @@ def upgrade_vcfanno_data(galaxy_dir):
 
 def _get_vcfanno_files():
     url = "https://api.github.com/repos/chapmanb/bcbio-nextgen/contents/config/vcfanno"
-    lines = urllib.urlopen(url).readlines()
-    files = [x["name"] for x in json.loads(lines[0])]
+    requests.packages.urllib3.disable_warnings()
+    lines = requests.get(url, verify=False).text
+    files = [x["name"] for x in json.loads(lines)]
     return files
+
+print _get_vcfanno_files()
 
 def _is_old_database(db_dir, args):
     """Check for old database versions, supported in snpEff 4.1.
