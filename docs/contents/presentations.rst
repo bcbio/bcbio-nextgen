@@ -1,6 +1,20 @@
 Presentations
 =============
 
+- `Broad Institute <http://www.broadinstitute.org/>`_ software engineering
+  seminar about bcbio validation and intergration with Common Workflow Language
+  and Workflow Definition Language (28 September 2016): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/broad_engineering2016_bcbio/broad2016_bcbio.pdf>`_
+
+- Materials from :ref:`teaching` at the `Summer 2016 NGS Data Analysis Course
+  at Harvard Chan School <http://bioinformatics.sph.harvard.edu/training/>`_
+  (11 August 2016): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2016b_teaching/ngscourse2016b_teaching.pdf>`_
+
+- `Bioinformatics Open Source Conference (BOSC) 2016
+  <http://www.open-bio.org/wiki/BOSC_2016>`_ lightning talk on bcbio and common
+  workflow language (8 July 2016): `slides
+  <http://f1000research.com/slides/5-1639>`_ and `video <https://youtu.be/kMoAWjHhOVc>`_.
+
 - Materials from :ref:`teaching` from the `Spring 2016 NGS Data Analysis Course
   at Harvard Chan School
   <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2016>`_
