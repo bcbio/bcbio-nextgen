@@ -378,7 +378,9 @@ def upgrade_vcfanno_data(galaxy_dir):
 def _get_vcfanno_files():
     url = "https://api.github.com/repos/chapmanb/bcbio-nextgen/contents/config/vcfanno"
     requests.packages.urllib3.disable_warnings()
-    lines = requests.get(url, verify=False).text
+    # be a good api user: https://developer.github.com/v3/#user-agent-required
+    user_agent = {'User-agent': 'bcbio-nextgen'}
+    lines = requests.get(url, headers=user_agent, verify=False).text
     files = [x["name"] for x in json.loads(lines)]
     return files
 
