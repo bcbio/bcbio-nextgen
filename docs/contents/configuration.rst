@@ -674,6 +674,11 @@ RNA sequencing
   expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
 
+Fast RNA-seq
+============
+- ``transcriptome_fasta`` An optional FASTA file of transcriptome sequences to
+  quantitate rather than using bcbio installed transcriptome sequences.
+
 Single-cell RNA sequencing
 ==========================
 
