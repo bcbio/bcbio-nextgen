@@ -43,10 +43,10 @@ def get_resources(genome, ref_file, data):
 def _ensure_annotations(resources, data):
     """Prepare any potentially missing annotations for downstream processing in a local directory.
     """
-    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
-                                              "inputs", "data", "annotations"))
     transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
     if transcript_gff and utils.file_exists(transcript_gff):
+        out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                                  "inputs", "data", "annotations"))
         resources["rnaseq"]["gene_bed"] = gtf.gtf_to_bed(transcript_gff, out_dir)
     return resources
 

@@ -63,6 +63,8 @@ def gtf_to_bed(gtf, alt_out_dir=None):
             raise IOError("Cannot write transcript BED output file %s" % out_file)
         else:
             out_file = os.path.join(alt_out_dir, os.path.basename(out_file))
+    if file_exists(out_file):
+        return out_file
     with open(out_file, "w") as out_handle:
         db = get_gtf_db(gtf)
         for feature in db.features_of_type('transcript', order_by=("seqid", "start", "end")):
