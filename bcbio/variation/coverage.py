@@ -223,7 +223,7 @@ def coverage(data, out_dir):
         if not file_exists(parse_file):
             with tx_tmpdir(data, work_dir) as tmp_dir:
                 with file_transaction(parse_file) as out_tx:
-                    cmd = ("{sambamba} depth region -F \"not unmapped\" -t {cores} "
+                    cmd = ("{sambamba} depth region -F \"not unmapped and not duplicate\" -t {cores} "
                            "%s -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
                            "-T 80 -T 100 -L {cleaned_bed} {in_bam} | sed 's/# "
                            "chrom/chrom/' > {out_tx}")
@@ -274,7 +274,7 @@ def _read_bcffile(out_file):
 
 def _run_bcftools(data, out_dir):
     """Get variants stats"""
-    vcf_file = data.get("vrn_file")
+    vcf_file = data.get("variants", [{}])[0].get("vrn_file", None)
     if not vcf_file:
         vcf_file = data['variants'][0].get("germline", None)
     opts = "-f PASS"
