@@ -19,6 +19,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 from bcbio.srna import mirdeep
+from bcbio.rnaseq import spikein
 
 def run_prepare(*data):
     """
@@ -102,6 +103,7 @@ def run_cluster(*data):
         sample = dd.set_novel_mirna_counts(sample, out_novel[0])
         sample = dd.set_novel_isomir_counts(sample, out_novel[1])
     data[0][0] = sample
+    data = spikein.combine_spikein(data)
     return data
 
 def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):

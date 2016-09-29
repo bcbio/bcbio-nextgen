@@ -22,6 +22,7 @@ from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
+from bcbio.rnaseq import spikein
 
 
 def trim_srna_sample(data):
@@ -81,6 +82,8 @@ def sample_annotation(data):
 
     if "trna" in tools:
         data['trna'] = _trna_annotation(data)
+
+    data = spikein.counts_spikein(data)
     return [[data]]
 
 def _cmd_cutadapt():
