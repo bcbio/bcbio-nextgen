@@ -13,15 +13,15 @@ except ImportError:
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
+from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils, vcfutils
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
 def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
     variant_regions = bedutils.population_variant_regions(items)
-    target = subset_variant_regions(variant_regions, region, out_file, items)
+    target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             target_bed = target
@@ -35,7 +35,10 @@ def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
                     chrom, start, end = region
                     with open(tx_tmp_bed, "w") as out_handle:
                         print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
-        return ["--bed", remove_lcr_regions(target_bed, items)]
+        if any(dd.get_coverage_interval(x) == "genome" for x in items):
+            target_bed = shared.remove_highdepth_regions(target_bed, items)
+            target_bed = shared.remove_lcr_regions(target_bed, items)
+        return ["--bed", target_bed]
     else:
         return []
 
