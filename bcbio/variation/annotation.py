@@ -193,7 +193,7 @@ def add_genome_context(orig_file, data):
                         out_handle.write('file = "%s"\n' % fname)
                         out_handle.write("columns = [4]\n")
                         out_handle.write('names = ["%s"]\n' % name)
-                        out_handle.write('ops = ["self"]\n')
+                        out_handle.write('ops = ["uniq"]\n')
                         all_names.append(name)
                 out_handle.write("[[postannotation]]\n")
                 out_handle.write("fields = [%s]\n" % (", ".join(['"%s"' % n for n in all_names])))
