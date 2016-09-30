@@ -142,7 +142,7 @@ def run_vep(in_file, data):
                     # http://useast.ensembl.org/info/docs/tools/vep/script/vep_other.html#pick
                     # Also use hgvs reporting but requires indexing the reference file
                     clinical_args = ["--pick", "--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
-                    clinical_fields = ["HGVS"]
+                    clinical_fields = ["HGVSc", "HGVSp"]
                 else:
                     clinical_args, clinical_fields = [], []
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
