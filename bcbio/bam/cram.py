@@ -3,6 +3,7 @@
 http://www.ebi.ac.uk/ena/about/cram_toolkit
 """
 import os
+import subprocess
 
 from bcbio import utils
 from bcbio.provenance import do
@@ -25,12 +26,16 @@ def compress(in_bam, data):
         with file_transaction(data, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", data["config"])
             bam = config_utils.get_program("bam", data["config"])
-            cmd = ("{bam} squeeze --in {in_bam} --out -.ubam --keepDups "
-                   "--binQualS=2,10,20,25,30,35,70 --binMid | "
-                   "{samtools} view -T {ref_file} -@ {cores} "
-                   "-C -x BD -x BI "
-                   "-o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Compress BAM to CRAM")
+            to_cram = ("{samtools} view -T {ref_file} -@ {cores} "
+                       "-C -x BD -x BI -o {tx_out_file}")
+            try:
+                cmd = ("{bam} squeeze --in {in_bam} --out -.ubam --keepDups "
+                    "--binQualS=2,10,20,25,30,35,70 --binMid | " + to_cram)
+                do.run(cmd.format(**locals()), "Compress BAM to CRAM")
+            # Retry failures avoiding using bam squeeze which can cause issues
+            except subprocess.CalledProcessError:
+                cmd = (to_cram + " {in_bam}")
+                do.run(cmd.format(**locals()), "Compress BAM to CRAM")
     index(out_file, data["config"])
     return out_file
 
