@@ -18,7 +18,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller: [vardict, freebayes, varscan]
       indelcaller: sid
       ensemble:
         numpass: 2
@@ -38,7 +38,7 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller: [vardict, freebayes, varscan]
       indelcaller: sid
       coverage_interval: genome
       ensemble:
@@ -62,7 +62,7 @@ details:
       mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller: [vardict, freebayes, varscan]
       indelcaller: sid
       ensemble:
         numpass: 2

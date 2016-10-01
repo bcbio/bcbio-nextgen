@@ -148,12 +148,13 @@ def _do_prioritize(items):
 
     Currently done on tumor-only input samples.
     """
-    if vcfutils.get_paired_phenotype(items[0]):
-        has_tumor = False
-        has_normal = False
-        for sub_data in items:
-            if vcfutils.get_paired_phenotype(sub_data) == "tumor":
-                has_tumor = True
-            elif vcfutils.get_paired_phenotype(sub_data) == "normal":
-                has_normal = True
-        return has_tumor and not has_normal
+    if not any("tumoronly-prioritization" in dd.get_tools_off(d) for d in items):
+        if vcfutils.get_paired_phenotype(items[0]):
+            has_tumor = False
+            has_normal = False
+            for sub_data in items:
+                if vcfutils.get_paired_phenotype(sub_data) == "tumor":
+                    has_tumor = True
+                elif vcfutils.get_paired_phenotype(sub_data) == "normal":
+                    has_normal = True
+            return has_tumor and not has_normal

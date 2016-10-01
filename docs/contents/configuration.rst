@@ -748,7 +748,9 @@ Post-processing
   we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality
   control FastQC usage. ``pbgzip`` turns off use of parallel bgzip
   during preparation of alignment inputs. ``seqcluster`` turns off use of
-  seqcluster tool in srnaseq pipeline.
+  seqcluster tool in srnaseq pipeline. ``tumoronly-prioritization`` turns off
+  attempted removal of germline variants from tumor only calls using external
+  population data sources like ExAC and 1000 genomes.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   ``upload_alignment`` turns off final upload of large alignment files.
   Default: [] -- all tools on.
