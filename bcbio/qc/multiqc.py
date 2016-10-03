@@ -47,7 +47,7 @@ def summary(*samples):
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            if input_dir.strip():
+            if input_dir:
                 cmd = "{export_tmp} {multiqc} -f -l {input_dir} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
@@ -69,13 +69,16 @@ def summary(*samples):
         out.append(data)
     return [[d] for d in out]
 
-
 def _create_list_file(dirs):
     out_file = "list_files.txt"
+    is_any = False
     with open(out_file, "w") as outh:
         for f in dirs:
             if f:
+                is_any = True
                 print >>outh, f
+    if not is_any:
+        return None
     return out_file
 
 def _check_multiqc_input(path):
