@@ -2,20 +2,29 @@
 """Exploratory code to convert bcbio generated CWL into WDL.
 
 Uses cwltool parser to parse input CWL then, calls out to cwl2wdl
-for generation of WDL:
+for generation of WDL using this fork of cwl2wdl:
 
-https://github.com/adamstruck/cwl2wdl
+https://github.com/chapmanb/cwl2wdl
 
 Targets for supporting in conversion:
 
 - Workflows
+- Sub-workflows
 - Tools -> Tasks
 - scatter parallelization
-- Record -> Object
+- Record -> Object/Map
 
 Current status:
 - Basic workflow support at top level
 - Initial Tool output
+
+ToDo:
+- Fix resolution of run commands with defaults
+- Map inputs in workflows, associating tasks
+- Read WDL output for each variable from JSON files (like read_json, but one output file?)
+- Figure out how to convert Records to Object/Map
+- Convert scatter parallelization
+- Add validation of WDL outputs
 """
 import os
 import pprint
@@ -29,7 +38,7 @@ import wdl.parser
 
 def main(wf_file, json_file):
     main_wf = cwltool.load_tool.load_tool(wf_file, cwltool.workflow.defaultMakeTool)
-    main_wf_dict = _wf_to_dict(main_wf)
+    main_wf_dict = cwl2wdl_classes.Workflow(_wf_to_dict(main_wf))
     wdl_doc = generators.WdlWorkflowGenerator(main_wf_dict).generate_wdl()
     wdl_file = "%s.wdl" % os.path.splitext(wf_file)[0]
     with open(wdl_file, "w") as out_handle:
@@ -39,15 +48,19 @@ def main(wf_file, json_file):
 def _wf_to_dict(wf):
     """Parse a workflow into cwl2wdl style dictionary.
     """
-    out = {"name": _id_to_name(wf.tool["id"]), "inputs": [], "outputs": [], "steps": [], "requirements": []}
+    out = {"name": _id_to_name(wf.tool["id"]), "inputs": [], "outputs": [],
+           "steps": [], "subworkflows": [],
+           "requirements": []}
     for step in wf.steps:
         if isinstance(step.embedded_tool, cwltool.workflow.Workflow):
-            task = _wf_to_dict(step.embedded_tool)
+            wf_def = _wf_to_dict(step.embedded_tool)
+            out["subworkflows"].append({"id": wf_def["name"], "definition": wf_def,
+                                        "inputs": [], "outputs": []})
         else:
             task_def = _tool_to_dict(step.embedded_tool)
             out["steps"].append({"task_id": task_def["name"], "task_definition": task_def,
-                                 "import_statement": "", "inputs": [], "outputs": []})
-    return cwl2wdl_classes.Workflow(out)
+                                 "inputs": [], "outputs": []})
+    return out
 
 def _to_variable_type(x):
     """Convert CWL variables to WDL variables, handling nested arrays.
