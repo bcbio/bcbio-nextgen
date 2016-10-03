@@ -21,7 +21,7 @@ def counts_spikein(data):
     salmon_dir = os.path.join(work_dir, "spikein", samplename)
     fasta_file = dd.get_spikein_fasta(data)
     if not fasta_file:
-        return [[data]]
+        return data
     files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
