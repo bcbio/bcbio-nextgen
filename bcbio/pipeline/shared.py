@@ -210,9 +210,11 @@ def remove_highdepth_regions(in_file, items):
                 all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
                 if len(highdepth_beds) > 0:
                     with open(all_file, "w") as out_handle:
-                        for line in fileinput.input(highdepth_beds):
-                            parts = line.split("\t")
-                            out_handle.write("\t".join(parts[:4]).rstrip() + "\n")
+                        for highdepth_bed in highdepth_beds:
+                            with utils.open_gzipsafe(highdepth_bed) as in_handle:
+                                for line in in_handle:
+                                    parts = line.split("\t")
+                                    out_handle.write("\t".join(parts[:4]).rstrip() + "\n")
                 if utils.file_exists(all_file):
                     to_remove = bedutils.sort_merge(all_file, items[0])
                     cmd = "bedtools subtract -nonamecheck -a {in_file} -b {to_remove} > {tx_out_file}"
