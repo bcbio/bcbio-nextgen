@@ -272,11 +272,25 @@ def _read_bcffile(out_file):
                 out["Variations (heterozygous)"] = line.split()[5]
     return out
 
+def _get_variant_callers(data):
+    """Use first caller if ensemble is not active"""
+    callers = dd.get_variantcaller(data)
+    active_callers = [c.get("variantcaller") for c in data.get("variants",[{}])]
+    active_vcf = [c.get("vrn_file") for c in data.get("variants",[{}])]
+    active_germline = [c.get("germline") for c in data.get("variants",[{}])]
+    vcf = dict(zip(active_callers, active_vcf))
+    germline = dict(zip(active_callers, active_germline))
+    if "ensemble" in active_callers:
+        vcf_fn = vcf["ensemble"]
+    else:
+        vcf_fn = vcf[callers[0]]
+    if not vcf_fn:
+        vcf_fn = germline[callers[0]]
+    return vcf_fn
+
 def _run_bcftools(data, out_dir):
     """Get variants stats"""
-    vcf_file = data.get("variants", [{}])[0].get("vrn_file", None)
-    if not vcf_file:
-        vcf_file = data['variants'][0].get("germline", None)
+    vcf_file = _get_variant_callers(data)
     opts = "-f PASS"
     out = {}
     if vcf_file:
