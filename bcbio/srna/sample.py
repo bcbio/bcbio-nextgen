@@ -4,7 +4,7 @@ import glob
 import os.path as op
 import shutil
 import subprocess
-import yaml
+import json
 from collections import Counter
 from contextlib import closing
 from distutils.version import LooseVersion
@@ -154,11 +154,13 @@ def _get_env():
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
         try:
-            version = yaml.load(stdout.read())[0].split("-")[1]
+            version = stdout.readlines()[2].strip().split("-")[1]
             if LooseVersion(version) >= LooseVersion("3"):
+                logger.info("miraligner version %s" % version)
                 return "JAVA_HOME=%s && " % anaconda
         except:
             logger.warning("Cannot detect miraligner version, asumming latest.")
+    raise
     return ""
 
 def _old_version(fn):
