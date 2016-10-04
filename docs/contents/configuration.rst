@@ -673,6 +673,7 @@ RNA sequencing
   Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
   expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
+- ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 
 Fast RNA-seq
 ============
@@ -703,6 +704,7 @@ smallRNA sequencing
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
 - ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2
+- ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 
 ChIP sequencing
 ===============

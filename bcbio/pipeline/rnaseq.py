@@ -1,12 +1,13 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish)
+                          express, variation, stringtie, sailfish, spikein)
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
+
 
 def fast_rnaseq(samples, run_parallel):
     samples = run_parallel("run_salmon_reads", samples)
@@ -140,6 +141,7 @@ def generate_transcript_counts(data):
                         "transcriptome BAM file was not found. Aligning to the "
                         "transcriptome with bowtie2.")
             data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
+    data = spikein.counts_spikein(data)
     return [[data]]
 
 def run_stringtie_expression(data):
@@ -291,6 +293,7 @@ def combine_files(samples):
         dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
     else:
         dexseq_combined = None
+    samples = spikein.combine_spikein(samples)
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         data = dd.set_combined_counts(data, combined)
