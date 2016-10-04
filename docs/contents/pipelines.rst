@@ -54,10 +54,10 @@ external annotations in a SQL-based query interface.
 .. _FreeBayes and BAM post-alignment processing: https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _improve variant filtering: http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/
 .. _FreeBayes: https://github.com/ekg/freebayes
-.. _GATK UnifiedGenotyper: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_genotyper_UnifiedGenotyper.html
-.. _GATK HaplotypeCaller: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_haplotypecaller_HaplotypeCaller.html
+.. _GATK UnifiedGenotyper: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_genotyper_UnifiedGenotyper.php
+.. _GATK HaplotypeCaller: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php
 .. _samtools mpileup: http://samtools.sourceforge.net/mpileup.shtml
-.. _GATK's Variant Quality Score Recalibrator: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_variantrecalibration_VariantRecalibrator.html
+.. _GATK's Variant Quality Score Recalibrator: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_variantrecalibration_VariantRecalibrator.php
 .. _bwa mem: http://bio-bwa.sourceforge.net/
 .. _novoalign: http://www.novocraft.com
 .. _snpEff: http://snpeff.sourceforge.net/
