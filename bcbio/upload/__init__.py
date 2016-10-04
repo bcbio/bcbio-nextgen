@@ -545,4 +545,6 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_sailfish_gene_tpm(sample)})
     if dd.get_tx2gene(sample):
         out.append({"path": dd.get_tx2gene(sample)})
+    if dd.get_spikein_counts(sample):
+        out.append({"path": dd.get_spikein_counts(sample)})
     return _add_meta(out, config=upload_config)

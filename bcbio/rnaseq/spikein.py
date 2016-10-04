@@ -81,7 +81,7 @@ def combine_spikein(samples):
     if not to_combine:
         return samples
 
-    tidy_file = os.path.join(sailfish_dir, "combined.sf")
+    tidy_file = os.path.join(sailfish_dir, "spikein.sf")
     if not file_exists(tidy_file):
         logger.info("Combining count files into %s." % tidy_file)
         df = pd.DataFrame()
@@ -102,6 +102,6 @@ def combine_spikein(samples):
 
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
-        # data = dd.set_tx2gene(data, tx2gene)
+        data = dd.set_spikein_counts(data, tidy_file)
         updated_samples.append([data])
     return updated_samples
