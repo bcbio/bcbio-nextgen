@@ -2,12 +2,15 @@
 
 Provides estimates of coverage intervals based on callable regions
 """
+import itertools
 import os
+import shutil
 import yaml
 
 import pybedtools
 import pandas as pd
 import numpy as np
+import pysam
 
 from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, safe_makedir,
@@ -18,7 +21,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio import broad
+from bcbio import bam, broad, utils
 from bcbio.pipeline import config_utils
 from bcbio.variation import vcfutils
 
@@ -63,6 +66,70 @@ def assign_interval(data):
                     % (dd.get_sample_name(data), cov_interval, genome_cov_pct * 100.0, offtarget_pct * 100.0))
         data["config"]["algorithm"]["coverage_interval"] = cov_interval
     return data
+
+def calculate(bam_file, data):
+    """Calculate coverage in parallel using samtools depth through goleft.
+
+    samtools depth removes duplicates and secondary reads from the counts:
+    if ( b->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP) ) continue;
+    """
+    params = {"window_size": 10, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data),
+              "high_multiplier": 20}
+    prefix = os.path.join(
+        utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
+        "%s-coverage" % (dd.get_sample_name(data)))
+    out_file = prefix + ".depth.bed"
+    callable_file = prefix + ".callable.bed"
+    if not utils.file_uptodate(out_file, bam_file):
+        ref_file = dd.get_ref_file(data)
+        variant_regions = dd.get_variant_regions_merged(data)
+        cmd = ["goleft", "depth", "--windowsize", str(params["window_size"]), "--q", "1",
+               "--mincov", str(params["min"]), "--reference", ref_file,
+               "--processes", str(dd.get_num_cores(data)), "--stats", "--ordered"]
+        if variant_regions:
+            window_file = "%s-tocalculate-windows.bed" % utils.splitext_plus(out_file)[0]
+            if not utils.file_uptodate(window_file, bam_file):
+                with file_transaction(data, window_file) as tx_out_file:
+                    pybedtools.BedTool().window_maker(w=params["parallel_window_size"],
+                                                      b=pybedtools.BedTool(variant_regions)).saveas(tx_out_file)
+            cmd += ["--bed", window_file]
+        max_depth = _get_max_depth(bam_file, variant_regions, ref_file, params, data)
+        if max_depth:
+            cmd += ["--maxmeandepth", str(int(max_depth))]
+        with file_transaction(data, out_file) as tx_out_file:
+            with utils.chdir(os.path.dirname(tx_out_file)):
+                tx_callable_file = tx_out_file.replace(".depth.bed", ".callable.bed")
+                prefix = tx_out_file.replace(".depth.bed", "")
+                cmd += ["--prefix", prefix, bam_file]
+                do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
+                shutil.move(tx_callable_file, callable_file)
+    return out_file, callable_file, _extract_highdepth(callable_file, data)
+
+def _extract_highdepth(callable_file, data):
+    out_file = callable_file.replace(".callable.bed", ".highdepth.bed")
+    if not utils.file_uptodate(out_file, callable_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(callable_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        parts = line.strip().split("\t")
+                        if "EXCESSIVE_COVERAGE" in parts:
+                            out_handle.write("\t".join(parts[:3] + ["highdepth"]) + "\n")
+    return out_file
+
+def _get_max_depth(bam_file, variant_regions, ref_file, params, data):
+    """Calculate maximum depth based on a rough multiplier of average coverage.
+    """
+    if dd.get_coverage_interval(data) == "genome":
+        if variant_regions:
+            total = pybedtools.BedTool(variant_regions).total_coverage()
+        else:
+            total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
+        read_counts = sum([a.aligned for a in bam.idxstats(bam_file, data)])
+        with pysam.Samfile(bam_file, "rb") as pysam_bam:
+            read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), 1e5)))
+        avg_cov = max(30.0, float(read_counts * read_size) / total)
+        return avg_cov * params["high_multiplier"]
 
 def decorate_problem_regions(query_bed, problem_bed_dir):
     """

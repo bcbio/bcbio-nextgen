@@ -30,7 +30,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, realign
+from bcbio.variation import bedutils, coverage, realign
 from bcbio.variation import multi as vmulti
 
 def parallel_callable_loci(in_bam, ref_file, data):
@@ -174,7 +174,7 @@ def sample_callable_bed(bam_file, ref_file, data):
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed, highdepth_bed = parallel_callable_loci(bam_file, ref_file, data)
+        coverage_file, callable_bed, highdepth_bed = coverage.calculate(bam_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -339,7 +339,7 @@ def block_regions(in_bam, ref_file, data):
     config = data["config"]
     min_n_size = int(config["algorithm"].get("nomap_split_size", 250))
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed, highdepth_bed = parallel_callable_loci(in_bam, ref_file, data)
+        coverage_file, callable_bed, highdepth_bed = coverage.calculate(in_bam, data)
         nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
         callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
         if not utils.file_uptodate(nblock_bed, callable_bed):
