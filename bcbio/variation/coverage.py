@@ -275,9 +275,11 @@ def _read_bcffile(out_file):
 def _get_variant_callers(data):
     """Use first caller if ensemble is not active"""
     callers = dd.get_variantcaller(data)
-    active_callers = [c.get("variantcaller") for c in data.get("variants",[{}])]
-    active_vcf = [c.get("vrn_file") for c in data.get("variants",[{}])]
-    active_germline = [c.get("germline") for c in data.get("variants",[{}])]
+    if isinstance(callers, basestring):
+        callers = [callers]
+    active_callers = [c.get("variantcaller") for c in data.get("variants", [{}])]
+    active_vcf = [c.get("vrn_file") for c in data.get("variants", [{}])]
+    active_germline = [c.get("germline") for c in data.get("variants", [{}])]
     vcf = dict(zip(active_callers, active_vcf))
     germline = dict(zip(active_callers, active_germline))
     if "ensemble" in active_callers:
