@@ -73,7 +73,7 @@ def calculate(bam_file, data):
     samtools depth removes duplicates and secondary reads from the counts:
     if ( b->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP) ) continue;
     """
-    params = {"window_size": 10, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data),
+    params = {"window_size": 5000, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data),
               "high_multiplier": 20}
     prefix = os.path.join(
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
