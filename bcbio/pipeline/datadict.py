@@ -121,6 +121,8 @@ LOOKUPS = {
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
     "callable_regions": {"keys": ["regions", "callable"]},
+    "median_coverage": {"keys": ["regions", "median_cov"]},
+    "coverage_bed": {"keys": ["regions", "coverage_bed"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},

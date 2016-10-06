@@ -1,7 +1,7 @@
 """Multiprocessing ready entry points for sample analysis.
 """
 from bcbio import heterogeneity, hla, structural, utils, chipseq, upload
-from bcbio.bam import callable, highdepth
+from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
@@ -246,14 +246,6 @@ def combine_calls(*args):
 @utils.map_wrap
 def prep_gemini_db(*args):
     return population.prep_gemini_db(*args)
-
-@utils.map_wrap
-def combine_callable_bed(*args):
-    return highdepth.combine_callable_bed(*args)
-
-@utils.map_wrap
-def calc_callable_loci(*args):
-    return callable.calc_callable_loci(*args)
 
 @utils.map_wrap
 def combine_sample_regions(*args):

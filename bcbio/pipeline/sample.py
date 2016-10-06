@@ -15,7 +15,7 @@ from bcbio import utils, bam, broad
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import callable, highdepth, trim
+from bcbio.bam import callable, trim
 from bcbio.hla import optitype
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
@@ -183,13 +183,15 @@ def postprocess_alignment(data):
         if not utils.file_exists(bam_file_ready):
             utils.symlink_plus(bam_file, bam_file_ready)
         bam.index(bam_file_ready, data["config"])
+        covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
-            callable.block_regions(bam_file_ready, ref_file, data)
-        sample_callable, highdepth_bed = callable.sample_callable_bed(bam_file_ready, ref_file, data)
+            callable.block_regions(covinfo.callable, bam_file_ready, ref_file, data)
         offtarget_stats = callable.calculate_offtarget(bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed,
-                           "highdepth": highdepth_bed,
-                           "sample_callable": sample_callable,
+                           "highdepth": covinfo.highdepth,
+                           "sample_callable": covinfo.callable,
+                           "coverage_bed": covinfo.coverage,
+                           "median_cov": covinfo.median_cov,
                            "offtarget_stats": offtarget_stats}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
