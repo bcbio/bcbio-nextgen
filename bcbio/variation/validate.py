@@ -529,10 +529,10 @@ def summarize_grading(samples):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                if "validate" in data:
+                validations = [variant.get("validate") for variant in data.get("variants", [])]
+                validations = [v for v in validations if v]
+                if len(validations) == 0 and "validate" in data:
                     validations = [data.get("validate")]
-                else:
-                    validations = [variant.get("validate") for variant in data.get("variants", [])]
                 for validate in validations:
                     if validate:
                         validate["grading_summary"] = out_csv
