@@ -277,6 +277,9 @@ def _clean_algorithm(data):
         if val:
             if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
                 val = [val]
+            # check for cases like [false] or [None]
+            if len(val) == 1 and not val[0] or val[0] == "None":
+                val = False
             data["algorithm"][key] = val
     return data
 
