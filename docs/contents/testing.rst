@@ -185,6 +185,30 @@ analyses. It enables exome by default, but you can use the larger whole genome
 evaluation by uncommenting the relevant parts of the configuration and retrieval
 script.
 
+Cancer-like mixture with Genome in a Bottle samples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example simulates somatic cancer calling using a mixture of two Genome in a
+Bottle samples, NA12878 as the "tumor" mixed with NA24385 as the background.
+The `Hartwig Medical Foundation <http://www.hartwigmedicalfoundation.nl/en/>`_
+and `Utrecht Medical Center
+<http://www.umcutrecht.nl/en/Research/Research-programs/Cancer>`_ generated this
+"tumor/normal" pair by physical mixing of samples prior to sequencing. The GiaB
+FTP directory has `more details on the design and truth sets
+<ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/use_cases/mixtures/UMCUTRECHT_NA12878_NA24385_mixture_10052016/README-NA12878_NA24385_mixture.txt>`_.
+The sample has variants at 15% and 30%, providing the ability to look at lower
+frequency mutations.
+
+To get the data::
+
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385-getdata.sh
+    bash cancer-giab-na12878-na24385-getdata.sh
+
+Then run the analysis with::
+
+    cd work
+    bcbio_nextgen.py ../config/cancer-giab-na12878-na24385.yaml -n 16
+
 Structural variant calling -- whole genome NA12878 (50x)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
