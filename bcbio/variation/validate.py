@@ -548,7 +548,7 @@ def summarize_grading(samples):
             plots = validateplot.create(plot_data, header, 0, data["config"],
                                         os.path.splitext(out_csv)[0])
         else:
-            plots = None
+            plots = []
         for data in vitems:
             if data.get("validate"):
                 data["validate"]["grading_plots"] = plots
