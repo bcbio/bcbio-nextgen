@@ -19,7 +19,6 @@ Current status:
 - Initial Tool output
 
 ToDo:
-- Fix resolution of run commands with defaults
 - Map inputs in workflows, associating tasks
 - Read WDL output for each variable from JSON files (like read_json, but one output file?)
 - Figure out how to convert Records to Object/Map
@@ -91,7 +90,7 @@ def _input_to_dict(i):
     return {"name": _id_to_localname(i["id"]) , "variable_type": var_type,
             "prefix": ib["prefix"], "separator": ib["itemSeparator"],
             "position": ib["position"], "is_required": True,
-            "default": i.get("default", ""), "separate": ib.get("separate", True)}
+            "default": i.get("default", None), "separate": ib.get("separate", True)}
 
 def _id_to_localname(input_id):
     return os.path.basename(input_id).split("#")[1]
