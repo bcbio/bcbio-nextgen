@@ -15,16 +15,16 @@ Targets for supporting in conversion:
 - Record -> Object/Map
 
 Current status:
-- Basic workflow support at top level
-- Initial Tool output
+- Connected workflow and tool output
 
 ToDo:
-- Map inputs in workflows, associating tasks
-- Read WDL output for each variable from JSON files (like read_json, but one output file?)
-- Figure out how to convert Records to Object/Map
+- Add resource requests for memory/CPU
 - Convert scatter parallelization
+- Convert/unpack Records to Object/Map
+- Read WDL output for each variable from JSON files (like read_json, but one output file?)
 - Add validation of WDL outputs
 """
+from __future__ import print_function
 import os
 import pprint
 import sys
@@ -47,19 +47,41 @@ def main(wf_file, json_file):
 def _wf_to_dict(wf):
     """Parse a workflow into cwl2wdl style dictionary.
     """
-    out = {"name": _id_to_name(wf.tool["id"]), "inputs": [], "outputs": [],
-           "steps": [], "subworkflows": [],
+    inputs, outputs = _get_wf_inout(wf)
+    out = {"name": _id_to_name(wf.tool["id"]), "inputs": inputs,
+           "outputs": outputs, "steps": [], "subworkflows": [],
            "requirements": []}
     for step in wf.steps:
+        inputs, outputs = _get_step_inout(step)
         if isinstance(step.embedded_tool, cwltool.workflow.Workflow):
             wf_def = _wf_to_dict(step.embedded_tool)
             out["subworkflows"].append({"id": wf_def["name"], "definition": wf_def,
-                                        "inputs": [], "outputs": []})
+                                        "inputs": inputs, "outputs": outputs})
         else:
             task_def = _tool_to_dict(step.embedded_tool)
             out["steps"].append({"task_id": task_def["name"], "task_definition": task_def,
-                                 "inputs": [], "outputs": []})
+                                 "inputs": inputs, "outputs": outputs})
     return out
+
+def _get_step_inout(step):
+    """Retrieve set of inputs and outputs connecting steps.
+    """
+    inputs = []
+    outputs = []
+    assert step.inputs_record_schema["type"] == "record"
+    for inp in step.inputs_record_schema["fields"]:
+        inputs.append({"id": inp["name"], "value": inp["source"].split("#")[-1].replace("/", ".")})
+    assert step.outputs_record_schema["type"] == "record"
+    for outp in step.outputs_record_schema["fields"]:
+        outputs.append({"id": outp["name"]})
+    return inputs, outputs
+
+def _get_wf_inout(wf):
+    assert wf.inputs_record_schema["type"] == "record"
+    assert wf.outputs_record_schema["type"] == "record"
+    inputs = [_input_to_dict(inp) for inp in wf.inputs_record_schema["fields"]]
+    outputs = [_output_to_dict(outp) for outp in wf.outputs_record_schema["fields"]]
+    return inputs, outputs
 
 def _to_variable_type(x):
     """Convert CWL variables to WDL variables, handling nested arrays.
@@ -85,12 +107,26 @@ def _input_to_dict(i):
     var_type = _to_variable_type(i["type"])
     if var_type.startswith("Array") and "inputBinding" in i.get("type", {}):
         ib = i["type"]["inputBinding"]
-    else:
+    elif "inputBinding" in i:
         ib = i["inputBinding"]
-    return {"name": _id_to_localname(i["id"]) , "variable_type": var_type,
+    else:
+        ib = {"prefix": None, "itemSeparator": None, "position": None}
+    return {"name": _id_to_localname(i["id"]) if "id" in i else i["name"],
+            "variable_type": var_type,
             "prefix": ib["prefix"], "separator": ib["itemSeparator"],
             "position": ib["position"], "is_required": True,
             "default": i.get("default", None), "separate": ib.get("separate", True)}
+
+def _output_to_dict(o):
+    if "outputSource" in o:
+        name = o["outputSource"].split("#")[-1].replace("/", ".")
+    elif "id" in o:
+        name = _id_to_localname(o["id"])
+    else:
+        name = o["name"]
+    return {"name": name,
+            "variable_type": _to_variable_type(o["type"]),
+            "output": "", "is_required": True}
 
 def _id_to_localname(input_id):
     return os.path.basename(input_id).split("#")[1]
@@ -110,9 +146,7 @@ def _tool_to_dict(tool):
            "baseCommand": " ".join(tool.tool["baseCommand"]),
            "arguments": [],
            "inputs": [_input_to_dict(i) for i in tool.tool["inputs"]],
-           "outputs": [{"name": _id_to_localname(o["id"]), "variable_type": _to_variable_type(o["type"]),
-                        "output": "", "is_required": True}
-                       for o in tool.tool["outputs"]],
+           "outputs": [_output_to_dict(o) for o in tool.tool["outputs"]],
            "requirements": [],
            "stdin": None, "stdout": None}
     return out
