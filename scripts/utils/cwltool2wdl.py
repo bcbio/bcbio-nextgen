@@ -18,9 +18,7 @@ Current status:
 - Connected workflow and tool output
 
 ToDo:
-- Add resource requests for memory/CPU
 - Convert scatter parallelization
-- Convert/unpack Records to Object/Map
 - Read WDL output for each variable from JSON files (like read_json, but one output file?)
 - Add validation of WDL outputs
 """
@@ -70,7 +68,13 @@ def _get_step_inout(step):
     outputs = []
     assert step.inputs_record_schema["type"] == "record"
     for inp in step.inputs_record_schema["fields"]:
-        inputs.append({"id": inp["name"], "value": inp["source"].split("#")[-1].replace("/", ".")})
+        source = inp["source"].split("#")[-1].replace("/", ".")
+        # Check if we're unpacking from a record, and unpack from our object
+        if "valueFrom" in inp:
+            attr_access = "['%s']" % inp["name"]
+            if inp["valueFrom"].find(attr_access) > 0:
+                source += ".%s" % inp["name"]
+        inputs.append({"id": inp["name"], "value": source})
     assert step.outputs_record_schema["type"] == "record"
     for outp in step.outputs_record_schema["fields"]:
         outputs.append({"id": outp["name"]})
@@ -137,18 +141,34 @@ def _id_to_name(input_id):
 def _tool_to_dict(tool):
     """Parse a tool definition into a cwl2wdl style dictionary.
     """
-    #print(tool)
-    #print(dir(tool))
-    #pprint.pprint(tool.tool)
-    # print(tool.requirements)
-    # print(tool.hints)
     out = {"name": _id_to_name(tool.tool["id"]),
            "baseCommand": " ".join(tool.tool["baseCommand"]),
            "arguments": [],
            "inputs": [_input_to_dict(i) for i in tool.tool["inputs"]],
            "outputs": [_output_to_dict(o) for o in tool.tool["outputs"]],
-           "requirements": [],
+           "requirements": _requirements_to_dict(tool.requirements + tool.hints),
            "stdin": None, "stdout": None}
+    return out
+
+def _requirements_to_dict(rs):
+    """Convert supported requirements into dictionary for output.
+    """
+    out = []
+    added = set([])
+    for r in rs:
+        if r["class"] == "DockerRequirement" and "docker" not in added:
+            added.add("docker")
+            out.append({"requirement_type": "docker", "value": r["dockerImageId"]})
+        elif r["class"] == "ResourceRequirement":
+            if "coresMin" in r and "cpu" not in added:
+                added.add("cpu")
+                out.append({"requirement_type": "cpu", "value": r["coresMin"]})
+            if "ramMin" in r and "memory" not in added:
+                added.add("memory")
+                out.append({"requirement_type": "memory", "value": "%s MB" % r["ramMin"]})
+            if "tmpdirMin" in r and "disks" not in added:
+                added.add("disks")
+                out.append({"requirement_type": "disks", "value": "local-disk %s HDD" % r["tmpdirMin"]})
     return out
 
 if __name__ == "__main__":
