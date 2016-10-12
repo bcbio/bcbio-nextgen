@@ -741,7 +741,7 @@ Post-processing
   Default: [] -- no archiving.
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
-  needed. ``gemini`` provides a `GEMINI database`_ of variants for downstream
+  needed. ``gemini`` avoids creation of a `GEMINI database`_ of variants for downstream
   query during variant calling pipelines. ``vardict_somatic_filter`` disables
   running a post calling filter for VarDict to remove variants found in normal
   samples. Without ``vardict_somatic_filter`` in paired analyses no soft
@@ -767,6 +767,9 @@ Post-processing
   forces gVCF output for callers that support it (GATK HaplotypeCaller,
   FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
   for variant filtration, even for smaller sample sizes.
+``gemini_allvariants`` enables all variants to go into GEMINI, not only those
+  that pass filters.
+
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini

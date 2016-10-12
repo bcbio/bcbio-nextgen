@@ -14,7 +14,7 @@ from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
-from bcbio.provenance import do, programs
+from bcbio.provenance import do
 from bcbio.variation import multiallelic, vcfutils
 
 def prep_gemini_db(fnames, call_info, samples, extras):
@@ -44,26 +44,19 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
             return None
         with file_transaction(data, gemini_db) as tx_gemini_db:
             gemini = config_utils.get_program("gemini", data["config"])
-            if "program_versions" in data["config"].get("resources", {}):
-                gemini_ver = programs.get_version("gemini", config=data["config"])
-            else:
-                gemini_ver = None
-            # Recent versions of gemini allow loading only passing variants
             load_opts = ""
-            if not gemini_ver or LooseVersion(gemini_ver) > LooseVersion("0.6.2.1"):
+            if "gemini_allvariants" not in dd.get_tools_on(data):
                 load_opts += " --passonly"
             # For small test files, skip gene table loading which takes a long time
-            if gemini_ver and LooseVersion(gemini_ver) > LooseVersion("0.6.4"):
-                if _is_small_vcf(gemini_vcf):
-                    load_opts += " --skip-gene-tables"
-                if "/test_automated_output/" in gemini_vcf:
-                    load_opts += " --test-mode"
+            if _is_small_vcf(gemini_vcf):
+                load_opts += " --skip-gene-tables"
+            if "/test_automated_output/" in gemini_vcf:
+                load_opts += " --test-mode"
             # Skip CADD or gerp-bp if neither are loaded
-            if gemini_ver and LooseVersion(gemini_ver) >= LooseVersion("0.7.0"):
-                gemini_dir = install.get_gemini_dir(data)
-                for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
-                    if not os.path.exists(os.path.join(gemini_dir, check_file)):
-                        load_opts += " %s" % skip_cmd
+            gemini_dir = install.get_gemini_dir(data)
+            for skip_cmd, check_file in [("--skip-cadd", "whole_genome_SNVs.tsv.compressed.gz")]:
+                if not os.path.exists(os.path.join(gemini_dir, check_file)):
+                    load_opts += " %s" % skip_cmd
             # skip gerp-bp which slows down loading
             load_opts += " --skip-gerp-bp "
             num_cores = data["config"]["algorithm"].get("num_cores", 1)
@@ -214,7 +207,7 @@ def do_db_build(samples, need_bam=True, gresources=None):
     for data in samples:
         if not need_bam or data.get("align_bam"):
             genomes.add(data["genome_build"])
-        if "gemini" in utils.get_in(data, ("config", "algorithm", "tools_off"), []):
+        if "gemini" in dd.get_tools_off(data):
             return False
     if len(genomes) == 1:
         if not gresources:
