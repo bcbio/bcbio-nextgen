@@ -6,23 +6,17 @@ for generation of WDL using this fork of cwl2wdl:
 
 https://github.com/chapmanb/cwl2wdl
 
-Targets for supporting in conversion:
-
-- Workflows
-- Sub-workflows
-- Tools -> Tasks
-- scatter parallelization
-- Record -> Object/Map
-
 Current status:
-- Connected workflow and tool output
+- Connected workflow, sub-workflow and tool output
+- Records -> Object
+- Dotproduct scatter parallelization
 
 ToDo:
-- Convert scatter parallelization
 - Read WDL output for each variable from JSON files (like read_json, but one output file?)
 - Add validation of WDL outputs
 """
 from __future__ import print_function
+import collections
 import os
 import pprint
 import sys
@@ -51,14 +45,15 @@ def _wf_to_dict(wf):
            "requirements": []}
     for step in wf.steps:
         inputs, outputs = _get_step_inout(step)
+        inputs, scatter = _organize_step_scatter(step, inputs)
         if isinstance(step.embedded_tool, cwltool.workflow.Workflow):
             wf_def = _wf_to_dict(step.embedded_tool)
             out["subworkflows"].append({"id": wf_def["name"], "definition": wf_def,
-                                        "inputs": inputs, "outputs": outputs})
+                                        "inputs": inputs, "outputs": outputs, "scatter": scatter})
         else:
             task_def = _tool_to_dict(step.embedded_tool)
             out["steps"].append({"task_id": task_def["name"], "task_definition": task_def,
-                                 "inputs": inputs, "outputs": outputs})
+                                 "inputs": inputs, "outputs": outputs, "scatter": scatter})
     return out
 
 def _get_step_inout(step):
@@ -79,6 +74,38 @@ def _get_step_inout(step):
     for outp in step.outputs_record_schema["fields"]:
         outputs.append({"id": outp["name"]})
     return inputs, outputs
+
+def _organize_step_scatter(step, inputs):
+    """Add scattering information from inputs, remapping input variables.
+    """
+    def extract_scatter_id(inp):
+        _, ns_var = inp.split("#")
+        _, var = ns_var.split("/")
+        return var
+    scatter_local = {}
+    if "scatter" in step.tool:
+        assert step.tool["scatterMethod"] == "dotproduct", \
+            "Only support dotproduct scattering in conversion to WDL"
+        inp_val = collections.OrderedDict()
+        for x in inputs:
+            inp_val[x["id"]] = x["value"]
+        for scatter_key in [extract_scatter_id(x) for x in step.tool["scatter"]]:
+            val = inp_val[scatter_key]
+            if len(val.split(".")) in [1, 2]:
+                base_key = val
+                attr = None
+            elif len(val.split(".")) == 3:
+                orig_location, record, attr = val.split(".")
+                base_key = "%s.%s" % (orig_location, record)
+            else:
+                raise ValueError("Unexpected scatter input: %s" % val)
+            local_ref = base_key.split(".")[-1] + "_local"
+            scatter_local[base_key] = local_ref
+            if attr:
+                local_ref += ".%s" % attr
+            inp_val[scatter_key] = local_ref
+            inputs = [{"id": iid, "value": ival} for iid, ival in inp_val.items()]
+    return inputs, [(v, k) for k, v in scatter_local.items()]
 
 def _get_wf_inout(wf):
     assert wf.inputs_record_schema["type"] == "record"
