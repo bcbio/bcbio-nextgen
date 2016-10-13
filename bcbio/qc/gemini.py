@@ -11,6 +11,10 @@ from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 
+
+def _do(cmd):
+    return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()
+
 def run(bam_file, data, out_dir):
     """Retrieve high level variant statistics from Gemini.
     """
@@ -31,25 +35,25 @@ def run(bam_file, data, out_dir):
                    "\"SELECT count(*) FROM variants\"",
                    "--gt-filter",
                    "\"gt_types.%s != HOM_REF\"" % name]
-            gt_counts = do.run(" ".join(cmd), "Gemini:Variants for %s" % name)
+            gt_counts = _do(" ".join(cmd))
             cmd = [gemini, "query", gemini_db, "-q",
                    "\"SELECT count(*) FROM variants WHERE in_dbsnp==1\" ",
                    "--gt-filter", "\"gt_types.%s != HOM_REF\"" % name]
-            dbsnp_counts = do.run(" ".join(cmd), "Gemini:dbSNP Variants for %s" % name)
+            dbsnp_counts = _do(" ".join(cmd))
             cmd = [gemini, "query", gemini_db, "-q",
                    "\"SELECT count(*) FROM variants\" ",
                    "--gt-filter", "\"gt_types.%s == HET\"" % name]
-            het_counts = do.run(" ".join(cmd), "Gemini:HET Variants for %s" % name)
+            het_counts = _do(" ".join(cmd))
             cmd = [gemini, "query", gemini_db, "-q",
                    "\"SELECT count(*) FROM variants\" ",
                    "--gt-filter", "\"gt_types.%s == HOM_ALT\"" % name]
-            hom_alt_counts = do.run(" ".join(cmd), "Gemini:ALT HOM Variants for %s" % name)
+            hom_alt_counts = _do(" ".join(cmd))
             out["Variations (heterozygous)"] = int(het_counts.strip()) if het_counts else 0
             out["Variations (alt homozygous)"] = int(hom_alt_counts.strip()) if hom_alt_counts else 0
             out["Variations (total)"] = int(gt_counts.strip()) if gt_counts else 0
             out["Variations (in dbSNP)"] = int(dbsnp_counts.strip()) if dbsnp_counts else 0
             if out.get("Variations (total)") > 0:
-                out["Variations (in dbSNP) pct"] = "%.1f%%" % (out["Variations (in dbSNP)"] /
+                out["Variations (in dbSNP) pct"] = "%.1f" % (out["Variations (in dbSNP)"] /
                                                                float(out["Variations (total)"]) * 100.0)
             with open(gemini_stat_file, "w") as out_handle:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
