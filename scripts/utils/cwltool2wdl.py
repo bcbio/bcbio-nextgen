@@ -12,7 +12,10 @@ Current status:
 - Dotproduct scatter parallelization
 
 ToDo:
-- Read WDL output for each variable from JSON files (like read_json, but one output file?)
+- Determine feasibility of scatter on multiple inputs. Do these
+  need to be put into an Object first?
+- Implement standard library function to read WDL output for
+  a variable from standard cwl.output.json files
 - Add validation of WDL outputs
 """
 from __future__ import print_function
@@ -25,7 +28,7 @@ from cwl2wdl import generators
 from cwl2wdl import base_classes as cwl2wdl_classes
 import cwltool.load_tool
 import cwltool.workflow
-import wdl.parser
+import wdl
 
 def main(wf_file, json_file):
     main_wf = cwltool.load_tool.load_tool(wf_file, cwltool.workflow.defaultMakeTool)
@@ -34,13 +37,14 @@ def main(wf_file, json_file):
     wdl_file = "%s.wdl" % os.path.splitext(wf_file)[0]
     with open(wdl_file, "w") as out_handle:
         out_handle.write(wdl_doc)
-    #print(wdl.parser.parse(wdl_doc, os.path.basename(wdl_file)))
+    # wdl_objects = wdl.load(wdl_file)
+    # print(wdl_objects)
 
 def _wf_to_dict(wf):
     """Parse a workflow into cwl2wdl style dictionary.
     """
     inputs, outputs = _get_wf_inout(wf)
-    out = {"name": _id_to_name(wf.tool["id"]), "inputs": inputs,
+    out = {"name": _id_to_name(wf.tool["id"]).replace("-", "_"), "inputs": inputs,
            "outputs": outputs, "steps": [], "subworkflows": [],
            "requirements": []}
     for step in wf.steps:
@@ -157,7 +161,7 @@ def _output_to_dict(o):
         name = o["name"]
     return {"name": name,
             "variable_type": _to_variable_type(o["type"]),
-            "output": "", "is_required": True}
+            "output": "read_cwl_json('cwl.output.json', '%s')" % name, "is_required": True}
 
 def _id_to_localname(input_id):
     return os.path.basename(input_id).split("#")[1]
