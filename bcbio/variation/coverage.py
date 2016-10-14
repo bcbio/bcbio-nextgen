@@ -34,7 +34,7 @@ def assign_interval(data):
       - amplicon: Amplication based regional coverage without off-target reads
     """
     genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
-    offtarget_thresh = 0.10  # percent of offtarget reads required to be capture (not amplification) based
+    offtarget_thresh = 0.05  # percent of offtarget reads required to be capture (not amplification) based
     if not dd.get_coverage_interval(data):
         vrs = dd.get_variant_regions(data)
         callable_file = dd.get_sample_callable(data)
