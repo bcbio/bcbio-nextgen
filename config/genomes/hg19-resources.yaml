@@ -1,4 +1,4 @@
-version: 29
+version: 30
 
 aliases:
   human: true
@@ -29,11 +29,11 @@ rnaseq:
   rRNA_fa: ../rnaseq/rRNA.fa
 
 srnaseq:
-    srna-transcripts: ../srnaseq/srna-transcripts.gtf
-    mirbase-hairpin: ../srnaseq/hairpin.fa
-    mirbase-mature: ../srnaseq/mature.fa
-    mirdeep2-fasta: ../srnaseq/Rfam_for_miRDeep.fa
-    trna-fasta: ../srnaseq/trna_mature_pre.fa
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+    trna_fasta: ../srnaseq/trna_mature_pre.fa
 
 coverage:
   coverage_problem_dir: ../coverage/problem_regions
