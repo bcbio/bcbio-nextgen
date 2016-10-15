@@ -312,8 +312,8 @@ def _maybe_add_summary(algorithm, sample, out):
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample):
         for (fname, ext, isplus) in [(sample.get("work_bam"), "ready", False),
-                                     (utils.get_in(sample, ("work_bam-plus", "disc")), "disc", True),
-                                     (utils.get_in(sample, ("work_bam-plus", "sr")), "sr", True)]:
+                                     (dd.get_disc_bam(sample), "disc", True),
+                                     (dd.get_sr_bam(sample), "sr", True)]:
             if fname and os.path.exists(fname):
                 if fname.endswith("bam"):
                     ftype, fext = "bam", ".bai"

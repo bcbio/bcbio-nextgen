@@ -79,7 +79,7 @@ def _add_supplemental_bams(data):
             base, ext = os.path.splitext(data[file_key])
             test_file = "%s-%s%s" % (base, supext, ext)
             if os.path.exists(test_file):
-                sup_key = file_key + "-plus"
+                sup_key = file_key + "_plus"
                 if not sup_key in data:
                     data[sup_key] = {}
                 data[sup_key][supext] = test_file
@@ -241,7 +241,7 @@ def delayed_bam_merge(data):
             extras.append(data[file_key])
         in_files = sorted(list(set(extras)))
         out_file = tz.get_in(["combine", file_key, "out"], data, _merge_out_from_infiles(in_files))
-        sup_exts = data.get(file_key + "-plus", {}).keys()
+        sup_exts = data.get(file_key + "_plus", {}).keys()
         for ext in sup_exts + [""]:
             merged_file = None
             if os.path.exists(utils.append_stem(out_file, "-" + ext)):
@@ -261,7 +261,7 @@ def delayed_bam_merge(data):
                     merged_file = cur_out_file
             if merged_file:
                 if ext:
-                    data[file_key + "-plus"][ext] = merged_file
+                    data[file_key + "_plus"][ext] = merged_file
                 else:
                     data[file_key] = merged_file
         data.pop("region", None)
@@ -279,7 +279,7 @@ def merge_split_alignments(data):
 def _merge_align_bams(data):
     """Merge multiple alignment BAMs, including split and discordant reads.
     """
-    for key in (["work_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"]):
+    for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
         in_files = tz.get_in(key, data)
         if in_files:
             if not isinstance(in_files, (list, tuple)):
