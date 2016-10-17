@@ -541,7 +541,10 @@ def summarize_grading(samples):
                                 writer.writerow(row)
                                 plot_data.append(row)
                         elif validate.get("summary") and not validate.get("summary") == "None":
-                            plot_files.append(validate["summary"])
+                            if isinstance(validate["summary"], (list, tuple)):
+                                plot_files.extend(list(set(validate["summary"])))
+                            else:
+                                plot_files.append(validate["summary"])
         if plot_files:
             plots = validateplot.classifyplot_from_plotfiles(plot_files, out_csv)
         elif plot_data:

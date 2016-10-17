@@ -166,12 +166,12 @@ def _convert_value(val):
         return int(val)
     elif _is_number(val, float):
         return float(val)
+    elif val.find(";;") >= 0:
+        return [_convert_value(v) for v in val.split(";;")]
     elif val.startswith(("{", "[")):
         # Can get ugly JSON output from CWL with unicode and ' instead of "
         # This tries to fix it so parsed correctly by json loader
         return json.loads(val.replace("u'", "'").replace("'", '"'))
-    elif val.find(";;") >= 0:
-        return [_convert_value(v) for v in val.split(";;")]
     elif val.lower() == "true":
         return True
     elif val.lower() == "false":
