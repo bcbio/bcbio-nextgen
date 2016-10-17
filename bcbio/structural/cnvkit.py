@@ -3,6 +3,7 @@
 http://cnvkit.readthedocs.org
 """
 import copy
+import math
 import os
 import sys
 import tempfile
@@ -18,8 +19,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
-from bcbio.variation import bedutils, effects, population, vcfutils
 from bcbio.provenance import do
+from bcbio.variation import bedutils, effects, population, vcfutils
 from bcbio.structural import annotate, shared, plot
 
 def run(items, background=None):
@@ -144,26 +145,30 @@ def _run_cnvkit_shared(inputs, backgrounds):
             return {}
         raw_target_bed = annotate.add_genes(raw_target_bed, inputs[0])
         parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
+        pct_coverage = (pybedtools.BedTool(raw_target_bed).total_coverage() /
+                        float(pybedtools.BedTool(access_bed).total_coverage())) * 100.0
         target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval,
-                                                     raw_work_dir, inputs[0])
+                                                     pct_coverage, raw_work_dir, inputs[0])
         split_beds = _split_bed(target_bed, inputs[0]) + _split_bed(antitarget_bed, inputs[0])
         samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
                          zip(["evaluate"] * len(inputs), inputs)
         split_cnns = run_multicore(_cnvkit_coverage,
                                    [(cdata, bed, itype) for itype, cdata in samples_to_run for bed in split_beds],
                                    inputs[0]["config"], parallel)
-        coverage_cnns = _merge_coverage(split_cnns, inputs[0])
-        background_cnn = _cnvkit_background([x["file"] for x in coverage_cnns if x["itype"] == "background"],
+        raw_coverage_cnns = _merge_coverage(split_cnns, inputs[0])
+        coverage_cnns = run_multicore(_cnvkit_metrics,
+                                      [(cnns, target_bed, antitarget_bed, cov_interval, inputs + backgrounds)
+                                       for cnns in tz.groupby("bam", raw_coverage_cnns).values()],
+                                      inputs[0]["config"], parallel)
+        background_cnn = _cnvkit_background(_select_background_cnns(coverage_cnns),
                                             background_cnn, target_bed, antitarget_bed, inputs[0])
         fixed_cnrs = run_multicore(_cnvkit_fix,
-                                   [(cnns, background_cnn, inputs[0]) for cnns in
+                                   [(cnns, background_cnn, inputs + backgrounds) for cnns in
                                     tz.groupby("bam", [x for x in coverage_cnns
                                                        if x["itype"] == "evaluate"]).values()],
                                       inputs[0]["config"], parallel)
-        pct_coverage = (pybedtools.BedTool(raw_target_bed).total_coverage() /
-                        float(pybedtools.BedTool(access_bed).total_coverage())) * 100.0
         run_multicore(_cnvkit_segment,
-                      [(cnr, cov_interval, pct_coverage, inputs[0]) for cnr in fixed_cnrs],
+                      [(cnr, cov_interval, data) for cnr, data in fixed_cnrs],
                       inputs[0]["config"], parallel)
     return ckouts
 
@@ -176,9 +181,12 @@ def _cna_has_values(fname):
 
 @utils.map_wrap
 @zeromq_aware_logging
-def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
+def _cnvkit_segment(cnr_file, cov_interval, data):
     """Perform segmentation and copy number calling on normalized inputs
     """
+    return _cnvkit_segment_base(cnr_file, cov_interval, data)
+
+def _cnvkit_segment_base(cnr_file, cov_interval, data):
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
@@ -187,10 +195,7 @@ def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
                     out_handle.write("chromosome\tstart\tend\tgene\tlog2\tprobes\tCN1\tCN2\tbaf\tweight\n")
             else:
                 cmd = [_get_cmd(), "segment",
-                    "-o", tx_out_file, cnr_file]
-                # small target regions, use haar for more defined segments
-                if pct_coverage < 1.0:
-                    cmd += ["-m", "haar", "-t", "0.0001"]
+                       "-o", tx_out_file, cnr_file]
                 small_vrn_files = _compatible_small_variants(data)
                 if len(small_vrn_files) > 0 and _cna_has_values(cnr_file):
                     cmd += ["-v", small_vrn_files[0]]
@@ -203,18 +208,72 @@ def _cnvkit_segment(cnr_file, cov_interval, pct_coverage, data):
 
 @utils.map_wrap
 @zeromq_aware_logging
-def _cnvkit_fix(cnns, background_cnn, data):
+def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
+    """Estimate noise of a sample using a flat background.
+    """
+    target_cnn = [x["file"] for x in cnns if x["cnntype"] == "target"][0]
+    background_file = "%s-flatbackground.cnn" % utils.splitext_plus(target_cnn)[0]
+    background_file = _cnvkit_background([], background_file, target_bed, antitarget_bed, items[0])
+    cnr_file, data = _cnvkit_fix_base(cnns, background_file, items, "-flatbackground")
+    cns_file = _cnvkit_segment_base(cnr_file, cov_interval, data)
+    metrics_file = "%s-metrics.txt" % utils.splitext_plus(target_cnn)[0]
+    if not utils.file_exists(metrics_file):
+        with file_transaction(data, metrics_file) as tx_metrics_file:
+            cmd = [_get_cmd(), "metrics", "-o", tx_metrics_file, "-s", cns_file, "--", cnr_file]
+            do.run(cmd, "CNVkit metrics")
+    metrics = _read_metrics_file(metrics_file)
+    out = []
+    for cnn in cnns:
+        cnn["metrics"] = metrics
+        out.append(cnn)
+    return out
+
+def _read_metrics_file(in_file):
+    with open(in_file) as in_handle:
+        header = in_handle.next().strip().split("\t")[1:]
+        vals = map(float, in_handle.next().strip().split("\t")[1:])
+    return dict(zip(header, vals))
+
+@utils.map_wrap
+@zeromq_aware_logging
+def _cnvkit_fix(cnns, background_cnn, items):
     """Normalize samples, correcting sources of bias.
     """
+    return [_cnvkit_fix_base(cnns, background_cnn, items)]
+
+def _cnvkit_fix_base(cnns, background_cnn, items, ext=""):
     assert len(cnns) == 2, "Expected target and antitarget CNNs: %s" % cnns
     target_cnn = [x["file"] for x in cnns if x["cnntype"] == "target"][0]
     antitarget_cnn = [x["file"] for x in cnns if x["cnntype"] == "antitarget"][0]
-    out_file = "%scnr" % os.path.commonprefix([target_cnn, antitarget_cnn])
+    data = [x for x in items if dd.get_sample_name(x) == cnns[0]["sample"]][0]
+    out_file = "%s%s.cnr" % (os.path.commonprefix([target_cnn, antitarget_cnn]).replace(".", ""), ext)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "fix", "-o", tx_out_file, target_cnn, antitarget_cnn, background_cnn]
             do.run(cmd, "CNVkit fix")
-    return [out_file]
+    return out_file, data
+
+def _select_background_cnns(cnns):
+    """Select cnns to use for background calculations.
+
+    Uses background samples in cohort, and will remove CNNs with high
+    on target variability. Uses (number of segments * biweight midvariance) as metric
+    for variability with higher numbers being more unreliable.
+    """
+    min_for_variability_analysis = 20
+    pct_keep = 0.10
+    b_cnns = [x for x in cnns if x["itype"] == "background"]
+    assert len(b_cnns) % 2 == 0, "Expect even set of target/antitarget cnns for background"
+    if len(b_cnns) >= min_for_variability_analysis:
+        b_cnns_w_metrics = []
+        for b_cnn in b_cnns:
+            unreliability = b_cnn["metrics"]["segments"] * b_cnn["metrics"]["bivar"]
+            b_cnns_w_metrics.append((unreliability, b_cnn))
+        b_cnns_w_metrics.sort()
+        to_keep = int(math.ceil(pct_keep * len(b_cnns) / 2.0) * 2)
+        b_cnns = [x[1] for x in b_cnns_w_metrics][:to_keep]
+        assert len(b_cnns) % 2 == 0, "Expect even set of target/antitarget cnns for background"
+    return [x["file"] for x in b_cnns]
 
 def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, data):
     """Calculate background reference, handling flat case with no normal sample.
@@ -297,9 +356,10 @@ def _cnvkit_coverage(data, bed_info, input_type):
             cmd = [_get_cmd(), "coverage", bam_file, bed_file, "-o", tx_out_file]
             do.run(cmd, "CNVkit coverage")
     return [{"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
+             "sample": dd.get_sample_name(data),
              "final_out": merged_out_file, "bed_i": bed_info.get("i"), "bed_orig": bed_info["orig"]}]
 
-def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
+def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, pct_coverage, work_dir, data):
     """Create target and antitarget regions from target and access files.
     """
     target_bed = os.path.join(work_dir, "%s.target.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
@@ -308,11 +368,17 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
             if cov_interval == "genome":
                 cmd += ["--avg-size", "500"]
+            # small target regions, use smaller, more defined segments
+            elif pct_coverage < 1.0:
+                cmd += ["--avg-size", "50"]
             do.run(cmd, "CNVkit target")
     antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
     if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
+            # small target regions, use smaller antitargets
+            if pct_coverage < 1.0:
+                cmd += ["--avg-size", "100000"]
             do.run(cmd, "CNVkit antitarget")
     return target_bed, antitarget_bed
 
