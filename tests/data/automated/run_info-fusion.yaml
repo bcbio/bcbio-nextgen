@@ -1,8 +1,5 @@
 upload:
-  dir: /data/upload
-resources:
-  tmp:
-    dir: /tmp/fusion_tmp
+  dir: upload
 details:
   - analysis: RNA-seq
     algorithm:

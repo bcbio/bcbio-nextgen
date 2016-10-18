@@ -1,8 +1,5 @@
 upload:
-  dir: /data/upload
-resources:
-  tmp:
-    dir: /tmp/srnaseq_bowtie_tmp
+  dir: upload
 fc_date: '150803'
 fc_name: miRQC
 details:

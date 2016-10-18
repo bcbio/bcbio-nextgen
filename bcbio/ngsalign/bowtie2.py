@@ -113,7 +113,7 @@ def index_transcriptome(gtf_file, ref_file, data):
     """
     use a GTF file and a reference FASTA file to index the transcriptome
     """
-    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file, data=data)
+    gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file)
     bowtie2_index = os.path.splitext(gtf_fasta)[0]
     bowtie2_build = config_utils.get_program("bowtie2", data["config"]) + "-build"
     cmd = "{bowtie2_build} --offrate 1 {gtf_fasta} {bowtie2_index}".format(**locals())

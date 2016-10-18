@@ -70,5 +70,3 @@ resources:
   oncofuse:
     jvm_opts: ["-Xms750m", "-Xmx2000m"]
     dir: /usr/local/share/java/oncofuse
-  tmp:
-    dir: /tmp/post_process_sample_tmp

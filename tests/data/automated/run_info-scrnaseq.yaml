@@ -1,8 +1,5 @@
 upload:
-  dir: /data/upload
-resources:
-  tmp:
-    dir: /tmp/scrnaseq_tmp
+  dir: upload
 details:
   - analysis: scRNA-seq
     algorithm:
@@ -11,6 +8,6 @@ details:
       minimum_barcode_depth: 500
     description: Test1
     files:
-      - /bcbio-nextgen/tests/data/Harvard-inDrop/r1.fq.gz
-      - /bcbio-nextgen/tests/data/Harvard-inDrop/r2.fq.gz
+      - ../data/Harvard-inDrop/r1.fq.gz
+      - ../data/Harvard-inDrop/r2.fq.gz
     genome_build: mm9

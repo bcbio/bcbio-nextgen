@@ -1,6 +1,5 @@
-resources:
-  tmp:
-    dir: /tmp/bamclean_tmp
+upload:
+  dir: upload
 details:
   - algorithm:
       aligner: false

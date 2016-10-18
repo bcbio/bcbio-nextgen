@@ -1,10 +1,7 @@
 upload:
-  dir: /data/upload
-resources:
-  tmp:
-    dir: /tmp/srnaseq_star_tmp
+  dir: upload
 fc_date: '150803'
-fc_name: miRQC
+fc_name: miRQCa
 details:
   - analysis: smallRNA-seq
     algorithm:
@@ -15,7 +12,7 @@ details:
       species: hsa
     description: miRQCa
     files:
-      - /bcbio-nextgen/tests/data/test_srnaseq/mirqca.fastq
+      - mirqca.fastq
     genome_build: hg19
     metadata:
       type: mirqc

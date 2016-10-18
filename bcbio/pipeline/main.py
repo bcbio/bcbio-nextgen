@@ -15,7 +15,7 @@ from bcbio import log, heterogeneity, hla, structural, utils
 from bcbio.cwl.inspect import initialize_watcher
 from bcbio.distributed import prun
 from bcbio.distributed.transaction import tx_tmpdir
-from bcbio.log import logger
+from bcbio.log import logger, DEFAULT_LOG_DIR
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import (archive, config_utils, disambiguate, region,
@@ -36,7 +36,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     os.chdir(workdir)
     config, config_file = config_utils.load_system_config(config_file, workdir)
     if config.get("log_dir", None) is None:
-        config["log_dir"] = os.path.join(workdir, "log")
+        config["log_dir"] = os.path.join(workdir, DEFAULT_LOG_DIR)
     if parallel["type"] in ["local", "clusterk"]:
         _setup_resources()
         _run_toplevel(config, config_file, workdir, parallel,
@@ -413,13 +413,12 @@ def _get_pipeline(item):
 def _pair_samples_with_pipelines(run_info_yaml, config):
     """Map samples defined in input file to pipelines to run.
     """
-    with open(run_info_yaml) as in_handle:
-        samples = yaml.safe_load(in_handle)
-        if isinstance(samples, dict):
-            resources = samples.pop("resources", {})
-            samples = samples["details"]
-        else:
-            resources = {}
+    samples = config_utils.load_config(run_info_yaml)
+    if isinstance(samples, dict):
+        resources = samples.pop("resources")
+        samples = samples["details"]
+    else:
+        resources = {}
     ready_samples = []
     for sample in samples:
         if "files" in sample:

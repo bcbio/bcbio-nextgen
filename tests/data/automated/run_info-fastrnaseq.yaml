@@ -1,8 +1,5 @@
 upload:
-  dir: /data/upload
-resources:
-  tmp:
-    dir: /tmp/fastrnaseq_tmp
+  dir: upload
 fc_date: '110907'
 fc_name: ERP000591
 details:

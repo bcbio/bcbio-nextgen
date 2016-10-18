@@ -20,7 +20,7 @@ def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta, data):
     if not cpat_cmd:
         return {}
     cutoff, hexamer, logit = get_coding_potential_cutoff(ref_gtf, ref_fasta, data)
-    assembled_fasta = gtf.gtf_to_fasta(assembled_gtf, ref_fasta, data=data)
+    assembled_fasta = gtf.gtf_to_fasta(assembled_gtf, ref_fasta)
     cpat_fn = cpat(assembled_fasta, hexamer, logit, data)
     coding_probabilities = load_cpat_coding_prob(cpat_fn)
     lengths = fasta.sequence_length(assembled_fasta)
@@ -44,7 +44,7 @@ def cpat(assembled_fasta, hexamer, logit, data, out_file=None):
     cmd = ("{r_setup}{cpat_cmd} --gene={assembled_fasta} --hex={hexamer} "
            "--logitModel={logit} --outfile={tx_out_file}")
     message = "Predicing coding potential of %s." % (assembled_fasta)
-    with file_transaction(data, out_file) as tx_out_file:
+    with file_transaction(out_file) as tx_out_file:
         do.run(cmd.format(**locals()), message)
     return out_file
 
@@ -109,19 +109,18 @@ def get_coding_potential_cutoff(ref_gtf, ref_fasta, data):
     the cutoff where the sensitivity and specificity meet
     """
     train_gtf, test_gtf = gtf.split_gtf(ref_gtf, sample_size=2000)
-    coding_gtf = gtf.partition_gtf(train_gtf, coding=True, data=data)
-    noncoding_gtf = gtf.partition_gtf(train_gtf, data=data)
-    noncoding_fasta = gtf.gtf_to_fasta(noncoding_gtf, ref_fasta, data=data)
-    cds_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta, cds=True, data=data)
+    coding_gtf = gtf.partition_gtf(train_gtf, coding=True)
+    noncoding_gtf = gtf.partition_gtf(train_gtf)
+    noncoding_fasta = gtf.gtf_to_fasta(noncoding_gtf, ref_fasta)
+    cds_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta, cds=True)
     hexamer_content = hexamer_table(cds_fasta, noncoding_fasta, data)
-    coding_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta, data=data)
+    coding_fasta = gtf.gtf_to_fasta(coding_gtf, ref_fasta)
     logit_model = make_logit_model(coding_fasta, noncoding_fasta,
                                        hexamer_content, data, "test_gtf")
-    test_fasta = gtf.gtf_to_fasta(test_gtf, ref_fasta, data=data)
+    test_fasta = gtf.gtf_to_fasta(test_gtf, ref_fasta)
     cpat_fn = cpat(test_fasta, hexamer_content, logit_model, data)
     cpat_prob = load_cpat_coding_prob(cpat_fn)
-    coding, noncoding = gtf.get_coding_noncoding_transcript_ids(
-        test_gtf, data=data)
+    coding, noncoding = gtf.get_coding_noncoding_transcript_ids(test_gtf)
     best_score = 1
     best_cutoff = 0
     best_sensitivity = 0
@@ -144,7 +143,7 @@ def hexamer_table(cds_fasta, noncoding_fasta, data, out_file=None):
     hex_cmd = config_utils.get_program("make_hexamer_tab.py", data)
     cmd = ("{hex_cmd} --cod={cds_fasta} --noncod={noncoding_fasta} "
            "> {tx_out_file}")
-    with file_transaction(data, out_file) as tx_out_file:
+    with file_transaction(out_file) as tx_out_file:
         message = ("Calculating hexamer content in %s and %s."
                    % (cds_fasta, noncoding_fasta))
         do.run(cmd.format(**locals()), message)
