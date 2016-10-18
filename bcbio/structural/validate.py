@@ -18,6 +18,7 @@ from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import convert
 from bcbio.distributed.transaction import file_transaction
+from bcbio.variation import ploidy
 
 mpl = utils.LazyImport("matplotlib")
 plt = utils.LazyImport("matplotlib.pyplot")
@@ -36,12 +37,12 @@ def _stat_str(x, n):
 def cnv_to_event(name, data):
     """Convert a CNV to an event name.
     """
-    ploidy = dd.get_ploidy(data)
+    cur_ploidy = ploidy.get_ploidy([data])
     if name.startswith("cnv"):
         num = max([int(x) for x in name.split("_")[0].replace("cnv", "").split(";")])
-        if num < ploidy:
+        if num < cur_ploidy:
             return "DEL"
-        elif num > ploidy:
+        elif num > cur_ploidy:
             return "DUP"
         else:
             return name

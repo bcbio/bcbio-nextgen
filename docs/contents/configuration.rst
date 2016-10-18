@@ -452,7 +452,15 @@ Coverage information
 Experimental information
 ========================
 
--  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid).
+-  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid). You can also
+   tweak specialty ploidy like mitochondrial calling by setting ploidy as a
+   dictionary. The defaults are::
+
+        ploidy:
+          default: 2
+          mitochondrial: 1
+          female: 2
+          male: 1
 
 .. _variant-config:
 

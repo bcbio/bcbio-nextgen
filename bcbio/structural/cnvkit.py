@@ -20,7 +20,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.variation import bedutils, effects, population, vcfutils
+from bcbio.variation import bedutils, effects, ploidy, population, vcfutils
 from bcbio.structural import annotate, shared, plot
 
 def run(items, background=None):
@@ -454,7 +454,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
-                   "--ploidy", str(dd.get_ploidy(data)),
+                   "--ploidy", str(ploidy.get_ploidy([data])),
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
@@ -474,7 +474,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
             with file_transaction(data, out_file) as tx_out_file:
                 cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
                        outformat, "--sample-id", dd.get_sample_name(data),
-                       "--ploidy", str(dd.get_ploidy(data)),
+                       "--ploidy", str(ploidy.get_ploidy([data])),
                        "-o", tx_out_file, call_file]
                 if gender and gender.lower() == "male":
                     cmd += ["--male-reference"]
