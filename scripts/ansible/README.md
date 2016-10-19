@@ -43,7 +43,8 @@ some basic infrastructure to do runs:
 - A security group allowing port 22 ssh access to the machines.
 - The name of a keypair to use for ssh access, where you have the private key
   stored locally.
-- A volume that will contain the run and bcbio installation.
+- A volume that will contain the run and bcbio installation. You can create this
+  in the AWS console, in the Volumes tab.
 - Optionally, an IAM role that allows access to S3 resources. This makes it
   easier to push/pull data to the instance.
 
@@ -146,9 +147,10 @@ When finished, you can terminate the instance with:
 ## Running bcbio
 
 On the first run you'll need to create a filesystem on the data volume and setup
-a directory for bcbio and your project:
+a directory for bcbio and your project, subsequent runs will mount automatically:
 
     sudo mkfs -t ext4 /dev/xvdf
+    sudo mount /dev/xvdf /mnt/work
     sudo mkdir /mnt/work/bcbio
     sudo chown ubuntu /mnt/work/bcbio
     sudo mkdir /mnt/work/your-project
