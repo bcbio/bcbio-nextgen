@@ -44,18 +44,19 @@ def count(data):
         tx_count_file, tx_summary_file = tx_files
         do.run(cmd.format(**locals()), message.format(**locals()))
     fixed_count_file = _format_count_file(count_file, data)
-    fixed_summary_file = _change_sample_name(summary_file, dd.get_sample_name(data))
+    fixed_summary_file = _change_sample_name(
+        summary_file, dd.get_sample_name(data), data=data)
     shutil.move(fixed_count_file, count_file)
     shutil.move(fixed_summary_file, summary_file)
 
     return count_file
 
-def _change_sample_name(in_file, sample_name):
+def _change_sample_name(in_file, sample_name, data=None):
     """Fix name in feature counts log file to get the same
        name in multiqc report.
     """
     out_file = append_stem(in_file, "_fixed")
-    with file_transaction(out_file) as tx_out:
+    with file_transaction(data, out_file) as tx_out:
         with open(tx_out, "w") as out_handle:
             with open(in_file) as in_handle:
                 for line in in_handle:

@@ -61,7 +61,7 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         out_file = out_file.replace(".gz", "")
         with file_transaction(config, out_file) as tx_out_file:
-            with tx_tmpdir() as tmpdir:
+            with tx_tmpdir(config) as tmpdir:
                 with utils.chdir(tmpdir):
                     paired = get_paired_bams(align_bams, items)
                     qsnp = config_utils.get_program("qsnp", config)

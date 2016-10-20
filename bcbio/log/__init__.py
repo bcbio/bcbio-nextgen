@@ -12,9 +12,11 @@ import logbook.queues
 from bcbio import utils
 
 LOG_NAME = "bcbio-nextgen"
+DEFAULT_LOG_DIR = 'log'
+
 
 def get_log_dir(config):
-    d = config.get("log_dir", "log")
+    d = config.get("log_dir", DEFAULT_LOG_DIR)
     return d
 
 logger = logbook.Logger(LOG_NAME)

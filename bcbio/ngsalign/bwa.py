@@ -214,9 +214,9 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     if dd.get_quality_format(data).lower() == "illumina":
         logger.info("bwa mem does not support the phred+64 quality format, "
                     "converting %s and %s to phred+33.")
-        fastq_file = fastq.groom(fastq_file, in_qual="fastq-illumina", data=data)
+        fastq_file = fastq.groom(fastq_file, data, in_qual="fastq-illumina")
         if pair_file:
-            pair_file = fastq.groom(pair_file, in_qual="fastq-illumina", data=data)
+            pair_file = fastq.groom(pair_file, data, in_qual="fastq-illumina")
     bwa = config_utils.get_program("bwa", data["config"])
     gtf_file = dd.get_gtf_file(data)
     gtf_fasta = index_transcriptome(gtf_file, ref_file, data)
@@ -226,7 +226,7 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     cmd = ("{bwa} mem {args} -a -t {num_cores} {gtf_fasta} {fastq_file} "
            "{pair_file} | {samtools} view -bhS - > {tx_out_file}")
 
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
         do.run(cmd.format(**locals()), message)
     data = dd.set_transcriptome_bam(data, out_file)

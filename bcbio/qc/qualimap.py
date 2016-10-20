@@ -38,22 +38,23 @@ def run(bam_file, data, out_dir):
             bam_file = ds_bam if ds_bam else bam_file
         if options.find("PDF") > -1:
             options = "%s -outfile %s" % (options, pdf_file)
-        utils.safe_makedir(out_dir)
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         qualimap = config_utils.get_program("qualimap", data["config"])
         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                              num_cores)
-        export = utils.local_path_export()
-        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
-               "-nt {num_cores} --java-mem-size={max_mem} {options}")
         species = tz.get_in(("genome_resources", "aliases", "ensembl"), data, "")
-        if species in ["HUMAN", "MOUSE"]:
-            cmd += " -gd {species}"
         regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
-        if regions:
-            bed6_regions = _bed_to_bed6(regions, out_dir)
-            cmd += " -gff {bed6_regions}"
-        do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
+        export = utils.local_path_export()
+        with file_transaction(data, out_dir) as tx_out_dir:
+            utils.safe_makedir(tx_out_dir)
+            cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_out_dir} "
+                "-nt {num_cores} --java-mem-size={max_mem} {options}")
+            if species in ["HUMAN", "MOUSE"]:
+                cmd += " -gd {species}"
+            if regions:
+                bed6_regions = _bed_to_bed6(regions, tx_out_dir)
+                cmd += " -gff {bed6_regions}"
+            do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
 
     return _parse_qualimap_metrics(report_file)
 
@@ -183,7 +184,7 @@ def _detect_duplicates(bam_file, out_dir, data):
     if not utils.file_exists(out_file):
         dup_align_bam = postalign.dedup_bam(bam_file, data)
         num_cores = dd.get_num_cores(data)
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             sambamba = config_utils.get_program("sambamba", data, default="sambamba")
             dup_count = ("{sambamba} view --nthreads {num_cores} --count "
                          "-F 'duplicate and not unmapped' "
@@ -270,10 +271,11 @@ def run_rnaseq(bam_file, data, out_dir):
     single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
     if not utils.file_exists(report_file):
-        utils.safe_makedir(out_dir)
-        bam.index(bam_file, config)
-        cmd = _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file, single_end, library)
-        do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
+        with file_transaction(data, out_dir) as tx_out_dir:
+            utils.safe_makedir(tx_out_dir)
+            bam.index(bam_file, config)
+            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_out_dir, gtf_file, single_end, library)
+            do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
         cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
         do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)

@@ -4,6 +4,7 @@ Provides estimates of coverage intervals based on callable regions
 """
 import itertools
 import os
+import sys
 import shutil
 import yaml
 
@@ -102,7 +103,9 @@ def calculate(bam_file, data):
                 tx_callable_file = tx_out_file.replace(".depth.bed", ".callable.bed")
                 prefix = tx_out_file.replace(".depth.bed", "")
                 cmd += ["--prefix", prefix, bam_file]
-                do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
+                bcbio_env = utils.get_bcbio_env()
+                msg = "Calculate coverage: %s" % dd.get_sample_name(data)
+                do.run(cmd, msg, env=bcbio_env)
                 shutil.move(tx_callable_file, callable_file)
     return out_file, callable_file, _extract_highdepth(callable_file, data), median_coverage
 
@@ -144,7 +147,7 @@ def _get_median_coverage(bam_file, variant_regions, file_prefix, data):
         yaml.safe_dump(stats, out_handle, default_flow_style=False, allow_unicode=False)
     return median_cov
 
-def decorate_problem_regions(query_bed, problem_bed_dir):
+def decorate_problem_regions(query_bed, problem_bed_dir, data):
     """
     decorate query_bed with percentage covered by BED files of regions specified
     in the problem_bed_dir
@@ -166,7 +169,7 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
     header = "\t".join(header + names)
     cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
            "-names {names_string} | sed -s 's/^#.*$/{header}/' | bgzip -c > {tx_out_file}")
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Annotate %s with problem regions." % query_bed
         do.run(cmd.format(**locals()), message)
     return out_file
@@ -198,7 +201,7 @@ def checkpoint(stem):
     return check_file
 
 @checkpoint("_summary")
-def _calculate_percentiles(in_file, sample):
+def _calculate_percentiles(in_file, sample, data=None):
     """
     Parse pct bases per region to summarize it in
     7 different pct of regions points with pct bases covered
@@ -225,12 +228,12 @@ def _calculate_percentiles(in_file, sample):
             pct[(cutoff, p_point)] = q
         pct_bases[cutoff] = sum(size * a)/float(sum(size))
 
-    with file_transaction(out_total_file) as tx_file:
+    with file_transaction(data, out_total_file) as tx_file:
         with open(tx_file, 'w') as out_handle:
             print >>out_handle, "cutoff_reads\tbases_pct\tsample"
             for k in pct_bases:
                 print >>out_handle, "\t".join(map(str, [k, pct_bases[k], sample]))
-    with file_transaction(out_file) as tx_file:
+    with file_transaction(data, out_file) as tx_file:
         with open(tx_file, 'w') as out_handle:
             print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
             for k in pct:
@@ -261,14 +264,14 @@ def _read_regions(fn):
     return regions
 
 @checkpoint("_fixed")
-def _add_high_covered_regions(in_file, bed_file, sample):
+def _add_high_covered_regions(in_file, bed_file, sample, data=None):
     """
     Add regions with higher coverage than the limit
     as fully covered.
     """
     out_file = append_stem(in_file, "_fixed")
     regions = _read_regions(in_file)
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(data, out_file) as out_tx:
         with open(bed_file) as in_handle:
             with open(out_tx, 'w') as out_handle:
                 if "header" in regions:
@@ -302,24 +305,24 @@ def coverage(data, out_dir):
         cores = dd.get_num_cores(data)
         if not file_exists(parse_file):
             with tx_tmpdir(data, work_dir) as tmp_dir:
-                with file_transaction(parse_file) as out_tx:
+                with file_transaction(data, parse_file) as out_tx:
                     cmd = ("{sambamba} depth region -F \"not unmapped and not duplicate\" -t {cores} "
                            "%s -T 1 -T 5 -T 10 -T 20 -T 40 -T 50 -T 60 -T 70 "
                            "-T 80 -T 100 -L {cleaned_bed} {in_bam} | sed 's/# "
                            "chrom/chrom/' > {out_tx}")
                     do.run(cmd.format(**locals()) % "-C 1000", "Run coverage for {}".format(sample))
-        parse_file = _add_high_covered_regions(parse_file, cleaned_bed,  sample)
-        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample)
+        parse_file = _add_high_covered_regions(parse_file, cleaned_bed,  sample, data=data)
+        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data)
     return os.path.abspath(parse_file)
 
-def _summary_variants(in_file, out_file):
+def _summary_variants(in_file, out_file, data=None):
     """Parse GC and depth variant file
        to be ready for multiqc.
     """
     dt = pd.read_csv(in_file, sep="\t", index_col=False,
                      dtype={"CG": np.float64, "depth": np.float64}, na_values=["."]).dropna()
     row = list()
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(data, out_file) as out_tx:
         cg = dt["CG"]
         d = dt["depth"]
         for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
@@ -420,7 +423,7 @@ def variants(data, out_dir):
         broad_runner = broad.runner_from_config_safe(data["config"])
         if in_bam and broad_runner and broad_runner.has_gatk():
             if not file_exists(parse_file):
-                with file_transaction(cg_file) as tx_out:
+                with file_transaction(data, cg_file) as tx_out:
                     params = ["-T", "VariantAnnotator",
                               "-R", ref_file,
                               "-L", cleaned_bed,
@@ -433,7 +436,7 @@ def variants(data, out_dir):
                 cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
-                with file_transaction(parse_file) as out_tx:
+                with file_transaction(data, parse_file) as out_tx:
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
                     cmd = ("bcftools query -s {sample} -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
@@ -443,7 +446,7 @@ def variants(data, out_dir):
                     logger.debug('parsing coverage: %s' % sample)
             if not file_exists(qc_file):
                 # This files will be copied to final
-                _summary_variants(parse_file, qc_file)
+                _summary_variants(parse_file, qc_file, data=data)
             if file_exists(qc_file) and file_exists(parse_file):
                 remove_plus(cg_file)
 
@@ -461,9 +464,9 @@ def priority_coverage(data, out_dir):
     nthreads = dd.get_num_cores(data)
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
-    with tx_tmpdir(data, work_dir) as tmp_dir:
+    with tx_tmpdir(data) as tmp_dir:
         cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
             cmd = ("{sambamba} depth base -t {nthreads} -L {cleaned_bed} "
                    "-F \"not unmapped\" "
@@ -489,9 +492,9 @@ def priority_total_coverage(data, out_dir):
     nthreads = dd.get_num_cores(data)
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     sambamba = config_utils.get_program("sambamba", data, default="sambamba")
-    with tx_tmpdir(data, work_dir) as tmp_dir:
+    with tx_tmpdir(data) as tmp_dir:
         cleaned_bed = clean_file(bed_file, data)
-        with file_transaction(out_file) as tx_out_file:
+        with file_transaction(data, out_file) as tx_out_file:
             cmd = ("{sambamba} depth region -t {nthreads} -L {cleaned_bed} "
                    "-F \"not unmapped\" "
                    "-T 10 -T 20 -T 30 -T 40 -T 50 -T 60 -T 70 -T 80 -T 90 -T 100 "

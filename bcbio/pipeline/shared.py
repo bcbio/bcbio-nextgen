@@ -238,15 +238,15 @@ def subtract_low_complexity(f):
     """Remove low complexity regions from callable regions if available.
     """
     @functools.wraps(f)
-    def wrapper(variant_regions, region, out_file, items=None, do_merge=True):
-        region_bed = f(variant_regions, region, out_file, items, do_merge)
+    def wrapper(variant_regions, region, out_file, items=None, do_merge=True, data=None):
+        region_bed = f(variant_regions, region, out_file, items, do_merge, data)
         if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
             region_bed = remove_lcr_regions(region_bed, items)
         return region_bed
     return wrapper
 
 @subtract_low_complexity
-def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True):
+def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True, data=None):
     """Return BED file subset by a specified chromosome region.
 
     variant_regions is a BED file, region is a chromosome name or tuple
@@ -263,7 +263,8 @@ def subset_variant_regions(variant_regions, region, out_file, items=None, do_mer
         subset_file = "{0}".format(utils.splitext_plus(out_file)[0])
         subset_file += "%s-regions.bed" % (merge_text)
         if not os.path.exists(subset_file):
-            with file_transaction(items[0] if items else None, subset_file) as tx_subset_file:
+            config = items[0] if items else data
+            with file_transaction(config, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
                     _subset_bed_by_region(variant_regions, tx_subset_file, region, do_merge = do_merge)
                 else:
