@@ -150,7 +150,7 @@ def compare_to_rm(data):
 def _annotate_validations(eval_files, data):
     """Add annotations about potential problem regions to validation VCFs.
     """
-    for key in ["tp", "fp", "fn"]:
+    for key in ["tp", "tp-calls", "fp", "fn"]:
         if eval_files.get(key):
             eval_files[key] = annotation.add_genome_context(eval_files[key], data)
     return eval_files
