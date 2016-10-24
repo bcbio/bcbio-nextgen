@@ -111,6 +111,9 @@ def process_alignment(data, alt_input=None):
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        umi_file = dd.get_umi_file(data)
+        if umi_file:
+            raise NotImplementedError("Need support for consensus calling with UMIs")
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")

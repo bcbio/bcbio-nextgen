@@ -28,9 +28,12 @@ def tobam_cl(data, out_file, is_paired=False):
     - If unpaired, use biobambam's bammarkduplicates
     """
     do_dedup = _check_dedup(data)
+    umi_file = dd.get_umi_file(data)
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
+        elif umi_file:
+            yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file), tx_out_file)
         elif is_paired and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
@@ -114,6 +117,18 @@ def _biobambam_dedup_sort(data, tx_out_file):
                "markthreads={cores} level=0 | "
                "{samtools} sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
                "-o {tx_out_file} /dev/stdin")
+    return cmd.format(**locals())
+
+def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
+    """Mark duplicates on aligner output and convert to grouped UMIs by position.
+    """
+    tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
+    cores, mem = _get_cores_memory(data)
+    cmd = ("samblaster -M --addMateTags | "
+           "fgbio AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
+           "fgbio GroupReadsByUmi -m 1 -e 1 -s adjacency | "
+           "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
+           "-o {tx_out_file} /dev/stdin")
     return cmd.format(**locals())
 
 def _check_dedup(data):
