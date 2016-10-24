@@ -84,7 +84,7 @@ class AutomatedAnalysisTest(unittest.TestCase):
         download_data = [DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
                          DlInfo("genomes_automated_test.tar.gz", "genomes", 31),
                          DlInfo("110907_ERP000591.tar.gz", None, None),
-                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 10),
+                         DlInfo("100326_FC6107FAAXX.tar.gz", None, 11),
                          DlInfo("tcga_benchmark.tar.gz", None, 3),
                          DlInfo("singlecell-rnaseq-test-data.tar.gz", "Harvard-inDrop", 1)]
         for dl in download_data:
@@ -373,6 +373,17 @@ class AutomatedAnalysisTest(unittest.TestCase):
             cl = ["bcbio_nextgen.py",
                   get_post_process_yaml(self.data_dir, workdir),
                   os.path.join(self.data_dir, "run_info-joint.yaml")]
+            subprocess.check_call(cl)
+
+    @attr(umi=True)
+    def test_10_umi(self):
+        """Use UMIs for de-duplication and consensus read generation in variant calling.
+        """
+        self._install_test_files(self.data_dir)
+        with make_workdir() as workdir:
+            cl = ["bcbio_nextgen.py",
+                  get_post_process_yaml(self.data_dir, workdir),
+                  os.path.join(self.data_dir, "run_info-umi.yaml")]
             subprocess.check_call(cl)
 
     @attr(docker=True)
