@@ -11,7 +11,7 @@ import contextlib
 from distutils.version import LooseVersion
 import os
 
-from bcbio import bam, utils
+from bcbio import bam, broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
@@ -123,13 +123,24 @@ def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
     """Mark duplicates on aligner output and convert to grouped UMIs by position.
     """
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
+    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 3)
     cores, mem = _get_cores_memory(data)
     cmd = ("samblaster -M --addMateTags | "
-           "fgbio AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
-           "fgbio GroupReadsByUmi -m 1 -e 1 -s adjacency | "
+           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
+           "fgbio {jvm_opts} GroupReadsByUmi -m 1 -e 1 -s adjacency | "
            "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
            "-o {tx_out_file} /dev/stdin")
     return cmd.format(**locals())
+
+def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
+    cores, mem = _get_cores_memory(data)
+    resources = config_utils.get_resources("fgbio", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
+    if scale_factor and cores > scale_factor:
+        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": cores // scale_factor}})
+    jvm_opts += broad.get_default_jvm_opts(tmpdir)
+    jvm_opts = " ".join(jvm_opts)
+    return jvm_opts
 
 def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
@@ -139,7 +150,8 @@ def umi_consensus(data):
     f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
     if not utils.file_uptodate(f1_out, align_bam):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
-            cmd = ("fgbio CallMolecularConsensusReads -S queryname -i {align_bam} -o /dev/stdout |"
+            jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
+            cmd = ("fgbio {jvm_opts} CallMolecularConsensusReads -S queryname -i {align_bam} -o /dev/stdout |"
                    "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out
