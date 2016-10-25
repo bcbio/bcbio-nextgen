@@ -80,7 +80,7 @@ def _add_supplemental_bams(data):
             test_file = "%s-%s%s" % (base, supext, ext)
             if os.path.exists(test_file):
                 sup_key = file_key + "_plus"
-                if not sup_key in data:
+                if sup_key not in data:
                     data[sup_key] = {}
                 data[sup_key][supext] = test_file
     return data
@@ -113,7 +113,10 @@ def process_alignment(data, alt_input=None):
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         umi_file = dd.get_umi_file(data)
         if umi_file:
-            raise NotImplementedError("Need support for consensus calling with UMIs")
+            f1, f2 = postalign.umi_consensus(data)
+            data["umi_bam"] = dd.get_work_bam(data)
+            del data["config"]["algorithm"]["umi_type"]
+            data = align_to_sort_bam(f1, f2, aligner, data)
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")

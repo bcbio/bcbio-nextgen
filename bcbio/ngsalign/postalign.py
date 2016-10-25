@@ -131,6 +131,19 @@ def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
            "-o {tx_out_file} /dev/stdin")
     return cmd.format(**locals())
 
+def umi_consensus(data):
+    """Convert UMI grouped reads into fastq pair for re-alignment.
+    """
+    align_bam = dd.get_work_bam(data)
+    f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
+    f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
+    if not utils.file_uptodate(f1_out, align_bam):
+        with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
+            cmd = ("fgbio CallMolecularConsensusReads -S queryname -i {align_bam} -o /dev/stdout |"
+                   "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")
+            do.run(cmd.format(**locals()), "UMI consensus fastq generation")
+    return f1_out, f2_out
+
 def _check_dedup(data):
     """Check configuration for de-duplication, handling back compatibility.
     """

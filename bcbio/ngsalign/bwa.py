@@ -118,7 +118,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     # back compatible -- older files were named with lane information, use sample name now
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
     if not utils.file_exists(out_file):
-        out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
+        umi_ext = "-cumi" if "umi_bam" in data else ""
+        out_file = os.path.join(align_dir, "{0}-sort{1}.bam".format(dd.get_sample_name(data), umi_ext))
     qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
     min_size = None
     if data.get("align_split") or fastq_file.endswith(".sdf"):
