@@ -137,7 +137,9 @@ def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
     resources = config_utils.get_resources("fgbio", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
     if scale_factor and cores > scale_factor:
-        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": cores // scale_factor}})
+        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                     {"direction": "increase",
+                                                                      "magnitude": cores // scale_factor}}})
     jvm_opts += broad.get_default_jvm_opts(tmpdir)
     jvm_opts = " ".join(jvm_opts)
     return jvm_opts
