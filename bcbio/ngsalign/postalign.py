@@ -33,7 +33,7 @@ def tobam_cl(data, out_file, is_paired=False):
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
         elif umi_file:
-            yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file), tx_out_file)
+            yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file, is_paired), tx_out_file)
         elif is_paired and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
@@ -119,16 +119,17 @@ def _biobambam_dedup_sort(data, tx_out_file):
                "-o {tx_out_file} /dev/stdin")
     return cmd.format(**locals())
 
-def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
+def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file, is_paired=False):
     """Mark duplicates on aligner output and convert to grouped UMIs by position.
     """
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
-    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 3)
+    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 2)
     cores, mem = _get_cores_memory(data)
+    group_cmd = "fgbio {jvm_opts} GroupReadsByUmi -m 1 -e 1 -s adjacency | " if is_paired else ""
     cmd = ("samblaster -M --addMateTags | "
-           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
-           "fgbio {jvm_opts} GroupReadsByUmi -m 1 -e 1 -s adjacency | "
-           "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
+           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | ") + \
+           group_cmd + \
+          ("samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
            "-o {tx_out_file} /dev/stdin")
     return cmd.format(**locals())
 
