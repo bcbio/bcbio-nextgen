@@ -134,16 +134,14 @@ can take more than 24 hours on machines using multiple cores.
 
 First get the input configuration file, fastq reads, reference materials and analysis regions::
 
-    mkdir -p NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
-    cd NA12878-exome-eval/config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
-    cd ../input
+    mkdir -p NA12878-exome-eval
+    cd NA12878-exome-eval
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
     bash NA12878-exome-methodcmp-getdata.sh
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    cd ../work
+    cd work
     bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
