@@ -10,6 +10,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -34,8 +35,14 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     in which case we should skip the FreeBayes run.
     """
     opts = ["--genotype-qualities", "--strict-vcf"]
-    opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
-
+    cur_ploidy = ploidy.get_ploidy(items, region)
+    base_ploidy = ploidy.get_ploidy(items)
+    opts += ["--ploidy", str(cur_ploidy)]
+    # Adjust min fraction when trying to call more sensitively in certain
+    # regions. This is primarily meant for pooled mitochondrial calling.
+    if (isinstance(region, (list, tuple)) and chromhacks.is_mitochondrial(region[0])
+          and cur_ploidy >= base_ploidy and "--min-alternate-fraction" not in opts and "-F" not in opts):
+        opts += ["--min-alternate-fraction", "0.01"]
     variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
     # Produce gVCF output
     if any("gvcf" in dd.get_tools_on(d) for d in items):
