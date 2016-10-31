@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import mimetypes
 import os
 import pandas as pd
 import shutil
@@ -23,7 +24,7 @@ def summary(*samples):
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    folders = []
+    file_fapths = []
     opts = ""
     out_dir = os.path.join(work_dir, "multiqc")
     out_data = os.path.join(work_dir, "multiqc", "multiqc_data")
@@ -35,20 +36,20 @@ def summary(*samples):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
-            folders.extend(pfiles)
+            file_fapths.extend(pfiles)
     # XXX temporary workaround until we can handle larger inputs through MultiQC
-    folders = list(set(folders))
+    file_fapths = list(set(file_fapths))
     # Back compatible -- to migrate to explicit specifications in input YAML
-    folders += ["trimmed", "htseq-count/*summary"]
+    file_fapths += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            input_dir = [_check_multiqc_input(d) for d in folders]
-            input_dir = _create_list_file(input_dir)
+            file_fapths = [fpath for fpath in file_fapths if _check_multiqc_input(fpath) and _is_good_file_for_multiqc(fpath)]
+            input_list_file = _create_list_file(file_fapths)
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            if input_dir:
-                cmd = "{export_tmp} {multiqc} -f -l {input_dir} -o {tx_out} {opts}"
+            if input_list_file:
+                cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
@@ -67,13 +68,13 @@ def summary(*samples):
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
         out.append(data)
-    return [[d] for d in out]
+    return [[fpath] for fpath in out]
 
-def _create_list_file(dirs):
+def _create_list_file(paths):
     out_file = "list_files.txt"
     is_any = False
     with open(out_file, "w") as outh:
-        for f in dirs:
+        for f in paths:
             if f:
                 is_any = True
                 print >>outh, f
@@ -82,12 +83,22 @@ def _create_list_file(dirs):
     return out_file
 
 def _check_multiqc_input(path):
-    """Check if dir exists, and return empty if it doesn't"""
+    """Check if file exists, and return empty if it doesn't"""
     if utils.file_exists(path):
         if path.find("bcfstats") == -1:
             return path
 
 # ## report and coverage
+
+def _is_good_file_for_multiqc(fapth):
+    """Returns False if the file is binary or image."""
+    # Use mimetypes to exclude binary files where possible
+    (ftype, encoding) = mimetypes.guess_type(fapth)
+    if encoding is not None:
+        return False
+    if ftype is not None and ftype.startswith('image'):
+        return False
+    return True
 
 def _report_summary(samples, out_dir):
     """

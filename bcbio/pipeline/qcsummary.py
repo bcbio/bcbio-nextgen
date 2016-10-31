@@ -144,7 +144,8 @@ def _organize_qc_files(program, qc_dir):
             if os.path.isfile(fname):
                 out_files.append(fname)
             elif os.path.isdir(fname) and not fname.endswith("tx"):
-                out_files.extend([os.path.join(fname, x) for x in os.listdir(fname)])
+                for root, dirs, files in os.walk(fname):
+                    out_files.extend([os.path.join(root, x) for x in files])
         if len(out_files) > 0:
             if len(out_files) == 1:
                 base = out_files[0]

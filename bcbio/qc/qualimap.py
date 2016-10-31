@@ -25,11 +25,16 @@ from bcbio.variation import bedutils
 def run(bam_file, data, out_dir):
     """Run qualimap to assess alignment quality metrics.
     """
+    # Qualimap results should be saved to a directory named after sample.
+    # MultiQC (for parsing additional data) picks the sample name after the dir as follows:
+    #   <sample name>/raw_data_qualimapReport/insert_size_histogram.txt
+    results_dir = os.path.join(out_dir, dd.get_sample_name(data))
     resources = config_utils.get_resources("qualimap", data["config"])
     options = " ".join(resources.get("options", ""))
-    report_file = os.path.join(out_dir, "qualimapReport.html")
+    report_file = os.path.join(results_dir, "qualimapReport.html")
+    utils.safe_makedir(results_dir)
     pdf_file = "qualimapReport.pdf"
-    if not utils.file_exists(report_file) and not utils.file_exists(os.path.join(out_dir, pdf_file)):
+    if not utils.file_exists(report_file) and not utils.file_exists(os.path.join(results_dir, pdf_file)):
         if "qualimap_full" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
             logger.info("Full qualimap analysis for %s may be slow." % bam_file)
             ds_bam = bam_file
@@ -38,15 +43,26 @@ def run(bam_file, data, out_dir):
             bam_file = ds_bam if ds_bam else bam_file
         if options.find("PDF") > -1:
             options = "%s -outfile %s" % (options, pdf_file)
-        utils.safe_makedir(out_dir)
+
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         qualimap = config_utils.get_program("qualimap", data["config"])
         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                              num_cores)
+
+        # Fixing the file name: MultiQC picks sample name from BAM file name.
+        fixed_bam_fname = os.path.join(out_dir, dd.get_sample_name(data) + ".bam")
+        if not os.path.islink(fixed_bam_fname):
+            os.symlink(bam_file, fixed_bam_fname)
+
         export = utils.local_path_export()
-        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {out_dir} "
+        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {fixed_bam_fname} -outdir {results_dir} "
+               "--skip-duplicated --skip-dup-mode 0 "
                "-nt {num_cores} --java-mem-size={max_mem} {options}")
-        species = tz.get_in(("genome_resources", "aliases", "ensembl"), data, "")
+        species = None
+        if tz.get_in(("genome_resources", "aliases", "human"), data, ""):
+            species = "HUMAN"
+        elif any(tz.get_in("genome_build", data, "").startswith(k) for k in ["mm", "GRCm"]):
+            species = "MOUSE"
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
         regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
@@ -55,9 +71,9 @@ def run(bam_file, data, out_dir):
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
 
-    return _parse_qualimap_metrics(report_file)
+    return _parse_qualimap_metrics(report_file, data)
 
-def _parse_qualimap_metrics(report_file):
+def _parse_qualimap_metrics(report_file, data):
     """Extract useful metrics from the qualimap HTML report file.
     """
     if not utils.file_exists(report_file):
@@ -76,7 +92,9 @@ def _parse_qualimap_metrics(report_file):
             out.update(parsers[header](table))
     new_names = []
     for metric in out:
-        new_names.append(metric + "_qualimap_1e7reads_est")
+        if "qualimap_full" not in tz.get_in(("config", "algorithm", "tools_on"), data, []):
+            metric += "_qualimap_1e7reads_est"
+        new_names.append(metric)
     out = dict(zip(new_names, out.values()))
     return out
 
@@ -263,21 +281,26 @@ def run_rnaseq(bam_file, data, out_dir):
     strandedness = {"firststrand": "strand-specific-reverse",
                     "secondstrand": "strand-specific-forward",
                     "unstranded": "non-strand-specific"}
-    report_file = os.path.join(out_dir, "qualimapReport.html")
-    raw_file = os.path.join(out_dir, "rnaseq_qc_results.txt")
+
+    # Qualimap results should be saved to a directory named after sample.
+    # MultiQC (for parsing additional data) picks the sample name after the dir as follows:
+    #   <sample name>/raw_data_qualimapReport/insert_size_histogram.txt
+    results_dir = os.path.join(out_dir, dd.get_sample_name(data))
+    report_file = os.path.join(results_dir, "qualimapReport.html")
+    raw_file = os.path.join(results_dir, "rnaseq_qc_results.txt")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
     single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
     if not utils.file_exists(report_file):
-        utils.safe_makedir(out_dir)
+        utils.safe_makedir(results_dir)
         bam.index(bam_file, config)
-        cmd = _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file, single_end, library)
+        cmd = _rnaseq_qualimap_cmd(data, bam_file, results_dir, gtf_file, single_end, library)
         do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
         cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
         do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
-    metrics.update(_detect_duplicates(bam_file, out_dir, data))
+    metrics.update(_detect_duplicates(bam_file, results_dir, data))
     metrics.update(_detect_rRNA(data))
     metrics.update({"Average insert size": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
