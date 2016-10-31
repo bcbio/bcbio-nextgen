@@ -48,14 +48,14 @@ def assign_interval(data):
             cov_interval = "genome"
             offtarget_pct = 0.0
         else:
-            offtarget_stat_file = dd.get_offtarget_stats(data)
-            if not offtarget_stat_file:
+            target_cov_stats_file = dd.get_target_cov_stats(data)
+            if not target_cov_stats_file:
                 offtarget_pct = 0.0
             else:
-                with open(offtarget_stat_file) as in_handle:
+                with open(target_cov_stats_file) as in_handle:
                     stats = yaml.safe_load(in_handle)
-                if float(stats["mapped"]) > 0:
-                    offtarget_pct = stats["offtarget"] / float(stats["mapped"])
+                if float(stats["mapped_unique"]) > 0:
+                    offtarget_pct = stats["offtarget"] / float(stats["mapped_unique"])
                 else:
                     offtarget_pct = 0.0
             if offtarget_pct > offtarget_thresh:
@@ -81,7 +81,7 @@ def calculate(bam_file, data):
     out_file = prefix + ".depth.bed"
     callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
-    median_coverage = _get_median_coverage(bam_file, variant_regions, prefix, data)
+    average_coverage = _get_average_coverage(bam_file, variant_regions, prefix, data)
     if not utils.file_uptodate(out_file, bam_file):
         ref_file = dd.get_ref_file(data)
         cmd = ["goleft", "depth", "--windowsize", str(params["window_size"]), "--q", "1",
@@ -94,7 +94,7 @@ def calculate(bam_file, data):
                     pybedtools.BedTool().window_maker(w=params["parallel_window_size"],
                                                       b=pybedtools.BedTool(variant_regions)).saveas(tx_out_file)
             cmd += ["--bed", window_file]
-        max_depth = _get_max_depth(median_coverage, params, data)
+        max_depth = _get_max_depth(average_coverage, params, data)
         if max_depth:
             cmd += ["--maxmeandepth", str(int(max_depth))]
         with file_transaction(data, out_file) as tx_out_file:
@@ -104,7 +104,7 @@ def calculate(bam_file, data):
                 cmd += ["--prefix", prefix, bam_file]
                 do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
                 shutil.move(tx_callable_file, callable_file)
-    return out_file, callable_file, _extract_highdepth(callable_file, data), median_coverage
+    return out_file, callable_file, _extract_highdepth(callable_file, data), average_coverage
 
 def _extract_highdepth(callable_file, data):
     out_file = callable_file.replace(".callable.bed", ".highdepth.bed")
@@ -118,31 +118,70 @@ def _extract_highdepth(callable_file, data):
                             out_handle.write("\t".join(parts[:3] + ["highdepth"]) + "\n")
     return out_file
 
-def _get_max_depth(median_coverage, params, data):
+def _get_max_depth(average_coverage, params, data):
     """Calculate maximum depth based on a rough multiplier of average coverage.
     """
     if dd.get_coverage_interval(data) == "genome":
-        avg_cov = max(30.0, median_coverage)
+        avg_cov = max(30.0, average_coverage)
         return avg_cov * params["high_multiplier"]
 
-def _get_median_coverage(bam_file, variant_regions, file_prefix, data):
+def _get_average_coverage(bam_file, variant_regions, file_prefix, data):
     cache_file = "%s-stats.yaml" % file_prefix
     if utils.file_uptodate(cache_file, bam_file):
         with open(cache_file) as in_handle:
             stats = yaml.safe_load(in_handle)
         return stats["median_coverage"]
     if variant_regions:
-        total = pybedtools.BedTool(variant_regions).total_coverage()
+        avg_cov = _average_target_coverage(data, variant_regions, bam_file)
     else:
-        total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
+        avg_cov = _average_genome_coverage(data, bam_file)
+    stats = {"median_coverage": avg_cov}
+    with open(cache_file, "w") as out_handle:
+        yaml.safe_dump(stats, out_handle, default_flow_style=False, allow_unicode=False)
+    return avg_cov
+
+def _average_genome_coverage(data, bam_file):
+    total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
     read_counts = sum([a.aligned for a in bam.idxstats(bam_file, data)])
     with pysam.Samfile(bam_file, "rb") as pysam_bam:
         read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), 1e5)))
-    median_cov = float(read_counts * read_size) / total
-    stats = {"median_coverage": median_cov}
-    with open(cache_file, "w") as out_handle:
-        yaml.safe_dump(stats, out_handle, default_flow_style=False, allow_unicode=False)
-    return median_cov
+    avg_cov = float(read_counts * read_size) / total
+    return avg_cov
+
+def _average_target_coverage(data, bed_file, bam_file):
+    sambamba_depth_output = run_sambamba_coverage_depth(data, bed_file, bam_file)
+    avg_covs = []
+    mean_cov_col = None
+    total_len = 0
+    with open(sambamba_depth_output) as fh:
+        for line in fh:
+            if line.startswith('#'):
+                mean_cov_col = line.split('\t').index('meanCoverage')
+                continue
+            line_tokens = line.replace('\n', '').split()
+            start, end = map(int, line_tokens[1:3])
+            size = end - start
+            avg_covs.append(float(line_tokens[mean_cov_col]) * size)
+            total_len += size
+    avg_cov = sum(avg_covs) / total_len if total_len > 0 else 0
+    return avg_cov
+
+def run_sambamba_coverage_depth(data, bed_file, bam_file):
+    bed_name = utils.splitext_plus(os.path.basename(bed_file))[0]
+    output_fpath = os.path.join(
+        utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
+            bed_name + "-" + dd.get_sample_name(data) + '-sambamba_depth.tsv')
+    sambamba = config_utils.get_program("sambamba", data["config"])
+    num_cores = dd.get_cores(data)
+    if utils.file_uptodate(output_fpath, bed_file):
+        return output_fpath
+    with file_transaction(data, output_fpath) as tx_out_file:
+        cmd = ("{sambamba} depth region -t {num_cores} "
+               "-F \"not failed_quality_control and not duplicate and not unmapped\" "
+               "-L {bed_file} {bam_file} -o {tx_out_file}")
+        do.run(cmd.format(**locals()), "Calling sambamba region depth")
+    logger.debug("Saved to " + output_fpath)
+    return output_fpath
 
 def decorate_problem_regions(query_bed, problem_bed_dir):
     """

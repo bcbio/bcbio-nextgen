@@ -17,6 +17,7 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
+from bcbio.bam.callable import calculate_target_coverage_metrics
 
 # ## High level functions to generate summary
 
@@ -233,7 +234,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     """
     cur_descriptions = set([s[0]["description"] for s in cur_samples])
     out = []
-    if os.path.exists(summary_file):
+    if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
             for s in yaml.load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
@@ -291,6 +292,23 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
 
 def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
+    out = dict()
+
+    target_cov_stats_file = calculate_target_coverage_metrics(bam_file, data)
+    if target_cov_stats_file and utils.file_exists(target_cov_stats_file):
+        with open(target_cov_stats_file) as in_handle:
+            stats = yaml.safe_load(in_handle)
+        offtarget = stats['offtarget']
+        mapped_unique = stats['mapped_unique']
+        mapped = stats['mapped']
+        total_reads = stats['total_reads']
+        out.update({
+            "offtarget_rate": 1.0 * offtarget / mapped_unique,
+            "Duplicates": mapped - mapped_unique,
+            "Duplicates_pct": 1.0 * (mapped - mapped_unique) / mapped,
+            "usable_rate": 1.0 * (mapped_unique - offtarget) / total_reads,
+        })
+
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
     coverage = cov.coverage(data, out_dir)
@@ -298,6 +316,8 @@ def _run_coverage_qc(bam_file, data, out_dir):
     # problem region directory
     # if priority:
     #    annotated = cov.decorate_problem_regions(priority, problem_regions)
+
+    return out
 
 def _run_variants_qc(bam_file, data, out_dir):
     """Run variants QC analysis"""

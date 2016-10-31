@@ -22,7 +22,6 @@ def run(bam_file, data, out_dir):
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "samtools stats", data)
     out = _parse_samtools_stats(stats_file)
-    out.update(_parse_offtargets(bam_file))
     return out
 
 def _parse_samtools_stats(stats_file):
@@ -39,19 +38,7 @@ def _parse_samtools_stats(stats_file):
             if metric in want:
                 stat = float(stat_str.strip())
                 out[want[metric]] = stat
-                if metric in ["reads duplicated"]:
-                    out["%s pct" % want[metric]] = stat / out["Total reads"]
     out["Mapping Rate"] = 1.0 * out["Mapped"] / out["Total reads"]
     out["Mapped reads"] = out["Mapped"] # remove after 1.0.0 release
     return out
 
-def _parse_offtargets(bam_file):
-    """
-    Add to metrics off-targets reads if it exitst
-    """
-    off_target = bam_file.replace(".bam", "-offtarget-stats.yaml")
-    if os.path.exists(off_target):
-        res = yaml.load(open(off_target))
-        res['offtarget_pct'] = "%.3f" % (float(res['offtarget']) / float(res['mapped']))
-        return res
-    return {}

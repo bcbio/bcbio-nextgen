@@ -127,7 +127,7 @@ LOOKUPS = {
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
-    "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
+    "target_cov_stats": {"keys": ["regions", "target_cov_stats"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],

@@ -34,7 +34,7 @@ def sample_callable_bed(bam_file, ref_file, data):
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        coverage_file, callable_bed, highdepth_bed, median_cov = coverage.calculate(bam_file, data)
+        coverage_file, callable_bed, highdepth_bed, avg_cov = coverage.calculate(bam_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -46,29 +46,43 @@ def sample_callable_bed(bam_file, ref_file, data):
                         filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
-    return CovInfo(out_file, highdepth_bed, median_cov, coverage_file)
+    return CovInfo(out_file, highdepth_bed, avg_cov, coverage_file)
 
-def calculate_offtarget(bam_file, ref_file, data):
+def calculate_target_coverage_metrics(bam_file, data):
     """Generate file of offtarget read counts for inputs with variant regions.
     """
     vrs_file = dd.get_variant_regions_merged(data)
     if vrs_file:
-        out_file = "%s-offtarget-stats.yaml" % os.path.splitext(bam_file)[0]
+        out_file = "%s-target-cov-stats.yaml" % os.path.splitext(bam_file)[0]
+        offtarget_out_file = "%s-offtarget-stats.yaml" % os.path.splitext(bam_file)[0]
         if not utils.file_exists(out_file):
-            with file_transaction(data, out_file) as tx_out_file:
-                offtarget_regions = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
-                ref_bed = get_ref_bedtool(ref_file, data["config"])
-                ref_bed.subtract(pybedtools.BedTool(vrs_file), nonamecheck=True).saveas(offtarget_regions)
-                samtools = config_utils.get_program("samtools", data["config"])
-                bedtools = config_utils.get_program("bedtools", data["config"])
-                cmd = ("{samtools} view -u {bam_file} -L {offtarget_regions} | "
-                       "{bedtools} intersect -abam - -b {offtarget_regions} -f 1.0 -bed | wc -l")
-                offtarget_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
-                cmd = "{samtools} idxstats {bam_file} | awk '{{s+=$3}} END {{print s}}'"
-                mapped_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+            with file_transaction(data, out_file) as tx_out_file, \
+                 file_transaction(data, offtarget_out_file) as tx_offtarget_file:
+                sambamba = config_utils.get_program("sambamba", data["config"])
+
+                cmd = "{sambamba} view -c -F \"\" {bam_file}"
+                total_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                cmd = "{sambamba} view -c -F \"not unmapped\" {bam_file}"
+                mapped_with_dups_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                cmd = "{sambamba} view -c -F \"not unmapped and not duplicate\" {bam_file}"
+                mapped_unique_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                cmd = "{sambamba} view -c -F \"not unmapped and not duplicate\" -L {vrs_file} {bam_file}"
+                ontarget_count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                offtarget_count = mapped_unique_count - ontarget_count
+
                 with open(tx_out_file, "w") as out_handle:
-                    yaml.safe_dump({"mapped": mapped_count, "offtarget": offtarget_count}, out_handle,
-                                   allow_unicode=False, default_flow_style=False)
+                    yaml.safe_dump({
+                        "total_reads": total_count,
+                        "mapped": mapped_with_dups_count,
+                        "mapped_unique": mapped_unique_count,
+                        "offtarget": offtarget_count,
+                    }, out_handle, allow_unicode=False, default_flow_style=False)
+                # For back compability:
+                with open(offtarget_out_file, "w") as out_handle:
+                    yaml.safe_dump({
+                        "mapped": mapped_unique_count,
+                        "offtarget": offtarget_count,
+                    }, out_handle, allow_unicode=False, default_flow_style=False)
         return out_file
 
 def get_ref_bedtool(ref_file, config, chrom=None):

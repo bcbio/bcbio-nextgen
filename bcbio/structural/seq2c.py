@@ -18,6 +18,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.structural import annotate, regions
 from bcbio.log import logger
+from bcbio.variation.coverage import run_sambamba_coverage_depth
 
 
 def precall(items):
@@ -139,19 +140,11 @@ def _split_cnv(items, calls_fpath):
         item["sv"][0]["calls"] = out_fname
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
-    sambamba_depth_file = os.path.join(work_dir, sample_name + '-sambamba_depth.tsv')
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    num_cores = dd.get_cores(data)
-    if not utils.file_exists(sambamba_depth_file):
-        with file_transaction(data, sambamba_depth_file) as tx_out_file:
-            cmd = ("{sambamba} depth region -t {num_cores} "
-                   "-F \"\" -L {bed_file} {bam_file} -o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Calling sambamba region depth")
-    logger.debug("Saved to " + sambamba_depth_file)
+    sambamba_depth_file = run_sambamba_coverage_depth(data, bed_file, bam_file)
 
     out_file = os.path.join(work_dir, sample_name + '-coverage.tsv')
     if not utils.file_exists(out_file):
-        logger.debug('Converting sambamba depth output to cov2lr.pl input in ' + dd.get_sample_name(data))
+        logger.debug('Converting sambamba depth output to cov2lr.pl input in ' + sample_name)
         with file_transaction(data, out_file) as tx_out_file:
             _sambabma_depth_to_seq2cov(sambamba_depth_file, tx_out_file, sample_name)
     logger.debug("Saved to " + out_file)
