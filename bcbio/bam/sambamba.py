@@ -35,12 +35,15 @@ def work_dir(data):
 
 def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_name=None):
     if not keep_dups:
-        query += " and not duplicate"
-    cmd_name = "num_" + (query.replace(" ", "_") or "reads")
+        if query:
+            query += " and not duplicate"
+        else:
+            query = "not duplicate"
+    cmd_id = "num_" + (query.replace(" ", "_") or "reads")
     if bed_file is not None:
         target_name = target_name or os.path.basename(bed_file)
-        cmd_name += "_on_" + target_name
-    output_file = os.path.join(work_dir(data), cmd_name)
+        cmd_id += "_on_" + target_name
+    output_file = os.path.join(work_dir(data), cmd_id)
 
     if not utils.file_uptodate(output_file, bam_file):
         index(data, bam_file)

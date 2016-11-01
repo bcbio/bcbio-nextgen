@@ -82,6 +82,8 @@ def calculate(bam_file, data):
     out_file = prefix + ".depth.bed"
     callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
+    logger.debug("variant_regions: " + str(variant_regions) + ", variant_regions_merged: " +
+                 str(dd.get_variant_regions(data)) + " calculationg average coverage of " + str(bam_file))
     variant_regions_avg_cov = get_average_coverage(data, bam_file, variant_regions,
                                                    "variant_regions", file_prefix=prefix)
     if not utils.file_uptodate(out_file, bam_file):
@@ -128,6 +130,8 @@ def _get_max_depth(average_coverage, params, data):
         return avg_cov * params["high_multiplier"]
 
 def get_average_coverage(data, bam_file, bed_file=None, target_name="genome", file_prefix=None):
+    logger.debug("Calculation average coverage of " + bam_file +
+                 " on " + target_name + ((" " + bed_file) if bed_file else ""))
     file_prefix = file_prefix or os.path.join(
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
         "%s-coverage" % (dd.get_sample_name(data)))
@@ -147,7 +151,7 @@ def get_average_coverage(data, bam_file, bed_file=None, target_name="genome", fi
 
 def _average_genome_coverage(data, bam_file):
     total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
-    read_counts = sambamba.number_of_reads(data, bam_file, keep_dups=False)
+    read_counts = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
     with pysam.Samfile(bam_file, "rb") as pysam_bam:
         read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), 1e5)))
     avg_cov = float(read_counts * read_size) / total
