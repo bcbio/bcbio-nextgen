@@ -65,7 +65,7 @@ def run(bam_file, data, out_dir):
             species = "MOUSE"
         if species in ["HUMAN", "MOUSE"]:
             cmd += " -gd {species}"
-        regions = bedutils.merge_overlaps(dd.get_variant_regions(data), data)
+        regions = bedutils.merge_overlaps(dd.get_coverage(data) or dd.get_variant_regions(data), data)
         if regions:
             bed6_regions = _bed_to_bed6(regions, out_dir)
             cmd += " -gff {bed6_regions}"

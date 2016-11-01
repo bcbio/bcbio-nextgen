@@ -168,27 +168,6 @@ def _report_summary(samples, out_dir):
                 shutil.move("report-ready.html", out_report)
     return samples
 
-def _get_coverage_per_region(name):
-    """
-    Parse coverage file if it exists to get average value.
-    """
-    fns = tz.get_in(["summary", "qc", "coverage"], name, {})
-    if fns:
-        fns = utils.flatten(fns.values())
-        fn = [fn for fn in fns if fn.find("coverage_fixed.bed") > -1]
-        if fn:
-            fn = fn[0]
-            if utils.file_exists(fn):
-                logger.debug("Reading meanCoverage for: %s" % fn)
-                try:
-                    dt = pd.read_csv(fn, sep="\t", index_col=False)
-                    if "meanCoverage" in dt:
-                        if len(dt["meanCoverage"]) > 0:
-                            return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
-                except TypeError:
-                    logger.debug("%s has no lines in coverage.bed" % name)
-    return "NA"
-
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
     """
@@ -243,8 +222,6 @@ def _merge_metrics(samples):
                     if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                         m.pop(me, None)
                 dt = pd.DataFrame(m, index=['1'])
-                dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
-                cov[sample_name] = dt['avg_coverage_per_region'][0]
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = sample_name
                 dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
@@ -258,8 +235,6 @@ def _merge_metrics(samples):
 
     out = []
     for s in samples:
-        if sample_name in cov:
-            s['summary']['metrics']['avg_coverage_per_region'] = cov[sample_name]
         out.append(s)
     return out
 

@@ -18,7 +18,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.structural import annotate, regions
 from bcbio.log import logger
-from bcbio.variation.coverage import run_sambamba_coverage_depth
+from bcbio.variation.coverage import regions_coverage
 
 
 def precall(items):
@@ -140,7 +140,7 @@ def _split_cnv(items, calls_fpath):
         item["sv"][0]["calls"] = out_fname
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
-    sambamba_depth_file = run_sambamba_coverage_depth(data, bed_file, bam_file)
+    sambamba_depth_file = regions_coverage(data, bed_file, bam_file, "sv_regions")
 
     out_file = os.path.join(work_dir, sample_name + '-coverage.tsv')
     if not utils.file_exists(out_file):
