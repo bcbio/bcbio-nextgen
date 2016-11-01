@@ -270,13 +270,16 @@ def _sort_by_region(fnames, regions, ref_file, config):
         contig_order[sq.name] = i
     sitems = []
     assert len(regions) == len(fnames), (regions, fnames)
+    added_fnames = set([])
     for region, fname in zip(regions, fnames):
-        if isinstance(region, (list, tuple)):
-            c, s, e = region
-        else:
-            c = region
-            s, e = 0, 0
-        sitems.append(((contig_order[c], s, e), fname))
+        if fname not in added_fnames:
+            if isinstance(region, (list, tuple)):
+                c, s, e = region
+            else:
+                c = region
+                s, e = 0, 0
+            sitems.append(((contig_order[c], s, e), fname))
+            added_fnames.add(fname)
     sitems.sort()
     return [x[1] for x in sitems]
 
