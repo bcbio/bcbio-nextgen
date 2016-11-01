@@ -337,6 +337,19 @@ def convert_to_bytes(mem_str):
     else:
         return int(mem_str)
 
+def adjust_cores_to_mb_target(target_mb, mem_str, cores):
+    """Scale core usage to match a Mb/core target.
+
+    Useful for memory dependent programs where we don't have control
+    over memory usage so need to scale cores.
+    """
+    cur_mb = convert_to_bytes(mem_str) / 1024.0
+    scale = target_mb / cur_mb
+    if scale >= 1:
+        return cores
+    else:
+        return max(1, int(math.ceil(scale * cores)))
+
 def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     """Adjust memory based on number of cores utilized.
     """

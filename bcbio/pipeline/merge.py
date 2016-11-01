@@ -69,6 +69,9 @@ def merge_bam_files(bam_files, work_dir, config, out_file=None, batch=None):
                         if bam.bam_already_sorted(bam_files[0], config, "coordinate"):
                             cmd = _sambamba_merge(bam_files)
                         else:
+                            # Aim for 3.5Gb/core memory for BAM merging
+                            num_cores = config_utils.adjust_cores_to_mb_target(
+                                3500, resources.get("memory", "2G"), num_cores)
                             assert config.get("mark_duplicates", True)
                             cmd = _biobambam_merge_dedup()
                         do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
