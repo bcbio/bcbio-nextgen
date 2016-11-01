@@ -120,7 +120,7 @@ def _biobambam_dedup_sort(data, tx_out_file):
     if data.get("align_split"):
         cmd = "{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -"
     else:
-        cmd = ("bamsormadup inputformat=sam threads={cores} tempfile={tmp_file}-markdup "
+        cmd = ("bamsormadup inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "
                "SO=coordinate indexfilename={tx_out_file}.bai > {tx_out_file}")
     return cmd.format(**locals())
 
