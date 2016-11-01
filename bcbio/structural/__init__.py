@@ -26,7 +26,7 @@ _CALLERS = {
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _GLOBAL_BATCHING = set(["seq2c"])
 
-def _get_svcallers(data):
+def get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
     if svs is None:
         svs = []
@@ -37,7 +37,7 @@ def _get_svcallers(data):
 def _handle_multiple_svcallers(data, stage):
     """Retrieve configured structural variation caller, handling multiple.
     """
-    svs = _get_svcallers(data)
+    svs = get_svcallers(data)
     # special cases -- prioritization
     if stage == "ensemble" and dd.get_svprioritize(data):
         svs.append("prioritize")
@@ -176,5 +176,5 @@ def parallel_multiplier(items):
     """
     machines = []
     for data in (xs[0] for xs in items):
-        machines.append(max(1, len(_get_svcallers(data)), len(dd.get_algorithm_qc(data))))
+        machines.append(max(1, len(get_svcallers(data)), len(dd.get_algorithm_qc(data))))
     return sum(machines)

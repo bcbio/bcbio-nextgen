@@ -34,7 +34,7 @@ def tobam_cl(data, out_file, is_paired=False):
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
         elif umi_file:
             yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file), tx_out_file)
-        elif is_paired and not _too_many_contigs(dd.get_ref_file(data)):
+        elif is_paired and _need_sr_disc_reads(data) and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
             with file_transaction(data, sr_file) as tx_sr_file:
@@ -49,6 +49,15 @@ def _too_many_contigs(ref_file):
     """
     max_contigs = 32768
     return len(list(ref.file_contigs(ref_file))) >= max_contigs
+
+def _need_sr_disc_reads(data):
+    """Check if we need split and discordant reads in downstream processing.
+
+    We use samblaster when needed and otherwise use an approach that does not
+    extract these reads to be less resource intensive.
+    """
+    from bcbio import structural
+    return "lumpy" in structural.get_svcallers(data)
 
 def _get_cores_memory(data, downscale=2):
     """Retrieve cores and memory, using samtools as baseline.
@@ -103,20 +112,16 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     return cmd.format(**locals())
 
 def _biobambam_dedup_sort(data, tx_out_file):
-    """Perform streaming deduplication and sorting with biobambam's bammarkduplicates2.
+    """Perform streaming deduplication and sorting with biobambam's bamsormadup
     """
     samtools = config_utils.get_program("samtools", data["config"])
-    bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
         cmd = "{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -"
     else:
-        cmd = ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
-               "{bammarkduplicates} tmpfile={tmp_file}-markdup "
-               "markthreads={cores} level=0 | "
-               "{samtools} sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
-               "-o {tx_out_file} /dev/stdin")
+        cmd = ("bamsormadup inputformat=sam threads={cores} tempfile={tmp_file}-markdup "
+               "SO=coordinate indexfilename={tx_out_file}.bai > {tx_out_file}")
     return cmd.format(**locals())
 
 def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
