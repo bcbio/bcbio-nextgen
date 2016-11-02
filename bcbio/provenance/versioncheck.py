@@ -67,7 +67,8 @@ def java(items):
                     version = version[:-1]
         if (not version or LooseVersion(version) >= LooseVersion(max_version) or
             LooseVersion(version) < LooseVersion(min_version)):
-            return ("java version %s required for running MuTect and GATK < 3.6. "
+            return ("java version %s required for running MuTect and GATK < 3.6.\n"
+                    "It needs to be first on your PATH so running 'java -version' give the correct version.\n"
                     "Found version %s at %s" % (min_version, version, java))
 
 def testall(items):

@@ -49,8 +49,10 @@ bcbio:
 
 Optional requirements:
 
-- Java 1.7, when running GATK < 3.6. bcbio distributes Java 8 as part of the
-  anaconda installation for recent versions of GATK.
+- Java 1.7, needed when running GATK < 3.6 or MuTect. This must be available in
+  your path so typing ``java -version`` resolves a 1.7 version. bcbio
+  distributes Java 8 as part of the anaconda installation for recent versions of
+  GATK and MuTect2.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
