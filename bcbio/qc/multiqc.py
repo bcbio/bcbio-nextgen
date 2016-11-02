@@ -8,7 +8,10 @@ import mimetypes
 import os
 import pandas as pd
 import shutil
+
+import pybedtools
 import toolz as tz
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -16,6 +19,8 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
+from bcbio.bam import ref
+from bcbio.structural import annotate, regions
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -37,6 +42,7 @@ def summary(*samples):
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
             file_fapths.extend(pfiles)
+    file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
     # XXX temporary workaround until we can handle larger inputs through MultiQC
     file_fapths = list(set(file_fapths))
     # Back compatible -- to migrate to explicit specifications in input YAML
@@ -71,7 +77,7 @@ def summary(*samples):
     return [[fpath] for fpath in out]
 
 def _create_list_file(paths):
-    out_file = "list_files.txt"
+    out_file = os.path.join(os.getcwd(), "list_files.txt")
     is_any = False
     with open(out_file, "w") as outh:
         for f in paths:
@@ -126,6 +132,9 @@ def _report_summary(samples, out_dir):
 
         logger.info("summarize metrics")
         samples = _merge_metrics(samples)
+
+        logger.info("summarize target information")
+        samples = _merge_target_information(samples)
 
         out_dir = utils.safe_makedir("coverage")
         logger.info("summarize coverage")
@@ -263,4 +272,58 @@ def _merge_fastqc(samples):
             dt_by_sample.append(dt)
         dt = utils.rbind(dt_by_sample)
         dt.to_csv(metric, sep="\t", index=False, mode ='w')
+    return samples
+
+def _merge_target_information(samples):
+    out_file = os.path.join("metrics", "target_info.yaml")
+    if utils.file_exists(out_file):
+        return samples
+
+    genomes = set(dd.get_genome_build(data) for data in samples)
+    coverage_beds = set(dd.get_coverage(data) for data in samples)
+    variant_regions = set(dd.get_variant_regions(data) for data in samples)
+
+    data = samples[0]
+    info = {}
+
+    # Reporting in MultiQC only if the genome is the sample across samples
+    if len(genomes) == 1:
+        info["genome_info"] = {
+            "name": dd.get_genome_build(data),
+            "size": sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])]),
+        }
+
+    # Reporting in MultiQC only if the target is the sample across samples
+    vcr = None
+    if len(variant_regions) == 1:
+        vcr = dd.get_variant_regions_orig(data)
+        vcr_merged = dd.get_variant_regions_merged(data)
+        vcr_ann = annotate.add_genes(vcr, data)
+        info["variants_regions_info"] = {
+            "bed": variant_regions,
+            "size": sum(len(x) for x in pybedtools.BedTool(vcr_merged)),
+            "regions": pybedtools.BedTool(vcr).count(),
+            "genes": len(list(set(r.name for r in pybedtools.BedTool(vcr_ann) if r.name and r.name != "."))),
+        }
+    elif len(variant_regions) == 0:
+        info["variants_regions_info"] = {"bed": None}
+
+    # Reporting in MultiQC only if the target is the sample across samples
+    if len(coverage_beds) == 1:
+        bed = dd.get_coverage(data)
+        if vcr and vcr == bed:
+            info["coverage_bed_info"] = info["variants_regions_info"]
+        elif bed:
+            ann_bed = annotate.add_genes(bed, data)
+            info["coverage_bed_info"] = {
+                "bed": bed,
+                "size": pybedtools.BedTool(bed).total_coverage(),
+                "regions": pybedtools.BedTool(bed).count(),
+                "genes": len(list(set(r.name for r in pybedtools.BedTool(ann_bed) if r.name and r.name != "."))),
+            }
+
+    if info:
+        with open(out_file, "w") as out_handle:
+            yaml.safe_dump(info, out_handle)
+
     return samples

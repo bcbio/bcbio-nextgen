@@ -120,6 +120,7 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
+    "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
     "callable_regions": {"keys": ["regions", "callable"]},
     "avg_coverage": {"keys": ["regions", "avg_coverage"]},
     "coverage_bed": {"keys": ["regions", "coverage_bed"]},

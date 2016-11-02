@@ -82,8 +82,6 @@ def calculate(bam_file, data):
     out_file = prefix + ".depth.bed"
     callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
-    logger.debug("variant_regions: " + str(variant_regions) + ", variant_regions_merged: " +
-                 str(dd.get_variant_regions(data)) + " calculationg average coverage of " + str(bam_file))
     variant_regions_avg_cov = get_average_coverage(data, bam_file, variant_regions,
                                                    "variant_regions", file_prefix=prefix)
     if not utils.file_uptodate(out_file, bam_file):
