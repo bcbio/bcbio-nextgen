@@ -55,8 +55,8 @@ def assign_interval(data):
             else:
                 with open(offtarget_stats_file) as in_handle:
                     stats = yaml.safe_load(in_handle)
-                if float(stats["mapped_unique"]) > 0:
-                    offtarget_pct = stats["offtarget"] / float(stats["mapped_unique"])
+                if stats.get("offtarget") and stats["mapped_unique"]:
+                    offtarget_pct = float(stats["offtarget"]) / stats["mapped_unique"]
                 else:
                     offtarget_pct = 0.0
             if offtarget_pct > offtarget_thresh:
@@ -454,7 +454,7 @@ def regions_coverage(data, bed_file, bam_file, target_name):
         return out_file
     with file_transaction(out_file) as tx_out_file:
         cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file) + " -o " + tx_out_file
-        message = "Calculating coverage of {target_name} regions in {bam_file}"
+        message = "Calculating regions coverage of {target_name} in {bam_file}"
         do.run(cmdl, message.format(**locals()))
     return out_file
 
@@ -475,7 +475,7 @@ def priority_coverage(data, out_dir):
         cmdl = sambamba.make_command(data, "depth base", in_bam, cleaned_bed)
         parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
         cmdl += " | {parse_cmd} > {tx_out_file}"
-        message = "Calculating coverage of {bed_file} regions in {in_bam}"
+        message = "Calculating base coverage of {bed_file} in {in_bam}"
         do.run(cmdl.format(**locals()), message.format(**locals()))
     return out_file
 
@@ -497,7 +497,7 @@ def priority_total_coverage(data, out_dir):
     cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed,
                                  depth_thresholds=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
     with file_transaction(out_file) as tx_out_file:
-        message = "Calculating coverage of {bed_file} regions in {in_bam}"
+        message = "Calculating region coverage of {bed_file} in {in_bam}"
         do.run(cmdl + " -o " + tx_out_file, message.format(**locals()))
     logger.debug("Saved svprioritize coverage into " + out_file)
     return out_file
