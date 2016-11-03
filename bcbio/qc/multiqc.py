@@ -4,10 +4,14 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import mimetypes
 import os
 import pandas as pd
 import shutil
+
+import pybedtools
 import toolz as tz
+import yaml
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -15,6 +19,8 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
+from bcbio.bam import ref
+from bcbio.structural import annotate, regions
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -23,7 +29,7 @@ def summary(*samples):
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    folders = []
+    file_fapths = []
     opts = ""
     out_dir = os.path.join(work_dir, "multiqc")
     out_data = os.path.join(work_dir, "multiqc", "multiqc_data")
@@ -35,20 +41,21 @@ def summary(*samples):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
-            folders.extend(pfiles)
+            file_fapths.extend(pfiles)
+    file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
     # XXX temporary workaround until we can handle larger inputs through MultiQC
-    folders = list(set(folders))
+    file_fapths = list(set(file_fapths))
     # Back compatible -- to migrate to explicit specifications in input YAML
-    folders += ["trimmed", "htseq-count/*summary"]
+    file_fapths += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            input_dir = [_check_multiqc_input(d) for d in folders]
-            input_dir = _create_list_file(input_dir)
+            file_fapths = [fpath for fpath in file_fapths if _check_multiqc_input(fpath) and _is_good_file_for_multiqc(fpath)]
+            input_list_file = _create_list_file(file_fapths)
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            if input_dir:
-                cmd = "{export_tmp} {multiqc} -f -l {input_dir} -o {tx_out} {opts}"
+            if input_list_file:
+                cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
@@ -67,13 +74,13 @@ def summary(*samples):
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
         out.append(data)
-    return [[d] for d in out]
+    return [[fpath] for fpath in out]
 
-def _create_list_file(dirs):
-    out_file = "list_files.txt"
+def _create_list_file(paths):
+    out_file = os.path.join(os.getcwd(), "list_files.txt")
     is_any = False
     with open(out_file, "w") as outh:
-        for f in dirs:
+        for f in paths:
             if f:
                 is_any = True
                 print >>outh, f
@@ -82,12 +89,22 @@ def _create_list_file(dirs):
     return out_file
 
 def _check_multiqc_input(path):
-    """Check if dir exists, and return empty if it doesn't"""
+    """Check if file exists, and return empty if it doesn't"""
     if utils.file_exists(path):
         if path.find("bcfstats") == -1:
             return path
 
 # ## report and coverage
+
+def _is_good_file_for_multiqc(fapth):
+    """Returns False if the file is binary or image."""
+    # Use mimetypes to exclude binary files where possible
+    (ftype, encoding) = mimetypes.guess_type(fapth)
+    if encoding is not None:
+        return False
+    if ftype is not None and ftype.startswith('image'):
+        return False
+    return True
 
 def _report_summary(samples, out_dir):
     """
@@ -115,6 +132,9 @@ def _report_summary(samples, out_dir):
 
         logger.info("summarize metrics")
         samples = _merge_metrics(samples)
+
+        logger.info("summarize target information")
+        samples = _merge_target_information(samples)
 
         out_dir = utils.safe_makedir("coverage")
         logger.info("summarize coverage")
@@ -156,27 +176,6 @@ def _report_summary(samples, out_dir):
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)
     return samples
-
-def _get_coverage_per_region(name):
-    """
-    Parse coverage file if it exists to get average value.
-    """
-    fns = tz.get_in(["summary", "qc", "coverage"], name, {})
-    if fns:
-        fns = utils.flatten(fns.values())
-        fn = [fn for fn in fns if fn.find("coverage_fixed.bed") > -1]
-        if fn:
-            fn = fn[0]
-            if utils.file_exists(fn):
-                logger.debug("Reading meanCoverage for: %s" % fn)
-                try:
-                    dt = pd.read_csv(fn, sep="\t", index_col=False)
-                    if "meanCoverage" in dt:
-                        if len(dt["meanCoverage"]) > 0:
-                            return "%.3f" % (sum(map(float, dt['meanCoverage'])) / len(dt['meanCoverage']))
-                except TypeError:
-                    logger.debug("%s has no lines in coverage.bed" % name)
-    return "NA"
 
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
@@ -232,8 +231,6 @@ def _merge_metrics(samples):
                     if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                         m.pop(me, None)
                 dt = pd.DataFrame(m, index=['1'])
-                dt['avg_coverage_per_region'] = _get_coverage_per_region(s)
-                cov[sample_name] = dt['avg_coverage_per_region'][0]
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = sample_name
                 dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
@@ -247,8 +244,6 @@ def _merge_metrics(samples):
 
     out = []
     for s in samples:
-        if sample_name in cov:
-            s['summary']['metrics']['avg_coverage_per_region'] = cov[sample_name]
         out.append(s)
     return out
 
@@ -277,4 +272,58 @@ def _merge_fastqc(samples):
             dt_by_sample.append(dt)
         dt = utils.rbind(dt_by_sample)
         dt.to_csv(metric, sep="\t", index=False, mode ='w')
+    return samples
+
+def _merge_target_information(samples):
+    out_file = os.path.join("metrics", "target_info.yaml")
+    if utils.file_exists(out_file):
+        return samples
+
+    genomes = set(dd.get_genome_build(data) for data in samples)
+    coverage_beds = set(dd.get_coverage(data) for data in samples)
+    variant_regions = set(dd.get_variant_regions(data) for data in samples)
+
+    data = samples[0]
+    info = {}
+
+    # Reporting in MultiQC only if the genome is the sample across samples
+    if len(genomes) == 1:
+        info["genome_info"] = {
+            "name": dd.get_genome_build(data),
+            "size": sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])]),
+        }
+
+    # Reporting in MultiQC only if the target is the sample across samples
+    vcr = None
+    if len(variant_regions) == 1:
+        vcr = dd.get_variant_regions_orig(data)
+        vcr_merged = dd.get_variant_regions_merged(data)
+        vcr_ann = annotate.add_genes(vcr, data)
+        info["variants_regions_info"] = {
+            "bed": variant_regions,
+            "size": sum(len(x) for x in pybedtools.BedTool(vcr_merged)),
+            "regions": pybedtools.BedTool(vcr).count(),
+            "genes": len(list(set(r.name for r in pybedtools.BedTool(vcr_ann) if r.name and r.name != "."))),
+        }
+    elif len(variant_regions) == 0:
+        info["variants_regions_info"] = {"bed": None}
+
+    # Reporting in MultiQC only if the target is the sample across samples
+    if len(coverage_beds) == 1:
+        bed = dd.get_coverage(data)
+        if vcr and vcr == bed:
+            info["coverage_bed_info"] = info["variants_regions_info"]
+        elif bed:
+            ann_bed = annotate.add_genes(bed, data)
+            info["coverage_bed_info"] = {
+                "bed": bed,
+                "size": pybedtools.BedTool(bed).total_coverage(),
+                "regions": pybedtools.BedTool(bed).count(),
+                "genes": len(list(set(r.name for r in pybedtools.BedTool(ann_bed) if r.name and r.name != "."))),
+            }
+
+    if info:
+        with open(out_file, "w") as out_handle:
+            yaml.safe_dump(info, out_handle)
+
     return samples

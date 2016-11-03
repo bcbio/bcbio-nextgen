@@ -193,12 +193,13 @@ def postprocess_alignment(data):
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(covinfo.callable, bam_file_ready, ref_file, data)
-        offtarget_stats = callable.calculate_offtarget(bam_file_ready, ref_file, data)
+        vrs_file = dd.get_variant_regions_merged(data)
+        offtarget_stats = callable.calculate_offtarget_stats(bam_file_ready, data, vrs_file, "variant_regions")
         data["regions"] = {"nblock": nblock_bed, "callable": callable_bed,
                            "highdepth": covinfo.highdepth,
                            "sample_callable": covinfo.callable,
                            "coverage_bed": covinfo.coverage,
-                           "median_cov": covinfo.median_cov,
+                           "avg_coverage": covinfo.avg_coverage,
                            "offtarget_stats": offtarget_stats}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and

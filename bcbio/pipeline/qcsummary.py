@@ -10,6 +10,7 @@ from datetime import datetime
 
 import toolz as tz
 
+from bcbio.variation.bedutils import clean_file
 from bcbio import bam, utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
@@ -17,6 +18,10 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
+from bcbio.bam.callable import calculate_offtarget_stats
+from bcbio.variation.coverage import get_average_coverage
+from bcbio.variation import bedutils
+
 
 # ## High level functions to generate summary
 
@@ -143,7 +148,8 @@ def _organize_qc_files(program, qc_dir):
             if os.path.isfile(fname):
                 out_files.append(fname)
             elif os.path.isdir(fname) and not fname.endswith("tx"):
-                out_files.extend([os.path.join(fname, x) for x in os.listdir(fname)])
+                for root, dirs, files in os.walk(fname):
+                    out_files.extend([os.path.join(root, x) for x in files])
         if len(out_files) > 0:
             if len(out_files) == 1:
                 base = out_files[0]
@@ -233,7 +239,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     """
     cur_descriptions = set([s[0]["description"] for s in cur_samples])
     out = []
-    if os.path.exists(summary_file):
+    if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
             for s in yaml.load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
@@ -291,13 +297,46 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
 
 def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
+    out = dict()
+    if dd.get_coverage(data):
+        bed_file = bedutils.merge_overlaps(dd.get_coverage(data), data)
+        target_name = "coverage"
+    elif dd.get_variant_regions_merged(data):
+        bed_file = dd.get_variant_regions_merged(data)
+        target_name = "variant_regions"
+    else:
+        bed_file = None
+        target_name = "wgs"
+
+    bed_file = clean_file(bed_file, data, prefix="cov-", simple=True)
+    offtarget_stats_file = calculate_offtarget_stats(bam_file, data, bed_file, target_name)
+    if offtarget_stats_file and utils.file_exists(offtarget_stats_file):
+        with open(offtarget_stats_file) as in_handle:
+            stats = yaml.safe_load(in_handle)
+        offtarget = stats.get('offtarget')
+        mapped_unique = stats['mapped_unique']
+        if offtarget and mapped_unique:
+            out['offtarget_rate'] = 1.0 * offtarget / mapped_unique
+        mapped = stats['mapped']
+        if mapped:
+            out['Duplicates'] = mapped - mapped_unique
+            out['Duplicates_pct'] = 1.0 * (mapped - mapped_unique) / mapped
+        total_reads = stats['total_reads']
+        if total_reads:
+            out['usable_rate'] = 1.0 * (mapped_unique - offtarget) / total_reads
+
+    avg_coverage = get_average_coverage(data, bam_file, bed_file, target_name)
+    out['avg_coverage'] = avg_coverage
+
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
-    coverage = cov.coverage(data, out_dir)
+    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir)
     # Re-enable with annotations from internally installed
     # problem region directory
     # if priority:
     #    annotated = cov.decorate_problem_regions(priority, problem_regions)
+
+    return out
 
 def _run_variants_qc(bam_file, data, out_dir):
     """Run variants QC analysis"""

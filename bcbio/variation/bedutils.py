@@ -148,6 +148,7 @@ def clean_inputs(data):
     """
     clean_vr = clean_file(utils.get_in(data, ("config", "algorithm", "variant_regions")), data)
     merged_vr = merge_overlaps(clean_vr, data)
+    data["config"]["algorithm"]["variant_regions_orig"] = utils.get_in(data, ("config", "algorithm", "variant_regions"))
     data["config"]["algorithm"]["variant_regions"] = clean_vr
     data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
     return data
