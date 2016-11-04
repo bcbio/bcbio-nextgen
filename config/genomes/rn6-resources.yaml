@@ -1,4 +1,4 @@
-version: 3
+version: 4
 
 aliases:
   ensembl: rattus_norvegicus_vep_83_Rnor_6.0
@@ -11,3 +11,9 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+srnaseq:
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+ 
