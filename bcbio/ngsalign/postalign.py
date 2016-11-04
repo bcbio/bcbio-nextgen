@@ -130,10 +130,8 @@ def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 1)
     cores, mem = _get_cores_memory(data)
-    cmd = ("samblaster -M --addMateTags | "
-           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
-           "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
-           "-o {tx_out_file} /dev/stdin")
+    cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=sam SO=coordinate | "
+           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o {tx_out_file}")
     return cmd.format(**locals())
 
 def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
