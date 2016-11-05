@@ -48,7 +48,9 @@ def add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000)
     distance_filter = (r"""awk -F$'\t' -v OFS='\t' '{if ($NF > %s) $%s = "."} {print}'""" %
                        (max_distance, gene_index))
     sort_cmd = bedutils.get_sort_cmd()
-    cmd = ("{sort_cmd} -k1,1 -k2,2n {in_file} | "
+    cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+    cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
+           "{sort_cmd} -k1,1 -k2,2n | "
             "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
             "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
             "{distance_filter} | cut -f 1-{max_column} | "
