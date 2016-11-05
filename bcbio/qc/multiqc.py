@@ -234,7 +234,7 @@ def _merge_metrics(samples):
                 dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
                 dt['sample'] = sample_name
                 dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-                df = _fix_duplicated_rate(dt)
+                dt = _fix_duplicated_rate(dt)
                 dt.transpose().to_csv(sample_file, sep="\t", header=False)
                 dt_together.append(dt)
                 s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
@@ -275,13 +275,13 @@ def _merge_fastqc(samples):
     return samples
 
 def _merge_target_information(samples):
-    out_file = os.path.join("metrics", "target_info.yaml")
+    out_file = os.path.abspath(os.path.join("metrics", "target_info.yaml"))
     if utils.file_exists(out_file):
         return samples
 
     genomes = set(dd.get_genome_build(data) for data in samples)
     coverage_beds = set(dd.get_coverage(data) for data in samples)
-    variant_regions = set(dd.get_variant_regions(data) for data in samples)
+    original_variant_regions = set(dd.get_variant_regions_orig(data) for data in samples)
 
     data = samples[0]
     info = {}
@@ -294,33 +294,40 @@ def _merge_target_information(samples):
         }
 
     # Reporting in MultiQC only if the target is the sample across samples
-    vcr = None
-    if len(variant_regions) == 1:
-        vcr = dd.get_variant_regions_orig(data)
-        vcr_merged = dd.get_variant_regions_merged(data)
-        vcr_ann = annotate.add_genes(vcr, data)
+    vcr_orig = None
+    if len(original_variant_regions) == 1 and list(original_variant_regions)[0] is not None:
+        vcr_orig = list(original_variant_regions)[0]
+        vcr_ann = annotate.add_genes(vcr_orig, data)
         info["variants_regions_info"] = {
-            "bed": variant_regions,
-            "size": sum(len(x) for x in pybedtools.BedTool(vcr_merged)),
-            "regions": pybedtools.BedTool(vcr).count(),
+            "bed": vcr_orig,
+            "size": sum(len(x) for x in pybedtools.BedTool(dd.get_variant_regions_merged(data))),
+            "regions": pybedtools.BedTool(vcr_orig).count(),
             "genes": len(list(set(r.name for r in pybedtools.BedTool(vcr_ann) if r.name and r.name != "."))),
         }
-    elif len(variant_regions) == 0:
-        info["variants_regions_info"] = {"bed": None}
-
+    else:
+        info["variants_regions_info"] = {
+            "bed": "callable regions",
+        }
     # Reporting in MultiQC only if the target is the sample across samples
     if len(coverage_beds) == 1:
-        bed = dd.get_coverage(data)
-        if vcr and vcr == bed:
+        cov_bed = list(coverage_beds)[0]
+        if cov_bed is not None:
+            if vcr_orig and vcr_orig == cov_bed:
+                info["coverage_bed_info"] = info["variants_regions_info"]
+            else:
+                ann_bed = annotate.add_genes(cov_bed, data)
+                info["coverage_bed_info"] = {
+                    "bed": cov_bed,
+                    "size": pybedtools.BedTool(cov_bed).total_coverage(),
+                    "regions": pybedtools.BedTool(cov_bed).count(),
+                    "genes": len(list(set(r.name for r in pybedtools.BedTool(ann_bed) if r.name and r.name != "."))),
+                }
+        else:
             info["coverage_bed_info"] = info["variants_regions_info"]
-        elif bed:
-            ann_bed = annotate.add_genes(bed, data)
-            info["coverage_bed_info"] = {
-                "bed": bed,
-                "size": pybedtools.BedTool(bed).total_coverage(),
-                "regions": pybedtools.BedTool(bed).count(),
-                "genes": len(list(set(r.name for r in pybedtools.BedTool(ann_bed) if r.name and r.name != "."))),
-            }
+
+    coverage_intervals = set(data["config"]["algorithm"]["coverage_interval"] for data in samples)
+    if len(coverage_intervals) == 1:
+        info["coverage_interval"] = list(coverage_intervals)[0]
 
     if info:
         with open(out_file, "w") as out_handle:

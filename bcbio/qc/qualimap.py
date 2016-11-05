@@ -71,7 +71,8 @@ def run(bam_file, data, out_dir):
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
 
-    return _parse_qualimap_metrics(report_file, data)
+    # return _parse_qualimap_metrics(report_file, data)
+    return dict()
 
 def _parse_qualimap_metrics(report_file, data):
     """Extract useful metrics from the qualimap HTML report file.
@@ -166,11 +167,12 @@ def _parse_metrics(metrics):
     # missing = set(["Genes Detected", "Transcripts Detected", "Mean Per Base Cov."])
     correct = set(["rRNA", "rRNA_rate"])
     percentages = set(["Intergenic pct", "Intronic pct", "Exonic pct"])
-    to_change = dict({"5'-3' bias": 1, "Intergenic pct": "Intergenic Rate",
+    to_change = dict({"5'-3' bias": 1,
+                      "Intergenic pct": "Intergenic Rate",
                       "Intronic pct": "Intronic Rate",
                       "Exonic pct": "Exonic Rate",
                       "Duplication Rate of Mapped": 1,
-                      "Average insert size": 1,
+                      "Average_insert_size": 1,
                       })
     total = ["Not aligned", "Aligned to genes", "No feature assigned"]
 
@@ -302,7 +304,7 @@ def run_rnaseq(bam_file, data, out_dir):
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
     metrics.update(_detect_rRNA(data))
-    metrics.update({"Average insert size": bam.estimate_fragment_size(bam_file)})
+    metrics.update({"Average_insert_size": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
     return metrics
 

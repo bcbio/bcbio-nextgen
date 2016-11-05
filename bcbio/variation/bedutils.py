@@ -146,9 +146,10 @@ def clean_inputs(data):
 
     Per-merges inputs to avoid needing to call multiple times during later parallel steps.
     """
-    clean_vr = clean_file(utils.get_in(data, ("config", "algorithm", "variant_regions")), data)
+    if not utils.get_in(data, ("config", "algorithm", "variant_regions_orig")):
+        data["config"]["algorithm"]["variant_regions_orig"] = dd.get_variant_regions(data)
+    clean_vr = clean_file(dd.get_variant_regions(data), data)
     merged_vr = merge_overlaps(clean_vr, data)
-    data["config"]["algorithm"]["variant_regions_orig"] = utils.get_in(data, ("config", "algorithm", "variant_regions"))
     data["config"]["algorithm"]["variant_regions"] = clean_vr
     data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
     return data
@@ -182,3 +183,15 @@ def intersect_two(f1, f2, work_dir, data):
                 cmd = "bedtools intersect -a {f1} -b {f2} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Intersect BED files", data)
         return out_file
+
+def get_padded_bed_file(bed_file, padding, data, bedprep_dir=None):
+    if not bedprep_dir:
+        bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
+    out_file = os.path.join(bedprep_dir, "%s-padded.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
+    if utils.file_uptodate(out_file, bed_file):
+        return out_file
+    fai_file = ref.fasta_idx(dd.get_ref_file(data))
+    with file_transaction(data, out_file) as tx_out_file:
+        cmd = "bedtools slop -i {bed_file} -g {fai_file} -b {padding} > {tx_out_file}"
+        do.run(cmd.format(**locals()), "Pad BED file", data)
+    return out_file

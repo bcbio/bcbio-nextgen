@@ -37,28 +37,22 @@ def assign_interval(data):
     genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
     offtarget_thresh = 0.05  # percent of offtarget reads required to be capture (not amplification) based
     if not dd.get_coverage_interval(data):
-        vrs = dd.get_variant_regions(data)
+        vrs = dd.get_variant_regions_merged(data)
         callable_file = dd.get_sample_callable(data)
         if vrs:
-            seq_size = pybedtools.BedTool(vrs).total_coverage()
+            callable_size = pybedtools.BedTool(vrs).total_coverage()
         else:
-            seq_size = pybedtools.BedTool(callable_file).total_coverage()
+            callable_size = pybedtools.BedTool(callable_file).total_coverage()
         total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
-        genome_cov_pct = seq_size / float(total_size)
+        genome_cov_pct = callable_size / float(total_size)
         if genome_cov_pct > genome_cov_thresh:
             cov_interval = "genome"
             offtarget_pct = 0.0
+        elif not vrs:
+            cov_interval = "regional"
+            offtarget_pct = 0.0
         else:
-            offtarget_stats_file = dd.get_offtarget_stats(data)
-            if not offtarget_stats_file:
-                offtarget_pct = 0.0
-            else:
-                with open(offtarget_stats_file) as in_handle:
-                    stats = yaml.safe_load(in_handle)
-                if stats.get("offtarget") and stats["mapped_unique"]:
-                    offtarget_pct = float(stats["offtarget"]) / stats["mapped_unique"]
-                else:
-                    offtarget_pct = 0.0
+            offtarget_pct = _count_offtarget(data, data["work_bam"], vrs or callable_file, "variant_regions")
             if offtarget_pct > offtarget_thresh:
                 cov_interval = "regional"
             else:
@@ -67,6 +61,14 @@ def assign_interval(data):
                     % (dd.get_sample_name(data), cov_interval, genome_cov_pct * 100.0, offtarget_pct * 100.0))
         data["config"]["algorithm"]["coverage_interval"] = cov_interval
     return data
+
+def _count_offtarget(data, bam_file, bed_file, target_name):
+    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+    ontarget = sambamba.number_mapped_reads_on_target(
+        data, bed_file, bam_file, keep_dups=False, target_name=target_name)
+    if mapped_unique:
+        return float(mapped_unique - ontarget) / mapped_unique
+    return 0.0
 
 def calculate(bam_file, data):
     """Calculate coverage in parallel using samtools depth through goleft.
