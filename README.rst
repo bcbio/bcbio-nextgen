@@ -119,7 +119,7 @@ Contributors
 - `Paul Tang`_, UCSF
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Vlad Saveliev`_, AstraZeneca
+- `Vlad Saveliev`_, Center for Algorithmic Biotechnology, St. Petersburg University
 
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
