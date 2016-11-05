@@ -163,7 +163,7 @@ def gatk_filter_rnaseq(data, vrn_file, out_file):
                   "--filterExpression", "\"'QD < 2.0'\"",
                   "--filterName", "QD",
                   "-o", tx_out_file]
-        jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data))
+        jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data), os.path.dirname(tx_out_file))
         do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params),
                "Filter variants.")
     return out_file

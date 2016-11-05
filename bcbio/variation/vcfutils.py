@@ -309,7 +309,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
                       "-V", input_file_list,
                       "-out", tx_out_file,
                       "-assumeSorted"]
-            jvm_opts = broad.get_gatk_framework_opts(config, include_gatk=False)
+            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), include_gatk=False)
             try:
                 do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Concat variant files", log_error=False)
             except subprocess.CalledProcessError as msg:
@@ -393,7 +393,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             if cores > 1:
                 params += ["-nt", min(cores, 4)]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            jvm_opts = broad.get_gatk_framework_opts(config, memscale=memscale)
+            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), memscale=memscale)
             do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)

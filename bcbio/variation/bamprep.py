@@ -38,7 +38,7 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
         runner = broad.runner_from_config(data["config"])
         return runner.cl_gatk(args, tmp_dir)
     else:
-        jvm_opts = broad.get_gatk_framework_opts(data["config"])
+        jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
         return broad.gatk_cmd("gatk-framework", jvm_opts, args)
 
 def _recal_has_reads(in_file):
