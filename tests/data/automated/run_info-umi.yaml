@@ -4,7 +4,6 @@ upload:
   dir: upload
 details:
   - algorithm:
-      align_split_size: false
       aligner: bwa
       recalibrate: false
       realign: false
