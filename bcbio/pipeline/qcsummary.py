@@ -9,6 +9,7 @@ import yaml
 from datetime import datetime
 
 import toolz as tz
+from bcbio.bam import sambamba
 
 from bcbio.variation.bedutils import clean_file
 from bcbio import bam, utils
@@ -18,7 +19,6 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
-from bcbio.bam.callable import calculate_offtarget_stats
 from bcbio.variation.coverage import get_average_coverage
 from bcbio.variation import bedutils
 
@@ -281,7 +281,7 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
     """
     out_file = os.path.join(utils.safe_makedir(os.path.join(data["dirs"]["work"], "researcher")),
                             "%s-summary.tsv" % run_info.clean_name(researcher))
-    metrics = ["Total reads", "Mapped reads", "Mapped reads pct", "Duplicates", "Duplicates pct"]
+    metrics = ["Total_reads", "Mapped_reads", "Mapped_reads_pct", "Duplicates", "Duplicates_pct"]
     with open(summary_yaml) as in_handle:
         with open(out_file, "w") as out_handle:
             writer = csv.writer(out_handle, dialect="excel-tab")
@@ -298,35 +298,43 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
 def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
     out = dict()
-    if dd.get_coverage(data):
-        bed_file = bedutils.merge_overlaps(dd.get_coverage(data), data)
-        target_name = "coverage"
-    elif dd.get_variant_regions_merged(data):
-        bed_file = dd.get_variant_regions_merged(data)
-        target_name = "variant_regions"
-    else:
-        bed_file = None
-        target_name = "wgs"
 
-    bed_file = clean_file(bed_file, data, prefix="cov-", simple=True)
-    offtarget_stats_file = calculate_offtarget_stats(bam_file, data, bed_file, target_name)
-    if offtarget_stats_file and utils.file_exists(offtarget_stats_file):
-        with open(offtarget_stats_file) as in_handle:
-            stats = yaml.safe_load(in_handle)
-        offtarget = stats.get('offtarget')
-        mapped_unique = stats['mapped_unique']
-        if offtarget and mapped_unique:
-            out['offtarget_rate'] = 1.0 * offtarget / mapped_unique
-        mapped = stats['mapped']
-        if mapped:
-            out['Duplicates'] = mapped - mapped_unique
-            out['Duplicates_pct'] = 1.0 * (mapped - mapped_unique) / mapped
-        total_reads = stats['total_reads']
+    total_reads = sambamba.number_of_reads(data, bam_file)
+    out['Total_reads'] = total_reads
+    mapped = sambamba.number_of_mapped_reads(data, bam_file)
+    out['Mapped_reads'] = mapped
+    if total_reads:
+        out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
+    if mapped:
+        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+        out['Mapped_unique_reads'] = mapped
+        mapped_dups = mapped - mapped_unique
+        out['Duplicates'] = mapped_dups
+        out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+
+        if dd.get_coverage(data):
+            bed_file = bedutils.merge_overlaps(dd.get_coverage(data), data)
+            target_name = "coverage"
+        else:
+            bed_file = dd.get_variant_regions_merged(data)
+            target_name = "variant_regions"
+
+        bed_file = clean_file(bed_file, data, prefix="cov-", simple=True)
+        ontarget = sambamba.number_mapped_reads_on_target(
+            data, bed_file, bam_file, keep_dups=False, target_name=target_name)
+        if mapped_unique:
+            out["Ontarget_unique_reads"] = ontarget
+            out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
+            out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
+            padded_bed_file = bedutils.get_padded_bed_file(bed_file, 200, data)
+            ontarget_padded = sambamba.number_mapped_reads_on_target(
+                data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
+            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:
-            out['usable_rate'] = 1.0 * (mapped_unique - offtarget) / total_reads
+            out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-    avg_coverage = get_average_coverage(data, bam_file, bed_file, target_name)
-    out['avg_coverage'] = avg_coverage
+        avg_coverage = get_average_coverage(data, bam_file, bed_file, target_name)
+        out['Avg_coverage'] = avg_coverage
 
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
