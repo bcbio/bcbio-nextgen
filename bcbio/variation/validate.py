@@ -122,7 +122,7 @@ def compare_to_rm(data):
         rm_interval_file = _gunzip(normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
                                                         toval_data),
                                    toval_data)
-        rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data,
+        rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data, prefix="validateregions-",
                                                bedprep_dir=utils.safe_makedir(os.path.join(base_dir, "bedprep")))
         rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data.get("genome_build"), base_dir, data)
         rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),

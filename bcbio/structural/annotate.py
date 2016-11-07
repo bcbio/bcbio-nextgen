@@ -25,12 +25,12 @@ def add_genes(in_file, data, max_distance=10000, work_dir=None):
         if not utils.file_uptodate(out_file, in_file):
             fai_file = ref.fasta_idx(dd.get_ref_file(data))
             with file_transaction(data, out_file) as tx_out_file:
-                add_genes_to_bed(in_file, gene_file, fai_file, tx_out_file, max_distance)
+                _add_genes_to_bed(in_file, gene_file, fai_file, tx_out_file, max_distance)
         return out_file
     else:
         return in_file
 
-def add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000):
+def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000):
     """Re-usable subcomponent that annotates BED file genes from another BED
     """
     input_rec = iter(pybedtools.BedTool(in_file)).next()
@@ -56,3 +56,32 @@ def add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000)
             "{distance_filter} | cut -f 1-{max_column} | "
             "bedtools merge -i - -c {columns} -o {ops} -delim ',' > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")
+
+def gene_one_per_line(in_file, data):
+    """Split comma-separated gene annotations (after add_genes). Leads to duplicated records.
+       Input:
+          chr1 100 200 F1,F2
+       Output:
+          chr1 100 200 F1
+          chr1 100 200 F2
+    """
+    if in_file:
+        # Report all duplicated annotations one-per-line
+        one_per_line_file = "%s-opl.bed" % utils.splitext_plus(in_file)[0]
+        if not utils.file_uptodate(one_per_line_file, in_file):
+            with file_transaction(data, one_per_line_file) as tx_out_file:
+                with open(tx_out_file, 'w') as out:
+                    for r in pybedtools.BedTool(in_file):
+                        for g in r.name.split(','):
+                            out.write('\t'.join(map(str, [r.chrom, r.start, r.end, g])) + '\n')
+        return one_per_line_file
+
+def count_genes(in_file, data):
+    if pybedtools.BedTool(in_file).field_count() <= 3:
+        ann_bed = add_genes(in_file, data)
+        ann_bed = gene_one_per_line(ann_bed, data)
+    else:
+        ann_bed = in_file
+    if ann_bed:
+        return len(list(set(r.name for r in pybedtools.BedTool(ann_bed)
+            if r.name and r.name != ".")))
