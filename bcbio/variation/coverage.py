@@ -488,7 +488,7 @@ def priority_total_coverage(data, out_dir):
     if not bed_file and not file_exists(bed_file) or prioritize.is_gene_list(bed_file):
         return {}
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    cleaned_bed = clean_file(bed_file, data)
+    cleaned_bed = clean_file(bed_file, data, prefix="svprioritize-")
     work_dir = safe_makedir(out_dir)
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, sample + "_priority_total_coverage.bed")

@@ -51,11 +51,15 @@ def check_bed_contigs(in_file, data):
 def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     """Prepare a clean sorted input BED file without headers
     """
+    # Remove non-ascii characters. Used in coverage analysis, to support JSON code in one column
+    #   and be happy with sambamba:
     simple = "iconv -c -f utf-8 -t ascii | sed 's/ //g' |" if simple else ""
     if in_file:
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
-        out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file))).replace(".gz", "")
+        out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
+        if out_file.endswith(".gz"):
+            out_file = out_file[:-3]
         if not utils.file_uptodate(out_file, in_file):
             check_bed_contigs(in_file, data)
             with file_transaction(data, out_file) as tx_out_file:
@@ -72,15 +76,16 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
 
 def sort_merge(in_file, data):
     """Sort and merge a BED file, collapsing gene names.
+       Output is a 3 or 4 column file (the 4th column values go comma-separated).
     """
-    out_file = "%s-sort.bed" % os.path.splitext(in_file)[0]
+    out_file = "%s-sortmerge.bed" % os.path.splitext(in_file)[0]
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
             sort_cmd = get_sort_cmd()
             cmd = ("{cat_cmd} {in_file} | {sort_cmd} -k1,1 -k2,2n | "
                    "bedtools merge -i - -c 4 -o distinct > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Sort BED file", data)
+            do.run(cmd.format(**locals()), "Sort and merge BED file", data)
     return out_file
 
 def remove_bad(line):
@@ -93,7 +98,7 @@ def remove_bad(line):
         return None
 
 def merge_overlaps(in_file, data, distance=None, out_dir=None):
-    """Merge bed file intervals to avoid overlapping regions.
+    """Merge bed file intervals to avoid overlapping regions. Output is always a 3 column file.
 
     Overlapping regions (1:1-100, 1:90-100) cause issues with callers like FreeBayes
     that don't collapse BEDs prior to using them.

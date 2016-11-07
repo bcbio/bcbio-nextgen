@@ -21,6 +21,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
 from bcbio.structural import annotate, regions
+from bcbio.variation import bedutils
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -297,13 +298,16 @@ def _merge_target_information(samples):
     vcr_orig = None
     if len(original_variant_regions) == 1 and list(original_variant_regions)[0] is not None:
         vcr_orig = list(original_variant_regions)[0]
-        vcr_ann = annotate.add_genes(vcr_orig, data)
+        vcr_clean = bedutils.clean_file(vcr_orig, data)
         info["variants_regions_info"] = {
             "bed": vcr_orig,
             "size": sum(len(x) for x in pybedtools.BedTool(dd.get_variant_regions_merged(data))),
-            "regions": pybedtools.BedTool(vcr_orig).count(),
-            "genes": len(list(set(r.name for r in pybedtools.BedTool(vcr_ann) if r.name and r.name != "."))),
+            "regions": pybedtools.BedTool(vcr_clean).count(),
         }
+        gene_num = annotate.count_genes(vcr_clean, data)
+        if gene_num is not None:
+            info["variants_regions_info"]["genes"] = gene_num
+
     else:
         info["variants_regions_info"] = {
             "bed": "callable regions",
@@ -315,13 +319,15 @@ def _merge_target_information(samples):
             if vcr_orig and vcr_orig == cov_bed:
                 info["coverage_bed_info"] = info["variants_regions_info"]
             else:
-                ann_bed = annotate.add_genes(cov_bed, data)
+                clean_bed = bedutils.clean_file(cov_bed, data, prefix="cov-", simple=True)
                 info["coverage_bed_info"] = {
                     "bed": cov_bed,
                     "size": pybedtools.BedTool(cov_bed).total_coverage(),
-                    "regions": pybedtools.BedTool(cov_bed).count(),
-                    "genes": len(list(set(r.name for r in pybedtools.BedTool(ann_bed) if r.name and r.name != "."))),
+                    "regions": pybedtools.BedTool(clean_bed).count(),
                 }
+                gene_num = annotate.count_genes(clean_bed, data)
+                if gene_num is not None:
+                    info["coverage_bed_info"]["genes"] = gene_num
         else:
             info["coverage_bed_info"] = info["variants_regions_info"]
 

@@ -313,27 +313,27 @@ def _run_coverage_qc(bam_file, data, out_dir):
         out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
 
         if dd.get_coverage(data):
-            bed_file = bedutils.merge_overlaps(dd.get_coverage(data), data)
+            cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+            merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
             target_name = "coverage"
         else:
-            bed_file = dd.get_variant_regions_merged(data)
+            merged_bed_file = dd.get_variant_regions_merged(data)
             target_name = "variant_regions"
 
-        bed_file = clean_file(bed_file, data, prefix="cov-", simple=True)
         ontarget = sambamba.number_mapped_reads_on_target(
-            data, bed_file, bam_file, keep_dups=False, target_name=target_name)
+            data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
         if mapped_unique:
             out["Ontarget_unique_reads"] = ontarget
             out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
             out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            padded_bed_file = bedutils.get_padded_bed_file(bed_file, 200, data)
+            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
             ontarget_padded = sambamba.number_mapped_reads_on_target(
                 data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
             out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-        avg_coverage = get_average_coverage(data, bam_file, bed_file, target_name)
+        avg_coverage = get_average_coverage(data, bam_file, merged_bed_file, target_name)
         out['Avg_coverage'] = avg_coverage
 
     priority = cov.priority_coverage(data, out_dir)
