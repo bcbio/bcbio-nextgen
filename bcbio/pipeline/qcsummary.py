@@ -89,6 +89,8 @@ def get_qc_tools(data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
         to_run += ["qsignature", "coverage", "variants", "picard"]
+    if dd.get_umi_file(data):
+        to_run += ["umi"]
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -99,7 +101,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -110,7 +112,8 @@ def _run_qc_tools(bam_file, data):
              "coverage": _run_coverage_qc,
              "variants": _run_variants_qc,
              "kraken": kraken.run,
-             "picard": picard.run}
+             "picard": picard.run,
+             "umi": umi.run}
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}
