@@ -11,6 +11,7 @@ import pybedtools
 import pandas as pd
 import numpy as np
 import pysam
+import toolz as tz
 
 from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, safe_makedir,
@@ -376,6 +377,8 @@ def _run_bcftools(data, out_dir):
     """Get variants stats"""
     vcf_file = _get_variant_callers(data)
     opts = "-f PASS"
+    if tz.get_in(("config", "algorithm", "jointcaller"), data):
+        opts = ""
     out = {}
     if vcf_file:
         name = dd.get_sample_name(data)
