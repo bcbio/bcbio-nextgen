@@ -9,9 +9,9 @@ from bcbio.distributed.transaction import file_transaction
 
 
 def make_command(data, cmd, bam_file, bed_file=None,
-                 depth_thresholds=None, max_cov=None, query=None):
+                 depth_thresholds=None, max_cov=None, query=None, multicore=True):
     sambamba = config_utils.get_program("sambamba", data["config"], default="sambamba")
-    num_cores = dd.get_cores(data)
+    num_cores = dd.get_cores(data) if multicore else 1
     target = (" -L " + bed_file) if bed_file else ""
     thresholds = "".join([" -T" + str(d) for d in (depth_thresholds or [])])
     maxcov = (" -C " + str(max_cov)) if max_cov else ""
@@ -48,7 +48,8 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
     if not utils.file_uptodate(output_file, bam_file):
         index(data, bam_file)
         with file_transaction(data, output_file) as tx_out_file:
-            cmdline = make_command(data, "view -c", bam_file, bed_file, query=query) + " > " + tx_out_file
+            cmdline = (make_command(data, "view -c", bam_file, bed_file, query=query, multicore=False)
+                       + " > " + tx_out_file)
             do.run(cmdline, "Counting " + query + " for " + bam_file + ((" on " + target_name) if target_name else ""))
 
     with open(output_file) as f:
