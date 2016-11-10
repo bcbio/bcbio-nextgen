@@ -224,6 +224,7 @@ def test_7_cancer(install_test_files, data_dir):
 @pytest.marks('cancer', 'cancerpanel', 'install_required')
 def test_7_cancer_nonormal(install_test_files, data_dir):
     """Test cancer calling without normal samples or with normal VCF panels.
+    Requires MuTect and GATK.
     """
     with make_workdir() as workdir:
         cl = ["bcbio_nextgen.py",

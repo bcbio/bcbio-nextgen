@@ -107,7 +107,7 @@ def _move_file_with_sizecheck(tx_file, final_file):
        it means that transaction didn't finish successfully.
     """
 
-    logger.info("Moving %s to %s" % (tx_file, final_file))
+    logger.debug("Moving %s to %s" % (tx_file, final_file))
 
     tmp_file = final_file + ".bcbiotmp"
     open(tmp_file, 'wb').close()

@@ -49,28 +49,30 @@ def run(bam_file, data, out_dir):
                                              num_cores)
 
         # Fixing the file name: MultiQC picks sample name from BAM file name.
-        fixed_bam_fname = os.path.join(out_dir, dd.get_sample_name(data) + ".bam")
-        if not os.path.islink(fixed_bam_fname):
-            os.symlink(bam_file, fixed_bam_fname)
-
-        export = utils.local_path_export()
-        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {fixed_bam_fname} -outdir {tx_results_dir} "
-               "--skip-duplicated --skip-dup-mode 0 "
-               "-nt {num_cores} --java-mem-size={max_mem} {options}")
-        species = None
-        if tz.get_in(("genome_resources", "aliases", "human"), data, ""):
-            species = "HUMAN"
-        elif any(tz.get_in("genome_build", data, "").startswith(k) for k in ["mm", "GRCm"]):
-            species = "MOUSE"
-        if species in ["HUMAN", "MOUSE"]:
-            cmd += " -gd {species}"
-        regions = bedutils.merge_overlaps(dd.get_coverage(data), data) or dd.get_variant_regions_merged(data)
-        if regions:
-            bed6_regions = _bed_to_bed6(regions, out_dir)
-            cmd += " -gff {bed6_regions}"
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
-            do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
+            fixed_bam_fname = os.path.join(tx_results_dir, dd.get_sample_name(data) + ".bam")
+            if not os.path.islink(fixed_bam_fname):
+                os.symlink(bam_file, fixed_bam_fname)
+
+            cmd = ("unset DISPLAY && {qualimap} bamqc -bam {fixed_bam_fname} -outdir {tx_results_dir} "
+                "--skip-duplicated --skip-dup-mode 0 "
+                "-nt {num_cores} --java-mem-size={max_mem} {options}")
+            species = None
+            if tz.get_in(("genome_resources", "aliases", "human"), data, ""):
+                species = "HUMAN"
+            elif any(tz.get_in("genome_build", data, "").startswith(k) for k in ["mm", "GRCm"]):
+                species = "MOUSE"
+            if species in ["HUMAN", "MOUSE"]:
+                cmd += " -gd {species}"
+            regions = bedutils.merge_overlaps(dd.get_coverage(data), data) or dd.get_variant_regions_merged(data)
+            if regions:
+                bed6_regions = _bed_to_bed6(regions, out_dir)
+                cmd += " -gff {bed6_regions}"
+                bcbio_env = utils.get_bcbio_env()
+                do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data), env=bcbio_env)
+            if os.path.exists(fixed_bam_fname):
+                os.unlink(fixed_bam_fname)
 
     # return _parse_qualimap_metrics(report_file, data)
     return dict()
@@ -290,19 +292,19 @@ def run_rnaseq(bam_file, data, out_dir):
     #   <sample name>/raw_data_qualimapReport/insert_size_histogram.txt
     results_dir = os.path.join(out_dir, dd.get_sample_name(data))
     report_file = os.path.join(results_dir, "qualimapReport.html")
-    raw_file = os.path.join(results_dir, "rnaseq_qc_results.txt")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
     single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
     if not utils.file_exists(report_file):
-        with file_transaction(data, out_dir) as tx_out_dir:
+        with file_transaction(data, results_dir) as tx_out_dir:
             utils.safe_makedir(tx_out_dir)
+            raw_file = os.path.join(tx_out_dir, "rnaseq_qc_results.txt")
             bam.index(bam_file, config)
             cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_out_dir, gtf_file, single_end, library)
             do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
-        cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
-        do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
+            cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
+            do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
     metrics.update(_detect_rRNA(data))

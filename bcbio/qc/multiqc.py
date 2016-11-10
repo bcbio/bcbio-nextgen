@@ -50,11 +50,11 @@ def summary(*samples):
     file_fapths += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
-            file_fapths = [f for f in file_fapths if f]
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
+            file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
+            file_fapths = [f for f in file_fapths if f]
             if file_fapths:
                 input_list_file = _create_list_file(file_fapths)
                 cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
@@ -82,6 +82,7 @@ def _create_list_file(dirs):
     out_file = "list_files.txt"
     with open(out_file, "w") as f:
         f.write('\n'.join(dirs))
+    return out_file
 
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""
@@ -218,7 +219,9 @@ def _merge_metrics(samples):
             if sample_name in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
-            sample_file = os.path.abspath(os.path.join("metrics", "%s_bcbio.txt" % sample_name))
+            metrics_dir = utils.safe_makedir(os.path.abspath("metrics"))
+            utils.safe_makedir(metrics_dir)
+            sample_file = os.path.join(metrics_dir, "%s_bcbio.txt" % sample_name)
             if not tz.get_in(['summary', 'qc'], s):
                 s['summary'] = {"qc": {}}
             if m:
