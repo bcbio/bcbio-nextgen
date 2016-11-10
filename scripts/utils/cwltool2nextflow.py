@@ -6,14 +6,15 @@ style dictionaries of workflows and processes (https://github.com/chapmanb/cwl2w
 before converting into Nextflow.
 
 Current status:
-- tools -> processes
+- steps -> processes
 
 ToDo:
 
-- define script inputs from JSON file
+- define script inputs from JSON file as starting point
+- correctly connect inputs from other processes; uses CWL style namespaced
+  references, needs to have unique names in process outputs
 - load outputs from tool JSON output
-- connected workflows
-- sub-workflows
+- sub-workflows; not sure how to define
 - Batching of inputs/outputs to grouped Channel (or use set)
 - Scatter parallelization
 """
@@ -65,17 +66,43 @@ def nf_step_to_process(step, out_handle):
 
     task_id = step["task_id"]
     directives = "\n  ".join(directives)
-    inputs = "\n".join(nf_inputs(step["inputs"], step["task_definition"]["inputs"]))
-    outputs = "\n".join(nf_outputs(step["outputs"], step["task_definition"]["outputs"]))
+    inputs = "\n    ".join(nf_io_to_process(step["inputs"], step["task_definition"]["inputs"],
+                                        step["scatter"]))
+    outputs = "\n    ".join(nf_io_to_process(step["outputs"], step["task_definition"]["outputs"]))
     commandline = (step["task_definition"]["baseCommand"] + " " +
                    " ".join([nf_input_to_cl(i) for i in step["task_definition"]["inputs"]]))
     out_handle.write(_nf_process_tmpl.format(**locals()))
 
-def nf_inputs(inputs, def_inputs):
-    return []
+def nf_io_to_process(ios, def_ios, scatter_ios=None):
+    """Convert CWL input/output into a nextflow process definition.
 
-def nf_outputs(outputs, def_outputs):
-    return []
+    Needs to handle scattered/parallel variables.
+    """
+    scatter_names = {k: v for k, v in scatter_ios} if scatter_ios else {}
+    var_types = {}
+    for def_io in def_ios:
+        var_types[def_io["name"]] = nf_type(def_io["variable_type"])
+    out = []
+    for io in ios:
+        cur_id = io["id"]
+        if scatter_names:
+            input_id = scatter_names[io["value"]]
+        else:
+            input_id = io.get("value")
+        vtype = var_types[cur_id]
+        if input_id and cur_id != input_id:
+            out.append("%s %s as %s" % (vtype, input_id, cur_id))
+        else:
+            out.append("%s %s" % (vtype, cur_id))
+    return out
+
+def nf_type(cwl_type):
+    """Convert a CWL variable type into Nextflow.
+    """
+    if "File" in cwl_type:
+        return "file"
+    else:
+        return "var"
 
 def nf_input_to_cl(inp):
     """Convert an input description into command line argument.
