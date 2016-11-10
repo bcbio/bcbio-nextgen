@@ -126,7 +126,9 @@ def downsample(in_bam, data, target_counts, read_filter="", always_run=False,
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
                 sambamba = config_utils.get_program("sambamba", data["config"])
-                num_cores = dd.get_num_cores(data)
+                # Avoid sambamba view segfaults with multiple cores
+                # num_cores = dd.get_num_cores(data)
+                num_cores = 1
                 cmd = ("{sambamba} view -t {num_cores} {read_filter} -f bam -o {tx_out_file} "
                        "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
