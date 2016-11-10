@@ -11,7 +11,7 @@ import contextlib
 from distutils.version import LooseVersion
 import os
 
-from bcbio import bam, utils
+from bcbio import bam, broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
@@ -28,10 +28,13 @@ def tobam_cl(data, out_file, is_paired=False):
     - If unpaired, use biobambam's bammarkduplicates
     """
     do_dedup = _check_dedup(data)
+    umi_file = dd.get_umi_file(data)
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
-        elif is_paired and not _too_many_contigs(dd.get_ref_file(data)):
+        elif umi_file:
+            yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file), tx_out_file)
+        elif is_paired and _need_sr_disc_reads(data) and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
             with file_transaction(data, sr_file) as tx_sr_file:
@@ -46,6 +49,15 @@ def _too_many_contigs(ref_file):
     """
     max_contigs = 32768
     return len(list(ref.file_contigs(ref_file))) >= max_contigs
+
+def _need_sr_disc_reads(data):
+    """Check if we need split and discordant reads in downstream processing.
+
+    We use samblaster when needed and otherwise use an approach that does not
+    extract these reads to be less resource intensive.
+    """
+    from bcbio import structural
+    return "lumpy" in structural.get_svcallers(data)
 
 def _get_cores_memory(data, downscale=2):
     """Retrieve cores and memory, using samtools as baseline.
@@ -100,21 +112,58 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     return cmd.format(**locals())
 
 def _biobambam_dedup_sort(data, tx_out_file):
-    """Perform streaming deduplication and sorting with biobambam's bammarkduplicates2.
+    """Perform streaming deduplication and sorting with biobambam's bamsormadup
     """
     samtools = config_utils.get_program("samtools", data["config"])
-    bammarkduplicates = config_utils.get_program("bammarkduplicates", data["config"])
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
         cmd = "{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -"
     else:
-        cmd = ("{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort - | "
-               "{bammarkduplicates} tmpfile={tmp_file}-markdup "
-               "markthreads={cores} level=0 | "
-               "{samtools} sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
-               "-o {tx_out_file} /dev/stdin")
+        cmd = ("bamsormadup inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "
+               "SO=coordinate indexfilename={tx_out_file}.bai > {tx_out_file}")
     return cmd.format(**locals())
+
+def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
+    """Mark duplicates on aligner output and convert to grouped UMIs by position.
+    """
+    tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
+    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 1)
+    cores, mem = _get_cores_memory(data)
+    # cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=sam SO=coordinate | "
+    #        "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o {tx_out_file}")
+    cmd = ("samblaster -M --addMateTags | "
+           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
+           "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
+           "-o {tx_out_file} /dev/stdin")
+    return cmd.format(**locals())
+
+def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
+    cores, mem = _get_cores_memory(data)
+    resources = config_utils.get_resources("fgbio", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx4g"])
+    if scale_factor and cores > scale_factor:
+        jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                     {"direction": "increase",
+                                                                      "magnitude": cores // scale_factor}}})
+    jvm_opts += broad.get_default_jvm_opts(tmpdir)
+    jvm_opts = " ".join(jvm_opts)
+    return jvm_opts
+
+def umi_consensus(data):
+    """Convert UMI grouped reads into fastq pair for re-alignment.
+    """
+    align_bam = dd.get_work_bam(data)
+    f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
+    f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
+    if not utils.file_uptodate(f1_out, align_bam):
+        with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
+            jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
+            cmd = ("fgbio {jvm_opts} GroupReadsByUmi -m 1 -e 1 -s adjacency -i {align_bam} | "
+                   "fgbio {jvm_opts} CallMolecularConsensusReads -S queryname -i /dev/stdin -o /dev/stdout | "
+                   "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")
+            do.run(cmd.format(**locals()), "UMI consensus fastq generation")
+    return f1_out, f2_out
 
 def _check_dedup(data):
     """Check configuration for de-duplication, handling back compatibility.

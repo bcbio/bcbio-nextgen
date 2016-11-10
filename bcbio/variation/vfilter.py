@@ -58,7 +58,7 @@ def genotype_filter(vcf_file, expression, data, name, filterext=""):
                       "--out", tx_out_file,
                       "--genotypeFilterName", name,
                       "--genotypeFilterExpression", "'%s'" % expression]
-            jvm_opts = broad.get_gatk_framework_opts(data["config"])
+            jvm_opts = broad.get_gatk_framework_opts(data["config"], os.path.dirname(tx_out_file))
             do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter with expression: %s" % expression)
     if out_file.endswith(".vcf.gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])

@@ -111,7 +111,7 @@ def combine_pairs(input_files):
     From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)
     Adjusted to allow different input paths or extensions for matching files.
     """
-    PAIR_FILE_IDENTIFIERS = set(["1", "2"])
+    PAIR_FILE_IDENTIFIERS = set(["1", "2", "3"])
 
     pairs = []
     used = set([])
@@ -151,7 +151,7 @@ def combine_pairs(input_files):
                 if b[s[0]- 1] in ("R", "_", "-", "."):
                     used.add(in_file)
                     used.add(comp_file)
-                    if b[s[0]] == "2":
+                    if b[s[0]] > a[s[0]]:
                         pairs.append([in_file, comp_file])
                     else:
                         pairs.append([comp_file, in_file])

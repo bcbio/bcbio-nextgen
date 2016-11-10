@@ -49,8 +49,10 @@ bcbio:
 
 Optional requirements:
 
-- Java 1.7, when running GATK < 3.6. bcbio distributes Java 8 as part of the
-  anaconda installation for recent versions of GATK.
+- Java 1.7, needed when running GATK < 3.6 or MuTect. This must be available in
+  your path so typing ``java -version`` resolves a 1.7 version. bcbio
+  distributes Java 8 as part of the anaconda installation for recent versions of
+  GATK and MuTect2.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
@@ -329,31 +331,12 @@ installation's `bcbio_system.yaml`, for example::
 Manual process
 ==============
 
-The manual process does not allow the in-place updates and management
-of third party tools that the automated installer makes possible. It's
-a more error-prone and labor intensive process. If you find you can't
-use the installer we'd love to hear why to make it more amenable to
-your system.
-
-Python code
-~~~~~~~~~~~
-
-You can install the latest release code with::
-
-      pip install --upgrade bcbio-nextgen
-
-Or the latest development version from GitHub::
-
-      git clone https://github.com/chapmanb/bcbio-nextgen.git
-      cd bcbio-nextgen && python setup.py build && python setup.py install
-
-This requires Python 2.7. The setup script installs
-required Python library dependencies. If you'd like to install the
-programs and libraries locally instead of globally, `virtualenv`_
-creates an isolated, local Python installation that does not require
-system install privileges.
-
-.. _virtualenv: http://www.virtualenv.org/en/latest/
+The manual process does not allow the in-place updates and management of third
+party tools that the automated installer makes possible. It's a more error-prone
+and labor intensive process. If you find you can't use the installer we'd love
+to hear why to make it more amenable to your system. If you'd like to develop
+against a bcbio installation, see the documentation on setting up a
+:ref:`code-devel-infrastructure`.
 
 Tool Requirements
 ~~~~~~~~~~~~~~~~~
@@ -365,19 +348,13 @@ for both software and associated data files::
 
     fab -f cloudbiolinux/fabfile.py -H localhost install_biolinux:flavor=ngs_pipeline_minimal
 
-You can also install them manually, adjusting locations in the
-``resources`` section of your ``bcbio_system.yaml`` configuration file
-as needed.  The CloudBioLinux infrastructure provides a full list of third party
-software installed with bcbio-nextgen:
-
-- `packages-homebrew.yaml`_ -- All third party tools installed through the
-  Homebrew/Linuxbrew package manager.
-- `custom.yaml`_ -- All third party tools installed via CloudBioLinux's custom
-  installation procedure.
+You can also install them manually, adjusting locations in the ``resources``
+section of your ``bcbio_system.yaml`` configuration file as needed. The
+CloudBioLinux infrastructure provides a full list of third party software
+installed with bcbio-nextgen in `packages-conda.yaml`_, which lists all third
+party tools installed through `Bioconda <https://bioconda.github.io/>`_
 
 .. _CloudBioLinux: http://cloudbiolinux.org
-.. _packages-homebrew.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/packages-homebrew.yaml
-.. _custom.yaml : https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/custom.yaml
 
 .. _data-requirements:
 

@@ -67,21 +67,28 @@ def _set_align_split_size(data):
     chunks of 5Gb or at most 50 maximum splits.
 
     The size estimate used in calculations is 20 million reads for ~5Gb.
+
+    For UMI calculations we skip splitting since we're going to align and
+    re-align after consensus.
     """
     target_size = 5  # Gb
     target_size_reads = 20  # million reads
     max_splits = 100  # Avoid too many pieces, causing merge memory problems
     val = tz.get_in(["config", "algorithm", "align_split_size"], data)
+    umi_file = dd.get_umi_file(data)
     if val is None:
-        total_size = 0  # Gb
-        for fname in data.get("files", []):
-            if os.path.exists(fname):
-                total_size += os.path.getsize(fname) / (1024.0 * 1024.0 * 1024.0)
-        # Only set if we have files and are bigger than the target size
-        if total_size > target_size:
-            data["config"]["algorithm"]["align_split_size"] = \
-              int(1e6 * _pick_align_split_size(total_size, target_size,
-                                               target_size_reads, max_splits))
+        if not umi_file:
+            total_size = 0  # Gb
+            for fname in data.get("files", []):
+                if os.path.exists(fname):
+                    total_size += os.path.getsize(fname) / (1024.0 * 1024.0 * 1024.0)
+            # Only set if we have files and are bigger than the target size
+            if total_size > target_size:
+                data["config"]["algorithm"]["align_split_size"] = \
+                  int(1e6 * _pick_align_split_size(total_size, target_size,
+                                                   target_size_reads, max_splits))
+    elif val:
+        assert not umi_file, "Cannot set align_split_size to %s with UMI file specified" % val
     return data
 
 def _pick_align_split_size(total_size, target_size, target_size_reads, max_splits):

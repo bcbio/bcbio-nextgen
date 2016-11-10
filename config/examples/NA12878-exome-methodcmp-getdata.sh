@@ -1,11 +1,24 @@
 #!/bin/bash
 set -eu -o pipefail
 
+# Data retrieval script for validation comparing alignment methods, preparation approaches
+# and variant callers for an NA12878 exome dataset from EdgeBio.
+#
+# See the bcbio-nextgen documentation for full instructions to
+# run this analysis:
+# https://bcbio-nextgen.readthedocs.org/en/latest/contents/testing.html#example-pipelines
+
+mkdir -p config
+cd config
+wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
+cd ..
+
+mkdir -p input
+cd input
 wget -c -O NA12878-NGv3-LAB1360-A_1.fastq.gz https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_1.fastq.gz
 wget -c -O NA12878-NGv3-LAB1360-A_2.fastq.gz https://s3.amazonaws.com/bcbio_nextgen/NA12878-NGv3-LAB1360-A_2.fastq.gz
 wget -c -O NGv3.bed.gz https://s3.amazonaws.com/bcbio_nextgen/NGv3.bed.gz
-# GiaB calls
-wget -c -O GiaB_v2_19.vcf.gz ftp://ftp.ncbi.nlm.nih.gov/giab/ftp/release/NA12878_HG001/NISTv2.19/NISTIntegratedCalls_14datasets_131103_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.19_2mindatasets_5minYesNoRatio_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
-tabix -f -p vcf GiaB_v2_19.vcf.gz
-wget -c -O GiaB_v2_19_regions.bed.gz ftp://ftp.ncbi.nlm.nih.gov/giab/ftp/release/NA12878_HG001/NISTv2.19/union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.19_2mindatasets_5minYesNoRatio.bed.gz
 gunzip *.bed.gz
+cd ..
+
+mkdir -p work

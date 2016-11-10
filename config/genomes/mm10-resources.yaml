@@ -1,4 +1,4 @@
-version: 18
+version: 19
 
 aliases:
   snpeff: GRCm38.82
@@ -20,6 +20,6 @@ rnaseq:
 srnaseq:
     srna_transcripts: ../srnaseq/srna-transcripts.gtf
     mirbase_hairpin: ../srnaseq/hairpin.fa
-    mirbase_mature: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
     mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
     trna_fasta: ../srnaseq/trna_mature_pre.fa

@@ -18,6 +18,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.structural import annotate, regions
 from bcbio.log import logger
+from bcbio.variation.coverage import regions_coverage
+from bcbio.variation.bedutils import clean_file
 
 
 def precall(items):
@@ -31,8 +33,7 @@ def precall(items):
     assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
     work_dir = _sv_workdir(data)
-    bed_file = regions.get_sv_bed(data) or dd.get_variant_regions(data)
-    bed_file = _prep_bed(data, bed_file, work_dir)
+    bed_file = _prep_bed(data, work_dir)
     bam_file = dd.get_align_bam(data)
     sample_name = dd.get_sample_name(data)
 
@@ -64,41 +65,34 @@ def run(items):
 
     return items
 
-def _prep_bed(data, bed_file, work_dir):
-    clean_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
-    bed = bt.BedTool(bed_file)
-    col_num = bed.field_count()
+def _prep_bed(data, work_dir):
+    """Selecting the bed file, cleaning, and properly annotating for Seq2C
+    """
+    bed_file = regions.get_sv_bed(data)
+    if bed_file:
+        bed_file = clean_file(bed_file, data, prefix="svregions-")
+    else:
+        bed_file = clean_file(dd.get_variant_regions(data), data)
 
-    if not utils.file_uptodate(clean_file, bed_file):
-        bed = bed.filter(lambda x: x.chrom and
-                         not any(x.chrom.startswith(e) for e in ['#', ' ', 'track', 'browser']))
-        bed = bed.remove_invalid()
-        with file_transaction(data, clean_file) as tx_out_file:
-            bed.saveas(tx_out_file)
-        logger.debug("Saved Seq2C clean BED file into " + clean_file)
-
+    col_num = bt.BedTool(bed_file).field_count()
     if col_num < 4:
-        annotated_file = annotate.add_genes(clean_file, data, max_distance=0, work_dir=work_dir)
-        if annotated_file == clean_file:
+        annotated_file = annotate.add_genes(bed_file, data, max_distance=0)
+        if annotated_file == bed_file:
             raise ValueError("BED file for Seq2C must be annotated with gene names, "
                              "however the input BED is 3-columns and we have no transcript "
                              "data to annotate with " + bed_file)
+        annotated_file = annotate.gene_one_per_line(annotated_file, data)
     else:
-        annotated_file = clean_file
+        annotated_file = bed_file
 
-    ready_file = os.path.join(work_dir, "%s-clean.bed" % (utils.splitext_plus(os.path.basename(annotated_file))[0]))
+    ready_file = "%s-seq2cclean.bed" % (utils.splitext_plus(annotated_file)[0])
     if not utils.file_uptodate(ready_file, annotated_file):
         bed = bt.BedTool(annotated_file)
         if col_num > 4 and col_num != 8:
             bed = bed.cut(range(4))
         bed = bed.filter(lambda x: x.name not in ["", ".", "-"])
-
-        # Report all duplicated annotations one-per-line
         with file_transaction(data, ready_file) as tx_out_file:
-            with open(tx_out_file, 'w') as out:
-                for r in bed:
-                    for g in r.name.split(','):
-                        out.write('\t'.join(map(str, [r.chrom, r.start, r.end, g])) + '\n')
+            bed.saveas(tx_out_file)
         logger.debug("Saved Seq2C clean annotated ready input BED into " + ready_file)
 
     return ready_file
@@ -139,19 +133,11 @@ def _split_cnv(items, calls_fpath):
         item["sv"][0]["calls"] = out_fname
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
-    sambamba_depth_file = os.path.join(work_dir, sample_name + '-sambamba_depth.tsv')
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    num_cores = dd.get_cores(data)
-    if not utils.file_exists(sambamba_depth_file):
-        with file_transaction(data, sambamba_depth_file) as tx_out_file:
-            cmd = ("{sambamba} depth region -t {num_cores} "
-                   "-F \"\" -L {bed_file} {bam_file} -o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Calling sambamba region depth")
-    logger.debug("Saved to " + sambamba_depth_file)
+    sambamba_depth_file = regions_coverage(data, bed_file, bam_file, "sv_regions")
 
     out_file = os.path.join(work_dir, sample_name + '-coverage.tsv')
     if not utils.file_exists(out_file):
-        logger.debug('Converting sambamba depth output to cov2lr.pl input in ' + dd.get_sample_name(data))
+        logger.debug('Converting sambamba depth output to cov2lr.pl input in ' + sample_name)
         with file_transaction(data, out_file) as tx_out_file:
             _sambabma_depth_to_seq2cov(sambamba_depth_file, tx_out_file, sample_name)
     logger.debug("Saved to " + out_file)
