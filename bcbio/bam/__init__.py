@@ -470,7 +470,7 @@ def filter_primary(bam_file, data):
     out_file = stem + ".primary" + ext
     if utils.file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmd = filter_primary_stream_cmd(bam_file, data)
         cmd += "> {tx_out_file}"
         do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %

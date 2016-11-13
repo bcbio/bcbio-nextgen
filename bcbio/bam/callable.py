@@ -28,6 +28,7 @@ from bcbio.variation import coverage
 from bcbio.variation import multi as vmulti
 from bcbio.bam import sambamba
 
+
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """

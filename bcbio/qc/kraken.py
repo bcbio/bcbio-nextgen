@@ -37,7 +37,7 @@ def run(bam_file, data, out_dir):
         if fn_file.endswith("bam"):
             logger.info("kraken: need fasta files as input")
             return {"kraken_report": "null"}
-        with tx_tmpdir(data, work_dir) as tx_tmp_dir:
+        with tx_tmpdir(data) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 out = os.path.join(tx_tmp_dir, "kraken_out")
                 out_stats = os.path.join(tx_tmp_dir, "kraken_stats")

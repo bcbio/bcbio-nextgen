@@ -104,7 +104,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             vrs = bedutils.population_variant_regions(items)
-            target = shared.subset_variant_regions(vrs, region, out_file, do_merge=False)
+            target = shared.subset_variant_regions(
+                vrs, region, out_file, items=items, do_merge=False)
             num_bams = len(align_bams)
             sample_vcf_names = []  # for individual sample names, given batch calling may be required
             for bamfile, item in itertools.izip(align_bams, items):

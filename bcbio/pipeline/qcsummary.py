@@ -345,7 +345,8 @@ def _run_coverage_qc(bam_file, data, out_dir):
     # Re-enable with annotations from internally installed
     # problem region directory
     # if priority:
-    #    annotated = cov.decorate_problem_regions(priority, problem_regions)
+    #    annotated = cov.decorate_problem_regions(
+    #        priority, problem_regions, data)
 
     return out
 

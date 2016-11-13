@@ -18,6 +18,13 @@ CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
+    if not ref_file:
+        logger.error("STAR index not found. We don't provide the STAR indexes "
+                     "by default because they are very large. You can install "
+                     "the index for your genome with: bcbio_nextgen.py upgrade "
+                     "--aligners star --genomes genome-build-name --data")
+        sys.exit(1)
+
     max_hits = 10
     srna = True if data["analysis"].lower().startswith("smallrna-seq") else False
     srna_opts = ""
@@ -28,13 +35,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     out_prefix = os.path.join(align_dir, dd.get_lane(data), "star")
     out_file = out_prefix + "Aligned.out.sam"
     out_dir = os.path.join(align_dir, "%s_star" % dd.get_lane(data))
-
-    if not ref_file:
-        logger.error("STAR index not found. We don't provide the STAR indexes "
-                     "by default because they are very large. You can install "
-                     "the index for your genome with: bcbio_nextgen.py upgrade "
-                     "--aligners star --genomes genome-build-name --data")
-        sys.exit(1)
 
     final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
     if file_exists(final_out):

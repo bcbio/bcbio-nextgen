@@ -36,7 +36,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             splicesites = create_splicesites_file(gtf_file, align_dir, data)
         cmd += "--known-splicesite-infile {splicesites} "
     message = "Aligning %s and %s with hisat2." %(fastq_file, pair_file)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_out_file)
         do.run(cmd.format(**locals()), message)
     data = dd.set_work_bam(data, out_file)

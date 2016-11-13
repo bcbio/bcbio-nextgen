@@ -33,7 +33,7 @@ def gatk_splitreads(data):
     if file_exists(split_bam):
         data = dd.set_split_bam(data, split_bam)
         return data
-    with file_transaction(split_bam) as tx_split_bam:
+    with file_transaction(data, split_bam) as tx_split_bam:
         params = ["-T", "SplitNCigarReads",
                   "-R", ref_file,
                   "-I", deduped_bam,
@@ -60,7 +60,7 @@ def gatk_rnaseq_calling(data):
     if file_exists(out_file):
         data = dd.set_vrn_file(data, out_file)
         return data
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         params = ["-T", "HaplotypeCaller",
                   "-R", ref_file,
                   "-I", split_bam,
@@ -125,7 +125,7 @@ def rnaseq_vardict_variant_calling(data):
     bamfile = dd.get_work_bam(data)
     bed_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
     opts = " -c 1 -S 2 -E 3 -g 4 "
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
         cmd = ("{r_setup}{jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
                 "-N {sample} -b {bamfile} {opts} {bed_file} "
@@ -152,7 +152,7 @@ def gatk_filter_rnaseq(data, vrn_file, out_file):
     ref_file = dd.get_ref_file(data)
     if file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         params = ["-T", "VariantFiltration",
                   "-R", ref_file,
                   "-V", vrn_file,

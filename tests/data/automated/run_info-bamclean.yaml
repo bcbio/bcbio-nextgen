@@ -1,3 +1,5 @@
+upload:
+  dir: upload
 details:
   - algorithm:
       aligner: false

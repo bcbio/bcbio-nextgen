@@ -169,5 +169,6 @@ def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file,
     if todo == "square":
         cmd += ["--caller", variantcaller]
     cmd += [out_file, ref_file, input_file]
-    do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)))
+    bcbio_env = utils.get_bcbio_env()
+    do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)), env=bcbio_env)
     return out_file

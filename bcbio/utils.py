@@ -222,6 +222,17 @@ def file_exists(fname):
     except OSError:
         return False
 
+
+def get_size(path):
+    """ Returns the size in bytes if `path` is a file,
+        or the size of all files in `path` if it's a directory.
+        Analogous to `du -s`.
+    """
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    return sum(get_size(os.path.join(path, f)) for f in os.listdir(path))
+
+
 def file_uptodate(fname, cmp_fname):
     """Check if a file exists, is non-empty and is more recent than cmp_fname.
     """
@@ -325,6 +336,8 @@ def copy_plus(orig, new):
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """
+    if not os.path.exists(orig):
+        raise RuntimeError("File not found: %s" % orig)
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
@@ -632,7 +645,7 @@ def Rscript_cmd():
 
     Prefers Rscript version installed via conda to a system version.
     """
-    rscript = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "Rscript"))
+    rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
     if rscript:
         return rscript
     else:
@@ -667,7 +680,7 @@ def R_package_path(package):
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
     """
-    perl = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "perl"))
+    perl = which(os.path.join(get_bcbio_bin(), "perl"))
     if perl:
         return perl
     else:
@@ -682,8 +695,27 @@ def get_perl_exports(tmpdir=None):
         out += " && export TMPDIR=%s" % (tmpdir)
     return out
 
+
+def get_bcbio_env():
+    env = os.environ.copy()
+    env["PATH"] = append_path(get_bcbio_bin(), env['PATH'])
+    return env
+
+
+def append_path(bin, path, at_start=True):
+    if at_start:
+        tmpl = "{bin}:{path}"
+    else:
+        tmpl = "{path}:{bin}"
+    return tmpl.format(bin=bin, path=path)
+
+
+def get_bcbio_bin():
+    return os.path.dirname(os.path.realpath(sys.executable))
+
+
 def local_path_export(at_start=True):
-    path = os.path.dirname(os.path.realpath(sys.executable))
+    path = get_bcbio_bin()
     if at_start:
         return "export PATH=%s:$PATH && " % (path)
     else:
@@ -737,6 +769,14 @@ def max_command_length():
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH
     return arg_length if arg_length > 0 else DEFAULT_MAX_LENGTH
+
+
+def get_abspath(path, pardir=None):
+    if pardir is None:
+        pardir = os.getcwd()
+    path = os.path.expandvars(path)
+    return os.path.normpath(os.path.join(pardir, path))
+
 
 # LazyImport from NIPY
 # https://github.com/nipy/nitime/blob/master/nitime/lazyimports.py

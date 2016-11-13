@@ -16,9 +16,13 @@ def run(items):
     """Perform detection of structural variations with Manta.
     """
     paired = vcfutils.get_paired(items)
-    work_dir = _sv_workdir(paired.tumor_data if paired else items[0])
-    workflow_file = _prep_config(items, paired, work_dir)
-    variant_file = _run_workflow(items, paired, workflow_file, work_dir)
+    data = paired.tumor_data if paired else items[0]
+    work_dir = _sv_workdir(data)
+    with file_transaction(data, work_dir) as tx_work_dir:
+        utils.safe_makedir(tx_work_dir)
+        tx_workflow_file = _prep_config(items, paired, tx_work_dir)
+        tx_variant_file = _run_workflow(items, paired, tx_workflow_file, tx_work_dir)
+    variant_file = get_perm_name(tx_variant_file, work_dir)
     out = []
     for data in items:
         sample_file = _select_sample(data, variant_file, work_dir)
@@ -29,6 +33,14 @@ def run(items):
                            "vrn_file": effects_vcf or sample_file})
         out.append(data)
     return out
+
+
+def get_perm_name(tx_file, permanent_dir):
+    dir_basename = os.path.basename(permanent_dir)
+    dir_basename = os.path.join(dir_basename, '')
+    fname = tx_file.split(dir_basename, 1)[1]
+    return os.path.join(permanent_dir, fname)
+
 
 def _run_workflow(items, paired, workflow_file, work_dir):
     """Run manta analysis inside prepared workflow directory.
@@ -104,8 +116,8 @@ def _maybe_limit_chromosomes(data):
         return []
 
 def _sv_workdir(data):
-    return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
-                                           dd.get_sample_name(data), "manta"))
+    return os.path.join(
+        data["dirs"]["work"], "structural", dd.get_sample_name(data), "manta")
 
 def _out_of_date(rw_file):
     """Check if a run workflow file points to an older version of manta and needs a refresh.
