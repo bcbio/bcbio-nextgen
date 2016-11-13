@@ -14,7 +14,7 @@ from bcbio import bam, broad, utils
 from bcbio.bam import ref
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
-from bcbio.utils import file_exists, safe_makedir, save_diskspace
+from bcbio.utils import file_exists, save_diskspace
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.provenance import do
 
@@ -30,60 +30,27 @@ def combine_bam(in_files, out_file, config):
     bam.index(out_file, config)
     return out_file
 
-def process_bam_by_chromosome(output_ext, file_key, default_targets=None, remove_alts=False):
-    """Provide targets to process a BAM file by individual chromosome regions.
-
-    output_ext: extension to supply to output files
-    file_key: the key of the BAM file in the input data map
-    default_targets: a list of extra chromosome targets to process, beyond those specified
-                     in the BAM file. Useful for retrieval of non-mapped reads.
-    remove_alts: Do not process alternative alleles.
-    """
-    if default_targets is None:
-        default_targets = []
-    def _do_work(data):
-        ignore_chroms = set(_get_alt_chroms(data) if remove_alts else [])
-        bam_file = data[file_key]
-        out_dir = tz.get_in(["dirs", "out"], data, os.path.dirname(bam_file))
-        out_file = os.path.join(out_dir, "{base}{ext}".format(
-                base=os.path.splitext(os.path.basename(bam_file))[0],
-                ext=output_ext))
-        part_info = []
-        if not file_exists(out_file):
-            work_dir = safe_makedir(
-                "{base}-split".format(base=os.path.splitext(out_file)[0]))
-            with pysam.Samfile(bam_file, "rb") as work_bam:
-                for chr_ref in list(work_bam.references) + default_targets:
-                    if chr_ref not in ignore_chroms:
-                        chr_out = os.path.join(work_dir,
-                                               "{base}-{ref}{ext}".format(
-                                                   base=os.path.splitext(os.path.basename(bam_file))[0],
-                                                   ref=chr_ref, ext=output_ext))
-                        part_info.append((chr_ref, chr_out))
-        return out_file, part_info
-    return _do_work
-
-def _get_alt_chroms(data):
-    """Retrieve alternative contigs as defined in bwa *.alts files.
+def get_noalt_contigs(data):
+    """Retrieve contigs without alternatives as defined in bwa *.alts files.
 
     If no alt files present (when we're not aligning with bwa), work around
     with standard set of alts based on hg38 -- anything with HLA, _alt or
     _decoy in the name.
     """
-    alts = []
+    alts = set([])
     alt_files = [f for f in tz.get_in(["reference", "bwa", "indexes"], data, []) if f.endswith("alt")]
     if alt_files:
         for alt_file in alt_files:
             with open(alt_file) as in_handle:
                 for line in in_handle:
                     if not line.startswith("@"):
-                        alts.append(line.split()[0].strip())
+                        alts.add(line.split()[0].strip())
     else:
         for contig in ref.file_contigs(dd.get_ref_file(data)):
             if ("_alt" in contig.name or "_decoy" in contig.name or
                   contig.name.startswith("HLA-") or ":" in contig.name):
-                alts.append(contig.name)
-    return alts
+                alts.add(contig.name)
+    return [c for c in ref.file_contigs(dd.get_ref_file(data)) if c.name not in alts]
 
 def write_nochr_reads(in_file, out_file, config):
     """Write a BAM file of reads that are not mapped on a reference chromosome.
