@@ -24,7 +24,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio import broad, utils
 from bcbio.bam import sambamba
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, shared
 from bcbio.variation import vcfutils
 
 def assign_interval(data):
@@ -92,13 +92,17 @@ def calculate(bam_file, data):
         cmd = ["goleft", "depth", "--windowsize", str(params["window_size"]), "--q", "1",
                "--mincov", str(params["min"]), "--reference", ref_file,
                "--processes", str(dd.get_num_cores(data)), "--stats", "--ordered"]
-        if variant_regions:
-            window_file = "%s-tocalculate-windows.bed" % utils.splitext_plus(out_file)[0]
-            if not utils.file_uptodate(window_file, bam_file):
-                with file_transaction(data, window_file) as tx_out_file:
-                    pybedtools.BedTool().window_maker(w=params["parallel_window_size"],
-                                                      b=pybedtools.BedTool(variant_regions)).saveas(tx_out_file)
-            cmd += ["--bed", window_file]
+        window_file = "%s-tocalculate-windows.bed" % utils.splitext_plus(out_file)[0]
+        if not utils.file_uptodate(window_file, bam_file):
+            with file_transaction(data, window_file) as tx_out_file:
+                if not variant_regions:
+                    variant_regions = "%s-genome.bed" % utils.splitext_plus(tx_out_file)[0]
+                    with open(variant_regions, "w") as out_handle:
+                        for c in shared.get_noalt_contigs(data):
+                            out_handle.write("%s\t%s\t%s\n" % (c.name, 0, c.size))
+                pybedtools.BedTool().window_maker(w=params["parallel_window_size"],
+                                                  b=pybedtools.BedTool(variant_regions)).saveas(tx_out_file)
+        cmd += ["--bed", window_file]
         max_depth = _get_max_depth(variant_regions_avg_cov, params, data)
         if max_depth:
             cmd += ["--maxmeandepth", str(int(max_depth))]

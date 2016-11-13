@@ -32,7 +32,10 @@ def run(_, data, out_dir):
                     key = (chrom, pos)
                 counts[key][umi] += 1
         umi_reductions = []
+        umi_counts = collections.defaultdict(int)
         for key in sorted(counts.keys()):
+            for c in counts[key].values():
+                umi_counts[c] += 1
             total_seqs = sum(counts[key].values())
             umi_count = len(counts[key])
             umi_reductions.append(float(total_seqs) / umi_count)
@@ -44,6 +47,7 @@ def run(_, data, out_dir):
         out["umi_consensus_pct"] = (100.0 - float(consensus_count) / float(mapped) * 100.0)
         out["umi_reduction_median"] = int(math.ceil(np.median(umi_reductions)))
         out["umi_reduction_max"] = int(max(umi_reductions))
+        out["umi_counts"] = dict(umi_counts)
         with open(stats_file, "w") as out_handle:
             yaml.safe_dump({dd.get_sample_name(data): out}, out_handle,
                            default_flow_style=False, allow_unicode=False)

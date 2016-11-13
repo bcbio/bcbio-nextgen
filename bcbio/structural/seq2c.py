@@ -30,7 +30,9 @@ def precall(items):
     items = [utils.to_single_data(x) for x in items]
     assert len(items) == 1, "Expect one item to Seq2C coverage calculation"
     data = utils.to_single_data(items)
-    assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
+    # sv_bed could specify a smaller region than variant coverage, so avoid
+    # this sanity check
+    # assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
     work_dir = _sv_workdir(data)
     bed_file = _prep_bed(data, work_dir)
