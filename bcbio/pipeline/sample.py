@@ -80,7 +80,7 @@ def _add_supplemental_bams(data):
             test_file = "%s-%s%s" % (base, supext, ext)
             if os.path.exists(test_file):
                 sup_key = file_key + "_plus"
-                if not sup_key in data:
+                if sup_key not in data:
                     data[sup_key] = {}
                 data[sup_key][supext] = test_file
     return data
@@ -111,6 +111,13 @@ def process_alignment(data, alt_input=None):
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        umi_file = dd.get_umi_file(data)
+        if umi_file and fastq2:
+            f1, f2 = postalign.umi_consensus(data)
+            data["umi_bam"] = dd.get_work_bam(data)
+            del data["config"]["algorithm"]["umi_type"]
+            data["config"]["algorithm"]["mark_duplicates"] = False
+            data = align_to_sort_bam(f1, f2, aligner, data)
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
@@ -186,13 +193,12 @@ def postprocess_alignment(data):
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
             callable.block_regions(covinfo.callable, bam_file_ready, ref_file, data)
-        offtarget_stats = callable.calculate_offtarget(bam_file_ready, ref_file, data)
-        data["regions"] = {"nblock": nblock_bed, "callable": callable_bed,
+        data["regions"] = {"nblock": nblock_bed,
+                           "callable": callable_bed,
                            "highdepth": covinfo.highdepth,
                            "sample_callable": covinfo.callable,
                            "coverage_bed": covinfo.coverage,
-                           "median_cov": covinfo.median_cov,
-                           "offtarget_stats": offtarget_stats}
+                           "avg_coverage": covinfo.avg_coverage}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):

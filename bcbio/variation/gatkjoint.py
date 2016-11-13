@@ -29,7 +29,8 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
             if not assoc_files: assoc_files = {}
             params = ["-T", "GenotypeGVCFs",
                       "-R", ref_file, "-o", tx_out_file,
-                      "-L", bamprep.region_to_gatk(region)]
+                      "-L", bamprep.region_to_gatk(region),
+                      "--max_alternate_alleles", "4"]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
             if assoc_files.get("dbsnp"):

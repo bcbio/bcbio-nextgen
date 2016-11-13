@@ -18,8 +18,7 @@ Current status
 
 bcbio currently supports creation of CWL for alignment, small variant
 calls (SNPs and indels), coverage assessment, HLA typing and quality
-control. It generates a `CWL draft
-3 <http://common-workflow-language.github.io/draft-3/>`_ compatible
+control. It generates a `CWL v1.0 <http://www.commonwl.org/v1.0/>`_ compatible
 workflow. The actual biological code execution during runs works with
 either the bcbio docker container
 (`bcbio/bcbio <https://hub.docker.com/r/bcbio/bcbio/>`_) or a local
@@ -57,7 +56,7 @@ We plan to continue to expand CWL support to include more components of bcbio,
 and also need to evaluate the workflow on larger, real life analyses. This
 includes supporting additional CWL runners. We're evaluating `Galaxy/Planemo
 <https://github.com/galaxyproject/planemo>`_ for integration with the Galaxy
-community.
+community, and working on support for `Broad's Cromwell WDL runner <http://gatkforums.broadinstitute.org/wdl/discussion/8454/feedback-on-initial-version-of-bcbio-wdl-converted-from-cwl>`_.
 
 Getting started
 ~~~~~~~~~~~~~~~
@@ -74,8 +73,8 @@ dependencies required to run bcbio with supported CWL runners. To install using
     ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
 If you have `Docker <https://www.docker.com/>`_ present on your system this is
-all you need to get started running examples. Alternatively,
-`install bcbio
+all you need to get started running examples. If you instead prefer to use a
+local installation, `install bcbio
 <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
 and make it available in your path.
 

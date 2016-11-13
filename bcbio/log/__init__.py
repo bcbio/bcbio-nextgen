@@ -94,6 +94,8 @@ def create_base_logger(config=None, parallel=None):
     Correctly sets up for local, multiprocessing and distributed runs.
     Creates subscribers for non-local runs that will be references from
     local logging.
+
+    Retrieves IP address using tips from http://stackoverflow.com/a/1267524/252589
     """
     if parallel is None: parallel = {}
     parallel_type = parallel.get("type", "local")
@@ -101,9 +103,11 @@ def create_base_logger(config=None, parallel=None):
     if parallel_type == "ipython":
         from bcbio.log import logbook_zmqpush
         ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-               if not ip.startswith("127.0.0")]
+               if not ip.startswith("127.")]
+        ips += [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())[1] for s in
+                [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]]
         if not ips:
-            sys.stderr.write("Cannot resolve a local IP address that isn't 127.0.0. "
+            sys.stderr.write("Cannot resolve a local IP address that isn't 127.x.x.x "
                              "Your machines might not have a local IP address "
                              "assigned or are not able to resolve it.\n")
             sys.exit(1)

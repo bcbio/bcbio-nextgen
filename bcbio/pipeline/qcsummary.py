@@ -9,7 +9,9 @@ import yaml
 from datetime import datetime
 
 import toolz as tz
+from bcbio.bam import sambamba
 
+from bcbio.variation.bedutils import clean_file
 from bcbio import bam, utils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
@@ -17,6 +19,9 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
+from bcbio.variation.coverage import get_average_coverage
+from bcbio.variation import bedutils
+
 
 # ## High level functions to generate summary
 
@@ -84,6 +89,8 @@ def get_qc_tools(data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
         to_run += ["qsignature", "coverage", "variants", "picard"]
+    if dd.get_umi_file(data):
+        to_run += ["umi"]
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -94,7 +101,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -105,7 +112,8 @@ def _run_qc_tools(bam_file, data):
              "coverage": _run_coverage_qc,
              "variants": _run_variants_qc,
              "kraken": kraken.run,
-             "picard": picard.run}
+             "picard": picard.run,
+             "umi": umi.run}
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}
@@ -143,7 +151,8 @@ def _organize_qc_files(program, qc_dir):
             if os.path.isfile(fname):
                 out_files.append(fname)
             elif os.path.isdir(fname) and not fname.endswith("tx"):
-                out_files.extend([os.path.join(fname, x) for x in os.listdir(fname)])
+                for root, dirs, files in os.walk(fname):
+                    out_files.extend([os.path.join(root, x) for x in files])
         if len(out_files) > 0:
             if len(out_files) == 1:
                 base = out_files[0]
@@ -233,7 +242,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     """
     cur_descriptions = set([s[0]["description"] for s in cur_samples])
     out = []
-    if os.path.exists(summary_file):
+    if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
             for s in yaml.load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
@@ -275,7 +284,7 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
     """
     out_file = os.path.join(utils.safe_makedir(os.path.join(data["dirs"]["work"], "researcher")),
                             "%s-summary.tsv" % run_info.clean_name(researcher))
-    metrics = ["Total reads", "Mapped reads", "Mapped reads pct", "Duplicates", "Duplicates pct"]
+    metrics = ["Total_reads", "Mapped_reads", "Mapped_reads_pct", "Duplicates", "Duplicates_pct"]
     with open(summary_yaml) as in_handle:
         with open(out_file, "w") as out_handle:
             writer = csv.writer(out_handle, dialect="excel-tab")
@@ -291,14 +300,55 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
 
 def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
+    out = dict()
+
+    total_reads = sambamba.number_of_reads(data, bam_file)
+    out['Total_reads'] = total_reads
+    mapped = sambamba.number_of_mapped_reads(data, bam_file)
+    out['Mapped_reads'] = mapped
+    if total_reads:
+        out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
+    if mapped:
+        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+        out['Mapped_unique_reads'] = mapped
+        mapped_dups = mapped - mapped_unique
+        out['Duplicates'] = mapped_dups
+        out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+
+        if dd.get_coverage(data):
+            cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+            merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
+            target_name = "coverage"
+        else:
+            merged_bed_file = dd.get_variant_regions_merged(data)
+            target_name = "variant_regions"
+
+        ontarget = sambamba.number_mapped_reads_on_target(
+            data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
+        if mapped_unique:
+            out["Ontarget_unique_reads"] = ontarget
+            out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
+            out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
+            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+            ontarget_padded = sambamba.number_mapped_reads_on_target(
+                data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
+            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+        if total_reads:
+            out['Usable_pct'] = 100.0 * ontarget / total_reads
+
+        avg_coverage = get_average_coverage(data, bam_file, merged_bed_file, target_name)
+        out['Avg_coverage'] = avg_coverage
+
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
-    coverage = cov.coverage(data, out_dir)
+    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir)
     # Re-enable with annotations from internally installed
     # problem region directory
     # if priority:
     #    annotated = cov.decorate_problem_regions(
     #        priority, problem_regions, data)
+
+    return out
 
 def _run_variants_qc(bam_file, data, out_dir):
     """Run variants QC analysis"""

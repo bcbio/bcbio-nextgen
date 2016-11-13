@@ -120,14 +120,14 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
+    "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
     "callable_regions": {"keys": ["regions", "callable"]},
-    "median_coverage": {"keys": ["regions", "median_cov"]},
+    "avg_coverage": {"keys": ["regions", "avg_coverage"]},
     "coverage_bed": {"keys": ["regions", "coverage_bed"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
-    "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
@@ -180,6 +180,15 @@ def get_input_sequence_files(data, default=None):
         assert len(data["files"]) == 1, data["files"]
         file1, file2 = data["files"][0], None
     return file1, file2
+
+def get_umi_file(data):
+    """Retrieve UMI, specified as a separate fastq file.
+    """
+    umi = tz.get_in(["config", "algorithm", "umi_type"], data)
+    if umi and os.path.exists(umi):
+        assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
+            "Using UMI file requires marking duplicates"
+        return umi
 
 def get_dexseq_gff(config, default=None):
     """

@@ -1,12 +1,13 @@
 ## 1.0.0 (in progress)
 
-- Support ATAC-seq for chipseq pipeline.
-- Remove duplicates after alignment for chipseq pipeline.
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
 - Use samtools depth instead of bedtools genomecov for depth calculations, and
   calculate high depth regions during initial depth calculations.
   Improves speed by more than 6x. Thanks to Brent Pedersen.
+- Adjust de-duplication strategy to use bamsormadup from biobambam2 for most
+  cases and samblaster when split and discordant reads needed for SV calling
+  with lumpy.
 - Fix handling of fresh installs with GATK 3.6 only included. Correctly handles
   versioning from bioconda and lack of specifically defined jar directory.
 - Unset JAVA_HOME when running gatk-framework and GATK > 3.6, forcing
@@ -23,6 +24,8 @@
 - Limit GATK cores used for GenotypeGVCFs to avoid excessive memory usage.
 - VQSR: allow forcing GATK to try VQSR with tools_on. Generate VQSR plots.
   Thanks to Zhengqiu Cai.
+- Support ATAC-seq for chipseq pipeline.
+- Remove duplicates after alignment for chipseq pipeline.
 - Support for bzip2 input files during variant calling. Thanks to Paulo Silva.
 - Allow non-positional UMI Rapmap quantified single-cell RNA-seq.
 - Re-enable save_diskspace option to reduce disk usage during alignment

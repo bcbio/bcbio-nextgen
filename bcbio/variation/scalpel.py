@@ -5,6 +5,7 @@ https://sourceforge.net/p/scalpel/code/ci/master/tree/
 
 from __future__ import print_function
 import os
+import shutil
 
 try:
     import vcf
@@ -102,16 +103,18 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
                 raise ValueError(message)
             input_bams = " ".join("%s" % x for x in align_bams)
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
+            tx_tmp_path = "%s-scalpel-work" % utils.splitext_plus(tx_out_file)[0]
             if os.path.exists(tmp_path):
                 utils.remove_safe(tmp_path)
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
-            opts += " --dir %s" % tmp_path
+            opts += " --dir %s" % tx_tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
             perl_exports = utils.get_perl_exports(os.path.dirname(tx_out_file))
             cmd = ("{perl_exports} && "
                    "scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
+            shutil.move(tx_tmp_path, tmp_path)
             # parse produced variant file further
             scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "variants.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
