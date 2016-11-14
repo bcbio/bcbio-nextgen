@@ -11,7 +11,7 @@ else
     echo "Starting syslogd..."
     service rsyslog start
 	echo "Mounting the bucket..."
-	cmd="goofys --endpoint s3.eu-central-1.amazonaws.com --sse $_BUCKET /mnt/$_BUCKET"
+	cmd="goofys --sse $_BUCKET /mnt/$_BUCKET"
 	echo $cmd
 	$cmd
     sleep 1
