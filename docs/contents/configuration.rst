@@ -625,16 +625,16 @@ for germline validations:
 
 - ``giab-NA12878`` --  `Genome in a Bottle
   <https://github.com/genome-in-a-bottle>`_ for NA12878. Truth sets: small_variants,
-  regions, DEL; Builds: GRCh37, hg19.
+  regions, DEL; Builds: GRCh37, hg19, hg38
 - ``giab-NA12878-crossmap`` --  `Genome in a Bottle
   <https://github.com/genome-in-a-bottle>`_ for NA12878 converted to hg38 with CrossMap. Truth sets: small_variants,
-  regions, DEL; Builds: hg38.
+  regions, DEL; Builds: hg38
 - ``giab-NA12878-remap`` --  `Genome in a Bottle
   <https://github.com/genome-in-a-bottle>`_ for NA12878 converted to hg38 with Remap. Truth sets: small_variants,
-  regions, DEL; Builds: hg38.
+  regions, DEL; Builds: hg38
 - ``platinum-genome-NA12878`` -- `Illumina Platinum Genome
   <http://www.illumina.com/platinumgenomes/>`_ for NA12878. Truth sets:
-  small_variants, regions; Builds: hg19, hg38.
+  small_variants, regions; Builds: hg19, hg38
 
 and for cancer validations:
 
