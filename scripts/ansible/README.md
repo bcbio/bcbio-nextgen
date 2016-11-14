@@ -44,7 +44,11 @@ some basic infrastructure to do runs:
 - The name of a keypair to use for ssh access, where you have the private key
   stored locally.
 - A volume that will contain the run and bcbio installation. You can create this
-  in the AWS console, in the Volumes tab.
+  in the AWS console, in the Volumes tab or using saws:
+
+       aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
+       aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
+
 - Optionally, an IAM role that allows access to S3 resources. This makes it
   easier to push/pull data to the instance.
 

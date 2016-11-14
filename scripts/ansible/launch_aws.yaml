@@ -41,11 +41,11 @@
   gather_facts: true
   tasks:
     - include_vars: project_vars.yaml
+    - apt: name="{{ item }}" update_cache=yes
+      become: true
+      with_items: [git, unzip, wget, tar, gzip, bzip2]
     - name: Mount work volume
       become: true
       mount: name=/mnt/work src=/dev/xvdf fstype=ext4 state=mounted
     - name: Add bcbio to path
       lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
-    - apt: name="{{ item }}" update_cache=yes
-      become: true
-      with_items: [git, unzip, wget, tar, gzip, bzip2]
