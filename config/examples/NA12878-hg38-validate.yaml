@@ -49,9 +49,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/GiaB_v2_19-38_remap.vcf.gz
-#      validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
-#      validate_method: rtg
+#      validate: giab-NA12878-remap/truth_small_variants.vcf.gz
+#      validate_regions: giab-NA12878-remap/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-2
 #    metadata:
@@ -68,9 +67,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/GiaB_v2_19-38_remap.vcf.gz
-#      validate_regions: ../input/GiaB_v2_19-38_remap-regions.bed
-#      validate_method: rtg
+#      validate: giab-NA12878-remap/truth_small_variants.vcf.gz
+#      validate_regions: giab-NA12878-remap/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-3
 #    metadata:
@@ -87,9 +85,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/GiaB_v2_19.vcf.gz
-#      validate_regions: ../input/GiaB_v2_19-37_prep_regions.bed
-#      validate_method: rtg
+#      validate: giab-NA12878/truth_small_variants.vcf.gz
+#      validate_regions: giab-NA12878/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-4
 #    metadata:
@@ -106,9 +103,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
-#      validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
-#      validate_method: rtg
+#      validate: giab-NA12878-crossmap/truth_small_variants.vcf.gz
+#      validate_regions: giab-NA12878-crossmap/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-5
 #    metadata:
@@ -125,9 +121,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/GiaB_v2_19-38_crossmap.vcf.gz
-#      validate_regions: ../input/GiaB_v2_19-38_crossmap-regions.bed
-#      validate_method: rtg
+#      validate: giab-NA12878-crossmap/truth_small_variants.vcf.gz
+#      validate_regions: giab-NA12878-crossmap/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-6
 #    metadata:
@@ -144,9 +139,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/platgene_NA12878-hg19-8_0_1.vcf.gz
-#      validate_regions: ../input/platgene_NA12878-hg19-8_0_1-regions.bed
-#      validate_method: rtg
+#      validate: platinum-genome-NA12878/truth_small_variants.vcf.gz
+#      validate_regions: platinum-genome-NA12878/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-7
 #    metadata:
@@ -163,9 +157,8 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
-#      validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
-#      validate_method: rtg
+#      validate: platinum-genome-NA12878/truth_small_variants.vcf.gz
+#      validate_regions: platinum-genome-NA12878/truth_regions.bed
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-8
 #    metadata:
@@ -182,6 +175,5 @@ details:
 #      remove_lcr: true
 #      tools_off: [vqsr]
 #      variantcaller: [freebayes, gatk-haplotype]
-#      validate: ../input/platgene_NA12878-hg38-2_0_1.vcf.gz
-#      validate_regions: ../input/platgene_NA12878-hg38-2_0_1-regions.bed
-#      validate_method: rtg
+#      validate: platinum-genome-NA12878/truth_small_variants.vcf.gz
+#      validate_regions: platinum-genome-NA12878/truth_regions.bed
