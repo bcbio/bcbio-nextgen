@@ -48,6 +48,10 @@ def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
 
 @utils.map_wrap
+def run_sailfish_index(*args):
+    return sailfish.run_sailfish_index(*args)
+
+@utils.map_wrap
 def run_rapmap_align(*args):
     return rapmap.run_rapmap_align(*args)
 
