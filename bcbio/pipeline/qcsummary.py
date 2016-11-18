@@ -319,11 +319,12 @@ def _run_coverage_qc(bam_file, data, out_dir):
             cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
             merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
             target_name = "coverage"
-        elif dd.get_coverage_interval(data) != "genome":
-            merged_bed_file = dd.get_variant_regions_merged(data)
-            target_name = "variant_regions"
         else:
-            target_name = None
+            merged_bed_file = dd.get_variant_regions_merged(data)
+            if dd.get_coverage_interval(data) != "genome":
+                target_name = "variant_regions"
+            else:
+                target_name = None
 
         if target_name:
             ontarget = sambamba.number_mapped_reads_on_target(
