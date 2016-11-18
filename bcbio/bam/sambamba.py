@@ -1,6 +1,6 @@
 import os
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
@@ -56,10 +56,25 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
         return int(f.read().strip())
 
 def number_of_reads(data, bam_file, keep_dups=True):
-    return _count_in_bam(data, bam_file, '', keep_dups)
+    # use idxstats if using an indexed lookup
+    if keep_dups:
+        total = 0
+        for c in bam.idxstats(bam_file, data):
+            total += c.aligned
+            total += c.unaligned
+        return total
+    else:
+        return _count_in_bam(data, bam_file, '', keep_dups)
 
 def number_of_mapped_reads(data, bam_file, keep_dups=True):
-    return _count_in_bam(data, bam_file, 'not unmapped', keep_dups)
+    # use idxstats if using an indexed lookup
+    if keep_dups:
+        total = 0
+        for c in bam.idxstats(bam_file, data):
+            total += c.aligned
+        return total
+    else:
+        return _count_in_bam(data, bam_file, 'not unmapped', keep_dups)
 
 def number_of_properly_paired_reads(data, bam_file, keep_dups=True):
     return _count_in_bam(data, bam_file, 'proper_pair', keep_dups)
