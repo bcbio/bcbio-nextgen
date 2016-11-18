@@ -324,9 +324,9 @@ def _run_coverage_qc(bam_file, data, out_dir):
             if dd.get_coverage_interval(data) != "genome":
                 target_name = "variant_regions"
             else:
-                target_name = None
+                target_name = "genome"
 
-        if target_name:
+        if target_name != "genome":
             ontarget = sambamba.number_mapped_reads_on_target(
                 data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
             if mapped_unique:
