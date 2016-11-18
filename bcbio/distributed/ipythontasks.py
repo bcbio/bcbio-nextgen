@@ -180,6 +180,12 @@ def run_salmon_reads(*args):
     with _setup_logging(args):
         return ipython.zip_args(apply(salmon.run_salmon_reads, *args))
 
+@require(salmon)
+def run_salmon_index(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(salmon.run_salmon_index, *args))
+
 @require(sample)
 def process_alignment(*args):
     args = ipython.unzip_args(args)

@@ -44,6 +44,10 @@ def run_salmon_bam(*args):
     return salmon.run_salmon_bam(*args)
 
 @utils.map_wrap
+def run_salmon_index(*args):
+    return salmon.run_salmon_index(*args)
+
+@utils.map_wrap
 def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
 

@@ -10,7 +10,7 @@ from bcbio.log import logger
 
 
 def fast_rnaseq(samples, run_parallel):
-    samples = run_parallel("salmon_index", [samples])
+    samples = run_parallel("run_salmon_index", [samples])
     samples = run_parallel("run_salmon_reads", samples)
     samples = sailfish.combine_sailfish(samples)
     return samples
