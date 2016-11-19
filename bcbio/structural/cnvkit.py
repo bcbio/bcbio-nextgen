@@ -137,7 +137,7 @@ def _run_cnvkit_shared(inputs, backgrounds):
         ckouts.append({"cnr": "%s.cnr" % out_base,
                        "cns": "%s.cns" % out_base,
                        "back_cnn": background_cnn})
-    if not utils.file_exists(ckouts[0]["cnr"]):
+    if not utils.file_exists(ckouts[0]["cns"]):
         cov_interval = dd.get_coverage_interval(inputs[0])
         raw_target_bed, access_bed = _get_target_access_files(cov_interval, inputs[0], work_dir)
         # bail out if we ended up with no regions
@@ -197,7 +197,7 @@ def _cnvkit_segment_base(cnr_file, cov_interval, data):
                 cmd = [_get_cmd(), "segment",
                        "-o", tx_out_file, cnr_file]
                 small_vrn_files = _compatible_small_variants(data)
-                if len(small_vrn_files) > 0 and _cna_has_values(cnr_file):
+                if len(small_vrn_files) > 0 and _cna_has_values(cnr_file) and cov_interval != "genome":
                     cmd += ["-v", small_vrn_files[0]]
                 if cov_interval == "genome":
                     cmd += ["--threshold", "0.00001"]
@@ -210,7 +210,12 @@ def _cnvkit_segment_base(cnr_file, cov_interval, data):
 @zeromq_aware_logging
 def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
     """Estimate noise of a sample using a flat background.
+
+    Only used for panel/targeted data due to memory issues with whole genome
+    samples.
     """
+    if cov_interval == "genome":
+        return cnns
     target_cnn = [x["file"] for x in cnns if x["cnntype"] == "target"][0]
     background_file = "%s-flatbackground.cnn" % utils.splitext_plus(target_cnn)[0]
     background_file = _cnvkit_background([], background_file, target_bed, antitarget_bed, items[0])
@@ -262,7 +267,7 @@ def _select_background_cnns(cnns):
     """
     min_for_variability_analysis = 20
     pct_keep = 0.10
-    b_cnns = [x for x in cnns if x["itype"] == "background"]
+    b_cnns = [x for x in cnns if x["itype"] == "background" and x.get("metrics")]
     assert len(b_cnns) % 2 == 0, "Expect even set of target/antitarget cnns for background"
     if len(b_cnns) >= min_for_variability_analysis:
         b_cnns_w_metrics = []
@@ -458,7 +463,8 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
-                cmd += ["-v", small_vrn_files[0]]
+                if dd.get_coverage_interval(data) != "genome":
+                    cmd += ["-v", small_vrn_files[0]]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
             if gender and gender.lower() != "unknown":
