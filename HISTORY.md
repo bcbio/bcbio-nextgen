@@ -1,4 +1,4 @@
-## 1.0.0 (in progress)
+## 1.0.0 (20 November 2016)
 
 - Default to no calling if `variantcaller` not specified, instead of old GATK
   UnifiedGenotyper default.
