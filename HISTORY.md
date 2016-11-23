@@ -1,3 +1,9 @@
+## 1.0.1 (in progress)
+
+- Support FreeBayes 1.1.0 for improved memory usage and 3-4x speedup.
+  Will default to 1.1.0 at next release. Validation work:
+  https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2016-11-21-giab-hg38-freebayes.md
+
 ## 1.0.0 (20 November 2016)
 
 - Default to no calling if `variantcaller` not specified, instead of old GATK
