@@ -50,7 +50,7 @@ def _run_cwltool(args):
     flags = ["--tmpdir-prefix", tmp_dir, "--tmp-outdir-prefix", tmp_dir]
     if args.no_container:
         _remove_bcbiovm_path()
-        flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
+        flags += ["--no-container", "--preserve-environment", "PATH", "--preserve-environment", "HOME"]
     cmd = ["cwltool"] + flags + args.toolargs + ["--", main_file, json_file]
     _run_tool(cmd, not args.no_container)
 

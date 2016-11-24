@@ -288,6 +288,7 @@ def _merge_align_bams(data):
     """
     for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
         in_files = tz.get_in(key, data)
+        in_files = [x for x in in_files if x and x != "None"]
         if in_files:
             if not isinstance(in_files, (list, tuple)):
                 in_files = [in_files]
@@ -297,6 +298,8 @@ def _merge_align_bams(data):
             merged_file = merge_bam_files(in_files, utils.safe_makedir(os.path.dirname(out_file)),
                                           data["config"], out_file=out_file)
             data = tz.update_in(data, key, lambda x: merged_file)
+        else:
+            data = tz.update_in(data, key, lambda x: None)
     if "align_bam" in data and "work_bam" in data:
         data["align_bam"] = data["work_bam"]
     return data

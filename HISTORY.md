@@ -7,7 +7,6 @@
   directly from bwa SAM: 'ERROR: bin field of BAM record does not equal value
   computed based on alignment start and end, and length of sequence to which read is aligned'
 
-
 ## 1.0.0 (20 November 2016)
 
 - Default to no calling if `variantcaller` not specified, instead of old GATK

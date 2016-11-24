@@ -89,16 +89,16 @@ def _variant_shared():
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
                 cwlout(["hla", "fastq"], ["File", "null"]),
-                cwlout(["work_bam_plus", "disc"], "File", [".bai"]),
-                cwlout(["work_bam_plus", "sr"], "File", [".bai"])],
+                cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
+                cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                ["aligner", "samtools", "sambamba"],
                {"files": 1.5}),
              s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
                 ["hla", "fastq"]],
                [cwlout(["align_bam"], "File", [".bai"]),
-                cwlout(["work_bam_plus", "disc"], "File", [".bai"]),
-                cwlout(["work_bam_plus", "sr"], "File", [".bai"]),
+                cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
+                cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
                 cwlout(["hla", "fastq"], ["File", "null"])],
                ["biobambam"],
                {"files": 3})]
@@ -196,7 +196,8 @@ def variant():
                 cwlout(["coverage", "problems"], ["File", "null"])],
                ["samtools", "fastqc"]),
              s("multiqc_summary", "multi-combined",
-               [["summary", "qc", "samtools"], ["summary", "qc", "fastqc"]],
+               [["genome_build"], ["summary", "qc", "samtools"], ["summary", "qc", "fastqc"],
+                ["reference", "fasta", "base"], ["config", "algorithm", "coverage_interval"]],
                [cwlout(["summary", "multiqc"], ["File", "null"])])
              # s("qc_report_summary", "multi-combined",
              #   [["align_bam"],
@@ -292,7 +293,8 @@ def rnaseq():
              cwlout(["summary", "qc", "fastqc"], "File")],
             ["samtools", "fastqc"]),
           s("multiqc_summary", "multi-combined",
-            [["summary", "qc", "samtools"], ["summary", "qc", "fastqc"]],
+            [["genome_build"], ["summary", "qc", "samtools"], ["summary", "qc", "fastqc"],
+             ["reference", "fasta", "base"], ["config", "algorithm", "coverage_interval"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])])]
 
     steps = prep + align + quantitate + qc
