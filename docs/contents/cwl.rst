@@ -114,12 +114,12 @@ GitHub repository locally <https://github.com/chapmanb/bcbio-nextgen>`_
 to get the test suite and run a minimal CWL workflow generated
 automatically by bcbio from the inputs::
 
-    git clone https://github.com/chapmanb/bcbio-nextgen.git
-    cd bcbio-nextgen/tests
-    ./run_tests.sh cwl_local
-    ./run_tests.sh cwl_docker
+    $ git clone https://github.com/chapmanb/bcbio-nextgen.git
+    $ cd bcbio-nextgen
+    $ pip intsall -r requirements_dev.txt
+    $ py.test -m cwl
 
-This will create a CWL workflow inside ``test_automated_output`` which
+This will create a CWL workflow inside ``tests/test_automated_output`` which
 you can run again manually with either a local bcbio installation or Docker as
 described above.
 
