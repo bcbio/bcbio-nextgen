@@ -37,7 +37,7 @@ def _header(fn):
     return l
 
 
-def _get_samples_to_process(fn, out_dir, config):
+def _get_samples_to_process(fn, out_dir, config, force_single):
     """parse csv file with one line per file. It will merge
     all files that have the same description name"""
     out_dir = os.path.abspath(out_dir)
@@ -69,17 +69,17 @@ def _get_samples_to_process(fn, out_dir, config):
             fn = "query_gsm"
             ext = ".fastq.gz"
         files = [os.path.abspath(fn_file[0]) if not is_gsm(fn_file[0]) else fn_file[0] for fn_file in items]
-        samples[sample] = [{'files': _check_paired(files), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
+        samples[sample] = [{'files': _check_paired(files, force_single), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
     return [samples[sample] for sample in samples]
 
 
-def _check_paired(files):
+def _check_paired(files, force_single):
     """check if files are fastq(.gz) and paired"""
     if files[0].endswith(".bam"):
         return files
     elif is_gsm(files[0]):
         return files
-    return combine_pairs(files)
+    return combine_pairs(files, force_single)
 
 
 def get_cluster_view(p):
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Merge fastq or bam files")
     parser.add_argument("--csv", required=True, help="csv file with metadata")
     parser.add_argument("--out", required=True, help="output dir")
+    parser.add_argument("--force_single", action='store_true', default=False, help="Treat all files as single reads")
     parser.add_argument("-n", "--numcores", type=int,
                         default=1, help="Number of concurrent jobs to process.")
     parser.add_argument("-c", "--cores-per-job", type=int,
