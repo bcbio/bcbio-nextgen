@@ -16,7 +16,7 @@ from bcbio import utils
 from bcbio.log import logger
 
 
-DEFAULT_TMP = '/tmp/bcbiotx'
+DEFAULT_TMP = 'bcbiotx'
 
 
 @contextlib.contextmanager
@@ -32,7 +32,8 @@ def tx_tmpdir(data=None, remove=True):
     data can be the full world information object being process or a
     configuration dictionary.
     """
-    tmpdir_base = utils.get_abspath(_get_base_tmpdir(data))
+    cwd = os.getcwd()
+    tmpdir_base = utils.get_abspath(_get_base_tmpdir(data, cwd))
     utils.safe_makedir(tmpdir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmpdir_base)
     logger.debug("Created tmp dir %s " % tmp_dir)
@@ -43,11 +44,11 @@ def tx_tmpdir(data=None, remove=True):
             utils.remove_safe(tmp_dir)
 
 
-def _get_base_tmpdir(data):
+def _get_base_tmpdir(data, cwd):
     config_tmpdir = tz.get_in(("config", "resources", "tmp", "dir"), data)
     if not config_tmpdir:
         config_tmpdir = tz.get_in(("resources", "tmp", "dir"), data)
-    return config_tmpdir or DEFAULT_TMP
+    return config_tmpdir or os.path.join(cwd, DEFAULT_TMP)
 
 
 @contextlib.contextmanager

@@ -73,9 +73,21 @@ def mock_io(mocker):
 
 
 class TestTxTmpdir(object):
+
+    def test_gets_base_tmpdir_name_from_config_or_cwd(self, mock_io, mocker):
+        mocker.patch('bcbio.distributed.transaction._get_base_tmpdir')
+        data = mock.Mock()
+        with tx_tmpdir(data):
+            pass
+        cwd = transaction.os.getcwd.return_value
+        transaction._get_base_tmpdir.assert_called_once_with(
+            data, cwd)
+        base_tmpdir = transaction._get_base_tmpdir.return_value
+        transaction.utils.get_abspath.assert_called_once_with(base_tmpdir)
+
     def test_makes_base_tmp_dir(self, mock_io):
         """"
-        Test that tx_tmpdir creates a base temporary directory,
+        Test that tx_tmpdir creates a base temporary directory
         """
         with tx_tmpdir(None):
             pass
@@ -95,15 +107,6 @@ class TestTxTmpdir(object):
         expected = transaction.tempfile.mkdtemp.return_value
         with tx_tmpdir() as tmp_dir:
             assert tmp_dir == expected
-
-    def test_gets_base_tmpdir_name_from_config(self, mock_io, mocker):
-        mocker.patch('bcbio.distributed.transaction._get_base_tmpdir')
-        data = mock.Mock()
-        with tx_tmpdir(data):
-            pass
-        transaction._get_base_tmpdir.assert_called_once_with(data)
-        transaction.utils.get_abspath.assert_called_once_with(
-            transaction._get_base_tmpdir.return_value)
 
     def test_rmtree_not_called_if_remove_is_false(self, mock_io):
         with tx_tmpdir(remove=False):
@@ -129,7 +132,7 @@ class TestGetConfigTmpdir(object):
             }
         }
         expected = TMPDIR
-        result = _get_base_tmpdir(config)
+        result = _get_base_tmpdir(config, CWD)
         assert result == expected
 
     def test_get_config_tmpdir__from_resources(self):
@@ -139,12 +142,12 @@ class TestGetConfigTmpdir(object):
             }
         }
         expected = 'TEST_TMP_DIR'
-        result = _get_base_tmpdir(config)
+        result = _get_base_tmpdir(config, CWD)
         assert result == expected
 
     def test_get_config_tmpdir__no_data(self):
-        result = _get_base_tmpdir(None)
-        assert result == '/tmp/bcbiotx'
+        result = _get_base_tmpdir(None, CWD)
+        assert result == '%s/bcbiotx' % CWD
 
 
 class TestFlattenPlusSafe(object):
