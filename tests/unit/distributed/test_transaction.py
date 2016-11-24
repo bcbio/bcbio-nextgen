@@ -76,7 +76,7 @@ class TestTxTmpdir(object):
 
     def test_gets_base_tmpdir_name_from_config_or_cwd(self, mock_io, mocker):
         mocker.patch('bcbio.distributed.transaction._get_base_tmpdir')
-        data = mock.Mock()
+        data  = mock.Mock()
         with tx_tmpdir(data):
             pass
         cwd = transaction.os.getcwd.return_value
@@ -118,6 +118,14 @@ class TestTxTmpdir(object):
         with tx_tmpdir(remove=True):
             pass
         transaction.utils.remove_safe.assert_called_once_with('foo')
+
+    def test_create_tmpdir_in_a_specified_base_dir(self, mock_io):
+        with tx_tmpdir(base_dir='somedir'):
+            pass
+        transaction.utils.get_abspath.assert_called_once_with(
+            'somedir/bcbiotx')
+        transaction.utils.safe_makedir.assert_called_once_with(
+            transaction.utils.get_abspath.return_value)
 
 
 class TestGetConfigTmpdir(object):
