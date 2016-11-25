@@ -104,8 +104,9 @@ def create_base_logger(config=None, parallel=None):
         from bcbio.log import logbook_zmqpush
         ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
                if not ip.startswith("127.")]
-        ips += [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())[1] for s in
-                [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]]
+        if not ips:
+            ips += [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())[1] for s in
+                    [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]]
         if not ips:
             sys.stderr.write("Cannot resolve a local IP address that isn't 127.x.x.x "
                              "Your machines might not have a local IP address "

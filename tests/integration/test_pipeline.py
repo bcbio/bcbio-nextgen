@@ -134,14 +134,14 @@ class TestVCFUtil(object):
         """Ensure we can correctly find paired fastq files.
         """
         test_pairs = ["/path/to/input/D1HJVACXX_2_AAGAGATC_1.fastq",
-                      "/path/to/input/D1HJVACXX_3_AAGAGATC_1.fastq",
+                      "/path/to/input/D1HJVACXX_4_AAGAGATC_1.fastq",
                       "/path/2/input/D1HJVACXX_2_AAGAGATC_2.fastq",
-                      "/path/2/input/D1HJVACXX_3_AAGAGATC_2.fastq"]
+                      "/path/2/input/D1HJVACXX_4_AAGAGATC_2.fastq"]
         out = fastq.combine_pairs(test_pairs)
         assert out[0] == ["/path/to/input/D1HJVACXX_2_AAGAGATC_1.fastq",
                           "/path/2/input/D1HJVACXX_2_AAGAGATC_2.fastq"], out[0]
-        assert out[1] == ["/path/to/input/D1HJVACXX_3_AAGAGATC_1.fastq",
-                          "/path/2/input/D1HJVACXX_3_AAGAGATC_2.fastq"], out[1]
+        assert out[1] == ["/path/to/input/D1HJVACXX_4_AAGAGATC_1.fastq",
+                          "/path/2/input/D1HJVACXX_4_AAGAGATC_2.fastq"], out[1]
 
         test_pairs = ["/path/to/input/Tester_1_fastq.txt",
                       "/path/to/input/Tester_2_fastq.txt"]

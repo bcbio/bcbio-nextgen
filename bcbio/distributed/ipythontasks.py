@@ -126,6 +126,12 @@ def run_sailfish(*args):
     with _setup_logging(args):
         return ipython.zip_args(apply(sailfish.run_sailfish, *args))
 
+@require(sailfish)
+def run_sailfish_index(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(sailfish.run_sailfish_index, *args))
+
 @require(rapmap)
 def run_rapmap_align(*args):
     args = ipython.unzip_args(args)
@@ -173,6 +179,12 @@ def run_salmon_reads(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(salmon.run_salmon_reads, *args))
+
+@require(salmon)
+def run_salmon_index(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(salmon.run_salmon_index, *args))
 
 @require(sample)
 def process_alignment(*args):

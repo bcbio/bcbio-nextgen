@@ -112,12 +112,13 @@ def process_alignment(data, alt_input=None):
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         umi_file = dd.get_umi_file(data)
-        if umi_file and fastq2:
-            f1, f2 = postalign.umi_consensus(data)
+        if umi_file:
             data["umi_bam"] = dd.get_work_bam(data)
-            del data["config"]["algorithm"]["umi_type"]
-            data["config"]["algorithm"]["mark_duplicates"] = False
-            data = align_to_sort_bam(f1, f2, aligner, data)
+            if fastq2:
+                f1, f2 = postalign.umi_consensus(data)
+                del data["config"]["algorithm"]["umi_type"]
+                data["config"]["algorithm"]["mark_duplicates"] = False
+                data = align_to_sort_bam(f1, f2, aligner, data)
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
@@ -287,6 +288,7 @@ def _merge_align_bams(data):
     """
     for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
         in_files = tz.get_in(key, data)
+        in_files = [x for x in in_files if x and x != "None"]
         if in_files:
             if not isinstance(in_files, (list, tuple)):
                 in_files = [in_files]
@@ -296,6 +298,8 @@ def _merge_align_bams(data):
             merged_file = merge_bam_files(in_files, utils.safe_makedir(os.path.dirname(out_file)),
                                           data["config"], out_file=out_file)
             data = tz.update_in(data, key, lambda x: merged_file)
+        else:
+            data = tz.update_in(data, key, lambda x: None)
     if "align_bam" in data and "work_bam" in data:
         data["align_bam"] = data["work_bam"]
     return data

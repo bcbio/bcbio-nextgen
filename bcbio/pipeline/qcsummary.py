@@ -319,22 +319,26 @@ def _run_coverage_qc(bam_file, data, out_dir):
             cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
             merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
             target_name = "coverage"
-        else:
+        elif dd.get_coverage_interval(data) != "genome":
             merged_bed_file = dd.get_variant_regions_merged(data)
             target_name = "variant_regions"
+        else:
+            merged_bed_file = None
+            target_name = "genome"
 
-        ontarget = sambamba.number_mapped_reads_on_target(
-            data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
-        if mapped_unique:
-            out["Ontarget_unique_reads"] = ontarget
-            out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
-            out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-            ontarget_padded = sambamba.number_mapped_reads_on_target(
-                data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
-            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
-        if total_reads:
-            out['Usable_pct'] = 100.0 * ontarget / total_reads
+        if merged_bed_file:
+            ontarget = sambamba.number_mapped_reads_on_target(
+                data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
+            if mapped_unique:
+                out["Ontarget_unique_reads"] = ontarget
+                out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
+                out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
+                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+                ontarget_padded = sambamba.number_mapped_reads_on_target(
+                    data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
+                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+            if total_reads:
+                out['Usable_pct'] = 100.0 * ontarget / total_reads
 
         avg_coverage = get_average_coverage(data, bam_file, merged_bed_file, target_name)
         out['Avg_coverage'] = avg_coverage

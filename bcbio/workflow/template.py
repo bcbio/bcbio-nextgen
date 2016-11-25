@@ -46,6 +46,8 @@ def setup_args(parser):
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     parser.add_argument("--only-metadata", help="Ignore samples not present in metadata CSV file",
                         action="store_true", default=False)
+    parser.add_argument("--force-single", help="Treat all files as single reads",
+                        action="store_true", default=False)
     setup_script_logging()
     return parser
 
@@ -81,7 +83,7 @@ KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
               ".txt.bz2": "fastq", ".bz2": "fastq"}
 
-def _prep_items_from_base(base, in_files):
+def _prep_items_from_base(base, in_files, force_single=False):
     """Prepare a set of configuration items for input files.
     """
     details = []
@@ -95,7 +97,7 @@ def _prep_items_from_base(base, in_files):
                 details.append(_prep_bam_input(f, i, base))
         elif ext in ["fastq", "fq", "fasta"]:
             files = list(files)
-            for fs in fastq.combine_pairs(files):
+            for fs in fastq.combine_pairs(files, force_single):
                 details.append(_prep_fastq_input(fs, base))
         else:
             print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
@@ -439,7 +441,7 @@ def setup(args):
             if iname in config:
                 inputs += retriever.get_files(metadata, config[iname])
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
-                 for item in _prep_items_from_base(base_item, inputs)]
+                 for item in _prep_items_from_base(base_item, inputs, args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
     out_dir = os.path.join(os.getcwd(), project_name)

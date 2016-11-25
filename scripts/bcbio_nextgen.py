@@ -113,6 +113,8 @@ def parse_cl_args(in_args):
                             action="store_true")
         # Hidden arguments passed downstream
         parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
+        parser.add_argument("--force-single", help="Treat all files as single reads",
+                            action="store_true", default=False)
     args = parser.parse_args(in_args)
     if hasattr(args, "workdir") and args.workdir:
         args.workdir = utils.safe_makedir(os.path.abspath(args.workdir))
@@ -165,6 +167,8 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     if kwargs.get("workflow", "") == "template":
         if args.only_metadata:
             inputs.append("--only-metadata")
+        if args.force_single:
+            inputs.append("--force-single")
         kwargs["inputs"] = inputs
         return kwargs
     elif len(inputs) == 1:

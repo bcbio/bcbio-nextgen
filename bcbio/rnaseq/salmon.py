@@ -105,8 +105,19 @@ def _libtype_string(bam_file, strandedness):
     strand = sailfish._sailfish_strand_string(strandedness)
     return libtype + strand
 
+def run_salmon_index(*samples):
+    for data in dd.sample_data_iterator(samples):
+        work_dir = dd.get_work_dir(data)
+        salmon_dir = os.path.join(work_dir, "salmon")
+        gtf_file = dd.get_gtf_file(data)
+        assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
+        fasta_file = dd.get_ref_file(data)
+        assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
+        salmon_index(gtf_file, fasta_file, data, salmon_dir)
+    return samples
+
 def salmon_index(gtf_file, ref_file, data, out_dir):
-    out_dir = os.path.join(out_dir, "index", dd.get_genome_build(data))
+    out_dir = os.path.join(out_dir, "index", sailfish.get_build_string(data))
     if dd.get_disambiguate(data):
         out_dir = "-".join([out_dir] + dd.get_disambguate(data))
     salmon = config_utils.get_program("salmon", dd.get_config(data))

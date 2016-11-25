@@ -3,7 +3,9 @@
 https://github.com/ekg/freebayes
 """
 
+from distutils.version import LooseVersion
 import os
+import subprocess
 import sys
 
 import toolz as tz
@@ -98,6 +100,16 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
 
     return call_file
 
+def _clean_freebayes_fmt_cl():
+    """For FreeBayes pre 1.1.0, need to remove problematic DPR FORMAT annotation.
+
+    This can be removed after bcbio 1.0.1 release which will default to
+    FreeBayes 1.1.0
+    """
+    version = subprocess.check_output(["freebayes", "--version"])
+    version = LooseVersion(version.split("version:")[-1].strip().replace("v", ""))
+    return "bcftools annotate -x FMT/DPR |" if version < LooseVersion("1.1.0") else ""
+
 def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None, somatic=None):
     """Detect SNPs and indels with FreeBayes.
@@ -128,11 +140,11 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                     opts = _add_somatic_opts(opts, somatic)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
                        """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
-                       "| {fix_ambig} | "
-                       "bcftools annotate -x FMT/DPR | bcftools view -a - | "
+                       "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                        "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                        "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "
@@ -174,12 +186,13 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 opts = _add_somatic_opts(opts, paired)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cl = ("{freebayes} -f {ref_file} {opts} "
                       "{paired.tumor_bam} {paired.normal_bam} "
                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                       "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
-                      "| {fix_ambig} | bcftools annotate -x FMT/DPR | bcftools view -a - | "
+                      "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "

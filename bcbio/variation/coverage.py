@@ -53,7 +53,8 @@ def assign_interval(data):
             cov_interval = "regional"
             offtarget_pct = 0.0
         else:
-            offtarget_pct = _count_offtarget(data, data["work_bam"], vrs or callable_file, "variant_regions")
+            offtarget_pct = _count_offtarget(data, dd.get_align_bam(data) or dd.get_work_bam(data),
+                                             vrs or callable_file, "variant_regions")
             if offtarget_pct > offtarget_thresh:
                 cov_interval = "regional"
             else:
