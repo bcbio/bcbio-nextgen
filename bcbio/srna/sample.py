@@ -44,7 +44,7 @@ def trim_srna_sample(data):
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         log_out = os.path.join(out_dir, "%s.log" % names)
         cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
-        options = " ".join(config_utils.get_resources("cutadapt", data['config']).get("options", ""))
+        options = " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", ""))
         cmd = _cmd_cutadapt()
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
@@ -53,7 +53,7 @@ def trim_srna_sample(data):
                     content = open(log_out).read().replace(out_short_file, names)
                     open(log_out, 'w').write(content)
                 if options:
-                    in_file = tx_out_file + ".tmp.fastq"
+                    in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
                     cmd = "{cutadapt} {options} {in_file} -o {tx_out_file} -m 17"
                     do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
