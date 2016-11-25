@@ -57,7 +57,7 @@ def _run_workflow(items, paired, workflow_file, work_dir):
     if not utils.file_exists(out_file):
         utils.remove_safe(os.path.join(work_dir, "workspace"))
         cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data),
-               "--quiet"]
+               ]
         do.run(cmd, "Run manta SV analysis")
     utils.remove_safe(os.path.join(work_dir, "workspace"))
     return out_file

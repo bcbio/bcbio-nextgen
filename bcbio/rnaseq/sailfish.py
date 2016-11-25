@@ -225,7 +225,7 @@ def combine_sailfish(samples):
             pivot = pivot.join(tdf)
             pivot = pivot.groupby("gene_id").agg(np.sum)
             pivot.to_csv(tx_out_file, sep="\t")
-        tx2gene = gtf.tx2genefile(gtf_file, tx2gene)
+        tx2gene = gtf.tx2genefile(gtf_file, tx2gene, data=data)
         logger.info("Finished combining count files into %s." % tidy_file)
 
     updated_samples = []
