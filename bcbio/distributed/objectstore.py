@@ -20,6 +20,10 @@ except ImportError:
     azure, azure_storage = None, None
 import boto
 import six
+from oauth2client.service_account import ServiceAccountCredentials
+from httplib2 import Http
+from apiclient.discovery import build
+from apiclient import http
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
@@ -646,3 +650,7 @@ def parse_remote(fname):
     """
     manager = _get_storage_manager(fname)
     return manager.parse_remote(fname)
+
+
+class GoogleDrive():
+    pass
