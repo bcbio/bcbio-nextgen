@@ -726,10 +726,11 @@ class GoogleDrive(object):
             self.GOOGLE_API_KEY_FILE,
             scopes=self.SCOPES
         )
+        http_auth = credentials.authorize(Http())
         self.service = build(
             self.SERVICE_NAME,
             self.SERVICE_VERSION,
-            credentials
+            http_auth
         )
 
     def download_file(self, file_id, output_file):

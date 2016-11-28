@@ -36,13 +36,19 @@ def test_filename_with_json_key_is_present(mock_api):
     assert GoogleDrive.GOOGLE_API_KEY_FILE.endswith('.json')
 
 
-def test_creates_http_auth(mock_api):
-    Credentials = objectstore.ServiceAccountCredentials
+def test_creates_api_credentials(mock_api):
+    cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
     GoogleDrive()
     objectstore.build.assert_called_once_with(
         'drive', 'v3',
-        Credentials.from_json_keyfile_name.return_value
+        cred.authorize.return_value
     )
+
+
+def test_creates_http_auth(mock_api):
+    cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
+    GoogleDrive()
+    cred.authorize.assert_called_once_with(objectstore.Http())
 
 
 def test_has_a_service_attribute(mock_api):
