@@ -442,25 +442,33 @@ Coverage information
 -  ``coverage_depth_min`` Minimum depth of coverage. Regions with less reads
    will not get called. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
-- ``coverage`` A BED file of regions to check for coverage. Coverage
-  and completeness are calculated over these regions and a Rmarkdown
-  report is generated in the `report` directory. See the section on
-  :ref:`input-file-preparation` for tips on ensuring this file matches
-  your reference genome. This can also be a shorthand for a BED file installed
-  by bcbio (see :ref:`sv-config` for options).
 
-Experimental information
-========================
+.. _analysis_regions-config:
 
--  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid). You can also
-   tweak specialty ploidy like mitochondrial calling by setting ploidy as a
-   dictionary. The defaults are::
+Analysis regions
+================
 
-        ploidy:
-          default: 2
-          mitochondrial: 1
-          female: 2
-          male: 1
+These BED files define the regions of the genome to analyze and report on.
+``variant_regions`` adjusts regions for small variant (SNP and indel) calling.
+`sv_regions`` defines regions for structural variant calling if different than
+``variant_regions``. For coverage-based quality control metrics, we first use
+``coverage`` if specified, then ``sv_regions`` if specified, then
+``variant_regions``. See the section on :ref:`input-file-preparation` for tips
+on ensuring chromosome naming in these files match your reference genome.
+
+-  ``variant_regions`` BED file of regions to call variants in.
+- ``sv_regions`` -- A specification of regions to target during structural
+  variant calling. By default, bcbio uses regions specified in
+  ``variant_regions`` but this allows custom specification for structural
+  variant calling. This can be a pointer to a BED file or special inputs:
+  ``exons`` for only exon regions, ``transcripts`` for transcript regions (the
+  min start and max end of exons) or ``transcriptsXXXX`` for transcripts plus a
+  window of XXXX size around it. The size can be an integer (``transcripts1000``)
+  or exponential (``transcripts1e5``). This applies to CNVkit and heterogeneity
+  analysis.
+- ``coverage`` A BED file of regions to check for coverage and completeness in
+  QC reporting. This can also be a shorthand for a BED file installed by bcbio
+  (see :ref:`sv-config` for options).
 
 .. _variant-config:
 
@@ -480,9 +488,6 @@ Variant calling
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
       tumor-only mode.
--  ``variant_regions`` BED file of regions to call variants in. See the section on
-   :ref:`input-file-preparation` for tips on ensuring this file matches
-   your reference genome.
 -  ``mark_duplicates`` Identify and remove variants [true, false]
    If true, will perform streaming duplicate marking with `samblaster`_ for
    paired reads and `biobambam's bammarkduplicates`_ for single end reads.
@@ -530,6 +535,16 @@ Variant calling
   joint calling. Currently applies to GATK HaplotypeCaller joint calling and
   defaults to the GATK recommendation of 200. Larger numbers of samples will
   first get combined prior to genotyping.
+-  ``ploidy`` Ploidy of called reads. Defaults to 2 (diploid). You can also
+   tweak specialty ploidy like mitochondrial calling by setting ploidy as a
+   dictionary. The defaults are::
+
+        ploidy:
+          default: 2
+          mitochondrial: 1
+          female: 2
+          male: 1
+
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
 - ``clinical_reporting`` Tune output for clinical reporting.
@@ -545,6 +560,14 @@ Variant calling
 .. _samblaster: https://github.com/GregoryFaust/samblaster
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
+
+Somatic variant calling
+=======================
+
+- ``min_allele_fraction`` Minimum allele fraction to detect variants in
+  heterogeneous tumor samples, set as the float or integer percentage to
+  resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
+  in the tumor sample of a tumor/normal pair.
 
 .. _sv-config:
 
@@ -570,15 +593,6 @@ Structural variant calling
        <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
      - ``actionable/ACMG56`` -- Medically actionable genes from the `The American College
        of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_
-- ``sv_regions`` -- A specification of regions to target during structural
-  variant calling. By default, bcbio uses regions specified in
-  ``variant_regions`` but this allows custom specification for structural
-  variant calling. This can be a pointer to a BED file or special inputs:
-  ``exons`` for only exon regions, ``transcripts`` for transcript regions (the
-  min start and max end of exons) or ``transcriptsXXXX`` for transcripts plus a
-  window of XXXX size around it. The size can be an integer (``transcripts1000``)
-  or exponential (``transcripts1e5``). This applies to CNVkit and heterogeneity
-  analysis.
 - ``fusion_mode`` Enable fusion detection in RNA-seq when using STAR (recommended)
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
@@ -661,16 +675,8 @@ provenance details about the origins of the installed files.
 
 .. _config-cancer:
 
-Cancer variant calling
-======================
-
-- ``min_allele_fraction`` Minimum allele fraction to detect variants in
-  heterogeneous tumor samples, set as the float or integer percentage to
-  resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
-  in the tumor sample of a tumor/normal pair.
-
 RNA sequencing
-======================
+==============
 
 - ``transcript_assembler`` If set, will assemble novel genes and transcripts and
   merge the results into the known annotation. Can have multiple values set in a
