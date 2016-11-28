@@ -42,3 +42,9 @@ def test_creates_http_auth(mock_api):
         'drive', 'v3',
         Credentials.from_json_keyfile_name.return_value
     )
+
+
+def test_has_a_service_attribute(mock_api):
+    drive = GoogleDrive()
+    assert drive.service == objectstore.build.return_value
+
