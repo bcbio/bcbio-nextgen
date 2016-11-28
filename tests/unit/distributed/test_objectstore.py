@@ -1,7 +1,7 @@
 import pytest
 
 from bcbio.distributed import objectstore
-from bcbio.distributed.objectstore import GoogleDrive
+from bcbio.distributed.objectstore import GoogleDrive, GoogleDownloader
 
 
 @pytest.fixture
@@ -56,3 +56,7 @@ def test_can_load_file_by_id(mock_api):
     drive.download_file(file_id, output_file)
     drive.service.files().get_media.assert_called_once_with(fileId=file_id)
 
+
+def test_downloader(mock_api):
+    downloader = GoogleDownloader()
+    assert downloader
