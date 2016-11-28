@@ -16,3 +16,11 @@ def mock_api(mocker):
 def test_create_google_drive_service(mock_api):
     service = GoogleDrive()
     assert service
+
+
+def test_creates_http_auth(mock_api):
+    GoogleDrive()
+    objectstore.ServiceAccountCredentials.from_json_keyfile_name\
+        .assert_called_once_with(
+            GoogleDrive.GOOGLE_API_KEY_FILE, scopes=GoogleDrive.SCOPES)
+
