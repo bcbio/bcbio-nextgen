@@ -48,3 +48,11 @@ def test_has_a_service_attribute(mock_api):
     drive = GoogleDrive()
     assert drive.service == objectstore.build.return_value
 
+
+def test_can_load_file_by_id(mock_api):
+    drive = GoogleDrive()
+    output_file = 'test_file'
+    file_id = 'test_file_id'
+    drive.download_file(file_id, output_file)
+    drive.service.files().get_media.assert_called_once_with(fileId=file_id)
+

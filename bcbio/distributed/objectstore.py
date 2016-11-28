@@ -723,9 +723,15 @@ class GoogleDrive():
 
     def __init__(self):
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            self.GOOGLE_API_KEY_FILE, scopes=self.SCOPES)
+            self.GOOGLE_API_KEY_FILE,
+            scopes=self.SCOPES
+        )
         self.service = build(
             self.SERVICE_NAME,
             self.SERVICE_VERSION,
             credentials
         )
+
+    def download_file(self, file_id, output_file):
+        request = self.service.files().get_media(fileId=file_id)
+
