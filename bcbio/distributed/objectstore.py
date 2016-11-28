@@ -747,4 +747,8 @@ class GoogleDownloader(object):
         media = self._download(
             fd, request, chunksize=self.CHUNK_SIZE
         )
-        media.next_chunk(num_retries=self.NUM_RETRIES)
+        done = False
+        while not done:
+            _, done = media.next_chunk(num_retries=self.NUM_RETRIES)
+            if done:
+                break
