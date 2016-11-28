@@ -655,7 +655,10 @@ def parse_remote(fname):
 class GoogleDrive():
     SCOPES = ['https://www.googleapis.com/auth/drive']
     GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
+    SERVICE_NAME = 'drive'
+    SERVICE_VERSION = 'v3'
 
     def __init__(self):
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
             self.GOOGLE_API_KEY_FILE, scopes=self.SCOPES)
+        service = build(self.SERVICE_NAME, self.SERVICE_VERSION, credentials)
