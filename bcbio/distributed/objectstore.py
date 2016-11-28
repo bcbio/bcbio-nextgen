@@ -674,4 +674,12 @@ class GoogleDrive(object):
 
 
 class GoogleDownloader(object):
-    pass
+    CHUNK_SIZE = 10*1024*1024
+
+    def __init__(self):
+        self._download = http.MediaIoBaseDownload
+
+    def load_to_file(self, fd, request):
+        self._download(
+            fd, request, chunksize=self.CHUNK_SIZE
+        )
