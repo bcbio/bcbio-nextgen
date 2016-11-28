@@ -34,11 +34,13 @@ def precall(items):
     # this sanity check
     # assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
 
-    work_dir = _sv_workdir(data)
+    assert "seq2c_bed_ready" in data["config"]["algorithm"], "Error: svregions or variant_regions BED file required for Seq2C"
+
     bed_file = data["config"]["algorithm"]["seq2c_bed_ready"]
     bam_file = dd.get_align_bam(data)
     sample_name = dd.get_sample_name(data)
 
+    work_dir = _sv_workdir(data)
     cov_file = _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name)
 
     if "sv" not in data:
@@ -75,6 +77,8 @@ def prep_seq2c_bed(data):
         bed_file = bedutils.clean_file(bed_file, data, prefix="svregions-")
     else:
         bed_file = bedutils.clean_file(dd.get_variant_regions(data), data)
+    if not bed_file:
+        return None
 
     col_num = bt.BedTool(bed_file).field_count()
     if col_num < 4:
