@@ -675,11 +675,13 @@ class GoogleDrive(object):
 
 class GoogleDownloader(object):
     CHUNK_SIZE = 10*1024*1024
+    NUM_RETRIES = 5
 
     def __init__(self):
         self._download = http.MediaIoBaseDownload
 
     def load_to_file(self, fd, request):
-        self._download(
+        media = self._download(
             fd, request, chunksize=self.CHUNK_SIZE
         )
+        media.next_chunk(num_retries=self.NUM_RETRIES)

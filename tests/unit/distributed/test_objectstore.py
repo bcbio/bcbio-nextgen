@@ -69,3 +69,13 @@ def test_downloader_executes_request(mock_api):
     downloader.load_to_file(fd, request)
     objectstore.http.MediaIoBaseDownload.assert_called_once_with(
         fd, request, chunksize=GoogleDownloader.CHUNK_SIZE)
+
+
+def test_loads_content_in_chunks(mock_api):
+    downloader = GoogleDownloader()
+    fd, request = mock.Mock(), mock.Mock()
+    downloader.load_to_file(fd, request)
+    media = objectstore.http.MediaIoBaseDownload.return_value
+    media.next_chunk.assert_called_once_with(
+        num_retries=GoogleDownloader.NUM_RETRIES)
+
