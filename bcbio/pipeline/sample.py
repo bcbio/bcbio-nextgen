@@ -21,13 +21,16 @@ from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import bedutils, coverage, recalibrate
+from bcbio.variation import coverage, recalibrate
 from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
 from bcbio.pipeline.sra import query_gsm
 from bcbio.bam import skewer
+from bcbio.structural.seq2c import prep_seq2c_bed
+from bcbio.variation.bedutils import clean_file, merge_overlaps
+
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -173,9 +176,26 @@ def prep_samples(*items):
     """
     out = []
     for data in (utils.to_single_data(x) for x in items):
-        data = bedutils.clean_inputs(data)
+        data = clean_inputs(data)
         out.append([data])
     return out
+
+def clean_inputs(data):
+    """Clean BED input files to avoid overlapping segments that cause downstream issues.
+
+    Per-merges inputs to avoid needing to call multiple times during later parallel steps.
+    """
+    if not utils.get_in(data, ("config", "algorithm", "variant_regions_orig")):
+        data["config"]["algorithm"]["variant_regions_orig"] = dd.get_variant_regions(data)
+    clean_vr = clean_file(dd.get_variant_regions(data), data)
+    merged_vr = merge_overlaps(clean_vr, data)
+    data["config"]["algorithm"]["variant_regions"] = clean_vr
+    data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
+
+    seq2c_ready_bed = prep_seq2c_bed(data)
+    data["config"]["algorithm"]["seq2c_bed_ready"] = seq2c_ready_bed
+
+    return data
 
 def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
@@ -204,7 +224,7 @@ def postprocess_alignment(data):
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
-            data = bedutils.clean_inputs(data)
+            data = clean_inputs(data)
         data = _recal_no_markduplicates(data)
     return [[data]]
 
