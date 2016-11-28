@@ -64,18 +64,39 @@ def test_downloader(mock_api):
 
 
 def test_downloader_executes_request(mock_api):
-    downloader = GoogleDownloader()
     fd, request = mock.Mock(), mock.Mock()
+    media = objectstore.http.MediaIoBaseDownload.return_value
+    media.next_chunk.side_effect = [
+        (mock.Mock(), True)
+    ]
+    downloader = GoogleDownloader()
     downloader.load_to_file(fd, request)
     objectstore.http.MediaIoBaseDownload.assert_called_once_with(
         fd, request, chunksize=GoogleDownloader.CHUNK_SIZE)
 
 
 def test_loads_content_in_chunks(mock_api):
-    downloader = GoogleDownloader()
     fd, request = mock.Mock(), mock.Mock()
-    downloader.load_to_file(fd, request)
     media = objectstore.http.MediaIoBaseDownload.return_value
+    media.next_chunk.side_effect = [
+        (mock.Mock(), True)
+    ]
+    downloader = GoogleDownloader()
+    downloader.load_to_file(fd, request)
     media.next_chunk.assert_called_once_with(
         num_retries=GoogleDownloader.NUM_RETRIES)
 
+
+def test_loads_chunks_until_done(mock_api):
+    fd, request = mock.Mock(), mock.Mock()
+    media = objectstore.http.MediaIoBaseDownload.return_value
+    next_chunk = [
+        (mock.Mock(), False),
+        (mock.Mock(), False),
+        (mock.Mock(), True),
+
+    ]
+    media.next_chunk.side_effect = next_chunk
+    downloader = GoogleDownloader()
+    downloader.load_to_file(fd, request)
+    assert objectstore.http.MediaIoBaseDownload().next_chunk.call_count == 3
