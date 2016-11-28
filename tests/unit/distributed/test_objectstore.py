@@ -28,3 +28,8 @@ def test_creates_http_auth(mock_api):
 def test_api_scope_includes_google_drive(mock_api):
     drive_scope = 'https://www.googleapis.com/auth/drive'
     assert drive_scope in GoogleDrive.SCOPES
+
+
+def test_filename_with_json_key_is_present(mock_api):
+    assert GoogleDrive.GOOGLE_API_KEY_FILE
+    assert GoogleDrive.GOOGLE_API_KEY_FILE.endswith('.json')
