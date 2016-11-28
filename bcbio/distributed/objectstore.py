@@ -14,6 +14,10 @@ import time
 import zlib
 
 import six
+from oauth2client.service_account import ServiceAccountCredentials
+from httplib2 import Http
+from apiclient.discovery import build
+from apiclient import http
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
@@ -709,3 +713,7 @@ def parse_remote(fname):
     """
     manager = _get_storage_manager(fname)
     return manager.parse_remote(fname)
+
+
+class GoogleDrive():
+    pass
