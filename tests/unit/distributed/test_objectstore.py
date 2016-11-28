@@ -1,3 +1,4 @@
+import mock
 import pytest
 
 from bcbio.distributed import objectstore
@@ -60,3 +61,11 @@ def test_can_load_file_by_id(mock_api):
 def test_downloader(mock_api):
     downloader = GoogleDownloader()
     assert downloader
+
+
+def test_downloader_executes_request(mock_api):
+    downloader = GoogleDownloader()
+    fd, request = mock.Mock(), mock.Mock()
+    downloader.load_to_file(fd, request)
+    objectstore.http.MediaIoBaseDownload.assert_called_once_with(
+        fd, request, chunksize=GoogleDownloader.CHUNK_SIZE)
