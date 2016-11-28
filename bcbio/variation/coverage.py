@@ -462,7 +462,7 @@ def regions_coverage(data, bed_file, bam_file, target_name):
     out_file = os.path.join(work_dir, target_name + "_regions_depth.bed")
     if utils.file_uptodate(out_file, bam_file) and utils.file_uptodate(out_file, bed_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file) + " -o " + tx_out_file
         message = "Calculating regions coverage of {target_name} in {bam_file}"
         do.run(cmdl, message.format(**locals()))

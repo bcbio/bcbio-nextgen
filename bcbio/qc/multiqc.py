@@ -212,7 +212,7 @@ def _merge_metrics(samples):
     out_file = os.path.join("metrics", "metrics.tsv")
     dt_together = []
     cov = {}
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(samples[0], out_file) as out_tx:
         for s in samples:
             sample_name = dd.get_sample_name(s)
             s = _add_disambiguate(s)

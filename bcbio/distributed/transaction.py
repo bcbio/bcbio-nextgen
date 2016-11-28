@@ -16,11 +16,11 @@ from bcbio import utils
 from bcbio.log import logger
 
 
-DEFAULT_TMP = '/tmp/bcbiotx'
+DEFAULT_TMP = 'bcbiotx'
 
 
 @contextlib.contextmanager
-def tx_tmpdir(data=None, remove=True):
+def tx_tmpdir(data=None, base_dir=None, remove=True):
     """Context manager to create and remove a transactional temporary directory.
 
     Handles creating a transactional directory for running commands in. Will
@@ -32,7 +32,8 @@ def tx_tmpdir(data=None, remove=True):
     data can be the full world information object being process or a
     configuration dictionary.
     """
-    tmpdir_base = utils.get_abspath(_get_base_tmpdir(data))
+    base_dir = base_dir or os.getcwd()
+    tmpdir_base = utils.get_abspath(_get_base_tmpdir(data, base_dir))
     utils.safe_makedir(tmpdir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmpdir_base)
     logger.debug("Created tmp dir %s " % tmp_dir)
@@ -43,11 +44,11 @@ def tx_tmpdir(data=None, remove=True):
             utils.remove_safe(tmp_dir)
 
 
-def _get_base_tmpdir(data):
+def _get_base_tmpdir(data, fallback_base_dir):
     config_tmpdir = tz.get_in(("config", "resources", "tmp", "dir"), data)
     if not config_tmpdir:
         config_tmpdir = tz.get_in(("resources", "tmp", "dir"), data)
-    return config_tmpdir or DEFAULT_TMP
+    return config_tmpdir or os.path.join(fallback_base_dir, DEFAULT_TMP)
 
 
 @contextlib.contextmanager
