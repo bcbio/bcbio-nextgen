@@ -31,10 +31,11 @@ def run(bam_file, data, out_dir):
     results_dir = os.path.join(out_dir, dd.get_sample_name(data))
     resources = config_utils.get_resources("qualimap", data["config"])
     options = " ".join(resources.get("options", ""))
+    results_file = os.path.join(results_dir, "genome_results.txt")
     report_file = os.path.join(results_dir, "qualimapReport.html")
     utils.safe_makedir(results_dir)
     pdf_file = "qualimapReport.pdf"
-    if not utils.file_exists(report_file) and not utils.file_exists(os.path.join(results_dir, pdf_file)):
+    if not utils.file_exists(results_file) and not utils.file_exists(os.path.join(results_dir, pdf_file)):
         if "qualimap_full" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
             logger.info("Full qualimap analysis for %s may be slow." % bam_file)
             ds_bam = bam_file
@@ -49,13 +50,8 @@ def run(bam_file, data, out_dir):
         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                              num_cores)
 
-        # Fixing the file name: MultiQC picks sample name from BAM file name.
-        fixed_bam_fname = os.path.join(out_dir, dd.get_sample_name(data) + ".bam")
-        if not os.path.islink(fixed_bam_fname):
-            os.symlink(bam_file, fixed_bam_fname)
-
         export = utils.local_path_export()
-        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {fixed_bam_fname} -outdir {results_dir} "
+        cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {results_dir} "
                "--skip-duplicated --skip-dup-mode 0 "
                "-nt {num_cores} --java-mem-size={max_mem} {options}")
         species = None
@@ -70,6 +66,8 @@ def run(bam_file, data, out_dir):
             bed6_regions = _bed_to_bed6(regions, out_dir)
             cmd += " -gff {bed6_regions}"
         do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data))
+        cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), results_file)
+        do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
 
     # return _parse_qualimap_metrics(report_file, data)
     return dict()
