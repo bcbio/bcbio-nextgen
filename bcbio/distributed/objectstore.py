@@ -652,7 +652,7 @@ def parse_remote(fname):
     return manager.parse_remote(fname)
 
 
-class GoogleDrive():
+class GoogleDrive(object):
     SCOPES = ['https://www.googleapis.com/auth/drive']
     GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
     SERVICE_NAME = 'drive'
@@ -672,3 +672,6 @@ class GoogleDrive():
     def download_file(self, file_id, output_file):
         request = self.service.files().get_media(fileId=file_id)
 
+
+class GoogleDownloader(object):
+    pass
