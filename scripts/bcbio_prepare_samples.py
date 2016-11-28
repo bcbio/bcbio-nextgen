@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Merge fastq or bam files")
     parser.add_argument("--csv", required=True, help="csv file with metadata")
     parser.add_argument("--out", required=True, help="output dir")
-    parser.add_argument("--force_single", action='store_true', default=False, help="Treat all files as single reads")
+    parser.add_argument("--force-single", action='store_true', default=False, help="Treat all files as single reads")
     parser.add_argument("-n", "--numcores", type=int,
                         default=1, help="Number of concurrent jobs to process.")
     parser.add_argument("-c", "--cores-per-job", type=int,
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     dirs = {'work': os.path.abspath(os.getcwd())}
     system.write_info(dirs, parallel, config)
     sysinfo = system.machine_info()[0]
-    samples = _get_samples_to_process(args.csv, out_dir, config)
+    samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single)
     parallel = resources.calculate(parallel, [samples], sysinfo, config)
 
     with prun.start(parallel, samples, config, dirs) as run_parallel:
