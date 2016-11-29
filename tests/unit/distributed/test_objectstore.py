@@ -58,7 +58,7 @@ def test_creates_http_auth(mock_api):
 
 def test_has_a_service_attribute(mock_api):
     drive = GoogleDriveService()
-    assert drive.service == objectstore.build.return_value
+    assert drive._service == objectstore.build.return_value
 
 
 def test_can_load_file_by_id(mock_api):
@@ -66,7 +66,7 @@ def test_can_load_file_by_id(mock_api):
     output_file = 'test_file'
     file_id = 'test_file_id'
     drive.download_file(file_id, output_file)
-    drive.service.files().get_media.assert_called_once_with(fileId=file_id)
+    drive._service.files().get_media.assert_called_once_with(fileId=file_id)
 
 
 def test_opens_output_file_for_writing(mock_api):
@@ -81,7 +81,7 @@ def test_downloads_file(mock_api, mocker):
     drive.download_file('test_file_id', 'test_fname')
     fd = objectstore.open().__enter__()
     mock_load.assert_called_once_with(
-        fd, drive.service.files().get_media.return_value)
+        fd, drive._service.files().get_media.return_value)
 
 
 def test_downloader(mock_api):
