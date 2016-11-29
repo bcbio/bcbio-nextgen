@@ -664,7 +664,7 @@ class GoogleDriveService(object):
             scopes=self.SCOPES
         )
         http_auth = credentials.authorize(Http())
-        self.service = build(
+        self._service = build(
             self.SERVICE_NAME,
             self.SERVICE_VERSION,
             http_auth
@@ -672,7 +672,7 @@ class GoogleDriveService(object):
         self._downloader = GoogleDownloader()
 
     def download_file(self, file_id, output_file):
-        request = self.service.files().get_media(fileId=file_id)
+        request = self._service.files().get_media(fileId=file_id)
         with open(output_file, 'w') as fd:
             self._downloader.load_to_file(fd, request)
 
