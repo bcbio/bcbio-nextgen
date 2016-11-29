@@ -146,19 +146,6 @@ def population_variant_regions(items):
             if vrs:
                 return vrs[0][1]
 
-def clean_inputs(data):
-    """Clean BED input files to avoid overlapping segments that cause downstream issues.
-
-    Per-merges inputs to avoid needing to call multiple times during later parallel steps.
-    """
-    if not utils.get_in(data, ("config", "algorithm", "variant_regions_orig")):
-        data["config"]["algorithm"]["variant_regions_orig"] = dd.get_variant_regions(data)
-    clean_vr = clean_file(dd.get_variant_regions(data), data)
-    merged_vr = merge_overlaps(clean_vr, data)
-    data["config"]["algorithm"]["variant_regions"] = clean_vr
-    data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
-    return data
-
 def combine(in_files, out_file, config):
     """Combine multiple BED files into a single output.
     """
