@@ -2,7 +2,7 @@ import mock
 import pytest
 
 from bcbio.distributed import objectstore
-from bcbio.distributed.objectstore import GoogleDrive, GoogleDownloader
+from bcbio.distributed.objectstore import GoogleDriveService, GoogleDownloader
 
 
 @pytest.fixture
@@ -10,35 +10,40 @@ def mock_api(mocker):
     mocker.patch('bcbio.distributed.objectstore.ServiceAccountCredentials')
     mocker.patch('bcbio.distributed.objectstore.Http')
     mocker.patch('bcbio.distributed.objectstore.build')
-    mocker.patch('bcbio.distributed.objectstore.http')
+    mock_http = mocker.patch('bcbio.distributed.objectstore.http')
+    mocker.patch('bcbio.distributed.objectstore.open')
+    media = mock_http.MediaIoBaseDownload.return_value
+    media.next_chunk.side_effect = [
+        (mock.Mock(), True)
+    ]
     yield None
 
 
 def test_create_google_drive_service(mock_api):
-    service = GoogleDrive()
+    service = GoogleDriveService()
     assert service
 
 
 def test_creates_google_credentials(mock_api):
-    GoogleDrive()
+    GoogleDriveService()
     objectstore.ServiceAccountCredentials.from_json_keyfile_name\
         .assert_called_once_with(
-            GoogleDrive.GOOGLE_API_KEY_FILE, scopes=GoogleDrive.SCOPES)
+            GoogleDriveService.GOOGLE_API_KEY_FILE, scopes=GoogleDriveService.SCOPES)
 
 
 def test_api_scope_includes_google_drive(mock_api):
     drive_scope = 'https://www.googleapis.com/auth/drive'
-    assert drive_scope in GoogleDrive.SCOPES
+    assert drive_scope in GoogleDriveService.SCOPES
 
 
 def test_filename_with_json_key_is_present(mock_api):
-    assert GoogleDrive.GOOGLE_API_KEY_FILE
-    assert GoogleDrive.GOOGLE_API_KEY_FILE.endswith('.json')
+    assert GoogleDriveService.GOOGLE_API_KEY_FILE
+    assert GoogleDriveService.GOOGLE_API_KEY_FILE.endswith('.json')
 
 
 def test_creates_api_credentials(mock_api):
     cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
-    GoogleDrive()
+    GoogleDriveService()
     objectstore.build.assert_called_once_with(
         'drive', 'v3',
         cred.authorize.return_value
@@ -47,21 +52,36 @@ def test_creates_api_credentials(mock_api):
 
 def test_creates_http_auth(mock_api):
     cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
-    GoogleDrive()
+    GoogleDriveService()
     cred.authorize.assert_called_once_with(objectstore.Http())
 
 
 def test_has_a_service_attribute(mock_api):
-    drive = GoogleDrive()
+    drive = GoogleDriveService()
     assert drive.service == objectstore.build.return_value
 
 
 def test_can_load_file_by_id(mock_api):
-    drive = GoogleDrive()
+    drive = GoogleDriveService()
     output_file = 'test_file'
     file_id = 'test_file_id'
     drive.download_file(file_id, output_file)
     drive.service.files().get_media.assert_called_once_with(fileId=file_id)
+
+
+def test_opens_output_file_for_writing(mock_api):
+    drive = GoogleDriveService()
+    drive.download_file('test_file_id', 'test_fname')
+    objectstore.open.assert_called_once_with('test_fname', 'w')
+
+
+def test_downloads_file(mock_api, mocker):
+    mock_load = mocker.patch.object(GoogleDownloader, 'load_to_file')
+    drive = GoogleDriveService()
+    drive.download_file('test_file_id', 'test_fname')
+    fd = objectstore.open().__enter__()
+    mock_load.assert_called_once_with(
+        fd, drive.service.files().get_media.return_value)
 
 
 def test_downloader(mock_api):
