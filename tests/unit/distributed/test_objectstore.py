@@ -147,3 +147,13 @@ class TestGoogleDrive(object):
     def test_check_repource(self, drive, url, expected):
         result = drive.check_resource(url)
         assert result == expected
+
+    @pytest.mark.parametrize('url', [
+        'https://drive.google.com/file/d/TEST_ID/view',
+        'https://drive.google.com/file/d/TEST_ID/',
+        'https://drive.google.com/file/d/TEST_ID',
+    ])
+    def test_parse_remote(self, drive, url):
+        expected = 'TEST_ID'
+        result = drive.parse_remote(url)
+        assert result == expected
