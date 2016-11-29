@@ -3,6 +3,8 @@ import pytest
 
 from bcbio.distributed import objectstore
 from bcbio.distributed.objectstore import GoogleDriveService, GoogleDownloader
+from bcbio.distributed.objectstore import GoogleDownloader
+from bcbio.distributed.objectstore import GoogleDrive
 
 
 @pytest.fixture
@@ -126,3 +128,22 @@ def test_loads_chunks_until_done(mock_api):
     downloader = GoogleDownloader()
     downloader.load_to_file(fd, request)
     assert objectstore.http.MediaIoBaseDownload().next_chunk.call_count == 3
+
+
+class TestGoogleDrive(object):
+
+    @pytest.yield_fixture
+    def drive(self):
+        yield GoogleDrive()
+
+    @pytest.mark.parametrize(('url', 'expected'), [
+        ('foo.com', False),
+        ('http://example.com', False),
+        ('https://example.pl', False),
+        ('https://drive.google.com', False),
+        ('https://drive.google.com/file/d/1234', True),
+        ('https://drive.google.com/file/d/1234/view', True),
+    ])
+    def test_check_repource(self, drive, url, expected):
+        result = drive.check_resource(url)
+        assert result == expected

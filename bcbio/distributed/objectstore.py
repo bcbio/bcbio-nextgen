@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 import zlib
+from urlparse import urlparse
 
 import six
 from oauth2client.service_account import ServiceAccountCredentials
@@ -766,7 +767,17 @@ class GoogleDrive(StorageManager):
         """Check if the received resource can be processed by
         the current storage manager.
         """
-        pass
+        ALLOWED_SCHEME = 'https'
+        DRIVE_NETLOC = 'drive.google.com'
+        FILE_REGEX = r'^/file/d/.*'
+        if not resource:
+            return False
+        url = urlparse(resource)
+        return all([
+            url.scheme == ALLOWED_SCHEME,
+            url.netloc == DRIVE_NETLOC,
+            re.match(FILE_REGEX, url.path)
+        ])
 
     def parse_remote(self, filename):
         """Parse a remote filename in order to obtain information
