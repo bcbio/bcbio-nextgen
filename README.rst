@@ -110,6 +110,7 @@ Contributors
 - `Oliver Hofmann <https://github.com/ohofmann>`_, Wolfson Wohl Cancer Research Center
 - `John Kern <https://github.com/kern3020>`_
 - `Rory Kirchner`_, Harvard Chan Bioinformatics Core
+- `Tetiana Khotiainsteva <https://github.com/tetianakh>`_, Ardigen
 - `Jakub Nowacki`_, AstraZeneca
 - `John Morrissey <https://github.com/jwm>`_, Harvard Chan Bioinformatics Core
 - `Lorena Pantano <https://github.com/lpantano>`_, Harvard Chan Bioinformatics Core
