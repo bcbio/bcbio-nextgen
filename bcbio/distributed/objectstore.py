@@ -760,30 +760,36 @@ class GoogleDownloader(object):
 
 
 class GoogleDrive(StorageManager):
+    _REMOTE_FILE = collections.namedtuple(
+        'RemoteFile', ['store', 'file_id']
+    )
 
     """The contract class for all the storage managers."""
 
     def check_resource(self, resource):
-        """Check if the received resource can be processed by
-        the current storage manager.
-        """
+        """Check if the received resource is a direct URL to a file
+        on a GoogleDrive"""
+        if not resource:
+            return False
         ALLOWED_SCHEME = 'https'
         DRIVE_NETLOC = 'drive.google.com'
         FILE_REGEX = r'^/file/d/.*'
-        if not resource:
-            return False
         url = urlparse(resource)
         return all([
             url.scheme == ALLOWED_SCHEME,
             url.netloc == DRIVE_NETLOC,
-            re.match(FILE_REGEX, url.path)
+            re.match(FILE_REGEX, url.path),
         ])
 
     def parse_remote(self, filename):
         """Parse a remote filename in order to obtain information
         related to received resource.
         """
-        pass
+        if not filename.endswith('/'):
+            filename = filename + '/'
+        PATTERN = r'/file/d/(.*?)/'
+        match = re.search(PATTERN, filename)
+        return match.group(1)
 
     def connect(self, resource):
         """Return a connection object pointing to the endpoint
