@@ -756,3 +756,40 @@ class GoogleDownloader(object):
             _, done = media.next_chunk(num_retries=self.NUM_RETRIES)
             if done:
                 break
+
+
+class GoogleDrive(StorageManager):
+
+    """The contract class for all the storage managers."""
+
+    def check_resource(self, resource):
+        """Check if the received resource can be processed by
+        the current storage manager.
+        """
+        pass
+
+    def parse_remote(self, filename):
+        """Parse a remote filename in order to obtain information
+        related to received resource.
+        """
+        pass
+
+    def connect(self, resource):
+        """Return a connection object pointing to the endpoint
+        associated to the received resource.
+        """
+        pass
+
+    def download(self, filename, input_dir, dl_dir=None):
+        """Download the resource from the storage."""
+        pass
+
+    def list(self, path):
+        """Return a list containing the names of the entries in the directory
+        given by path. The list is in arbitrary order.
+        """
+        pass
+
+    def open(self, filename):
+        """Provide a handle-like object for streaming."""
+        pass
