@@ -50,12 +50,13 @@ def summary(*samples):
     file_fapths += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
-            file_fapths = [fpath for fpath in file_fapths if _check_multiqc_input(fpath) and _is_good_file_for_multiqc(fpath)]
-            input_list_file = _create_list_file(file_fapths)
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            if input_list_file:
+            file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
+            file_fapths = [f for f in file_fapths if f]
+            if file_fapths:
+                input_list_file = _create_list_file(file_fapths)
                 cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
@@ -77,16 +78,10 @@ def summary(*samples):
         out.append(data)
     return [[fpath] for fpath in out]
 
-def _create_list_file(paths):
-    out_file = os.path.join(os.getcwd(), "list_files.txt")
-    is_any = False
-    with open(out_file, "w") as outh:
-        for f in paths:
-            if f:
-                is_any = True
-                print >>outh, f
-    if not is_any:
-        return None
+def _create_list_file(dirs):
+    out_file = "list_files.txt"
+    with open(out_file, "w") as f:
+        f.write('\n'.join(dirs))
     return out_file
 
 def _check_multiqc_input(path):
@@ -167,7 +162,7 @@ def _report_summary(samples, out_dir):
             run_file = "%s-run.R" % (os.path.splitext(out_report)[0])
             with open(run_file, "w") as out_handle:
                 out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
-            cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
+            # cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
             # Skip automated generation of coverage report to avoid error
             # messages. We need to generalize coverage reporting and re-include.
             # try:
@@ -217,14 +212,16 @@ def _merge_metrics(samples):
     out_file = os.path.join("metrics", "metrics.tsv")
     dt_together = []
     cov = {}
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(samples[0], out_file) as out_tx:
         for s in samples:
             sample_name = dd.get_sample_name(s)
             s = _add_disambiguate(s)
             if sample_name in cov:
                 continue
             m = tz.get_in(['summary', 'metrics'], s)
-            sample_file = os.path.abspath(os.path.join("metrics", "%s_bcbio.txt" % sample_name))
+            metrics_dir = utils.safe_makedir(os.path.abspath("metrics"))
+            utils.safe_makedir(metrics_dir)
+            sample_file = os.path.join(metrics_dir, "%s_bcbio.txt" % sample_name)
             if not tz.get_in(['summary', 'qc'], s):
                 s['summary'] = {"qc": {}}
             if m:

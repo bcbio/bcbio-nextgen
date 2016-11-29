@@ -18,11 +18,11 @@ from bcbio.utils import (file_exists, chdir, safe_makedir,
                          append_stem, is_gzipped, remove_plus,
                          open_gzipsafe, copy_plus, splitext_plus)
 from bcbio.bam import ref
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio import bam, broad, utils
+from bcbio import broad, utils
 from bcbio.bam import sambamba
 from bcbio.pipeline import config_utils, shared
 from bcbio.variation import vcfutils
@@ -112,7 +112,9 @@ def calculate(bam_file, data):
                 tx_callable_file = tx_out_file.replace(".depth.bed", ".callable.bed")
                 prefix = tx_out_file.replace(".depth.bed", "")
                 cmd += ["--prefix", prefix, bam_file]
-                do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
+                bcbio_env = utils.get_bcbio_env()
+                msg = "Calculate coverage: %s" % dd.get_sample_name(data)
+                do.run(cmd, msg, env=bcbio_env)
                 shutil.move(tx_callable_file, callable_file)
     return out_file, callable_file, _extract_highdepth(callable_file, data), variant_regions_avg_cov
 
@@ -181,7 +183,7 @@ def _average_target_coverage(data, bed_file, bam_file, target_name):
     avg_cov = sum(avg_covs) / total_len if total_len > 0 else 0
     return avg_cov
 
-def decorate_problem_regions(query_bed, problem_bed_dir):
+def decorate_problem_regions(query_bed, problem_bed_dir, data):
     """
     decorate query_bed with percentage covered by BED files of regions specified
     in the problem_bed_dir
@@ -203,7 +205,7 @@ def decorate_problem_regions(query_bed, problem_bed_dir):
     header = "\t".join(header + names)
     cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
            "-names {names_string} | sed -s 's/^#.*$/{header}/' | bgzip -c > {tx_out_file}")
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Annotate %s with problem regions." % query_bed
         do.run(cmd.format(**locals()), message)
     return out_file
@@ -235,7 +237,7 @@ def checkpoint(stem):
     return check_file
 
 @checkpoint("_summary")
-def _calculate_percentiles(in_file, sample):
+def _calculate_percentiles(in_file, sample, data=None):
     """
     Parse pct bases per region to summarize it in
     7 different pct of regions points with pct bases covered
@@ -262,12 +264,12 @@ def _calculate_percentiles(in_file, sample):
             pct[(cutoff, p_point)] = q
         pct_bases[cutoff] = sum(size * a)/float(sum(size))
 
-    with file_transaction(out_total_file) as tx_file:
+    with file_transaction(data, out_total_file) as tx_file:
         with open(tx_file, 'w') as out_handle:
             print >>out_handle, "cutoff_reads\tbases_pct\tsample"
             for k in pct_bases:
                 print >>out_handle, "\t".join(map(str, [k, pct_bases[k], sample]))
-    with file_transaction(out_file) as tx_file:
+    with file_transaction(data, out_file) as tx_file:
         with open(tx_file, 'w') as out_handle:
             print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
             for k in pct:
@@ -298,14 +300,14 @@ def _read_regions(fn):
     return regions
 
 @checkpoint("_fixed")
-def _add_high_covered_regions(in_file, bed_file, sample):
+def _add_high_covered_regions(in_file, bed_file, sample, data=None):
     """
     Add regions with higher coverage than the limit
     as fully covered.
     """
     out_file = append_stem(in_file, "_fixed")
     regions = _read_regions(in_file)
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(data, out_file) as out_tx:
         with open(bed_file) as in_handle:
             with open(out_tx, 'w') as out_handle:
                 if "header" in regions:
@@ -318,14 +320,14 @@ def _add_high_covered_regions(in_file, bed_file, sample):
                         print >>out_handle, regions[idx]
     return out_file
 
-def _summary_variants(in_file, out_file):
+def _summary_variants(in_file, out_file, data=None):
     """Parse GC and depth variant file
        to be ready for multiqc.
     """
     dt = pd.read_csv(in_file, sep="\t", index_col=False,
                      dtype={"CG": np.float64, "depth": np.float64}, na_values=["."]).dropna()
     row = list()
-    with file_transaction(out_file) as out_tx:
+    with file_transaction(data, out_file) as out_tx:
         cg = dt["CG"]
         d = dt["depth"]
         for p_point in [0.01, 10, 25, 50, 75, 90, 99.9, 100]:
@@ -428,7 +430,7 @@ def variants(data, out_dir):
         broad_runner = broad.runner_from_config_safe(data["config"])
         if in_bam and broad_runner and broad_runner.has_gatk():
             if not file_exists(parse_file):
-                with file_transaction(cg_file) as tx_out:
+                with file_transaction(data, cg_file) as tx_out:
                     params = ["-T", "VariantAnnotator",
                               "-R", ref_file,
                               "-L", cleaned_bed,
@@ -441,7 +443,7 @@ def variants(data, out_dir):
                 cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
 
             if not file_exists(parse_file):
-                with file_transaction(parse_file) as out_tx:
+                with file_transaction(data, parse_file) as out_tx:
                     with open(out_tx, 'w') as out_handle:
                         print >>out_handle, "CG\tdepth\tsample"
                     cmd = ("bcftools query -s {sample} -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
@@ -451,7 +453,7 @@ def variants(data, out_dir):
                     logger.debug('parsing coverage: %s' % sample)
             if not file_exists(qc_file):
                 # This files will be copied to final
-                _summary_variants(parse_file, qc_file)
+                _summary_variants(parse_file, qc_file, data=data)
             if file_exists(qc_file) and file_exists(parse_file):
                 remove_plus(cg_file)
 
@@ -460,7 +462,7 @@ def regions_coverage(data, bed_file, bam_file, target_name):
     out_file = os.path.join(work_dir, target_name + "_regions_depth.bed")
     if utils.file_uptodate(out_file, bam_file) and utils.file_uptodate(out_file, bed_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file) + " -o " + tx_out_file
         message = "Calculating regions coverage of {target_name} in {bam_file}"
         do.run(cmdl, message.format(**locals()))
@@ -479,7 +481,7 @@ def priority_coverage(data, out_dir):
     in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     if utils.file_uptodate(out_file, cleaned_bed) and utils.file_uptodate(out_file, in_bam):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmdl = sambamba.make_command(data, "depth base", in_bam, cleaned_bed)
         parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
         cmdl += " | {parse_cmd} > {tx_out_file}"
@@ -504,7 +506,7 @@ def priority_total_coverage(data, out_dir):
         return out_file
     cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed,
                                  depth_thresholds=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Calculating region coverage of {bed_file} in {in_bam}"
         do.run(cmdl + " -o " + tx_out_file, message.format(**locals()))
     logger.debug("Saved svprioritize coverage into " + out_file)
@@ -525,17 +527,17 @@ def coverage_region_detailed_stats(data, out_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
         sample = dd.get_sample_name(data)
         logger.debug("doing coverage for %s" % sample)
-        parse_total_file = os.path.join(sample + "_cov_total.tsv")
+        os.path.join(sample + "_cov_total.tsv")
         parse_file = os.path.join(sample + "_coverage.bed")
         if utils.file_uptodate(parse_file, cleaned_bed) and utils.file_uptodate(parse_file, in_bam):
             pass
         else:
-            with file_transaction(parse_file) as out_tx:
+            with file_transaction(data, parse_file) as out_tx:
                 cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed,
                                              depth_thresholds=[1, 5, 10, 20, 40, 50, 60, 70, 80, 100],
                                              max_cov=1000)
                 cmdl += " | sed 's/# chrom/chrom/' > " + out_tx
                 do.run(cmdl, "Run coverage regional analysis for {}".format(sample))
-        parse_file = _add_high_covered_regions(parse_file, cleaned_bed, sample)
-        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample)
+        parse_file = _add_high_covered_regions(parse_file, cleaned_bed, sample, data=data)
+        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data)
     return os.path.abspath(parse_file)

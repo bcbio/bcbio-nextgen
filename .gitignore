@@ -24,3 +24,5 @@ cwl/*-workflow
 *~
 \#*
 .idea/
+__pycache__
+.coverage

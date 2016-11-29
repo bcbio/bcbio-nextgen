@@ -61,7 +61,7 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, quant_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-    _sleuthify_sailfish(quant_dir)
+        _sleuthify_sailfish(tx_out_dir)
     return out_file
 
 def estimate_kmer_size(fq):
@@ -102,8 +102,8 @@ def create_combined_fasta(data, out_dir):
         if file_exists(out_file):
             fasta_files.append(out_file)
         else:
-            out_file = _gtf_to_fasta(gtf_file, ref_file, out_file)
-            out_file = _clean_gtf_fa(out_file, out_file)
+            out_file = _gtf_to_fasta(gtf_file, ref_file, out_file, data=data)
+            out_file = _clean_gtf_fa(out_file, out_file, data=data)
             fasta_files.append(out_file)
     out_stem = os.path.join(out_dir, dd.get_genome_build(data))
     if dd.get_disambiguate(data):
@@ -114,7 +114,7 @@ def create_combined_fasta(data, out_dir):
 
     fasta_file_string = " ".join(fasta_files)
     cmd = "cat {fasta_file_string} > {tx_out_file}"
-    with file_transaction(combined_file) as tx_out_file:
+    with file_transaction(data, combined_file) as tx_out_file:
         do.run(cmd.format(**locals()), "Combining transcriptome FASTA files.")
     return combined_file
 
@@ -145,7 +145,7 @@ def sailfish_index(gtf_file, ref_file, data, build, kmer_size):
     gtf_fa = create_combined_fasta(data, out_dir)
     if file_exists(out_dir + "versionInfo.json"):
         return out_dir
-    with file_transaction(out_dir) as tx_out_dir:
+    with file_transaction(data, out_dir) as tx_out_dir:
         cmd = ("{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} "
                "-k {kmer_size}")
         message = "Creating sailfish index for {gtf_fa}."
@@ -165,19 +165,19 @@ def _sailfish_strand_string(strandedness):
             'firststrand': "SR",
             'secondstrand': "SF"}.get(strandedness, "U")
 
-def _gtf_to_fasta(gtf_file, ref_file, out_file):
-    with file_transaction(out_file) as tx_gtf_fa:
+def _gtf_to_fasta(gtf_file, ref_file, out_file, data=None):
+    with file_transaction(data, out_file) as tx_gtf_fa:
         cmd = "gtf_to_fasta {gtf_file} {ref_file} {tx_gtf_fa}"
         message = "Extracting genomic sequences of {gtf_file}."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_file
 
-def _clean_gtf_fa(gtf_fa, out_file):
+def _clean_gtf_fa(gtf_fa, out_file, data=None):
     """
     convert the gtf_to_fasta sequence names to just the transcript ID
     >1 ENST00000389680 chrM+ 648-1601 -> >ENST00000389680
     """
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         with open(gtf_fa) as in_handle, open(tx_out_file, "w") as out_handle:
             for line in in_handle:
                 if line.startswith(">"):
@@ -213,11 +213,11 @@ def combine_sailfish(samples):
         df["id"] = df.index
         # some versions of the transcript annotations can have duplicated entries
         df = df.drop_duplicates(["id", "sample"])
-        with file_transaction(tidy_file) as tx_out_file:
+        with file_transaction(data, tidy_file) as tx_out_file:
             df.to_csv(tx_out_file, sep="\t", index_label="name")
-        with file_transaction(transcript_tpm_file) as  tx_out_file:
+        with file_transaction(data, transcript_tpm_file) as  tx_out_file:
             df.pivot("id", "sample", "tpm").to_csv(tx_out_file, sep="\t")
-        with file_transaction(gene_tpm_file) as  tx_out_file:
+        with file_transaction(data, gene_tpm_file) as  tx_out_file:
             pivot = df.pivot("id", "sample", "tpm")
             tdf = pd.DataFrame.from_dict(gtf.transcript_to_gene(gtf_file),
                                          orient="index")
@@ -225,7 +225,7 @@ def combine_sailfish(samples):
             pivot = pivot.join(tdf)
             pivot = pivot.groupby("gene_id").agg(np.sum)
             pivot.to_csv(tx_out_file, sep="\t")
-        tx2gene = gtf.tx2genefile(gtf_file, tx2gene)
+        tx2gene = gtf.tx2genefile(gtf_file, tx2gene, data=data)
         logger.info("Finished combining count files into %s." % tidy_file)
 
     updated_samples = []

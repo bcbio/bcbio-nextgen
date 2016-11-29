@@ -319,23 +319,42 @@ Test suite
 
 The test suite exercises the scripts driving the analysis, so are a
 good starting point to ensure correct installation. Tests use the
-`nose`_ test runner pre-installed as part of the pipeline. Grab the latest
-source code::
+`pytest`_ framework. Grab the latest source code::
 
      $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-To run the standard tests::
+Create a virtual environment, and install the dependencies required 
+to run tests::
 
-     $ cd bcbio-nextgen/tests
-     $ ./run_tests.sh
+     $ cd bcbio-nextgen
+     $ virtualenv .venv
+     $ source .venv/bin/activate
+     $ pip install -r requirements_dev.txt
 
-To run specific subsets of the tests::
+To run unit tests::
 
-     $ ./run_tests.sh rnaseq
-     $ ./run_tests.sh speed=2
-     $ ./run_tests.sh devel
-     $ ./run_tests.sh docker
-     $ ./run_tests.sh devel_ipython
+     $ py.test tests/unit
+
+To run integration pipeline tests::
+
+     $ py.test tests/integration
+
+To run tests which use bcbio_vm::
+
+     $ py.test tests/bcbio_vm
+
+Optionally, you can provide argument ``-s`` to ``py.test`` to see the logs
+logs which are written to stdout, and ``-v`` to make py.test optput more 
+verbose. The tests are marked with labels which you can use to run a 
+specific subsets of the tests using the ``-m`` argument::
+
+     $ py.test -m rnaseq
+     $ py.test -m speed2
+     $ py.test -m devel
+     $ py.test -m docker
+     $ py.test -m devel_ipython
+
+To see the test coverage, add the ``--cov=bcbio`` argument to ``py.test``.
 
 By default the test suite will use your installed system configuration
 for running tests, substituting the test genome information instead of
@@ -344,4 +363,4 @@ using full genomes. If you need a specific testing environment, copy
 ``tests/data/automated/post_process.yaml`` to provide a test-only
 configuration.
 
-.. _nose: http://somethingaboutorange.com/mrl/projects/nose/
+.. _pytest: http://doc.pytest.org/en/latest/

@@ -198,7 +198,10 @@ def merge_split_alignments(samples, run_parallel):
                 cur_hla["hla"]["fastq"].append(hla_files)
         if cur_hla:
             hla_merges.append([cur_hla])
-    _save_fastq_space(samples)
+    if not tz.get_in(["config", "algorithm", "kraken"], data):
+        # kraken requires fasta filenames from data['files'] as input.
+        # We don't want to remove those files if kraken qc is required.
+        _save_fastq_space(samples)
     merged = run_parallel("delayed_bam_merge", ready_merge)
     hla_merge_raw = run_parallel("merge_split_alignments", hla_merges)
     hla_merges = {}

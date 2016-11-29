@@ -1,21 +1,23 @@
 """Tests associated with detecting sequencing results dumped from a machine.
 """
 import os
-import unittest
 
-from nose.plugins.attrib import attr
 import yaml
 
+import pytest
 from bcbio.illumina import samplesheet
 
-class SampleSheetTest(unittest.TestCase):
+
+class TestSampleSheet(object):
     """Deal with Illumina SampleSheets and convert to YAML input.
     """
-    def setUp(self):
-        self.ss_file = os.path.join(os.path.dirname(__file__),
-                                    "data", "illumina_samplesheet.csv")
+    @property
+    def ss_file(self):
+        return os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "data", "illumina_samplesheet.csv")
 
-    @attr(speed=1)
+    @pytest.marks('speed1')
     def test_toyaml(self):
         """Convert CSV Illumina SampleSheet to YAML.
         """
@@ -27,12 +29,12 @@ class SampleSheetTest(unittest.TestCase):
         assert info[0]['multiplex'][0]['barcode_id'] == 5
         os.remove(out_file)
 
-    @attr(speed=1)
+    @pytest.marks('speed1')
     def test_checkforrun(self):
         """Check for the presence of runs in an Illumina SampleSheet.
         """
         fcdir = "fake/101007_80HM7ABXX"
-        config = {"samplesheet_directories" : [os.path.dirname(self.ss_file)]}
+        config = {"samplesheet_directories": [os.path.dirname(self.ss_file)]}
         ss = samplesheet.run_has_samplesheet(fcdir, config, False)
         assert ss is not None
         fcdir = "fake/101007_NOPEXX"

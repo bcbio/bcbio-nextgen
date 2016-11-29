@@ -133,6 +133,8 @@ def load_config(config_file):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     config = _expand_paths(config)
+    if 'resources' not in config:
+        config['resources'] = {}
     # lowercase resource names, the preferred way to specify, for back-compatibility
     newr = {}
     for k, v in config["resources"].iteritems():

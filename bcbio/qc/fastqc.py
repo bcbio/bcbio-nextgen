@@ -13,6 +13,7 @@ except ImportError:
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import tx_tmpdir
+from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
@@ -59,7 +60,8 @@ def run(bam_file, data, fastqc_out):
                     if os.path.exists("%s.zip" % tx_fastqc_out):
                         shutil.move("%s.zip" % tx_fastqc_out, os.path.join(fastqc_out, "%s.zip" % fastqc_clean_name))
                 elif not os.path.exists(sentry_file):
-                    raise ValueError("FastQC failed to produce output HTML file: %s" % os.path.listdir(tx_tmp_dir))
+                    raise ValueError("FastQC failed to produce output HTML file: %s" % os.listdir(tx_tmp_dir))
+    logger.info("Produced HTML report %s" % sentry_file)
     parser = FastQCParser(fastqc_out, dd.get_sample_name(data))
     stats = parser.get_fastqc_summary()
     parser.save_sections_into_file()
