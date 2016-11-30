@@ -131,6 +131,9 @@ def run_vep(in_file, data):
                 if is_human:
                     dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
                     loftee_args, loftee_fields = _get_loftee(data)
+                    dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data)
+                    maxentscan_args, maxentscan_fields = _get_maxentscan(data)
+                    genesplicer_args, genesplicer_fields = _get_genesplicer(data)
                     prediction_args = ["--sift", "b", "--polyphen", "b"]
                     prediction_fields = ["PolyPhen", "SIFT"]
                 else:

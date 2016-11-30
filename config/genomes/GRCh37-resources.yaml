@@ -16,6 +16,7 @@ variation:
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
+  dbscsnv: ../variation/dbscSNV.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
 

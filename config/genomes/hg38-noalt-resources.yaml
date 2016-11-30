@@ -7,6 +7,7 @@ aliases:
 
 variation:
   dbsnp: ../variation/dbsnp-147.vcf.gz
+  dbscsnv: ../variation/dbscSNV.txt.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
