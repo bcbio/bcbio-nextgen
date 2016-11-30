@@ -806,9 +806,9 @@ class GoogleDrive(StorageManager):
         if not self.check_resource(filename):
             return
         remote_file = self.parse_remote(filename)
-        dl_file = self._get_dl_location(input_dir, dl_dir)
-        self._download(remote_file.file_id, dl_file)
-        return dl_file
+        dl_filename = self._get_dl_location(remote_file, input_dir, dl_dir)
+        self._download_file(remote_file.file_id, dl_filename)
+        return dl_filename
 
     def _download_file(self, file_id, output_file):
         request = self.service.files().get_media(fileId=file_id)
@@ -818,6 +818,17 @@ class GoogleDrive(StorageManager):
     def _get_filename(self, file_id):
         request = self.service.files().get(fileId=file_id)
         return request.execute().get('name', str(file_id))
+
+    def _get_dl_location(self, remote_file, input_dir, dl_dir):
+        filename = self._get_filename(remote_file.file_id)
+        if not dl_dir:
+            dl_dir = self._make_dl_dir(input_dir)
+        return os.path.join(dl_dir, filename)
+
+    def _make_dl_dir(self, input_dir):
+        dl_dir = os.path.join(input_dir, self.STORE)
+        utils.safe_makedir(dl_dir)
+        return dl_dir
 
     def list(self, path):
         """Return a list containing the names of the entries in the directory

@@ -102,7 +102,8 @@ def test_loads_chunks_until_done(mock_api):
 class TestGoogleDrive(object):
 
     @pytest.yield_fixture
-    def drive(self, mock_api):
+    def drive(self, mock_api, mocker):
+        mocker.patch('bcbio.distributed.objectstore.utils')
         yield GoogleDrive()
 
     @pytest.mark.parametrize(('url', 'expected'), [
@@ -163,3 +164,21 @@ class TestGoogleDrive(object):
         drive.service.files().get().execute.return_value = {}
         result = drive._get_filename('TEST_FILE_ID')
         assert result == 'TEST_FILE_ID'
+
+    def test_get_dl_location_from_dl_dir(self, drive):
+        drive.service.files().get().execute.return_value = {
+            'name': 'TEST_FILENAME'
+        }
+        remote_file = GoogleDrive._REMOTE_FILE('GoogleDrive', '1234ID')
+        location = drive._get_dl_location(remote_file, 'input', 'path/to/dl')
+        assert location == 'path/to/dl/TEST_FILENAME'
+
+    def test_get_dl_location_from_input_dir(self, drive):
+        drive.service.files().get().execute.return_value = {
+            'name': 'TEST_FILENAME'
+        }
+        remote_file = GoogleDrive._REMOTE_FILE('GoogleDrive', '1234ID')
+        location = drive._get_dl_location(remote_file, 'input', None)
+        objectstore.utils.safe_makedir.assert_called_once_with(
+            'input/GoogleDrive')
+        assert location == 'input/GoogleDrive/TEST_FILENAME'
