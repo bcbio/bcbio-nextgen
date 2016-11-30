@@ -463,8 +463,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
-                if dd.get_coverage_interval(data) != "genome":
-                    cmd += ["-v", small_vrn_files[0]]
+                cmd += ["-v", small_vrn_files[0]]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
             if gender and gender.lower() != "unknown":

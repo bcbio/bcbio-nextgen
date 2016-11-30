@@ -31,7 +31,8 @@ install:
 
 script:
   - docker run  bcbio/bcbio:dev bash -c "py.test tests/unit --cov=bcbio"
-  - docker run  bcbio/bcbio:dev bash -c "py.test tests/integration -v -m 'not install_required' --cov=bcbio"
+  # Currently turned off to reduce test run times on Travis
+  #- docker run  bcbio/bcbio:dev bash -c "py.test tests/integration -v -m 'not install_required' --cov=bcbio"
   - py.test tests/bcbio_vm -v
 
 notifications:

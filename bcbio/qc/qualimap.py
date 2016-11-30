@@ -53,7 +53,7 @@ def run(bam_file, data, out_dir):
             utils.safe_makedir(tx_results_dir)
 
             export = utils.local_path_export()
-            cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_fname} -outdir {tx_results_dir} "
+            cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_results_dir} "
                 "--skip-duplicated --skip-dup-mode 0 "
                 "-nt {num_cores} --java-mem-size={max_mem} {options}")
             species = None
@@ -69,8 +69,8 @@ def run(bam_file, data, out_dir):
                 cmd += " -gff {bed6_regions}"
             bcbio_env = utils.get_bcbio_env()
             do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data), env=bcbio_env)
-            cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), results_file)
-            do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
+        cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), results_file)
+        do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
 
     # return _parse_qualimap_metrics(report_file, data)
     return dict()
