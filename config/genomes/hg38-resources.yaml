@@ -8,8 +8,7 @@ aliases:
 variation:
   dbsnp: ../variation/dbsnp-147.vcf.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
-  dbnsfp_fields: LRT_score,LRT_converted_rankscore,LRT_pred,MutationTaster_score,MutationTaster_converted_rankscore,MutationTaster_pred,MutationAssessor_score,MutationAssessor_rankscore,MutationAssessor_pred,FATHMM_score,FATHMM_rankscore,FATHMM_pred,MetaSVM_score,MetaSVM_rankscore,MetaSVM_pred,MetaLR_score,MetaLR_rankscore,MetaLR_pred,Reliability_index,VEST3_score,VEST3_rankscore,PROVEAN_score,PROVEAN_converted_rankscore,PROVEAN_pred,CADD_raw,CADD_raw_rankscore,CADD_phred,GERP++_NR,GERP++_RS,GERP++_RS_rankscore,phyloP46way_primate,phyloP46way_primate_rankscore,phyloP46way_placental,phyloP46way_placental_rankscore,phyloP100way_vertebrate,phyloP100way_vertebrate_rankscore,phastCons46way_primate,phastCons46way_primate_rankscore,phastCons46way_placental,phastCons46way_placental_rankscore,phastCons100way_vertebrate,phastCons100way_vertebrate_rankscore,SiPhy_29way_pi,SiPhy_29way_logOdds,SiPhy_29way_logOdds_rankscore,LRT_Omega,UniSNP_ids,ARIC5606_AA_AC,ARIC5606_AA_AF,ARIC5606_EA_AC,ARIC5606_EA_AF,clinvar_rs,clinvar_clnsig,clinvar_trait,COSMIC_ID,COSMIC_CNT
-  train_hapmap: ../variation/hapmap_3.3.vcf.gz
+  dbnsfp_fields: RadialSVM_score,RadialSVM_pred,LR_score,LR_pred,MutationTaster_score,MutationTaster_pred,FATHMM_score,FATHMM_pred,PROVEAN_score,PROVEAN_pred,MetaSVM_score,MetaSVM_pred,CADD_raw,CADD_phred,Reliability_index
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
