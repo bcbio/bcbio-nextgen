@@ -131,7 +131,6 @@ def run_vep(in_file, data):
                 if is_human:
                     dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
                     loftee_args, loftee_fields = _get_loftee(data)
-                    dbscsnv_args, dbscsnv_fields = _get_dbscsnv(data)
                     prediction_args = ["--sift", "b", "--polyphen", "b"]
                     prediction_fields = ["PolyPhen", "SIFT"]
                 else:
@@ -191,17 +190,6 @@ def _get_loftee(data):
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
 
-def _get_dbscsnv(data):
-    """
-    dbscSNV includes all potential human SNVs within splicing consensus regions
-    (−3 to +8 at the 5’ splice site and −12 to +2 at the 3’ splice site), i.e. scSNVs,
-    related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
-    """
-    dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
-    if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], []
-    else:
-        return [], []
 
 # ## snpEff variant effects
 
