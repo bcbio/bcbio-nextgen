@@ -21,82 +21,76 @@ def mock_api(mocker):
     yield None
 
 
-def test_create_google_drive_service(mock_api):
-    service = GoogleDriveServiceFactory.create('test')
-    assert service
+class TestGoogleDriveServiceFactory(object):
+    KEY_FILE = 'TEST_API_KEY_FILE'
 
+    def test_creates_google_credentials(self, mock_api):
+        GoogleDriveServiceFactory.create(self.KEY_FILE)
+        objectstore.ServiceAccountCredentials.from_json_keyfile_name\
+            .assert_called_once_with(
+                self.KEY_FILE,
+                scopes=GoogleDriveServiceFactory.SCOPES
+            )
 
-def test_creates_google_credentials(mock_api):
-    GoogleDriveServiceFactory.create('TEST_API_KEY_FILE')
-    objectstore.ServiceAccountCredentials.from_json_keyfile_name\
-        .assert_called_once_with(
-            'TEST_API_KEY_FILE',
-            scopes=GoogleDriveServiceFactory.SCOPES
+    def test_api_scope_includes_google_drive(self):
+        drive_scope = 'https://www.googleapis.com/auth/drive'
+        assert drive_scope in GoogleDriveServiceFactory.SCOPES
+
+    def test_creates_api_credentials(self, mock_api):
+        cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
+        GoogleDriveServiceFactory.create('TEST')
+        objectstore.build.assert_called_once_with(
+            'drive', 'v3',
+            cred.authorize.return_value
         )
 
+    def test_creates_http_auth(self, mock_api):
+        cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
+        GoogleDriveServiceFactory.create(self.KEY_FILE)
+        cred.authorize.assert_called_once_with(objectstore.Http())
 
-def test_api_scope_includes_google_drive(mock_api):
-    drive_scope = 'https://www.googleapis.com/auth/drive'
-    assert drive_scope in GoogleDriveServiceFactory.SCOPES
-
-
-def test_creates_api_credentials(mock_api):
-    cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
-    GoogleDriveServiceFactory.create('TEST')
-    objectstore.build.assert_called_once_with(
-        'drive', 'v3',
-        cred.authorize.return_value
-    )
+    def test_returns_service_object(self, mock_api):
+        service = GoogleDriveServiceFactory.create(self.KEY_FILE)
+        assert service == objectstore.build.return_value
 
 
-def test_creates_http_auth(mock_api):
-    cred = objectstore.ServiceAccountCredentials.from_json_keyfile_name()
-    GoogleDriveServiceFactory.create('TEST')
-    cred.authorize.assert_called_once_with(objectstore.Http())
+class TestGoogleDownloader(object):
+    @pytest.yield_fixture
+    def media(self, mock_api):
+        media = objectstore.http.MediaIoBaseDownload.return_value
+        media.next_chunk.side_effect = [
+            (mock.Mock(), True)
+        ]
+        yield media
 
+    @pytest.yield_fixture
+    def downloader(self, media):
+        yield GoogleDownloader()
 
-def test_downloader(mock_api):
-    downloader = GoogleDownloader()
-    assert downloader
+    def test_downloader_executes_request(self, downloader):
+        fd, request = mock.Mock(), mock.Mock()
+        downloader = GoogleDownloader()
+        downloader.load_to_file(fd, request)
+        objectstore.http.MediaIoBaseDownload.assert_called_once_with(
+            fd, request, chunksize=GoogleDownloader.CHUNK_SIZE)
 
+    def test_loads_content_in_chunks(self, downloader, media):
+        fd, request = mock.Mock(), mock.Mock()
+        downloader.load_to_file(fd, request)
+        media.next_chunk.assert_called_once_with(
+            num_retries=GoogleDownloader.NUM_RETRIES)
 
-def test_downloader_executes_request(mock_api):
-    fd, request = mock.Mock(), mock.Mock()
-    media = objectstore.http.MediaIoBaseDownload.return_value
-    media.next_chunk.side_effect = [
-        (mock.Mock(), True)
-    ]
-    downloader = GoogleDownloader()
-    downloader.load_to_file(fd, request)
-    objectstore.http.MediaIoBaseDownload.assert_called_once_with(
-        fd, request, chunksize=GoogleDownloader.CHUNK_SIZE)
+    def test_loads_chunks_until_done(self, downloader, media):
+        fd, request = mock.Mock(), mock.Mock()
+        next_chunk = [
+            (mock.Mock(), False),
+            (mock.Mock(), False),
+            (mock.Mock(), True),
 
-
-def test_loads_content_in_chunks(mock_api):
-    fd, request = mock.Mock(), mock.Mock()
-    media = objectstore.http.MediaIoBaseDownload.return_value
-    media.next_chunk.side_effect = [
-        (mock.Mock(), True)
-    ]
-    downloader = GoogleDownloader()
-    downloader.load_to_file(fd, request)
-    media.next_chunk.assert_called_once_with(
-        num_retries=GoogleDownloader.NUM_RETRIES)
-
-
-def test_loads_chunks_until_done(mock_api):
-    fd, request = mock.Mock(), mock.Mock()
-    media = objectstore.http.MediaIoBaseDownload.return_value
-    next_chunk = [
-        (mock.Mock(), False),
-        (mock.Mock(), False),
-        (mock.Mock(), True),
-
-    ]
-    media.next_chunk.side_effect = next_chunk
-    downloader = GoogleDownloader()
-    downloader.load_to_file(fd, request)
-    assert objectstore.http.MediaIoBaseDownload().next_chunk.call_count == 3
+        ]
+        media.next_chunk.side_effect = next_chunk
+        downloader.load_to_file(fd, request)
+        assert objectstore.http.MediaIoBaseDownload().next_chunk.call_count == 3
 
 
 class TestGoogleDrive(object):
@@ -123,7 +117,7 @@ class TestGoogleDrive(object):
         'https://drive.google.com/file/d/TEST_ID/',
         'https://drive.google.com/file/d/TEST_ID',
     ])
-    def test_parse_remote(self, drive, url):
+    def test_parse_remote_returns_file_id_from_url(self, drive, url):
         expected = 'TEST_ID'
         result = drive.parse_remote(url)
         assert result.file_id == expected
@@ -144,8 +138,8 @@ class TestGoogleDrive(object):
 
     def test_download_file_calls_downlaoder(self, drive, mocker):
         mock_load = mocker.patch.object(GoogleDownloader, 'load_to_file')
-        drive._download_file('test_file_id', 'test_fname')
         fd = objectstore.open().__enter__()
+        drive._download_file('test_file_id', 'test_fname')
         mock_load.assert_called_once_with(
             fd, drive.service.files().get_media.return_value)
 

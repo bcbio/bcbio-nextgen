@@ -714,31 +714,33 @@ def parse_remote(fname):
 
 
 class GoogleDriveServiceFactory(object):
+    """Creates and returns an instance of googleapiclient.discovery.Resource
+    class for interacting with GoogleDrive.
+    """
     SCOPES = ['https://www.googleapis.com/auth/drive']
     SERVICE_NAME = 'drive'
     SERVICE_VERSION = 'v3'
 
     @classmethod
     def create(cls, key_file):
+        """Accepts path to json file with credentials for a service account.
+        See Google API documentation for details:
+        https://developers.google.com/identity/protocols/OAuth2ServiceAccount
+        """
         credentials = cls._get_credentials(key_file)
         http_auth = credentials.authorize(Http())
         return cls._build_service(http_auth)
 
     @classmethod
     def _get_credentials(cls, key_file):
+        """Desipher Google API keys from the json file with credentials."""
         return ServiceAccountCredentials.from_json_keyfile_name(
-            key_file,
-            scopes=cls.SCOPES
+            key_file, scopes=cls.SCOPES
         )
 
     @classmethod
     def _build_service(cls, auth):
-        return build(
-            cls.SERVICE_NAME,
-            cls.SERVICE_VERSION,
-            auth
-        )
-
+        return build(cls.SERVICE_NAME, cls.SERVICE_VERSION, auth)
 
 
 class GoogleDownloader(object):
@@ -746,33 +748,35 @@ class GoogleDownloader(object):
     NUM_RETRIES = 5
 
     def __init__(self):
-        self._download = http.MediaIoBaseDownload
+        self._request_media = http.MediaIoBaseDownload
 
     def load_to_file(self, fd, request):
-        media = self._download(
-            fd, request, chunksize=self.CHUNK_SIZE
-        )
+        media = self._request_media(fd, request, chunksize=self.CHUNK_SIZE)
+        self._load_in_chunks(media)
+
+    def _load_in_chunks(self, media_resp):
         done = False
         while not done:
-            _, done = media.next_chunk(num_retries=self.NUM_RETRIES)
+            _, done = media_resp.next_chunk(num_retries=self.NUM_RETRIES)
             if done:
                 break
-
 
 class GoogleDrive(StorageManager):
     _REMOTE_FILE = collections.namedtuple(
         'RemoteFile', ['store', 'file_id']
     )
+    # TODO figure out where to keep the file name. Maybe in a config file?
     GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
     STORE = 'GoogleDrive'
 
     def __init__(self):
-        self.service = GoogleDriveServiceFactory.create(self.GOOGLE_API_KEY_FILE)
+        self.service = GoogleDriveServiceFactory.create(
+            self.GOOGLE_API_KEY_FILE)
         self._downloader = GoogleDownloader()
 
     def check_resource(self, resource):
         """Check if the received resource is a direct URL to a file
-        on a GoogleDrive"""
+        on a GoogleDrive."""
         if not resource:
             return False
         ALLOWED_SCHEME = 'https'
@@ -796,46 +800,50 @@ class GoogleDrive(StorageManager):
         return self._REMOTE_FILE(self.STORE, match.group(1))
 
     def connect(self, resource):
-        """Return a connection object pointing to the endpoint
-        associated to the received resource.
+        """Return an instance of googleapiclient.discovery.Resource
+        class for interaction with GoogleDrive API.
         """
+        if not self.check_resource(resource):
+            return None
         return self.service
 
-    def download(self, filename, input_dir, dl_dir=None):
-        """Download the resource from the storage."""
-        if not self.check_resource(filename):
-            return
-        remote_file = self.parse_remote(filename)
+    def download(self, resource, input_dir, dl_dir=None):
+        """Download a file by a direct URL from GoogleDrive."""
+        if not self.check_resource(resource):
+            return None
+        remote_file = self.parse_remote(resource)
         dl_filename = self._get_dl_location(remote_file, input_dir, dl_dir)
         self._download_file(remote_file.file_id, dl_filename)
         return dl_filename
 
-    def _download_file(self, file_id, output_file):
-        request = self.service.files().get_media(fileId=file_id)
-        with open(output_file, 'w') as fd:
-            self._downloader.load_to_file(fd, request)
-
-    def _get_filename(self, file_id):
-        request = self.service.files().get(fileId=file_id)
-        return request.execute().get('name', str(file_id))
-
     def _get_dl_location(self, remote_file, input_dir, dl_dir):
+        """Determine download location for the file."""
         filename = self._get_filename(remote_file.file_id)
-        if not dl_dir:
-            dl_dir = self._make_dl_dir(input_dir)
+        dl_dir = dl_dir or self._make_dl_dir(input_dir)
         return os.path.join(dl_dir, filename)
 
+    def _get_filename(self, file_id):
+        """Request file name from GoogleDrive by its fileId."""
+        FILENAME_KEY = 'name'
+        request = self.service.files().get(fileId=file_id)
+        return request.execute().get(FILENAME_KEY, str(file_id))
+
     def _make_dl_dir(self, input_dir):
+        """Create a download dir. """
         dl_dir = os.path.join(input_dir, self.STORE)
         utils.safe_makedir(dl_dir)
         return dl_dir
 
+    def _download_file(self, file_id, output_file):
+        """Download file from GoogleDrive into the output_file."""
+        request = self.service.files().get_media(fileId=file_id)
+        with open(output_file, 'w') as fd:
+            self._downloader.load_to_file(fd, request)
+
     def list(self, path):
-        """Return a list containing the names of the entries in the directory
-        given by path. The list is in arbitrary order.
-        """
-        pass
+        """Funcitonality not needed."""
+        raise NotImplementedError
 
     def open(self, filename):
-        """Provide a handle-like object for streaming."""
-        pass
+        """Functionality not applicable."""
+        raise NotImplementedError
