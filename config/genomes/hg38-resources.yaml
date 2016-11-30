@@ -7,7 +7,9 @@ aliases:
 
 variation:
   dbsnp: ../variation/dbsnp-147.vcf.gz
-  train_hapmap: ../variation/hapmap_3.3.vcf.gz
+  dbnsfp: ../variation/dbNSFP.txt.gz
+  dbnsfp_fields: RadialSVM_score,RadialSVM_pred,LR_score,LR_pred,MutationTaster_score,MutationTaster_pred,FATHMM_score,FATHMM_pred,PROVEAN_score,PROVEAN_pred,MetaSVM_score,MetaSVM_pred,CADD_raw,CADD_phred,Reliability_index
+  dbscsnv: ../variation/dbscSNV.txt.gz
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
