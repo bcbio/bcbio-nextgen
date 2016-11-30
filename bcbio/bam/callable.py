@@ -32,7 +32,7 @@ from bcbio.bam import sambamba
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """
-    CovInfo = collections.namedtuple("CovInfo", "callable, highdepth, avg_coverage, coverage")
+    CovInfo = collections.namedtuple("CovInfo", "callable, highdepth, avg_coverage, coverage, raw_callable")
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
@@ -48,7 +48,7 @@ def sample_callable_bed(bam_file, ref_file, data):
                         filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
-    return CovInfo(out_file, highdepth_bed, variant_regions_avg_cov, coverage_file)
+    return CovInfo(out_file, highdepth_bed, variant_regions_avg_cov, coverage_file, callable_bed)
 
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
