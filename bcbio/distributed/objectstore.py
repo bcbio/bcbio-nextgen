@@ -646,10 +646,7 @@ def is_remote(fname):
 
 def file_exists_or_remote(fname):
     """Check if a file exists or is accessible remotely."""
-    if is_remote(fname):
-        return True
-    else:
-        return os.path.exists(fname)
+    return is_remote(fname) or utils.file_exists(fname)
 
 
 def default_region(fname):
@@ -716,29 +713,32 @@ def parse_remote(fname):
     return manager.parse_remote(fname)
 
 
-class GoogleDriveService(object):
+class GoogleDriveServiceFactory(object):
     SCOPES = ['https://www.googleapis.com/auth/drive']
-    GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
     SERVICE_NAME = 'drive'
     SERVICE_VERSION = 'v3'
 
-    def __init__(self):
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            self.GOOGLE_API_KEY_FILE,
-            scopes=self.SCOPES
-        )
+    @classmethod
+    def create(cls, key_file):
+        credentials = cls._get_credentials(key_file)
         http_auth = credentials.authorize(Http())
-        self._service = build(
-            self.SERVICE_NAME,
-            self.SERVICE_VERSION,
-            http_auth
-        )
-        self._downloader = GoogleDownloader()
+        return cls._build_service(http_auth)
 
-    def download_file(self, file_id, output_file):
-        request = self._service.files().get_media(fileId=file_id)
-        with open(output_file, 'w') as fd:
-            self._downloader.load_to_file(fd, request)
+    @classmethod
+    def _get_credentials(cls, key_file):
+        return ServiceAccountCredentials.from_json_keyfile_name(
+            key_file,
+            scopes=cls.SCOPES
+        )
+
+    @classmethod
+    def _build_service(cls, auth):
+        return build(
+            cls.SERVICE_NAME,
+            cls.SERVICE_VERSION,
+            auth
+        )
+
 
 
 class GoogleDownloader(object):
@@ -763,8 +763,11 @@ class GoogleDrive(StorageManager):
     _REMOTE_FILE = collections.namedtuple(
         'RemoteFile', ['store', 'file_id']
     )
+    GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
 
-    """The contract class for all the storage managers."""
+    def __init__(self):
+        self.service = GoogleDriveServiceFactory.create(self.GOOGLE_API_KEY_FILE)
+        self._downloader = GoogleDownloader()
 
     def check_resource(self, resource):
         """Check if the received resource is a direct URL to a file
@@ -795,11 +798,21 @@ class GoogleDrive(StorageManager):
         """Return a connection object pointing to the endpoint
         associated to the received resource.
         """
-        pass
+        return self.service
 
     def download(self, filename, input_dir, dl_dir=None):
         """Download the resource from the storage."""
-        pass
+        if not self.check_resource(filename):
+            return
+        remote_file = self.parse_remote(filename)
+        dl_file = self._get_dl_location(input_dir, dl_dir)
+        self._download(remote_file.file_id, dl_file)
+        return dl_file
+
+    def _download_file(self, file_id, output_file):
+        request = self.service.files().get_media(fileId=file_id)
+        with open(output_file, 'w') as fd:
+            self._downloader.load_to_file(fd, request)
 
     def list(self, path):
         """Return a list containing the names of the entries in the directory
