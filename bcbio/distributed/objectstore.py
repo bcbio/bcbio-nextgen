@@ -752,10 +752,9 @@ class GoogleDrive(StorageManager):
         with open(output_file, 'w') as fd:
             self._downloader.load_to_file(fd, request)
 
-    def _get_filename(self, file_url):
-        resource = self.parse_remote(file_url)
-        request = self.service.files().get(fileId=resource.file_id)
-        return request.execute().get('name', resource.file_id)
+    def _get_filename(self, file_id):
+        request = self.service.files().get(fileId=file_id)
+        return request.execute().get('name', str(file_id))
 
     def list(self, path):
         """Return a list containing the names of the entries in the directory
