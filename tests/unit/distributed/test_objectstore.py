@@ -131,17 +131,17 @@ class TestGoogleDrive(object):
         assert GoogleDrive.GOOGLE_API_KEY_FILE
         assert GoogleDrive.GOOGLE_API_KEY_FILE.endswith('.json')
 
-    def test_can_load_file_by_id(self, drive):
+    def test_download_file_can_load_file_by_id(self, drive):
         output_file = 'test_file'
         file_id = 'test_file_id'
         drive._download_file(file_id, output_file)
         drive.service.files().get_media.assert_called_once_with(fileId=file_id)
 
-    def test_opens_output_file_for_writing(self, drive):
+    def test_download_file_opens_output_file_for_writing(self, drive):
         drive._download_file('test_file_id', 'test_fname')
         objectstore.open.assert_called_once_with('test_fname', 'w')
 
-    def test_downloads_file(self, drive, mocker):
+    def test_download_file_calls_downlaoder(self, drive, mocker):
         mock_load = mocker.patch.object(GoogleDownloader, 'load_to_file')
         drive._download_file('test_file_id', 'test_fname')
         fd = objectstore.open().__enter__()
