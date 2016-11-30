@@ -3,7 +3,7 @@ version: 30
 aliases:
   human: true
   snpeff: hg19
-  ensembl: homo_sapiens_vep_83_GRCh37
+  ensembl: homo_sapiens_vep_86_GRCh37
 
 variation:
   dbsnp: ../variation/dbsnp-147.vcf.gz
