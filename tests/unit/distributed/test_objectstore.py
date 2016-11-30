@@ -125,7 +125,7 @@ class TestGoogleDrive(object):
     def test_parse_remote(self, drive, url):
         expected = 'TEST_ID'
         result = drive.parse_remote(url)
-        assert result == expected
+        assert result.file_id == expected
 
     def test_filename_with_json_key_is_present(self, mock_api):
         assert GoogleDrive.GOOGLE_API_KEY_FILE
@@ -148,4 +148,20 @@ class TestGoogleDrive(object):
         mock_load.assert_called_once_with(
             fd, drive.service.files().get_media.return_value)
 
+    def test_get_filename_calls_google_api(self, drive):
+        drive._get_filename('https://drive.google.com/file/d/TEST_FILE_ID')
+        drive.service.files().get.assert_called_once_with(fileId='TEST_FILE_ID')
 
+    def test_get_filename_returns_file_name_if_present(self, drive):
+        drive.service.files().get().execute.return_value = {
+            'name': 'TEST_FILENAME'
+        }
+        result = drive._get_filename(
+            'https://drive.google.com/file/d/TEST_FILE_ID')
+        assert result == 'TEST_FILENAME'
+
+    def test_get_filename_returns_file_id_if_no_name(self, drive):
+        drive.service.files().get().execute.return_value = {}
+        result = drive._get_filename(
+            'https://drive.google.com/file/d/TEST_FILE_ID')
+        assert result == 'TEST_FILE_ID'
