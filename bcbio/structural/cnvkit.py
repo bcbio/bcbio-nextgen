@@ -499,7 +499,10 @@ def _add_segmetrics_to_output(out, data):
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "segmetrics",
                    "--ci", "--pi",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
-            if dd.get_coverage_interval(data) != "genome":
+            # Use less fine grained bootstrapping intervals for whole genome runs
+            if dd.get_coverage_interval(data) == "genome":
+                cmd += ["--alpha", "0.1", "--bootstrap", "50"]
+            else:
                 cmd += ["--alpha", "0.01", "--bootstrap", "500"]
             do.run(cmd, "CNVkit segmetrics")
     out["segmetrics"] = out_file

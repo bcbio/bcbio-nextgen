@@ -217,7 +217,7 @@ def postprocess_alignment(data):
         bam.index(bam_file_ready, data["config"])
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
-            callable.block_regions(covinfo.callable, bam_file_ready, ref_file, data)
+            callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
                            "callable": callable_bed,
                            "highdepth": covinfo.highdepth,
