@@ -190,6 +190,7 @@ def _get_loftee(data):
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
 
+
 # ## snpEff variant effects
 
 def snpeff_version(args=None, data=None):
