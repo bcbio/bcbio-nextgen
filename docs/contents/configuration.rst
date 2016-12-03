@@ -454,7 +454,10 @@ These BED files define the regions of the genome to analyze and report on.
 ``variant_regions``. For coverage-based quality control metrics, we first use
 ``coverage`` if specified, then ``sv_regions`` if specified, then
 ``variant_regions``. See the section on :ref:`input-file-preparation` for tips
-on ensuring chromosome naming in these files match your reference genome.
+on ensuring chromosome naming in these files match your reference genome. bcbio
+pre-installs some standard BED files for human analyses. Reference these using
+the naming schemes described in the
+`reference data repository <https://github.com/AstraZeneca-NGS/reference_data#capture-region-bed-files>`_.
 
 -  ``variant_regions`` BED file of regions to call variants in.
 - ``sv_regions`` -- A specification of regions to target during structural
