@@ -219,7 +219,7 @@ def _update_conda_packages():
         os.remove(req_file)
     subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
     subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
-                           "-c", "bioconda", "--file", req_file])
+                           "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
     return os.path.dirname(os.path.dirname(conda_bin))
@@ -230,7 +230,7 @@ def _update_conda_devel():
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
     subprocess.check_call([conda_bin, "install", "--update-deps",
-                           "--quiet", "--yes", "-c", "bioconda", "bcbio-nextgen"])
+                           "--quiet", "--yes", "-c", "bioconda", "-c", "conda-forge", "bcbio-nextgen"])
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def get_genome_dir(gid, galaxy_dir, data):
