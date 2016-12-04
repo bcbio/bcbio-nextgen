@@ -68,13 +68,10 @@ class TestCWL():
             print "To run with a CWL tool, cd test_automated_output and:"
             print " ".join(cl)
 
-    @pytest.mark.xfail
-    @pytest.marks('speed2', 'cwl', 'cwl_local')
+    @pytest.marks('speed2', 'cwl', 'cwl_local', 'install_required')
     def test_1_cwl_local(self, install_test_files, data_dir):
         """Create a common workflow language description and run on local installation.
         """
-        # TODO the test fails, I can't seem to figure out why and how to
-        # fix it.
         with make_workdir() as workdir:
             cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
                   "--systemconfig", get_post_process_yaml(data_dir, workdir)]
