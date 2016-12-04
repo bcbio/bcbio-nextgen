@@ -99,7 +99,6 @@ def test_2_fastrnaseq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.mark.skip(reason="Requires umis")
 @pytest.marks('rnaseq', 'scrnaseq')
 def test_2_scrnaseq(install_test_files, data_dir):
     """Run a single-cell RNA-seq analysis
@@ -209,7 +208,7 @@ def test_6_bamclean(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('speed2', 'cancer', 'cancermulti')
+@pytest.marks('speed2', 'cancer', 'cancermulti', 'install_required')
 def test_7_cancer(install_test_files, data_dir):
     """Test paired tumor-normal calling using multiple
     calling approaches: MuTect, VarScan, FreeBayes.
@@ -256,4 +255,14 @@ def test_9_joint(install_test_files, data_dir):
         cl = ["bcbio_nextgen.py",
               get_post_process_yaml(data_dir, workdir),
               os.path.join(data_dir, "run_info-joint.yaml")]
+        subprocess.check_call(cl)
+
+@pytest.marks("umibarcode", "install_required")
+def test_5_bam(install_test_files, data_dir):
+    """Allow BAM files as input to pipeline.
+    """
+    with make_workdir() as workdir:
+        cl = ["bcbio_nextgen.py",
+              get_post_process_yaml(data_dir, workdir),
+              os.path.join(data_dir, "run_info-umi.yaml")]
         subprocess.check_call(cl)
