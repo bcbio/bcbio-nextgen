@@ -16,7 +16,7 @@ before_install:
 install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
-  - conda install --yes -c bioconda -c conda-forge bcbio-nextgen-vm -q
+  - conda install --yes -c bioconda -c conda-forge bcbio-nextgen-vm bcbio-nextgen -q
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
   # Update to latest bcbio-nextgen code externally and within the container
@@ -27,9 +27,9 @@ install:
   - pip install cwl_runner
 
 script:
-  - docker run  bcbio/bcbio bash -c "/usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
+  - docker run -v `pwd`:/bcbio bcbio/bcbio bash -c "cd /bcbio && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
   # Currently turned off to reduce test run times on Travis
-  #- docker run  bcbio/bcbio bash -c "/usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
+  #- docker run -v `pwd`:/bcbio bcbio/bcbio bash -c "cd /bcbio && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker
  
 notifications:
