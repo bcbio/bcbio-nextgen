@@ -27,9 +27,9 @@ install:
   - pip install cwl_runner
 
 script:
-  - docker run -v `pwd`:/bcbio bcbio/bcbio bash -c "cd /bcbio && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
+  - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
   # Currently turned off to reduce test run times on Travis
-  #- docker run -v `pwd`:/bcbio bcbio/bcbio bash -c "cd /bcbio && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
+  #- docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker
  
 notifications:
