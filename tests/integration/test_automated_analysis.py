@@ -258,7 +258,7 @@ def test_9_joint(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 @pytest.marks("umibarcode", "install_required")
-def test_5_bam(install_test_files, data_dir):
+def test_10_umi(install_test_files, data_dir):
     """Allow BAM files as input to pipeline.
     """
     with make_workdir() as workdir:

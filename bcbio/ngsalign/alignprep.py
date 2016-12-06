@@ -75,9 +75,9 @@ def _set_align_split_size(data):
     target_size_reads = 20  # million reads
     max_splits = 100  # Avoid too many pieces, causing merge memory problems
     val = tz.get_in(["config", "algorithm", "align_split_size"], data)
-    umi_file = dd.get_umi_file(data)
+    umi_consensus = dd.get_umi_consensus(data)
     if val is None:
-        if not umi_file:
+        if not umi_consensus:
             total_size = 0  # Gb
             for fname in data.get("files", []):
                 if os.path.exists(fname):
@@ -88,7 +88,7 @@ def _set_align_split_size(data):
                   int(1e6 * _pick_align_split_size(total_size, target_size,
                                                    target_size_reads, max_splits))
     elif val:
-        assert not umi_file, "Cannot set align_split_size to %s with UMI file specified" % val
+        assert not umi_file, "Cannot set align_split_size to %s with UMI conensus specified" % val
     return data
 
 def _pick_align_split_size(total_size, target_size, target_size_reads, max_splits):
