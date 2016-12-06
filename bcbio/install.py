@@ -198,12 +198,16 @@ def _get_conda_bin():
         return conda_bin
 
 def _default_deploy_args(args):
+    """Standard install arguments for CloudBioLinux.
+
+    Avoid using sudo and keep an installation isolated if running as the root user.
+    """
     return {"flavor": "ngs_pipeline_minimal",
             "vm_provider": "novm",
             "hostname": "localhost",
             "fabricrc_overrides": {"edition": "minimal",
                                    "use_sudo": False,
-                                   "keep_isolated": args.isolate,
+                                   "keep_isolated": args.isolate or os.geteuid() == 0,
                                    "conda_cmd": _get_conda_bin(),
                                    "distribution": args.distribution or "__auto__",
                                    "dist_name": "__auto__"}}
