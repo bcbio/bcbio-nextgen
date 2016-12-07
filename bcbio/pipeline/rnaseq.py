@@ -5,7 +5,7 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data
+from bcbio.utils import filter_missing, flatten, to_single_data, get_in
 from bcbio.log import logger
 
 

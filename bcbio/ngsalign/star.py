@@ -18,6 +18,7 @@ from bcbio.bam import fastq
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
+
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if not ref_file:
         logger.error("STAR index not found. We don't provide the STAR indexes "
@@ -188,3 +189,15 @@ def get_star_version(data):
             if "STAR_" in line:
                 version = line.split("STAR_")[1].strip()
     return version
+
+
+def _should_run_fusion(config):
+    fusion_mode = dd.get_fusion_mode(config) or \
+         utils.get_in(config, ("algorithm", "fusion_mode"), False)
+    fusion_caller = dd.get_fusion_caller(config) or \
+         utils.get_in(config, ("algorithm", "fusion_caller"), None)
+
+    CALLER = 'star'
+    if fusion_mode and fusion_caller in (None, CALLER):
+        return True
+    return False

@@ -301,14 +301,10 @@ def _bowtie_major_version(stdout):
         major_version = 1
     return major_version
 
+
 def _should_run_fusion(config):
-    fusion_mode = dd.get_fusion_mode(config) or \
-         get_in(config, ("algorithm", "fusion_mode"), False)
-    fusion_caller = dd.get_fusion_caller(config) or \
-         get_in(config, ("algorithm", "fusion_caller"), None)
-    if fusion_mode and fusion_caller in (None, 'tophat'):
-        return True
-    return False
+    CALLER = 'tophat'
+    return config_utils.should_run_fusion(CALLER, config)
 
 
 def _determine_aligner_and_reference(ref_file, config):
