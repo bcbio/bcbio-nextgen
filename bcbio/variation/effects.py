@@ -211,8 +211,9 @@ def _get_dbscsnv(data):
     https://github.com/Ensembl/VEP_plugins/blob/master/dbscSNV.pm
     """
     dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
+    annotations = ["ada_score","rf_score"]
     if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], []
+        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], annotations
     else:
         return [], []
 
@@ -227,12 +228,12 @@ def _get_maxentscan(data):
     """
 
         #TODO
-        # Add MaxEntScan to bioconda
         # Devise a way to add path to dir where conda installed the scripts
 
     maxentscan_dir = /path/to/dir/with/maxentscan/scripts/
+    annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
-        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], []
+        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
     else:
         return [], []
 
@@ -249,8 +250,9 @@ def _get_genesplicer(data):
 
     genesplicer_dir = /path/to/dir/with/genesplicer/executable/
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
+    annotations = ["genesplicer"]
     if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
-        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], []
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], annotations
     else:
         return [], []
 
