@@ -38,7 +38,7 @@ def _set_transcriptome_option(options, data, ref_file):
     # prefer transcriptome-index vs a GTF file if available
     transcriptome_index = get_in(data, ("genome_resources", "rnaseq",
                                         "transcriptome_index", "tophat"))
-    fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    fusion_mode = _should_run_fusion(data)
     if transcriptome_index and file_exists(transcriptome_index) and not fusion_mode:
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
         return options
@@ -78,9 +78,7 @@ def _set_stranded_flag(options, config):
     return options
 
 def _set_fusion_mode(options, config):
-    fusion_mode = get_in(config, ("algorithm", "fusion_mode"), False)
-    fusion_caller = get_in(config, ("algorithm", "fusion_caller"), None)
-    if fusion_mode and fusion_caller in (None, 'tophat'):
+    if _should_run_fusion(config):
         options["fusion-search"] = True
     return options
 
@@ -303,8 +301,18 @@ def _bowtie_major_version(stdout):
         major_version = 1
     return major_version
 
+def _should_run_fusion(config):
+    fusion_mode = dd.get_fusion_mode(config) or \
+         get_in(config, ("algorithm", "fusion_mode"), False)
+    fusion_caller = dd.get_fusion_caller(config) or \
+         get_in(config, ("algorithm", "fusion_caller"), None)
+    if fusion_mode and fusion_caller in (None, 'tophat'):
+        return True
+    return False
+
+
 def _determine_aligner_and_reference(ref_file, config):
-    fusion_mode = get_in(config, ("algorithm", "fusion_mode"), False)
+    fusion_mode = _should_run_fusion(config)
     # fusion_mode only works with bowtie1
     if fusion_mode:
         return _get_bowtie_with_reference(config, ref_file, 1)
