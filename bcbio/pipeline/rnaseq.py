@@ -1,12 +1,13 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish, spikein, pizzly)
+                          express, variation, stringtie, sailfish, spikein, pizzly, ericscript)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import joint, vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data, get_in
+from bcbio.pipeline import config_utils
+from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
 
 
@@ -361,3 +362,16 @@ def combine_files(samples):
             data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
     return updated_samples
+
+
+def detect_fusions(samples):
+    STANDALONE_CALLERS = {
+        'ericscript': ericscript.run,
+    }
+    fusion_mode = dd.get_in_samples(samples, dd.get_fusion_mode)
+    caller = dd.get_in_samples(samples, dd.get_fusion_caller)
+    caller_fn = STANDALONE_CALLERS.get(caller)
+
+    if fusion_mode and caller_fn:
+        return [caller_fn(s) for s in samples]
+    return samples
