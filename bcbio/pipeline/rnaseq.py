@@ -373,5 +373,5 @@ def detect_fusions(samples):
     caller_fn = STANDALONE_CALLERS.get(caller)
 
     if fusion_mode and caller_fn:
-        return [caller_fn(s) for s in samples]
+        return [[caller_fn(s)] for s in dd.sample_data_iterator(samples)]
     return samples
