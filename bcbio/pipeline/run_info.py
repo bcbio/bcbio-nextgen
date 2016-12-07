@@ -799,6 +799,8 @@ def _add_algorithm_defaults(algorithm):
     Converts allowed multiple inputs into lists if specified as a single item.
     Converts required single items into string if specified as a list
     """
+    if not algorithm:
+        algorithm = {}
     defaults = {"archive": [],
                 "tools_off": [],
                 "tools_on": [],
