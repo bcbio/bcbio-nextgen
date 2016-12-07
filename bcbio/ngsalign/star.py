@@ -47,7 +47,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if ref_file.endswith("chrLength"):
         ref_file = os.path.dirname(ref_file)
 
-<<<<<<< HEAD
     with file_transaction(data, align_dir) as tx_align_dir:
         tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
         tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
@@ -82,38 +81,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
-=======
-    cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
-           "--runThreadN {num_cores} --outFileNamePrefix {tx_prefix_dir} "
-           "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
-           "--outStd SAM {srna_opts} "
-           "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
-    cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
-    cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
-    cmd += _read_group_option(names)
-    if _should_run_fusion(data):
-        cmd += (
-            " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-            "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-            "--chimScoreSeparation 5 "
-            "--chimOutType WithinSAM "
-        )
-    strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
-                                "unstranded").lower()
-    if strandedness == "unstranded" and not srna:
-        cmd += " --outSAMstrandField intronMotif "
-
-    if not srna:
-        cmd += " --quantMode TranscriptomeSAM "
-
-    with tx_tmpdir(data) as tx_prefix_dir:
-        with file_transaction(data, final_out) as tx_final_out:
-            cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
-            run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
-            do.run(cmd.format(**locals()), run_message, None)
-
-    data = _update_data(final_out, out_dir, names, data)
->>>>>>> 78e6bfe... Select fusion caller from config
     return data
 
 
