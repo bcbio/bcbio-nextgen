@@ -80,9 +80,8 @@ def _set_stranded_flag(options, config):
 def _set_fusion_mode(options, config):
     fusion_mode = get_in(config, ("algorithm", "fusion_mode"), False)
     fusion_caller = get_in(config, ("algorithm", "fusion_caller"), None)
-    if fusion_mode:
-        if fusion_caller is None or fusion_caller == 'tophat':
-            options["fusion-search"] = True
+    if fusion_mode and fusion_caller in (None, 'tophat'):
+        options["fusion-search"] = True
     return options
 
 def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,

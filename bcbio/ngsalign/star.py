@@ -58,12 +58,15 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
         cmd += _read_group_option(names)
-        fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
-        if fusion_mode:
-            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                    "--chimScoreSeparation 5 "
-                    "--chimOutType WithinSAM ")
+        fusion_mode = dd.get_fusion_mode(data)
+        fusion_caller = dd.get_fusion_caller(data)
+        if fusion_mode and fusion_caller in (None, 'star'):
+            cmd += (
+                " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                "--chimScoreSeparation 5 "
+                "--chimOutType WithinSAM "
+            )
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:
