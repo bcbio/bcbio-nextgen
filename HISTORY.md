@@ -1,5 +1,9 @@
 ## 1.0.1 (in progress)
 
+- Fix bug in 1.0.0 release with parallel calculations on whole genome samples.
+  The release version only parallelizes by chromosome instead of callable
+  regions, resulting in less parallelism. Thanks to Sven-Eric Schelhorn and
+  Neill Gibson.
 - Generalize use of working directories to support runs on S3 mounted
   filesystems. Ensures all work takes place inside transactional directories.
   Thanks to Tetiana Khotiainsteva and Sven-Eric Schelhorn.
@@ -8,6 +12,8 @@
   https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2016-11-21-giab-hg38-freebayes.md
 - Fixes for Seq2C concurrency problems when preparing BED files. Thanks to Vlad
   Saveliev.
+- Pre-install capture region BED files and enable short hand specification in
+  sample configuration.
 - Testing suite cleanup. Move to py.test and separate integration and unit
   tests. Thanks to Tetiana Khotiainsteva.
 

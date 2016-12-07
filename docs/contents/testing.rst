@@ -323,13 +323,12 @@ good starting point to ensure correct installation. Tests use the
 
      $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-Create a virtual environment, and install the dependencies required 
+Create a virtual environment, and install the dependencies required
 to run tests::
 
      $ cd bcbio-nextgen
      $ virtualenv .venv
      $ source .venv/bin/activate
-     $ pip install -r requirements_dev.txt
 
 To run unit tests::
 

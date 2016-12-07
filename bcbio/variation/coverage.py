@@ -134,7 +134,7 @@ def _get_max_depth(average_coverage, params, data):
     """Calculate maximum depth based on a rough multiplier of average coverage.
     """
     if dd.get_coverage_interval(data) == "genome":
-        avg_cov = max(30.0, average_coverage)
+        avg_cov = min(30.0, average_coverage)
         return avg_cov * params["high_multiplier"]
 
 def get_average_coverage(data, bam_file, bed_file=None, target_name="genome", file_prefix=None):

@@ -181,13 +181,17 @@ def get_input_sequence_files(data, default=None):
         file1, file2 = data["files"][0], None
     return file1, file2
 
-def get_umi_file(data):
-    """Retrieve UMI, specified as a separate fastq file.
+def get_umi_consensus(data):
+    """Retrieve UMI for consensus based preparation.
+
+    We specify this either as a separate fastq file or embedded
+    in the read name as `fastq_name`.`
     """
+    consensus_choices = (["fastq_name"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
-    if umi and os.path.exists(umi):
+    if umi and (umi in consensus_choices or os.path.exists(umi)):
         assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
-            "Using UMI file requires marking duplicates"
+            "Using consensus UMI inputs requires marking duplicates"
         return umi
 
 def get_dexseq_gff(config, default=None):

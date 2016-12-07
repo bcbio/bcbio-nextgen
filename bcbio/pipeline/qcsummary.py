@@ -89,7 +89,7 @@ def get_qc_tools(data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
         to_run += ["qsignature", "coverage", "variants", "picard"]
-    if dd.get_umi_file(data):
+    if dd.get_umi_consensus(data):
         to_run += ["umi"]
     return to_run
 

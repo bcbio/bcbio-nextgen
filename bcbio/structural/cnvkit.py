@@ -499,7 +499,10 @@ def _add_segmetrics_to_output(out, data):
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "segmetrics",
                    "--ci", "--pi",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
-            if dd.get_coverage_interval(data) != "genome":
+            # Use less fine grained bootstrapping intervals for whole genome runs
+            if dd.get_coverage_interval(data) == "genome":
+                cmd += ["--alpha", "0.1", "--bootstrap", "50"]
+            else:
                 cmd += ["--alpha", "0.01", "--bootstrap", "500"]
             do.run(cmd, "CNVkit segmetrics")
     out["segmetrics"] = out_file
@@ -546,9 +549,6 @@ def _add_plots_to_output(out, data):
     diagram_plot = _add_diagram_plot(out, data)
     if diagram_plot:
         out["plot"]["diagram"] = diagram_plot
-    loh_plot = _add_loh_plot(out, data)
-    if loh_plot:
-        out["plot"]["loh"] = loh_plot
     scatter = _add_scatter_plot(out, data)
     if scatter:
         out["plot"]["scatter"] = scatter
@@ -648,20 +648,6 @@ def _add_diagram_plot(out, data):
                 cmd += ["--male-reference"]
             do.run(cmd, "CNVkit diagram plot")
     return out_file
-
-def _add_loh_plot(out, data):
-    vrn_files = _compatible_small_variants(data)
-    if len(vrn_files) > 0:
-        out_file = "%s-loh.pdf" % os.path.splitext(out["cnr"])[0]
-        cns = _remove_haplotype_chroms(out["cns"], data)
-        if _cnx_is_empty(cns):
-            return None
-        if not utils.file_exists(out_file):
-            with file_transaction(data, out_file) as tx_out_file:
-                cmd = [_get_cmd(), "loh", "-t", "-s", cns,
-                       "-o", tx_out_file, vrn_files[0]]
-                do.run(cmd, "CNVkit diagram plot")
-        return out_file
 
 def _create_access_file(ref_file, out_dir, data):
     """Create genome access file for CNVlib to define available genomic regions.

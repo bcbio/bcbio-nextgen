@@ -29,13 +29,14 @@ parallelizing different types of processes:
   this in the ``resource`` section of either a sample YAML file
   (:ref:`sample-resources`) or ``bcbio_system.yaml``. Ideally you specify this
   in the ``default`` section (along with memory usage). For example, this would
-  specify that processes using multiple cores can get up to 16 cores::
+  specify that processes using multiple cores can get up to 16 cores with 2G of
+  memory per core::
 
-    resources:
-      default:
-        memory: 2G
-        cores: 16
-        jvm_opts: ["-Xms750m", "-Xmx2000m"]
+      resources:
+        default:
+          memory: 2G
+          cores: 16
+          jvm_opts: ["-Xms750m", "-Xmx2000m"]
 
 bcbio uses these settings, along with memory requests, to determine how to
 partition jobs. For example, if you had ``-n 32`` and ``cores: 16`` for a run on
@@ -48,7 +49,10 @@ above, if bcbio was running a 16 core java proecess, it would use 32Gb of memory
 for the JVM, adjusting ``Xmx`` and ``Xms`` to match cores used. Internally bcbio
 looks at the memory and CPU usage on a machine and matches your configuration
 options to the available system resources. It will scale down core requests if
-memory is limiting, avoiding over-scheduling resources during the run.
+memory is limiting, avoiding over-scheduling resources during the run. You
+ideally want to set both ``memory`` and ``jvm_opts`` to match the average memory
+per core on the run machine and adjust upwards if this does not provide enough
+memory for some processes during the run.
 
 For single machine runs with a small number of samples, you generally want to
 set ``cores`` close to or equal the number of total cores you're allocating to

@@ -115,8 +115,7 @@ def process_alignment(data, alt_input=None):
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
-        umi_file = dd.get_umi_file(data)
-        if umi_file:
+        if dd.get_umi_consensus(data):
             data["umi_bam"] = dd.get_work_bam(data)
             if fastq2:
                 f1, f2 = postalign.umi_consensus(data)
@@ -217,7 +216,7 @@ def postprocess_alignment(data):
         bam.index(bam_file_ready, data["config"])
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
-            callable.block_regions(covinfo.callable, bam_file_ready, ref_file, data)
+            callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
                            "callable": callable_bed,
                            "highdepth": covinfo.highdepth,

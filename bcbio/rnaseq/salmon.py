@@ -126,6 +126,7 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data, out_dir)
+    assert file_exists(gtf_fa), "%s was not found, exiting." % gtf_fa
     tmpdir = dd.get_tmp_dir(data)
     out_file = os.path.join(out_dir, "versionInfo.json")
     if file_exists(out_file):

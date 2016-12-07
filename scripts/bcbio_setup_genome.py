@@ -186,13 +186,21 @@ def append_ercc(gtf_file, fasta_file):
     print append_gtf_cmd.format(**locals())
     subprocess.check_call(append_gtf_cmd.format(**locals()), shell=True)
 
+class MyParser(ArgumentParser):
+    def error(self, message):
+        self.print_help()
+        galaxy_base = os.path.join(_get_data_dir(), "galaxy")
+        print "\nCurrent genomes\n"
+        print open(loc.get_loc_file(galaxy_base, "samtools")).read()
+        sys.exit(0)
 
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
                    "place the genome under name/build in the genomes "
                    "directory in your bcbio-nextgen installation.")
 
-    parser = ArgumentParser(description=description)
+    parser = MyParser(description=description)
+
     parser.add_argument("-c", "--cores", default=1,
                         help="number of cores to use")
     parser.add_argument("-f", "--fasta", required=True,
