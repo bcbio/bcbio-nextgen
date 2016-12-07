@@ -62,9 +62,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
         cmd += _read_group_option(names)
-        fusion_mode = dd.get_fusion_mode(data)
-        fusion_caller = dd.get_fusion_caller(data)
-        if fusion_mode and fusion_caller in (None, 'star'):
+        fusion_mode = _should_run_fusion(data)
+        if fusion_mode:
             cmd += (
                 " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
                 "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
@@ -196,12 +195,5 @@ def get_star_version(data):
 
 
 def _should_run_fusion(config):
-    fusion_mode = dd.get_fusion_mode(config) or \
-         utils.get_in(config, ("algorithm", "fusion_mode"), False)
-    fusion_caller = dd.get_fusion_caller(config) or \
-         utils.get_in(config, ("algorithm", "fusion_caller"), None)
-
     CALLER = 'star'
-    if fusion_mode and fusion_caller in (None, CALLER):
-        return True
-    return False
+    return config_utils.should_run_fusion(CALLER, config)
