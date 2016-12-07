@@ -129,6 +129,8 @@ def run_vep(in_file, data):
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 if is_human:
+                    plugins=tz.get_in(("config", "resources", "vep", "plugins"), data,["dbnsfp","loftee"])
+
                     dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
                     loftee_args, loftee_fields = _get_loftee(data)
                     dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data)
@@ -139,6 +141,9 @@ def run_vep(in_file, data):
                 else:
                     dbnsfp_args, dbnsfp_fields = [], []
                     loftee_args, loftee_fields = [], []
+                    dbscsnv_args, dbscsnv_fields= [], []
+                    maxentscan_args, maxentscan_fields = [], []
+                    genesplicer_args, genesplicer_fields = [], []
                     prediction_args, prediction_fields = [], []
                 if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
                     # In case of clinical reporting, we need one and only one variant per gene
@@ -157,8 +162,8 @@ def run_vep(in_file, data):
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + clinical_fields)] + \
-                       prediction_args + dbnsfp_args + loftee_args + clinical_args
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + dbscsnv_fields + maxentscan_fields + genesplicer_fields + clinical_fields)] + \
+                       prediction_args + dbnsfp_args + loftee_args + dbscsnv_args + maxentscan_args + genesplicer_args + clinical_args
 
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
