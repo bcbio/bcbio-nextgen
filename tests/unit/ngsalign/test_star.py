@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from tests.unit.data import DATA as _DATA
 from tests.unit.data import NAMES as _NAMES
 from copy import deepcopy
@@ -46,4 +45,3 @@ def test_should_run_fusion(mock_should_run):
     result = star._should_run_fusion(config)
     mock_should_run.assert_called_once_with('star', config)
     assert result == mock_should_run.return_value
->>>>>>> f3b777e... Use should_run_fusion from config_utils everywhere
