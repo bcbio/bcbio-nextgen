@@ -6,7 +6,7 @@ from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import joint, vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data
+from bcbio.utils import filter_missing, flatten, to_single_data, get_in
 from bcbio.log import logger
 
 

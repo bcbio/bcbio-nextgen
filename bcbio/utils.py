@@ -17,6 +17,7 @@ import types
 
 import toolz as tz
 import yaml
+
 try:
     from concurrent import futures
 except ImportError:
