@@ -251,6 +251,10 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = rnaseq.assemble_transcripts(run_parallel, samples)
         with profile.report("estimate expression (threaded)", dirs):
             samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
+
+    # TODO parallelize by sample!
+    rnaseq.detect_fusions(samples)
+
     with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
                     dirs, "rnaseqcount-singlethread", max_multicore=1) as run_parallel:
         with profile.report("estimate expression (single threaded)", dirs):
