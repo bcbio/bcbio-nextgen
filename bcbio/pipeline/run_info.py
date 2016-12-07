@@ -171,6 +171,7 @@ def add_reference_resources(data, remote_retriever=None):
         data["reference"]["genome_context"] = annotation.get_context_files(data)
     data = _fill_validation_targets(data)
     data = _fill_prioritization_targets(data)
+    data = _fill_capture_regions(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
         if population.do_db_build([data], need_bam=False):
@@ -212,6 +213,26 @@ def _fill_validation_targets(data):
             else:
                 raise ValueError("Configuration problem. Validation file not found for %s: %s" %
                                  (vtarget, val))
+    return data
+
+def _fill_capture_regions(data):
+    """Fill short-hand specification of BED capture regions.
+    """
+    ref_file = dd.get_ref_file(data)
+    for target in ["variant_regions", "sv_regions", "coverage"]:
+        val = tz.get_in(["config", "algorithm", target], data)
+        if val and not os.path.exists(val):
+            installed_vals = []
+            # Check prioritize directory
+            for ext in [".bed", ".bed.gz"]:
+                installed_vals += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                                          "coverage", val + ext)))
+            if len(installed_vals) == 0:
+                raise ValueError("Configuration problem. BED file not found for %s: %s" %
+                                 (target, val))
+            else:
+                assert len(installed_vals) == 1, installed_vals
+                data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_vals[0])
     return data
 
 def _fill_prioritization_targets(data):

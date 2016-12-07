@@ -28,12 +28,13 @@ def tobam_cl(data, out_file, is_paired=False):
     - If unpaired, use biobambam's bammarkduplicates
     """
     do_dedup = _check_dedup(data)
-    umi_file = dd.get_umi_file(data)
+    umi_consensus = dd.get_umi_consensus(data)
+    print("&&", umi_consensus)
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
-        elif umi_file:
-            yield (_sam_to_grouped_umi_cl(data, umi_file, tx_out_file), tx_out_file)
+        elif umi_consensus:
+            yield (_sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file), tx_out_file)
         elif is_paired and _need_sr_disc_reads(data) and not _too_many_contigs(dd.get_ref_file(data)):
             sr_file = "%s-sr.bam" % os.path.splitext(out_file)[0]
             disc_file = "%s-disc.bam" % os.path.splitext(out_file)[0]
@@ -124,18 +125,22 @@ def _biobambam_dedup_sort(data, tx_out_file):
                "SO=coordinate indexfilename={tx_out_file}.bai > {tx_out_file}")
     return cmd.format(**locals())
 
-def _sam_to_grouped_umi_cl(data, umi_file, tx_out_file):
+def _sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file):
     """Mark duplicates on aligner output and convert to grouped UMIs by position.
+
+    Works with either a separate umi_file or UMI embedded in the read names.
     """
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 1)
     cores, mem = _get_cores_memory(data)
-    # cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=sam SO=coordinate | "
-    #        "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o {tx_out_file}")
-    cmd = ("samblaster -M --addMateTags | "
-           "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_file} -o /dev/stdout | "
-           "samtools sort -@ {cores} -m {mem} -T {tmp_file}-finalsort "
-           "-o {tx_out_file} /dev/stdin")
+    cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=bam "
+           "level=0 SO=coordinate | ")
+    # UMIs in a separate file
+    if os.path.exists(umi_consensus):
+        cmd += "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_consensus} -o {tx_out_file}"
+    # UMIs embedded in read name
+    else:
+        cmd += "umis bamtag --umi_only - | samtools view -b > {tx_out_file}"
     return cmd.format(**locals())
 
 def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):

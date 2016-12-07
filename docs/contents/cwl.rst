@@ -116,7 +116,6 @@ automatically by bcbio from the inputs::
 
     $ git clone https://github.com/chapmanb/bcbio-nextgen.git
     $ cd bcbio-nextgen
-    $ pip intsall -r requirements_dev.txt
     $ py.test -m cwl
 
 This will create a CWL workflow inside ``tests/test_automated_output`` which
