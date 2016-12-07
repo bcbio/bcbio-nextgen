@@ -78,6 +78,7 @@ LOOKUPS = {
     "express_counts": {"keys": ['express_counts']},
     "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
+    "fusion_caller": {"keys": ['config', 'algorithm', 'fusion_caller']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
     "aligner": {"keys": ['config', 'algorithm', 'aligner']},
