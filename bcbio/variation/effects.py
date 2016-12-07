@@ -130,12 +130,14 @@ def run_vep(in_file, data):
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 if is_human:
                     plugins=tz.get_in(("config", "resources", "vep", "plugins"), data,["dbnsfp","loftee"])
-
-                    dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
-                    loftee_args, loftee_fields = _get_loftee(data)
-                    dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data)
-                    maxentscan_args, maxentscan_fields = _get_maxentscan(data)
-                    genesplicer_args, genesplicer_fields = _get_genesplicer(data)
+                    for plugin in plugins:
+                        # python if-else shorthand
+                        # x = 10 if a > b else 11
+                        dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data) if plugin == "dbsnfp" else [], []
+                        loftee_args, loftee_fields = _get_loftee(data) if plugin == "loftee" else [], []
+                        dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data) if plugin == "dbscsnv" else [], []
+                        maxentscan_args, maxentscan_fields = _get_maxentscan(data) if plugin == "maxentscan" else [], []
+                        genesplicer_args, genesplicer_fields = _get_genesplicer(data) if plugin == "genesplicer" else [], []
                     prediction_args = ["--sift", "b", "--polyphen", "b"]
                     prediction_fields = ["PolyPhen", "SIFT"]
                 else:
