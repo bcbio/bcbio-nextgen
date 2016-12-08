@@ -1,0 +1,8 @@
+# Template for fast rna-seq with human data
+---
+details:
+  - analysis: fastrna-seq
+    genome_build: GRCh37
+    algorithm: {}
+upload:
+  dir: ../final
