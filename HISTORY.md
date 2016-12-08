@@ -12,6 +12,12 @@
   https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2016-11-21-giab-hg38-freebayes.md
 - Fixes for Seq2C concurrency problems when preparing BED files. Thanks to Vlad
   Saveliev.
+- Support for VEP 86 with additional plugins and generalization of fields.
+  Thanks to Matthias De Smet.
+- Deprecate `clinical_reporting` parameter and introduce new
+  `effects_transcripts` parameter than enables more control over variant effects
+  prediction. Enable HGVS by default for human projects and separates from
+  transcript selection.
 - Pre-install capture region BED files and enable short hand specification in
   sample configuration.
 - Testing suite cleanup. Move to py.test and separate integration and unit

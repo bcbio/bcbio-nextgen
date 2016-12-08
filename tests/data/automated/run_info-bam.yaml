@@ -36,6 +36,7 @@ details:
       variantcaller: freebayes
       #variantcaller: [gatk, gatk-haplotype]
       #effects: vep
+      #effects_transcripts: canonical
       #svcaller: [lumpy, cnvkit, manta, metasv]
       svcaller: [cnvkit, seq2c, lumpy]
       #remove_lcr: true
@@ -51,8 +52,6 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     resources:
-      vep:
-        options: [--pick]
       novoalign:
         options: [-o, FullNW]
       tmp:

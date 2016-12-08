@@ -503,6 +503,11 @@ Variant calling
   `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
   with support for `dbNSFP`_ annotation, when downloaded using
   :ref:`datatarget-install`. [snpeff, vep, false]
+- ``effects_transcripts`` Define the transcripts to use for effect prediction
+  annotation. Options ``all``: Standard Ensembl transcript list (the default);
+  ``canonical``: Report single canonical transcripts (``-canon`` in snpEff,
+  ``-pick`` in VEP); ``canonical_cancer`` Canonical transcripts with hand
+  curated changes for more common cancer transcripts (effects snpEff only).
 -  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
    for human variant calling. `Heng Li's variant artifacts paper`_ provides
    these regions, which cover ~2% of the genome but contribute to a large
@@ -550,9 +555,6 @@ Variant calling
 
 -  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
    no phasing [false, gatk]
-- ``clinical_reporting`` Tune output for clinical reporting.
-  Modifies snpEff and VEP parameters to use HGVS notation on canonical
-  transcripts [false, true].
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.

@@ -41,7 +41,7 @@ details:
       # Uses --pick in VEP to only select the strongest effect per variant position
       # across all transcripts and alleles. Ranked by canonical, biotype status and
       # length of the transcript, along with the ranking of the consequence type
-      clinical_reporting: true
+      effects_transcripts: canonical
       # --- Structural variation calling
       sv_regions:
       # Path to bed with chrom start end gene_name

@@ -103,6 +103,7 @@ Contributors
 - `Brad Chapman`_, Harvard Chan Bioinformatics Core
 - `Saket Choudhary`_, University Of Southern California
 - `Peter Cock`_, The James Hutton Institute
+- `Matthias De Smet <https://github.com/matthdsm>`_, Universitair Ziekenhuis Gent
 - `Matt Edwards`_, MIT
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen

@@ -88,7 +88,7 @@ def _set_align_split_size(data):
                   int(1e6 * _pick_align_split_size(total_size, target_size,
                                                    target_size_reads, max_splits))
     elif val:
-        assert not umi_file, "Cannot set align_split_size to %s with UMI conensus specified" % val
+        assert not umi_consensus, "Cannot set align_split_size to %s with UMI conensus specified" % val
     return data
 
 def _pick_align_split_size(total_size, target_size, target_size_reads, max_splits):

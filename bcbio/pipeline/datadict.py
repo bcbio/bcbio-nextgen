@@ -14,6 +14,7 @@ LOOKUPS = {
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
     "svprioritize": {"keys": ['config', 'algorithm', 'svprioritize']},
+    "effects_transcripts": {"keys": ["config", "algorithm", "effects_transcripts"], "default": "all"},
     "genome_build": {"keys": ["genome_build"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},

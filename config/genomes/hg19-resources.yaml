@@ -1,8 +1,8 @@
-version: 31
+version: 32
 
 aliases:
   human: true
-  snpeff: hg19
+  snpeff: GRCh37.75
   ensembl: homo_sapiens_vep_86_GRCh37
 
 variation:

@@ -128,33 +128,23 @@ def run_vep(in_file, data):
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
+                config_args, config_fields, prediction_fields = [], [], []
                 if is_human:
-                    plugins=tz.get_in(("config", "resources", "vep", "plugins"), data,["dbnsfp","loftee"])
+                    plugin_fns = {"dbnsfp": _get_dbnsfp, "loftee": _get_loftee, "dbscsnv": _get_dbscsnv,
+                                  "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
+                    plugins = tz.get_in(("config", "resources", "vep", "plugins"), data, ["dbnsfp", "loftee"])
                     for plugin in plugins:
-                        # python if-else shorthand
-                        # x = 10 if a > b else 11
-                        dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data) if plugin == "dbsnfp" else [], []
-                        loftee_args, loftee_fields = _get_loftee(data) if plugin == "loftee" else [], []
-                        dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data) if plugin == "dbscsnv" else [], []
-                        maxentscan_args, maxentscan_fields = _get_maxentscan(data) if plugin == "maxentscan" else [], []
-                        genesplicer_args, genesplicer_fields = _get_genesplicer(data) if plugin == "genesplicer" else [], []
-                    prediction_args = ["--sift", "b", "--polyphen", "b"]
-                    prediction_fields = ["PolyPhen", "SIFT"]
-                else:
-                    dbnsfp_args, dbnsfp_fields = [], []
-                    loftee_args, loftee_fields = [], []
-                    dbscsnv_args, dbscsnv_fields= [], []
-                    maxentscan_args, maxentscan_fields = [], []
-                    genesplicer_args, genesplicer_fields = [], []
-                    prediction_args, prediction_fields = [], []
-                if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
-                    # In case of clinical reporting, we need one and only one variant per gene
-                    # http://useast.ensembl.org/info/docs/tools/vep/script/vep_other.html#pick
-                    # Also use hgvs reporting but requires indexing the reference file
-                    clinical_args = ["--pick", "--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
-                    clinical_fields = ["HGVSc", "HGVSp"]
-                else:
-                    clinical_args, clinical_fields = [], []
+                        plugin_args, plugin_fields = plugin_fns[plugin](data)
+                        config_args += plugin_args
+                        plugin_fields += plugin_fields
+                    config_args += ["--sift", "b", "--polyphen", "b"]
+                    prediction_fields += ["PolyPhen", "SIFT"]
+                    # Use HGVS by default, requires indexing the reference genome
+                    config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
+                    config_fields += ["HGVSc", "HGVSp"]
+                if (dd.get_effects_transcripts(data).startswith("canonical")
+                      or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
+                    config_args += ["--pick"]
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
                               "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
@@ -163,10 +153,9 @@ def run_vep(in_file, data):
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
-                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + dbscsnv_fields + maxentscan_fields + genesplicer_fields + clinical_fields)] + \
-                       prediction_args + dbnsfp_args + loftee_args + dbscsnv_args + maxentscan_args + genesplicer_args + clinical_args
-
+                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
+                       "--gene_phenotype", "--ccds",
+                       "--fields", ",".join(std_fields + config_fields)] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
@@ -271,7 +260,7 @@ def _snpeff_args_from_config(data):
     """Retrieve snpEff arguments supplied through input configuration.
     """
     config = data["config"]
-    args = []
+    args = ["-hgvs"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):
@@ -280,15 +269,15 @@ def _snpeff_args_from_config(data):
     if vcfutils.get_paired_phenotype(data):
         args += ["-cancer"]
 
-    # Skip HGVS if running structural variant calling due to errors
-    # https://github.com/chapmanb/bcbio-nextgen/issues/1205
-    # https://github.com/pcingola/SnpEff/issues/128
-    svcaller = tz.get_in(["config", "algorithm", "svcaller"], data)
-    if svcaller:
-        args += ["-noHgvs"]
-    # Provide options tuned to reporting variants in clinical environments
-    elif config["algorithm"].get("clinical_reporting"):
-        args += ["-canon", "-hgvs"]
+    effects_transcripts = dd.get_effects_transcripts(data)
+    if effects_transcripts == "canonical" or tz.get_in(("config", "algorithm", "clinical_reporting"), data):
+        args += ["-canon"]
+    elif effects_transcripts in set(["canonical_cancer"]):
+        _, snpeff_base_dir = get_db(data)
+        canon_list_file = os.path.join(snpeff_base_dir, "transcripts", "%s.txt" % effects_transcripts)
+        if not utils.file_exists(canon_list_file):
+            raise ValueError("Cannot find expected file for effects_transcripts: %s" % canon_list_file)
+        args += ["-canonList", canon_list_file]
     return args
 
 def get_db(data):
