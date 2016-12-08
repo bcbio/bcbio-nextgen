@@ -195,7 +195,7 @@ def _get_loftee(data):
 def _get_dbscsnv(data):
     """
     dbscSNV includes all potential human SNVs within splicing consensus regions
-    (−3 to +8 at the 5’ splice site and −12 to +2 at the 3’ splice site), i.e. scSNVs,
+    (-3 to +8 at the 5' splice site and -12 to +2 at the 3' splice site), i.e. scSNVs,
     related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
     https://github.com/Ensembl/VEP_plugins/blob/master/dbscSNV.pm
     """
