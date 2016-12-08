@@ -129,13 +129,23 @@ def run_vep(in_file, data):
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 if is_human:
-                    dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
-                    loftee_args, loftee_fields = _get_loftee(data)
+                    plugins=tz.get_in(("config", "resources", "vep", "plugins"), data,["dbnsfp","loftee"])
+                    for plugin in plugins:
+                        # python if-else shorthand
+                        # x = 10 if a > b else 11
+                        dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data) if plugin == "dbsnfp" else [], []
+                        loftee_args, loftee_fields = _get_loftee(data) if plugin == "loftee" else [], []
+                        dbscsnv_args, dbscsnv_fields= _get_dbscsnv(data) if plugin == "dbscsnv" else [], []
+                        maxentscan_args, maxentscan_fields = _get_maxentscan(data) if plugin == "maxentscan" else [], []
+                        genesplicer_args, genesplicer_fields = _get_genesplicer(data) if plugin == "genesplicer" else [], []
                     prediction_args = ["--sift", "b", "--polyphen", "b"]
                     prediction_fields = ["PolyPhen", "SIFT"]
                 else:
                     dbnsfp_args, dbnsfp_fields = [], []
                     loftee_args, loftee_fields = [], []
+                    dbscsnv_args, dbscsnv_fields= [], []
+                    maxentscan_args, maxentscan_fields = [], []
+                    genesplicer_args, genesplicer_fields = [], []
                     prediction_args, prediction_fields = [], []
                 if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
                     # In case of clinical reporting, we need one and only one variant per gene
@@ -154,8 +164,8 @@ def run_vep(in_file, data):
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--gene_phenotype", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + clinical_fields)] + \
-                       prediction_args + dbnsfp_args + loftee_args + clinical_args
+                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields + dbscsnv_fields + maxentscan_fields + genesplicer_fields + clinical_fields)] + \
+                       prediction_args + dbnsfp_args + loftee_args + dbscsnv_args + maxentscan_args + genesplicer_args + clinical_args
 
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
@@ -192,6 +202,52 @@ def _get_loftee(data):
     annotations = ["LoF", "LoF_filter", "LoF_flags"]
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
+
+def _get_dbscsnv(data):
+    """
+    dbscSNV includes all potential human SNVs within splicing consensus regions
+    (−3 to +8 at the 5’ splice site and −12 to +2 at the 3’ splice site), i.e. scSNVs,
+    related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
+    https://github.com/Ensembl/VEP_plugins/blob/master/dbscSNV.pm
+    """
+    dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
+    annotations = ["ada_score","rf_score"]
+    if dbscsnv_file and os.path.exists(dbscsnv_file):
+        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], annotations
+    else:
+        return [], []
+
+def _get_maxentscan(data):
+    """
+    The plugin executes the logic from one of the scripts depending on which
+    splice region the variant overlaps:
+        score5.pl : last 3 bases of exon    --> first 6 bases of intron
+        score3.pl : last 20 bases of intron --> first 3 bases of exon
+    The plugin reports the reference, alternate and difference (REF - ALT) maximumentropy scores.
+    https://github.com/Ensembl/VEP_plugins/blob/master/MaxEntScan.pm
+    """
+
+    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan", data["config"])))
+    annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
+    if maxentscan_dir and os.path.exists(maxentscan_dir):
+        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
+    else:
+        return [], []
+
+def _get_genesplicer(data):
+    """
+    This is a plugin for the Ensembl Variant Effect Predictor (VEP) that
+    runs GeneSplicer (https://ccb.jhu.edu/software/genesplicer/) to get splice site predictions.
+    https://github.com/Ensembl/VEP_plugins/blob/master/GeneSplicer.pm
+    """
+
+    genesplicer_dir = os.path.dirname(os.path.realpath(config_utils.get_program("genesplicer", data["config"])))
+    genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
+    annotations = ["genesplicer"]
+    if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], annotations
+    else:
+        return [], []
 
 # ## snpEff variant effects
 
