@@ -276,6 +276,7 @@ This mode of ``bcbio-nextgen`` quantitates transcript expression using `Salmon
 order of magnitude faster or more than running the full RNA-seq analysis. The
 cost of the increased speed is that you will have much less information about
 your samples at the end of the run, which can make troubleshooting trickier.
+Invoke with ``analysis: fastrna-seq``.
 
 single-cell RNA-seq
 ~~~~~~~~~~~~~~~~~~~
