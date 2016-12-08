@@ -703,6 +703,14 @@ def get_bcbio_env():
     return env
 
 
+def get_ericscript_env(config):
+    env = os.environ.copy()
+    # TODO caution hardcoded path!!!!
+    ES_BIN = "/usr/local/share/bcbio-nextgen/anaconda/envs/ericscript/bin"
+    env['PATH'] = append_path(ES_BIN, env['PATH'])
+    return env
+
+
 def append_path(bin, path, at_start=True):
     if at_start:
         tmpl = "{bin}:{path}"
