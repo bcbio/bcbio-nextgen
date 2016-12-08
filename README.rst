@@ -118,6 +118,7 @@ Contributors
 - `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Paul Tang`_, UCSF
+- `Stephen Turner`_, University of Virginia
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
 - `Vlad Saveliev`_, Center for Algorithmic Biotechnology, St. Petersburg University
@@ -137,6 +138,7 @@ Contributors
 .. _James Porter: https://github.com/porterjamesj
 .. _Valentine Svensson: https://github.com/vals
 .. _Paul Tang: https://github.com/tanglingfung
+.. _Stephen Turner: https://github.com/stephenturner
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
 .. _Jeff Hammerbacher: https://github.com/hammer
