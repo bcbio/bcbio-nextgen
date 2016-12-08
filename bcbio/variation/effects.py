@@ -202,7 +202,7 @@ def _get_loftee(data):
     annotations = ["LoF", "LoF_filter", "LoF_flags"]
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
-    
+
 def _get_dbscsnv(data):
     """
     dbscSNV includes all potential human SNVs within splicing consensus regions
@@ -227,10 +227,7 @@ def _get_maxentscan(data):
     https://github.com/Ensembl/VEP_plugins/blob/master/MaxEntScan.pm
     """
 
-        #TODO
-        # Devise a way to add path to dir where conda installed the scripts
-
-    maxentscan_dir = /path/to/dir/with/maxentscan/scripts/
+    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan", data["config"])))
     annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
         return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
@@ -244,11 +241,7 @@ def _get_genesplicer(data):
     https://github.com/Ensembl/VEP_plugins/blob/master/GeneSplicer.pm
     """
 
-    #TODO
-    # Devise a way to add path to dir where conda installed the scripts
-    # Add genesplicer training set to data repository
-
-    genesplicer_dir = /path/to/dir/with/genesplicer/executable/
+    genesplicer_dir = os.path.dirname(os.path.realpath(config_utils.get_program("genesplicer", data["config"])))
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
     annotations = ["genesplicer"]
     if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
