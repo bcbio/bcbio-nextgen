@@ -10,6 +10,7 @@ from bcbio.upload import shared, filesystem, galaxy, s3, irods
 from bcbio.pipeline import run_info
 from bcbio.variation import vcfutils
 import bcbio.pipeline.datadict as dd
+from bcbio.rnaseq import ericscript
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -87,6 +88,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_sailfish_files(algorithm, sample, out)
     out = _maybe_add_salmon_files(algorithm, sample, out)
     out = _maybe_add_kallisto_files(algorithm, sample, out)
+    out = _maybe_add_ericscript_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -363,6 +365,15 @@ def _maybe_add_kallisto_files(algorithm, sample, out):
         out.append({"path": kallisto_dir,
                     "type": "directory",
                     "ext": "kallisto"})
+
+def _maybe_add_ericscript_files(algorithm, sample, out):
+    ericscript_dir = ericscript.get_output_dir(sample)
+    if os.path.exists(ericscript_dir):
+        out.append({
+            'path': ericscript_dir,
+            'type': 'directory',
+            'ext': 'ericscript',
+        })
     return out
 
 def _flatten_file_with_secondary(input, out_dir):
