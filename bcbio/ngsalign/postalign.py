@@ -3,7 +3,6 @@
 Centralizes a pipelined approach to generating sorted, de-duplicated BAM output
 from sequencer results.
 
-sambamba: https://github.com/lomereiter/sambamba
 samblaster: http://arxiv.org/pdf/1403.7486v1.pdf
 biobambam bammarkduplicates: http://arxiv.org/abs/1306.0836
 """
@@ -88,27 +87,19 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     """
     samblaster = config_utils.get_program("samblaster", data["config"])
     samtools = config_utils.get_program("samtools", data["config"])
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    cores, mem = _get_cores_memory(data, downscale=3)
     tmp_prefix = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
-    for ext in ["spl", "disc", "full"]:
-        utils.safe_makedir("%s-%s" % (tmp_prefix, ext))
-    sort_opt = "-N" if data.get("align_split") else ""
-    full_tobam_cmd = ("{samtools} view -b -S -u - | "
-                      "{sambamba} sort {sort_opt} -t {cores} -m {mem} "
-                      "--tmpdir {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
-    tobam_cmd = ("{samtools} sort -@ {cores} -m {mem} "
-                 "-T {tmp_prefix}-{dext} -o {out_file} /dev/stdin")
-    # samblaster 0.1.22 and better require the -M flag for compatibility with bwa-mem
-    # https://github.com/GregoryFaust/samblaster/releases/tag/v.0.1.22
-    if LooseVersion(programs.get_version_manifest("samblaster", data=data, required=True)) >= LooseVersion("0.1.22"):
-        opts = "-M"
-    else:
-        opts = ""
+    tobam_cmd = ("{samtools} sort {sort_opt} -@ {cores} -m {mem} -T {tmp_prefix}-{dext} -o {out_file} -")
+    # full BAM -- associate more memory and cores
+    cores, mem = _get_cores_memory(data, downscale=2)
+    sort_opt = "-n" if data.get("align_split") else ""
+    dedup_cmd = tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
+    # split and discordant BAMs -- give less memory/cores since smaller files
+    sort_opt = ""
+    cores, mem = _get_cores_memory(data, downscale=4)
     splitter_cmd = tobam_cmd.format(out_file=tx_sr_file, dext="spl", **locals())
     discordant_cmd = tobam_cmd.format(out_file=tx_disc_file, dext="disc", **locals())
-    dedup_cmd = full_tobam_cmd.format(out_file=tx_out_file, dext="full", **locals())
-    cmd = ("{samblaster} --addMateTags {opts} --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
+    # samblaster 0.1.22 and better require the -M flag for compatibility with bwa-mem
+    cmd = ("{samblaster} --addMateTags -M --splitterFile >({splitter_cmd}) --discordantFile >({discordant_cmd}) "
            "| {dedup_cmd}")
     return cmd.format(**locals())
 

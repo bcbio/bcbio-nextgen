@@ -18,6 +18,8 @@
   `effects_transcripts` parameter than enables more control over variant effects
   prediction. Enable HGVS by default for human projects and separates from
   transcript selection.
+- For lumpy runs that use samblaster, use samtools sort instead of sambamba
+  sort. Avoids segfault issues with samblaster. Thanks to Oliver Hofmann.
 - Pre-install capture region BED files and enable short hand specification in
   sample configuration.
 - Testing suite cleanup. Move to py.test and separate integration and unit
