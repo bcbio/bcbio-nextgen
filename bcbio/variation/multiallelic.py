@@ -25,6 +25,7 @@ the resulting VCF is still valid.
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import effects, vcfutils
 
@@ -48,12 +49,14 @@ def _decompose(in_file, data):
     """
     out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
+        ref_file = dd.get_ref_file(data)
         assert out_file.endswith(".vcf.gz")
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("gunzip -c %s | "
                    "sed 's/ID=AD,Number=./ID=AD,Number=R/' | "
                    "vt decompose -s - "
+                   "| vt normalize -r %s - "
                    """| awk '{ gsub("./-65", "./."); print $0 }'"""
                    "| bgzip -c > %s")
-            do.run(cmd % (in_file, tx_out_file), "Multi-allelic to single allele")
+            do.run(cmd % (in_file, ref_file, tx_out_file), "Multi-allelic to single allele")
     return vcfutils.bgzip_and_index(out_file, data["config"])

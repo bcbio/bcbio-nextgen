@@ -22,6 +22,8 @@
   sort. Avoids segfault issues with samblaster. Thanks to Oliver Hofmann.
 - Pre-install capture region BED files and enable short hand specification in
   sample configuration.
+- Use vt normalize as part of GEMINI decomposition to clean up complex
+  multiallelic variants. Thanks to Sergey Naumenko.
 - Testing suite cleanup. Move to py.test and separate integration and unit
   tests. Thanks to Tetiana Khotiainsteva.
 
