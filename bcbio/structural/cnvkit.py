@@ -117,6 +117,11 @@ def _run_cnvkit_population(items, background):
 def _get_cmd():
     return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
 
+def _prep_cmd(cmd, tx_out_file):
+    """Wrap CNVkit commands ensuring we use local temporary directories.
+    """
+    return "export TMPDIR=%s && %s" % (os.path.dirname(tx_out_file), " ".join(cmd))
+
 def _bam_to_outbase(bam_file, work_dir):
     """Convert an input BAM file into CNVkit expected output.
     """
@@ -202,7 +207,8 @@ def _cnvkit_segment_base(cnr_file, cov_interval, data):
                 if cov_interval == "genome":
                     cmd += ["--threshold", "0.00001"]
                 # preferentially use conda installed Rscript
-                export_cmd = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
+                export_cmd = ("unset R_HOME && export PATH=%s:$PATH && export TMPDIR=%s && "
+                              % (os.path.dirname(utils.Rscript_cmd()), os.path.dirname(tx_out_file)))
                 do.run(export_cmd + " ".join(cmd), "CNVkit segment")
     return out_file
 
@@ -225,7 +231,7 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
     if not utils.file_exists(metrics_file):
         with file_transaction(data, metrics_file) as tx_metrics_file:
             cmd = [_get_cmd(), "metrics", "-o", tx_metrics_file, "-s", cns_file, "--", cnr_file]
-            do.run(cmd, "CNVkit metrics")
+            do.run(_prep_cmd(cmd, tx_metrics_file), "CNVkit metrics")
     metrics = _read_metrics_file(metrics_file)
     out = []
     for cnn in cnns:
@@ -255,7 +261,7 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ext=""):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "fix", "-o", tx_out_file, target_cnn, antitarget_cnn, background_cnn]
-            do.run(cmd, "CNVkit fix")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit fix")
     return out_file, data
 
 def _select_background_cnns(cnns):
@@ -290,7 +296,7 @@ def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, da
                 cmd += ["-t", target_bed, "-a", antitarget_bed]
             else:
                 cmd += background_cnns
-            do.run(cmd, "CNVkit background")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit background")
     return out_file
 
 def _split_bed(bed_input, data):
@@ -359,7 +365,7 @@ def _cnvkit_coverage(data, bed_info, input_type):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "coverage", bam_file, bed_file, "-o", tx_out_file]
-            do.run(cmd, "CNVkit coverage")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit coverage")
     return [{"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
              "sample": dd.get_sample_name(data),
              "final_out": merged_out_file, "bed_i": bed_info.get("i"), "bed_orig": bed_info["orig"]}]
@@ -376,7 +382,7 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, pct_coverage, work
             # small target regions, use smaller, more defined segments
             elif pct_coverage < 1.0:
                 cmd += ["--avg-size", "50"]
-            do.run(cmd, "CNVkit target")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
     antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
     if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
@@ -384,7 +390,7 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, pct_coverage, work
             # small target regions, use smaller antitargets
             if pct_coverage < 1.0:
                 cmd += ["--avg-size", "100000"]
-            do.run(cmd, "CNVkit antitarget")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_bed, antitarget_bed
 
 def _get_target_access_files(cov_interval, data, work_dir):
@@ -605,7 +611,7 @@ def _add_global_scatter_plot(out, data):
     cns = _remove_haplotype_chroms(out["cns"], data)
     with file_transaction(data, out_file) as tx_out_file:
         cmd = [_get_cmd(), "scatter", "-s", cns, "-o", tx_out_file, cnr]
-        do.run(cmd, "CNVkit global scatter plot")
+        do.run(_prep_cmd(cmd, tx_out_file), "CNVkit global scatter plot")
     return out_file
 
 def _add_scatter_plot(out, data):
@@ -621,7 +627,7 @@ def _add_scatter_plot(out, data):
     with file_transaction(data, out_file) as tx_out_file:
         cmd = [_get_cmd(), "scatter", "-s", cns, "-o", tx_out_file, "-l",
                priority_bed, cnr]
-        do.run(cmd, "CNVkit scatter plot")
+        do.run(_prep_cmd(cmd, tx_out_file), "CNVkit scatter plot")
     return out_file
 
 def _cnx_is_empty(in_file):
@@ -646,7 +652,7 @@ def _add_diagram_plot(out, data):
             gender = population.get_gender(data)
             if gender and gender.lower() == "male":
                 cmd += ["--male-reference"]
-            do.run(cmd, "CNVkit diagram plot")
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit diagram plot")
     return out_file
 
 def _create_access_file(ref_file, out_dir, data):
@@ -659,7 +665,7 @@ def _create_access_file(ref_file, out_dir, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "access",
                    ref_file, "-s", "10000", "-o", tx_out_file]
-            do.run(cmd, "Create CNVkit access file")
+            do.run(_prep_cmd(cmd, tx_out_file), "Create CNVkit access file")
     return out_file
 
 # ## Theta support
@@ -673,6 +679,6 @@ def export_theta(ckout, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "export", "theta", cns_file, cnr_file, "-o", tx_out_file]
-            do.run(cmd, "Export CNVkit calls as inputs for TheTA2")
+            do.run(_prep_cmd(cmd, tx_out_file), "Export CNVkit calls as inputs for TheTA2")
     ckout["theta_input"] = out_file
     return ckout
