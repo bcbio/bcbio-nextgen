@@ -400,7 +400,7 @@ def _get_target_access_files(cov_interval, data, work_dir):
     http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
     """
     base_regions = shared.get_base_cnv_regions(data, work_dir)
-    target_bed = bedutils.merge_overlaps(base_regions, data, out_dir=work_dir)
+    target_bed = bedutils.sort_merge(base_regions, data, out_dir=work_dir)
     if cov_interval == "amplicon":
         return target_bed, target_bed
     elif cov_interval == "genome":

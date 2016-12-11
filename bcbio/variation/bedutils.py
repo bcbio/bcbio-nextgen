@@ -74,11 +74,13 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
         vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
         return out_file
 
-def sort_merge(in_file, data):
+def sort_merge(in_file, data, out_dir=None):
     """Sort and merge a BED file, collapsing gene names.
        Output is a 3 or 4 column file (the 4th column values go comma-separated).
     """
     out_file = "%s-sortmerge.bed" % os.path.splitext(in_file)[0]
+    if out_dir:
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
