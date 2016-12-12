@@ -19,18 +19,15 @@ from bcbio.distributed.transaction import file_transaction
 transforms = {"harvard-indrop":
               {"json": {
                   "read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-                  "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-               "dual": True},
+                  "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""}},
               "harvard-indrop-v2":
               {"json": {
                   "read2": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-               "dual": True},
+                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""}},
               "CEL-seq":
               {"json": {
                   "read1": r"""(?P<name>@.*) .*\\n(?P<CB>.{8})(?P<MB>.{4})(.*)\\n\\+(.*)\\n(.*)\\n""",
-                  "read2": r"""(@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n"""},
-               "dual": False}}
+                  "read2": r"""(@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n"""}}}
 
 def write_transform_file(transform_data, out_file):
     """
@@ -44,14 +41,6 @@ def write_transform_file(transform_data, out_file):
         with open(tx_out_file, "w") as out_handle:
             json.dump(transform_data["json"], out_handle)
     return out_file
-
-def is_dual_index(transform):
-    if file_exists(transform):
-        transform = json.load(open(transform))
-        if "CB1" in transform["read1"] or "CB1" in transform["read2"]:
-            return True
-    else:
-        return transforms[transform]["dual"]
 
 def umi_transform(data):
     """
@@ -75,13 +64,12 @@ def umi_transform(data):
     if file_exists(out_file):
         data["files"] = [out_file]
         return [[data]]
-    index_option = "--dual_index" if is_dual_index(transform) else ""
     if len(dd.get_cellular_barcodes(data)) == 2:
         split_option = "--separate_cb"
     else:
         split_option = ""
     umis = config_utils.get_program("umis", data, default="umis")
-    cmd = ("{umis} fastqtransform {index_option} {split_option} {transform_file} "
+    cmd = ("{umis} fastqtransform {split_option} {transform_file} "
            "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
     message = ("Inserting UMI and barcode information into the read name of %s"
