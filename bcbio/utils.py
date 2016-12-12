@@ -777,6 +777,13 @@ def get_abspath(path, pardir=None):
     path = os.path.expandvars(path)
     return os.path.normpath(os.path.join(pardir, path))
 
+def sort_filenames(filenames):
+    """
+    sort a list of files by filename only, ignoring the directory names
+    """
+    basenames = [os.path.basename(x) for x in filenames]
+    indexes = [i[0] for i in sorted(enumerate(basenames), key=lambda x:x[1])]
+    return [filenames[x] for x in indexes]
 
 # LazyImport from NIPY
 # https://github.com/nipy/nitime/blob/master/nitime/lazyimports.py

@@ -12,7 +12,7 @@ from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
-from bcbio.utils import open_possible_gzip
+from bcbio.utils import open_possible_gzip, sort_filenames
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 
@@ -111,11 +111,12 @@ def combine_pairs(input_files, force_single=False):
     From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)
     Adjusted to allow different input paths or extensions for matching files.
     """
-    PAIR_FILE_IDENTIFIERS = set(["1", "2", "3"])
+    PAIR_FILE_IDENTIFIERS = set(["1", "2", "3", "4"])
 
     pairs = []
     used = set([])
     for in_file in input_files:
+        matches = set([])
         if in_file in used:
             continue
         if not force_single:
@@ -150,13 +151,10 @@ def combine_pairs(input_files, force_single=False):
                             continue
                     # if the 1/2 is not a separator or prefaced with R, skip
                     if b[s[0]- 1] in ("R", "_", "-", "."):
-                        used.add(in_file)
-                        used.add(comp_file)
-                        if b[s[0]] > a[s[0]]:
-                            pairs.append([in_file, comp_file])
-                        else:
-                            pairs.append([comp_file, in_file])
-                        break
+                        matches.update([in_file, comp_file])
+                        used.update([in_file, comp_file])
+            if matches:
+                pairs.append(sort_filenames(list(matches)))
         if in_file not in used:
             pairs.append([in_file])
             used.add(in_file)
