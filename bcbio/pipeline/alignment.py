@@ -11,6 +11,7 @@ import toolz as tz
 from bcbio import bam, utils
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, novoalign, snap, star,
                             hisat2)
+from bcbio.pipeline import datadict as dd
 
 # Define a next-generation sequencing tool to plugin:
 # align_fn -- runs an aligner and generates SAM output
@@ -57,10 +58,10 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
         data = _align_from_bam(fastq1, aligner, aligner_index, ref_file,
-                            names, align_dir, data)
+                               names, align_dir, data)
     else:
         data = _align_from_fastq(fastq1, fastq2, aligner, aligner_index, ref_file,
-                                names, align_dir, data)
+                                 names, align_dir, data)
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
         if not data.get("align_split"):
             bam.index(data["work_bam"], data["config"])
@@ -117,7 +118,7 @@ def _align_from_fastq(fastq1, fastq2, aligner, align_ref, sam_ref, names,
     out = align_fn(fastq1, fastq2, align_ref, names, align_dir, data)
     # handle align functions that update the main data dictionary in place
     if isinstance(out, dict):
-        assert "work_bam" in out
+        assert out.get("work_bam"), (dd.get_sample_name(data), out.get("work_bam"))
         return out
     # handle output of raw SAM files that need to be converted to BAM
     else:

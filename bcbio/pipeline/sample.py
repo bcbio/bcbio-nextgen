@@ -310,11 +310,11 @@ def _merge_align_bams(data):
     """Merge multiple alignment BAMs, including split and discordant reads.
     """
     for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
-        in_files = tz.get_in(key, data)
+        in_files = tz.get_in(key, data, [])
+        if not isinstance(in_files, (list, tuple)):
+            in_files = [in_files]
         in_files = [x for x in in_files if x and x != "None"]
         if in_files:
-            if not isinstance(in_files, (list, tuple)):
-                in_files = [in_files]
             ext = "-%s" % key[-1] if len(key) > 1 else ""
             out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
                                     "%s-sort%s.bam" % (dd.get_sample_name(data), ext))
