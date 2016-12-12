@@ -46,12 +46,9 @@ def update_file(finfo, sample_info, config):
             email.utils.parsedate_tz(key.last_modified))) if key else None
         no_upload = key and modified >= finfo["mtime"]
         if not no_upload:
-            if config.get("region") in objectstore.REGIONS_NEWPERMS["s3"]:
-                _upload_file_aws_cli(fname, config["bucket"], keyname, config, finfo)
-            else:
-                _upload_file(fname, config["bucket"], keyname, config, finfo)
+            _upload_file_aws_cli(fname, config["bucket"], keyname, config, finfo)
 
-def _upload_file(fname, bucket, keyname, config=None, mditems=None):
+def _upload_file_gof3r(fname, bucket, keyname, config=None, mditems=None):
     metadata = ["-m", "x-amz-server-side-encryption:AES256"]
     endpoint = []
     if mditems:
@@ -70,7 +67,7 @@ def _upload_file(fname, bucket, keyname, config=None, mditems=None):
     do.run(cmd, "Upload to s3: %s %s" % (bucket, keyname))
 
 def _upload_file_aws_cli(local_fname, bucket, keyname, config=None, mditems=None):
-    """Potentially streaming download via the standard AWS command line interface.
+    """Streaming upload via the standard AWS command line interface.
     """
     s3_fname = "s3://%s/%s" % (bucket, keyname)
     args = ["--sse", "--expected-size", str(os.path.getsize(local_fname))]
