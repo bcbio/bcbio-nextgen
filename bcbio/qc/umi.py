@@ -15,11 +15,14 @@ def run(_, data, out_dir):
     stats_file = os.path.join(utils.safe_makedir(out_dir), "%s_umi_stats.yaml" % dd.get_sample_name(data))
     if not utils.file_uptodate(stats_file, dd.get_align_bam(data)):
         out = {}
-        counts = collections.defaultdict(lambda: collections.defaultdict(int))
         total = 0
         mapped = 0
         duplicates = 0
+        umi_reductions = []
+        umi_counts = collections.defaultdict(int)
         with pysam.AlignmentFile(data["umi_bam"], "rb", check_sq=False) as bam_iter:
+            cur_counts = collections.defaultdict(int)
+            cur_key = None
             for rec in bam_iter:
                 total += 1
                 umi = rec.get_tag("RX")
@@ -30,15 +33,24 @@ def run(_, data, out_dir):
                     chrom = bam_iter.getrname(rec.reference_id)
                     pos = rec.reference_start
                     key = (chrom, pos)
-                counts[key][umi] += 1
-        umi_reductions = []
-        umi_counts = collections.defaultdict(int)
-        for key in sorted(counts.keys()):
-            for c in counts[key].values():
-                umi_counts[c] += 1
-            total_seqs = sum(counts[key].values())
-            umi_count = len(counts[key])
-            umi_reductions.append(float(total_seqs) / umi_count)
+                    if key != cur_key:
+                        # update counts
+                        if cur_counts:
+                            for c in cur_counts.values():
+                                umi_counts[c] += 1
+                            total_seqs = sum(cur_counts.values())
+                            umi_count = len(cur_counts)
+                            umi_reductions.append(float(total_seqs) / umi_count)
+                        # update current keys
+                        cur_key = key
+                        cur_counts = collections.defaultdict(int)
+                    cur_counts[umi] += 1
+            if cur_counts:
+                for c in cur_counts.values():
+                    umi_counts[c] += 1
+                total_seqs = sum(cur_counts.values())
+                umi_count = len(cur_counts)
+                umi_reductions.append(float(total_seqs) / umi_count)
         consensus_count = sum([x.aligned for x in bam.idxstats(dd.get_align_bam(data), data)])
         out["umi_baseline_all"] = total
         out["umi_baseline_mapped"] = mapped
