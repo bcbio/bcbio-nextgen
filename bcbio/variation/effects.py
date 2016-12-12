@@ -270,14 +270,14 @@ def _snpeff_args_from_config(data):
         args += ["-cancer"]
 
     effects_transcripts = dd.get_effects_transcripts(data)
-    if effects_transcripts == "canonical" or tz.get_in(("config", "algorithm", "clinical_reporting"), data):
-        args += ["-canon"]
-    elif effects_transcripts in set(["canonical_cancer"]):
+    if effects_transcripts in set(["canonical_cancer"]):
         _, snpeff_base_dir = get_db(data)
         canon_list_file = os.path.join(snpeff_base_dir, "transcripts", "%s.txt" % effects_transcripts)
         if not utils.file_exists(canon_list_file):
             raise ValueError("Cannot find expected file for effects_transcripts: %s" % canon_list_file)
         args += ["-canonList", canon_list_file]
+    elif effects_transcripts == "canonical" or tz.get_in(("config", "algorithm", "clinical_reporting"), data):
+        args += ["-canon"]
     return args
 
 def get_db(data):
