@@ -1,7 +1,7 @@
-version: 20
+version: 21
 
 aliases:
-  snpeff: GRCm38.82
+  snpeff: GRCm38.86
   ensembl: mus_musculus_vep_86_GRCm38
 
 variation:
