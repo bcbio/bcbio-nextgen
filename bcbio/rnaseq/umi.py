@@ -7,6 +7,7 @@ https://github.com/vals/umis
 import pandas as pd
 import json
 import os
+from itertools import repeat, chain
 
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -57,8 +58,9 @@ def umi_transform(data):
     transform each read by identifying the barcode and UMI for each read
     and putting the information in the read name
     """
-    fq1, fq2 = dd.get_input_sequence_files(data)
-    fq2 = fq2 if fq2 else ""
+    fqfiles = list(dd.get_input_sequence_files(data))
+    fqfiles.extend(list(repeat("", 4-len(fqfiles))))
+    fq1, fq2, fq3, fq4 = fqfiles
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     safe_makedir(umi_dir)
     transform = dd.get_umi_type(data)
@@ -80,7 +82,7 @@ def umi_transform(data):
         split_option = ""
     umis = config_utils.get_program("umis", data, default="umis")
     cmd = ("{umis} fastqtransform {index_option} {split_option} {transform_file} "
-           "{fq1} {fq2} "
+           "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
     message = ("Inserting UMI and barcode information into the read name of %s"
                % fq1)
