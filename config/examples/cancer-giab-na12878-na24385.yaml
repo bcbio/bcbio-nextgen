@@ -37,3 +37,7 @@ details:
     batch: 24385
     phenotype: normal
     validate_sample: NA12878/NA24385 mixture
+fc_date: '20161212'
+fc_name: giab-mixture
+upload:
+  dir: ../final
