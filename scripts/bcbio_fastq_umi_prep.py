@@ -2,9 +2,9 @@
 """Convert 3 fastq inputs (read 1, read 2, UMI) into paired inputs with UMIs in read names
 
 Usage:
-  fastq_umis_to_paired.py single <out basename> <read 1 fastq> <read 2 fastq> <umi fastq>
+  bcbio_fastq_umi_prep.py single <out basename> <read 1 fastq> <read 2 fastq> <umi fastq>
 or:
-  fastq_umis_to_paired.py autopair [<list> <of> <fastq> <files>]
+  bcbio_fastq_umi_prep.py autopair [<list> <of> <fastq> <files>]
 
 Creates two fastq files with embedded UMIs: <out_basename>_R1.fq.gz <out_basename>_R2.fq.gz
 or a directory of fastq files with UMIs added to the names.
