@@ -435,7 +435,7 @@ Coverage information
   exome analyses, and ``amplicon`` is partial-genome sequencing from
   PCR amplicon sequencing. This influences GATK options for filtering: we use
   Variant Quality Score Recalibration when set to ``genome``, otherwise we
-  apply hard filters. Also affects copy number calling with CNVkit, structural
+  apply cutoff-based soft filters. Also affects copy number calling with CNVkit, structural
   variant calling and deep panel calling in cancer samples, where we tune
   regional/amplicon analyses to maximize sensitivity.
   [genome, regional, amplicon]

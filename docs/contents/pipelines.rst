@@ -28,7 +28,7 @@ current implementation:
 - Additional work to `improve variant filtering`_, providing methods to
   remove low complexity regions (LCRs) that can bias indel results. We also
   tuned `GATK's Variant Quality Score Recalibrator`_ (VQSR) and compared it with
-  hard filtering. VQSR requires a large number of variants and we use
+  cutoff-based soft filtering. VQSR requires a large number of variants and we use
   it in bcbio with GATK HaplotypeCaller when your :ref:`algorithm-config`
   contains high depth samples (``coverage_depth`` is not low) and you are
   calling on the whole genome (``coverage_interval`` is genome) or have more

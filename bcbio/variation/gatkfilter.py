@@ -1,6 +1,6 @@
 """Perform GATK based filtering, perferring variant quality score recalibration.
 
-Performs hard filtering when VQSR fails on smaller sets of variant calls.
+Performs cutoff-based soft filtering when VQSR fails on smaller sets of variant calls.
 """
 import os
 
@@ -14,26 +14,23 @@ from bcbio.variation import vcfutils, vfilter
 
 def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
-
-    For VQSR, need to split the file to apply. For hard filters can run on the original
-    filter, filtering by bcftools type.
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if config_utils.use_vqsr(algs):
         assert "gvcf" not in dd.get_tools_on(data), \
-            ("Cannot force gVCF output and use VQSR. Try using hard filtering with tools_off: [vqsr]")
+            ("Cannot force gVCF output and use VQSR. Try using cutoff-based soft filtering with tools_off: [vqsr]")
         snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, data["config"])
         snp_filter_file = _variant_filtration(snp_file, ref_file, vrn_files, data, "SNP",
-                                              vfilter.gatk_snp_hard)
+                                              vfilter.gatk_snp_cutoff)
         indel_filter_file = _variant_filtration(indel_file, ref_file, vrn_files, data, "INDEL",
-                                                vfilter.gatk_indel_hard)
+                                                vfilter.gatk_indel_cutoff)
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
         combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
         return _filter_nonref(combined_file, data)
     else:
-        snp_filter = vfilter.gatk_snp_hard(call_file, data)
-        indel_filter = vfilter.gatk_indel_hard(snp_filter, data)
+        snp_filter = vfilter.gatk_snp_cutoff(call_file, data)
+        indel_filter = vfilter.gatk_indel_cutoff(snp_filter, data)
         if "gvcf" not in dd.get_tools_on(data):
             return _filter_nonref(indel_filter, data)
         else:
@@ -180,8 +177,8 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
 
 # ## SNP and indel specific variant filtration
 
-def _already_hard_filtered(in_file, filter_type):
-    """Check if we have a pre-existing hard filter file from previous VQSR failure.
+def _already_cutoff_filtered(in_file, filter_type):
+    """Check if we have a pre-existing cutoff-based filter file from previous VQSR failure.
     """
     filter_file = "%s-filter%s.vcf.gz" % (utils.splitext_plus(in_file)[0], filter_type)
     return utils.file_exists(filter_file)
@@ -190,24 +187,25 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
                         hard_filter_fn):
     """Filter SNP and indel variant calls using GATK best practice recommendations.
 
-    Hard filter if configuration indicates too little data or already finished a
-    hard filtering, otherwise try VQSR.
+    Use cutoff-based soft filters if configuration indicates too little data or
+    already finished a cutoff-based filtering step, otherwise try VQSR.
+
     """
     # Algorithms multiplied by number of input files to check for large enough sample sizes
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if (not config_utils.use_vqsr(algs) or
-          _already_hard_filtered(in_file, filter_type)):
-        logger.info("Skipping VQSR, using hard filers: we don't have whole genome input data")
+          _already_cutoff_filtered(in_file, filter_type)):
+        logger.info("Skipping VQSR, using cutoff-based filers: we don't have whole genome input data")
         return hard_filter_fn(in_file, data)
     elif not _have_training_data(vrn_files):
-        logger.info("Skipping VQSR, using hard filers: genome build does not have sufficient training data")
+        logger.info("Skipping VQSR, using cutoff-based filers: genome build does not have sufficient training data")
         return hard_filter_fn(in_file, data)
     else:
         sensitivities = {"INDEL": "98.0", "SNP": "99.97"}
         recal_file, tranches_file = _run_vqsr(in_file, ref_file, vrn_files,
                                               sensitivities[filter_type], filter_type, data)
         if recal_file is None:  # VQSR failed
-            logger.info("VQSR failed due to lack of training data. Using hard filtering.")
+            logger.info("VQSR failed due to lack of training data. Using cutoff-based soft filtering.")
             return hard_filter_fn(in_file, data)
         else:
             return _apply_vqsr(in_file, ref_file, recal_file, tranches_file,
