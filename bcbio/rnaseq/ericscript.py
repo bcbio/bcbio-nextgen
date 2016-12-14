@@ -15,12 +15,12 @@ def run(config):
     with file_transaction(config, output_location) as tx_output_location:
         cmd = [
             'ericscript.pl',
-            '-db %s' % db_location,
-            '-name %s' % samplename,
-            '-o %s' % tx_output_location,
+            '-db', db_location,
+            '-name', samplename,
+            '-o', tx_output_location,
         ]
         cmd += fastq_files
-        do.run(cmd, env=env)
+        do.run(cmd, "Detect gene fusions with EricScript", env=env)
 
 
 def get_output_dir(config):
