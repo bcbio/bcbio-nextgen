@@ -566,6 +566,8 @@ Variant calling
 .. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
 
+.. _config-cancer:
+
 Somatic variant calling
 =======================
 
@@ -678,7 +680,28 @@ For more information on the hg38 truth set preparation see the work on `validati
 <https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes>`_ contain
 provenance details about the origins of the installed files.
 
-.. _config-cancer:
+UMIs
+====
+Unique molecular identifiers (UMIs) are short random barcodes used to tag
+individual molecules and avoid amplification biased. Both
+single cell RNA-seq and variant calling support UMIs. For variant calling,
+`fgbio <https://github.com/fulcrumgenomics/fgbio>`_ collapses sequencing
+duplicates for each UMI into a single consensus read prior to running
+re-alignment and variant calling. To help with preparing fastq files with UMIs
+bcbio provides a script ``bcbio_fastq_umi_prep.py`` which converts reads output
+by an Illumina as 3 files (read 1, read 2, and UMIs) into paired reads with UMIs
+in the fastq names. This can run on a single set of files or autopair an entire
+directory of fastq files::
+
+   bcbio_fastq_umi_prep.py autopair <list> <of> <fastq> <files>
+
+Configuration options for UMIs:
+
+- ``umi_type`` The UMI/cellular barcode scheme used for your data. For single
+  cell RNA sequencing, supports [harvard-indrop, harvard-indrop-v2, cel-seq].
+  For variant analysis with UMI based consensus calling, supports either
+  ``fastq_name`` with UMIs in read names or the path to a fastq file with
+  UMIs for each aligned read.
 
 RNA sequencing
 ==============
@@ -702,8 +725,6 @@ Fast RNA-seq
 Single-cell RNA sequencing
 ==========================
 
-- ``umi_type`` The UMI/cellular barcode scheme used for your data. Supports
-  [harvard-indrop, harvard-indrop-v2, cel-seq].
 - ``minimum_barcode_depth`` Cellular barcodes with less than this many reads
   assigned to them are discarded (default 100,000).
 - ``cellular_barcodes`` An optional list of one or two files which have the
