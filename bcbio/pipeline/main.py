@@ -238,9 +238,7 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     with prun.start(_wres(parallel, ["samtools", "cufflinks"]),
                     samples, config, dirs, "rnaseqcount") as run_parallel:
         with profile.report("disambiguation", dirs):
-            import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
             samples = disambiguate.resolve(samples, run_parallel)
-            import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
         with profile.report("transcript assembly", dirs):
             samples = rnaseq.assemble_transcripts(run_parallel, samples)
         with profile.report("estimate expression (threaded)", dirs):
