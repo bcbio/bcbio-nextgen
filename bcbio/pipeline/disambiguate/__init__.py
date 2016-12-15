@@ -15,7 +15,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline.disambiguate.run import main as disambiguate_main
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import merge, run_info
+from bcbio.pipeline import config_utils, merge, run_info
 from bcbio.provenance import do
 from bcbio import bam
 
@@ -135,11 +135,7 @@ def run(items, config):
     summary_file = "%s_summary.txt" % base_name
     if not utils.file_exists(summary_file):
         with file_transaction(items[0], out_dir) as tx_out_dir:
-            Args = collections.namedtuple("Args", "A B output_dir intermediate_dir "
-                                          "no_sort prefix aligner")
-            args = Args(work_bam_a, work_bam_b, tx_out_dir, tx_out_dir,
-                        True, "", aligner)
-            disambiguate_main(args)
+            _run_cplusplus(work_bam_a, work_bam_b, tx_out_dir, aligner, os.path.basename(base_name), items)
     data_a["disambiguate"] = \
       {data_b["genome_build"]: bam.sort("%s.disambiguatedSpeciesB.bam" % base_name, config),
        "%s-ambiguous" % data_a["genome_build"]: bam.sort("%s.ambiguousSpeciesA.bam" % base_name, config),
@@ -148,33 +144,18 @@ def run(items, config):
     data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
     return [[data_a]]
 
-def run_cplusplus(items, config):
+def _run_python(work_bam_a, work_bam_b, out_dir, aligner, prefix, items):
+    """Run python version of disambiguation
+    """
+    Args = collections.namedtuple("Args", "A B output_dir intermediate_dir "
+                                    "no_sort prefix aligner")
+    args = Args(work_bam_a, work_bam_b, out_dir, out_dir, True, "", aligner)
+    disambiguate_main(args)
+
+def _run_cplusplus(work_bam_a, work_bam_b, out_dir, aligner, prefix, items):
     """Run third party disambiguation script, resolving into single set of calls.
     """
-    assert len(items) == 2, "Can only resolve two organism disambiguation"
-    # check aligner, handling tophat/tophat2 distinctions
-    aligner = config["algorithm"].get("aligner")
-    aligner = "tophat" if aligner.startswith("tophat") else aligner
-    assert aligner in ["bwa", "hisat2", "tophat", "star"], "Disambiguation only supported for bwa, hisat2, star and tophat alignments."
-    if items[0]["disambiguate"].get("base"):
-        data_a, data_b = items
-    else:
-        data_b, data_a = items
-    work_bam_a = bam.sort(data_a["work_bam"], config, "queryname")
-    work_bam_b = bam.sort(data_b["work_bam"], config, "queryname")
-    out_dir = os.path.normpath(os.path.join(os.path.dirname(work_bam_a),
-                                            os.pardir, os.pardir, "disambiguate"))
-    base_name = os.path.join(out_dir, os.path.splitext(os.path.basename(work_bam_a))[0])
-    summary_file = "%s_summary.txt" % base_name
-    if not utils.file_exists(summary_file):
-        with file_transaction(items[0], out_dir) as tx_out_dir:
-            raise NotImplementedError("Still need to test and support C++ version")
-            cmd = ""
-            do.run(cmd.format(**locals()), "Disambiguation", data_a)
-    data_a["disambiguate"] = \
-      {data_b["genome_build"]: "%s.disambiguatedSpeciesB.bam" % base_name,
-       "%s-ambiguous" % data_a["genome_build"]: "%s.ambiguousSpeciesA.bam" % base_name,
-       "%s-ambiguous" % data_b["genome_build"]: "%s.ambiguousSpeciesB.bam" % base_name,
-       "summary": summary_file}
-    data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
-    return [[data_a]]
+    ngs_disambiguate = config_utils.get_program("ngs_disambiguate", items[0]["config"])
+    cmd = [ngs_disambiguate, "--no-sort", "--prefix", prefix, "--aligner", aligner,
+           "--output-dir", out_dir, work_bam_a, work_bam_b]
+    do.run(cmd, "Disambiguation", items[0])
