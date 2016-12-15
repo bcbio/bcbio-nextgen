@@ -19,6 +19,7 @@ variation:
   dbscsnv: ../variation/dbscSNV.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
+  genesplicer: ../variation/genesplicer/
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
