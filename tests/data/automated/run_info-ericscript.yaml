@@ -7,6 +7,8 @@ details:
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
+      disambiguate:
+       - mm9
       fusion_mode: True
       fusion_caller: ericscript
     description: Test1
