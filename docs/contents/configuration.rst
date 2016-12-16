@@ -744,7 +744,8 @@ Single-cell RNA sequencing
 smallRNA sequencing
 ===================
 
-- ``adapter`` The 3' end adapter that needs to be remove.
+- ``adapter`` The 3' end adapter that needs to be remove. For NextFlex protocol you can add
+  resources: ``cutadapt:options:["-u 4", "-u -4"]``.
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
 - ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2
