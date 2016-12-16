@@ -1,22 +1,25 @@
 from bcbio.pipeline import datadict as dd
 
-import pytest
 
-
-FUSION_CALLER = 'TEST_FUSION_CALLER'
-
-
-@pytest.fixture
-def data():
-    return {
+def test_get_fusion_caller():
+    data = {
         'config': {
             'algorithm': {
-                'fusion_caller': FUSION_CALLER,
+                'fusion_caller': 'FUSION_CALLER',
             },
         },
     }
 
-
-def test_get_fusion_caller(data):
     result = dd.get_fusion_caller(data)
-    assert result == FUSION_CALLER
+    assert result == 'FUSION_CALLER'
+
+
+def test_get_ericscript_outdir():
+    sample_config = {
+        'dirs': {
+            'work': 'TEST_WORK_DIR'
+        },
+    }
+    result = dd.get_ericscript_outdir(sample_config)
+    expected = 'TEST_WORK_DIR/ericscript'
+    assert result == expected

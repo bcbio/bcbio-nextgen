@@ -315,3 +315,8 @@ def get_keys(lookup):
     return the keys used to look up a function in the datadict
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
+
+
+def get_ericscript_outdir(sample):
+    OUTPUT_DIR_NAME = 'ericscript'
+    return os.path.join(get_work_dir(sample), OUTPUT_DIR_NAME)
