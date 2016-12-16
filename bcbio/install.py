@@ -669,7 +669,7 @@ def _datatarget_defaults(args, default_args):
         val = None
         if x == "data":
             val = "gemini"
-        elif x in ["cadd", "dbnsfp", "kraken"]:
+        elif x in ["cadd", "dbnsfp", "dbscsnv", "kraken"]:
             val = x
         if val and val not in default_data:
             default_data.append(val)
