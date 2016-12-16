@@ -7,8 +7,9 @@ samblaster: http://arxiv.org/pdf/1403.7486v1.pdf
 biobambam bammarkduplicates: http://arxiv.org/abs/1306.0836
 """
 import contextlib
-from distutils.version import LooseVersion
 import os
+
+import toolz as tz
 
 from bcbio import bam, broad, utils
 from bcbio.bam import ref
@@ -16,7 +17,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
-from bcbio.provenance import do, programs
+from bcbio.provenance import do
 
 @contextlib.contextmanager
 def tobam_cl(data, out_file, is_paired=False):
@@ -155,11 +156,28 @@ def umi_consensus(data):
     if not utils.file_uptodate(f1_out, align_bam):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
-            cmd = ("fgbio {jvm_opts} GroupReadsByUmi -m 1 -e 1 -s adjacency -i {align_bam} | "
-                   "fgbio {jvm_opts} CallMolecularConsensusReads -S queryname -i /dev/stdin -o /dev/stdout | "
+            group_opts, cons_opts = _get_fgbio_options(data)
+            cmd = ("fgbio {jvm_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
+                   "fgbio {jvm_opts} CallMolecularConsensusReads {cons_opts} "
+                   "-S queryname -i /dev/stdin -o /dev/stdout | "
                    "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out
+
+def _get_fgbio_options(data):
+    """Get adjustable, through resources, or default options for fgbio.
+    """
+    group_opts = ["--edits", "--min-map-q"]
+    cons_opts = ["--min-reads"]
+    defaults = {"--min-reads": "1",
+                "--min-map-q": "1",
+                "--edits": "1"}
+    ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
+    assert len(ropts) % 2 == 0, "Expect even number of options for fgbio" % ropts
+    defaults.update(dict(tz.partition(2, ropts)))
+    group_out = " ".join(["%s %s" % (x, defaults[x]) for x in group_opts])
+    cons_out = " ".join(["%s %s" % (x, defaults[x]) for x in cons_opts])
+    return group_out, cons_out
 
 def _check_dedup(data):
     """Check configuration for de-duplication, handling back compatibility.

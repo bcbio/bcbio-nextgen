@@ -12,6 +12,9 @@ details:
       variantcaller: freebayes
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
+    resources:
+      fgbio:
+        options: [--edits, 2, --min-reads, 3]
     analysis: variant2
     description: Test1
     genome_build: hg19
