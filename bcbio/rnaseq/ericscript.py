@@ -1,47 +1,33 @@
-import os
-import functools
-from collections import namedtuple
-from bcbio.distributed.transaction import file_transaction
-import bcbio.pipeline.datadict as dd
-from bcbio.provenance import do
 from bcbio import utils
+from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
+from bcbio.pipeline.fastq import convert_bam_to_fastq
+from bcbio.provenance import do
 
 
 def run(config):
-    ericscript = EricScriptConfig(config)
-
-    with file_transaction(config, ericscript.output_dir) as tx_output_dir:
-        input_data = get_input_data(tx_output_dir, config)
-        if input_data.convert_cmd:
-            msg = 'Convert disambiguated bam reads to fastq'
-            do.run(input_data.convert_cmd, msg, env=ericscript.env)
-        cmd = ericscript.get_run_command(tx_output_dir, input_data.files)
-        do.run(cmd, ericscript.info_message, env=ericscript.env)
+    input_files = prepare_input_data(config)
+    run_ericscript(config, input_files)
     return config
 
 
-InputData = namedtuple('InputData', ['files', 'convert_cmd'])
+def prepare_input_data(config):
+
+    if not dd.get_disambiguate(config):
+        return dd.get_input_sequence_files(config)
+
+    work_bam = dd.get_work_bam(config)
+    fq_files = convert_bam_to_fastq(
+        work_bam, dd.get_work_dir(config), None, None, config
+    )
+    return fq_files
 
 
-def get_input_data(tx_output_dir, config):
-    if dd.get_disambiguate(config):
-        work_bam = dd.get_work_bam(config)
-        fq_files = _get_fq_fnames(tx_output_dir)
-        convert_cmd = [
-            'bamToFastq',
-            '-i', work_bam,
-            '-fq', fq_files[0],
-            '-fq2', fq_files[1]
-        ]
-    else:
-        fq_files = dd.get_input_sequence_files(config)
-        convert_cmd = None
-    return InputData(fq_files, convert_cmd)
-
-
-def _get_fq_fnames(location):
-    join = functools.partial(os.path.join, location)
-    return map(join, ('input1.fq', 'input2.fq'))
+def run_ericscript(sample_config, input_files):
+    es_config = EricScriptConfig(sample_config)
+    with file_transaction(sample_config, es_config.output_dir) as tx_out_dir:
+        cmd = es_config.get_run_command(tx_out_dir, input_files)
+        do.run(cmd, es_config.info_message, env=es_config.env)
 
 
 class EricScriptConfig(object):
