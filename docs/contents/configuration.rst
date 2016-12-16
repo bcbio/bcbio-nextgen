@@ -687,11 +687,15 @@ individual molecules and avoid amplification biased. Both
 single cell RNA-seq and variant calling support UMIs. For variant calling,
 `fgbio <https://github.com/fulcrumgenomics/fgbio>`_ collapses sequencing
 duplicates for each UMI into a single consensus read prior to running
-re-alignment and variant calling. To help with preparing fastq files with UMIs
-bcbio provides a script ``bcbio_fastq_umi_prep.py`` which converts reads output
-by an Illumina as 3 files (read 1, read 2, and UMIs) into paired reads with UMIs
-in the fastq names. This can run on a single set of files or autopair an entire
-directory of fastq files::
+re-alignment and variant calling. This requires ``mark_duplicates: true`` (the
+default) since it uses position based duplicates and UMI tags for collapsing
+duplicate reads into consensus sequences.
+
+To help with preparing fastq files with UMIs bcbio provides a script
+``bcbio_fastq_umi_prep.py`` which converts reads output by an Illumina as 3
+files (read 1, read 2, and UMIs) into paired reads with UMIs in the fastq names.
+This can run on a single set of files or autopair an entire directory of fastq
+files::
 
    bcbio_fastq_umi_prep.py autopair <list> <of> <fastq> <files>
 

@@ -133,8 +133,12 @@ def file_reasonable_size(target_file, input_file):
         # named pipes -- we can't calculate size
         if input_file.strip().startswith("<("):
             return True
-        if input_file.endswith((".bam", ".gz")):
+        if input_file.endswith((".gz")):
             scale = 10.0
+        # bams can be compressed at different levels so use larger scale factor
+        # to account for that potential
+        elif input_file.endswith((".bam")):
+            scale = 25.0
         else:
             scale = 20.0
         orig_size = os.path.getsize(input_file) / pow(1024.0, 3)
