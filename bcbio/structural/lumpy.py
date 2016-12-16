@@ -63,8 +63,8 @@ def _filter_by_support(in_file, data):
                  "(FORMAT/SR == 0 && FORMAT/SU < 15 && ABS(SVLEN)>50000) || "
                  "(FORMAT/SR == 0 && FORMAT/SU < 5 && ABS(SVLEN)<2000) || "
                  "(FORMAT/SR == 0 && FORMAT/SU < 15 && ABS(SVLEN)<300)")
-    return vfilter.hard_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
-                                     limit_regions=None)
+    return vfilter.cutoff_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
+                                       limit_regions=None)
 
 def _filter_by_background(base_samples, back_samples, gt_vcfs, data):
     """Filter base samples, marking any also present in the background.

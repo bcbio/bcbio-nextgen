@@ -43,8 +43,8 @@ def run(items):
                    "(NUM_SVTOOLS = 1 && ABS(SVLEN)<4000 && BA_FLANK_PERCENT>80) || "
                    "(NUM_SVTOOLS = 1 && ABS(SVLEN)<4000 && BA_NUM_GOOD_REC=0) || "
                    "(ABS(SVLEN)<4000 && BA_NUM_GOOD_REC>2)")
-        filter_file = vfilter.hard_w_expression(out_file, filters,
-                                                data, name="ReassemblyStats", limit_regions=None)
+        filter_file = vfilter.cutoff_w_expression(out_file, filters,
+                                                  data, name="ReassemblyStats", limit_regions=None)
         effects_vcf, _ = effects.add_to_vcf(filter_file, data, "snpeff")
         data["sv"].append({"variantcaller": "metasv",
                            "vrn_file": effects_vcf or filter_file})

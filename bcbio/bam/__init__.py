@@ -57,17 +57,20 @@ def index(in_bam, config, check_timestamp=True):
         for fname in [index_file, alt_index_file]:
             utils.remove_safe(fname)
         sambamba = _get_sambamba(config)
+        assert sambamba, "Did not find sambamba for indexing"
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, index_file) as tx_index_file:
             assert tx_index_file.find(".bam.bai") > 0
             tx_bam_file = tx_index_file.replace(".bam.bai", ".bam")
             utils.symlink_plus(in_bam, tx_bam_file)
-            if sambamba:
+            try:
                 cmd = "{sambamba} index -t {num_cores} {tx_bam_file}"
-            else:
-                cmd = "{samtools} index {tx_bam_file}"
-            do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
+                do.run(cmd.format(**locals()), "Index BAM file with sambamba: %s" % os.path.basename(in_bam))
+            except subprocess.CalledProcessError:
+                cmd = "{samtools} index {in_bam} {tx_index_file}"
+                do.run(cmd.format(**locals()), "Backup single thread index of BAM file with samtools: %s"
+                       % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
 
 def remove(in_bam):
