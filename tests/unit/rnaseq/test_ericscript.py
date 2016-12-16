@@ -5,6 +5,7 @@ from bcbio.rnaseq import ericscript
 from bcbio.rnaseq.ericscript import EricScriptConfig
 from tests.unit.conftest import DummyFileTransaction
 
+
 class TestEricScriptConfig(object):
 
     @pytest.yield_fixture
@@ -50,7 +51,7 @@ class TestEricScriptConfig(object):
 
 
 class TestGetInputData(object):
-    def test_get_disambiguated_bam(self):
+    def test_get_disambiguated_bam(self, mocker):
         sample_config = {
             'config': {
                 'algorithm': {
@@ -59,20 +60,17 @@ class TestGetInputData(object):
             },
             'work_bam':
                 '/path/to/disambiguate_star/Test1.nsorted.human.sorted.bam',
+            'dirs': {'work': '/path/to/workdir'},
         }
 
-        result = ericscript.get_input_data('TX_DIR', sample_config)
-        expected_fq_files = ['TX_DIR/input1.fq', 'TX_DIR/input2.fq']
-        assert result.files == expected_fq_files
-        assert result.convert_cmd == [
-            'bamToFastq',
-            '-i',
-            '/path/to/disambiguate_star/Test1.nsorted.human.sorted.bam',
-            '-fq',
-            expected_fq_files[0],
-            '-fq2',
-            expected_fq_files[1],
-        ]
+        convert = mocker.patch('bcbio.rnaseq.ericscript.convert_bam_to_fastq')
+        result = ericscript.prepare_input_data(sample_config)
+        convert.assert_called_once_with(
+            sample_config['work_bam'],
+            sample_config['dirs']['work'],
+            None, None, sample_config
+        )
+        assert result == convert.return_value
 
     def test_get_fastq_input_files_if_no_disambiguation(self):
         fq_files = (
@@ -80,9 +78,9 @@ class TestGetInputData(object):
             '/path/to/1_2_trimmed.fq.gz'
         )
         sample_config = {'files': list(fq_files)}
-        result = ericscript.get_input_data('TX_DIR', sample_config)
-        assert result.files == fq_files
-        assert result.convert_cmd is None
+        result = ericscript.prepare_input_data(sample_config)
+        assert result == fq_files
+
 
 class TestRun(object):
 
@@ -104,16 +102,27 @@ class TestRun(object):
         yield mocker.patch(
             'bcbio.rnaseq.ericscript.do.run', autospec=True)
 
-    def test_returns_sample_config(self, mock_ft, do_run, es_config):
+    @pytest.yield_fixture
+    def prepare_data(self, mocker):
+        yield mocker.patch('bcbio.rnaseq.ericscript.prepare_input_data')
+
+    def test_returns_sample_config(
+            self, prepare_data, mock_ft, do_run, es_config):
         config = mock.MagicMock()
         result = ericscript.run(config)
         assert result == config
 
-    def test_run_ericscript_without_input_file_conversion(
-            self, mocker, do_run, es_config, mock_ft):
-        get_data = mocker.patch('bcbio.rnaseq.ericscript.get_input_data')
-        get_data.return_value = ericscript.InputData('FILES', None)
+    def test_gets_ericscript_command(
+            self, prepare_data, mock_ft, do_run, es_config):
 
+        ericscript.run(mock.Mock())
+        es_config.get_run_command.assert_called_once_with(
+            mock.ANY,
+            prepare_data.return_value
+        )
+
+    def test_runs_ericscript_command(
+            self, prepare_data, mock_ft, do_run, es_config):
         ericscript.run(mock.Mock())
         do_run.assert_called_once_with(
             es_config.get_run_command.return_value,
@@ -121,26 +130,8 @@ class TestRun(object):
             env=es_config.env,
         )
 
-    def test_run_ericscript_with_input_file_conversion(
-            self, mocker, do_run, es_config, mock_ft):
-        get_data = mocker.patch('bcbio.rnaseq.ericscript.get_input_data')
-        get_data.return_value = ericscript.InputData('FILES', 'CONVERT_CMD')
-
-        ericscript.run(mock.Mock())
-        # assert that both input file conversion and EricScript were run:
-        convert_call = mock.call(
-            'CONVERT_CMD',
-            'Convert disambiguated bam reads to fastq',
-            env=es_config.env,
-        )
-        ericscript_call = mock.call(
-            es_config.get_run_command.return_value,
-            es_config.info_message,
-            env=es_config.env,
-        )
-        do_run.assert_has_calls([convert_call, ericscript_call])
-
-    def test_calls_file_transaction(self, do_run, mock_ft, es_config):
+    def test_calls_file_transaction(
+            self, prepare_data, mock_ft, do_run, es_config):
         config = mock.MagicMock()
         ericscript.run(config)
         mock_ft.assert_called_once_with(config, es_config.output_dir)

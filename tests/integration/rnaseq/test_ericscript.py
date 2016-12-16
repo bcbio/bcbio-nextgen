@@ -11,7 +11,7 @@ class ConfigCreator(object):
 
     INPUT_DATA_DIR = 'fusion/input'
     INPUT_FILENAMES = {
-        'work_bam':  '1_2_Test1.trimmed.fq.gz',
+        'work_bam':  'Test1.nsorted.human.sorted.bam',
         'fq_files': [
             '1_1_Test1.trimmed.fq.gz',
             '1_2_Test1.trimmed.fq.gz',
@@ -76,12 +76,20 @@ def assert_run_successfully(data_dir=None, work_dir=None):
 
 
 def _load_result_file(fname):
-    return pd.read_csv(fname, sep='\t').drop('EricScore',  axis=1)
+    # Load results from the fname and check that the same fusions were
+    # detected.
+    # To compare dataframes, row order must be the same.
+    columns_to_keep = ['chr1', 'chr2', 'strand1', 'strand2', 'EnsemblGene1',
+                       'EnsemblGene2', 'fusiontype']
+    sort_by = ['EnsemblGene1', 'EnsemblGene2']
+    df = pd.read_csv(fname, sep='\t')[columns_to_keep].sort(sort_by)
+    df.index = range(len(df))
+    return df
 
 
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir):
-    """Run an RNA-seq analysis and test fusion genes
+    """Run gene fusion analysis on trimmed pair-end reads with EricScript.
     """
     with make_workdir() as work_dir:
         sample_config = ConfigCreator().get_config_without_disambiguate(
@@ -90,9 +98,10 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
+@pytest.marks('runthis')
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir):
-    """Run an RNA-seq analysis and test fusion genes
+    """Run gene fusion analysis on disambiguated reads with EricScript.
     """
     with make_workdir() as work_dir:
         sample_config = ConfigCreator().get_config_with_disambiguate(
