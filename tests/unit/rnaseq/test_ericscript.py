@@ -43,7 +43,6 @@ class TestEricScriptConfig(object):
             'TEST_LANE',
             '-o',
             'TX_DIR',
-            '--remove',
             'file1.fq',
             'file2.fq',
         ]
@@ -77,8 +76,8 @@ class TestGetInputData(object):
 
     def test_get_fastq_input_files_if_no_disambiguation(self):
         fq_files = (
-                '/path/to/trimmed.fq.gz',
-                '/path/to/trimmed.fq.gz'
+            '/path/to/1_1_trimmed.fq.gz',
+            '/path/to/1_2_trimmed.fq.gz'
         )
         sample_config = {'files': list(fq_files)}
         result = ericscript.get_input_data('TX_DIR', sample_config)
@@ -104,6 +103,11 @@ class TestRun(object):
     def do_run(self, mocker):
         yield mocker.patch(
             'bcbio.rnaseq.ericscript.do.run', autospec=True)
+
+    def test_returns_sample_config(self, mock_ft, do_run, es_config):
+        config = mock.MagicMock()
+        result = ericscript.run(config)
+        assert result == config
 
     def test_run_ericscript_without_input_file_conversion(
             self, mocker, do_run, es_config, mock_ft):

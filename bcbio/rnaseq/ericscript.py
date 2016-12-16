@@ -17,6 +17,7 @@ def run(config):
             do.run(input_data.convert_cmd, msg, env=ericscript.env)
         cmd = ericscript.get_run_command(tx_output_dir, input_data.files)
         do.run(cmd, ericscript.info_message, env=ericscript.env)
+    return config
 
 
 InputData = namedtuple('InputData', ['files', 'convert_cmd'])
@@ -59,7 +60,6 @@ class EricScriptConfig(object):
             '-db', self._db_location,
             '-name', self._sample_name,
             '-o', tx_output_dir,
-            '--remove',
         ] + list(input_files)
 
     @property
