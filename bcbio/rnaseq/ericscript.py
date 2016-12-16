@@ -11,10 +11,10 @@ def run(config):
     ericscript = EricScriptConfig(config)
 
     with file_transaction(config, ericscript.output_dir) as tx_output_dir:
-        input_data = get_input_files(tx_output_dir, config)
-        if input_data.cmd:
+        input_data = get_input_data(tx_output_dir, config)
+        if input_data.convert_cmd:
             msg = 'Convert disambiguated bam reads to fastq'
-            do.run(input_data.cmd, msg, env=ericscript.env)
+            do.run(input_data.convert_cmd, msg, env=ericscript.env)
         cmd = ericscript.get_run_command(tx_output_dir, input_data.files)
         do.run(cmd, ericscript.info_message, env=ericscript.env)
 
@@ -22,9 +22,9 @@ def run(config):
 InputData = namedtuple('InputData', ['files', 'convert_cmd'])
 
 
-def get_input_files(tx_output_dir, config):
-    if dd.get_disambiguate('disambiguate'):
-        work_bam = _get_disambiguated_bam(config)
+def get_input_data(tx_output_dir, config):
+    if dd.get_disambiguate(config):
+        work_bam = dd.get_work_bam(config)
         fq_files = _get_fq_fnames(tx_output_dir)
         convert_cmd = [
             'bamToFastq',
@@ -36,10 +36,6 @@ def get_input_files(tx_output_dir, config):
         fq_files = dd.get_input_sequence_files(config)
         convert_cmd = None
     return InputData(fq_files, convert_cmd)
-
-
-def _get_disambiguated_bam(config):
-    return dd.get_work_bam(config)
 
 
 def _get_fq_fnames(location):
@@ -61,10 +57,10 @@ class EricScriptConfig(object):
         return [
             'ericscript.pl',
             '-db', self._db_location,
-            '-name', self._samplename,
+            '-name', self._sample_name,
             '-o', tx_output_dir,
             '--remove',
-        ] + input_files
+        ] + list(input_files)
 
     @property
     def info_message(self):
@@ -85,7 +81,7 @@ class EricScriptConfig(object):
         return utils.get_ericscript_env(config)
 
     def _get_output_dir(self, config):
-        return os.path.join(dd.get_work_dir(config), self._OUTPUT_DIR_NAME)
+        return dd.get_ericscript_outdir(config)
 
     def _get_ericscript_db(self, config):
         return '/data/ericscript/ericscript_db'
