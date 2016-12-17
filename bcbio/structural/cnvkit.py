@@ -481,7 +481,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     for outformat in ["bed", "vcf"]:
         out_file = "%s.%s" % (os.path.splitext(call_file)[0], outformat)
         calls[outformat] = out_file
-        if not utils.file_exists(out_file):
+        if not os.path.exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
                 cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
                        outformat, "--sample-id", dd.get_sample_name(data),

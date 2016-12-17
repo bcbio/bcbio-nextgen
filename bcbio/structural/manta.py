@@ -18,11 +18,13 @@ def run(items):
     paired = vcfutils.get_paired(items)
     data = paired.tumor_data if paired else items[0]
     work_dir = _sv_workdir(data)
-    with file_transaction(data, work_dir) as tx_work_dir:
-        utils.safe_makedir(tx_work_dir)
-        tx_workflow_file = _prep_config(items, paired, tx_work_dir)
-        tx_variant_file = _run_workflow(items, paired, tx_workflow_file, tx_work_dir)
-    variant_file = get_perm_name(tx_variant_file, work_dir)
+    variant_file = _get_out_file(work_dir, paired)
+    if not utils.file_exists(variant_file):
+        with file_transaction(data, work_dir) as tx_work_dir:
+            utils.safe_makedir(tx_work_dir)
+            tx_workflow_file = _prep_config(items, paired, tx_work_dir)
+            _run_workflow(items, paired, tx_workflow_file, tx_work_dir)
+    assert utils.file_exists(variant_file), "Manta finished without output file %s" % variant_file
     out = []
     for data in items:
         sample_file = _select_sample(data, variant_file, work_dir)
@@ -34,18 +36,9 @@ def run(items):
         out.append(data)
     return out
 
-
-def get_perm_name(tx_file, permanent_dir):
-    dir_basename = os.path.basename(permanent_dir)
-    dir_basename = os.path.join(dir_basename, '')
-    fname = tx_file.split(dir_basename, 1)[1]
-    return os.path.join(permanent_dir, fname)
-
-
-def _run_workflow(items, paired, workflow_file, work_dir):
-    """Run manta analysis inside prepared workflow directory.
+def _get_out_file(work_dir, paired):
+    """Retrieve manta output variant file, depending on analysis.
     """
-    data = paired.tumor_data if paired else items[0]
     if paired:
         if paired.normal_bam:
             base_file = "somaticSV.vcf.gz"
@@ -53,14 +46,16 @@ def _run_workflow(items, paired, workflow_file, work_dir):
             base_file = "tumorSV.vcf.gz"
     else:
         base_file = "diploidSV.vcf.gz"
-    out_file = os.path.join(work_dir, "results", "variants", base_file)
-    if not utils.file_exists(out_file):
-        utils.remove_safe(os.path.join(work_dir, "workspace"))
-        cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data),
-               ]
-        do.run(cmd, "Run manta SV analysis")
+    return os.path.join(work_dir, "results", "variants", base_file)
+
+def _run_workflow(items, paired, workflow_file, work_dir):
+    """Run manta analysis inside prepared workflow directory.
+    """
     utils.remove_safe(os.path.join(work_dir, "workspace"))
-    return out_file
+    data = paired.tumor_data if paired else items[0]
+    cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data)]
+    do.run(cmd, "Run manta SV analysis")
+    utils.remove_safe(os.path.join(work_dir, "workspace"))
 
 def _select_sample(data, variant_file, work_dir):
     """Select current sample from original call file.
