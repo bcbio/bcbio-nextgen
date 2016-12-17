@@ -126,8 +126,9 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
-                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
+                         os.path.dirname(utils.Rscript_cmd()))
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                         "-N {sample} -b {bamfile} {opts} "
                         "| {strandbias}"
                         "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
@@ -276,8 +277,9 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                    (os.path.join(os.path.dirname(sys.executable), "py"),
                                      0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
-                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
+                         os.path.dirname(utils.Rscript_cmd()))
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
