@@ -100,19 +100,23 @@ def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files):
     # this behavior might not be what we want; we could also do two or
     # more passes of cutadapt
     cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
-    adapter_cmd = " ".join(map(lambda x: "--adapter=" + x, adapters))
+    adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
     base_cmd = ("{cutadapt} --times=2 --quality-base={quality_base} "
                 "--quality-cutoff=5 --format=fastq "
                 "{adapter_cmd} ").format(**locals())
-    if len(fastq_files) == 1:
-        return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
+    if len(fastq_files) == 2:
+        # support for the single-command paired trimming introduced in
+        # cutadapt 1.8
+        adapter_cmd = adapter_cmd.replace("-a ", "-A ")
+        base_cmd += "{adapter_cmd} ".format(adapter_cmd=adapter_cmd)
+        return _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd)
     else:
-        return _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd)
+        return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
 
 def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     """
-    this has to use the -o option, not redirect to stdout in order for gzipping to be
-    honored
+    this has to use the -o option, not redirect to stdout in order for
+    gzipping to be supported
     """
     min_length = MINIMUM_LENGTH
     cmd = base_cmd + " --minimum-length={min_length} ".format(**locals())
@@ -122,18 +126,15 @@ def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     cmd = "%s | tee > {log_tx}" % cmd
     return cmd
 
-def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
+def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd):
     """
-    sickle has an issue with 0 length reads, here is the open issue for it:
-    https://github.com/najoshi/sickle/issues/32
-    until that is resolved, this is a workaround which avoids using sickle
+    run cutadapt in paired end mode
     """
     fq1, fq2 = [objectstore.cl_input(x) for x in fastq_files]
     of1, of2 = out_files
     base_cmd += " --minimum-length={min_length} ".format(min_length=MINIMUM_LENGTH)
-    first_cmd = base_cmd + " -o {tmp_fq1} -p {tmp_fq2} " + fq1 + " " + fq2
-    second_cmd = base_cmd + " -o {of2_tx} -p {of1_tx} {tmp_fq2} {tmp_fq1}"
-    return first_cmd + "| tee > {log_tx};" + second_cmd + "; rm {tmp_fq1} {tmp_fq2} "
+    first_cmd = base_cmd + " -o {of1_tx} -p {of2_tx} " + fq1 + " " + fq2
+    return first_cmd + "| tee > {log_tx};"
 
 def _get_sequences_to_trim(config, builtin):
     builtin_adapters = _get_builtin_adapters(config, builtin)
