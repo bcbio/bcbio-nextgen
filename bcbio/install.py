@@ -10,6 +10,7 @@ import datetime
 import dateutil
 from distutils.version import LooseVersion
 import gzip
+import itertools
 import os
 import shutil
 import subprocess
@@ -450,6 +451,8 @@ def _install_toolplus(args):
         if tool.name in set(["gatk", "mutect"]):
             print("Installing %s" % tool.name)
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
+        elif tool.name == 'ericscript':
+            _install_ericscript(toolplus_manifest, system_config, toolplus_dir)
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" % (tool.name, tool.fname))
 
@@ -471,6 +474,77 @@ def _install_gatk_jar(name, fname, manifest, system_config, toolplus_dir):
     shutil.copyfile(fname, os.path.join(store_dir, os.path.basename(fname)))
     _update_system_file(system_config, name, {"dir": store_dir})
     _update_manifest(manifest, name, version)
+
+
+def _install_ericscript(manifest, system_config, toolplus_dir):
+    """Install EricScript in a separate conda env
+    """
+    PKG_NAME = 'ericscript'
+    CONDA_ENV = 'ericscript1'
+    conda_api = CondaAPI()
+
+    env_prefix = conda_api.create_env(CONDA_ENV)
+    print env_prefix
+    version = conda_api.get_latest_version(PKG_NAME)
+    conda_api.install_package(
+        PKG_NAME, version=version, env_name=CONDA_ENV)
+
+    _update_system_file(system_config, PKG_NAME, {"env": env_prefix})
+    _update_manifest(manifest, PKG_NAME, version)
+
+
+class CondaAPI(object):
+    _BASE_CMD = ('conda', )
+    _CHANNELS = ('-c', 'bioconda', '-c', 'r')
+    _OUTPUT_ARGS = ('--json', )
+
+    def _get_cmd(self, sub_cmd):
+        return list(
+            itertools.chain(
+                self._BASE_CMD,
+                sub_cmd,
+                self._CHANNELS,
+                self._OUTPUT_ARGS
+            )
+        )
+
+    def create_env(self, env_name):
+        create_env_cmd = self._get_cmd(['create', '--name', env_name])
+        try:
+            output = subprocess.check_output(create_env_cmd)
+        except subprocess.CalledProcessError as e:
+            if 'already exists' in e.output:
+                env_prefix = json.loads(e.output)['message'].split('/', 1)[-1]
+            else:
+                raise
+        else:
+            env_prefix = json.loads(output)['actions']['PREFIX']
+
+        return env_prefix
+
+    def get_latest_version(self, package):
+        version_cmd = self._get_cmd(['search', package])
+        output = subprocess.check_output(version_cmd)
+        return json.loads(output)[package][-1]['version']
+
+    def install_package(self, package, version=None, env_name=None):
+        if version:
+            pkg_full_name = '%s=%s' % (package, version)
+        else:
+            pkg_full_name = package
+
+        if not env_name:
+            env_name = 'root'
+
+        install_cmd = self._get_cmd(
+            ['install', '--name', env_name, pkg_full_name, '--quiet']
+        )
+        output = subprocess.check_output(install_cmd)
+        success = json.loads(output)['success']
+        if not success:
+            raise RuntimeError(
+                "Failed to install %s into %s", pkg_full_name, env_name)
+
 
 def _update_manifest(manifest_file, name, version):
     """Update the toolplus manifest file with updated name and version
@@ -677,6 +751,8 @@ def _check_toolplus(x):
             raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
                                              % (name, fname))
         return Tool(name, fname)
+    elif x == 'ericscript':
+        return Tool('ericscript', None)
     else:
         raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
 
