@@ -1,7 +1,6 @@
-import os
 import functools
+import os
 
-import pytest
 import pandas as pd
 from bcbio.rnaseq import ericscript
 from tests.conftest import make_workdir
@@ -9,52 +8,46 @@ from tests.conftest import make_workdir
 
 class ConfigCreator(object):
 
-    INPUT_DATA_DIR = 'fusion/input'
-    INPUT_FILENAMES = {
+    _INPUT_DATA_DIR = 'fusion/input'
+    _INPUT_FILENAMES = {
         'work_bam':  'Test1.nsorted.human.sorted.bam',
         'fq_files': [
             '1_1_Test1.trimmed.fq.gz',
             '1_2_Test1.trimmed.fq.gz',
         ],
     }
-    DISAMBIGUATE = {
-        'config': {
-            'algorithm': {
-                'disambiguate': ['mm9'],
-            },
-        },
-    }
-    BASE_CONFIG = {
-        'rgnames': {'lane': 'TEST_LANE'},
-    }
 
     def get_config_with_disambiguate(self, data_dir=None, work_dir=None):
         config = self.get_config_without_disambiguate(
             data_dir=data_dir, work_dir=work_dir)
-        config.update(self.DISAMBIGUATE)
+        config.update(self._get_disambiguate())
         return config
 
     def get_config_without_disambiguate(self, data_dir=None, work_dir=None):
-        join = self._get_join_datadir_fn(data_dir)
-        filepaths_config = self._join_filepaths(join, work_dir)
-        return self._merge_dicts(self.BASE_CONFIG, filepaths_config)
+        config = self._get_base_config()
+        config.update(self._get_filepaths(data_dir, work_dir))
+        return config
 
-    def _get_join_datadir_fn(self, data_dir):
-        input_data_dir = os.path.join(data_dir, os.pardir, self.INPUT_DATA_DIR)
-        return functools.partial(os.path.join, input_data_dir)
-
-    def _join_filepaths(self, join_fn, workdir):
+    def _get_base_config(self):
         return {
-            'work_bam': join_fn(self.INPUT_FILENAMES['work_bam']),
-            'dirs': {'work': workdir},
-            'files': map(join_fn, self.INPUT_FILENAMES['fq_files'])
+            'rgnames': {'lane': 'TEST_LANE'},
         }
 
-    def _merge_dicts(self, *args):
-        result = {}
-        for d in args:
-            result.update(d)
-        return result
+    def _get_disambiguate(self):
+        return {
+            'config': {
+                'algorithm': {'disambiguate': ['mm9']},
+            },
+        }
+
+    def _get_filepaths(self, data_dir, workdir):
+        data_dir = os.path.join(data_dir, os.pardir, self._INPUT_DATA_DIR)
+        join_fn = functools.partial(os.path.join, data_dir)
+        return {
+            'work_bam': join_fn(self._INPUT_FILENAMES['work_bam']),
+            'dirs': {'work': workdir},
+            'files': map(join_fn, self._INPUT_FILENAMES['fq_files'])
+        }
 
 
 def assert_run_successfully(data_dir=None, work_dir=None):
@@ -78,9 +71,17 @@ def assert_run_successfully(data_dir=None, work_dir=None):
 def _load_result_file(fname):
     # Load results from the fname and check that the same fusions were
     # detected.
-    # To compare dataframes, row order must be the same.
-    columns_to_keep = ['chr1', 'chr2', 'strand1', 'strand2', 'EnsemblGene1',
-                       'EnsemblGene2', 'fusiontype']
+    # To compare dataframes, row order must be the same, so we sort values
+    # and reset index.
+    columns_to_keep = [
+        'chr1',
+        'chr2',
+        'strand1',
+        'strand2',
+        'EnsemblGene1',
+        'EnsemblGene2',
+        'fusiontype'
+    ]
     sort_by = ['EnsemblGene1', 'EnsemblGene2']
     df = pd.read_csv(fname, sep='\t')[columns_to_keep].sort(sort_by)
     df.index = range(len(df))
@@ -98,7 +99,6 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
-@pytest.marks('runthis')
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir):
     """Run gene fusion analysis on disambiguated reads with EricScript.
