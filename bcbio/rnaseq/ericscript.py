@@ -12,6 +12,11 @@ def run(config):
 
 
 def prepare_input_data(config):
+    """ Incase of disambiguation, we want to run fusion calling on
+    the disambiguated reads, which are in the work_bam file.
+    As EricScript accepts 2 fastq files as input, we need to convert
+    the .bam to 2 .fq files.
+    """
 
     if not dd.get_disambiguate(config):
         return dd.get_input_sequence_files(config)
@@ -31,8 +36,8 @@ def run_ericscript(sample_config, input_files):
 
 
 class EricScriptConfig(object):
+    info_message = "Detect gene fusions with EricScript"
     _OUTPUT_DIR_NAME = "ericscript"
-    _MESSAGE = "Detect gene fusions with EricScript"
 
     def __init__(self, config):
         self._env = self._get_env(config)
@@ -47,10 +52,6 @@ class EricScriptConfig(object):
             '-name', self._sample_name,
             '-o', tx_output_dir,
         ] + list(input_files)
-
-    @property
-    def info_message(self):
-        return self._MESSAGE
 
     @property
     def env(self):
