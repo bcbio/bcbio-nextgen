@@ -62,14 +62,21 @@ Use this information to create a configuration file called `project_vars.yaml`:
     security_group: bcbio_cluster_sg
     keypair: kunkel-keypair
     iam_role: bcbio_full_s3_access
+    region: us-east-1
 
 With this in place you can launch your instance with:
 
     ansible-playbook -vvv launch_aws.yaml
 
 This creates the instance, attaches the data volume, mounts the volume as
-`/mnt/work` and installs basic system tools for running. Get the Public DNS
-name of the created machine with:
+`/mnt/work` and installs basic system tools for running. On the first run for a
+new data volume, this will not work cleanly since the filesystem is not prepared
+and can't be mounted. The machine will be setup and you should ssh in and follow
+the instructions below in 'Running bcbio' to create an ext4 filesystem on the
+attached disk. Subsequent restarts with the same attached disk will then work
+without any manual steps.
+
+Get the Public DNS name of the created machine with:
 
     saws> aws ec2 describe-instances | grep Public
 

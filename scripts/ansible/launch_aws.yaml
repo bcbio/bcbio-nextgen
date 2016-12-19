@@ -19,6 +19,7 @@
         keypair: "{{ keypair }}"
         vpc_subnet_id: "{{ vpc_subnet }}"
         instance_profile_name: "{{ iam_role }}"
+        region: "{{ region }}"
         assign_public_ip: yes
         count: 1
         wait: yes
@@ -41,7 +42,9 @@
   gather_facts: true
   tasks:
     - include_vars: project_vars.yaml
-    - apt: name="{{ item }}" update_cache=yes
+    - apt: update_cache=yes
+      become: true
+    - apt: name="{{ item }}"
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
     - name: Mount work volume
