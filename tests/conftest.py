@@ -48,21 +48,7 @@ def workdir():
 def get_post_process_yaml(data_dir, workdir):
     """Prepare a bcbio_system YAML file pointing to test data.
     """
-    try:
-        from bcbiovm.docker.defaults import get_datadir
-        datadir = data_dir or get_datadir()
-        sys_conf_file = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
-        system = sys_conf_file if datadir else None
-    except ImportError:
-        system = None
-    if system is None or not os.path.exists(system):
-        try:
-            _, system = load_system_config(
-                config_file="bcbio_system.yaml", work_dir=workdir)
-        except ValueError:
-            system = None
-    if system is None or not os.path.exists(system):
-        system = os.path.join(data_dir, "post_process-sample.yaml")
+    system = _get_bcbio_system(workdir, data_dir)
     # create local config pointing to reduced genomes
     test_system = os.path.join(workdir, "bcbio_system.yaml")
     with open(system) as in_handle:
@@ -71,6 +57,41 @@ def get_post_process_yaml(data_dir, workdir):
         with open(test_system, "w") as out_handle:
             yaml.dump(config, out_handle)
     return test_system
+
+
+def _get_bcbio_system(workdir, data_dir):
+    system = _get_bcbiovm_config(data_dir)
+    if _config_is_invalid(system):
+        system = _get_system_config(workdir, system)
+    if _config_is_invalid(system):
+        system = os.path.join(data_dir, "post_process-sample.yaml")
+    return system
+
+
+def _get_bcbiovm_config(data_dir):
+    try:
+        from bcbiovm.docker.defaults import get_datadir
+        datadir = data_dir or get_datadir()
+        sys_conf_file = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
+        system = sys_conf_file if datadir else None
+    except ImportError:
+        system = None
+    return system
+
+
+def _config_is_invalid(config_fname):
+    return config_fname is None or not os.path.exists(config_fname)
+
+
+def _get_system_config(work_dir, system):
+    try:
+        _, system = load_system_config(
+            config_file="bcbio_system.yaml",
+            work_dir=work_dir
+        )
+    except ValueError:
+        system = None
+    return system
 
 
 @pytest.fixture
