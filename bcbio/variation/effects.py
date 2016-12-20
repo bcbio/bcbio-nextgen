@@ -136,7 +136,7 @@ def run_vep(in_file, data):
                     for plugin in plugins:
                         plugin_args, plugin_fields = plugin_fns[plugin](data)
                         config_args += plugin_args
-                        plugin_fields += plugin_fields
+                        config_fields += plugin_fields
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     prediction_fields += ["PolyPhen", "SIFT"]
                     # Use HGVS by default, requires indexing the reference genome
