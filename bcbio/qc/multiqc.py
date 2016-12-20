@@ -130,7 +130,8 @@ def _report_summary(samples, out_dir):
         samples = _merge_metrics(samples)
 
         logger.info("summarize target information")
-        samples = _merge_target_information(samples)
+        if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
+            samples = _merge_target_information(samples)
 
         out_dir = utils.safe_makedir("coverage")
         logger.info("summarize coverage")
@@ -284,14 +285,14 @@ def _merge_target_information(samples):
     data = samples[0]
     info = {}
 
-    # Reporting in MultiQC only if the genome is the sample across samples
+    # Reporting in MultiQC only if the genome is the same across all samples
     if len(genomes) == 1:
         info["genome_info"] = {
             "name": dd.get_genome_build(data),
             "size": sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])]),
         }
 
-    # Reporting in MultiQC only if the target is the sample across samples
+    # Reporting in MultiQC only if the target is the same across all samples
     vcr_orig = None
     if len(original_variant_regions) == 1 and list(original_variant_regions)[0] is not None:
         vcr_orig = list(original_variant_regions)[0]
@@ -304,12 +305,11 @@ def _merge_target_information(samples):
         gene_num = annotate.count_genes(vcr_clean, data)
         if gene_num is not None:
             info["variants_regions_info"]["genes"] = gene_num
-
     else:
         info["variants_regions_info"] = {
             "bed": "callable regions",
         }
-    # Reporting in MultiQC only if the target is the sample across samples
+    # Reporting in MultiQC only if the target is the same across samples
     if len(coverage_beds) == 1:
         cov_bed = list(coverage_beds)[0]
         if cov_bed is not None:
