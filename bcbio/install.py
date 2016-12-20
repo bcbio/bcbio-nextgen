@@ -486,14 +486,14 @@ def _install_ericscript(manifest, system_config, toolplus_dir):
     """Install EricScript in a separate conda env
     """
     PKG_NAME = 'ericscript'
-    CONDA_ENV = 'ericscript1'
+    CONDA_ENV = 'ericscript'
     conda_api = CondaAPI()
 
     env_prefix = conda_api.create_env(CONDA_ENV)
-    print env_prefix
     version = conda_api.get_latest_version(PKG_NAME)
     conda_api.install_package(
         PKG_NAME, version=version, env_name=CONDA_ENV)
+    print "Installed %s=%s into %s" % (PKG_NAME, version, env_prefix)
 
     _update_system_file(system_config, PKG_NAME, {"env": env_prefix})
     _update_manifest(manifest, PKG_NAME, version)
