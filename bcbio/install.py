@@ -513,37 +513,41 @@ class CondaAPI(object):
         try:
             output = subprocess.check_output(create_env_cmd)
         except subprocess.CalledProcessError as e:
-            if 'already exists' in e.output:
-                env_prefix = json.loads(e.output)['message'].split('/', 1)[-1]
-            else:
+            if 'already exists' not in e.output:
                 raise
+            env_prefix = self._get_path_from_message(
+                self._unserialize(e.output)['message'])
         else:
-            env_prefix = json.loads(output)['actions']['PREFIX']
+            env_prefix = self._unserialize(output)['actions']['PREFIX']
 
         return env_prefix
+
+    def _unserialize(self, output):
+        return json.loads(output)
+
+    def _get_path_from_message(self, message):
+        idx = message.find(os.path.sep)
+        return message[idx:]
 
     def get_latest_version(self, package):
         version_cmd = self._get_cmd(['search', package])
         output = subprocess.check_output(version_cmd)
-        return json.loads(output)[package][-1]['version']
+        return self._unserialize(output)[package][-1]['version']
 
-    def install_package(self, package, version=None, env_name=None):
-        if version:
-            pkg_full_name = '%s=%s' % (package, version)
-        else:
-            pkg_full_name = package
-
-        if not env_name:
-            env_name = 'root'
-
+    def install_package(self, package, version=None, env_name='root'):
+        pkg_full_name = self._get_full_name(package, version)
         install_cmd = self._get_cmd(
             ['install', '--name', env_name, pkg_full_name, '--quiet']
         )
         output = subprocess.check_output(install_cmd)
-        success = json.loads(output)['success']
+        success = self._unserialize(output).get('success')
         if not success:
             raise RuntimeError(
                 "Failed to install %s into %s", pkg_full_name, env_name)
+
+    def _get_full_name(self, package, version):
+        return '%s=%s' % (package, version) if version else package
+
 
 
 def _update_manifest(manifest_file, name, version):
