@@ -19,7 +19,7 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
-from bcbio.variation.coverage import get_average_coverage
+from bcbio.variation.coverage import get_average_coverage, regions_coverage
 from bcbio.variation import bedutils
 
 
@@ -308,44 +308,48 @@ def _run_coverage_qc(bam_file, data, out_dir):
     out['Mapped_reads'] = mapped
     if total_reads:
         out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
-    if mapped:
-        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-        out['Mapped_unique_reads'] = mapped
-        mapped_dups = mapped - mapped_unique
-        out['Duplicates'] = mapped_dups
-        out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+    if not mapped:
+        return out
 
-        if dd.get_coverage(data):
-            cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
-            merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
-            target_name = "coverage"
-        elif dd.get_coverage_interval(data) != "genome":
-            merged_bed_file = dd.get_variant_regions_merged(data)
-            target_name = "variant_regions"
-        else:
-            merged_bed_file = None
-            target_name = "genome"
+    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+    out['Mapped_unique_reads'] = mapped
+    mapped_dups = mapped - mapped_unique
+    out['Duplicates'] = mapped_dups
+    out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
 
-        if merged_bed_file:
-            ontarget = sambamba.number_mapped_reads_on_target(
-                data, merged_bed_file, bam_file, keep_dups=False, target_name=target_name)
-            if mapped_unique:
-                out["Ontarget_unique_reads"] = ontarget
-                out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
-                out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-                ontarget_padded = sambamba.number_mapped_reads_on_target(
-                    data, padded_bed_file, bam_file, keep_dups=False, target_name=target_name + "_padded")
-                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
-            if total_reads:
-                out['Usable_pct'] = 100.0 * ontarget / total_reads
+    if dd.get_coverage(data):
+        cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+        merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
+        target_name = "coverage"
+    elif dd.get_coverage_interval(data) != "genome":
+        merged_bed_file = dd.get_variant_regions_merged(data)
+        target_name = "variant_regions"
+    else:
+        merged_bed_file = None
+        target_name = "genome"
 
-        avg_coverage = get_average_coverage(data, bam_file, merged_bed_file, target_name)
-        out['Avg_coverage'] = avg_coverage
+    if merged_bed_file:
+        ontarget = sambamba.number_of_mapped_reads(
+            data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
+        if mapped_unique:
+            out["Ontarget_unique_reads"] = ontarget
+            out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
+            out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
+            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+            ontarget_padded = sambamba.number_of_mapped_reads(
+                data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
+            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+        if total_reads:
+            out['Usable_pct'] = 100.0 * ontarget / total_reads
+
+    avg_depth = get_average_coverage(data, bam_file, merged_bed_file, target_name)
+    out['Avg_coverage'] = avg_depth
 
     priority = cov.priority_coverage(data, out_dir)
     cov.priority_total_coverage(data, out_dir)
-    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir)
+    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
+        extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
+
     # Re-enable with annotations from internally installed
     # problem region directory
     # if priority:
