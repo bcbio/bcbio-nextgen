@@ -624,7 +624,7 @@ class RegularServer:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, RegularServer):
+    for manager in (AmazonS3, ArvadosKeep, AzureBlob, DNAnexus, GoogleDrive, RegularServer, SevenBridges):
         if manager.check_resource(resource):
             return manager()
 
@@ -699,7 +699,7 @@ def list(remote_dirname):
     return manager.list(remote_dirname)
 
 
-def open(fname):
+def open_file(fname):
     """Provide a handle-like object for streaming."""
     manager = _get_storage_manager(fname)
     return manager.open(fname)
@@ -745,7 +745,7 @@ class GoogleDriveServiceFactory(object):
 
 class GoogleDownloader(object):
     CHUNK_SIZE = 10*1024*1024
-    NUM_RETRIES = 5
+    NUM_RETRIES = 10
 
     def __init__(self):
         self._request_media = http.MediaIoBaseDownload
@@ -756,8 +756,14 @@ class GoogleDownloader(object):
 
     def _load_in_chunks(self, media_resp):
         done = False
+        i = 0
+        print "Download progress:"
+        print "0 %"
         while not done:
-            _, done = media_resp.next_chunk(num_retries=self.NUM_RETRIES)
+            progress, done = media_resp.next_chunk(num_retries=self.NUM_RETRIES)
+            i += 1
+            if not i % 10:
+                print '%.1f %%' % (progress.progress() * 100)
             if done:
                 break
 
@@ -774,7 +780,8 @@ class GoogleDrive(StorageManager):
             self.GOOGLE_API_KEY_FILE)
         self._downloader = GoogleDownloader()
 
-    def check_resource(self, resource):
+    @classmethod
+    def check_resource(cls, resource):
         """Check if the received resource is a direct URL to a file
         on a GoogleDrive."""
         if not resource:
@@ -841,7 +848,7 @@ class GoogleDrive(StorageManager):
             self._downloader.load_to_file(fd, request)
 
     def list(self, path):
-        """Funcitonality not needed."""
+        """Funcitonality is not needed."""
         raise NotImplementedError
 
     def open(self, filename):

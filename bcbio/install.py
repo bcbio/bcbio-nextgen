@@ -17,6 +17,9 @@ import shutil
 import subprocess
 import sys
 import glob
+import urllib
+import json
+import tarfile
 
 import requests
 from six.moves import urllib
@@ -28,6 +31,8 @@ from bcbio.pipeline import genome
 from bcbio.variation import effects
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.distributed import objectstore
+
 
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
@@ -279,6 +284,9 @@ def upgrade_bcbio_data(args, remotes):
     """
     from fabric.api import env
     data_dir = _get_data_dir()
+    # TODO remove
+    if 'ericscript' in args.datatarget:
+        _install_ericscript_db(_get_data_dir(), args)
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
     tooldir = args.tooldir or get_defaults().get("tooldir")
@@ -306,6 +314,9 @@ def upgrade_bcbio_data(args, remotes):
         subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
+    if 'ericscript' in args.datatarget:
+        _install_ericscript_db(_get_data_dir(), args)
+    upgrade_vcfanno_data(s["fabricrc_overrides"]["galaxy_home"])
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -441,12 +452,16 @@ def upgrade_thirdparty_tools(args, remotes):
                 os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
 
+
+def _get_system_config():
+    return os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+
 def _install_toolplus(args):
     """Install additional tools we cannot distribute, updating local manifest.
     """
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     toolplus_manifest = os.path.join(manifest_dir, "toolplus-packages.yaml")
-    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    system_config = _get_system_config()
     # Handle toolplus installs inside Docker container
     if not os.path.exists(system_config):
         docker_system_config = os.path.join(_get_data_dir(), "config", "bcbio_system.yaml")
@@ -555,7 +570,6 @@ class CondaAPI(object):
         return '%s=%s' % (package, version) if version else package
 
 
-
 def _update_manifest(manifest_file, name, version):
     """Update the toolplus manifest file with updated name and version
     """
@@ -593,6 +607,22 @@ def _update_system_file(system_file, name, new_kvs):
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)
 
+
+def _install_ericscript_db(datadir, args):
+    PKG_NAME = 'ericscript'
+    HG_38_URL = 'https://drive.google.com/file/d/0B9s__vuJPvIiUGt1SnFMZFg4TlE/view'  # noqa
+    ericscript_datadir = os.path.join(datadir, "ericscript")
+
+    print "Downloading EricScript database for hg38..."
+    archived_db_file = objectstore.download(HG_38_URL, input_dir=os.getcwd())
+    archive = tarfile.open(archived_db_file)
+    archive.extractall(ericscript_datadir)
+    print "Ericscript database was saved to ", ericscript_datadir
+
+    system_config = _get_system_config()
+    _update_system_file(system_config, PKG_NAME, {"db": ericscript_datadir})
+
+
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
@@ -605,30 +635,29 @@ def _install_kraken_db(datadir, args):
     requests.packages.urllib3.disable_warnings()
     last_mod = urllib.request.urlopen(url).info().getheader('Last-Modified')
     last_mod = dateutil.parser.parse(last_mod).astimezone(dateutil.tz.tzutc())
-    if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
-        if not os.path.exists(db):
-            is_new_version = True
-        else:
-            cur_file = glob.glob(os.path.join(kraken, "minikraken_*"))[0]
-            cur_version = datetime.datetime.utcfromtimestamp(os.path.getmtime(cur_file))
-            is_new_version = last_mod.date() > cur_version.date()
-            if is_new_version:
-                shutil.move(cur_file, cur_file.replace('minikraken', 'old'))
-        if not os.path.exists(kraken):
-            utils.safe_makedir(kraken)
-        if is_new_version:
-            if not os.path.exists(compress):
-                subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
-            cmd = ["tar", "-xzvf", compress, "-C", kraken]
-            subprocess.check_call(cmd)
-            last_version = glob.glob(os.path.join(kraken, "minikraken_*"))
-            utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
-            utils.remove_safe(compress)
-        else:
-            print("You have the latest version %s." % last_mod)
-    else:
+    if not os.path.exists(os.path.join(tooldir, "bin", "kraken")):
         raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
-                                         os.path.join(tooldir, "bin", "kraken"))
+                                        os.path.join(tooldir, "bin", "kraken"))
+    if not os.path.exists(db):
+        is_new_version = True
+    else:
+        cur_file = glob.glob(os.path.join(kraken, "minikraken_*"))[0]
+        cur_version = datetime.datetime.utcfromtimestamp(os.path.getmtime(cur_file))
+        is_new_version = last_mod.date() > cur_version.date()
+        if is_new_version:
+            shutil.move(cur_file, cur_file.replace('minikraken', 'old'))
+    if not os.path.exists(kraken):
+        utils.safe_makedir(kraken)
+    if is_new_version:
+        if not os.path.exists(compress):
+            subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
+        cmd = ["tar", "-xzvf", compress, "-C", kraken]
+        subprocess.check_call(cmd)
+        last_version = glob.glob(os.path.join(kraken, "minikraken_*"))
+        utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
+        utils.remove_safe(compress)
+    else:
+        print "You have the latest version %s." % last_mod
 
 # ## Store a local configuration file with upgrade details
 
@@ -785,7 +814,8 @@ def add_subparser(subparsers):
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
                         action="append", default=[],
-                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv", "battenberg", "kraken", "ericscript"])
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv"
+                                 "battenberg", "kraken", "ericscript"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",
