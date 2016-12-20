@@ -203,7 +203,7 @@ def _add_disambiguate(sample):
 def _fix_duplicated_rate(dt):
     """Get RNA duplicated rate if exists and replace by samtools metric"""
     if "Duplication_Rate_of_Mapped" in dt:
-        dt["Duplicates_pct"] = dt["Duplication_Rate_of_Mapped"]
+        dt["Duplicates_pct"] = 100.0 * dt["Duplication_Rate_of_Mapped"]
     return dt
 
 def _merge_metrics(samples):

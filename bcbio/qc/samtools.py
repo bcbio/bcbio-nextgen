@@ -40,7 +40,7 @@ def _parse_samtools_stats(stats_file):
             if metric in want:
                 stat = float(stat_str.strip())
                 out[want[metric]] = stat
-    out["Mapped_reads_pct"] = 1.0 * out["Mapped"] / out["Total_reads"]
+    out["Mapped_reads_pct"] = 100.0 * out["Mapped"] / out["Total_reads"]
     out["Mapped_reads"] = out["Mapped"]  # remove after 1.0.0 release
     return out
 
