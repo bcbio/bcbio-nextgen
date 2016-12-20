@@ -26,6 +26,12 @@
   multiallelic variants. Thanks to Sergey Naumenko.
 - Testing suite cleanup. Move to py.test and separate integration and unit
   tests. Thanks to Tetiana Khotiainsteva.
+- Fix issue with cutadapt hanging on gzipped input. Thanks to Stephen Turner.
+- Updated cutadapt to use single-pass trimming for paired-end files, improving
+  performance and hitting the disk less.
+- Added support for cellular barcode error correction with single-cell RNA-seq
+  via the `cellular_barcode_correction` parameter. This corrects edit distances
+  up to the set value, defaults to 1.
 
 ## 1.0.0 (20 November 2016)
 
