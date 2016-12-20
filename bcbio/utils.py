@@ -19,6 +19,7 @@ import types
 import toolz as tz
 import yaml
 
+
 try:
     from concurrent import futures
 except ImportError:
@@ -594,8 +595,11 @@ def replace_directory(out_files, dest_dir):
         raise ValueError("in_files must either be a sequence of filenames "
                          "or a string")
 
-def which(program):
+
+def which(program, env=None):
     """ returns the path to an executable or None if it can't be found"""
+    if env is None:
+        env = os.environ.copy()
 
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
@@ -605,7 +609,7 @@ def which(program):
         if is_exe(program):
             return program
     else:
-        for path in os.environ["PATH"].split(os.pathsep):
+        for path in env["PATH"].split(os.pathsep):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
@@ -703,11 +707,22 @@ def get_bcbio_env():
     return env
 
 
-def get_ericscript_env(config):
-    env = os.environ.copy()
-    # TODO caution hardcoded path!!!!
-    ES_BIN = "/usr/local/share/bcbio-nextgen/anaconda/envs/ericscript/bin"
-    env['PATH'] = append_path(ES_BIN, env['PATH'])
+def get_ericscript_env(sample_config):
+    ERICSCRIPT_EXEC = 'ericscipt.pl'
+    env = get_bcbio_env()
+    if which(ERICSCRIPT_EXEC, env=env):
+        return env
+
+    import bcbio.pipeline.datadict as dd
+    es_conda_env = dd.get_ericscript_env(sample_config)
+    if not es_conda_env:
+        raise RuntimeError(
+            'EricScript is not installed. '
+            'Please run: \nbcbio_nextgen.py upgrade --toolplus ericscript\n'
+            'to install it.'
+        )
+    es_bin = '%s/bin' % es_conda_env
+    env['PATH'] = append_path(es_bin, env['PATH'])
     return env
 
 
