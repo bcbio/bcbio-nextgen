@@ -42,8 +42,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
     if coverage_depth_min and coverage_depth_min < 4:
         confidence = "4.0"
-        params += ["--standard_min_confidence_threshold_for_calling", confidence,
-                   "--standard_min_confidence_threshold_for_emitting", confidence]
+        params += ["--standard_min_confidence_threshold_for_calling", confidence]
     for a in annotation.get_gatk_annotations(config):
         params += ["--annotation", a]
     for x in align_bams:

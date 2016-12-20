@@ -69,9 +69,7 @@ def gatk_rnaseq_calling(data):
                   "--emitRefConfidence", "GVCF",
                   "--variant_index_type", "LINEAR",
                   "--variant_index_parameter", "128000",
-                  "-dontUseSoftClippedBases",
-                  "-stand_call_conf", "20.0",
-                  "-stand_emit_conf", "20.0"]
+                  "-dontUseSoftClippedBases"]
         broad_runner.run_gatk(params)
     data = dd.set_vrn_file(data, out_file)
     return data
