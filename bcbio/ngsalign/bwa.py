@@ -41,7 +41,8 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 bwa_cmd = _get_bwa_mem_cmd(data, out_file, ref_file, "-")
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
-                cmd = ("{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
+                cmd = ("unset JAVA_HOME && "
+                       "{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
                        "| {bwa_cmd} | ")
                 cmd = cmd.format(**locals()) + tobam_cl
@@ -151,7 +152,8 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """Perform bwa-mem alignment on supported read lengths.
     """
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
-        cmd = "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file), tobam_cl)
+        cmd = ("unset JAVA_HOME && "
+               "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file), tobam_cl))
         do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
                 [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     return out_file
@@ -171,7 +173,7 @@ def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, 
             _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
         align_type = "sampe" if sai2_file else "samse"
-        cmd = ("{bwa} {align_type} -r '{rg_info}' {ref_file} {sai1_file} {sai2_file} "
+        cmd = ("unset JAVA_HOME && {bwa} {align_type} -r '{rg_info}' {ref_file} {sai1_file} {sai2_file} "
                "{fastq_file} {pair_file} | ")
         cmd = cmd.format(**locals()) + tobam_cl
         do.run(cmd, "bwa %s" % align_type, data)

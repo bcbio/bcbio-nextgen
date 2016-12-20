@@ -29,7 +29,6 @@ def tobam_cl(data, out_file, is_paired=False):
     """
     do_dedup = _check_dedup(data)
     umi_consensus = dd.get_umi_consensus(data)
-    print("&&", umi_consensus)
     with file_transaction(data, out_file) as tx_out_file:
         if not do_dedup:
             yield (sam_to_sortbam_cl(data, tx_out_file), tx_out_file)
@@ -157,7 +156,8 @@ def umi_consensus(data):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
             group_opts, cons_opts = _get_fgbio_options(data)
-            cmd = ("fgbio {jvm_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
+            cmd = ("unset JAVA_HOME && "
+                   "fgbio {jvm_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
                    "fgbio {jvm_opts} CallMolecularConsensusReads {cons_opts} "
                    "-S queryname -i /dev/stdin -o /dev/stdout | "
                    "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")

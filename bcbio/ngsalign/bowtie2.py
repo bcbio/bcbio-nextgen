@@ -56,7 +56,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data,
                     if names.get(key):
                         cl += ["--rg", "%s:%s" % (tag, names[key])]
             cl = [str(i) for i in cl]
-            cmd = " ".join(cl) + " | " + tobam_cl
+            cmd = "unset JAVA_HOME && " + " ".join(cl) + " | " + tobam_cl
             do.run(cmd, "Aligning %s and %s with Bowtie2." % (fastq_file, pair_file))
     return out_file
 

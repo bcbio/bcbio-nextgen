@@ -40,7 +40,8 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 rg_info = get_rg_info(names)
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
-                cmd = ("{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
+                cmd = ("unset JAVA_HOME && "
+                       "{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {novoalign} -o SAM '{rg_info}' -d {ref_file} -f /dev/stdin "
                        "  -F BAMPE -c {num_cores} {extra_novo_args} | ")
                 cmd = (cmd + tobam_cl).format(**locals())
@@ -75,7 +76,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
         with tx_tmpdir(data) as work_dir:
             with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
-                cmd = ("{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "
+                cmd = ("unset JAVA_HOME && "
+                       "{novoalign} -o SAM '{rg_info}' -d {ref_file} -f {fastq_file} {pair_file} "
                        "  -c {num_cores} {extra_novo_args} | ")
                 cmd = (cmd + tobam_cl).format(**locals())
                 do.run(cmd, "Novoalign: %s" % names["sample"], None,

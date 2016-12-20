@@ -68,7 +68,8 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
                 input_cmd = "-fastq -"
             stream_input = stream_input.format(**locals())
             tmp_dir = os.path.dirname(tx_out_file)
-            cmd = ("export TMPDIR={tmp_dir} && {stream_input} | snap-aligner {sub_cmd} {index_dir} {input_cmd} "
+            cmd = ("export TMPDIR={tmp_dir} && unset JAVA_HOME && {stream_input} | "
+                   "snap-aligner {sub_cmd} {index_dir} {input_cmd} "
                    "-R '{rg_info}' -t {num_cores} -M -o -sam - | ")
             do.run(cmd.format(**locals()) + tobam_cl, "SNAP alignment: %s" % names["sample"])
     data["work_bam"] = out_file
