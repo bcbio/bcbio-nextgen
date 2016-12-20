@@ -731,7 +731,7 @@ Single-cell RNA sequencing
 
 - ``minimum_barcode_depth`` Cellular barcodes with less than this many reads
   assigned to them are discarded (default 100,000).
-- ``cellular_barcodes`` An optional list of one or two files which have the
+- ``cellular_barcodes`` A single file or a list of one or two files which have
   valid cellular barcodes. Provide one file if there is only one barcode and
   two files if the barcodes are split. If no file is provided, all cellular
   barcodes passing the ``minimum_barcode_depth`` filter are kept.
@@ -740,6 +740,10 @@ Single-cell RNA sequencing
 - ``singlecell_quantifier`` Quantifier to use for single-cell RNA-sequencing.
   Non-academic users without a kallisto license should choose ``rapmap``.
   Supports ``rapmap`` or ``kallisto``.
+- ``cellular_barcode_correction`` Number of errors to correct in identified
+  cellular barcodes. Requires a set of known barcodes to be passed with the
+  ``cellular_barcodes`` option. Defaults to 1. Set to 0 to turn off
+  error correction.
 
 smallRNA sequencing
 ===================

@@ -82,12 +82,15 @@ def umi_transform(data):
 def filter_barcodes(data):
     fq1 = dd.get_input_sequence_files(data)[0]
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
+    correction = dd.get_cellular_barcode_correction(data)
     bc = dd.get_cellular_barcodes(data)
     if not bc:
         return [[data]]
     bc1 = None
     bc2 = None
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
+    if isinstance(bc, basestring):
+        bc1 = bc
     if len(bc) == 1:
         bc1 = bc[0]
     if len(bc) == 2:
@@ -103,6 +106,8 @@ def filter_barcodes(data):
     cmd = "{umis} cb_filter --cores {ncores} "
     if bc1:
         cmd += "--bc1 {bc1} "
+        if correction:
+            cmd += "--nedit {correction} "
     if bc2:
         cmd += "--bc2 {bc2} "
 
