@@ -1,9 +1,12 @@
+from copy import deepcopy
 import functools
 import os
+import pytest
 
 import pandas as pd
 from bcbio.rnaseq import ericscript
 from tests.conftest import make_workdir
+from bcbio.pipeline import config_utils
 
 
 class ConfigCreator(object):
@@ -17,13 +20,18 @@ class ConfigCreator(object):
         ],
     }
 
-    def get_config_with_disambiguate(self, data_dir=None, work_dir=None):
+    def __init__(self, system_config):
+        self._system_config = deepcopy(system_config)
+
+    def config_with_disambiguate(self, data_dir=None, work_dir=None):
         config = self.get_config_without_disambiguate(
             data_dir=data_dir, work_dir=work_dir)
-        config.update(self._get_disambiguate())
+        if 'algorithm' not in config['config']:
+            config['config']['algorithm'] = {}
+        config['config']['algorithm'].update({'disambiguate': ['mm9']})
         return config
 
-    def get_config_without_disambiguate(self, data_dir=None, work_dir=None):
+    def config_without_disambiguate(self, data_dir=None, work_dir=None):
         config = self._get_base_config()
         config.update(self._get_filepaths(data_dir, work_dir))
         return config
@@ -31,13 +39,7 @@ class ConfigCreator(object):
     def _get_base_config(self):
         return {
             'rgnames': {'lane': 'TEST_LANE'},
-        }
-
-    def _get_disambiguate(self):
-        return {
-            'config': {
-                'algorithm': {'disambiguate': ['mm9']},
-            },
+            'config': deepcopy(self._system_config)
         }
 
     def _get_filepaths(self, data_dir, workdir):
@@ -88,13 +90,25 @@ def _load_result_file(fname):
     return df
 
 
+def create_sample_config(data_dir, work_dir, disambiguate=False):
+    system_config, _ = config_utils.load_system_config(work_dir=work_dir)
+    c = ConfigCreator(system_config)
+    if disambiguate:
+        return c.config_with_disambiguate(
+            data_dir=data_dir, work_dir=work_dir)
+    else:
+        return c.config_without_disambiguate(
+            data_dir=data_dir, work_dir=work_dir)
+
+
+@pytest.marks('this')
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir):
     """Run gene fusion analysis on trimmed pair-end reads with EricScript.
     """
     with make_workdir() as work_dir:
-        sample_config = ConfigCreator().get_config_without_disambiguate(
-            data_dir=data_dir, work_dir=work_dir)
+        sample_config = create_sample_config(
+            data_dir, work_dir, disambiguate=False)
         ericscript.run(sample_config)
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
@@ -104,7 +118,7 @@ def test_detect_fusions_with_ericscipt_with_disambiguate(
     """Run gene fusion analysis on disambiguated reads with EricScript.
     """
     with make_workdir() as work_dir:
-        sample_config = ConfigCreator().get_config_with_disambiguate(
-            data_dir=data_dir, work_dir=work_dir)
+        sample_config = create_sample_config(
+            data_dir, work_dir, disambiguate=True)
         ericscript.run(sample_config)
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)

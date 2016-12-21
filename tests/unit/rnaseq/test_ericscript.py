@@ -19,15 +19,27 @@ class TestEricScriptConfig(object):
             'dirs': {
                 'work': 'TEST_WORK_DIR'
             },
+            'config': {
+                'resources': {'ericscript': {
+                    'env': '/path/to/envs/ericscript',
+                    'db': '/path/to/ericscript_db',
+                    },
+                }
+            }
         }
         yield EricScriptConfig(sample)
 
     def test_info_message(self, es_config):
         assert es_config.info_message == "Detect gene fusions with EricScript"
 
-    def test_env(self, es_config):
+    def test_gets_env_via_utils(self, es_config):
         expected_env = ericscript.utils.get_ericscript_env.return_value
         assert es_config.env == expected_env
+
+    def test_calls_utils_with_env_prefix_to_get_env(self, es_config):
+        es_config.env
+        ericscript.utils.get_ericscript_env.assert_called_once_with(
+            '/path/to/envs/ericscript')
 
     def test_output_dir(self, es_config):
         assert es_config.output_dir == 'TEST_WORK_DIR/ericscript'
@@ -39,7 +51,7 @@ class TestEricScriptConfig(object):
         expected = [
             'ericscript.pl',
             '-db',
-            '/data/ericscript/ericscript_db',
+            '/path/to/ericscript_db',
             '-name',
             'TEST_LANE',
             '-o',
