@@ -12,14 +12,3 @@ def test_get_fusion_caller():
 
     result = dd.get_fusion_caller(data)
     assert result == 'FUSION_CALLER'
-
-
-def test_get_ericscript_outdir():
-    sample_config = {
-        'dirs': {
-            'work': 'TEST_WORK_DIR'
-        },
-    }
-    result = dd.get_ericscript_outdir(sample_config)
-    expected = 'TEST_WORK_DIR/ericscript'
-    assert result == expected
