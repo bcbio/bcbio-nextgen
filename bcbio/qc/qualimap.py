@@ -69,8 +69,9 @@ def run(bam_file, data, out_dir):
                 cmd += " -gff {bed6_regions}"
             bcbio_env = utils.get_bcbio_env()
             do.run(cmd.format(**locals()), "Qualimap: %s" % dd.get_sample_name(data), env=bcbio_env)
-        cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), results_file)
-        do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
+            tx_results_file = os.path.join(tx_results_dir, "genome_results.txt")
+            cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
+            do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
 
     # return _parse_qualimap_metrics(report_file, data)
     return dict()

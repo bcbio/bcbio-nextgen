@@ -66,21 +66,19 @@ def number_of_reads(data, bam_file, keep_dups=True):
     else:
         return _count_in_bam(data, bam_file, '', keep_dups)
 
-def number_of_mapped_reads(data, bam_file, keep_dups=True):
+def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target_name=None):
     # use idxstats if using an indexed lookup
-    if keep_dups:
+    if not bed_file and keep_dups:
         total = 0
         for c in bam.idxstats(bam_file, data):
             total += c.aligned
         return total
     else:
-        return _count_in_bam(data, bam_file, 'not unmapped', keep_dups)
+        return _count_in_bam(data, bam_file, 'not unmapped',
+            keep_dups=keep_dups, bed_file=bed_file, target_name=target_name)
 
 def number_of_properly_paired_reads(data, bam_file, keep_dups=True):
-    return _count_in_bam(data, bam_file, 'proper_pair', keep_dups)
+    return _count_in_bam(data, bam_file, 'proper_pair', keep_dups=keep_dups)
 
 def number_of_dup_reads(data, bam_file):
     return _count_in_bam(data, bam_file, 'not unmapped and duplicate')
-
-def number_mapped_reads_on_target(data, bed_file, bam_file, keep_dups=True, target_name=None):
-    return _count_in_bam(data, bam_file, 'not unmapped', keep_dups, bed_file=bed_file, target_name=target_name)
