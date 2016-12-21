@@ -48,6 +48,14 @@ class TestEricScriptConfig(object):
     def test_sample_output_dir(self, es_config):
         assert es_config.sample_out_dir == 'TEST_WORK_DIR/ericscript/TEST_LANE'
 
+    def test_reference_index(self, es_config):
+        expected = '/path/to/ericscript_db/data/homo_sapiens/allseq.fa.bwt'
+        assert es_config.reference_index == expected
+
+    def test_reference_fasta(self, es_config):
+        expected = '/path/to/ericscript_db/data/homo_sapiens/allseq.fa'
+        assert es_config.reference_fasta == expected
+
     def test_get_run_command(self, es_config):
         tx_dir = 'TX_DIR'
         input_files = ('file1.fq', 'file2.fq')

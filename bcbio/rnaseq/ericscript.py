@@ -3,13 +3,13 @@ import os
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.ngsalign import bwa
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.fastq import convert_bam_to_fastq
 from bcbio.provenance import do
 
 
 def run(config):
-    # TODO build bwa index
     input_files = prepare_input_data(config)
     run_ericscript(config, input_files)
     return config
@@ -44,9 +44,11 @@ def run_ericscript(sample_config, input_files):
 
 
 class EricScriptConfig(object):
-    info_message = "Detect gene fusions with EricScript"
+    info_message = 'Detect gene fusions with EricScript'
     EXECUTABLE = 'ericscript.pl'
-    _OUTPUT_DIR_NAME = "ericscript"
+    _OUTPUT_DIR_NAME = 'ericscript'
+    _REF_INDEX = 'data/homo_sapiens/allseq.fa.bwt'
+    _REF_FASTA = 'data/homo_sapiens/allseq.fa'
 
     def __init__(self, config):
         self._db_location = dd.get_ericscript_db(config)
@@ -85,6 +87,14 @@ class EricScriptConfig(object):
                 self.output_dir, self._sample_name
             )
         return self._sample_out_dir
+
+    @property
+    def reference_index(self):
+        return os.path.join(self._db_location, self._REF_INDEX)
+
+    @property
+    def reference_fasta(self):
+        return os.path.join(self._db_location, self._REF_FASTA)
 
     def _get_env(self):
         return utils.get_ericscript_env(self._env_prefix)
