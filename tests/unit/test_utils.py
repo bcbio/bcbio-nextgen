@@ -3,8 +3,6 @@ import pytest
 
 from bcbio import utils
 
-TEST_CONDA_ENV = '/path/to/conda/env'
-
 
 @pytest.yield_fixture
 def bcbio_env(mocker):
@@ -13,31 +11,12 @@ def bcbio_env(mocker):
     yield env
 
 
-@pytest.yield_fixture
-def which(mocker):
-    yield mock.patch('bcbio.utils.which')
+def test_get_ericscript_env_if_executable_not_found(bcbio_env):
+    test_conda_prefix = '/path/to/conda/env'
+    env = utils.get_ericscript_env(test_conda_prefix)
+    assert env['PATH'].startswith(test_conda_prefix)
 
 
-@pytest.fixture
-def config():
-    return {'config': {'resources': {'ericscript': {'env': TEST_CONDA_ENV}}}}
-
-
-def test_get_ericscript_env_if_executable_not_found(which, bcbio_env, config):
-    which.return_value = None
-    env = utils.get_ericscript_env(config)
-    assert env['PATH'].startswith(TEST_CONDA_ENV)
-
-
-def test_ericscript_env_if_exec_found_in_bcbio_env(which, bcbio_env, config):
-    which.return_value = '/some/path'
-    env = utils.get_ericscript_env(config)
-    assert env == bcbio_env.return_value
-
-
-def test_get_ericscript_env_raises_runtime_error_when_install_not_found(
-        which, bcbio_env):
-    which.return_value = None
-    config = {'config': {'resources': {}}}
+def test_get_ericscript_env_raises_runtime_error_if_no_env_prefix(bcbio_env):
     with pytest.raises(RuntimeError):
-        utils.get_ericscript_env(config)
+        utils.get_ericscript_env(None)
