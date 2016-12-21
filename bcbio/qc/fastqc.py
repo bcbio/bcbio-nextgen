@@ -31,9 +31,11 @@ def run(bam_file, data, fastqc_out):
     if not os.path.exists(sentry_file):
         work_dir = os.path.dirname(fastqc_out)
         utils.safe_makedir(work_dir)
-        bam_file = (bam.downsample(bam_file, data, 1e7, work_dir=work_dir)
-                    if data.get("analysis", "").lower() not in ["standard", "smallrna-seq"]
-                    else bam_file)
+        ds_file = (bam.downsample(bam_file, data, 1e7, work_dir=work_dir)
+                   if data.get("analysis", "").lower() not in ["standard", "smallrna-seq"]
+                   else None)
+        if ds_file is not None:
+            bam_file = ds_file
         frmt = "bam" if bam_file.endswith("bam") else "fastq"
         fastqc_name = utils.splitext_plus(os.path.basename(bam_file))[0]
         fastqc_clean_name = dd.get_sample_name(data)
