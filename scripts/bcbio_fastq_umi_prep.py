@@ -64,8 +64,12 @@ def run_autopair(args):
     for fnames in fastq.combine_pairs(sorted(args.files)):
         if len(fnames) == 2:
             to_run.append(fnames)
+        elif len(fnames) == 3:
+            r1, r2, r3 = sorted(fnames)
+            to_run.append([r1, r2])
+            extras.append(r3)
         else:
-            assert len(fnames) == 1
+            assert len(fnames) == 1, fnames
             extras.append(fnames[0])
     ready_to_run = []
     for r1, r2 in to_run:
