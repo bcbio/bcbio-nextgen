@@ -368,9 +368,9 @@ def _maybe_add_kallisto_files(algorithm, sample, out):
 
 def _maybe_add_ericscript_files(algorithm, sample, out):
     config = EricScriptConfig(sample)
-    if os.path.exists(config.output_dir):
+    if os.path.exists(config.sample_out_dir):
         out.append({
-            'path': config.output_dir,
+            'path': config.sample_out_dir,
             'type': 'directory',
             'ext': 'ericscript',
         })
