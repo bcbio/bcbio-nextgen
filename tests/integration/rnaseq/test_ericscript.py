@@ -20,53 +20,55 @@ class ConfigCreator(object):
         ],
     }
 
-    def __init__(self, system_config):
+    def __init__(self, data_dir, work_dir, system_config):
+        self._data_dir = data_dir
+        self._work_dir = work_dir
         self._system_config = deepcopy(system_config)
 
-    def config_with_disambiguate(self, data_dir=None, work_dir=None):
-        config = self.get_config_without_disambiguate(
-            data_dir=data_dir, work_dir=work_dir)
+    def config_without_disambiguate(self):
+        config = self._get_base_config()
+        config.update(self._get_filepaths())
+        return config
+
+    def config_with_disambiguate(self):
+        config = self.get_config_without_disambiguate()
         if 'algorithm' not in config['config']:
             config['config']['algorithm'] = {}
         config['config']['algorithm'].update({'disambiguate': ['mm9']})
         return config
 
-    def config_without_disambiguate(self, data_dir=None, work_dir=None):
-        config = self._get_base_config()
-        config.update(self._get_filepaths(data_dir, work_dir))
-        return config
-
     def _get_base_config(self):
+        conf = deepcopy(self._system_config)
         return {
             'rgnames': {'lane': 'TEST_LANE'},
-            'config': deepcopy(self._system_config)
+            'config':  conf
         }
 
-    def _get_filepaths(self, data_dir, workdir):
-        data_dir = os.path.join(data_dir, os.pardir, self._INPUT_DATA_DIR)
+    def _get_filepaths(self):
+        data_dir = os.path.join(
+            self._data_dir, os.pardir, self._INPUT_DATA_DIR)
         join_fn = functools.partial(os.path.join, data_dir)
         return {
             'work_bam': join_fn(self._INPUT_FILENAMES['work_bam']),
-            'dirs': {'work': workdir},
+            'dirs': {'work': self._work_dir},
             'files': map(join_fn, self._INPUT_FILENAMES['fq_files'])
         }
 
 
 def assert_run_successfully(data_dir=None, work_dir=None):
-    ERICSCRIPT_DIR = os.path.join(work_dir, 'ericscript')
-    OUT_DIR = os.path.join(ERICSCRIPT_DIR, 'out')
-    ALN_DIR = os.path.join(ERICSCRIPT_DIR, 'aln')
-    EXPECTED_RESULT = os.path.join(
+    ERICSCRIPT_DIR = 'ericscript/TEST_LANE'
+    OUT_DIR = 'out'
+    ALN_DIR = 'aln'
+    assert os.path.exists(os.path.join(work_dir, ERICSCRIPT_DIR))
+    assert os.path.exists(os.path.join(ERICSCRIPT_DIR, OUT_DIR))
+    assert os.path.exists(os.path.join(ERICSCRIPT_DIR, ALN_DIR))
+
+    result = os.path.join(
+        work_dir, ERICSCRIPT_DIR, 'TEST_LANE.results.total.tsv')
+    expected_result = os.path.join(
         data_dir, os.pardir, 'fusion/results/TEST_LANE.results.total.tsv')
-    RESULT = os.path.join(work_dir, 'ericscript/TEST_LANE.results.total.tsv')
-
-    assert os.path.exists(ERICSCRIPT_DIR)
-    assert os.path.exists(OUT_DIR)
-    assert os.path.exists(ALN_DIR)
-    assert os.path.exists(RESULT)
-
-    expected = _load_result_file(EXPECTED_RESULT)
-    result = _load_result_file(RESULT)
+    expected = _load_result_file(expected_result)
+    result = _load_result_file(result)
     assert result.equals(expected)
 
 
@@ -92,13 +94,11 @@ def _load_result_file(fname):
 
 def create_sample_config(data_dir, work_dir, disambiguate=False):
     system_config, _ = config_utils.load_system_config(work_dir=work_dir)
-    c = ConfigCreator(system_config)
+    c = ConfigCreator(data_dir, work_dir, system_config)
     if disambiguate:
-        return c.config_with_disambiguate(
-            data_dir=data_dir, work_dir=work_dir)
+        return c.config_with_disambiguate()
     else:
-        return c.config_without_disambiguate(
-            data_dir=data_dir, work_dir=work_dir)
+        return c.config_without_disambiguate()
 
 
 @pytest.marks('this')
