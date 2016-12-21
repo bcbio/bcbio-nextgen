@@ -114,26 +114,22 @@ def get_aligned_reads(in_bam, data):
     total = float(align + unaligned)
     return 1.0 * align / total
 
-def downsample(in_bam, data, target_counts, read_filter="", always_run=False,
-               work_dir=None):
+def downsample(in_bam, data, target_counts, work_dir=None):
     """Downsample a BAM file to the specified number of target counts.
     """
     index(in_bam, data["config"])
     ds_pct = get_downsample_pct(in_bam, target_counts, data)
-    if always_run and not ds_pct:
-        ds_pct = 1.0
     if ds_pct:
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)
         if work_dir:
             out_file = os.path.join(work_dir, os.path.basename(out_file))
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                sambamba = config_utils.get_program("sambamba", data["config"])
-                # Avoid sambamba view segfaults with multiple cores
-                # num_cores = dd.get_num_cores(data)
-                num_cores = 1
-                cmd = ("{sambamba} view -t {num_cores} {read_filter} -f bam -o {tx_out_file} "
-                       "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
+                samtools = config_utils.get_program("samtools", data["config"])
+                num_cores = dd.get_num_cores(data)
+                ds_pct = "42." + "{ds_pct:.3}".format(ds_pct=ds_pct).replace("0.", "")
+                cmd = ("{samtools} view -O BAM -@ {num_cores} -o {tx_out_file} "
+                       "-s {ds_pct} {in_bam}")
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
 

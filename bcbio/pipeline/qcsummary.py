@@ -19,7 +19,6 @@ from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import coverage as cov
 from bcbio.rnaseq import gtf
-from bcbio.variation.coverage import get_average_coverage, regions_coverage
 from bcbio.variation import bedutils
 
 
@@ -342,7 +341,7 @@ def _run_coverage_qc(bam_file, data, out_dir):
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-    avg_depth = get_average_coverage(data, bam_file, merged_bed_file, target_name)
+    avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
     out['Avg_coverage'] = avg_depth
 
     priority = cov.priority_coverage(data, out_dir)
