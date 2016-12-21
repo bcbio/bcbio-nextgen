@@ -8,9 +8,9 @@ TEST_CONDA_ENV = '/path/to/conda/env'
 
 @pytest.yield_fixture
 def bcbio_env(mocker):
-    environ = mocker.patch('bcbio.utils.get_bcbio_env')
-    environ.return_value = {'PATH': '/usr/bin:/bin'}
-    yield environ
+    env = mocker.patch('bcbio.utils.get_bcbio_env')
+    env.return_value = {'PATH': '/usr/bin:/bin'}
+    yield env
 
 
 @pytest.yield_fixture

@@ -9,7 +9,7 @@ from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3
 from bcbio.pipeline import run_info
 import bcbio.pipeline.datadict as dd
-from bcbio.rnaseq import ericscript
+from bcbio.rnaseq.ericscript import EricScriptConfig
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
@@ -293,10 +293,10 @@ def _maybe_add_salmon_files(algorithm, sample, out):
 
 
 def _maybe_add_ericscript_files(algorithm, sample, out):
-    ericscript_dir = ericscript.get_output_dir(sample)
-    if os.path.exists(ericscript_dir):
+    config = EricScriptConfig(sample)
+    if os.path.exists(config.output_dir):
         out.append({
-            'path': ericscript_dir,
+            'path': config.output_dir,
             'type': 'directory',
             'ext': 'ericscript',
         })

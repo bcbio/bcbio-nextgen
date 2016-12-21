@@ -1,3 +1,4 @@
+import os
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -6,6 +7,7 @@ from bcbio.provenance import do
 
 
 def run(config):
+    # TODO build bwa index
     input_files = prepare_input_data(config)
     run_ericscript(config, input_files)
     return config
@@ -68,7 +70,8 @@ class EricScriptConfig(object):
         return utils.get_ericscript_env(config)
 
     def _get_output_dir(self, config):
-        return dd.get_ericscript_outdir(config)
+        return os.path.join(dd.get_work_dir(config), self._OUTPUT_DIR_NAME)
 
     def _get_ericscript_db(self, config):
+        # TODO get from config
         return '/data/ericscript/ericscript_db'
