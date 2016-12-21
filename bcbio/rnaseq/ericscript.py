@@ -43,6 +43,11 @@ def run_ericscript(sample_config, input_files):
         do.run(cmd, es_config.info_message, env=es_config.env)
 
 
+def build_bwa_index_if_absent(es_config, sample_config):
+    if not os.path.exists(es_config.reference_index):
+        bwa.build_bwa_index(es_config.reference_fasta, sample_config)
+
+
 class EricScriptConfig(object):
     info_message = 'Detect gene fusions with EricScript'
     EXECUTABLE = 'ericscript.pl'
