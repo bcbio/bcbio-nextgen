@@ -37,6 +37,8 @@ def run_ericscript(sample_config, input_files):
     es_config = EricScriptConfig(sample_config)
     utils.safe_makedir(es_config.output_dir)
 
+    build_bwa_index_if_absent(es_config, sample_config)
+
     with file_transaction(sample_config, es_config.sample_out_dir) as tx_out:
         cmd = es_config.get_run_command(tx_out, input_files)
         logger.info("Running EricScript:\n%s" % ' '.join(cmd))

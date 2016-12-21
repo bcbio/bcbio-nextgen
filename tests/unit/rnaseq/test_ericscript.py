@@ -116,6 +116,11 @@ class TestRun(object):
         )
 
     @pytest.yield_fixture
+    def build_idx(self, mocker):
+        yield mocker.patch('bcbio.rnaseq.ericscript.build_bwa_index_if_absent')
+
+
+    @pytest.yield_fixture
     def es_config(self, mocker):
         mock_ES = mocker.patch(
             'bcbio.rnaseq.ericscript.EricScriptConfig',
@@ -135,13 +140,13 @@ class TestRun(object):
         yield mocker.patch('bcbio.rnaseq.ericscript.prepare_input_data')
 
     def test_returns_sample_config(
-            self, prepare_data, mock_ft, do_run, es_config, utils):
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
         config = mock.MagicMock()
         result = ericscript.run(config)
         assert result == config
 
     def test_gets_ericscript_command(
-            self, prepare_data, mock_ft, do_run, es_config, utils):
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
 
         ericscript.run(mock.Mock())
         es_config.get_run_command.assert_called_once_with(
@@ -150,7 +155,7 @@ class TestRun(object):
         )
 
     def test_runs_ericscript_command(
-            self, prepare_data, mock_ft, do_run, es_config, utils):
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
         ericscript.run(mock.Mock())
         do_run.assert_called_once_with(
             es_config.get_run_command.return_value,
@@ -159,16 +164,22 @@ class TestRun(object):
         )
 
     def test_calls_file_transaction(
-            self, prepare_data, mock_ft, do_run, es_config, utils):
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
         config = mock.MagicMock()
         ericscript.run(config)
         mock_ft.assert_called_once_with(config, es_config.sample_out_dir)
 
     def test_creates_base_ericscript_output_dir(
-            self, prepare_data, mock_ft, do_run, es_config, utils):
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
         config = mock.MagicMock()
         ericscript.run(config)
         utils.safe_makedir.assert_called_once_with(es_config.output_dir)
+
+    def test_builds_bwa_index(
+            self, prepare_data, mock_ft, do_run, es_config, utils, build_idx):
+        config = mock.MagicMock()
+        ericscript.run(config)
+        build_idx.assert_called_once_with(es_config, config)
 
 
 class TestBuildBWAIndex(object):
