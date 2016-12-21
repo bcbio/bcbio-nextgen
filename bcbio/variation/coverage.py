@@ -248,7 +248,7 @@ def checkpoint(stem):
     return check_file
 
 @checkpoint("_summary")
-def _calculate_percentiles(in_file, sample, data=None):
+def _calculate_percentiles(in_file, sample, data=None, cutoffs=None):
     """
     Parse pct bases per region to summarize it in
     7 different pct of regions points with pct bases covered
@@ -269,11 +269,12 @@ def _calculate_percentiles(in_file, sample, data=None):
     pct_bases = dict()
     size = np.array(dt["chromEnd"]) - np.array(dt["chromStart"])
     for cutoff in [h for h in list(dt) if h.startswith("percentage")]:
-        a = np.array(dt[cutoff])
-        for p_point in [0.01, 10, 25, 50, 75, 90, 99.9]:
-            q = np.percentile(a, p_point)
-            pct[(cutoff, p_point)] = q
-        pct_bases[cutoff] = sum(size * a)/float(sum(size))
+        if cutoffs and int(cutoff.split("percentage")[1]) in cutoffs:
+            a = np.array(dt[cutoff])
+            for p_point in [0.01, 10, 25, 50, 75, 90, 99.9]:
+                q = np.percentile(a, p_point)
+                pct[(cutoff, p_point)] = q
+            pct_bases[cutoff] = sum(size * a)/float(sum(size))
 
     with file_transaction(data, out_total_file) as tx_file:
         with open(tx_file, 'w') as out_handle:
@@ -536,8 +537,6 @@ def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
     cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
 
     cutoffs = {1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000}
-    if extra_cutoffs:
-        cutoffs |= extra_cutoffs
 
     with chdir(work_dir):
         in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
@@ -548,9 +547,9 @@ def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
             pass
         else:
             with file_transaction(data, parse_file) as out_tx:
-                depth_thresholds = sorted(list(cutoffs))
+                depth_thresholds = sorted(list(cutoffs | extra_cutoffs))
                 cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed, depth_thresholds=depth_thresholds)
                 cmdl += " | sed 's/# chrom/chrom/' > " + out_tx
                 do.run(cmdl, "Run coverage regional analysis for {}".format(sample))
-        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data)
+        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data, cutoffs=cutoffs)
     return os.path.abspath(parse_file)
