@@ -604,13 +604,15 @@ def _update_system_file(system_file, name, new_kvs):
 def _install_ericscript_db(datadir, args):
     PKG_NAME = 'ericscript'
     HG_38_URL = 'https://drive.google.com/file/d/0B9s__vuJPvIiUGt1SnFMZFg4TlE/view'  # noqa
-    ericscript_datadir = os.path.join(datadir, "ericscript")
 
     print "Downloading EricScript database for hg38..."
     archived_db_file = objectstore.download(HG_38_URL, input_dir=os.getcwd())
     archive = tarfile.open(archived_db_file)
-    archive.extractall(ericscript_datadir)
-    print "Ericscript database was saved to ", ericscript_datadir
+    archive.extractall(datadir)
+    print "Ericscript database was saved to ", datadir
+
+    ericscript_datadir = os.path.join(datadir, "ericscript_db")
+    assert os.path.isdir(ericscript_datadir)
 
     system_config = _get_system_config()
     _update_system_file(system_config, PKG_NAME, {"db": ericscript_datadir})
