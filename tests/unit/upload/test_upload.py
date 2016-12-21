@@ -13,7 +13,7 @@ def exists(mocker):
 
 @pytest.yield_fixture
 def es_out_dir(mocker):
-    yield mocker.patch.object(EricScriptConfig, 'output_dir')
+    yield mocker.patch.object(EricScriptConfig, 'sample_out_dir')
 
 
 def test_add_ericscript_files_does_nothing_if_oudir_doesnt_exist(
