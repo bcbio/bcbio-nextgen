@@ -14,7 +14,7 @@ def run(config):
 
 
 def prepare_input_data(config):
-    """ Incase of disambiguation, we want to run fusion calling on
+    """ In case of disambiguation, we want to run fusion calling on
     the disambiguated reads, which are in the work_bam file.
     As EricScript accepts 2 fastq files as input, we need to convert
     the .bam to 2 .fq files.
@@ -42,10 +42,12 @@ class EricScriptConfig(object):
     _OUTPUT_DIR_NAME = "ericscript"
 
     def __init__(self, config):
-        self._env = self._get_env(config)
-        self._sample_name = self._get_sample_name(config)
-        self._db_location = self._get_ericscript_db(config)
-        self._output_dir = self._get_output_dir(config)
+        self._db_location = dd.get_ericscript_db(config)
+        self._env_prefix = dd.get_ericscript_env(config)
+        self._sample_name = dd.get_lane(config)
+        self._work_dir = dd.get_work_dir(config)
+        self._env = None
+        self._output_dir = None
 
     def get_run_command(self, tx_output_dir, input_files):
         return [
@@ -57,21 +59,18 @@ class EricScriptConfig(object):
 
     @property
     def env(self):
+        if self._env is None:
+            self._env = self._get_env()
         return self._env
 
     @property
     def output_dir(self):
+        if self._output_dir is None:
+            self._output_dir = self._get_output_dir()
         return self._output_dir
 
-    def _get_sample_name(self, config):
-        return dd.get_lane(config)
+    def _get_env(self):
+        return utils.get_ericscript_env(self._env_prefix)
 
-    def _get_env(self, config):
-        return utils.get_ericscript_env(config)
-
-    def _get_output_dir(self, config):
-        return os.path.join(dd.get_work_dir(config), self._OUTPUT_DIR_NAME)
-
-    def _get_ericscript_db(self, config):
-        # TODO get from config
-        return '/data/ericscript/ericscript_db'
+    def _get_output_dir(self):
+        return os.path.join(self._work_dir, self._OUTPUT_DIR_NAME)
