@@ -733,21 +733,15 @@ def get_bcbio_env():
     return env
 
 
-def get_ericscript_env(sample_config):
-    ERICSCRIPT_EXEC = 'ericscipt.pl'
-    env = get_bcbio_env()
-    if which(ERICSCRIPT_EXEC, env=env):
-        return env
-
-    import bcbio.pipeline.datadict as dd
-    es_conda_env = dd.get_ericscript_env(sample_config)
-    if not es_conda_env:
+def get_ericscript_env(conda_env_prefix):
+    if not conda_env_prefix:
         raise RuntimeError(
             'EricScript is not installed. '
             'Please run: \nbcbio_nextgen.py upgrade --toolplus ericscript\n'
             'to install it.'
         )
-    es_bin = '%s/bin' % es_conda_env
+    env = get_bcbio_env()
+    es_bin = '%s/bin' % conda_env_prefix
     env['PATH'] = append_path(es_bin, env['PATH'])
     return env
 
