@@ -169,3 +169,30 @@ class TestRun(object):
         config = mock.MagicMock()
         ericscript.run(config)
         utils.safe_makedir.assert_called_once_with(es_config.output_dir)
+
+
+class TestBuildBWAIndex(object):
+
+    @pytest.fixture
+    def exists(self, mocker):
+        yield mocker.patch('bcbio.rnaseq.ericscript.os.path.exists')
+
+    @pytest.fixture
+    def bwa_build(self, mocker):
+        yield mocker.patch('bcbio.rnaseq.ericscript.bwa.build_bwa_index')
+
+    def test_doesnt_build_index_if_already_exists(self, exists, bwa_build):
+        exists.return_value = True
+        ericscript.build_bwa_index_if_absent(mock.Mock(), mock.Mock())
+        assert bwa_build.call_count == 0
+
+    def test_builds_index_if_it_doesnt_exist(self, exists, bwa_build):
+        exists.return_value = False
+        es_config, config = mock.Mock(spec=EricScriptConfig), mock.Mock()
+        ericscript.build_bwa_index_if_absent(es_config, config)
+        bwa_build.assert_called_once_with(es_config.reference_fasta, config)
+
+    def test_checks_if_index_exists(self, exists, bwa_build):
+        es_config = mock.Mock(spec=EricScriptConfig)
+        ericscript.build_bwa_index_if_absent(es_config, mock.Mock())
+        exists.assert_called_once_with(es_config.reference_index)
