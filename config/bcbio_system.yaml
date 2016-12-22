@@ -22,7 +22,7 @@ resources:
   gatk:
     jvm_opts: ["-Xms500m", "-Xmx3500m"]
   snpeff:
-    jvm_opts: ["-Xms750m", "-Xmx6g"]
+    jvm_opts: ["-Xms750m", "-Xmx3g"]
   qualimap:
     memory: 4g
   express:

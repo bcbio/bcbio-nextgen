@@ -307,12 +307,16 @@ def get_snpeff_files(data):
     else:
         return {}
 
-def get_cmd(cmd_name, datadir, config, out_file):
+def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     """Retrieve snpEff base command line.
     """
-    resources = config_utils.get_resources("snpeff", config)
-    memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
-    snpeff = config_utils.get_program("snpEff", config)
+    resources = config_utils.get_resources("snpeff", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
+    jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                 {"direction": "increase",
+                                                                  "magnitude": dd.get_cores(data)}}})
+    memory = " ".join(jvm_opts)
+    snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
     export = utils.local_path_export()
     cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
@@ -337,7 +341,7 @@ def _run_snpeff(snp_in, out_format, data):
         else:
             bgzip_cmd = ""
         with file_transaction(data, out_file) as tx_out_file:
-            snpeff_cmd = get_cmd("eff", datadir, data["config"], tx_out_file)
+            snpeff_cmd = _get_snpeff_cmd("eff", datadir, data, tx_out_file)
             cmd = ("{snpeff_cmd} {config_args} -noLog -i vcf -o {out_format} "
                    "-s {stats_file} {snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
