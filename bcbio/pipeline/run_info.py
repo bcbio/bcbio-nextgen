@@ -239,8 +239,8 @@ def _fill_prioritization_targets(data):
     """Fill in globally installed files for prioritization.
     """
     ref_file = dd.get_ref_file(data)
-    for target in [["svprioritize"], ["coverage"]]:
-        val = tz.get_in(["config", "algorithm"] + target, data)
+    for target in ["svprioritize", "coverage"]:
+        val = tz.get_in(["config", "algorithm", target], data)
         if val and not os.path.exists(val):
             installed_vals = []
             # Check prioritize directory
@@ -249,13 +249,17 @@ def _fill_prioritization_targets(data):
                                                                           "coverage", "prioritize",
                                                                           val + "*%s" % ext)))
             # Check sv-annotation directory for prioritize gene name lists
-            if target[-1] == "svprioritize":
+            if target == "svprioritize":
                 installed_vals += glob.glob(os.path.join(
                     os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py"))),
                     "%s*" % os.path.basename(val)))
             if len(installed_vals) == 0:
-                raise ValueError("Configuration problem. BED file not found for %s: %s" %
-                                 (target, val))
+                # some targets can be filled in later
+                if target not in set(["coverage"]):
+                    raise ValueError("Configuration problem. BED file not found for %s: %s" %
+                                     (target, val))
+                else:
+                    installed_val = val
             elif len(installed_vals) == 1:
                 installed_val = installed_vals[0]
             else:
@@ -268,7 +272,7 @@ def _fill_prioritization_targets(data):
                 # handle date-stamped inputs
                 if not installed_val:
                     installed_val = sorted(installed_vals, reverse=True)[0]
-            data = tz.update_in(data, ["config", "algorithm"] + target, lambda x: installed_val)
+            data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_val)
     return data
 
 # ## Sample and BAM read group naming
