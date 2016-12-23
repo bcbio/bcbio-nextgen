@@ -31,6 +31,12 @@ install:
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*
   - ~/install/bcbio-vm/anaconda/bin/python setup.py install
+  - pip install -U pip
+  - pip install -r requirements_dev.txt
+  - bcbio_vm.py devel setup_install
+  - pip install cwl_runner
+  # Install dev requirements and build a container for testing
+  - docker build --file Dockerfile_dev -t bcbio/bcbio:dev .
 
 script:
   # -- Prepare variant docker image

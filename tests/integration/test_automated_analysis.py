@@ -79,7 +79,7 @@ def test_2_fusion(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('fusion', 'ericscript')
+@pytest.marks('fusion', 'ericscript', 'install_required')
 def test_2_fusion_with_ericscipt(install_test_files, data_dir):
     """Run an RNA-seq analysis and test fusion genes
     """
