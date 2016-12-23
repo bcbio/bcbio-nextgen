@@ -29,6 +29,7 @@ def setup_logging():
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on trimmed pair-end reads with EricScript.
+       Requires installation of EricScript and its reference data.
     """
     with make_workdir() as work_dir:
         sample_config = create_sample_config(
@@ -41,6 +42,7 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on disambiguated reads with EricScript.
+       Requires installation of EricScript and its reference data.
     """
     with make_workdir() as work_dir:
         sample_config = create_sample_config(

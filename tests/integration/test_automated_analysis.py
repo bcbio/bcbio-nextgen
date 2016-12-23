@@ -79,19 +79,6 @@ def test_2_fusion(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('fusion', 'ericscript', 'install_required')
-def test_2_fusion_with_ericscipt(install_test_files, data_dir):
-    """Run an RNA-seq analysis and test fusion genes
-    """
-    # TODO convert into a test that only runs ericscript
-    with make_workdir() as workdir:
-        cl = ["bcbio_nextgen.py",
-              get_post_process_yaml(data_dir, workdir),
-              os.path.join(data_dir, os.pardir, "test_fusion"),
-              os.path.join(data_dir, "run_info-ericscript.yaml")]
-        subprocess.check_call(cl)
-
-
 @pytest.marks('star', 'rnaseq', 'rnaseq_standard')
 def test_2_star(install_test_files, data_dir):
     """Run an RNA-seq analysis with STAR and generate gene-level counts.
