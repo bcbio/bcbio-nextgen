@@ -335,10 +335,13 @@ def _run_coverage_qc(bam_file, data, out_dir):
             out["Ontarget_unique_reads"] = ontarget
             out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
             out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-            ontarget_padded = sambamba.number_of_mapped_reads(
-                data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
-            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+            if dd.get_coverage_interval(data) != "genome":
+                # Skip padded calculation for WGS even if the "coverage" file is specified
+                # the padded statistic makes only sense for exomes and panels
+                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+                ontarget_padded = sambamba.number_of_mapped_reads(
+                    data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
+                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
