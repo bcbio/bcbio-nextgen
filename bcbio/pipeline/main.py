@@ -252,13 +252,17 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("estimate expression (threaded)", dirs):
             samples = rnaseq.quantitate_expression_parallel(samples, run_parallel)
 
-    # TODO parallelize by sample!
-    rnaseq.detect_fusions(samples)
+    with prun.start(_wres(parallel, ["ericscript"]), samples, config,
+                    dirs, "fusion-standalone-callers") as run_parallel:
+        with profile.report("Detect gene fusions", dirs):
+            rnaseq.detect_fusions(samples)
 
     with prun.start(_wres(parallel, ["dexseq", "express"]), samples, config,
                     dirs, "rnaseqcount-singlethread", max_multicore=1) as run_parallel:
         with profile.report("estimate expression (single threaded)", dirs):
             samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
+
+
     samples = rnaseq.combine_files(samples)
     with prun.start(_wres(parallel, ["gatk"]), samples, config,
                     dirs, "rnaseq-variation") as run_parallel:
