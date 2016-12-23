@@ -328,13 +328,31 @@ def combine_files(samples):
 
 
 def detect_fusions(samples):
+    """Run fusion with a standalone tool, specified in config
+    as fusion_caller.
+    If fusion_mode is True, and no fusion_caller is specified,
+    or fusion_caller == 'aligner', it is assumed that gene fusion
+    detection was run on the alignment step.
+    """
+    fusion_mode = dd.get_in_samples(samples, dd.get_fusion_mode)
+    if not fusion_mode:
+        return samples
+
+    caller = dd.get_in_samples(samples, dd.get_fusion_caller)
+    if not caller or caller == 'aligner':
+        logger.info("No standalone fusion caller specified in the config.")
+        return samples
+
     STANDALONE_CALLERS = {
         'ericscript': ericscript.run,
     }
-    fusion_mode = dd.get_in_samples(samples, dd.get_fusion_mode)
-    caller = dd.get_in_samples(samples, dd.get_fusion_caller)
     caller_fn = STANDALONE_CALLERS.get(caller)
+    if not caller_fn:
+        logger.warning(
+            "Gene fusion detection with %s is not supported."
+            "Supported callers:\n%s" % ', '.join(STANDALONE_CALLERS.keys())
+        )
+        return samples
 
-    if fusion_mode and caller_fn:
-        return [[caller_fn(s)] for s in dd.sample_data_iterator(samples)]
-    return samples
+    logger.info("Running gene fusion detection with  %s" % caller)
+    return [[caller_fn(s)] for s in dd.sample_data_iterator(samples)]
