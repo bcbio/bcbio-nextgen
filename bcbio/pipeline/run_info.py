@@ -221,7 +221,7 @@ def _fill_capture_regions(data):
     ref_file = dd.get_ref_file(data)
     for target in ["variant_regions", "sv_regions", "coverage"]:
         val = tz.get_in(["config", "algorithm", target], data)
-        if val and not os.path.exists(val):
+        if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_vals = []
             # Check prioritize directory
             for ext in [".bed", ".bed.gz"]:
@@ -241,7 +241,7 @@ def _fill_prioritization_targets(data):
     ref_file = dd.get_ref_file(data)
     for target in ["svprioritize", "coverage"]:
         val = tz.get_in(["config", "algorithm", target], data)
-        if val and not os.path.exists(val):
+        if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_vals = []
             # Check prioritize directory
             for ext in [".bed", ".bed.gz"]:
