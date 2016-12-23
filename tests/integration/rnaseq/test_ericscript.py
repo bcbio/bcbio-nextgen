@@ -4,9 +4,49 @@ import os
 import pytest
 
 import pandas as pd
+
 from bcbio.rnaseq import ericscript
 from tests.conftest import make_workdir
 from bcbio.pipeline import config_utils
+from bcbio.log import setup_script_logging
+
+
+def create_sample_config(data_dir, work_dir, disambiguate=False):
+    system_config, _ = config_utils.load_system_config(work_dir=work_dir)
+    c = ConfigCreator(data_dir, work_dir, system_config)
+    if disambiguate:
+        return c.config_with_disambiguate()
+    else:
+        return c.config_without_disambiguate()
+
+
+@pytest.fixture
+def setup_logging():
+    setup_script_logging()
+
+
+@pytest.marks('install_required')
+def test_detect_fusions_with_ericscipt_without_disambiguate(
+        install_test_files, data_dir, setup_logging):
+    """Run gene fusion analysis on trimmed pair-end reads with EricScript.
+    """
+    with make_workdir() as work_dir:
+        sample_config = create_sample_config(
+            data_dir, work_dir, disambiguate=False)
+        ericscript.run(sample_config)
+        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
+
+
+@pytest.marks('install_required')
+def test_detect_fusions_with_ericscipt_with_disambiguate(
+        install_test_files, data_dir, setup_logging):
+    """Run gene fusion analysis on disambiguated reads with EricScript.
+    """
+    with make_workdir() as work_dir:
+        sample_config = create_sample_config(
+            data_dir, work_dir, disambiguate=True)
+        ericscript.run(sample_config)
+        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
 class ConfigCreator(object):
@@ -31,7 +71,7 @@ class ConfigCreator(object):
         return config
 
     def config_with_disambiguate(self):
-        config = self.get_config_without_disambiguate()
+        config = self.config_without_disambiguate()
         if 'algorithm' not in config['config']:
             config['config']['algorithm'] = {}
         config['config']['algorithm'].update({'disambiguate': ['mm9']})
@@ -90,35 +130,3 @@ def _load_result_file(fname):
     df = pd.read_csv(fname, sep='\t')[columns_to_keep].sort(sort_by)
     df.index = range(len(df))
     return df
-
-
-def create_sample_config(data_dir, work_dir, disambiguate=False):
-    system_config, _ = config_utils.load_system_config(work_dir=work_dir)
-    c = ConfigCreator(data_dir, work_dir, system_config)
-    if disambiguate:
-        return c.config_with_disambiguate()
-    else:
-        return c.config_without_disambiguate()
-
-
-@pytest.marks('this')
-def test_detect_fusions_with_ericscipt_without_disambiguate(
-        install_test_files, data_dir):
-    """Run gene fusion analysis on trimmed pair-end reads with EricScript.
-    """
-    with make_workdir() as work_dir:
-        sample_config = create_sample_config(
-            data_dir, work_dir, disambiguate=False)
-        ericscript.run(sample_config)
-        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
-
-
-def test_detect_fusions_with_ericscipt_with_disambiguate(
-        install_test_files, data_dir):
-    """Run gene fusion analysis on disambiguated reads with EricScript.
-    """
-    with make_workdir() as work_dir:
-        sample_config = create_sample_config(
-            data_dir, work_dir, disambiguate=True)
-        ericscript.run(sample_config)
-        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
