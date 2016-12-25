@@ -11,22 +11,19 @@ small blocks.
 """
 import collections
 import os
-import subprocess
 
 import numpy
 import pybedtools
 import pysam
 import toolz as tz
-import yaml
 
 from bcbio import broad, utils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import coverage
 from bcbio.variation import multi as vmulti
-from bcbio.bam import sambamba
 
 
 def sample_callable_bed(bam_file, ref_file, data):
