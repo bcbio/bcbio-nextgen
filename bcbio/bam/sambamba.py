@@ -37,7 +37,7 @@ def index(data, bam_fpath):
     return indexed_bam
 
 def work_dir(data):
-    return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
+    return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data), "sambamba"))
 
 def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_name=None):
     if not keep_dups:
