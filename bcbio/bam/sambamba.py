@@ -62,7 +62,7 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
         return int(f.read().strip())
 
 def number_of_reads(data, bam_file, keep_dups=True):
-    return _count_in_bam(data, bam_file, '', keep_dups)
+    return _count_in_bam(data, bam_file, "not secondary_alignment", keep_dups)
 
 def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target_name=None):
     return _count_in_bam(data, bam_file, mapped_filter_query,
