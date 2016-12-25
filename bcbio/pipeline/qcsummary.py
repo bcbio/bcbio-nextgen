@@ -307,21 +307,20 @@ def _run_coverage_qc(bam_file, data, out_dir):
 
     if "Total_reads" not in samtools_stats:
         return
-    out["Total_reads"] = total_reads = samtools_stats["Total_reads"]
+    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
     if not total_reads:
         return
 
-    if "Mapped_reads" not in samtools_stats or "Mapped_both_mates" not in samtools_stats:
+    if "Mapped_reads_raw" not in samtools_stats or "Mapped_reads" not in samtools_stats:
         return
-    out["Mapped_reads"] = mapped = samtools_stats["Mapped_both_mates"]
+    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
     out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
     if not mapped:
         return out
 
     if "Duplicates" in samtools_stats:
-        raw_mapped = samtools_stats["Mapped_reads"]
-        out['Duplicates'] = dups = samtools_stats["Duplicates"]
-        out['Duplicates_pct'] = 100.0 * dups / raw_mapped
+        out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
+        out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
 
     out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
 
