@@ -11,20 +11,17 @@ import pybedtools
 import pandas as pd
 import numpy as np
 import pysam
-import toolz as tz
 
 from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, safe_makedir,
-                         append_stem, is_gzipped, remove_plus,
-                         open_gzipsafe, copy_plus, splitext_plus)
-from bcbio import bam, broad, utils
+                         append_stem, copy_plus)
+from bcbio import utils
 from bcbio.bam import ref, sambamba
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.pipeline import config_utils, shared
-from bcbio.variation import vcfutils
+from bcbio.pipeline import shared
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
@@ -194,48 +191,6 @@ def _average_bed_coverage(data, bed_file, bam_file, target_name):
     avg_cov = sum(avg_covs) / total_len if total_len > 0 else 0
     return avg_cov
 
-def decorate_problem_regions(query_bed, problem_bed_dir, data):
-    """
-    decorate query_bed with percentage covered by BED files of regions specified
-    in the problem_bed_dir
-    """
-    if is_gzipped(query_bed):
-        stem, _ = os.path.splitext(query_bed)
-        stem, ext = os.path.splitext(stem)
-    else:
-        stem, ext = os.path.splitext(query_bed)
-    out_file = stem + ".problem_annotated" + ext + ".gz"
-    if file_exists(out_file):
-        return out_file
-    bed_files = _find_bed_files(problem_bed_dir)
-    bed_file_string = " ".join(bed_files)
-    names = [os.path.splitext(os.path.basename(x))[0] for x in bed_files]
-    names_string = " ".join(names)
-    with open_gzipsafe(query_bed) as in_handle:
-        header = map(str, in_handle.next().strip().split())
-    header = "\t".join(header + names)
-    cmd = ("bedtools annotate -i {query_bed} -files {bed_file_string} "
-           "-names {names_string} | sed -s 's/^#.*$/{header}/' | bgzip -c > {tx_out_file}")
-    with file_transaction(data, out_file) as tx_out_file:
-        message = "Annotate %s with problem regions." % query_bed
-        do.run(cmd.format(**locals()), message)
-    return out_file
-
-def _find_bed_files(path):
-    """
-    recursively walk directories to find all of the BED files in the
-    problem regions directory
-    """
-    bed_files = []
-    for dirpath, subdirs, files in os.walk(path):
-        for x in files:
-            if x.endswith(".bed") or x.endswith(".bed.gz"):
-                bed_files.append(os.path.join(dirpath, x))
-    return bed_files
-
-def _silence_run(cmd):
-    do._do_run(cmd, False)
-
 def checkpoint(stem):
     def check_file(f):
         def wrapper(*args, **kwargs):
@@ -354,121 +309,6 @@ def _summary_variants(in_file, out_file, data=None):
             row.append([p_point, q_d, q_cg])
         pd.DataFrame(row).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
-def _read_bcffile(out_file):
-    out = {}
-    with open(out_file) as in_handle:
-        for line in in_handle:
-            if line.startswith("SN") and line.find("records") > -1:
-                out["Variations (total)"] = line.split()[-1]
-            elif line.startswith("SN") and line.find("SNPs") > -1:
-                out["Variations (SNPs)"] = line.split()[-1]
-            elif line.startswith("SN") and line.find("indels") > -1:
-                out["Variations (indels)"] = line.split()[-1]
-            elif line.startswith("TSTV"):
-                out["Variations (ts/tv)"] = line.split()[4]
-            elif line.startswith("PSC"):
-                # out["Variations (homozygous)"] = line.split()[3]
-                out["Variations (alt homozygous)"] = line.split()[4]
-                out["Variations (heterozygous)"] = line.split()[5]
-    return out
-
-def _get_variant_callers(data):
-    """Use first caller if ensemble is not active"""
-    callers = dd.get_variantcaller(data)
-    if not callers:
-        return None
-    if isinstance(callers, basestring):
-        callers = [callers]
-    active_callers = [c.get("variantcaller") for c in data.get("variants", [{}])]
-    active_vcf = [c.get("vrn_file") for c in data.get("variants", [{}])]
-    active_germline = [c.get("germline") for c in data.get("variants", [{}])]
-    vcf = dict(zip(active_callers, active_vcf))
-    germline = dict(zip(active_callers, active_germline))
-    if "ensemble" in active_callers:
-        vcf_fn = vcf["ensemble"]
-    else:
-        vcf_fn = vcf[callers[0]]
-    if not vcf_fn:
-        vcf_fn = germline[callers[0]]
-    return vcf_fn
-
-def _run_bcftools(data, out_dir):
-    """Get variants stats"""
-    vcf_file = _get_variant_callers(data)
-    opts = "-f PASS"
-    if tz.get_in(("config", "algorithm", "jointcaller"), data):
-        opts = ""
-    out = {}
-    if vcf_file:
-        name = dd.get_sample_name(data)
-        stem = os.path.join(out_dir, os.path.basename(splitext_plus(vcf_file)[0]))
-        out_file = "%s-%s-bcfstats.tsv" % (stem, name)
-        bcftools = config_utils.get_program("bcftools", data["config"])
-        if not file_exists(out_file):
-            cmd = ("{bcftools} stats -s {name} {opts} {vcf_file} > {out_file}")
-            do.run(cmd.format(**locals()), "basic vcf stats %s" % dd.get_sample_name(data))
-        out[name] = _read_bcffile(out_file)
-    return out
-
-def variants(data, out_dir):
-    """Variants QC metrics"""
-    if not "variants" in data:
-        return None
-    work_dir = safe_makedir(out_dir)
-    sample = dd.get_sample_name(data)
-    bcfstats = _run_bcftools(data, work_dir)
-    bed_file = dd.get_coverage(data)
-    bcf_out = os.path.join(sample + "_bcbio_variants_stats.txt")
-    cg_file = os.path.join(sample + "_with-gc.vcf.gz")
-    parse_file = os.path.join(sample + "_gc-depth-parse.tsv")
-    qc_file = os.path.join(sample + "_bcbio_variants.txt")
-    with chdir(work_dir):
-        if not file_exists(bcf_out):
-            with open(bcf_out, "w") as out_handle:
-                yaml.safe_dump(bcfstats, out_handle, default_flow_style=False, allow_unicode=False)
-        if "vrn_file" not in data or not bed_file:
-            return None
-
-        in_vcf = data['vrn_file']
-        cleaned_bed = clean_file(bed_file, data)
-        if file_exists(qc_file):
-            return qc_file
-        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-        ref_file = dd.get_ref_file(data)
-        assert ref_file, "Need the reference genome fasta file."
-        bed_file = dd.get_variant_regions(data)
-        in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-        num_cores = dd.get_num_cores(data)
-        broad_runner = broad.runner_from_config_safe(data["config"])
-        if in_bam and broad_runner and broad_runner.has_gatk():
-            if not file_exists(parse_file):
-                with file_transaction(data, cg_file) as tx_out:
-                    params = ["-T", "VariantAnnotator",
-                              "-R", ref_file,
-                              "-L", cleaned_bed,
-                              "-I", in_bam,
-                              "-A", "GCContent",
-                              "-A", "Coverage",
-                              "--variant", in_vcf,
-                              "--out", tx_out]
-                    broad_runner.run_gatk(params)
-                cg_file = vcfutils.bgzip_and_index(cg_file, data["config"])
-
-            if not file_exists(parse_file):
-                with file_transaction(data, parse_file) as out_tx:
-                    with open(out_tx, 'w') as out_handle:
-                        print >>out_handle, "CG\tdepth\tsample"
-                    cmd = ("bcftools query -s {sample} -f '[%GC][\\t%DP][\\t%SAMPLE]\\n' -R "
-                            "{bed_file} {cg_file} >> {out_tx}")
-                    do.run(cmd.format(**locals()),
-                            "Calculating GC content and depth for %s" % in_vcf)
-                    logger.debug('parsing coverage: %s' % sample)
-            if not file_exists(qc_file):
-                # This files will be copied to final
-                _summary_variants(parse_file, qc_file, data=data)
-            if file_exists(qc_file) and file_exists(parse_file):
-                remove_plus(cg_file)
-
 def regions_coverage(data, bed_file, bam_file, target_name, depth_thresholds=None):
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, target_name + "_regions_depth.bed")
@@ -479,50 +319,6 @@ def regions_coverage(data, bed_file, bam_file, target_name, depth_thresholds=Non
         cmdl += " -o " + tx_out_file
         message = "Calculating regions coverage of {target_name} in {bam_file}"
         do.run(cmdl, message.format(**locals()))
-    return out_file
-
-def priority_coverage(data, out_dir):
-    from bcbio.structural import prioritize
-    bed_file = dd.get_svprioritize(data)
-    if not bed_file or not file_exists(bed_file) or prioritize.is_gene_list(bed_file):
-        return data
-
-    work_dir = safe_makedir(out_dir)
-    sample = dd.get_sample_name(data)
-    cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
-    out_file = os.path.join(work_dir, sample + "_priority_depth.bed")
-    in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    if utils.file_uptodate(out_file, cleaned_bed) and utils.file_uptodate(out_file, in_bam):
-        return out_file
-    with file_transaction(data, out_file) as tx_out_file:
-        cmdl = sambamba.make_command(data, "depth base", in_bam, cleaned_bed)
-        parse_cmd = "awk '{print $1\"\t\"$2\"\t\"$2\"\t\"$3\"\t\"$10}' | sed '1d'"
-        cmdl += " | {parse_cmd} > {tx_out_file}"
-        message = "Calculating base coverage of {bed_file} in {in_bam}"
-        do.run(cmdl.format(**locals()), message.format(**locals()))
-    return out_file
-
-def priority_total_coverage(data, out_dir):
-    """
-    calculate coverage at 10 depth intervals in the priority regions
-    """
-    from bcbio.structural import prioritize
-    bed_file = dd.get_svprioritize(data)
-    if not bed_file and not file_exists(bed_file) or prioritize.is_gene_list(bed_file):
-        return {}
-    in_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    cleaned_bed = clean_file(bed_file, data, prefix="svprioritize-")
-    work_dir = safe_makedir(out_dir)
-    sample = dd.get_sample_name(data)
-    out_file = os.path.join(work_dir, sample + "_priority_total_coverage.bed")
-    if utils.file_uptodate(out_file, cleaned_bed) and utils.file_uptodate(out_file, in_bam):
-        return out_file
-    cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed,
-                                 depth_thresholds=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-    with file_transaction(data, out_file) as tx_out_file:
-        message = "Calculating region coverage of {bed_file} in {in_bam}"
-        do.run(cmdl + " -o " + tx_out_file, message.format(**locals()))
-    logger.debug("Saved svprioritize coverage into " + out_file)
     return out_file
 
 def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):

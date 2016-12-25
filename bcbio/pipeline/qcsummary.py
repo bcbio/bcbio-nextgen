@@ -100,7 +100,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi, variant
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -109,7 +109,7 @@ def _run_qc_tools(bam_file, data):
              "gemini": gemini.run,
              "qsignature": qsignature.run,
              "coverage": _run_coverage_qc,
-             "variants": _run_variants_qc,
+             "variants": variant.run,
              "kraken": kraken.run,
              "picard": picard.run,
              "umi": umi.run}
@@ -122,15 +122,16 @@ def _run_qc_tools(bam_file, data):
         out = qc_fn(bam_file, data, cur_qc_dir)
         qc_files = None
         if out and isinstance(out, dict):
-            metrics.update(out)
+            if "base" in out:
+                qc_files = out
+            else:
+                metrics.update(out)
         elif out and isinstance(out, basestring) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
         if qc_files:
             qc_out[program_name] = qc_files
-
-    bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
     metrics["Name"] = dd.get_sample_name(data)
     metrics["Quality format"] = dd.get_quality_format(data).lower()
@@ -344,23 +345,10 @@ def _run_coverage_qc(bam_file, data, out_dir):
     avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
     out['Avg_coverage'] = avg_depth
 
-    priority = cov.priority_coverage(data, out_dir)
-    cov.priority_total_coverage(data, out_dir)
     region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
-        extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-
-    # Re-enable with annotations from internally installed
-    # problem region directory
-    # if priority:
-    #    annotated = cov.decorate_problem_regions(
-    #        priority, problem_regions, data)
+                                                              extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
 
     return out
-
-def _run_variants_qc(bam_file, data, out_dir):
-    """Run variants QC analysis"""
-    cov.variants(data, out_dir)
-    return None
 
 # ## Galaxy functionality
 

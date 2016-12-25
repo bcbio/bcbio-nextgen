@@ -42,6 +42,11 @@ def summary(*samples):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
+            # Skip bcftools stats until we clean up presentation in MultiQC output:
+            # - Avoid creating a new row in General Stats
+            # - Add plot of depth metrics to replace GATK based depth metrics calculation
+            if program in ["variants"]:
+                pfiles = [x for x in pfiles if x.find("bcfstats") == -1]
             file_fapths.extend(pfiles)
     file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
     # XXX temporary workaround until we can handle larger inputs through MultiQC
@@ -56,7 +61,7 @@ def summary(*samples):
             file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
             file_fapths = [f for f in file_fapths if f]
             if file_fapths:
-                input_list_file = _create_list_file(file_fapths)
+                input_list_file = _create_list_file(file_fapths, out_dir)
                 cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
@@ -78,8 +83,8 @@ def summary(*samples):
         out.append(data)
     return [[fpath] for fpath in out]
 
-def _create_list_file(dirs):
-    out_file = "list_files.txt"
+def _create_list_file(dirs, out_dir):
+    out_file = os.path.join(out_dir, "list_files.txt")
     with open(out_file, "w") as f:
         f.write('\n'.join(dirs))
     return out_file
@@ -87,8 +92,7 @@ def _create_list_file(dirs):
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""
     if utils.file_exists(path):
-        if path.find("bcfstats") == -1:
-            return path
+        return path
 
 # ## report and coverage
 
