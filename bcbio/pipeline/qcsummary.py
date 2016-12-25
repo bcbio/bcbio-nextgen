@@ -10,7 +10,6 @@ from datetime import datetime
 
 import toolz as tz
 from bcbio.bam import sambamba
-
 from bcbio.variation.bedutils import clean_file
 from bcbio import bam, utils
 from bcbio.log import logger
@@ -302,20 +301,29 @@ def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
     out = dict()
 
-    total_reads = sambamba.number_of_reads(data, bam_file)
-    out['Total_reads'] = total_reads
-    mapped = sambamba.number_of_mapped_reads(data, bam_file)
-    out['Mapped_reads'] = mapped
-    if total_reads:
-        out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
+    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
+    from bcbio.qc import samtools
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+
+    if "Total_reads" not in samtools_stats:
+        return
+    out["Total_reads"] = total_reads = samtools_stats["Total_reads"]
+    if not total_reads:
+        return
+
+    if "Mapped_reads" not in samtools_stats or "Mapped_both_mates" not in samtools_stats:
+        return
+    out["Mapped_reads"] = mapped = samtools_stats["Mapped_both_mates"]
+    out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
     if not mapped:
         return out
 
-    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-    out['Mapped_unique_reads'] = mapped
-    mapped_dups = mapped - mapped_unique
-    out['Duplicates'] = mapped_dups
-    out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+    if "Duplicates" in samtools_stats:
+        raw_mapped = samtools_stats["Mapped_reads"]
+        out['Duplicates'] = dups = samtools_stats["Duplicates"]
+        out['Duplicates_pct'] = 100.0 * dups / raw_mapped
+
+    out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
 
     if dd.get_coverage(data):
         cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
