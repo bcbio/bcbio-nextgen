@@ -293,7 +293,7 @@ def fastrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
 
 def singlecellrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
-    with prun.start(_wres(parallel, ["samtools"]), samples, config,
+    with prun.start(_wres(parallel, ["samtools", "rapmap"]), samples, config,
                     dirs, "singlecell-rnaseq") as run_parallel:
         with profile.report("singlecell-rnaseq", dirs):
             samples = rnaseq.singlecell_rnaseq(samples, run_parallel)
