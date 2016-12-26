@@ -42,11 +42,6 @@ def summary(*samples):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
-            # Skip bcftools stats until we clean up presentation in MultiQC output:
-            # - Avoid creating a new row in General Stats
-            # - Add plot of depth metrics to replace GATK based depth metrics calculation
-            if program in ["variants"]:
-                pfiles = [x for x in pfiles if x.find("bcfstats") == -1]
             file_fapths.extend(pfiles)
     file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
     # XXX temporary workaround until we can handle larger inputs through MultiQC
@@ -96,10 +91,10 @@ def _check_multiqc_input(path):
 
 # ## report and coverage
 
-def _is_good_file_for_multiqc(fapth):
+def _is_good_file_for_multiqc(fpath):
     """Returns False if the file is binary or image."""
     # Use mimetypes to exclude binary files where possible
-    (ftype, encoding) = mimetypes.guess_type(fapth)
+    (ftype, encoding) = mimetypes.guess_type(fpath)
     if encoding is not None:
         return False
     if ftype is not None and ftype.startswith('image'):

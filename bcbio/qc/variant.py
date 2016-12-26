@@ -1,6 +1,10 @@
 """Variant quality control summaries
+
+TODO:
+ - Add plot of depth metrics to replace GATK based depth metrics calculation
 """
 import os
+import shutil
 
 import toolz as tz
 
@@ -13,45 +17,64 @@ from bcbio.provenance import do
 def run(bam_file, data, out_dir):
     """Prepare variants QC analysis: bcftools stats and snpEff output.
     """
-    stats_file = bcftools_stats(data, out_dir)
-    if stats_file:
-        return {"base": stats_file, "secondary": []}
+    out = []
+    for stat_fn in [_bcftools_stats, _snpeff_stats]:
+        out_file = stat_fn(data, out_dir)
+        if out_file:
+            out.append(out_file)
+    if out:
+        return {"base": out[0], "secondary": out[1:]}
 
-def _get_variant_callers(data):
-    """Use first caller if ensemble is not active"""
+def _snpeff_stats(data, out_dir):
+    vcinfo = _get_active_vcinfo(data)
+    if vcinfo and vcinfo.get("vrn_stats"):
+        effects_csv = tz.get_in(["vrn_stats", "effects-stats-csv"], vcinfo)
+        if effects_csv and utils.file_exists(effects_csv):
+            out_dir = utils.safe_makedir(os.path.join(out_dir, "snpeff"))
+            out_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
+            with file_transaction(data, out_file) as tx_out_file:
+                shutil.copy(effects_csv, tx_out_file)
+            return out_file
+
+def _get_active_vcinfo(data):
+    """Use first caller if ensemble is not active
+    """
     callers = dd.get_variantcaller(data)
     if not callers:
         return None
     if isinstance(callers, basestring):
         callers = [callers]
-    active_callers = [c.get("variantcaller") for c in data.get("variants", [{}])]
-    active_vcf = [c.get("vrn_file") for c in data.get("variants", [{}])]
-    active_germline = [c.get("germline") for c in data.get("variants", [{}])]
-    vcf = dict(zip(active_callers, active_vcf))
-    germline = dict(zip(active_callers, active_germline))
-    if "ensemble" in active_callers:
-        vcf_fn = vcf["ensemble"]
-    else:
-        vcf_fn = vcf[callers[0]]
-    if not vcf_fn:
-        vcf_fn = germline[callers[0]]
-    return vcf_fn
+    if "variants" in data:
+        for v in data["variants"]:
+            if v.get("variantcaller") == "ensemble":
+                return v
+        return data["variants"][0]
 
-def bcftools_stats(data, out_dir):
+def _bcftools_stats(data, out_dir):
     """Run bcftools stats.
     """
-    vcf_file = _get_variant_callers(data)
-    if vcf_file:
+    vcinfo = _get_active_vcinfo(data)
+    if vcinfo:
+        out_dir = utils.safe_makedir(os.path.join(out_dir, "bcftools_stats"))
+        vcf_file = vcinfo["vrn_file"]
         if tz.get_in(("config", "algorithm", "jointcaller"), data):
             opts = ""
         else:
             opts = "-f PASS"
         name = dd.get_sample_name(data)
-        stem = os.path.join(out_dir, os.path.basename(utils.splitext_plus(vcf_file)[0]))
-        out_file = os.path.join(out_dir, "%s-%s-bcfstats.tsv" % (stem, name))
+        out_file = os.path.join(out_dir, "%s.txt" % name)
         bcftools = config_utils.get_program("bcftools", data["config"])
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                cmd = ("{bcftools} stats -s {name} {opts} {vcf_file} > {tx_out_file}")
+                orig_out_file = os.path.join(os.path.dirname(tx_out_file), "orig_%s" % os.path.basename(tx_out_file))
+                cmd = ("{bcftools} stats -s {name} {opts} {vcf_file} > {orig_out_file}")
                 do.run(cmd.format(**locals()), "bcftools stats %s" % dd.get_sample_name(data))
+                with open(orig_out_file) as in_handle:
+                    with open(tx_out_file, "w") as out_handle:
+                        for line in in_handle:
+                            if line.startswith("ID\t"):
+                                parts = line.split("\t")
+                                parts[-1] = "%s\n" % name
+                                line = "\t".join(parts)
+                            out_handle.write(line)
         return out_file
