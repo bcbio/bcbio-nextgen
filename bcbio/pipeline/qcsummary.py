@@ -10,7 +10,6 @@ from datetime import datetime
 
 import toolz as tz
 from bcbio.bam import sambamba
-
 from bcbio.variation.bedutils import clean_file
 from bcbio import bam, utils
 from bcbio.log import logger
@@ -302,20 +301,28 @@ def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
     out = dict()
 
-    total_reads = sambamba.number_of_reads(data, bam_file)
-    out['Total_reads'] = total_reads
-    mapped = sambamba.number_of_mapped_reads(data, bam_file)
-    out['Mapped_reads'] = mapped
-    if total_reads:
-        out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
+    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
+    from bcbio.qc import samtools
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+
+    if "Total_reads" not in samtools_stats:
+        return
+    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
+    if not total_reads:
+        return
+
+    if "Mapped_reads_raw" not in samtools_stats or "Mapped_reads" not in samtools_stats:
+        return
+    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
+    out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
     if not mapped:
         return out
 
-    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-    out['Mapped_unique_reads'] = mapped
-    mapped_dups = mapped - mapped_unique
-    out['Duplicates'] = mapped_dups
-    out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+    if "Duplicates" in samtools_stats:
+        out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
+        out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
+
+    out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
 
     if dd.get_coverage(data):
         cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
@@ -335,10 +342,13 @@ def _run_coverage_qc(bam_file, data, out_dir):
             out["Ontarget_unique_reads"] = ontarget
             out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
             out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-            ontarget_padded = sambamba.number_of_mapped_reads(
-                data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
-            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+            if dd.get_coverage_interval(data) != "genome":
+                # Skip padded calculation for WGS even if the "coverage" file is specified
+                # the padded statistic makes only sense for exomes and panels
+                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+                ontarget_padded = sambamba.number_of_mapped_reads(
+                    data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
+                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
