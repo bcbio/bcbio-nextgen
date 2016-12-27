@@ -148,7 +148,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
         if parallel in "multi-parallel" or len(inp["id"].split("/")) > 1:
-            scatter_inputs.append("%s/%s" % (name, step_inp["id"]))
+            scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,
            "in": sinputs,
