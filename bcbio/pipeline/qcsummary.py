@@ -322,8 +322,6 @@ def _run_coverage_qc(bam_file, data, out_dir):
         out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
         out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
 
-    out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-
     if dd.get_coverage(data):
         cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
         merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
@@ -334,6 +332,12 @@ def _run_coverage_qc(bam_file, data, out_dir):
     else:
         merged_bed_file = None
         target_name = "genome"
+
+    # Whole genome runs do not need detailed on-target calculations, use total mapped
+    if dd.get_coverage_interval(data) == "genome":
+        mapped_unique = mapped
+    else:
+        out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
 
     if merged_bed_file:
         ontarget = sambamba.number_of_mapped_reads(
