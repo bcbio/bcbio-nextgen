@@ -321,6 +321,8 @@ def _run_coverage_qc(bam_file, data, out_dir):
     if "Duplicates" in samtools_stats:
         out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
         out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
+    else:
+        dups = 0
 
     if dd.get_coverage(data):
         cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
@@ -333,9 +335,9 @@ def _run_coverage_qc(bam_file, data, out_dir):
         merged_bed_file = None
         target_name = "genome"
 
-    # Whole genome runs do not need detailed on-target calculations, use total mapped
+    # Whole genome runs do not need detailed on-target calculations, use total unique mapped
     if dd.get_coverage_interval(data) == "genome":
-        mapped_unique = mapped
+        mapped_unique = mapped - dups
     else:
         out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
 
