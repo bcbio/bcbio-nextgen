@@ -7,6 +7,9 @@
 - Generalize use of working directories to support runs on S3 mounted
   filesystems. Ensures all work takes place inside transactional directories.
   Thanks to Tetiana Khotiainsteva and Sven-Eric Schelhorn.
+- Provide separate germline calling for somatic tumor/normal pairs. Supplements
+  somatic calls with standard germline calls on normal samples, including
+  ensemble and SV calling.
 - Support FreeBayes 1.1.0 for improved memory usage and 3-4x speedup.
   Will default to 1.1.0 at next release. Validation work:
   https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2016-11-21-giab-hg38-freebayes.md

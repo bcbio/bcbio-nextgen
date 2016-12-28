@@ -425,6 +425,21 @@ Alignment
   run. ``tools_off: [upload_alignment]`` may also be useful in conjunction with
   this. [false, true]
 
+Alignment postprocessing
+========================
+
+-  ``mark_duplicates`` Identify and remove variants [true, false]
+   If true, will perform streaming duplicate marking with
+   `biobambam's bammarkduplicates or bamsormadup
+   <https://github.com/gt1/biobambam>`_.
+   Uses `samblaster <https://github.com/GregoryFaust/samblaster>`_ as an
+   alternative if you have paired reads and specifying ``lumpy`` as an ``svcaller``.
+-  ``recalibrate`` Perform GATK's base quality score recalibration on the
+   aligned BAM file. Defaults to false, no recalibration. [false, gatk]
+-  ``realign`` Perform GATK's realignment around indels on the aligned BAM
+   file. Defaults to no realignment since realigning callers like FreeBayes and
+   GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
+
 Coverage information
 ====================
 - ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
@@ -484,21 +499,21 @@ Variant calling
 
     - Paired (typically somatic, tumor-normal) variant calling is currently
       supported by vardict, freebayes, mutect2, mutect (see disclaimer below),
-      scalpel (indels only) and varscan. See ``phenotype`` below for how to pair tumor
-      and normal samples.
-    - Selecting mutect (SNP caller) can also be combined by indels from scalpel or sid and
-      combine the output. Mutect operates in both tumor-normal and tumor-only modes.
+      scalpel (indels only) and varscan. See the pipeline documentation on
+      :ref:`cancer-calling` for details on pairing tumor and normal samples.
+    - You can generate both somatic and germline calls for paired tumor-normal
+      samples using different sets of callers. The pipeline documentation on
+      calling :ref:`somatic-w-germline-variants` details how to do this.
+    - mutect, a SNP-only caller, can be combined with indels from scalpel or
+      sid. Mutect operates in both tumor-normal and tumor-only modes.
       In tumor-only mode the indels from scalpel will reflect all indels in the sample,
       as there is currently no way of separating the germline from somatic indels in
       tumor-only mode.
--  ``mark_duplicates`` Identify and remove variants [true, false]
-   If true, will perform streaming duplicate marking with `samblaster`_ for
-   paired reads and `biobambam's bammarkduplicates`_ for single end reads.
--  ``recalibrate`` Perform base quality score recalibration on the
-   aligned BAM file. Defaults to false, no recalibration. [false, gatk]
--  ``realign`` Perform realignment around indels on the aligned BAM
-   file. Defaults to no realignment since realigning callers like FreeBayes and
-   GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
+- ``indelcaller`` For the MuTect SNP only variant caller it is possible to add
+   calls from an indelcaller such as scalpel, pindel and somatic indel detector
+   (for Appistry MuTect users only). Currently an experimental option that adds
+   these indel calls to MuTect's SNP-only output. Only one caller supported.
+   Omit to ignore. [scalpel, pindel, sid, false]
 - ``effects`` Method used to calculate expected variant effects. Defaults to
   `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
   with support for `dbNSFP`_ annotation, when downloaded using
@@ -515,11 +530,6 @@ Variant calling
    in repetitive regions. Removal can help facilitate comparisons between
    methods and reduce false positives if you don't need calls in LCRs for your
    biological analysis. [false, true]
-- ``indelcaller`` For the MuTect SNP only variant caller it is possible to add
-   calls from an indelcaller such as scalpel, pindel and somatic indel detector
-   (for Appistry MuTect users only). Currently an experimental option that adds
-   these indel calls to MuTect's SNP-only output. Only one caller supported.
-   Omit to ignore. [scalpel, pindel, sid, false]
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
    match with appropriate ``variantcaller``. Joint calling is only needed for
@@ -562,8 +572,6 @@ Variant calling
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
 .. _dbNSFP: https://sites.google.com/site/jpopgen/dbNSFP
-.. _samblaster: https://github.com/GregoryFaust/samblaster
-.. _biobambam's bammarkduplicates: https://github.com/gt1/biobambam
 .. _Heng Li's variant artifacts paper: http://arxiv.org/abs/1404.0929
 
 .. _config-cancer:
@@ -760,7 +768,7 @@ ChIP sequencing
 
 - ``peakcaller`` bcbio only accepts ``[macs2]``
 - ``aligner`` Currently ``bowtie2`` is the only one tested
-- The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
+- The ```` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
 - ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Paramters will change depending on the option to get the best possible results. Only macs2 supported for now.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::

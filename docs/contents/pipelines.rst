@@ -138,6 +138,8 @@ all merged sample calls. bcbio has two methods to call samples together:
       metadata:
         batch: Batch1
 
+.. _cancer-calling:
+
 Cancer variant calling
 ~~~~~~~~~~~~~~~~~~~~~~
 bcbio supports somatic cancer calling with tumor and optionally matched normal pairs using
@@ -185,6 +187,47 @@ heterogeneity and structural variability that define cancer genomes.
 
 .. _full evaluation of cancer calling: http://bcb.io/2015/03/05/cancerval/
 .. _synthetic dataset 3 from the ICGC-TCGA DREAM challenge: https://www.synapse.org/#!Synapse:syn312572/wiki/62018
+
+.. _somatic-w-germline-variants:
+
+Somatic with germline variants
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For tumor/normal somatic samples, bcbio can call both somatic (tumor-specific)
+and germline (pre-existing) variants. The typical outputs of
+:ref:`cancer-calling` are likely somatic variants acquired by the cancer, but
+pre-existing germline risk variants are often also diagnostic.
+
+bcbio enables calling both somatic and germline variants within a single
+pipeline run. Since the algorithms for calling both are different, you specify
+which callers to use for each step in the :ref:`variant-config` configuration::
+
+    description: your-normal
+    variantcaller:
+       somatic: vardict
+       germline: freebayes
+
+bcbio does a single alignment for the normal sample, then splits at the variant
+calling steps. In this example, you'd get FreeBayes germline calls labeled as
+``your-normal-germline`` and VarDict somatic calls for the tumor sample linked
+to this normal.
+
+Germline calling supports multiple callers, and other configuration options like
+ensemble and structural variant calling inherit from the remainder configuration. For
+example, to use 3 callers for somatic and germline calling, create ensemble calls
+for both and include germline and somatic events from two structural variant
+callers::
+
+    variantcaller:
+       somatic: [vardict, varscan, mutect2]
+       germline: [freebayes, gatk-haplotype, platypue]
+    ensemble:
+       numpass: 2
+    svcaller: [manta, cnvkit]
+
+Tumor-only inputs mix somatic and germline variants, making it difficult to
+separate events. For tumor-only cases we suggest running standard
+:ref:`cancer-calling`. bcbio will attempt to distinguish somatic and germline
+mutations using the presence of variants in population databases.
 
 .. _svs-pipeline:
 
