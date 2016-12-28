@@ -44,11 +44,15 @@ def _get_active_vcinfo(data):
         return None
     if isinstance(callers, basestring):
         callers = [callers]
+    active_vs = []
     if "variants" in data:
         for v in data["variants"]:
             if v.get("variantcaller") == "ensemble":
                 return v
-        return data["variants"][0]
+            if v.get("vrn_file"):
+                active_vs.append(v)
+        if len(active_vs) > 0:
+            return active_vs[0]
 
 def _bcftools_stats(data, out_dir):
     """Run bcftools stats.

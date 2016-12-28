@@ -12,7 +12,8 @@ from bcbio.cwl import cwlutils
 from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
-from bcbio.variation import gatk, gatkfilter, multi, phasing, ploidy, vcfutils, vfilter
+from bcbio.variation import (gatk, gatkfilter, germline, multi,
+                             phasing, ploidy, vcfutils, vfilter)
 
 # ## Variant filtration -- shared functionality
 
@@ -154,9 +155,11 @@ def _collapse_by_bam_variantcaller(samples):
 def _dup_samples_by_variantcaller(samples, require_bam=True):
     """Prepare samples by variant callers, duplicating any with multiple callers.
     """
+    samples = [utils.to_single_data(x) for x in samples]
+    samples = germline.split_somatic(samples)
     to_process = []
     extras = []
-    for data in [utils.to_single_data(x) for x in samples]:
+    for data in samples:
         added = False
         for add in handle_multiple_callers(data, "variantcaller", require_bam=require_bam):
             added = True
