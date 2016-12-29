@@ -83,17 +83,17 @@ uses test data. This will run in under 5 minutes on a local machine and
 doesn't require a bcbio installation if you have Docker available on
 your machine:
 
-1. Download and unpack the test data::
+1. Download and unpack the `test repository <https://github.com/bcbio/test_bcbio_cwl>`_::
 
-     wget https://s3.amazonaws.com/bcbio/cwl/test_bcbio_cwl.tar.gz
+     wget -O test_bcbio_cwl.tar.gz https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz
      tar -xzvpf test_bcbio_cwl.tar.gz
-     cd test_bcbio_cwl
+     cd test_bcbio_cwl-master
 
 2. Run the analysis using ``cwltool``. If you have Docker available on your
    machine, cwltool will download the ``bcbio/bcbio`` container and you don't
    need to install anything else to get started. If you have an old version of
    the container you want to update to the latest with ``docker pull
-   bcbio/bcbio``. You can use the ``run_cwl.sh`` script or run directly from the
+   bcbio/bcbio``. You can use the ``run_cwltool.sh`` script or run directly from the
    command line::
 
      bcbio_vm.py cwlrun cwltool run_info-cwl-workflow
