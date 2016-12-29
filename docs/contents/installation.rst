@@ -166,6 +166,9 @@ other analyses. The available targets are:
   copy number changes in whole genome cancer samples.
 - ``kraken`` Database for `Kraken <https://ccb.jhu.edu/software/kraken/>`_,
   optionally used for contamination detection.
+- ``ericscript`` Database for `EricScript <https://sites.google.com/site/bioericscript/>`_,
+  which is can be used for gene fusion detection. The build for hg38 and Ensembl
+  version 84 is installed.
 
 .. _toolplus-install:
 
@@ -218,6 +221,20 @@ so your input jar needs to include the version in the name.
 
 .. _FreeBayes and GATK comparison: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _GATK download: http://www.broadinstitute.org/gatk/download
+
+EricScript
+~~~~~~~~~~~~~~~~~~~~~~~
+To install the latest version of `EricScript <https://sites.google.com/site/bioericscript/>`_, run::
+
+    bcbio_nextgen.py upgrade --tools --toolplus ericscript
+
+This command installs EricScript in a separate conda environment to avoid
+dependency conflicts with bcbio. The prefix to the conda environment is written
+into the ``bcbio_system.yaml``.
+
+To run EricScript, you also need to download the reference data via ``--datatarget``
+command line argument. See the section on :ref:`datatarget-install` for more
+details.
 
 System requirements
 ===================
