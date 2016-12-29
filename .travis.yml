@@ -37,7 +37,6 @@ install:
   - pip install cwl_runner
   # Install dev requirements and build a container for testing
   - pip install -r requirements_dev.txt
-  - docker build --file Dockerfile_dev -t bcbio/bcbio:dev .
 
 script:
   # -- Prepare variant docker image
