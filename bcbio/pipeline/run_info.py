@@ -221,7 +221,7 @@ def _fill_capture_regions(data):
     ref_file = dd.get_ref_file(data)
     for target in ["variant_regions", "sv_regions", "coverage"]:
         val = tz.get_in(["config", "algorithm", target], data)
-        if val and not os.path.exists(val):
+        if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_vals = []
             # Check prioritize directory
             for ext in [".bed", ".bed.gz"]:
@@ -241,7 +241,7 @@ def _fill_prioritization_targets(data):
     ref_file = dd.get_ref_file(data)
     for target in ["svprioritize", "coverage"]:
         val = tz.get_in(["config", "algorithm", target], data)
-        if val and not os.path.exists(val):
+        if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_vals = []
             # Check prioritize directory
             for ext in [".bed", ".bed.gz"]:
@@ -304,8 +304,9 @@ def _clean_algorithm(data):
             if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
                 val = [val]
             # check for cases like [false] or [None]
-            if len(val) == 1 and not val[0] or val[0] == "None":
-                val = False
+            if isinstance(val, (list, tuple)):
+                if len(val) == 1 and not val[0] or val[0] == "None":
+                    val = False
             data["algorithm"][key] = val
     return data
 
@@ -570,12 +571,15 @@ def _check_variantcaller(item):
     """
     allowed = set(genotype.get_variantcallers().keys() + [None, False])
     vcs = item["algorithm"].get("variantcaller")
-    if not isinstance(vcs, (tuple, list)):
-        vcs = [vcs]
-    problem = [x for x in vcs if x not in allowed]
-    if len(problem) > 0:
-        raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
-                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+    if not isinstance(vcs, dict):
+        vcs = {"variantcaller": vcs}
+    for vc_set in vcs.values():
+        if not isinstance(vc_set, (tuple, list)):
+            vc_set = [vc_set]
+        problem = [x for x in vc_set if x not in allowed]
+        if len(problem) > 0:
+            raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
+                             "Supported options: %s\n" % (problem, sorted(list(allowed))))
 
 def _check_jointcaller(data):
     """Ensure specified jointcaller is valid.
@@ -826,7 +830,7 @@ def _add_algorithm_defaults(algorithm):
             algorithm[k] = v
     for k, v in algorithm.items():
         if k in convert_to_list:
-            if v and not isinstance(v, (list, tuple)):
+            if v and not isinstance(v, (list, tuple)) and not isinstance(v, dict):
                 algorithm[k] = [v]
             elif v is None:
                 algorithm[k] = []

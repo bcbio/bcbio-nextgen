@@ -25,7 +25,7 @@ def from_world(world, run_info_file, integrations=None):
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
     prep_cwl(samples, workflow_fn, out_dir, out_file, integrations)
 
-def _cwl_workflow_template(inputs):
+def _cwl_workflow_template(inputs, top_level=False):
     """Retrieve CWL inputs shared amongst different workflows.
     """
     ready_inputs = []
@@ -33,6 +33,8 @@ def _cwl_workflow_template(inputs):
         cur_inp = copy.deepcopy(inp)
         for attr in ["source", "valueFrom"]:
             cur_inp.pop(attr, None)
+        if top_level:
+            cur_inp = workflow._flatten_nested_input(cur_inp)
         ready_inputs.append(cur_inp)
     return {"class": "Workflow",
             "cwlVersion": "v1.0",
@@ -148,7 +150,7 @@ def _step_template(name, run_file, inputs, outputs, parallel):
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
         if parallel in "multi-parallel" or len(inp["id"].split("/")) > 1:
-            scatter_inputs.append("%s/%s" % (name, step_inp["id"]))
+            scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,
            "in": sinputs,

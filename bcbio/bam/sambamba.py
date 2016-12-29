@@ -8,6 +8,12 @@ from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 
 
+mapped_filter_query = (
+    "not unmapped and "
+    "not mate_is_unmapped and "
+    "not secondary_alignment and "
+    "not failed_quality_control")
+
 def make_command(data, cmd, bam_file, bed_file=None,
                  depth_thresholds=None, max_cov=None, query=None, multicore=True):
     sambamba = config_utils.get_program("sambamba", data["config"], default="sambamba")
@@ -16,7 +22,7 @@ def make_command(data, cmd, bam_file, bed_file=None,
     thresholds = "".join([" -T" + str(d) for d in (depth_thresholds or [])])
     maxcov = (" -C " + str(max_cov)) if max_cov else ""
     if query is None:
-        query = "not failed_quality_control and not duplicate and not unmapped"
+        query = mapped_filter_query + " and not duplicate"
     return ("{sambamba} {cmd} -t {num_cores} {bam_file} "
             "{target} {thresholds} {maxcov} -F \"{query}\"").format(**locals())
 
@@ -31,7 +37,7 @@ def index(data, bam_fpath):
     return indexed_bam
 
 def work_dir(data):
-    return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "sambamba", dd.get_sample_name(data)))
+    return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data), "sambamba"))
 
 def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_name=None):
     if not keep_dups:
@@ -56,29 +62,8 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
         return int(f.read().strip())
 
 def number_of_reads(data, bam_file, keep_dups=True):
-    # use idxstats if using an indexed lookup
-    if keep_dups:
-        total = 0
-        for c in bam.idxstats(bam_file, data):
-            total += c.aligned
-            total += c.unaligned
-        return total
-    else:
-        return _count_in_bam(data, bam_file, '', keep_dups)
+    return _count_in_bam(data, bam_file, "not secondary_alignment", keep_dups)
 
 def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target_name=None):
-    # use idxstats if using an indexed lookup
-    if not bed_file and keep_dups:
-        total = 0
-        for c in bam.idxstats(bam_file, data):
-            total += c.aligned
-        return total
-    else:
-        return _count_in_bam(data, bam_file, 'not unmapped',
-            keep_dups=keep_dups, bed_file=bed_file, target_name=target_name)
-
-def number_of_properly_paired_reads(data, bam_file, keep_dups=True):
-    return _count_in_bam(data, bam_file, 'proper_pair', keep_dups=keep_dups)
-
-def number_of_dup_reads(data, bam_file):
-    return _count_in_bam(data, bam_file, 'not unmapped and duplicate')
+    return _count_in_bam(data, bam_file, mapped_filter_query,
+                         keep_dups=keep_dups, bed_file=bed_file, target_name=target_name)

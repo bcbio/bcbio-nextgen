@@ -32,6 +32,27 @@ def is_paired_analysis(align_bams, items):
     """
     return get_paired_bams(align_bams, items) is not None
 
+
+def somatic_batches(items):
+    """Group items into somatic calling batches (tumor-only or tumor/normal).
+
+    Returns batches, where a data item may be in pairs, and somatic and non_somatic
+    (which are the original list of items).
+    """
+    non_somatic = []
+    somatic = []
+    data_by_batches = defaultdict(list)
+    for data in items:
+        if not get_paired_phenotype(data):
+            non_somatic.append(data)
+        else:
+            somatic.append(data)
+            batches = dd.get_batches(data)
+            if batches:
+                for batch in batches:
+                    data_by_batches[batch].append(data)
+    return data_by_batches.values(), somatic, non_somatic
+
 def get_paired(items):
     return get_paired_bams([dd.get_align_bam(d) for d in items], items)
 
@@ -192,13 +213,16 @@ def select_sample(in_file, sample, out_file, config, filters=None):
     """
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
-            if in_file.endswith(".gz"):
-                bgzip_and_index(in_file, config)
-            bcftools = config_utils.get_program("bcftools", config)
-            output_type = "z" if out_file.endswith(".gz") else "v"
-            filter_str = "-f %s" % filters if filters is not None else ""  # filters could be e.g. 'PASS,.'
-            cmd = "{bcftools} view -O {output_type} {filter_str} {in_file} -s {sample} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Select sample: %s" % sample)
+            if len(get_samples(in_file)) == 1:
+                shutil.copy(in_file, tx_out_file)
+            else:
+                if in_file.endswith(".gz"):
+                    bgzip_and_index(in_file, config)
+                bcftools = config_utils.get_program("bcftools", config)
+                output_type = "z" if out_file.endswith(".gz") else "v"
+                filter_str = "-f %s" % filters if filters is not None else ""  # filters could be e.g. 'PASS,.'
+                cmd = "{bcftools} view -O {output_type} {filter_str} {in_file} -s {sample} > {tx_out_file}"
+                do.run(cmd.format(**locals()), "Select sample: %s" % sample)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
@@ -446,7 +470,6 @@ def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parall
 # ## VCF preparation
 
 def move_vcf(orig_file, new_file):
-
     """Move a VCF file with associated index.
     """
     for ext in ["", ".idx", ".tbi"]:

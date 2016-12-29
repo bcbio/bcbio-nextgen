@@ -238,7 +238,7 @@ def _group_by_batches(samples, check_fn):
     for data in [x[0] for x in samples]:
         if check_fn(data):
             batch = tz.get_in(["metadata", "batch"], data)
-            name = str(data["name"][-1])
+            name = str(dd.get_sample_name(data))
             if batch:
                 out_retrieve.append((str(batch), data))
             else:

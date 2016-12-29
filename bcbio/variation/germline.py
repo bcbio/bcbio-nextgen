@@ -12,20 +12,83 @@ import cyvcf2
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
+def split_somatic(items):
+    """Split somatic batches, adding a germline target.
+
+    Enables separate germline calling of samples using shared alignments.
+    """
+    somatic_groups, somatic, non_somatic = vcfutils.somatic_batches(items)
+    # extract germline samples to run from normals in tumor/normal pairs
+    germline_added = set([])
+    germline = []
+    for somatic_group in somatic_groups:
+        paired = vcfutils.get_paired(somatic_group)
+        if paired.normal_data:
+            cur = utils.deepish_copy(paired.normal_data)
+            vc = dd.get_variantcaller(cur)
+            if isinstance(vc, dict) and "germline" in vc:
+                cur["description"] = "%s-germline" % cur["description"]
+                if cur["description"] not in germline_added:
+                    germline_added.add(cur["description"])
+                    cur["rgnames"]["sample"] = cur["description"]
+                    del cur["metadata"]["batch"]
+                    cur["metadata"]["phenotype"] = "germline"
+                    cur = remove_align_qc_tools(cur)
+                    cur["config"]["algorithm"]["variantcaller"] = vc["germline"]
+                    germline.append(cur)
+    # Fix variantcalling specification for only somatic targets
+    somatic_out = []
+    for data in somatic:
+        vc = dd.get_variantcaller(data)
+        if isinstance(vc, dict) and "somatic" in vc:
+            data["config"]["algorithm"]["variantcaller"] = vc["somatic"]
+        somatic_out.append(data)
+    return non_somatic + somatic_out + germline
+
+def remove_align_qc_tools(data):
+    """Remove alignment based QC tools we don't need for data replicates.
+
+    When we do multiple variant calling on a sample file (somatic/germline),
+    avoid re-running QC.
+    """
+    align_qc = set(["qsignature", "coverage", "picard", "samtools", "fastqc"])
+    data["config"]["algorithm"]["qc"] = [t for t in dd.get_algorithm_qc(data)
+                                         if t not in align_qc]
+    return data
+
 def extract(data, items):
-    """Extract germline calls for the given sample, if tumor/normal or prioritized.
+    """Extract germline calls for the given sample, if tumor only.
+
+    For germline calling done separately, fix VCF sample naming to match.
     """
     if vcfutils.get_paired_phenotype(data):
-        is_paired = dd.get_batches(data) and len(items) > 1
-        if is_paired:
-            germline_vcf = _extract_germline(data["vrn_file"], data)
-        else:
+        if dd.get_batches(data) and len(items) == 1:
             germline_vcf = _remove_prioritization(data["vrn_file"], data)
-        germline_vcf = vcfutils.bgzip_and_index(germline_vcf, data["config"])
-        data["vrn_file_plus"] = {"germline": germline_vcf}
+            germline_vcf = vcfutils.bgzip_and_index(germline_vcf, data["config"])
+            data["vrn_file_plus"] = {"germline": germline_vcf}
+    elif dd.get_phenotype(data) == "germline":
+        sample_name = dd.get_sample_name(data)
+        vcf_samples = vcfutils.get_samples(data["vrn_file"])
+        if (sample_name.endswith("-germline") and len(vcf_samples) == 1
+              and sample_name.replace("-germline", "") == vcf_samples[0]):
+            data["vrn_file"] = _fix_germline_samplename(data["vrn_file"], sample_name, data)
     return data
+
+def _fix_germline_samplename(in_file, sample_name, data):
+    """Replace germline sample names, originally from normal BAM file.
+    """
+    out_file = "%s-fixnames%s" % utils.splitext_plus(in_file)
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            sample_file = "%s-samples.txt" % utils.splitext_plus(tx_out_file)[0]
+            with open(sample_file, "w") as out_handle:
+                out_handle.write("%s\n" % sample_name)
+            cmd = ("bcftools reheader -s {sample_file} {in_file} -o {tx_out_file}")
+            do.run(cmd.format(**locals()), "Fix germline samplename: %s" % sample_name)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _remove_prioritization(in_file, data):
     """Remove tumor-only prioritization and return non-filtered calls.

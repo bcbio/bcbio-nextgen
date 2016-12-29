@@ -20,7 +20,7 @@ from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
-from bcbio.structural import annotate, regions
+from bcbio.structural import annotate
 from bcbio.variation import bedutils
 
 def summary(*samples):
@@ -32,8 +32,8 @@ def summary(*samples):
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
     file_fapths = []
     opts = ""
-    out_dir = os.path.join(work_dir, "multiqc")
-    out_data = os.path.join(work_dir, "multiqc", "multiqc_data")
+    out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "mulitqc"))
+    out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     samples = _report_summary(samples, os.path.join(out_dir, "report"))
     for data in samples:
@@ -56,7 +56,7 @@ def summary(*samples):
             file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
             file_fapths = [f for f in file_fapths if f]
             if file_fapths:
-                input_list_file = _create_list_file(file_fapths)
+                input_list_file = _create_list_file(file_fapths, out_dir)
                 cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
@@ -78,8 +78,8 @@ def summary(*samples):
         out.append(data)
     return [[fpath] for fpath in out]
 
-def _create_list_file(dirs):
-    out_file = "list_files.txt"
+def _create_list_file(dirs, out_dir):
+    out_file = os.path.join(out_dir, "list_files.txt")
     with open(out_file, "w") as f:
         f.write('\n'.join(dirs))
     return out_file
@@ -87,15 +87,14 @@ def _create_list_file(dirs):
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""
     if utils.file_exists(path):
-        if path.find("bcfstats") == -1:
-            return path
+        return path
 
 # ## report and coverage
 
-def _is_good_file_for_multiqc(fapth):
+def _is_good_file_for_multiqc(fpath):
     """Returns False if the file is binary or image."""
     # Use mimetypes to exclude binary files where possible
-    (ftype, encoding) = mimetypes.guess_type(fapth)
+    (ftype, encoding) = mimetypes.guess_type(fpath)
     if encoding is not None:
         return False
     if ftype is not None and ftype.startswith('image'):

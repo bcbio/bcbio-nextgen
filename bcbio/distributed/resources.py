@@ -5,6 +5,7 @@ programs, then extracts resource requirements from the input bcbio_system file.
 """
 import copy
 import math
+import operator
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
@@ -32,6 +33,8 @@ def _get_resource_programs(progs, algs):
             for alg in algs:
                 callers = alg.get(p)
                 if callers:
+                    if isinstance(callers, dict):
+                        callers = reduce(operator.add, callers.values())
                     if isinstance(callers, (list, tuple)):
                         for x in callers:
                             out.add(x)
@@ -51,6 +54,8 @@ def _parent_prefix(prefix):
         for alg in algs:
             vcs = alg.get("variantcaller")
             if vcs:
+                if isinstance(vcs, dict):
+                    vcs = reduce(operator.add, vcs.values())
                 if not isinstance(vcs, (list, tuple)):
                     vcs = [vcs]
                 return any(vc.startswith(prefix) for vc in vcs if vc)

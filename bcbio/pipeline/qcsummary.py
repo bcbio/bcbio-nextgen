@@ -9,20 +9,37 @@ import yaml
 from datetime import datetime
 
 import toolz as tz
-from bcbio.bam import sambamba
 
-from bcbio.variation.bedutils import clean_file
-from bcbio import bam, utils
+from bcbio import utils
+from bcbio.bam import sambamba
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
-from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
-from bcbio.variation import coverage as cov
+from bcbio.provenance import do
 from bcbio.rnaseq import gtf
+from bcbio.variation import coverage as cov
 from bcbio.variation import bedutils
 
 
 # ## High level functions to generate summary
+
+def split_for_qc(data):
+    """CWL: split an input sample into QC steps for parallel runs.
+    """
+    data = utils.to_single_data(data)
+    to_analyze, extras = _split_samples_by_qc([data])
+    out = []
+    for data in to_analyze:
+        data = utils.to_single_data(data)
+        out.append({"cur_qc": dd.get_algorithm_qc(data)[0]})
+    return out
+
+def qc_to_rec(samples):
+    """CWL: Convert a set of input samples into records for parallelization.
+    """
+    samples = [utils.to_single_data(x) for x in samples]
+    return [[x] for x in cwlutils.samples_to_records(samples)]
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
@@ -100,7 +117,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi
+    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi, variant
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -109,7 +126,7 @@ def _run_qc_tools(bam_file, data):
              "gemini": gemini.run,
              "qsignature": qsignature.run,
              "coverage": _run_coverage_qc,
-             "variants": _run_variants_qc,
+             "variants": variant.run,
              "kraken": kraken.run,
              "picard": picard.run,
              "umi": umi.run}
@@ -122,15 +139,16 @@ def _run_qc_tools(bam_file, data):
         out = qc_fn(bam_file, data, cur_qc_dir)
         qc_files = None
         if out and isinstance(out, dict):
-            metrics.update(out)
+            if "base" in out:
+                qc_files = out
+            else:
+                metrics.update(out)
         elif out and isinstance(out, basestring) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
         if qc_files:
             qc_out[program_name] = qc_files
-
-    bam.remove("%s-downsample%s" % os.path.splitext(bam_file))
 
     metrics["Name"] = dd.get_sample_name(data)
     metrics["Quality format"] = dd.get_quality_format(data).lower()
@@ -301,23 +319,31 @@ def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
     out = dict()
 
-    total_reads = sambamba.number_of_reads(data, bam_file)
-    out['Total_reads'] = total_reads
-    mapped = sambamba.number_of_mapped_reads(data, bam_file)
-    out['Mapped_reads'] = mapped
-    if total_reads:
-        out['Mapped_reads_pct'] = 100.0 * mapped / total_reads
+    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
+    from bcbio.qc import samtools
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+
+    if "Total_reads" not in samtools_stats:
+        return
+    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
+    if not total_reads:
+        return
+
+    if "Mapped_reads_raw" not in samtools_stats or "Mapped_reads" not in samtools_stats:
+        return
+    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
+    out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
     if not mapped:
         return out
 
-    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-    out['Mapped_unique_reads'] = mapped
-    mapped_dups = mapped - mapped_unique
-    out['Duplicates'] = mapped_dups
-    out['Duplicates_pct'] = 100.0 * mapped_dups / mapped
+    if "Duplicates" in samtools_stats:
+        out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
+        out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
+    else:
+        dups = 0
 
     if dd.get_coverage(data):
-        cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+        cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
         merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
@@ -327,6 +353,12 @@ def _run_coverage_qc(bam_file, data, out_dir):
         merged_bed_file = None
         target_name = "genome"
 
+    # Whole genome runs do not need detailed on-target calculations, use total unique mapped
+    if dd.get_coverage_interval(data) == "genome":
+        mapped_unique = mapped - dups
+    else:
+        out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+
     if merged_bed_file:
         ontarget = sambamba.number_of_mapped_reads(
             data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
@@ -334,33 +366,23 @@ def _run_coverage_qc(bam_file, data, out_dir):
             out["Ontarget_unique_reads"] = ontarget
             out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
             out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-            ontarget_padded = sambamba.number_of_mapped_reads(
-                data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
-            out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
+            if dd.get_coverage_interval(data) != "genome":
+                # Skip padded calculation for WGS even if the "coverage" file is specified
+                # the padded statistic makes only sense for exomes and panels
+                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+                ontarget_padded = sambamba.number_of_mapped_reads(
+                    data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
+                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
     avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
     out['Avg_coverage'] = avg_depth
 
-    priority = cov.priority_coverage(data, out_dir)
-    cov.priority_total_coverage(data, out_dir)
     region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
-        extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-
-    # Re-enable with annotations from internally installed
-    # problem region directory
-    # if priority:
-    #    annotated = cov.decorate_problem_regions(
-    #        priority, problem_regions, data)
+                                                              extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
 
     return out
-
-def _run_variants_qc(bam_file, data, out_dir):
-    """Run variants QC analysis"""
-    cov.variants(data, out_dir)
-    return None
 
 # ## Galaxy functionality
 
