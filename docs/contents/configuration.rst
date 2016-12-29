@@ -695,8 +695,10 @@ Structural variant calling
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true]. This
   option is deprecated in favor of ``fusion_caller``.
-- ``fusion_caller`` Enable fusion detection for RNA-seq runs. Supports ``oncofuse``
-  for STAR/tophat runs and ``pizzly`` for all runs.
+- ``fusion_caller`` Specify a standalone fusion caller for fusion mode. Supports
+  ``oncofuse`` for STAR/tophat runs, ``pizzly`` and ``ericscript`` for all runs.
+  If a standalone caller is specified (i.e. ``pizzly`` or ``ericscript`` ),
+  fusion detection will not be performed with aligner.
 
 HLA typing
 ==========
