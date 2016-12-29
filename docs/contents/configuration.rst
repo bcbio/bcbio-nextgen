@@ -612,6 +612,10 @@ Structural variant calling
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
   ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
+- ``fusion_caller`` Specify a standalone fusion caller for fusion mode
+  (only relevant when ``fusion_mode: true``). If a standalone caller is specified,
+  fusion detection will not be performed with aligner.
+  Currently only supports ``ericscript``. 
 
 HLA typing
 ==========
