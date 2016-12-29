@@ -20,7 +20,7 @@ from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
-from bcbio.structural import annotate, regions
+from bcbio.structural import annotate
 from bcbio.variation import bedutils
 
 def summary(*samples):

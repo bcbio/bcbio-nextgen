@@ -9,19 +9,37 @@ import yaml
 from datetime import datetime
 
 import toolz as tz
+
+from bcbio import utils
 from bcbio.bam import sambamba
-from bcbio.variation.bedutils import clean_file
-from bcbio import bam, utils
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
-from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
-from bcbio.variation import coverage as cov
+from bcbio.provenance import do
 from bcbio.rnaseq import gtf
+from bcbio.variation import coverage as cov
 from bcbio.variation import bedutils
 
 
 # ## High level functions to generate summary
+
+def split_for_qc(data):
+    """CWL: split an input sample into QC steps for parallel runs.
+    """
+    data = utils.to_single_data(data)
+    to_analyze, extras = _split_samples_by_qc([data])
+    out = []
+    for data in to_analyze:
+        data = utils.to_single_data(data)
+        out.append({"cur_qc": dd.get_algorithm_qc(data)[0]})
+    return out
+
+def qc_to_rec(samples):
+    """CWL: Convert a set of input samples into records for parallelization.
+    """
+    samples = [utils.to_single_data(x) for x in samples]
+    return [[x] for x in cwlutils.samples_to_records(samples)]
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
@@ -325,7 +343,7 @@ def _run_coverage_qc(bam_file, data, out_dir):
         dups = 0
 
     if dd.get_coverage(data):
-        cov_bed_file = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+        cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
         merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
