@@ -35,7 +35,7 @@ class TestEricScriptConfig(object):
 
     def test_gets_env_via_utils(self, es_config):
         expected_env = ericscript.utils.get_ericscript_env.return_value
-        assert es_config.env == expected_env
+        assert es_config.env == expected_env.copy()
 
     def test_calls_utils_with_env_prefix_to_get_env(self, es_config):
         es_config.env
@@ -118,7 +118,6 @@ class TestRun(object):
     @pytest.yield_fixture
     def build_idx(self, mocker):
         yield mocker.patch('bcbio.rnaseq.ericscript.build_bwa_index_if_absent')
-
 
     @pytest.yield_fixture
     def es_config(self, mocker):
