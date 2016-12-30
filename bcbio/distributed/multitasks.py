@@ -144,10 +144,6 @@ def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
-def split_for_qc(*args):
-    return qcsummary.split_for_qc(*args)
-
-@utils.map_wrap
 def qc_to_rec(*args):
     return qcsummary.qc_to_rec(*args)
 

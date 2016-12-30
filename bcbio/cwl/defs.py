@@ -187,28 +187,21 @@ def variant():
             [["vc_rec"]],
             [cwlout(["validate", "grading_summary"], ["File", "null"]),
              cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})])]
-    qc_wf = [s("split_for_qc", "single-split",
-               [["qc_rec"]],
-               [cwlout(["cur_qc"], "string")]),
-             s("pipeline_summary", "single-parallel",
-               [["cur_qc"], ["qc_rec"]],
-               [cwlout(["summary", "qc"], "File")]),
-             s("merge_qc", "single-merge",
-               [["summary", "qc"]],
-               [cwlout(["summary", "qc"], "File")])]
     qc = [s("qc_to_rec", "multi-batch",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+             ["genome_build"], ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "coverage"],
              ["config", "algorithm", "qc"],
              ["config", "algorithm", "variant_regions"]],
             [cwlout("qc_rec", "record")]),
-          w("qc", "multi-parallel", qc_wf, [["qc_rec"]]),
+          s("pipeline_summary", "multi-parallel",
+            ["qc_rec"],
+            [cwlout(["summary", "qc"], ["File", "null"])]),
           s("multiqc_summary", "multi-combined",
-            [["genome_build"], ["summary", "qc"],
-             ["reference", "fasta", "base"], ["config", "algorithm", "coverage_interval"]],
+            [["qc_rec"], ["summary", "qc"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])])]
-    steps = align + vc  # + qc
-    final_outputs = [["align_bam"]]
+    steps = align + vc + qc
+    final_outputs = [["align_bam"], ["summary", "multiqc"]]
     return steps, final_outputs
 
 def sv():

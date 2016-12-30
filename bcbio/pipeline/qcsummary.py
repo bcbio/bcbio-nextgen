@@ -24,22 +24,12 @@ from bcbio.variation import bedutils
 
 # ## High level functions to generate summary
 
-def split_for_qc(data):
-    """CWL: split an input sample into QC steps for parallel runs.
-    """
-    data = utils.to_single_data(data)
-    to_analyze, extras = _split_samples_by_qc([data])
-    out = []
-    for data in to_analyze:
-        data = utils.to_single_data(data)
-        out.append({"cur_qc": dd.get_algorithm_qc(data)[0]})
-    return out
-
 def qc_to_rec(samples):
     """CWL: Convert a set of input samples into records for parallelization.
     """
-    samples = [utils.to_single_data(x) for x in samples]
-    return [[x] for x in cwlutils.samples_to_records(samples)]
+    to_analyze, extras = _split_samples_by_qc([utils.to_single_data(x) for x in samples])
+    recs = cwlutils.samples_to_records([utils.to_single_data(x) for x in to_analyze + extras])
+    return [[x] for x in recs]
 
 def generate_parallel(samples, run_parallel):
     """Provide parallel preparation of summary information for alignment and variant calling.
@@ -63,6 +53,8 @@ def generate_parallel(samples, run_parallel):
 
 def pipeline_summary(data):
     """Provide summary information on processing sample.
+
+    Handles standard and CWL (single QC output) cases.
     """
     data = utils.to_single_data(data)
     work_bam = data.get("align_bam")
@@ -75,6 +67,9 @@ def pipeline_summary(data):
     if dd.get_ref_file(data) is not None and work_bam:
         logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
         data["summary"] = _run_qc_tools(work_bam, data)
+        if (len(dd.get_algorithm_qc(data)) == 1
+              and "output_cwl_keys" in data and "summary__qc" in data["output_cwl_keys"]):
+            data["summary"]["qc"] = data["summary"]["qc"].get(dd.get_algorithm_qc(data)[0])
     return [[data]]
 
 def get_qc_tools(data):
@@ -133,7 +128,7 @@ def _run_qc_tools(bam_file, data):
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}
-    for program_name in tz.get_in(["config", "algorithm", "qc"], data):
+    for program_name in dd.get_algorithm_qc(data):
         qc_fn = tools[program_name]
         cur_qc_dir = os.path.join(qc_dir, program_name)
         out = qc_fn(bam_file, data, cur_qc_dir)

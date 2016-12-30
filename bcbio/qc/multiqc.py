@@ -37,14 +37,22 @@ def summary(*samples):
     out_file = os.path.join(out_dir, "multiqc_report.html")
     samples = _report_summary(samples, os.path.join(out_dir, "report"))
     for data in samples:
-        for program, pfiles in tz.get_in(["summary", "qc"], data, {}).iteritems():
+        sum_qc = tz.get_in(["summary", "qc"], data, {})
+        if sum_qc in [None, "None"]:
+            sum_qc = {}
+        if isinstance(sum_qc, dict):
+            all_pfiles = sum_qc.values()
+        elif isinstance(sum_qc, basestring):
+            all_pfiles = [sum_qc]
+        else:
+            raise ValueError("Unexpected summary qc: %s" % sum_qc)
+        for pfiles in all_pfiles:
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
             elif isinstance(pfiles, basestring):
                 pfiles = [pfiles]
             file_fapths.extend(pfiles)
     file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
-    # XXX temporary workaround until we can handle larger inputs through MultiQC
     file_fapths = list(set(file_fapths))
     # Back compatible -- to migrate to explicit specifications in input YAML
     file_fapths += ["trimmed", "htseq-count/*summary"]
