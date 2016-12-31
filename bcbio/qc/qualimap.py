@@ -2,6 +2,7 @@
 
 http://qualimap.bioinfo.cipf.es/
 """
+import glob
 import os
 
 import lxml.html
@@ -54,8 +55,8 @@ def run(bam_file, data, out_dir):
 
             export = utils.local_path_export()
             cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_results_dir} "
-                "--skip-duplicated --skip-dup-mode 0 "
-                "-nt {num_cores} --java-mem-size={max_mem} {options}")
+                   "--skip-duplicated --skip-dup-mode 0 "
+                   "-nt {num_cores} --java-mem-size={max_mem} {options}")
             species = None
             if tz.get_in(("genome_resources", "aliases", "human"), data, ""):
                 species = "HUMAN"
@@ -63,7 +64,10 @@ def run(bam_file, data, out_dir):
                 species = "MOUSE"
             if species in ["HUMAN", "MOUSE"]:
                 cmd += " -gd {species}"
-            regions = bedutils.merge_overlaps(dd.get_coverage(data), data) or dd.get_variant_regions_merged(data)
+            regions = bedutils.merge_overlaps(dd.get_coverage(data)
+                                              if dd.get_coverage(data) not in [None, False, "None"]
+                                              else dd.get_variant_regions_merged(data),
+                                              data)
             if regions:
                 bed6_regions = _bed_to_bed6(regions, out_dir)
                 cmd += " -gff {bed6_regions}"
@@ -72,9 +76,7 @@ def run(bam_file, data, out_dir):
             tx_results_file = os.path.join(tx_results_dir, "genome_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
-
-    # return _parse_qualimap_metrics(report_file, data)
-    return dict()
+    return {"base": results_file, "secondary": glob.glob(os.path.join(out_dir, "raw_data_qualimapReport", "*.txt"))}
 
 def _parse_qualimap_metrics(report_file, data):
     """Extract useful metrics from the qualimap HTML report file.

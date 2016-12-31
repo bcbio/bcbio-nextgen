@@ -30,7 +30,7 @@ def summary(*samples):
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    file_fapths = []
+    in_files = []
     opts = ""
     out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "mulitqc"))
     out_data = os.path.join(out_dir, "multiqc_data")
@@ -49,22 +49,26 @@ def summary(*samples):
         for pfiles in all_pfiles:
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles["secondary"]
+            # CWL: presents output files as single file plus associated secondary files
             elif isinstance(pfiles, basestring):
-                pfiles = [pfiles]
-            file_fapths.extend(pfiles)
-    file_fapths.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
-    file_fapths = list(set(file_fapths))
+                if os.path.exists(pfiles):
+                    pfiles = [os.path.join(os.path.dirname(pfiles), x) for x in os.listdir(os.path.dirname(pfiles))]
+                else:
+                    pfiles = []
+            in_files.extend(pfiles)
+    in_files.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
+    in_files = list(set(in_files))
     # Back compatible -- to migrate to explicit specifications in input YAML
-    file_fapths += ["trimmed", "htseq-count/*summary"]
+    in_files += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
         with utils.chdir(work_dir):
             export_tmp = ""
             if dd.get_tmp_dir(samples[0]):
                 export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            file_fapths = (_check_multiqc_input(f) for f in file_fapths if _is_good_file_for_multiqc(f))
-            file_fapths = [f for f in file_fapths if f]
-            if file_fapths:
-                input_list_file = _create_list_file(file_fapths, out_dir)
+            in_files = [_check_multiqc_input(f) for f in in_files if _is_good_file_for_multiqc(f)]
+            in_files = [f for f in in_files if f]
+            if in_files:
+                input_list_file = _create_list_file(in_files, out_dir)
                 cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
                 with tx_tmpdir(data, work_dir) as tx_out:
                     do.run(cmd.format(**locals()), "Run multiqc")
@@ -72,7 +76,7 @@ def summary(*samples):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
                         shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
     out = []
-    for i, data in enumerate(samples):
+    for i, data in enumerate(_group_by_samplename(samples)):
         if i == 0:
             if utils.file_exists(out_file):
                 data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
@@ -83,8 +87,16 @@ def summary(*samples):
                 if "summary" not in data:
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
-        out.append(data)
-    return [[fpath] for fpath in out]
+        out.append([data])
+    return out
+
+def _group_by_samplename(samples):
+    """Group samples split by QC method back into a single sample.
+    """
+    out = collections.defaultdict(list)
+    for data in samples:
+        out[(dd.get_sample_name(data), dd.get_align_bam(data))].append(data)
+    return [xs[0] for xs in out.values()]
 
 def _create_list_file(dirs, out_dir):
     out_file = os.path.join(out_dir, "list_files.txt")

@@ -327,7 +327,7 @@ def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
     for region in coverage option.
     """
     bed_file = dd.get_coverage(data)
-    if not bed_file:
+    if not bed_file or not utils.file_exists(bed_file):
         return None
     work_dir = safe_makedir(out_dir)
     cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)

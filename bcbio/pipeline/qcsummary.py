@@ -337,7 +337,7 @@ def _run_coverage_qc(bam_file, data, out_dir):
     else:
         dups = 0
 
-    if dd.get_coverage(data):
+    if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
         cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
         merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
         target_name = "coverage"

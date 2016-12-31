@@ -40,7 +40,7 @@ details:
       #svcaller: [lumpy, cnvkit, manta, metasv]
       svcaller: [cnvkit, seq2c, lumpy]
       #remove_lcr: true
-      tools_on: [qualimap]
+      tools_on: [qualimap_full]
       tools_off: [gemini]
       mixup_check: qsignature
       quality_format: standard
