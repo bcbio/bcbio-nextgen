@@ -197,9 +197,10 @@ def variant():
             [cwlout("qc_rec", "record")]),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
-            [cwlout(["summary", "qc"], ["File", "null"])]),
+            [cwlout(["summary", "qc"], ["File", "null"]),
+             cwlout(["summary", "metrics"], "string")]),
           s("multiqc_summary", "multi-combined",
-            [["qc_rec"], ["summary", "qc"]],
+            [["qc_rec"], ["summary", "qc"], ["summary", "metrics"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])])]
     steps = align + vc + qc
     final_outputs = [["align_bam"], ["summary", "multiqc"]]

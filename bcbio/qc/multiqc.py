@@ -30,47 +30,22 @@ def summary(*samples):
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    in_files = []
-    opts = ""
     out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "mulitqc"))
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     samples = _report_summary(samples, os.path.join(out_dir, "report"))
-    for data in samples:
-        sum_qc = tz.get_in(["summary", "qc"], data, {})
-        if sum_qc in [None, "None"]:
-            sum_qc = {}
-        if isinstance(sum_qc, dict):
-            all_pfiles = sum_qc.values()
-        elif isinstance(sum_qc, basestring):
-            all_pfiles = [sum_qc]
-        else:
-            raise ValueError("Unexpected summary qc: %s" % sum_qc)
-        for pfiles in all_pfiles:
-            if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
-            # CWL: presents output files as single file plus associated secondary files
-            elif isinstance(pfiles, basestring):
-                if os.path.exists(pfiles):
-                    pfiles = [os.path.join(os.path.dirname(pfiles), x) for x in os.listdir(os.path.dirname(pfiles))]
-                else:
-                    pfiles = []
-            in_files.extend(pfiles)
-    in_files.append(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
-    in_files = list(set(in_files))
-    # Back compatible -- to migrate to explicit specifications in input YAML
-    in_files += ["trimmed", "htseq-count/*summary"]
     if not utils.file_exists(out_file):
-        with utils.chdir(work_dir):
-            export_tmp = ""
-            if dd.get_tmp_dir(samples[0]):
-                export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
-            in_files = [_check_multiqc_input(f) for f in in_files if _is_good_file_for_multiqc(f)]
-            in_files = [f for f in in_files if f]
+        with tx_tmpdir(samples[0], work_dir) as tx_out:
+            in_files = _get_input_files(samples, out_dir, tx_out)
+            in_files += _merge_metrics(samples, out_dir)
             if in_files:
-                input_list_file = _create_list_file(in_files, out_dir)
-                cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out} {opts}"
-                with tx_tmpdir(data, work_dir) as tx_out:
+                with utils.chdir(work_dir):
+                    input_list_file = _create_list_file(in_files, out_dir)
+                    if dd.get_tmp_dir(samples[0]):
+                        export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
+                    else:
+                        export_tmp = ""
+                    cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out}"
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -89,6 +64,51 @@ def summary(*samples):
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
         out.append([data])
     return out
+
+def _get_input_files(samples, base_dir, tx_out_dir):
+    """Retrieve input files, keyed by sample and QC method name.
+
+    Stages files into the work directory to ensure correct names for
+    MultiQC sample assessment when running with CWL.
+    """
+    in_files = collections.defaultdict(list)
+    for data in samples:
+        sum_qc = tz.get_in(["summary", "qc"], data, {})
+        if sum_qc in [None, "None"]:
+            sum_qc = {}
+        elif isinstance(sum_qc, basestring):
+            sum_qc = {dd.get_algorithm_qc(data)[0]: sum_qc}
+        elif not isinstance(sum_qc, dict):
+            raise ValueError("Unexpected summary qc: %s" % sum_qc)
+        for program, pfiles in sum_qc.items():
+            if isinstance(pfiles, dict):
+                pfiles = [pfiles["base"]] + pfiles["secondary"]
+            # CWL: presents output files as single file plus associated secondary files
+            elif isinstance(pfiles, basestring):
+                if os.path.exists(pfiles):
+                    pfiles = [os.path.join(os.path.dirname(pfiles), x) for x in os.listdir(os.path.dirname(pfiles))]
+                else:
+                    pfiles = []
+            in_files[(dd.get_sample_name(data), program)].extend(pfiles)
+    staged_files = []
+    for (sample, program), files in in_files.items():
+        cur_dir = utils.safe_makedir(os.path.join(tx_out_dir, sample, program))
+        for f in files:
+            if _check_multiqc_input(f) and _is_good_file_for_multiqc(f):
+                if _in_temp_directory(f):
+                    staged_f = os.path.join(cur_dir, os.path.basename(f))
+                    shutil.copy(f, staged_f)
+                    staged_files.append(staged_f)
+                else:
+                    staged_files.append(f)
+    # Back compatible -- to migrate to explicit specifications in input YAML
+    staged_files += ["trimmed", "htseq-count/*summary"]
+    # Add in created target_info file
+    staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
+    return sorted(list(set(staged_files)))
+
+def _in_temp_directory(f):
+    return any(x.startswith("tmp") for x in f.split("/"))
 
 def _group_by_samplename(samples):
     """Group samples split by QC method back into a single sample.
@@ -144,9 +164,6 @@ def _report_summary(samples, out_dir):
         logger.info("summarize fastqc")
         with utils.chdir(out_dir):
             _merge_fastqc(samples)
-
-        logger.info("summarize metrics")
-        samples = _merge_metrics(samples)
 
         logger.info("summarize target information")
         if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
@@ -225,44 +242,31 @@ def _fix_duplicated_rate(dt):
         dt["Duplicates_pct"] = 100.0 * dt["Duplication_Rate_of_Mapped"]
     return dt
 
-def _merge_metrics(samples):
+def _merge_metrics(samples, out_dir):
+    """Merge metrics from multiple QC steps
     """
-    parse project.yaml file to get metrics for each bam
-    """
-    out_file = os.path.join("metrics", "metrics.tsv")
-    dt_together = []
-    cov = {}
-    with file_transaction(samples[0], out_file) as out_tx:
-        for s in samples:
-            sample_name = dd.get_sample_name(s)
-            s = _add_disambiguate(s)
-            if sample_name in cov:
-                continue
-            m = tz.get_in(['summary', 'metrics'], s)
-            metrics_dir = utils.safe_makedir(os.path.abspath("metrics"))
-            utils.safe_makedir(metrics_dir)
-            sample_file = os.path.join(metrics_dir, "%s_bcbio.txt" % sample_name)
-            if not tz.get_in(['summary', 'qc'], s):
-                s['summary'] = {"qc": {}}
-            if m:
-                for me in m.keys():
-                    if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
-                        m.pop(me, None)
-                dt = pd.DataFrame(m, index=['1'])
-                dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
-                dt['sample'] = sample_name
-                dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-                dt = _fix_duplicated_rate(dt)
-                dt.transpose().to_csv(sample_file, sep="\t", header=False)
-                dt_together.append(dt)
-                s['summary']['qc'].update({'bcbio':{'base': sample_file, 'secondary': []}})
-        if len(dt_together) > 0:
-            dt_together = utils.rbind(dt_together)
-            dt_together.to_csv(out_tx, index=False, sep="\t")
-
-    out = []
+    logger.info("summarize metrics")
+    out_dir = utils.safe_makedir(os.path.join(out_dir, "report", "metrics"))
+    sample_metrics = collections.defaultdict(dict)
     for s in samples:
-        out.append(s)
+        s = _add_disambiguate(s)
+        m = tz.get_in(['summary', 'metrics'], s)
+        if m:
+            for me in m.keys():
+                if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
+                    m.pop(me, None)
+            sample_metrics[dd.get_sample_name(s)].update(m)
+    out = []
+    for sample_name, m in sample_metrics.items():
+        sample_file = os.path.join(out_dir, "%s_bcbio.txt" % sample_name)
+        with file_transaction(samples[0], sample_file) as tx_out_file:
+            dt = pd.DataFrame(m, index=['1'])
+            dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
+            dt['sample'] = sample_name
+            dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
+            dt = _fix_duplicated_rate(dt)
+            dt.transpose().to_csv(tx_out_file, sep="\t", header=False)
+        out.append(sample_file)
     return out
 
 def _merge_fastqc(samples):
@@ -293,7 +297,8 @@ def _merge_fastqc(samples):
     return samples
 
 def _merge_target_information(samples):
-    out_file = os.path.abspath(os.path.join("metrics", "target_info.yaml"))
+    metrics_dir = utils.safe_makedir("metrics")
+    out_file = os.path.abspath(os.path.join(metrics_dir, "target_info.yaml"))
     if utils.file_exists(out_file):
         return samples
 
