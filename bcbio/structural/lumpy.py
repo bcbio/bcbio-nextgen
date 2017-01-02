@@ -132,9 +132,9 @@ def run(items):
         disc_bams.append(disc_bam)
         cur_dels, cur_dups = _bedpes_from_cnv_caller(data, work_dir)
         previous_evidence[dd.get_sample_name(data)] = {}
-        if cur_dels:
+        if cur_dels and utils.file_exists(cur_dels):
             previous_evidence[dd.get_sample_name(data)]["dels"] = cur_dels
-        if cur_dups:
+        if cur_dups and utils.file_exists(cur_dups):
             previous_evidence[dd.get_sample_name(data)]["dups"] = cur_dups
     lumpy_vcf, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence,
                                          work_dir, items)
