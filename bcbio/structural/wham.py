@@ -8,13 +8,13 @@ import os
 import vcf
 
 from bcbio import utils
-from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region
 from bcbio.structural import shared
-from bcbio.variation import bamprep, effects, vcfutils
+from bcbio.variation import effects, vcfutils
 from bcbio.provenance import do
 
 def run(items, background=None):
@@ -39,8 +39,6 @@ def run(items, background=None):
             data["sv"] = []
         sample_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(orig_vcf)[0], dd.get_sample_name(data))
         sample_vcf = vcfutils.select_sample(orig_vcf, dd.get_sample_name(data), sample_vcf, data["config"])
-        if background:
-            sample_vcf = filter_by_background(sample_vcf, orig_vcf, background, data)
         effects_vcf, _ = effects.add_to_vcf(sample_vcf, data, "snpeff")
         data["sv"].append({"variantcaller": "wham",
                            "vrn_file": effects_vcf or sample_vcf})
@@ -57,62 +55,15 @@ def _run_wham(inputs, background_bams):
     out_file = os.path.join(_sv_workdir(inputs[0]), "%s-wham.vcf.gz" % dd.get_sample_name(inputs[0]))
     if not utils.file_exists(out_file):
         with file_transaction(inputs[0], out_file) as tx_out_file:
-            coords = chromhacks.autosomal_or_x_coords(dd.get_ref_file(inputs[0]))
-            parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": []}
-            rs = run_multicore(_run_wham_coords,
-                                [(inputs, background_bams, coord, out_file)
-                                 for coord in coords],
-                                inputs[0]["config"], parallel)
-            rs = {coord: fname for (coord, fname) in rs}
-            vcfutils.concat_variant_files([rs[c] for c in coords], tx_out_file, coords,
-                                          dd.get_ref_file(inputs[0]), inputs[0]["config"])
-    return out_file
-
-@utils.map_wrap
-@zeromq_aware_logging
-def _run_wham_coords(inputs, background_bams, coords, final_file):
-    """Run WHAM on a specific set of chromosome, start, end coordinates.
-    """
-    base, ext = utils.splitext_plus(final_file)
-    raw_file = "%s-%s.vcf" % (base, region.to_safestr(coords))
-    all_bams = ",".join([x["align_bam"] for x in inputs] + background_bams)
-    if not utils.file_exists(raw_file):
-        with file_transaction(inputs[0], raw_file) as tx_raw_file:
             cores = dd.get_cores(inputs[0])
             ref_file = dd.get_ref_file(inputs[0])
-            coord_str = bamprep.region_to_gatk(coords)
-            opts = "-k -m 30"
-            cmd = ("WHAM-GRAPHENING {opts} -x {cores} -a {ref_file} -f {all_bams} -r {coord_str} "
-                   "> {tx_raw_file}")
-            do.run(cmd.format(**locals()), "Run WHAM: %s" % region.to_safestr(coords))
-    merge_vcf = _run_wham_merge(raw_file, inputs[0])
-    gt_vcf = _run_wham_genotype(merge_vcf, all_bams, coords, inputs[0])
-    prep_vcf = vcfutils.sort_by_ref(gt_vcf, inputs[0])
-    return [[coords, prep_vcf]]
-
-def _run_wham_genotype(in_file, all_bams, coords, data):
-    """Run genotyping on a prepped, merged VCF file.
-    """
-    out_file = "%s-wgts%s" % utils.splitext_plus(in_file)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cores = dd.get_cores(data)
-            ref_file = dd.get_ref_file(data)
-            coord_str = bamprep.region_to_gatk(coords)
-            cmd = ("WHAM-GRAPHENING -b {in_file} -x {cores} -a {ref_file} -f {all_bams} -r {coord_str} "
-                   "> {tx_out_file}")
-            do.run(cmd.format(**locals()), "Genotype WHAM: %s" % region.to_safestr(coords))
-    return out_file
-
-def _run_wham_merge(in_file, data):
-    """Run WHAM merge functionality to combine closely spaced events.
-    """
-    out_file = "%s-merge%s" % utils.splitext_plus(in_file)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = "mergeIndvs -f {in_file} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Merge WHAM output")
-    return out_file
+            include_chroms = ",".join([c.name for c in ref.file_contigs(ref_file)
+                                       if chromhacks.is_autosomal_or_x(c.name)])
+            all_bams = ",".join([x["align_bam"] for x in inputs] + background_bams)
+            cmd = ("whamg -x {cores} -a {ref_file} -f {all_bams} -c {include_chroms} "
+                   "| bgzip -c > {tx_out_file}")
+            do.run(cmd.format(**locals()), "WHAM SV caller: %s" % ", ".join(dd.get_sample_name(d) for d in inputs))
+    return vcfutils.bgzip_and_index(out_file, inputs[0]["config"])
 
 def filter_by_background(in_vcf, full_vcf, background, data):
     """Filter SV calls also present in background samples.

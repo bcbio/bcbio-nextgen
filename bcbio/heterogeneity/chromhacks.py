@@ -4,7 +4,6 @@ This puts ugly chromosome naming assumptions that restrict heterogeneity estimat
 to autosomal chromosomes in a single place.
 """
 from bcbio import utils
-from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 
 def is_autosomal(chrom):
@@ -33,13 +32,6 @@ def is_nonalt(chrom):
 
 def is_mitochondrial(chrom):
     return chrom in ["MT", "chrM", "chrMT"]
-
-def autosomal_or_x_coords(ref_file):
-    out = []
-    for contig in ref.file_contigs(ref_file):
-        if is_autosomal_or_x(contig.name):
-            out.append((contig.name, 0, contig.size))
-    return out
 
 def bed_to_standardonly(in_file, data, headers=None):
     out_file = "%s-stdchrs%s" % utils.splitext_plus(in_file)
