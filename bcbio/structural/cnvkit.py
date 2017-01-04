@@ -152,10 +152,8 @@ def _run_cnvkit_shared(inputs, backgrounds):
             return {}
         raw_target_bed = annotate.add_genes(raw_target_bed, inputs[0])
         parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
-        pct_coverage = (pybedtools.BedTool(raw_target_bed).total_coverage() /
-                        float(pybedtools.BedTool(access_bed).total_coverage())) * 100.0
         target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval,
-                                                     pct_coverage, raw_work_dir, inputs[0])
+                                                     raw_work_dir, inputs[0])
         samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
                          zip(["evaluate"] * len(inputs), inputs)
         raw_coverage_cnns = [_cnvkit_coverage(cdata, bed, itype) for itype, cdata in samples_to_run
@@ -312,7 +310,7 @@ def _cnvkit_coverage(data, bed_file, input_type):
     return {"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
             "sample": dd.get_sample_name(data)}
 
-def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, pct_coverage, work_dir, data):
+def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Create target and antitarget regions from target and access files.
     """
     target_bed = os.path.join(work_dir, "%s.target.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
