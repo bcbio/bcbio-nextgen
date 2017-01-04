@@ -19,7 +19,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared, config_utils
 from bcbio.provenance import do
 from bcbio.structural import regions
-from bcbio.variation import population
+from bcbio.variation import bedutils, population
 
 # ## Case/control
 
@@ -94,7 +94,7 @@ def get_base_cnv_regions(data, work_dir):
         # Finally, default to the defined variant regions
         if not base_regions:
             base_regions = dd.get_variant_regions(data)
-    return base_regions
+    return bedutils.clean_file(base_regions, data)
 
 def prepare_exclude_file(items, base_file, chrom=None):
     """Prepare a BED file for exclusion.

@@ -82,11 +82,18 @@ def sort_merge(in_file, data, out_dir=None):
     if out_dir:
         out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file):
+        column_opt = ""
+        with utils.open_gzipsafe(in_file) as in_handle:
+            for line in in_handle:
+                if not line.startswith(("#", "track", "browser")):
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        column_opt = "-c 4 -o distinct"
         with file_transaction(data, out_file) as tx_out_file:
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
             sort_cmd = get_sort_cmd()
             cmd = ("{cat_cmd} {in_file} | {sort_cmd} -k1,1 -k2,2n | "
-                   "bedtools merge -i - -c 4 -o distinct > {tx_out_file}")
+                   "bedtools merge -i - {column_opt} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Sort and merge BED file", data)
     return out_file
 
