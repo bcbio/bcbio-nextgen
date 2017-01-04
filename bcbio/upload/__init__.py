@@ -49,6 +49,8 @@ def _get_files(sample):
         return _get_files_srnaseq(sample)
     elif analysis.lower() in ["chip-seq"]:
         return _get_files_chipseq(sample)
+    elif analysis.lower() in ["scrna-seq"]:
+        return _get_files_scrnaseq(sample)
     else:
         return []
 
@@ -74,6 +76,15 @@ def _get_files_srnaseq(sample):
     out = _maybe_add_trimming(algorithm, sample, out)
     out = _maybe_add_seqbuster(algorithm, sample, out)
     out = _maybe_add_trna(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _get_files_scrnaseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    out = _maybe_add_summary(algorithm, sample, out)
+    out = _maybe_add_transcriptome_alignment(sample, out)
+    out = _maybe_add_counts(algorithm, sample, out)
+    out = _maybe_add_barcode_histogram(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_chipseq(sample):
@@ -370,6 +381,16 @@ def _maybe_add_counts(algorithm, sample, out):
         out.append({"path": stats_file,
                     "type": "count_stats",
                     "ext": "ready"})
+    return out
+
+def _maybe_add_barcode_histogram(algorithm, sample, out):
+    if not dd.get_count_file(sample):
+        return out
+    count_file = sample["count_file"]
+    histogram_file = os.path.join(os.path.dirname(count_file), "cb-histogram.txt")
+    out.append({"path": histogram_file,
+                "type": "counts",
+                "ext": "ready"})
     return out
 
 def _maybe_add_oncofuse(algorithm, sample, out):

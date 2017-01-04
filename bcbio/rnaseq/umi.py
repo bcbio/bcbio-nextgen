@@ -253,7 +253,10 @@ def split_demultiplexed_sampledata(data, demultiplexed):
     for fastq in demultiplexed:
         barcode = os.path.basename(fastq).split(".")[0]
         datadict = copy.deepcopy(data)
-        datadict = dd.set_sample_name(data, samplename + "-" + barcode)
+        datadict = dd.set_sample_name(datadict, samplename + "-" + barcode)
+        datadict = dd.set_description(datadict, samplename + "-" + barcode)
+        datadict["rgnames"]["rg"] = samplename + "-" + barcode
+        datadict["name"]= ["", samplename + "-" + barcode]
         datadict["files"] = [fastq]
         datadicts.append(datadict)
     return datadicts
