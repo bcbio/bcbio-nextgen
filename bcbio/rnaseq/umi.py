@@ -54,7 +54,6 @@ def umi_transform(data):
     """
     fqfiles = data["files"]
     fqfiles.extend(list(repeat("", 4-len(fqfiles))))
-    logger.info(fqfiles)
     fq1, fq2, fq3, fq4 = fqfiles
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     safe_makedir(umi_dir)
@@ -147,8 +146,6 @@ def barcode_histogram(data):
     out_file = os.path.join(sample_dir, "cb-histogram.txt")
     if file_exists(out_file):
         return [[data]]
-#    fq1_cmd = "{fq1}" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
-#    fq1_cmd = fq1_cmd.format(fq1=fq1)
     fq1_cmd = fq1
     cmd = "{umis} cb_histogram {fq1_cmd} > {tx_out_file}"
     with file_transaction(out_file) as tx_out_file:
