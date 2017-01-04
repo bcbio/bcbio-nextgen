@@ -17,17 +17,19 @@ from bcbio.distributed.transaction import file_transaction
 
 
 transforms = {"harvard-indrop":
-              {"json": {
-                  "read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-                  "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""}},
+              {"read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
+               "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
               "harvard-indrop-v2":
-              {"json": {
-                  "read2": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""}},
+              {"read2": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
+                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
               "CEL-seq":
-              {"json": {
-                  "read1": r"""(?P<name>@.*) .*\\n(?P<CB>.{8})(?P<MB>.{4})(.*)\\n\\+(.*)\\n(.*)\\n""",
-                  "read2": r"""(@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n"""}}}
+              {"read1": r"""(?P<name>@.*) .*\n(?P<CB>.{8})(?P<MB>.{4})(.*)\n\+(.*)\n(.*)\n""",
+               "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
+              "harvard-indrop-v3":
+              {"read1": r"""(?P<name>[^\s]+).*\n(?P<seq>.*)\n\\+(.*)\n(?P<qual>.*)\n""",
+               "read2": r"""(.*)\n(?P<CB1>.*)\n(.*)\n(.*)\n""",
+               "read3": r"""(.*)\n(?P<SB>.*)\n(.*)\n(.*)\n""",
+               "read4": r"""(.*)\n(?P<CB2>.{8})(?P<MB>.{6})\n(.*)\n(.*)\n"""}}
 
 def write_transform_file(transform_data, out_file):
     """
@@ -39,7 +41,7 @@ def write_transform_file(transform_data, out_file):
 
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
-            json.dump(transform_data["json"], out_handle)
+            json.dump(transform_data, out_handle)
     return out_file
 
 def umi_transform(data):
