@@ -435,6 +435,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "min_read_length", "coverage_depth_min", "callable_min_size",
                       "min_allele_fraction", "umi_type", "minimum_barcode_depth",
                       "cellular_barcodes", "vcfanno",
+                      "sample_barcodes",
                       "remove_lcr", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
                       "mixup_check", "expression_caller", "qc", "positional_umi",
@@ -662,6 +663,7 @@ def _sanity_check_files(item, files):
     """
     msg = None
     file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
+    logger.info(item)
     if len(file_types) > 1:
         msg = "Found multiple file types (BAM and fastq)"
     file_type = file_types.pop()
@@ -669,7 +671,7 @@ def _sanity_check_files(item, files):
         if len(files) != 1:
             msg = "Expect a single BAM file input as input"
     elif file_type == "fastq":
-        if len(files) not in [1, 2]:
+        if len(files) not in [1, 2] and item["analysis"].lower() != "scrna-seq":
             msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
         if len(files) == 2 and files[0] == files[1]:
             msg = "Expect both fastq files to not be the same"

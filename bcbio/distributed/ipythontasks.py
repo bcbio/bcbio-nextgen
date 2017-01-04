@@ -145,6 +145,12 @@ def run_umi_transform(*args):
         return ipython.zip_args(apply(umi.umi_transform, *args))
 
 @require(umi)
+def demultiplex_samples(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.demultiplex_samples, *args))
+
+@require(umi)
 def run_filter_barcodes(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):

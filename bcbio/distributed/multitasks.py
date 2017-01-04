@@ -32,6 +32,10 @@ def run_umi_transform(*args):
     return umi.umi_transform(*args)
 
 @utils.map_wrap
+def demultiplex_samples(*args):
+    return umi.demultiplex_samples(*args)
+
+@utils.map_wrap
 def run_kallisto_singlecell(*args):
     return kallisto.run_kallisto_singlecell(*args)
 
