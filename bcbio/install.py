@@ -280,9 +280,6 @@ def upgrade_bcbio_data(args, remotes):
     """
     from fabric.api import env
     data_dir = _get_data_dir()
-    # TODO remove
-    if 'ericscript' in args.datatarget:
-        _install_ericscript_db(_get_data_dir(), args)
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
     tooldir = args.tooldir or get_defaults().get("tooldir")

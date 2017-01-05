@@ -708,7 +708,6 @@ class GoogleDrive(StorageManager):
     _REMOTE_FILE = collections.namedtuple(
         'RemoteFile', ['store', 'file_id']
     )
-    # TODO figure out where to keep the file name. Maybe in a config file?
     GOOGLE_API_KEY_FILE = 'google_api_key_81009922beba.json'
     STORE = 'GoogleDrive'
 
