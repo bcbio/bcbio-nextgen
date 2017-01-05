@@ -23,8 +23,8 @@ import boto
 import six
 from oauth2client.service_account import ServiceAccountCredentials
 from httplib2 import Http
-from apiclient.discovery import build
-from apiclient import http
+from googleapiclient.discovery import build
+from googleapiclient import http
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
