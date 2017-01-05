@@ -36,7 +36,7 @@ def tx_tmpdir(data=None, base_dir=None, remove=True):
     tmpdir_base = utils.get_abspath(_get_base_tmpdir(data, base_dir))
     utils.safe_makedir(tmpdir_base)
     tmp_dir = tempfile.mkdtemp(dir=tmpdir_base)
-    logger.debug("Created tmp dir %s " % tmp_dir)
+    #logger.debug("Created tmp dir %s " % tmp_dir)
     try:
         yield tmp_dir
     finally:
@@ -108,7 +108,7 @@ def _move_file_with_sizecheck(tx_file, final_file):
        it means that transaction didn't finish successfully.
     """
 
-    logger.debug("Moving %s to %s" % (tx_file, final_file))
+    #logger.debug("Moving %s to %s" % (tx_file, final_file))
 
     tmp_file = final_file + ".bcbiotmp"
     open(tmp_file, 'wb').close()

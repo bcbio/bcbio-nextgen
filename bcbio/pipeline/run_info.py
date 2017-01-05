@@ -663,7 +663,6 @@ def _sanity_check_files(item, files):
     """
     msg = None
     file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
-    logger.info(item)
     if len(file_types) > 1:
         msg = "Found multiple file types (BAM and fastq)"
     file_type = file_types.pop()
