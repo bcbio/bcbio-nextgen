@@ -37,8 +37,7 @@ def get_fastq_files(data):
     for in_file in ready_files:
         if not objectstore.is_remote(in_file):
             assert os.path.exists(in_file), "%s does not exist." % in_file
-    return ((ready_files[0] if len(ready_files) > 0 else None),
-            (ready_files[1] if len(ready_files) > 1 else None))
+    return ready_files
 
 def _gzip_fastq(in_file):
     """

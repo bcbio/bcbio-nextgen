@@ -228,9 +228,11 @@ class BroadRunner:
     def _has_gatk_conda_wrapper(self):
         cmd = gatk_cmd("gatk", [], ["--version"])
         if cmd:
-            with closing(subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-                return stdout.read().find("GATK jar file not found") == -1
+            try:
+                stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                return stdout.find("GATK jar file not found") == -1
+            except subprocess.CalledProcessError:
+                return False
 
     def has_gatk(self):
         if self._has_gatk_conda_wrapper():
@@ -472,7 +474,7 @@ def gatk_cmd(name, jvm_opts, params):
     if gatk_cmd:
         return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
             (os.path.dirname(gatk_cmd), gatk_cmd,
-            " ".join(jvm_opts), " ".join([str(x) for x in params]))
+             " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):

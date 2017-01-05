@@ -38,8 +38,7 @@ def prepare_sample(data):
     FASTQ and/or downsampling the number of reads for a test run
     """
     logger.debug("Preparing %s" % data["rgnames"]["sample"])
-    file1, file2 = get_fastq_files(data)
-    data["files"] = [file1, file2]
+    data["files"] = get_fastq_files(data)
     return [[data]]
 
 def trim_sample(data):

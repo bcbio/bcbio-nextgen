@@ -131,6 +131,7 @@ LOOKUPS = {
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
+    "sample_barcodes": {"keys": ["config", "algorithm", "sample_barcodes"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
                           "default": []},
     "minimum_barcode_depth": {"keys": ["config", "algorithm", "minimum_barcode_depth"],

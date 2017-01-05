@@ -319,16 +319,30 @@ Test suite
 
 The test suite exercises the scripts driving the analysis, so are a
 good starting point to ensure correct installation. Tests use the
-`pytest`_ framework. Grab the latest source code::
+`pytest`_ framework. The tests are available in the bcbio source code::
 
      $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-Create a virtual environment, and install the dependencies required
-to run tests::
+There is a small wrapper script that finds the py.test and other dependencies
+pre-installed with bcbio you can use to run tests::
 
-     $ cd bcbio-nextgen
-     $ virtualenv .venv
-     $ source .venv/bin/activate
+     $ cd tests
+     $ ./run_tests.sh
+
+You can use this to run specific test targets::
+
+     $ ./run_tests.sh cancer
+     $ ./run_tests.sh rnaseq
+     $ ./run_tests.sh devel
+     $ ./run_tests.sh docker
+
+Optionally, you can run pytest directly from the bcbio install to tweak more
+options. It will be in ``/path/to/bcbiio/anaconda/bin/py.test``. Pass
+``-s`` to ``py.test`` to see the stdout log, and ``-v`` to make py.test optput more
+verbose. The tests are marked with labels which you can use to run a
+specific subsets of the tests using the ``-m`` argument::
+
+     $ py.test -m rnaseq
 
 To run unit tests::
 
@@ -341,17 +355,6 @@ To run integration pipeline tests::
 To run tests which use bcbio_vm::
 
      $ py.test tests/bcbio_vm
-
-Optionally, you can provide argument ``-s`` to ``py.test`` to see the logs
-logs which are written to stdout, and ``-v`` to make py.test optput more 
-verbose. The tests are marked with labels which you can use to run a 
-specific subsets of the tests using the ``-m`` argument::
-
-     $ py.test -m rnaseq
-     $ py.test -m speed2
-     $ py.test -m devel
-     $ py.test -m docker
-     $ py.test -m devel_ipython
 
 To see the test coverage, add the ``--cov=bcbio`` argument to ``py.test``.
 

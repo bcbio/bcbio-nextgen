@@ -38,6 +38,10 @@
 - Added support for cellular barcode error correction with single-cell RNA-seq
   via the `cellular_barcode_correction` parameter. This corrects edit distances
   up to the set value, defaults to 1.
+- Add support for sample-based demultiplexing of single-cell RNA-seq runs.
+- Move single-cell RNA-seq results to the upload directory.
+- Make positional UMI default to off for single-cell RNA-seq.
+- Add support for the Klein lab v3 version of the inDrop protocol.
 
 ## 1.0.0 (20 November 2016)
 

@@ -115,13 +115,14 @@ def _run_cnvkit_population(items, background):
             out.extend(_associate_cnvkit_out(ckouts, [cur_input]))
         return out
 
-def _get_cmd():
-    return os.path.join(os.path.dirname(sys.executable), "cnvkit.py")
+def _get_cmd(script_name="cnvkit.py"):
+    return os.path.join(os.path.dirname(os.path.realpath(sys.executable)), script_name)
 
 def _prep_cmd(cmd, tx_out_file):
     """Wrap CNVkit commands ensuring we use local temporary directories.
     """
-    return "export TMPDIR=%s && %s" % (os.path.dirname(tx_out_file), " ".join(cmd))
+    cmd = " ".join(cmd) if isinstance(cmd, (list, tuple)) else cmd
+    return "export TMPDIR=%s && %s" % (os.path.dirname(tx_out_file), cmd)
 
 def _bam_to_outbase(bam_file, work_dir):
     """Convert an input BAM file into CNVkit expected output.
@@ -151,10 +152,8 @@ def _run_cnvkit_shared(inputs, backgrounds):
             return {}
         raw_target_bed = annotate.add_genes(raw_target_bed, inputs[0])
         parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
-        pct_coverage = (pybedtools.BedTool(raw_target_bed).total_coverage() /
-                        float(pybedtools.BedTool(access_bed).total_coverage())) * 100.0
         target_bed, antitarget_bed = _cnvkit_targets(raw_target_bed, access_bed, cov_interval,
-                                                     pct_coverage, raw_work_dir, inputs[0])
+                                                     raw_work_dir, inputs[0])
         samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
                          zip(["evaluate"] * len(inputs), inputs)
         raw_coverage_cnns = [_cnvkit_coverage(cdata, bed, itype) for itype, cdata in samples_to_run
@@ -311,28 +310,58 @@ def _cnvkit_coverage(data, bed_file, input_type):
     return {"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
             "sample": dd.get_sample_name(data)}
 
-def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, pct_coverage, work_dir, data):
+def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Create target and antitarget regions from target and access files.
     """
     target_bed = os.path.join(work_dir, "%s.target.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
     if not utils.file_uptodate(target_bed, raw_target_bed):
         with file_transaction(data, target_bed) as tx_out_file:
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
-            if cov_interval == "genome":
-                cmd += ["--avg-size", "500"]
-            # small target regions, use smaller, more defined segments
-            elif pct_coverage < 1.0:
-                cmd += ["--avg-size", "50"]
+            bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
+            if bin_estimates.get("target"):
+                cmd += ["--avg-size", str(bin_estimates["target"])]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
     antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
     if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
-            # small target regions, use smaller antitargets
-            if pct_coverage < 1.0:
-                cmd += ["--avg-size", "100000"]
+            bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
+            if bin_estimates.get("antitarget"):
+                cmd += ["--avg-size", str(bin_estimates["antitarget"])]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_bed, antitarget_bed
+
+def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data):
+    """Estimate good coverage bin sizes for target regions based on coverage.
+    """
+    out_file = os.path.join(work_dir, "%s-bin_estimate.txt" % os.path.splitext(os.path.basename(raw_target_bed))[0])
+    method_map = {"genome": "wgs", "regional": "hybrid", "amplicon": "amplicon"}
+    if not os.path.exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = [_get_cmd("coverage_bin_size.py"), dd.get_align_bam(data),
+                   "-m", method_map[cov_interval], "-t", raw_target_bed,
+                   "-g", access_bed]
+            cmd = " ".join(cmd) + " > " + tx_out_file
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit coverage bin estimation")
+    avg_bin_sizes = {}
+    estimate_map = {"On-target": "target", "Off-target": "antitarget",
+                    "Genome": "target", "Targets (sampling)": "target"}
+    range_map = {("genome", "target"): (500, 1000),
+                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (50000, 200000),
+                 ("amplicon", "target"): (50, 267)}
+    with open(out_file) as in_handle:
+        for line in in_handle:
+            if line.startswith(tuple(estimate_map.keys())):
+                name, depth, bin_size = line.strip().split()
+                name = estimate_map[name.replace(":", "")]
+                try:
+                    bin_size = int(bin_size)
+                except ValueError:
+                    bin_size = None
+                if bin_size and bin_size > 0:
+                    cur_min, cur_max = range_map[(cov_interval, name)]
+                    avg_bin_sizes[name] = max(min(bin_size, cur_max), cur_min)
+    return avg_bin_sizes
 
 def _get_target_access_files(cov_interval, data, work_dir):
     """Retrieve target and access files based on the type of data to process.
