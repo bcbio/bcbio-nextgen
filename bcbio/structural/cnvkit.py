@@ -318,16 +318,16 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
         with file_transaction(data, target_bed) as tx_out_file:
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
             bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
-            if bin_estimates.get("On-target"):
-                cmd += ["--avg-size", str(bin_estimates["On-target"])]
+            if bin_estimates.get("target"):
+                cmd += ["--avg-size", str(bin_estimates["target"])]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
     antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
     if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
             bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
-            if bin_estimates.get("Off-target"):
-                cmd += ["--avg-size", str(bin_estimates["Off-target"])]
+            if bin_estimates.get("antitarget"):
+                cmd += ["--avg-size", str(bin_estimates["antitarget"])]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_bed, antitarget_bed
 
@@ -344,18 +344,23 @@ def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work
             cmd = " ".join(cmd) + " > " + tx_out_file
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit coverage bin estimation")
     avg_bin_sizes = {}
+    estimate_map = {"On-target": "target", "Off-target": "antitarget",
+                    "Genome": "target", "Targets (sampling)": "target"}
+    range_map = {("genome", "target"): (500, 1000),
+                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (50000, 200000),
+                 ("amplicon", "target"): (50, 267)}
     with open(out_file) as in_handle:
         for line in in_handle:
-            if line.startswith(("On-target", "Off-target")):
+            if line.startswith(tuple(estimate_map.keys())):
                 name, depth, bin_size = line.strip().split()
-                name = name.replace(":", "")
+                name = estimate_map[name.replace(":", "")]
                 try:
                     bin_size = int(bin_size)
                 except ValueError:
                     bin_size = None
-                if bin_size < 0:
-                    bin_size = None
-                avg_bin_sizes[name] = bin_size
+                if bin_size and bin_size > 0:
+                    cur_min, cur_max = range_map[(cov_interval, name)]
+                    avg_bin_sizes[name] = max(min(bin_size, cur_max), cur_min)
     return avg_bin_sizes
 
 def _get_target_access_files(cov_interval, data, work_dir):
