@@ -221,7 +221,6 @@ if __name__ == "__main__":
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
                         action="append", default=[],
-                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv",
                         choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp",
                                  "battenberg", "kraken", "ericscript"])
     parser.add_argument("--genomes", help="Genomes to download",
