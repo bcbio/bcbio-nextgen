@@ -169,6 +169,12 @@ other analyses. The available targets are:
 - ``ericscript`` Database for `EricScript <https://sites.google.com/site/bioericscript/>`_,
   which is can be used for gene fusion detection. The build for hg38 and Ensembl
   version 84 is installed.
+  If you have the database downloaded, you can add the absolute path to its 
+  location into the ``bcbio_system.yaml`` to let bcbio use it::
+  
+  resources:
+    ericscript:
+      db: /path/to/ericscript_db
 
 .. _toolplus-install:
 
