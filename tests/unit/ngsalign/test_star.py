@@ -1,10 +1,12 @@
-from tests.unit.data import DATA as _DATA
-from tests.unit.data import NAMES as _NAMES
 from copy import deepcopy
 
 import pytest
+import mock
 
+from bcbio.ngsalign import star
 from bcbio.pipeline import datadict as dd
+from tests.unit.data import DATA as _DATA
+from tests.unit.data import NAMES as _NAMES
 
 
 @pytest.fixture
@@ -21,17 +23,12 @@ def test_get_star_dirnames(data, names):
     from bcbio.ngsalign.star import _get_star_dirnames
     align_dir = '/path/to/align/dir'
     lane = dd.get_lane(data)
-    result = _get_star_dirnames(align_dir, data, names)
+    result = star._get_star_dirnames(align_dir, data, names)
     assert result.out_dir == '/path/to/align/dir/%s_star' % lane
     assert result.out_prefix == '/path/to/align/dir/%s' % lane
     assert result.out_file == '/path/to/align/dir/%sAligned.out.sam' % lane
     assert result.final_out == '/path/to/align/dir/%s_star/%s.bam' % (
         lane, names['sample'])
-=======
-from bcbio.ngsalign import star
-
-import mock
-import pytest
 
 
 @pytest.yield_fixture
