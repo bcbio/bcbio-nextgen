@@ -152,9 +152,7 @@ def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
     data["count_file"] = featureCounts.count(data)
 
-    if dd.get_fusion_mode(data, False):
-        # TODO: decide what to do with oncofuse in case output from fusion
-        # caller is not supported
+    if dd.get_fusion_mode(data, False) and not dd.get_fusion_caller(data):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
