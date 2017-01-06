@@ -347,7 +347,7 @@ def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work
     estimate_map = {"On-target": "target", "Off-target": "antitarget",
                     "Genome": "target", "Targets (sampling)": "target"}
     range_map = {("genome", "target"): (500, 1000),
-                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (50000, 200000),
+                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (20000, 200000),
                  ("amplicon", "target"): (50, 267)}
     with open(out_file) as in_handle:
         for line in in_handle:
