@@ -29,7 +29,7 @@ def handle_vcf_calls(vcf_file, data, orig_items):
         return vcf_file
     else:
         if population.do_db_build(orig_items):
-            gemini_db = population.create_gemini_db(vcf_file, data)
+            gemini_db = population.create_gemini_db_orig(vcf_file, data)
             if gemini_db:
                 priority_file = _prep_priority_filter(gemini_db, data)
                 return _apply_priority_filter(vcf_file, priority_file, data)

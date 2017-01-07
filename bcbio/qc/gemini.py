@@ -7,13 +7,22 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
-from bcbio.provenance import do
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 
 
 def _do(cmd):
     return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0].strip()
+
+def _db_has_attr(attr, gemini, gemini_db):
+    db_info = _do(" ".join([gemini, "db_info", gemini_db]))
+    for line in db_info.split("\n"):
+        if line.startswith("variants"):
+            parts = [x.strip() for x in line.split() if x.strip()]
+            if len(parts) > 1 and parts[1] == attr:
+                return True
+    return False
 
 def run(bam_file, data, out_dir):
     """Retrieve high level variant statistics from Gemini.
@@ -26,7 +35,7 @@ def run(bam_file, data, out_dir):
         out_dir = utils.safe_makedir(out_dir)
         gemini_db = gemini_dbs[0]
         gemini_stat_file = os.path.join(out_dir, "%s-%s-stats.yaml" % (os.path.splitext(os.path.basename(gemini_db))[0], name))
-        if name.find("+") > -1 :
+        if name.find("+") > -1:
             logger.debug("WARNING: skipping gemini stats because `+` character found in sample name.")
             return out
         if not utils.file_uptodate(gemini_stat_file, gemini_db):
@@ -36,10 +45,13 @@ def run(bam_file, data, out_dir):
                    "--gt-filter",
                    "\"gt_types.%s != HOM_REF\"" % name]
             gt_counts = _do(" ".join(cmd))
-            cmd = [gemini, "query", gemini_db, "-q",
-                   "\"SELECT count(*) FROM variants WHERE in_dbsnp==1\" ",
-                   "--gt-filter", "\"gt_types.%s != HOM_REF\"" % name]
-            dbsnp_counts = _do(" ".join(cmd))
+            if _db_has_attr("rs_ids", gemini, gemini_db):
+                cmd = [gemini, "query", gemini_db, "-q",
+                       "\"SELECT count(*) FROM variants WHERE rs_ids is not null\" ",
+                       "--gt-filter", "\"gt_types.%s != HOM_REF\"" % name]
+                dbsnp_counts = _do(" ".join(cmd))
+            else:
+                dbsnp_counts = 0
             cmd = [gemini, "query", gemini_db, "-q",
                    "\"SELECT count(*) FROM variants\" ",
                    "--gt-filter", "\"gt_types.%s == HET\"" % name]
