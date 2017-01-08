@@ -48,7 +48,8 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     if not vcfutils.vcf_has_variants(gemini_vcf):
         return None
     if not utils.file_exists(gemini_db):
-        ann_file = vcfanno.run_vcfanno(gemini_vcf, "gemini", data, install.get_gemini_dir(data))
+        data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
+        ann_file = vcfanno.run_vcfanno(gemini_vcf, "gemini", data, data_basepath)
         with file_transaction(data, gemini_db) as tx_gemini_db:
             vcf2db = config_utils.get_program("vcf2db.py", data)
             cmd = [vcf2db, ann_file, ped_file, tx_gemini_db]
@@ -215,10 +216,10 @@ def get_multisample_vcf(fnames, name, caller, data):
         return gemini_vcf
 
 def _has_gemini(data):
+    """Use gemini if we installed required data.
+    """
     from bcbio import install
-    gemini_dir = install.get_gemini_dir(data)
-    return ((os.path.exists(gemini_dir) and len(os.listdir(gemini_dir)) > 0)
-            and os.path.exists(os.path.join(os.path.dirname(gemini_dir), "gemini-config.yaml")))
+    return "gemini" in install.get_defaults().get("datatarget", [])
 
 def do_db_build(samples, need_bam=True):
     """Confirm we should build a gemini database: need gemini and not in tools_off.
