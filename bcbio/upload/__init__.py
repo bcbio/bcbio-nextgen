@@ -12,7 +12,8 @@ import bcbio.pipeline.datadict as dd
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
-               "s3": s3}
+               "s3": s3,
+               "irods": irods}
 
 def project_from_sample(sample):
     upload_config = sample.get("upload")
