@@ -1,11 +1,12 @@
 """
-    Handle upload and retrieval of files from iRods.
+    Handle upload and retrieval of files from iRods. This method requires a preconfigured connection
+    to an iRods repository throught the `iinit` command
     config options:
     upload:
       method: irods
-      zone: iRods zone name
-      resource: (optional) iRods resource name, if other than default
       dir: absolute parent path in iRods repository
+      resource: (optional) iRods resource name, if other than default
+      extra: (optional)["list","of","arbitrary","options","that","can","be","passed","to","iput"]
 
 """
 import datetime
@@ -36,19 +37,22 @@ def update_file(finfo, sample_info, config):
         keyname = os.path.join(config.get("dir", ""), orig_keyname)
         metadata= _format_metadata(sample_info)
         if not no_upload:
-            _upload_file_icommands_cli(fname, config, metadata)
+            _upload_file_icommands_cli(fname, keyname, config, metadata)
 
-def _upload_file_icommands_cli(local_fname, config=None, metadata=None):
+def _upload_file_icommands_cli(local_fname, keyname, config=None, metadata=None):
     """
     Upload via the standard icommands CLI.
-    example: iput -kK -P -R $resource -v --metadata "key;value;;key;value;;" $file $dir/$file
+    example: iput -K -P -R $resource -v --metadata "attr1;val1;unit1;attr2;val2;unit2;" $file $dir/$file
+    go to https://docs.irods.org/4.2.0/icommands/user/#iput for more info
     """
 
     irods_fname = "%s/%s" % (config.get("dir"), keyname)
-    args = ["-kK","-P", "-v"]
+    args = ["-K","-P", "-v"]
     if config:
         if config.get("resource"):
             args += ["-R", config.get("resource")]
+        if config.get("extra"):
+            args += config.get("extra")
     if metadata:
         args += ["--metadata", metadata]
 
@@ -58,9 +62,12 @@ def _upload_file_icommands_cli(local_fname, config=None, metadata=None):
 def _format_metadata(metadata):
     """
     Format metadata to use in icommands CLI
-    requisite format: "key;value;;key;value"
+    requisite format: "attr1;val1;unit1;attr2;val2;unit2;"
     """
-
+    meta_string=""
+    #assuming metadata is a dictionary: {key1:value1,key2:value2}
+    for keyname, value in metadata.iteritems():
+        meta_string += str(keyname;value;;)
     return meta_string
 
 
