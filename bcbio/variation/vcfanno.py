@@ -40,7 +40,7 @@ def run_vcfanno(vcf, anno_type, data, data_basepath=None):
         logger.warn(CONF_NOT_FOUND.format(**locals()))
         return vcf
 
-    out_file = utils.splitext_plus(vcf)[0] + anno_type + "-annotated.vcf.gz"
+    out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
     if utils.file_exists(out_file):
         return out_file
 
