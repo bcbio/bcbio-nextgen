@@ -219,7 +219,7 @@ def _get_maxentscan(data):
     https://github.com/Ensembl/VEP_plugins/blob/master/MaxEntScan.pm
     """
 
-    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan", data["config"])))
+    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan_score3.pl", data["config"])))
     annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
         return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
