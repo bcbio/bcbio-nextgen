@@ -74,7 +74,7 @@ def umi_transform(data):
     else:
         split_option = ""
     umis = config_utils.get_program("umis", data, default="umis")
-
+    cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
     with open_fastq(fq1) as in_handle:
         read = in_handle.next()
@@ -83,6 +83,7 @@ def umi_transform(data):
             return [[data]]
 
     cmd = ("{umis} fastqtransform {split_option} {transform_file} "
+           "--cores {cores} "
            "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
     message = ("Inserting UMI and barcode information into the read name of %s"
