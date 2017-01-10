@@ -26,17 +26,14 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
     gemini_vcf = multiallelic.to_single(multisample_vcf, data)
-    use_gemini_quick = (do_db_build(samples) and
-                        any(vcfutils.vcf_has_variants(f) for f in fnames))
-    if not utils.file_exists(gemini_db) and use_gemini_quick:
-        use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
-        if use_gemini:
-            ped_file = create_ped_file(samples + extras, gemini_vcf)
-            # Use original approach for hg19/GRCh37 pending additional testing
-            if support_gemini_orig(data):
-                gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
-            else:
-                gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
+    use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
+    if not utils.file_exists(gemini_db) and use_gemini:
+        ped_file = create_ped_file(samples + extras, gemini_vcf)
+        # Use original approach for hg19/GRCh37 pending additional testing
+        if support_gemini_orig(data):
+            gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
+        else:
+            gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": multisample_vcf if is_batch else None}]]
 
@@ -201,14 +198,14 @@ def get_multisample_vcf(fnames, name, caller, data):
     if len(unique_fnames) > 1:
         gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
         vrn_file_batch = None
-        for variant in data["variants"]:
+        for variant in data.get("variants", []):
             if variant["variantcaller"] == caller and variant.get("vrn_file_batch"):
                 vrn_file_batch = variant["vrn_file_batch"]
         if vrn_file_batch:
             utils.symlink_plus(vrn_file_batch, gemini_vcf)
             return gemini_vcf
         else:
-            return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
+            return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, dd.get_ref_file(data),
                                                 data["config"])
     else:
         gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, utils.splitext_plus(unique_fnames[0])[1]))

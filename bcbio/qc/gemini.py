@@ -24,6 +24,18 @@ def _db_has_attr(attr, gemini, gemini_db):
                 return True
     return False
 
+def _get_sample_name(gemini, gemini_db, data):
+    """vcf2db remaps some characters ('-' and ' ') to underscores.
+    """
+    name = dd.get_sample_name(data)
+    name_clean = name.replace("-", "_").replace(" ", "_")
+    cmd = [gemini, "query", gemini_db, "-q", '"SELECT name from samples"']
+    db_samples = set(x.strip() for x in _do(" ".join(cmd)).split("\n"))
+    if name_clean in db_samples:
+        return name_clean
+    else:
+        return name
+
 def run(bam_file, data, out_dir):
     """Retrieve high level variant statistics from Gemini.
     """
@@ -31,33 +43,33 @@ def run(bam_file, data, out_dir):
     gemini_dbs = [d for d in
                   [tz.get_in(["population", "db"], x) for x in data.get("variants", [])] if d]
     if len(gemini_dbs) > 0:
-        name = dd.get_sample_name(data)
-        out_dir = utils.safe_makedir(out_dir)
+        gemini = config_utils.get_program("gemini", data["config"])
         gemini_db = gemini_dbs[0]
+        name = _get_sample_name(gemini, gemini_db, data)
+        out_dir = utils.safe_makedir(out_dir)
         gemini_stat_file = os.path.join(out_dir, "%s-%s-stats.yaml" % (os.path.splitext(os.path.basename(gemini_db))[0], name))
         if name.find("+") > -1:
             logger.debug("WARNING: skipping gemini stats because `+` character found in sample name.")
             return out
         if not utils.file_uptodate(gemini_stat_file, gemini_db):
-            gemini = config_utils.get_program("gemini", data["config"])
             cmd = [gemini, "query", gemini_db, "-q",
-                   "\"SELECT count(*) FROM variants\"",
+                   "\"SELECT count(*) FROM variants WHERE filter is null\"",
                    "--gt-filter",
                    "\"gt_types.%s != HOM_REF\"" % name]
             gt_counts = _do(" ".join(cmd))
             if _db_has_attr("rs_ids", gemini, gemini_db):
                 cmd = [gemini, "query", gemini_db, "-q",
-                       "\"SELECT count(*) FROM variants WHERE rs_ids is not null\" ",
+                       "\"SELECT count(*) FROM variants WHERE rs_ids is not null and filter is null\" ",
                        "--gt-filter", "\"gt_types.%s != HOM_REF\"" % name]
                 dbsnp_counts = _do(" ".join(cmd))
             else:
                 dbsnp_counts = 0
             cmd = [gemini, "query", gemini_db, "-q",
-                   "\"SELECT count(*) FROM variants\" ",
+                   "\"SELECT count(*) FROM variants WHERE filter is null\" ",
                    "--gt-filter", "\"gt_types.%s == HET\"" % name]
             het_counts = _do(" ".join(cmd))
             cmd = [gemini, "query", gemini_db, "-q",
-                   "\"SELECT count(*) FROM variants\" ",
+                   "\"SELECT count(*) FROM variants WHERE filter is null\" ",
                    "--gt-filter", "\"gt_types.%s == HOM_ALT\"" % name]
             hom_alt_counts = _do(" ".join(cmd))
             out["Variations (heterozygous)"] = int(het_counts.strip()) if het_counts else 0
