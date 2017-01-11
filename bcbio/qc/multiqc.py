@@ -38,7 +38,7 @@ def summary(*samples):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
             in_files = _get_input_files(samples, out_dir, tx_out)
             in_files += _merge_metrics(samples, out_dir)
-            if in_files:
+            if _one_exists(in_files):
                 with utils.chdir(out_dir):
                     _create_config_file(out_dir, samples)
                     input_list_file = _create_list_file(in_files, out_dir)
@@ -65,6 +65,15 @@ def summary(*samples):
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
         out.append([data])
     return out
+
+def _one_exists(input_files):
+    """
+    at least one file must exist for multiqc to run properly
+    """
+    for f in input_files:
+        if os.path.exists(f):
+            return True
+    return False
 
 def _get_input_files(samples, base_dir, tx_out_dir):
     """Retrieve input files, keyed by sample and QC method name.
