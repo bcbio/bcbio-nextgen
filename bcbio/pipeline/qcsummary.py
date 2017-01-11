@@ -95,7 +95,6 @@ def get_qc_tools(data):
         to_run.append("small-rna")
     if not analysis.startswith("smallrna-seq"):
         to_run.append("samtools")
-        to_run.append("gemini")
         if tz.get_in(["config", "algorithm", "kraken"], data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
@@ -112,13 +111,12 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, gemini, kraken, qsignature, qualimap, samtools, picard, srna, umi, variant
+    from bcbio.qc import fastqc, kraken, qsignature, qualimap, samtools, picard, srna, umi, variant
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
              "qualimap": qualimap.run,
              "qualimap_rnaseq": qualimap.run_rnaseq,
-             "gemini": gemini.run,
              "qsignature": qsignature.run,
              "coverage": _run_coverage_qc,
              "variants": variant.run,

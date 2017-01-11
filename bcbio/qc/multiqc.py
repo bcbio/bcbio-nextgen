@@ -39,7 +39,8 @@ def summary(*samples):
             in_files = _get_input_files(samples, out_dir, tx_out)
             in_files += _merge_metrics(samples, out_dir)
             if in_files:
-                with utils.chdir(work_dir):
+                with utils.chdir(out_dir):
+                    _create_config_file(out_dir, samples)
                     input_list_file = _create_list_file(in_files, out_dir)
                     if dd.get_tmp_dir(samples[0]):
                         export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
@@ -122,6 +123,21 @@ def _create_list_file(dirs, out_dir):
     out_file = os.path.join(out_dir, "list_files.txt")
     with open(out_file, "w") as f:
         f.write('\n'.join(dirs))
+    return out_file
+
+def _create_config_file(out_dir, samples):
+    """Provide configuration file hiding duplicate columns.
+
+    Future entry point for providing top level configuration of output reports.
+    """
+    out_file = os.path.join(out_dir, "multiqc_config.yaml")
+    out = {"table_columns_visible":
+           {"SnpEff": {"Change_rate": False,
+                       "Ts_Tv_ratio": False,
+                       "Number_of_variants_before_filter": False}},
+           "module_order": ["bcbio", "samtools", "bcftools", "picard", "qualimap", "snpeff", "fastqc"]}
+    with open(out_file, "w") as out_handle:
+        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file
 
 def _check_multiqc_input(path):
