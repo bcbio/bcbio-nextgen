@@ -205,7 +205,7 @@ def _get_dbscsnv(data):
     dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
     annotations = ["ada_score","rf_score"]
     if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], annotations
+        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)], annotations
     else:
         return [], []
 
