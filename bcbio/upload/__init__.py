@@ -6,7 +6,7 @@ import os
 import toolz as tz
 
 from bcbio import log, utils
-from bcbio.upload import shared, filesystem, galaxy, s3
+from bcbio.upload import shared, filesystem, galaxy, s3, irods
 from bcbio.pipeline import run_info
 import bcbio.pipeline.datadict as dd
 
