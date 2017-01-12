@@ -25,7 +25,8 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     name, caller, is_batch = call_info
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
-    gemini_vcf = multiallelic.to_single(multisample_vcf, data)
+    passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
+    gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
     use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     if not utils.file_exists(gemini_db) and use_gemini:
         ped_file = create_ped_file(samples + extras, gemini_vcf)
