@@ -10,6 +10,9 @@
 - Provide separate germline calling for somatic tumor/normal pairs. Supplements
   somatic calls with standard germline calls on normal samples, including
   ensemble and SV calling.
+- Support creating GEMINI databases with new generic mechanism using vcfanno/vcf2db.
+  This allows creation of GEMINI output for any organism. Adds support for hg38
+  with annotations from dbSNP, Clinvar, ExAC and ESP.
 - Support FreeBayes 1.1.0 for improved memory usage and 3-4x speedup.
   Will default to 1.1.0 at next release. Validation work:
   https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2016-11-21-giab-hg38-freebayes.md
@@ -18,6 +21,7 @@
   easier. Thanks to Vlad Saveliev.
 - Fixes for Seq2C concurrency problems when preparing BED files. Thanks to Vlad
   Saveliev.
+- Update WHAM structural variant caller to support the latest release.
 - Support for VEP 86 with additional plugins and generalization of fields.
   Thanks to Matthias De Smet.
 - Deprecate `clinical_reporting` parameter and introduce new
