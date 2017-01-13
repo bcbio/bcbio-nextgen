@@ -272,8 +272,8 @@ The ``upload`` section of the sample configuration file describes where to put
 the final output files of the pipeline. At its simplest, you can configure
 bcbio-nextgen to upload results to a local directory, for example a folder
 shared amongst collaborators or a Dropbox account. You can also configure
-it to upload results automatically to a Galaxy instance or to
-`Amazon S3`_. Here is the simplest configuration, uploading to a local
+it to upload results automatically to a Galaxy instance, to
+`Amazon S3`_ or to iRODS. Here is the simplest configuration, uploading to a local
 directory::
 
      upload:
@@ -329,6 +329,18 @@ For S3 access credentials, set the standard environmental variables,
 or use `IAM access roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_
 with an instance profile on EC2 to give your instances permission to create
 temporary S3 access.
+
+iRODS parameters:
+
+    upload:
+      method: irods
+      dir: absolute parent path in iRODS repository
+      resource: (optional) iRODS resource name, if other than default
+      ticket: (optional) iRODS ticket, for ticket based access
+      extra: (optional)["list","of","arbitrary","options","that","can","be","passed","to","iput"]
+
+Uploads to iRODS depend on a valid installation of the iCommands CLI, and a preconfigured connection
+trough the `iinit` command.
 
 Globals
 ~~~~~~~
