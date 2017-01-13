@@ -23,11 +23,12 @@ def _format_metadata(metadata):
     Format metadata to use in iCommands CLI
     requisite format: "attr1;val1;unit1;attr2;val2;unit2;"
     """
-    meta_string=""
+    meta_string=[]
     #assuming metadata is a dictionary: {key1:value1,key2:value2}
     for keyname, value in metadata.iteritems():
-        meta_string += str(keyname;value;;)
-    return meta_string
+        unit=""
+        meta_string += [str(keyname).replace(" ","_"),str(value).replace(" ","_"),unit]
+    return ";".join(meta_string)
 
 
 def update_file(finfo, sample_info, config):
@@ -49,9 +50,8 @@ def update_file(finfo, sample_info, config):
 
     for fname, orig_keyname in to_transfer:
         keyname = os.path.join(config.get("dir", ""), orig_keyname)
-        metadata= _format_metadata(sample_info)
-        if not no_upload:
-            _upload_file_icommands_cli(fname, keyname, config, metadata)
+        #metadata= _format_metadata(sample_info['summary']['metrics'])
+        _upload_file_icommands_cli(fname, keyname, config )
 
 def _upload_file_icommands_cli(local_fname, keyname, config=None, metadata=None):
     """
