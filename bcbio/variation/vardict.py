@@ -129,10 +129,11 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
                          os.path.dirname(utils.Rscript_cmd()))
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
-                        "-N {sample} -b {bamfile} {opts} "
-                        "| {strandbias}"
-                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                       "-N {sample} -b {bamfile} {opts} "
+                       "| {strandbias}"
+                       "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| bcftools filter -i 'QUAL >= 0' "
+                       "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -285,6 +286,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "{freq_filter} "
+                       "| bcftools filter -i 'QUAL >= 0' "
                        "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
