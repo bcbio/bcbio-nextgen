@@ -31,7 +31,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     if not utils.file_exists(gemini_db) and use_gemini:
         ped_file = create_ped_file(samples + extras, gemini_vcf)
         # Use original approach for hg19/GRCh37 pending additional testing
-        if support_gemini_orig(data):
+        if support_gemini_orig(data) and not any("gemini_vcfanno" in dd.get_tools_on(d) for d in samples):
             gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
         else:
             gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)

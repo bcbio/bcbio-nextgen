@@ -825,8 +825,9 @@ Post-processing
   FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
   for variant filtration, even for smaller sample sizes.
 ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
-  that pass filters.
-
+  that pass filters. ``gemini_vcfanno`` uses the new vcfanno/vcf2db for creating
+  GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other
+  organisms.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini
