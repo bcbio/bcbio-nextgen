@@ -6,13 +6,14 @@ import os
 import toolz as tz
 
 from bcbio import log, utils
-from bcbio.upload import shared, filesystem, galaxy, s3
+from bcbio.upload import shared, filesystem, galaxy, s3, irods
 from bcbio.pipeline import run_info
 import bcbio.pipeline.datadict as dd
 
 _approaches = {"filesystem": filesystem,
                "galaxy": galaxy,
-               "s3": s3}
+               "s3": s3,
+               "irods": irods}
 
 def project_from_sample(sample):
     upload_config = sample.get("upload")
