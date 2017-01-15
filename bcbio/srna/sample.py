@@ -24,6 +24,7 @@ from bcbio.pipeline import config_utils
 from bcbio.log import logger
 from bcbio.rnaseq import spikein
 
+from six import iteritems
 
 def trim_srna_sample(data):
     """
@@ -128,7 +129,7 @@ def _summary(in_file):
             data[l] += counts
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, 'w') as out_handle:
-            for l, c in data.iteritems():
+            for l, c in iteritems(data):
                 out_handle.write("%s %s\n" % (l, c))
     return out_file
 

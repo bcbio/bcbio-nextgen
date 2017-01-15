@@ -1,6 +1,6 @@
 """Read genome build configurations from Galaxy *.loc and bcbio-nextgen resource files.
 """
-import ConfigParser
+from six.moves import configparser
 import glob
 import os
 import sys
@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 
 import toolz as tz
 import yaml
+from six import iteritems
 
 from bcbio import utils
 from bcbio.distributed import objectstore
@@ -63,7 +64,7 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     input_dir = os.path.join(base_dir, "inputs")
     if isinstance(xs, dict):
         out = {}
-        for k, v in xs.iteritems():
+        for k, v in iteritems(xs):
             if k not in ignore_keys and v and isinstance(v, basestring):
                 if v.lower() == "none":
                     out[k] = None
@@ -172,7 +173,7 @@ def _get_galaxy_tool_info(galaxy_base):
     ini_file = os.path.join(galaxy_base, "universe_wsgi.ini")
     info = {"tool_data_table_config_path": os.path.join(galaxy_base, "tool_data_table_conf.xml"),
             "tool_data_path": os.path.join(galaxy_base, "tool-data")}
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(ini_file)
     if "app:main" in config.sections():
         for option in config.options("app:main"):

@@ -3,6 +3,7 @@
 import datetime
 import os
 
+from six import iteritems
 import toolz as tz
 
 from bcbio import log, utils
@@ -311,7 +312,7 @@ def _maybe_add_summary(algorithm, sample, out):
                         "type": "pdf",
                         "ext": "summary"})
         if sample["summary"].get("qc"):
-            for program, finfo in sample["summary"]["qc"].iteritems():
+            for program, finfo in iteritems(sample["summary"]["qc"]):
                 out.extend(_flatten_file_with_secondary(finfo, os.path.join("qc", program)))
         if utils.get_in(sample, ("summary", "researcher")):
             out.append({"path": sample["summary"]["researcher"],

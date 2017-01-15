@@ -12,8 +12,8 @@ https://github.com/AstraZeneca-NGS/VarDict
 specify 'vardict-perl'.
 """
 import os
-import itertools
 import sys
+from six.moves import zip
 
 import toolz as tz
 import pybedtools
@@ -108,7 +108,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 vrs, region, out_file, items=items, do_merge=False)
             num_bams = len(align_bams)
             sample_vcf_names = []  # for individual sample names, given batch calling may be required
-            for bamfile, item in itertools.izip(align_bams, items):
+            for bamfile, item in zip(align_bams, items):
                 # prepare commands
                 sample = dd.get_sample_name(item)
                 vardict = get_vardict_command(items[0])

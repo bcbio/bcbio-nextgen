@@ -7,6 +7,7 @@ scripts to reconcile.
 Uses disambiguation scripts contributed by AstraZeneca, incorporated into bcbio-nextgen:
 https://github.com/mjafin/disambiguate
 """
+from __future__ import print_function
 import collections
 import copy
 import os
@@ -59,7 +60,7 @@ def resolve(items, run_parallel):
         dis1 = run_parallel("run_disambiguate",
                             [(xs, xs[0]["config"]) for xs in to_process.itervalues()])
         disambigs_by_name = collections.defaultdict(list)
-        print len(dis1)
+        print(len(dis1))
         for xs in dis1:
             assert len(xs) == 1
             data = xs[0]
@@ -80,7 +81,7 @@ def merge_extras(items, config):
             in_files.append(data["disambiguate"][extra_name])
         out_file = "%s-allmerged%s" % os.path.splitext(in_files[0])
         if in_files[0].endswith(".bam"):
-            print out_file, in_files
+            print(out_file, in_files)
             merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), config,
                                                 out_file=out_file)
         else:

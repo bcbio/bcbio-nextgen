@@ -8,6 +8,7 @@ import os
 import lxml.html
 import pandas as pd
 import pybedtools
+from six import iteritems
 import toolz as tz
 import toolz.dicttoolz as dtz
 
@@ -184,7 +185,7 @@ def _parse_metrics(metrics):
 
     out = {}
     total_reads = sum([int(metrics[name]) for name in total])
-    out.update({key: val for key, val in metrics.iteritems() if key in correct})
+    out.update({key: val for key, val in iteritems(metrics) if key in correct})
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
 

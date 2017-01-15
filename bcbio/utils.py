@@ -9,13 +9,14 @@ import contextlib
 import itertools
 import functools
 import random
-import ConfigParser
+from six.moves import configparser
 import collections
 import fnmatch
 import subprocess
 import sys
 import types
 
+from six import iteritems
 import toolz as tz
 import yaml
 try:
@@ -265,7 +266,7 @@ def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -451,7 +452,7 @@ def merge_config_files(fnames):
     out = _load_yaml(fnames[0])
     for fname in fnames[1:]:
         cur = _load_yaml(fname)
-        for k, v in cur.iteritems():
+        for k, v in iteritems(cur):
             if k in out and isinstance(out[k], dict):
                 out[k].update(v)
             else:
@@ -465,7 +466,7 @@ def deepish_copy(org):
     http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
     """
     out = dict().fromkeys(org)
-    for k, v in org.iteritems():
+    for k, v in iteritems(org):
         if isinstance(v, dict):
             out[k] = deepish_copy(v)
         else:
@@ -764,7 +765,7 @@ def max_command_length():
     try:
         arg_max = os.sysconf('SC_ARG_MAX')
         env_lines = len(os.environ) * 4
-        env_chars = sum([len(x) + len(y) for x, y in os.environ.iteritems()])
+        env_chars = sum([len(x) + len(y) for x, y in iteritems(os.environ)])
         arg_length = arg_max - env_lines - 2048
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH

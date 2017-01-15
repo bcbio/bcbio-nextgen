@@ -3,6 +3,7 @@
 http://www.bioconductor.org/packages/release/bioc/html/BubbleTree.html
 http://www.bioconductor.org/packages/release/bioc/vignettes/BubbleTree/inst/doc/BubbleTree-vignette.html
 """
+from __future__ import print_function
 import collections
 import csv
 import os
@@ -366,7 +367,7 @@ if __name__ == "__main__":
               "min_depth": 15}
     for rec in bcf_in:
         if _is_possible_loh(rec, bcf_in, params, somatic(sys.argv[2], sys.argv[3])):
-            print rec.filter.keys(), len(rec.filter)
+            print(rec.filter.keys(), len(rec.filter))
 
 _script = """
 .libPaths(c("{local_sitelib}"))

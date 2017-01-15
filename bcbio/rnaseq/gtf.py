@@ -7,6 +7,7 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
+from six import iteritems
 
 def guess_infer_extent(gtf_file):
     """
@@ -283,7 +284,7 @@ def tx2genefile(gtf, out_file=None, data=None):
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
-            for k, v in transcript_to_gene(gtf).iteritems():
+            for k, v in iteritems(transcript_to_gene(gtf)):
                 out_handle.write(",".join([k, v]) + "\n")
     return out_file
 

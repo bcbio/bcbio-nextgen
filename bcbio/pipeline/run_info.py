@@ -11,6 +11,7 @@ import itertools
 import os
 import string
 
+from six import iteritems
 import toolz as tz
 import yaml
 from bcbio import install, utils
@@ -46,7 +47,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
         "Did not find input sample YAML file: %s" % run_info_yaml
     run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names)
     remote_retriever = None
-    for iname, retriever in integrations.iteritems():
+    for iname, retriever in iteritems(integrations):
         if iname in config:
             run_details = retriever.add_remotes(run_details, config[iname])
             remote_retriever = retriever
@@ -128,8 +129,8 @@ def _add_remote_resources(resources):
     """Retrieve remote resources like GATK/MuTect jars present in S3.
     """
     out = copy.deepcopy(resources)
-    for prog, info in resources.iteritems():
-        for key, val in info.iteritems():
+    for prog, info in iteritems(resources):
+        for key, val in iteritems(info):
             if key == "jar" and objectstore.is_remote(val):
                 store_dir = utils.safe_makedir(os.path.join(os.getcwd(), "inputs", "jars", prog))
                 fname = objectstore.download(val, store_dir, store_dir)
@@ -777,16 +778,16 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
         # Add any global resource specifications
         if "resources" not in item:
             item["resources"] = {}
-        for prog, pkvs in resources.iteritems():
+        for prog, pkvs in iteritems(resources):
             if prog not in item["resources"]:
                 item["resources"][prog] = {}
-            for key, val in pkvs.iteritems():
+            for key, val in iteritems(pkvs):
                 item["resources"][prog][key] = val
         for iname, ivals in integrations.items():
             if ivals:
                 if iname not in item:
                     item[iname] = {}
-                for k, v in ivals.iteritems():
+                for k, v in iteritems(ivals):
                     item[iname][k] = v
 
         run_details.append(item)
@@ -858,7 +859,7 @@ def _replace_global_vars(xs, global_vars):
         return [_replace_global_vars(x) for x in xs]
     elif isinstance(xs, dict):
         final = {}
-        for k, v in xs.iteritems():
+        for k, v in iteritems(xs):
             if isinstance(v, basestring) and v in global_vars:
                 v = global_vars[v]
             final[k] = v
