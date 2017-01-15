@@ -1,5 +1,6 @@
 """Integration with Galaxy nglims.
 """
+from __future__ import print_function
 import collections
 import copy
 import glob
@@ -37,7 +38,7 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
     Only passes non-empty files through for processing.
     """
     files = []
-    print "->", ldetail_group[0]["name"], len(ldetail_group)
+    print("->", ldetail_group[0]["name"], len(ldetail_group))
     for read in ["R1", "R2"]:
         fastq_inputs = sorted(list(set(reduce(operator.add,
                                               (_get_fastq_files(x, read, fastq_dir) for x in ldetail_group)))))

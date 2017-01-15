@@ -6,35 +6,35 @@ From Nick Loman's EntrezAjax:
 
 https://github.com/nickloman/entrezajax
 """
-import urllib
-import urllib2
+from __future__ import print_function
+from six.moves import urllib
 import logging
 
-class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
+class SmartRedirectHandler(urllib.request.HTTPRedirectHandler):
     def http_error_302(self, req, fp, code, msg, headers):
         logging.debug(headers)
         return headers
 
 def _hmmer(endpoint, args1, args2):
-    opener = urllib2.build_opener(SmartRedirectHandler())
-    urllib2.install_opener(opener);
+    opener = urllib.request.build_opener(SmartRedirectHandler())
+    urllib.request.install_opener(opener);
 
-    params = urllib.urlencode(args1)
+    params = urllib.parse.urlencode(args1)
     try:
-        req = urllib2.Request(endpoint,
+        req = urllib.request.Request(endpoint,
                               data = params,
                               headers={"Accept" : "application/json"})
-        v = urllib2.urlopen(req)
-    except urllib2.HTTPError as e:
+        v = urllib.request.urlopen(req)
+    except urllib.error.HTTPError as e:
         raise Exception("HTTP Error 400: %s" % e.read())
 
     results_url = v['location']
 
-    enc_res_params = urllib.urlencode(args2)
+    enc_res_params = urllib.parse.urlencode(args2)
     modified_res_url = results_url + '?' + enc_res_params
 
-    results_request = urllib2.Request(modified_res_url)
-    f = urllib2.urlopen(results_request)
+    results_request = urllib.request.Request(modified_res_url)
+    f = urllib.request.urlopen(results_request)
     return f
 
 def phmmer(**kwargs):
@@ -90,7 +90,7 @@ SGVQRQFRIGYNRAARIIEQMEAQQIVSTPGHNGNREVLAPPPHE"""
     handle = hmmscan(hmmdb = 'pfam', seq = seq)
     import json
     j = json.loads(handle.read())
-    print json.dumps(j, sort_keys=True, indent=4)
+    print(json.dumps(j, sort_keys=True, indent=4))
 
 # test()
 

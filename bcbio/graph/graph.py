@@ -11,6 +11,7 @@ import socket
 
 import pandas as pd
 import cPickle as pickle
+from six import iteritems
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
@@ -165,13 +166,13 @@ def add_common_plot_features(plot, steps):
 
     ymax = plot.get_ylim()[1]
     ticks = {}
-    for tstamp, step in steps.iteritems():
+    for tstamp, step in iteritems(steps):
         if step == 'finished':
             continue
         plot.vlines(tstamp, 0, ymax, linestyles='dashed')
         tstamp = mpl.dates.num2epoch(mpl.dates.date2num(tstamp))
         ticks[tstamp] = step
-    tick_kvs = sorted(ticks.iteritems())
+    tick_kvs = sorted(iteritems(ticks))
     top_axis = plot.twiny()
     top_axis.set_xlim(*plot.get_xlim())
     top_axis.set_xticks([k for k, v in tick_kvs])
@@ -369,7 +370,7 @@ def generate_graphs(data_frames, hardware_info, steps, outdir,
     # Hash of hosts containing (data, hardware, steps) tuple
     collectl_info = collections.defaultdict(dict)
 
-    for host, data_frame in data_frames.iteritems():
+    for host, data_frame in iteritems(data_frames):
         if verbose:
             print('Generating CPU graph for {}...'.format(host))
         graph, data_cpu = graph_cpu(data_frame, steps, hardware_info[host]['num_cpus'])

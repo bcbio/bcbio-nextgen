@@ -7,6 +7,7 @@ import glob
 import os
 
 import toolz as tz
+from six import iteritems
 
 from bcbio import bam, utils
 from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, novoalign, snap, star,
@@ -44,7 +45,7 @@ TOOLS = {
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "hisat2": NgsTool(hisat2.align, None, None, hisat2.remap_index_fn)}
 
-metadata = {"support_bam": [k for k, v in TOOLS.iteritems() if v.bam_align_fn is not None]}
+metadata = {"support_bam": [k for k, v in iteritems(TOOLS) if v.bam_align_fn is not None]}
 
 def align_to_sort_bam(fastq1, fastq2, aligner, data):
     """Align to the named genome build, returning a sorted BAM file.

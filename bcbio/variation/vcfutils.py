@@ -4,12 +4,14 @@
 from collections import namedtuple, defaultdict
 import copy
 import gzip
-import itertools
 import os
 import shutil
 import subprocess
 
+from six import iteritems
 import toolz as tz
+
+from six.moves import zip
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -62,7 +64,7 @@ def get_paired_bams(align_bams, items):
     normal BAMs or with normal VCF panels.
     """
     tumor_bam, tumor_name, normal_bam, normal_name, normal_panel, tumor_config, normal_data = (None,) * 7
-    for bamfile, item in itertools.izip(align_bams, items):
+    for bamfile, item in zip(align_bams, items):
         phenotype = get_paired_phenotype(item)
         if phenotype == "normal":
             normal_bam = bamfile
@@ -282,7 +284,7 @@ def _check_samples_nodups(fnames):
     for f in fnames:
         for s in get_samples(f):
             counts[s] += 1
-    duplicates = [s for s, c in counts.iteritems() if c > 1]
+    duplicates = [s for s, c in iteritems(counts) if c > 1]
     if duplicates:
         raise ValueError("Duplicate samples found in inputs %s: %s" % (duplicates, fnames))
 

@@ -2,6 +2,7 @@
 
 Handles running the full pipeline based on instructions
 """
+from __future__ import print_function
 from collections import defaultdict
 import copy
 import os
@@ -9,6 +10,7 @@ import sys
 import resource
 import tempfile
 
+from six import iteritems
 import yaml
 
 from bcbio import log, heterogeneity, hla, structural, utils
@@ -198,15 +200,15 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
     return samples
 
 def _debug_samples(i, samples):
-    print "---", i, len(samples)
+    print("---", i, len(samples))
     for sample in (x[0] for x in samples):
-        print "  ", sample["description"], sample.get("region"), \
+        print("  ", sample["description"], sample.get("region"), \
             utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
             utils.get_in(sample, ("config", "algorithm", "jointcaller")), \
             utils.get_in(sample, ("metadata", "batch")), \
             [x.get("variantcaller") for x in sample.get("variants", [])], \
             sample.get("work_bam"), \
-            sample.get("vrn_file")
+            sample.get("vrn_file"))
 
 def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
     ## Alignment and preparation requiring the entire input file (multicore cluster)
@@ -428,10 +430,10 @@ def _pair_samples_with_pipelines(run_info_yaml, config):
         usample.pop("algorithm", None)
         if "resources" not in usample:
             usample["resources"] = {}
-        for prog, pkvs in resources.iteritems():
+        for prog, pkvs in iteritems(resources):
             if prog not in usample["resources"]:
                 usample["resources"][prog] = {}
-            for key, val in pkvs.iteritems():
+            for key, val in iteritems(pkvs):
                 usample["resources"][prog][key] = val
         config = config_utils.update_w_custom(config, usample)
         sample["resources"] = {}

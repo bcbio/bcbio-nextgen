@@ -6,6 +6,7 @@ import os.path
 import re
 
 import pandas as pd
+from six import iteritems
 
 def _parse_raw(fp, start_tstamp, end_tstamp):
     import progressbar
@@ -192,8 +193,8 @@ def load_collectl(pattern, start_time, end_time):
                 'net': set(),
                 'proc': set(),
             }
-            for tstamp, sample in raw.iteritems():
-                for group, items in sample.iteritems():
+            for tstamp, sample in iteritems(raw):
+                for group, items in iteritems(sample):
                     if group == 'disk':
                         instances['disk'] = instances['disk'].union(
                             items.keys())
@@ -243,7 +244,7 @@ def load_collectl(pattern, start_time, end_time):
                      in ['name', 'read_bytes', 'write_bytes']
                      ])
 
-        for tstamp, sample in raw.iteritems():
+        for tstamp, sample in iteritems(raw):
             if ('cpu' not in sample or
                 'disk' not in sample or
                 'mem' not in sample):

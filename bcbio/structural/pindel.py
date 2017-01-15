@@ -6,7 +6,6 @@ http://gmt.genome.wustl.edu/packages/pindel/
 from __future__ import print_function
 import os
 import time
-import itertools
 import shutil
 from bcbio import bam, utils, broad
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -15,7 +14,7 @@ from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
 from bcbio.variation.vcfutils import bgzip_and_index, get_paired_bams
 from bcbio.variation import annotation
 from bcbio.provenance import do
-
+from six.moves import zip
 
 def _pindel_options(items, config, out_file, region, tmp_path):
     """parse pindel options. Add region to cmd.
@@ -108,7 +107,7 @@ def _create_tmp_input(input_bams, names, tmp_path, config):
     """
     tmp_input = os.path.join(tmp_path, "pindel.txt")
     with open(tmp_input, 'w') as out_handle:
-        for bam_file, name in itertools.izip(input_bams, names):
+        for bam_file, name in zip(input_bams, names):
             print("%s\t%s\t%s\n" % (bam_file, 250, name), file=out_handle)
     return tmp_input
 

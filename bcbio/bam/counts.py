@@ -3,7 +3,7 @@
 These are useful for plotting comparisons between BAM files to look at
 differences in defined or random regions.
 """
-
+from __future__ import print_function
 import random
 import collections
 
@@ -20,7 +20,7 @@ class NormalizedBam:
             self._total = 1e6
         else:
             self._total = sum(1 for r in self._bam.fetch() if not r.is_unmapped)
-            print name, self._total
+            print(name, self._total)
 
     def all_regions(self):
         """Get a tuple of all chromosome, start and end regions.
