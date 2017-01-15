@@ -431,6 +431,7 @@ def _copy_to_configdir(items, out_dir):
 
 def setup(args):
     template, template_txt = name_to_config(args.template)
+    run_info.validate_yaml(template_txt, args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])

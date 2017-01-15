@@ -677,7 +677,7 @@ def _sanity_check_files(item, files):
     if msg:
         raise ValueError("%s for %s: %s" % (msg, item.get("description", ""), files))
 
-def _check_yaml_file(yaml_fn):
+def validate_yaml(yaml_in, yaml_fn):
     """Check with yamllint the yaml syntaxes
     Looking for duplicate keys."""
     try:
@@ -688,7 +688,11 @@ def _check_yaml_file(yaml_fn):
     conf = """{"extends": "relaxed",
                "rules": {"trailing-spaces": {"level": "warning"},
                          "new-line-at-end-of-file": {"level": "warning"}}}"""
-    out = linter.run(open(yaml_fn), YamlLintConfig(conf))
+    if utils.file_exists(yaml_in):
+        with open(yaml_in) as in_handle:
+            yaml_in = in_handle.read()
+    out = linter.run(yaml_in, YamlLintConfig(conf))
+
     for problem in out:
         msg = '%(fn)s:%(line)s:%(col)s: [%(level)s] %(msg)s' % {'fn': yaml_fn,
                                                                 'line': problem.line,
@@ -701,7 +705,7 @@ def _check_yaml_file(yaml_fn):
 def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
     """Read run information from a passed YAML file.
     """
-    _check_yaml_file(run_info_yaml)
+    validate_yaml(run_info_yaml, run_info_yaml)
     with open(run_info_yaml) as in_handle:
         loaded = yaml.load(in_handle)
     fc_name, fc_date = None, None
