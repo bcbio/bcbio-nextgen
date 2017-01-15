@@ -312,29 +312,6 @@ def _run_coverage_qc(bam_file, data, out_dir):
     """Run coverage QC analysis"""
     out = dict()
 
-    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
-    from bcbio.qc import samtools
-    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
-
-    if "Total_reads" not in samtools_stats:
-        return
-    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
-    if not total_reads:
-        return
-
-    if "Mapped_reads_raw" not in samtools_stats or "Mapped_reads" not in samtools_stats:
-        return
-    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
-    out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
-    if not mapped:
-        return out
-
-    if "Duplicates" in samtools_stats:
-        out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
-        out['Duplicates_pct'] = 100.0 * dups / int(samtools_stats["Mapped_reads_raw"])
-    else:
-        dups = 0
-
     if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
         cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
         merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
@@ -346,17 +323,34 @@ def _run_coverage_qc(bam_file, data, out_dir):
         merged_bed_file = None
         target_name = "genome"
 
-    # Whole genome runs do not need detailed on-target calculations, use total unique mapped
+    avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
+    out['Avg_coverage'] = avg_depth
+
+    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
+    from bcbio.qc import samtools
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+    
+    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
+    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
+    out["Mapped_paired_reads"] = mapped_paired = int(samtools_stats["Mapped_paired_reads"])
+    out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
+
+    if total_reads:
+        out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
+    if mapped:
+        out['Duplicates_pct'] = 100.0 * dups / mapped
+
     if dd.get_coverage_interval(data) == "genome":
         mapped_unique = mapped - dups
     else:
-        out['Mapped_unique_reads'] = mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-
+        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+    out['Mapped_unique_reads'] = mapped_unique
+    
     if merged_bed_file:
         ontarget = sambamba.number_of_mapped_reads(
             data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
+        out["Ontarget_unique_reads"] = ontarget
         if mapped_unique:
-            out["Ontarget_unique_reads"] = ontarget
             out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
             out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
             if dd.get_coverage_interval(data) != "genome":
@@ -369,12 +363,8 @@ def _run_coverage_qc(bam_file, data, out_dir):
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-    avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
-    out['Avg_coverage'] = avg_depth
-
     region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
                                                               extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-
     return out
 
 # ## Galaxy functionality
