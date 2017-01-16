@@ -30,7 +30,7 @@ def summary(*samples):
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
         logger.debug("multiqc not found. Update bcbio_nextgen.py tools to fix this issue.")
-    out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "mulitqc"))
+    out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "multiqc"))
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     samples = _report_summary(samples, os.path.join(out_dir, "report"))

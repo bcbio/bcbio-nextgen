@@ -27,8 +27,8 @@ def run(bam_file, data, out_dir):
 def _parse_samtools_stats(stats_file):
     out = {}
     want = {"raw total sequences":      "Total_reads",
-            "reads mapped":             "Mapped_reads_raw",
-            "reads mapped and paired":  "Mapped_reads",
+            "reads mapped":             "Mapped_reads",
+            "reads mapped and paired":  "Mapped_paired_reads",
             "reads duplicated":         "Duplicates",
             "insert size average":      "Average_insert_size"}
     with open(stats_file) as in_handle:
