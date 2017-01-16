@@ -21,14 +21,14 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """
     data = samples[0]
-    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    name, caller, is_batch = call_info
-    gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
-    multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
-    passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
-    gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
     use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
+    name, caller, is_batch = call_info
+    out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
+    multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
+    gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     if not utils.file_exists(gemini_db) and use_gemini:
+        passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
+        gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
         ped_file = create_ped_file(samples + extras, gemini_vcf)
         # Use original approach for hg19/GRCh37 pending additional testing
         if support_gemini_orig(data) and not any("gemini_vcfanno" in dd.get_tools_on(d) for d in samples):

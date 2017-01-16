@@ -345,7 +345,7 @@ def _run_coverage_qc(bam_file, data, out_dir):
     else:
         mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
     out['Mapped_unique_reads'] = mapped_unique
-    
+
     if merged_bed_file:
         ontarget = sambamba.number_of_mapped_reads(
             data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
