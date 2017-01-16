@@ -2,8 +2,6 @@
 """
 import os
 
-import yaml
-
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
 from bcbio.pipeline import config_utils
@@ -26,11 +24,11 @@ def run(bam_file, data, out_dir):
 
 def _parse_samtools_stats(stats_file):
     out = {}
-    want = {"raw total sequences":      "Total_reads",
-            "reads mapped":             "Mapped_reads",
-            "reads mapped and paired":  "Mapped_paired_reads",
-            "reads duplicated":         "Duplicates",
-            "insert size average":      "Average_insert_size"}
+    want = {"raw total sequences": "Total_reads",
+            "reads mapped": "Mapped_reads",
+            "reads mapped and paired": "Mapped_paired_reads",
+            "reads duplicated": "Duplicates",
+            "insert size average": "Average_insert_size"}
     with open(stats_file) as in_handle:
         for line in in_handle:
             if not line.startswith("SN"):
@@ -41,5 +39,8 @@ def _parse_samtools_stats(stats_file):
             if metric in want:
                 stat = float(stat_str.strip())
                 out[want[metric]] = stat
+    # Ensure we have zero values for any metrics not present in stats output
+    for metric in want.values():
+        if metric not in out:
+            out[metric] = 0
     return out
-
