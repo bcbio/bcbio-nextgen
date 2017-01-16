@@ -72,7 +72,7 @@ def _upload_dir_icommands_cli(local_dir, irods_dir, config=None, metadata=None):
     go to https://docs.irods.org/4.2.0/icommands/user/#iput for more info
     """
 
-    args= ["-K","-T","-v","-r","-f","-X","%s/upload.iRODS"%(config.get("dir")),"--lfrestart","%s/lfrestart.iRODS"%(config.get("dir")),"--retries 5"]
+    args= ["-b","-f","-K","-r","-T","-v","-X","%s/upload.iRODS"%(config.get("dir")),"--retries","5","--lfrestart","%s/lfrestart.iRODS"%(config.get("dir"))]
     if config:
         if config.get("resource"):
             args += ["-R", config.get("resource")]
@@ -94,7 +94,7 @@ def _upload_file_icommands_cli(local_fname, irods_fname, config=None, metadata=N
     go to https://docs.irods.org/4.2.0/icommands/user/#iput for more info
     """
 
-    args = ["-K","-T","-v","-f","-X","%s/upload.iRODS"%(config.get("dir")),"--lfrestart","%s/lfrestart.iRODS"%(config.get("dir")),"--retries 5"]
+    args= ["-b","-f","-K","-T","-v","-X","%s/upload.iRODS"%(config.get("dir")),"--retries","5","--lfrestart","%s/lfrestart.iRODS"%(config.get("dir"))]
     if config:
         if config.get("resource"):
             args += ["-R", config.get("resource")]
