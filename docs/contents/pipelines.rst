@@ -47,7 +47,10 @@ bcbio automates post-variant calling annotation to make
 the outputs easier to feed directly into your biological analysis. We annotate
 variant effects using `snpEff`_ or `Variant Effect Predictor`_ (VEP), and
 prepare a `GEMINI database`_ that associates variants with multiple
-external annotations in a SQL-based query interface.
+external annotations in a SQL-based query interface. GEMINI databases have the
+most associated external information for human samples (GRCh37/hg19 and hg38)
+but are available for any organism with the database populated using the VCF
+INFO column and predicted effects.
 
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _variant evaluation framework: https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/

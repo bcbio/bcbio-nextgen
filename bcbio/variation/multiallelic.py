@@ -29,13 +29,13 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import effects, vcfutils
 
-def to_single(in_file, data):
+def to_single(in_file, data, passonly=False):
     """Convert multi-allelic inputs in the original VCF file into single alleles.
     """
     out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         if vcfutils.vcf_has_variants(in_file):
-            ready_ma_file = _decompose(in_file, data)
+            ready_ma_file = _decompose(in_file, data, passonly=passonly)
             ann_ma_file, _ = effects.add_to_vcf(ready_ma_file, data)
             if ann_ma_file:
                 ready_ma_file = ann_ma_file
@@ -44,19 +44,26 @@ def to_single(in_file, data):
             utils.symlink_plus(in_file, out_file)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _decompose(in_file, data):
+def _decompose(in_file, data, passonly=False):
     """Convert multi-allelic variants into single allelic.
+
+    vt normalize has the -n flag passed (skipping reference checks) because
+    of errors where the reference genome has non GATCN ambiguous bases. These
+    are not supported in VCF, so you'll have a mismatch of N in VCF versus R
+    (or other ambiguous bases) in the genome.
     """
     out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         ref_file = dd.get_ref_file(data)
         assert out_file.endswith(".vcf.gz")
+        sample_filter = "| bcftools view -f 'PASS,.' " if passonly else ""
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("gunzip -c %s | "
                    "sed 's/ID=AD,Number=./ID=AD,Number=R/' | "
                    "vt decompose -s - "
-                   "| vt normalize -r %s - "
+                   "| vt normalize -n -r %s - "
                    """| awk '{ gsub("./-65", "./."); print $0 }'"""
+                   "%s"
                    "| bgzip -c > %s")
-            do.run(cmd % (in_file, ref_file, tx_out_file), "Multi-allelic to single allele")
+            do.run(cmd % (in_file, ref_file, sample_filter, tx_out_file), "Multi-allelic to single allele")
     return vcfutils.bgzip_and_index(out_file, data["config"])

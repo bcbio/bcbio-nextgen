@@ -347,13 +347,13 @@ def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work
     estimate_map = {"On-target": "target", "Off-target": "antitarget",
                     "Genome": "target", "Targets (sampling)": "target"}
     range_map = {("genome", "target"): (500, 1000),
-                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (50000, 200000),
+                 ("regional", "target"): (50, 267), ("regional", "antitarget"): (20000, 200000),
                  ("amplicon", "target"): (50, 267)}
     with open(out_file) as in_handle:
         for line in in_handle:
             if line.startswith(tuple(estimate_map.keys())):
-                name, depth, bin_size = line.strip().split()
-                name = estimate_map[name.replace(":", "")]
+                name, depth, bin_size = line.strip().split("\t")
+                name = estimate_map[name.replace(":", "").strip()]
                 try:
                     bin_size = int(bin_size)
                 except ValueError:

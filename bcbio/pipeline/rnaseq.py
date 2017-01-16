@@ -19,7 +19,12 @@ def singlecell_rnaseq(samples, run_parallel):
     quantifier = dd.get_in_samples(samples, dd.get_singlecell_quantifier)
     quantifier = quantifier.lower()
     samples = run_parallel("run_umi_transform", samples)
-    samples = run_parallel("demultiplex_samples", samples)
+    demultiplexed = run_parallel("demultiplex_samples", samples)
+    # break demultiplixed lanes into their own samples
+    samples = []
+    for lane in demultiplexed:
+        for index in lane:
+            samples.append([index])
     samples = run_parallel("run_barcode_histogram", samples)
     samples = run_parallel("run_filter_barcodes", samples)
     if quantifier == "rapmap":

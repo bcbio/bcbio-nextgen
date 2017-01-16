@@ -104,6 +104,6 @@ def _get_multiplier(samples):
         else:
             to_skip += 1.0
     mult = (to_process - to_skip) / len(samples)
-    if mult < 0:
-        mutl = 1 / len(samples)
-    return mult
+    if mult <= 0:
+        mult = 1 / len(samples)
+    return max(mult, 1)

@@ -794,8 +794,17 @@ Post-processing
 ===============
 
 - ``archive`` Specify targets for long term archival. ``cram`` does 8-bin
-  compression of BAM files into `CRAM format`_.
-  Default: [] -- no archiving.
+  compression of BAM files into `CRAM format`_. Default: [] -- no archiving.
+
+.. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
+
+Tweaking defaults
+=================
+
+bcbio provides some hints to change default behavior be either turning specific
+defaults on or off, with ``tools_on`` and ``tools_off``. Both can be
+lists with multiple options:
+
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
   needed. ``gemini`` avoids creation of a `GEMINI database`_ of variants for downstream
@@ -812,7 +821,6 @@ Post-processing
   population data sources like ExAC and 1000 genomes.
   ``vqsr`` turns off variant quality score recalibration for all samples.
   ``upload_alignment`` turns off final upload of large alignment files.
-  Default: [] -- all tools on.
 - ``tools_on`` Specify functionality to enable that is off by default.
   ``svplots`` adds additional coverage and summary plots for CNVkit and detected
   ensemble variants. ``qualimap`` runs `Qualimap
@@ -824,11 +832,11 @@ Post-processing
   forces gVCF output for callers that support it (GATK HaplotypeCaller,
   FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
   for variant filtration, even for smaller sample sizes.
-``gemini_allvariants`` enables all variants to go into GEMINI, not only those
-  that pass filters.
+  ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
+  that pass filters. ``gemini_vcfanno`` uses the new vcfanno/vcf2db for creating
+  GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other
+  organisms.
 
-
-.. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 .. _GEMINI database: https://github.com/arq5x/gemini
 
 parallelization

@@ -283,8 +283,8 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
                     do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
     if data.get("genome_build"):
-        gresources = get_resources(data["genome_build"], ref_file, data)
-        if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
+        if (data.get("files") and population.do_db_build([data], need_bam=False)
+              and population.support_gemini_orig(data)):
             # symlink base GEMINI directory to work directory, avoiding write/space issues
             out_gemini_dir = utils.safe_makedir(os.path.join(os.path.dirname(ref_dir), "gemini_data"))
             orig_gemini_dir = install.get_gemini_dir()

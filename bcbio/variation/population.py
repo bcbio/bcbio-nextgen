@@ -15,7 +15,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import multiallelic, vcfutils
+from bcbio.variation import multiallelic, vcfanno, vcfutils
 
 def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
@@ -25,18 +25,38 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     name, caller, is_batch = call_info
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
-    gemini_vcf = multiallelic.to_single(multisample_vcf, data)
-    use_gemini_quick = (do_db_build(samples) and
-                        any(vcfutils.vcf_has_variants(f) for f in fnames))
-    if not utils.file_exists(gemini_db) and use_gemini_quick:
-        use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
-        if use_gemini:
-            ped_file = create_ped_file(samples + extras, gemini_vcf)
+    passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
+    gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
+    use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
+    if not utils.file_exists(gemini_db) and use_gemini:
+        ped_file = create_ped_file(samples + extras, gemini_vcf)
+        # Use original approach for hg19/GRCh37 pending additional testing
+        if support_gemini_orig(data) and not any("gemini_vcfanno" in dd.get_tools_on(d) for d in samples):
+            gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
+        else:
             gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": multisample_vcf if is_batch else None}]]
 
 def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
+    """Generalized vcfanno/vcf2db workflow for loading variants into a GEMINI database.
+    """
+    if not gemini_db:
+        gemini_db = "%s.db" % utils.splitext_plus(gemini_vcf)[0]
+    if not vcfutils.vcf_has_variants(gemini_vcf):
+        return None
+    if not utils.file_exists(gemini_db):
+        data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
+        ann_file = vcfanno.run_vcfanno(gemini_vcf, "gemini", data, data_basepath)
+        with file_transaction(data, gemini_db) as tx_gemini_db:
+            vcf2db = config_utils.get_program("vcf2db.py", data)
+            cmd = [vcf2db, ann_file, ped_file, tx_gemini_db]
+            do.run(cmd, "GEMINI: create database with vcf2db")
+    return gemini_db
+
+def create_gemini_db_orig(gemini_vcf, data, gemini_db=None, ped_file=None):
+    """Original GEMINI specific data loader, only works with hg19/GRCh37.
+    """
     if not gemini_db:
         gemini_db = "%s.db" % utils.splitext_plus(gemini_vcf)[0]
     if not utils.file_exists(gemini_db):
@@ -179,14 +199,14 @@ def get_multisample_vcf(fnames, name, caller, data):
     if len(unique_fnames) > 1:
         gemini_vcf = os.path.join(out_dir, "%s-%s.vcf.gz" % (name, caller))
         vrn_file_batch = None
-        for variant in data["variants"]:
+        for variant in data.get("variants", []):
             if variant["variantcaller"] == caller and variant.get("vrn_file_batch"):
                 vrn_file_batch = variant["vrn_file_batch"]
         if vrn_file_batch:
             utils.symlink_plus(vrn_file_batch, gemini_vcf)
             return gemini_vcf
         else:
-            return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, data["sam_ref"],
+            return vcfutils.merge_variant_files(unique_fnames, gemini_vcf, dd.get_ref_file(data),
                                                 data["config"])
     else:
         gemini_vcf = os.path.join(out_dir, "%s-%s%s" % (name, caller, utils.splitext_plus(unique_fnames[0])[1]))
@@ -194,14 +214,13 @@ def get_multisample_vcf(fnames, name, caller, data):
         return gemini_vcf
 
 def _has_gemini(data):
+    """Use gemini if we installed required data.
+    """
     from bcbio import install
-    gemini_dir = install.get_gemini_dir(data)
-    return ((os.path.exists(gemini_dir) and len(os.listdir(gemini_dir)) > 0)
-            and os.path.exists(os.path.join(os.path.dirname(gemini_dir), "gemini-config.yaml")))
+    return "gemini" in install.get_defaults().get("datatarget", [])
 
-def do_db_build(samples, need_bam=True, gresources=None):
-    """Confirm we should build a gemini database: need gemini + human samples +
-    hg19/GRCh37 + not in tools_off.
+def do_db_build(samples, need_bam=True):
+    """Confirm we should build a gemini database: need gemini and not in tools_off.
     """
     genomes = set()
     for data in samples:
@@ -210,13 +229,12 @@ def do_db_build(samples, need_bam=True, gresources=None):
         if "gemini" in dd.get_tools_off(data):
             return False
     if len(genomes) == 1:
-        if not gresources:
-            gresources = samples[0]["genome_resources"]
-        return (tz.get_in(["aliases", "human"], gresources, False)
-                and genomes.issubset(("hg19", "GRCh37"))
-                and _has_gemini(samples[0]))
+        return _has_gemini(samples[0])
     else:
         return False
+
+def support_gemini_orig(data):
+    return dd.get_genome_build(data) in set(["hg19", "GRCh37"])
 
 def get_gemini_files(data):
     """Enumerate available gemini data files in a standard installation.

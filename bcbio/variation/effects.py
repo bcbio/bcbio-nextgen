@@ -205,7 +205,7 @@ def _get_dbscsnv(data):
     dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
     annotations = ["ada_score","rf_score"]
     if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbnsfp_file)], annotations
+        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)], annotations
     else:
         return [], []
 
@@ -219,7 +219,7 @@ def _get_maxentscan(data):
     https://github.com/Ensembl/VEP_plugins/blob/master/MaxEntScan.pm
     """
 
-    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan", data["config"])))
+    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan_score3.pl", data["config"])))
     annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
         return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
@@ -315,9 +315,11 @@ def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     """
     resources = config_utils.get_resources("snpeff", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
+    # scale by cores, defaulting to 2x base usage to ensure we have enough memory
+    # for single core runs to use with human genomes
     jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
                                                                  {"direction": "increase",
-                                                                  "magnitude": dd.get_cores(data)}}})
+                                                                  "magnitude": max(2, dd.get_cores(data))}}})
     memory = " ".join(jvm_opts)
     snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
