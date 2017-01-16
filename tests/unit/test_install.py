@@ -27,7 +27,7 @@ class TestCondaAPI(object):
         expected = [
             'conda', 'create',
             '--name', name,
-            '-c', 'bioconda', '-c', 'r',
+            '-c', 'bioconda', '-c', 'r', '-c', 'conda-forge',
             '--json',
         ]
         sp.assert_called_once_with(expected)
@@ -52,7 +52,7 @@ class TestCondaAPI(object):
         api.get_latest_version(pkg)
         sp.assert_called_once_with([
             'conda', 'search', pkg,
-            '-c', 'bioconda', '-c', 'r',
+            '-c', 'bioconda', '-c', 'r', '-c', 'conda-forge',
             '--json',
         ])
 
@@ -72,7 +72,7 @@ class TestCondaAPI(object):
             '--name', 'root',
             pkg,
             '--quiet',
-            '-c', 'bioconda', '-c', 'r',
+            '-c', 'bioconda', '-c', 'r', '-c', 'conda-forge',
             '--json',
         ])
 
@@ -86,7 +86,7 @@ class TestCondaAPI(object):
             '--name', 'root',
             '%s=%s' % (pkg, version),
             '--quiet',
-            '-c', 'bioconda', '-c', 'r',
+            '-c', 'bioconda', '-c', 'r', '-c', 'conda-forge',
             '--json',
         ])
 
@@ -100,7 +100,7 @@ class TestCondaAPI(object):
             '--name', env_name,
             pkg,
             '--quiet',
-            '-c', 'bioconda', '-c', 'r',
+            '-c', 'bioconda', '-c', 'r', '-c', 'conda-forge',
             '--json',
         ])
 
