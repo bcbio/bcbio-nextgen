@@ -282,7 +282,7 @@ directory::
 General parameters, always required:
 
 - ``method`` Upload method to employ. Defaults to local filesystem.
-  [filesystem, galaxy, s3]
+  [filesystem, galaxy, s3, irods]
 - ``dir`` Local filesystem directory to copy to.
 
 Galaxy parameters:
@@ -332,12 +332,16 @@ temporary S3 access.
 
 iRODS parameters:
 
+- ``resource`` (optional) iRODS resource name, if other than default
+- ``ticket`` (optional) iRODS ticket, for ticket based access
+
+example configuration
+
     upload:
       method: irods
-      dir: absolute parent path in iRODS repository
-      resource: (optional) iRODS resource name, if other than default
-      ticket: (optional) iRODS ticket, for ticket based access
-      extra: (optional)["list","of","arbitrary","options","that","can","be","passed","to","iput"]
+      dir: ../final
+      resource: yourResourceName
+      ticket: iRODticketString
 
 Uploads to iRODS depend on a valid installation of the iCommands CLI, and a preconfigured connection
 trough the `iinit` command.
