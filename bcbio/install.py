@@ -506,7 +506,7 @@ def _install_ericscript(manifest, system_config, toolplus_dir):
 
 class CondaAPI(object):
     _BASE_CMD = ('conda', )
-    _CHANNELS = ('-c', 'bioconda', '-c', 'r')
+    _CHANNELS = ('-c', 'bioconda', '-c', 'r', '-c', 'conda-forge')
     _OUTPUT_ARGS = ('--json', )
 
     def _get_cmd(self, sub_cmd):
