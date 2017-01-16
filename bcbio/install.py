@@ -256,7 +256,6 @@ def get_genome_dir(gid, galaxy_dir, data):
 
 def _get_data_dir():
     base_dir = os.path.realpath(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))))
-    import ipdb; ipdb.set_trace()  # XXX BREAKPOINT
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
         raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.\n"
                          "bcbio-nextgen needs to be installed inside an anaconda environment \n"
