@@ -1,3 +1,9 @@
+## 1.0.2 (in progress)
+
+- Support latest svtyper (0.1.1) for lumpy to provide speed improvements. Will
+  default to 0.1.1 at next release.
+  (use `bcbio_conda install -c bioconda svtyper=0.1.1` to test in development)
+
 ## 1.0.1 (17 January 2017)
 
 - Fix bug in 1.0.0 release with parallel calculations on whole genome samples.
