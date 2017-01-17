@@ -1,4 +1,4 @@
-## 1.0.1 (in progress)
+## 1.0.1 (17 January 2017)
 
 - Fix bug in 1.0.0 release with parallel calculations on whole genome samples.
   The release version only parallelizes by chromosome instead of callable
