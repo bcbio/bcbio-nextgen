@@ -443,6 +443,17 @@ def sort_by_ref(vcf_file, data):
                 do.run(cmd.format(**locals()), "Sort VCF by reference")
     return bgzip_and_index(out_file, data["config"])
 
+def add_contig_to_header(line, ref_file):
+    """Streaming target to add contigs to a VCF file header.
+    """
+    if line.startswith("##fileformat=VCF"):
+        out = [line]
+        for region in ref.file_contigs(ref_file):
+            out.append("##contig=<ID=%s,length=%s>" % (region.name, region.size))
+        return "\n".join(out)
+    else:
+        return line
+
 # ## Parallel VCF file combining
 
 def parallel_combine_variants(orig_files, out_file, ref_file, config, run_parallel):

@@ -71,7 +71,7 @@ def _enforce_max_region_size(in_file, data):
     return out_file
 
 def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
-                  out_file=None):
+                out_file=None):
     """Run VarDict variant calling.
     """
     if vcfutils.is_paired_analysis(align_bams, items):
@@ -102,7 +102,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        with file_transaction(items[0], raw_file) as tx_out_file:
             vrs = bedutils.population_variant_regions(items)
             target = shared.subset_variant_regions(
                 vrs, region, out_file, items=items, do_merge=False)
@@ -117,7 +118,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 opts = (" ".join(_vardict_options_from_config(items, config, out_file, target))
                         if _is_bed_file(target) else "")
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
@@ -135,9 +136,9 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                        "| bcftools filter -i 'QUAL >= 0' "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
-                    temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
+                    temp_file_prefix = raw_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
-                    tmp_out += ".gz" if out_file.endswith("gz") else ""
+                    tmp_out += ".gz" if raw_file.endswith("gz") else ""
                     sample_vcf_names.append(tmp_out)
                     with file_transaction(item, tmp_out) as tx_tmp_file:
                         if not _is_bed_file(target):
@@ -155,10 +156,12 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
                 vcfutils.merge_variant_files(orig_files=sample_vcf_names,
-                                                out_file=tx_out_file, ref_file=ref_file,
-                                                config=config, region=bamprep.region_to_gatk(region))
-    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
-                if assoc_files.get("dbsnp") else out_file)
+                                             out_file=tx_out_file, ref_file=ref_file,
+                                             config=config, region=bamprep.region_to_gatk(region))
+        if assoc_files.get("dbsnp"):
+            annotation.add_dbsnp(raw_file, assoc_files["dbsnp"], items[0], out_file)
+        else:
+            utils.symlink_plus(raw_file, out_file)
     return out_file
 
 def _safe_to_float(x):
@@ -237,7 +240,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        with file_transaction(items[0], raw_file) as tx_out_file:
             target = shared.subset_variant_regions(dd.get_variant_regions(items[0]), region,
                                                    out_file, do_merge=True)
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -290,8 +294,10 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
-    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
-                if assoc_files.get("dbsnp") else out_file)
+        if assoc_files.get("dbsnp"):
+            annotation.add_dbsnp(raw_file, assoc_files["dbsnp"], items[0], out_file)
+        else:
+            utils.symlink_plus(raw_file, out_file)
     return out_file
 
 def get_vardict_command(data):

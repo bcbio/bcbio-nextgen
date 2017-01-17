@@ -5,6 +5,7 @@
 import glob
 import gzip
 import os
+import sys
 
 import pybedtools
 
@@ -105,16 +106,28 @@ def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
         out_handle.write(chrom_line)
     return new_header
 
-def add_dbsnp(orig_file, dbsnp_file, config):
+def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
     """Annotate a VCF file with dbSNP.
     """
-    orig_file = vcfutils.bgzip_and_index(orig_file, config)
-    out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
+    orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
+    if out_file is None:
+        out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
-        with file_transaction(config, out_file) as tx_out_file:
-            cmd = "bcftools annotate -c ID -a {dbsnp_file} -o {tx_out_file} -O z {orig_file}"
+        with file_transaction(data, out_file) as tx_out_file:
+            conf_file = os.path.join(os.path.dirname(out_file), "dbsnp.conf")
+            with open(conf_file, "w") as out_handle:
+                out_handle.write('[[annotation]]\n')
+                out_handle.write('file="%s"\n' % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
+                out_handle.write('fields=["ID"]\n')
+                out_handle.write('names=["rs_ids"]\n')
+                out_handle.write('ops=["concat"]\n')
+            py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+            ref_file = dd.get_ref_file(data)
+            cmd = ("vcfanno {conf_file} {orig_file} | "
+                   """{py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' | """
+                   "bcftools annotate --set-id +'%INFO/rs_ids' -o {tx_out_file} -O z")
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
-    return vcfutils.bgzip_and_index(out_file, config)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.

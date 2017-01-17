@@ -23,6 +23,8 @@
   Saveliev.
 - Update WHAM structural variant caller to support the latest release.
 - Update delly structural variant caller to support the latest release.
+- Improve dbSNP annotation speeds for adding rs IDs to VarDict output.
+  Thanks to Ben Liesfeld.
 - Support for VEP 87 with additional plugins and generalization of fields.
   Thanks to Matthias De Smet.
 - Deprecate `clinical_reporting` parameter and introduce new
