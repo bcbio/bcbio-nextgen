@@ -590,7 +590,7 @@ Structural variant calling
 ==========================
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
-  cnvkit, seq2c, battenberg]. LUMPY and Manta require paired end reads.
+  cnvkit, seq2c, delly, battenberg]. LUMPY and Manta require paired end reads.
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
   structural variant calls to highlight changes in known genes. This can be

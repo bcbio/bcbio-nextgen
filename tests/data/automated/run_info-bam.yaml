@@ -38,7 +38,7 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, cnvkit, manta, metasv]
-      svcaller: [cnvkit, seq2c, lumpy]
+      svcaller: [cnvkit, seq2c, lumpy, delly]
       #remove_lcr: true
       tools_on: [qualimap_full]
       tools_off: [gemini]
@@ -78,7 +78,6 @@ details:
 #      variantcaller: freebayes
 #      variant_regions: ../data/automated/variant_regions-bam.bed
 #      nomap_split_size: 500
-#      # svcaller: [delly, lumpy, cn.mops]
 #    metadata:
 #      batch: TestBatch1
 #    analysis: variant2

@@ -22,6 +22,7 @@
 - Fixes for Seq2C concurrency problems when preparing BED files. Thanks to Vlad
   Saveliev.
 - Update WHAM structural variant caller to support the latest release.
+- Update delly structural variant caller to support the latest release.
 - Support for VEP 87 with additional plugins and generalization of fields.
   Thanks to Matthias De Smet.
 - Deprecate `clinical_reporting` parameter and introduce new
