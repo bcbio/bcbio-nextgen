@@ -25,8 +25,8 @@ def singlecell_rnaseq(samples, run_parallel):
     for lane in demultiplexed:
         for index in lane:
             samples.append([index])
-    samples = run_parallel("run_barcode_histogram", samples)
     samples = run_parallel("run_filter_barcodes", samples)
+    samples = run_parallel("run_barcode_histogram", samples)
     if quantifier == "rapmap":
         samples = run_parallel("run_rapmap_align", samples)
         samples = run_parallel("run_tagcount", samples)
