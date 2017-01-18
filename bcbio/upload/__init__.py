@@ -128,6 +128,7 @@ def _get_files_variantcall(sample):
     out = _maybe_add_sv(algorithm, sample, out)
     out = _maybe_add_hla(algorithm, sample, out)
     out = _maybe_add_heterogeneity(algorithm, sample, out)
+
     out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -389,8 +390,8 @@ def _maybe_add_barcode_histogram(algorithm, sample, out):
     count_file = sample["count_file"]
     histogram_file = os.path.join(os.path.dirname(count_file), "cb-histogram.txt")
     out.append({"path": histogram_file,
-                "type": "counts",
-                "ext": "ready"})
+                "type": "tsv",
+                "ext": "barcodes"})
     return out
 
 def _maybe_add_oncofuse(algorithm, sample, out):
