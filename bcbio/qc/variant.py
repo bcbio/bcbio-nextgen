@@ -30,7 +30,7 @@ def _snpeff_stats(data, out_dir):
     if vcinfo and vcinfo.get("vrn_stats"):
         effects_csv = tz.get_in(["vrn_stats", "effects-stats-csv"], vcinfo)
         if effects_csv and utils.file_exists(effects_csv):
-            out_dir = utils.safe_makedir(os.path.join(out_dir, "snpeff"))
+            out_dir = utils.safe_makedir(out_dir)
             out_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
             with file_transaction(data, out_file) as tx_out_file:
                 shutil.copy(effects_csv, tx_out_file)
@@ -59,14 +59,14 @@ def _bcftools_stats(data, out_dir):
     """
     vcinfo = _get_active_vcinfo(data)
     if vcinfo:
-        out_dir = utils.safe_makedir(os.path.join(out_dir, "bcftools_stats"))
+        out_dir = utils.safe_makedir(out_dir)
         vcf_file = vcinfo["vrn_file"]
         if tz.get_in(("config", "algorithm", "jointcaller"), data):
             opts = ""
         else:
             opts = "-f PASS"
         name = dd.get_sample_name(data)
-        out_file = os.path.join(out_dir, "%s.txt" % name)
+        out_file = os.path.join(out_dir, "%s_bcftools_stats.txt" % name)
         bcftools = config_utils.get_program("bcftools", data["config"])
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
