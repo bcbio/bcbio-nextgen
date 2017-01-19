@@ -46,7 +46,8 @@ def summary(*samples):
                         export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
                     else:
                         export_tmp = ""
-                    cmd = "{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out}"
+                    path_export = utils.local_path_export()
+                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out}"
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
