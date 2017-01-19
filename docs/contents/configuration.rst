@@ -334,7 +334,6 @@ iRODS parameters:
 
 - ``folder`` Full directory name within iRODS to prefix the output.
 - ``resource`` (optional) iRODS resource name, if other than default.
-- ``ticket`` (optional) iRODS ticket, for ticket based access.
 
 example configuration
 
@@ -343,7 +342,6 @@ example configuration
         dir: ../final
         folder: /irodsZone/your/path/
         resource: yourResourceName
-        ticket: iRODSticketString
 
 Uploads to iRODS depend on a valid installation of the iCommands CLI, and a preconfigured connection
 through the `iinit` command.
