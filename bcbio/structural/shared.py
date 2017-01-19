@@ -215,29 +215,19 @@ def get_sv_chroms(items, exclude_file):
 def _extract_split_and_discordants(in_bam, work_dir, data):
     """Retrieve split-read alignments from input BAM file.
     """
-    dedup_file = os.path.join(work_dir, "%s-dedup.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     sr_file = os.path.join(work_dir, "%s-sr.bam" % os.path.splitext(os.path.basename(in_bam))[0])
     disc_file = os.path.join(work_dir, "%s-disc.bam" % os.path.splitext(os.path.basename(in_bam))[0])
-    samtools = config_utils.get_program("samtools", data["config"])
-    cores = utils.get_in(data, ("config", "algorithm", "num_cores"), 1)
-    resources = config_utils.get_resources("samtools", data["config"])
-    mem = config_utils.adjust_memory(resources.get("memory", "2G"),
-                                     3, "decrease").upper()
-    if not utils.file_exists(sr_file) or not utils.file_exists(disc_file) or utils.file_exists(dedup_file):
-        with tx_tmpdir(data) as tmpdir:
-            with file_transaction(data, sr_file) as tx_sr_file:
-                with file_transaction(data, disc_file) as tx_disc_file:
-                    with file_transaction(data, dedup_file) as tx_dedup_file:
-                        samblaster_cl = postalign.samblaster_dedup_sort(data, tx_dedup_file,
-                                                                        tx_sr_file, tx_disc_file)
-                        out_base = os.path.join(tmpdir,
-                                                "%s-namesort" % os.path.splitext(os.path.basename(in_bam))[0])
-                        cmd = ("{samtools} sort -n -@ {cores} -m {mem} -O sam -T {out_base} {in_bam} | ")
-                        cmd = cmd.format(**locals()) + samblaster_cl
-                        do.run(cmd, "samblaster: split and discordant reads", data)
-    for fname in [sr_file, disc_file, dedup_file]:
+    if not utils.file_exists(sr_file) or not utils.file_exists(disc_file):
+        with file_transaction(data, sr_file) as tx_sr_file:
+            with file_transaction(data, disc_file) as tx_disc_file:
+                cores = dd.get_num_cores(data)
+                ref_file = dd.get_ref_file(data)
+                cmd = ("extract-sv-reads -e --input-threads {cores} -T {ref_file} "
+                       "-i {in_bam} -s {tx_sr_file} -d {tx_disc_file}")
+                do.run(cmd.format(**locals()), "extract split and discordant reads", data)
+    for fname in [sr_file, disc_file]:
         bam.index(fname, data["config"])
-    return dedup_file, sr_file, disc_file
+    return sr_file, disc_file
 
 def _find_existing_inputs(data):
     """Check for pre-calculated split reads and discordants done as part of alignment streaming.
@@ -246,24 +236,25 @@ def _find_existing_inputs(data):
     sr_file = "%s-sr.bam" % os.path.splitext(in_bam)[0]
     disc_file = "%s-disc.bam" % os.path.splitext(in_bam)[0]
     if utils.file_exists(sr_file) and utils.file_exists(disc_file):
-        return in_bam, sr_file, disc_file
+        return sr_file, disc_file
     else:
         sr_file = dd.get_sr_bam(data)
         disc_file = dd.get_disc_bam(data)
         if sr_file and utils.file_exists(sr_file) and disc_file and utils.file_exists(disc_file):
-            return in_bam, sr_file, disc_file
+            return sr_file, disc_file
         else:
-            return None, None, None
+            return None, None
 
 def get_split_discordants(data, work_dir):
-    """Retrieve full, split and discordant reads, potentially calculating with samblaster as needed.
+    """Retrieve split and discordant reads, potentially calculating with extract_sv_reads as needed.
     """
-    dedup_bam, sr_bam, disc_bam = _find_existing_inputs(data)
-    if not dedup_bam:
-        work_dir = (work_dir if not os.access(os.path.dirname(data["align_bam"]), os.W_OK | os.X_OK)
-                    else os.path.dirname(data["align_bam"]))
-        dedup_bam, sr_bam, disc_bam = _extract_split_and_discordants(data["align_bam"], work_dir, data)
-    return dedup_bam, sr_bam, disc_bam
+    align_bam = dd.get_align_bam(data)
+    sr_bam, disc_bam = _find_existing_inputs(data)
+    if not sr_bam:
+        work_dir = (work_dir if not os.access(os.path.dirname(align_bam), os.W_OK | os.X_OK)
+                    else os.path.dirname(align_bam))
+        sr_bam, disc_bam = _extract_split_and_discordants(align_bam, work_dir, data)
+    return sr_bam, disc_bam
 
 def get_cur_batch(items):
     """Retrieve name of the batch shared between all items in a group.

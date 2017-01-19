@@ -102,8 +102,9 @@ def _prep_subsampled_bams(data, work_dir):
     XXX Currently not used as new versions of delly do not get good sensitivity
     with downsampled BAMs.
     """
-    full_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
-    ds_bam = bam.downsample(full_bam, data, 1e8, read_filter="-F 'not secondary_alignment and proper_pair'",
+    sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
+    ds_bam = bam.downsample(dd.get_align_bam(data), data, 1e8,
+                            read_filter="-F 'not secondary_alignment and proper_pair'",
                             always_run=True, work_dir=work_dir)
     out_bam = "%s-final%s" % utils.splitext_plus(ds_bam)
     if not utils.file_exists(out_bam):

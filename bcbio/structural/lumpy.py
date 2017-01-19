@@ -40,7 +40,6 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence, work_dir, items
                 disc_bams = ",".join(disc_bams)
                 exclude = "-x %s" % sv_exclude_bed if (sv_exclude_bed and utils.file_exists(sv_exclude_bed)) else ""
                 ref_file = dd.get_ref_file(items[0])
-                curpython_dir = os.path.dirname(sys.executable)
                 depths = []
                 for sample, ev_files in previous_evidence.items():
                     for ev_type, ev_file in ev_files.items():
@@ -48,8 +47,8 @@ def _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence, work_dir, items
                             depths.append("%s:%s" % (sample, ev_file))
                 depth_arg = "-d %s" % ",".join(depths) if len(depths) > 0 else ""
                 # use our bcbio python for runs within lumpyexpress
-                cmd = ("export PATH={curpython_dir}:$PATH && "
-                       "lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
+                exports = utils.local_path_export()
+                cmd = ("{exports}lumpyexpress -v -B {full_bams} -S {sr_bams} -D {disc_bams} "
                        "{exclude} {depth_arg} -T {tmpdir} -o {tx_out_file}")
                 do.run(cmd.format(**locals()), "lumpyexpress", items[0])
     return vcfutils.sort_by_ref(out_file, items[0]), sv_exclude_bed
@@ -128,8 +127,8 @@ def run(items):
     previous_evidence = {}
     full_bams, sr_bams, disc_bams = [], [], []
     for data in items:
-        dedup_bam, sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
-        full_bams.append(dedup_bam)
+        sr_bam, disc_bam = sshared.get_split_discordants(data, work_dir)
+        full_bams.append(dd.get_align_bam(data))
         sr_bams.append(sr_bam)
         disc_bams.append(disc_bam)
         cur_dels, cur_dups = _bedpes_from_cnv_caller(data, work_dir)
@@ -143,15 +142,15 @@ def run(items):
     gt_vcfs = {}
     for data in items:
         sample = dd.get_sample_name(data)
-        dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
+        sr_bam, _ = sshared.get_split_discordants(data, work_dir)
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
         if "bnd-genotype" in dd.get_tools_on(data):
-            gt_vcf = _run_svtyper(sample_vcf, dedup_bam, sr_bam, exclude_file, data)
+            gt_vcf = _run_svtyper(sample_vcf, dd.get_align_bam(data), sr_bam, exclude_file, data)
         else:
             std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
-            std_gt_vcf = _run_svtyper(std_vcf, dedup_bam, sr_bam, exclude_file, data)
+            std_gt_vcf = _run_svtyper(std_vcf, dd.get_align_bam(data), sr_bam, exclude_file, data)
             gt_vcf = vcfutils.concat_variant_files_bcftools(
                 orig_files=[std_gt_vcf, bnd_vcf],
                 out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
@@ -224,8 +223,8 @@ def run_svtyper_prioritize(call):
     """Run svtyper on prioritized outputs, adding in typing for breakends skipped earlier.
     """
     def _run(in_file, work_dir, data):
-        dedup_bam, sr_bam, _ = sshared.get_split_discordants(data, work_dir)
-        return _run_svtyper(in_file, dedup_bam, sr_bam, call.get("exclude_file"), data)
+        sr_bam, _ = sshared.get_split_discordants(data, work_dir)
+        return _run_svtyper(in_file, dd.get_align_bam(data), sr_bam, call.get("exclude_file"), data)
     return _run
 
 def _older_svtyper_version(svtyper):
