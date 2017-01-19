@@ -332,19 +332,21 @@ temporary S3 access.
 
 iRODS parameters:
 
-- ``resource`` (optional) iRODS resource name, if other than default
-- ``ticket`` (optional) iRODS ticket, for ticket based access
+- ``folder`` Full directory name within iRODS to prefix the output.
+- ``resource`` (optional) iRODS resource name, if other than default.
+- ``ticket`` (optional) iRODS ticket, for ticket based access.
 
 example configuration
 
-    upload:
-      method: irods
-      dir: ../final
-      resource: yourResourceName
-      ticket: iRODticketString
+      upload:
+        method: irods
+        dir: ../final
+        folder: /irodsZone/your/path/
+        resource: yourResourceName
+        ticket: iRODSticketString
 
 Uploads to iRODS depend on a valid installation of the iCommands CLI, and a preconfigured connection
-trough the `iinit` command.
+through the `iinit` command.
 
 Globals
 ~~~~~~~
