@@ -7,35 +7,13 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed.transaction import _get_base_tmpdir
 from bcbio.distributed.transaction import _flatten_plus_safe
 from bcbio.distributed.transaction import _move_file_with_sizecheck
+from tests.unit.conftest import DummyCM, DummyTxTmpdir
 
 
 CWD = 'TEST_CWD'
 CONFIG = {'a': 1}
 TMP = '/tmp'
 TMPDIR = 'TEST_TMPDIR'
-
-
-class DummyCM(object):
-    value = None
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        pass
-
-    def __getattr__(self, attr):
-        return self.value.__getattribute__(attr)
-
-
-class DummyTxTmpdir(DummyCM):
-    value = 'foo'
-
-    def __iadd__(self, other):
-        return self.value + other
 
 
 class DummyFlattenPlusSafe(DummyCM):

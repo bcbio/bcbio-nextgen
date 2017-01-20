@@ -18,6 +18,8 @@ import types
 
 import toolz as tz
 import yaml
+
+
 try:
     from concurrent import futures
 except ImportError:
@@ -593,8 +595,11 @@ def replace_directory(out_files, dest_dir):
         raise ValueError("in_files must either be a sequence of filenames "
                          "or a string")
 
-def which(program):
+
+def which(program, env=None):
     """ returns the path to an executable or None if it can't be found"""
+    if env is None:
+        env = os.environ.copy()
 
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
@@ -604,7 +609,7 @@ def which(program):
         if is_exe(program):
             return program
     else:
-        for path in os.environ["PATH"].split(os.pathsep):
+        for path in env["PATH"].split(os.pathsep):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
@@ -699,6 +704,19 @@ def get_perl_exports(tmpdir=None):
 def get_bcbio_env():
     env = os.environ.copy()
     env["PATH"] = append_path(get_bcbio_bin(), env['PATH'])
+    return env
+
+
+def get_ericscript_env(conda_env_prefix):
+    if not conda_env_prefix:
+        raise RuntimeError(
+            'EricScript is not installed. '
+            'Please run: \nbcbio_nextgen.py upgrade --toolplus ericscript\n'
+            'to install it.'
+        )
+    env = get_bcbio_env()
+    es_bin = '%s/bin' % conda_env_prefix
+    env['PATH'] = append_path(es_bin, env['PATH'])
     return env
 
 

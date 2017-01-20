@@ -1,0 +1,8 @@
+google_api_python_client==1.5.5
+cryptography==1.4
+
+pytest==3.0.2
+pytest-mock==1.2
+ipdb==0.10.1
+pytest-marks==0.4
+pytest-cov==2.4.0

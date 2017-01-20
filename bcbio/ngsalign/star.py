@@ -18,6 +18,7 @@ from bcbio.bam import fastq
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
+
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if not ref_file:
         logger.error("STAR index not found. We don't provide the STAR indexes "
@@ -58,12 +59,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
         cmd += _read_group_option(names)
-        fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
-        if fusion_mode:
-            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                    "--chimScoreSeparation 5 "
-                    "--chimOutType WithinSAM ")
+        if _should_run_fusion(data):
+            cmd += (
+                " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                "--chimScoreSeparation 5 "
+                "--chimOutType WithinSAM "
+            )
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:
@@ -185,3 +187,8 @@ def get_star_version(data):
             if "STAR_" in line:
                 version = line.split("STAR_")[1].strip()
     return version
+
+
+def _should_run_fusion(config):
+    CALLER = 'star'
+    return config_utils.should_run_fusion(CALLER, config)
