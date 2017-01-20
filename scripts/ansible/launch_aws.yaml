@@ -44,13 +44,19 @@
   gather_facts: true
   tasks:
     - include_vars: project_vars.yaml
+    - name: Create ext4 filesystem if not present
+      filesystem: fstype=ext4 dev=/dev/xvdf
+      become: true
+    - name: Mount work volume
+      become: true
+      mount: name=/mnt/work src=/dev/xvdf fstype=ext4 state=mounted
+    - name: Create bcbio directory if missing
+      file: path=/mnt/work/bcbio state=directory owner=ubuntu
+      become: true
+    - name: Add bcbio to path
+      lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
     - apt: update_cache=yes
       become: true
     - apt: name="{{ item }}"
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
-    - name: Mount work volume
-      become: true
-      mount: name=/mnt/work src=/dev/xvdf fstype=ext4 state=mounted
-    - name: Add bcbio to path
-      lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
