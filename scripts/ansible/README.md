@@ -34,23 +34,38 @@ Tools used on your local machine:
   [Dependencies and environmental variables for AWS access](http://docs.ansible.com/ansible/guide_aws.html)
   -- automate starting up instances
 - [saws](https://github.com/donnemartin/saws) -- manage and query running
-  instances. You can install with `bcbio_pip install saws`
+  instances.
 
-You'll need to use the [AWS console](https://aws.amazon.com/) or saws to setup
-some basic infrastructure to do runs:
+You can install these into an isolated conda environment and setup with:
+
+    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
+    bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
+    ./tools/bin/pip install ansible saws
+    ./tools/bin/aws configure
+
+You'll need to create some basic AWS infrastructure to do runs. You can use the
+automation in
+[bcbio-vm](http://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html#aws-setup)
+to create these:
+
+    bcbio_vm.py aws iam
+    bcbio_vm.py aws vpc
+
+or use the [AWS console](https://aws.amazon.com/) or saws. You need:
 
 - An AWS Virtual Private Cloud (VPC). A default VPC is fine.
 - A security group allowing port 22 ssh access to the machines.
 - The name of a keypair to use for ssh access, where you have the private key
   stored locally.
-- A volume that will contain the run and bcbio installation. You can create this
-  in the AWS console, in the Volumes tab or using saws:
+- Optionally, an IAM role that allows access to S3 resources. This makes it
+  easier to push/pull data to the instance.
+
+Finally, create a volume that will contain the run and bcbio installation. It
+should be in the same availability zone as your created VPC. You can create this
+in the AWS console in the Volumes tab, or using saws/aws:
 
        aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
        aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
-
-- Optionally, an IAM role that allows access to S3 resources. This makes it
-  easier to push/pull data to the instance.
 
 Use this information to create a configuration file called `project_vars.yaml`:
 
@@ -157,17 +172,12 @@ When finished, you can terminate the instance with:
 
 ## Running bcbio
 
-On the first run you'll need to create a filesystem on the data volume and setup
-a directory for bcbio and your project, subsequent runs will mount automatically:
+On the first run you'll need to create a project directory to work in:
 
-    sudo mkfs -t ext4 /dev/xvdf
-    sudo mount /dev/xvdf /mnt/work
-    sudo mkdir /mnt/work/bcbio
-    sudo chown ubuntu /mnt/work/bcbio
     sudo mkdir /mnt/work/your-project
     sudo chown ubuntu /mnt/work/your-project
 
-Then [install bcbio](http://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html)
+and [install bcbio](http://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html)
 on the working volume with the genomes and aligner indices you need:
 
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
