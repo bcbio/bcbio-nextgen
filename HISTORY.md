@@ -3,6 +3,7 @@
 - Improve lumpy structural variant runs from pre-aligned BAM files, using
   extract_sv_reads to avoid need to resort input files. Thanks to Neill Gibson.
 - Upload of pipeline results to iRODS. Thanks to Matthias De Smet.
+- Add duplicate removal to post-FreeBayes processing. Thanks to Neill Gibson.
 - Support latest svtyper (0.1.1) for lumpy to provide speed improvements. Will
   default to 0.1.1 at next release.
   (use `bcbio_conda install -c bioconda svtyper=0.1.1` to test in development)
