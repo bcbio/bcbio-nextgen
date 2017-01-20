@@ -6,6 +6,7 @@ along with variant frequencies.
 https://github.com/morrislab/phylowgs
 http://genomebiology.com/2015/16/1/35
 """
+from __future__ import print_function
 import collections
 import os
 import sys
@@ -33,7 +34,7 @@ def run(vrn_info, cnvs_by_name, somatic_info):
         ssm_file, cnv_file = _prep_inputs(vrn_info, cnvs_by_name["battenberg"], somatic_info, work_dir, config)
         evolve_file = _run_evolve(ssm_file, cnv_file, work_dir, somatic_info.tumor_data)
         summary_file = _prepare_summary(evolve_file, ssm_file, cnv_file, work_dir, somatic_info)
-        print summary_file
+        print(summary_file)
 
 def _prepare_summary(evolve_file, ssm_file, cnv_file, work_dir, somatic_info):
     """Prepare a summary with gene-labelled heterogeneity from PhyloWGS predictions.

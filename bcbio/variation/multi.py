@@ -6,6 +6,7 @@ calling simultaneously.
 import collections
 import os
 
+from six import iteritems
 import toolz as tz
 
 from bcbio import utils
@@ -121,7 +122,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
             data = prep_data_fn(data, [data])
             singles.append(data)
     batches = []
-    for batch, items in batch_groups.iteritems():
+    for batch, items in iteritems(batch_groups):
         batch_data = utils.deepish_copy(_pick_lead_item(items))
         # For nested primary batches, split permanently by batch
         if tz.get_in(["metadata", "batch"], batch_data):

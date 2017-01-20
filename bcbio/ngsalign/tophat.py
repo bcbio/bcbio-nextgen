@@ -10,6 +10,7 @@ import subprocess
 
 import numpy
 import pysam
+from six import iteritems
 
 try:
     import sh
@@ -135,7 +136,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             tophat_runner = sh.Command(config_utils.get_program("tophat",
                                                                 config))
             ready_options = {}
-            for k, v in options.iteritems():
+            for k, v in iteritems(options):
                 ready_options[k.replace("-", "_")] = v
             # tophat requires options before arguments,
             # otherwise it silently ignores them

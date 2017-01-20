@@ -1,7 +1,8 @@
 """Utilities for working with fastq files.
 """
 
-from itertools import izip, product
+from six.moves import zip
+from itertools import product
 import os
 import random
 import gzip
@@ -77,7 +78,7 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
         fq1_single_handle = open(tmp_out_files[2], "w")
         fq2_single_handle = open(tmp_out_files[3], "w")
 
-        for fq1_record, fq2_record in izip(fq1_in, fq2_in):
+        for fq1_record, fq2_record in zip(fq1_in, fq2_in):
             if len(fq1_record.seq) >= min_length and len(fq2_record.seq) >= min_length:
                 fq1_out_handle.write(fq1_record.format(quality_format))
                 fq2_out_handle.write(fq2_record.format(quality_format))

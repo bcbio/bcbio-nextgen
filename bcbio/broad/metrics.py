@@ -11,6 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.broad.picardrun import picard_rnaseq_metrics
 
 import pysam
+from six import iteritems
 
 class PicardMetricsParser(object):
     """Read metrics files produced by Picard analyses.
@@ -65,7 +66,7 @@ class PicardMetricsParser(object):
                 parse_fn = None
             if parse_fn:
                 with open(fname) as in_handle:
-                    for key, val in parse_fn(in_handle).iteritems():
+                    for key, val in iteritems(parse_fn(in_handle)):
                         if not key.startswith(prefix):
                             key = "%s_%s" % (prefix, key)
                         all_metrics[key] = val
@@ -220,7 +221,7 @@ class PicardMetricsParser(object):
             vals = self._read_vals_of_interest(want_stats, header, info)
             if info[0].lower() == "pair":
                 new_vals = dict()
-                for item, val in vals.iteritems():
+                for item, val in iteritems(vals):
                     if item in half_stats:
                         new_vals[item] = str(int(val) // 2)
                     else:

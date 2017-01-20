@@ -3,6 +3,7 @@
 Enables automated installation tool and in-place updates to install additional
 data and software.
 """
+from __future__ import print_function
 import argparse
 import collections
 import contextlib
@@ -15,9 +16,10 @@ import shutil
 import subprocess
 import sys
 import glob
-import urllib
 
 import requests
+from six import iteritems
+from six.moves import urllib
 import toolz as tz
 import yaml
 
@@ -179,9 +181,9 @@ def _install_container_bcbio_system(datadir):
             expose_config = yaml.load(in_handle)
     else:
         expose_config = {"resources": {}}
-    for pname, vals in config["resources"].iteritems():
+    for pname, vals in iteritems(config["resources"]):
         expose_vals = {}
-        for k, v in vals.iteritems():
+        for k, v in iteritems(vals):
             if k in expose:
                 expose_vals[k] = v
         if len(expose_vals) > 0 and pname not in expose_config["resources"]:
@@ -497,9 +499,9 @@ def _update_system_file(system_file, name, new_kvs):
         config = {}
     new_rs = {}
     added = False
-    for rname, r_kvs in config.get("resources", {}).iteritems():
+    for rname, r_kvs in iteritems(config.get("resources", {})):
         if rname == name:
-            for k, v in new_kvs.iteritems():
+            for k, v in iteritems(new_kvs):
                 r_kvs[k] = v
             added = True
         new_rs[rname] = r_kvs
@@ -519,7 +521,7 @@ def _install_kraken_db(datadir, args):
     db = os.path.join(kraken, base)
     tooldir = args.tooldir or get_defaults()["tooldir"]
     requests.packages.urllib3.disable_warnings()
-    last_mod = urllib.urlopen(url).info().getheader('Last-Modified')
+    last_mod = urllib.request.urlopen(url).info().getheader('Last-Modified')
     last_mod = dateutil.parser.parse(last_mod).astimezone(dateutil.tz.tzutc())
     if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
         if not os.path.exists(db):
@@ -541,7 +543,7 @@ def _install_kraken_db(datadir, args):
             utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
             utils.remove_safe(compress)
         else:
-            print "You have the latest version %s." % last_mod
+            print("You have the latest version %s." % last_mod)
     else:
         raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
                                          os.path.join(tooldir, "bin", "kraken"))

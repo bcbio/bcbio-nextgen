@@ -3,6 +3,7 @@
 Required configurable variables in upload:
   dir
 """
+from __future__ import print_function
 import collections
 import os
 import shutil
@@ -82,7 +83,7 @@ def _to_datalibrary_safe(fname, gi, folder_name, sample_info, config):
             num_tries += 1
             if num_tries > max_tries:
                 raise
-            print "Retrying upload, failed with:", str(e)
+            print("Retrying upload, failed with:", str(e))
             time.sleep(5)
 
 def _to_datalibrary(fname, gi, folder_name, sample_info, config):
