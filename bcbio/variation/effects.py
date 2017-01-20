@@ -175,10 +175,24 @@ def _get_dbnsfp(data):
     https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
-    annotations = tz.get_in(("config", "resources", "vep", "dbnsfp_fields"), data,
-                            ['RadialSVM_score', 'RadialSVM_pred', 'LR_score', 'LR_pred', 'MutationTaster_score',
-                             'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred', 'PROVEAN_score', 'PROVEAN_pred',
-                             'MetaSVM_score', 'MetaSVM_pred', 'CADD_raw', 'CADD_phred', 'Reliability_index'])
+    annotations = ["LRT_score", "LRT_converted_rankscore", "LRT_pred", "LRT_Omega",
+                    "MutationTaster_score", "MutationTaster_converted_rankscore", "MutationTaster_pred", "MutationTaster_model", "MutationTaster_AAE",
+                    "MutationAssessor_UniprotID", "MutationAssessor_variant", "MutationAssessor_score", "MutationAssessor_score_rankscore", "MutationAssessor_pred",
+                    "FATHMM_score", "FATHMM_converted_rankscore", "FATHMM_pred",
+                    "PROVEAN_score", "PROVEAN_converted_rankscore", "PROVEAN_pred",
+                    "Transcript_id_VEST3", "Transcript_var_VEST3", "VEST3_score", "VEST3_rankscore",
+                    "MetaSVM_score", "MetaSVM_rankscore", "MetaSVM_pred", "MetaLR_score", "MetaLR_rankscore", "MetaLR_pred",
+                    "Reliability_index", "M-CAP_score", "M-CAP_rankscore", "M-CAP_pred",
+                    "CADD_raw", "CADD_raw_rankscore", "CADD_phred", "DANN_score", "DANN_rankscore",
+                    "fathmm-MKL_coding_score", "fathmm-MKL_coding_rankscore", "fathmm-MKL_coding_pred", "fathmm-MKL_coding_group",
+                    "Eigen_coding_or_noncoding", "Eigen-raw", "Eigen-phred", "Eigen-PC-raw", "Eigen-PC-phred", "Eigen-PC-raw_rankscore",
+                    "GenoCanyon_score", "GenoCanyon_score_rankscore", "integrated_fitCons_score", "integrated_fitCons_score_rankscore", "integrated_confidence_value",
+                    "GM12878_fitCons_score", "GM12878_fitCons_score_rankscore", "GM12878_confidence_value",
+                    "H1-hESC_fitCons_score", "H1-hESC_fitCons_score_rankscore", "H1-hESC_confidence_value", "HUVEC_fitCons_score", "HUVEC_fitCons_score_rankscore", "HUVEC_confidence_value",
+                    "GERP++_NR", "GERP++_RS", "GERP++_RS_rankscore", "phyloP100way_vertebrate", "phyloP100way_vertebrate_rankscore", "phyloP20way_mammalian", "phyloP20way_mammalian_rankscore",
+                    "phastCons100way_vertebrate", "phastCons100way_vertebrate_rankscore", "phastCons20way_mammalian", "phastCons20way_mammalian_rankscore", "SiPhy_29way_pi", "SiPhy_29way_logOdds", "SiPhy_29way_logOdds_rankscore",
+                    "clinvar_rs", "clinvar_clnsig", "clinvar_trait", "clinvar_golden_stars", "Interpro_domain", "GTEx_V6_gene", "GTEx_V6_tissue"]
+
     if dbnsfp_file and os.path.exists(dbnsfp_file):
         return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
     else:
