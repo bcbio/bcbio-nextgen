@@ -35,7 +35,6 @@ resources:
     memory: 8g
   # -- Additional options for VEP power users, set options
   #vep:
-  #  options: ["--sift b","--polyphen b","--ccds","--uniprot","--hgvs","--symbol","--numbers","--domains","--regulatory","--canonical","--protein","--biotype","--uniprot","--tsl","--appris","--gene_phenotype --gmaf","--maf_1kg","--maf_esp","--maf_esp","--pubmed","--variant_class"]
   #  plugins: ["dbnsfp","loftee","dbscsnv","maxentscan","genesplicer"]
 
 # Location of galaxy configuration file, which has pointers to reference data
