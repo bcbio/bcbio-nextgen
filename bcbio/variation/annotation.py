@@ -114,7 +114,7 @@ def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
         out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
         with file_transaction(data, out_file) as tx_out_file:
-            conf_file = os.path.join(os.path.dirname(out_file), "dbsnp.conf")
+            conf_file = os.path.join(os.path.dirname(tx_out_file), "dbsnp.conf")
             with open(conf_file, "w") as out_handle:
                 out_handle.write('[[annotation]]\n')
                 out_handle.write('file="%s"\n' % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
