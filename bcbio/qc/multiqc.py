@@ -144,7 +144,8 @@ def _create_config_file(out_dir, samples):
     out = {"table_columns_visible":
            {"SnpEff": {"Change_rate": False,
                        "Ts_Tv_ratio": False,
-                       "Number_of_variants_before_filter": False}},
+                       "Number_of_variants_before_filter": False},
+            "samtools": {"error_rate": False}},
            "module_order": ["bcbio", "samtools", "bcftools", "picard", "qualimap", "snpeff", "fastqc"]}
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
