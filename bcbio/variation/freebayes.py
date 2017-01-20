@@ -147,7 +147,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                        "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                        "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "
+                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -195,7 +195,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                       "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                      "vt normalize -n -r {ref_file} -q - | vcfuniqalleles "
+                      "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                       "{compress_cmd} > {tx_out_file}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
