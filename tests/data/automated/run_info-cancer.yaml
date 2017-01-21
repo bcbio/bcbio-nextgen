@@ -27,6 +27,7 @@ details:
       svcaller: [lumpy]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
+      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor
@@ -51,7 +52,7 @@ details:
       svcaller: [lumpy]
       #svcaller: [cnvkit]
       #tools_on: [svplots]
-      tools_off: [vardict_somatic_filter]
+      tools_off: [vardict_somatic_filter, gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: cancer/az-cancer-panel
   - analysis: variant2
@@ -77,5 +78,6 @@ details:
       svcaller: [lumpy]
       #tools_on: [svplots]
       #svcaller: [cnvkit]
+      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: ../data/automated/variant_regions-cancer.bed
