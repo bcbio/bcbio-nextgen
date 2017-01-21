@@ -40,7 +40,7 @@ You can install these into an isolated conda environment and setup with:
 
     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
-    ./tools/bin/pip install ansible saws
+    ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
 
 You'll need to create some basic AWS infrastructure to do runs. You can use the
@@ -54,15 +54,20 @@ to create these:
 or use the [AWS console](https://aws.amazon.com/) or saws. You need:
 
 - An AWS Virtual Private Cloud (VPC). A default VPC is fine.
-- A security group allowing port 22 ssh access to the machines.
-- The name of a keypair to use for ssh access, where you have the private key
-  stored locally.
+- A security group allowing port 22 ssh access to the machines. For the
+  automated bcbio-vm setup, this is called `bcbio_cluster_sg`.
+- The name of a [keypair](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName) 
+  to use for ssh access, where you have the private key stored locally. If you
+  used the bcbio-vm automated setup, you'll have a keypair named `bcbio` in
+  `~/.bcbio/aws_keypairs/bcbio`.
 - Optionally, an IAM role that allows access to S3 resources. This makes it
-  easier to push/pull data to the instance.
+  easier to push/pull data to the instance. The bcbio-vm automation creates one
+  called `bcbio_full_s3_access`.
 
 Finally, create a volume that will contain the run and bcbio installation. It
-should be in the same availability zone as your created VPC. You can create this
-in the AWS console in the Volumes tab, or using saws/aws:
+should be in the same availability zone as your created VPC (`aws ec2
+describe-subnets`). You can create this in the AWS console in the Volumes tab,
+or using saws/aws:
 
        aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
        aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
@@ -84,14 +89,8 @@ With this in place you can launch your instance with:
     ansible-playbook -vvv launch_aws.yaml
 
 This creates the instance, attaches the data volume, mounts the volume as
-`/mnt/work` and installs basic system tools for running. On the first run for a
-new data volume, this will not work cleanly since the filesystem is not prepared
-and can't be mounted. The machine will be setup and you should ssh in and follow
-the instructions below in 'Running bcbio' to create an ext4 filesystem on the
-attached disk. Subsequent restarts with the same attached disk will then work
-without any manual steps.
-
-Get the Public DNS name of the created machine with:
+`/mnt/work` and installs basic system tools. Get the Public DNS name of the
+created machine with:
 
     saws> aws ec2 describe-instances | grep Public
 
@@ -99,8 +98,10 @@ Then ssh into your machine with:
 
     ssh -i /path/to/your/private.key ubuntu@ec2-XX-XXX-XXX-XXX.compute-1.amazonaws.com
 
-You can skip ahead to the section about running bcbio, which is the same across
-all cloud providers. When finished, terminate the current instance with:
+On the first run with a new data volume, install bcbio and setup a work
+directory for running following the instructions in 'Running bcbio.' Then you're
+ready to run an analysis. This on-machine setup is the same across all cloud
+providers. When finished, terminate the current instance with:
 
     saws> aws ec2 terminate-instances --instance-ids i-xxxxxxx
 
