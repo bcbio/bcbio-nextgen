@@ -18,7 +18,6 @@ import sys
 import glob
 
 import requests
-from six import iteritems
 from six.moves import urllib
 import toolz as tz
 import yaml
@@ -499,9 +498,9 @@ def _update_system_file(system_file, name, new_kvs):
         config = {}
     new_rs = {}
     added = False
-    for rname, r_kvs in iteritems(config.get("resources", {})):
+    for rname, r_kvs in config.get("resources", {}).items():
         if rname == name:
-            for k, v in iteritems(new_kvs):
+            for k, v in new_kvs.items():
                 r_kvs[k] = v
             added = True
         new_rs[rname] = r_kvs

@@ -6,7 +6,6 @@ Script that creates bcbio-compatible inputs in case of multiple files samples
 
 import os
 import yaml
-from six import iteritems
 from collections import defaultdict
 from argparse import ArgumentParser
 from bcbio import log
@@ -59,7 +58,7 @@ def _get_samples_to_process(fn, out_dir, config, force_single):
                     samples[cols[1]].append(cols)
                 else:
                     logger.info("skipping %s, File doesn't exist." % cols[0])
-    for sample, items in iteritems(samples):
+    for sample, items in samples.items():
         if is_fastq(items[0][0], True):
             fn = "fq_merge"
             ext = ".fastq.gz"
