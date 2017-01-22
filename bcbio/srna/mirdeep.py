@@ -31,10 +31,16 @@ def run(data):
     out_dir = op.join(work_dir, "mirdeep2")
     out_file = op.join(out_dir, "result_res.csv")
     safe_makedir(out_dir)
+    if not file_exists(rfam_file):
+        logger.warning("mirdeep2 Rfam file not instaled. Skipping...")
+        return None
+    if not file_exists(mirdeep2):
+        logger.warning("mirdeep2 executable file not found. Skipping...")
+        return None
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
         cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res").format(**locals())
-        if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(rfam_file):
+        if not file_exists(out_file):
             try:
                 do.run(cmd.format(**locals()), "Running mirdeep2.")
             except:
