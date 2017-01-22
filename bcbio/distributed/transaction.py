@@ -10,7 +10,6 @@ import os
 import shutil
 import tempfile
 
-from six import iteritems
 import toolz as tz
 
 from bcbio import utils
@@ -92,7 +91,7 @@ def _move_tmp_files(safe, orig):
 
     _move_file_with_sizecheck(safe, orig)
     # Move additional, associated files in the same manner
-    for check_ext, check_idx in iteritems(exts):
+    for check_ext, check_idx in exts.items():
         if not safe.endswith(check_ext):
             continue
         safe_idx = safe + check_idx

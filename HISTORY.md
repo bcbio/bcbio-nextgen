@@ -7,6 +7,8 @@
 - Support latest svtyper (0.1.1) for lumpy to provide speed improvements. Will
   default to 0.1.1 at next release.
   (use `bcbio_conda install -c bioconda svtyper=0.1.1` to test in development)
+- Work towards supporting a Python 3 compatible bcbio codebase. Thanks to
+  Michael Crusoe.
 
 ## 1.0.1 (17 January 2017)
 

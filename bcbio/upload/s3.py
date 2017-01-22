@@ -9,8 +9,6 @@ from bcbio.distributed import objectstore
 from bcbio.provenance import do
 from bcbio.upload import filesystem
 
-from six import iteritems
-
 def _update_val(key, val):
     if key == "mtime":
         return val.isoformat()
@@ -54,7 +52,7 @@ def _upload_file_gof3r(fname, bucket, keyname, config=None, mditems=None):
     metadata = ["-m", "x-amz-server-side-encryption:AES256"]
     endpoint = []
     if mditems:
-        for name, val in iteritems(mditems):
+        for name, val in mditems.items():
             val = _update_val(name, val)
             if val:
                 metadata += ["-m", "x-amz-meta-%s:%s" % (name, val)]
@@ -95,6 +93,6 @@ def upload_file_boto(fname, remote_fname, mditems=None):
         mditems = {}
     if "x-amz-server-side-encryption" not in mditems:
         mditems["x-amz-server-side-encryption"] = "AES256"
-    for name, val in iteritems(mditems):
+    for name, val in mditems.items():
         key.set_metadata(name, val)
     key.set_contents_from_filename(fname, encrypt_key=True)

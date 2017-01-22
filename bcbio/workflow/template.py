@@ -16,7 +16,6 @@ import os
 import shutil
 from six.moves import urllib
 
-from six import iteritems
 import toolz as tz
 import yaml
 import sys
@@ -186,7 +185,7 @@ def _write_config_file(items, global_vars, template, project_name, out_dir,
             out["upload"]["region"] = r_base.region
     if global_vars:
         out["globals"] = global_vars
-    for k, v in iteritems(template):
+    for k, v in template.items():
         if k not in ["details"]:
             out[k] = v
     if os.path.exists(out_config_file):
@@ -359,7 +358,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
-        for k, v in iteritems(item_md):
+        for k, v in item_md.items():
             if v:
                 if k in TOP_LEVEL:
                     item[k] = v

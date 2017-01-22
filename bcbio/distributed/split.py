@@ -11,7 +11,6 @@ splitting specific code.
 import collections
 
 from bcbio import utils
-from six import iteritems
 
 def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
                                    parallel_name, combine_name,
@@ -110,7 +109,7 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
             else:
                 extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
-                    for (k, v) in iteritems(out_map)]
+                    for (k, v) in out_map.items()]
     return combine_args, final_args.values() + extras
 
 def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):

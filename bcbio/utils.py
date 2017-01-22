@@ -16,7 +16,6 @@ import subprocess
 import sys
 import types
 
-from six import iteritems
 import toolz as tz
 import yaml
 try:
@@ -452,7 +451,7 @@ def merge_config_files(fnames):
     out = _load_yaml(fnames[0])
     for fname in fnames[1:]:
         cur = _load_yaml(fname)
-        for k, v in iteritems(cur):
+        for k, v in cur.items():
             if k in out and isinstance(out[k], dict):
                 out[k].update(v)
             else:
@@ -466,7 +465,7 @@ def deepish_copy(org):
     http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
     """
     out = dict().fromkeys(org)
-    for k, v in iteritems(org):
+    for k, v in org.items():
         if isinstance(v, dict):
             out[k] = deepish_copy(v)
         else:
@@ -765,7 +764,7 @@ def max_command_length():
     try:
         arg_max = os.sysconf('SC_ARG_MAX')
         env_lines = len(os.environ) * 4
-        env_chars = sum([len(x) + len(y) for x, y in iteritems(os.environ)])
+        env_chars = sum([len(x) + len(y) for x, y in os.environ.items()])
         arg_length = arg_max - env_lines - 2048
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH
