@@ -19,19 +19,22 @@ def is_autosomal(chrom):
         except ValueError:
             return False
 
+def is_sex(chrom):
+    return chrom in ["X", "chrX", "Y", "chrY"]
+
+def is_mitochondrial(chrom):
+    return chrom in ["MT", "chrM", "chrMT"]
+
 def is_autosomal_or_x(chrom):
     return is_autosomal(chrom) or chrom in ["X", "chrX"]
 
 def is_autosomal_or_sex(chrom):
-    return is_autosomal_or_x(chrom) or chrom in ["Y", "chrY"]
+    return is_autosomal_or_x(chrom) or is_sex(chrom)
 
 def is_nonalt(chrom):
     """Check that a chromosome is on 1-22, X, Y, MT.
     """
     return is_autosomal_or_sex(chrom) or is_mitochondrial(chrom)
-
-def is_mitochondrial(chrom):
-    return chrom in ["MT", "chrM", "chrMT"]
 
 def bed_to_standardonly(in_file, data, headers=None):
     out_file = "%s-stdchrs%s" % utils.splitext_plus(in_file)

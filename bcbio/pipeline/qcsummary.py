@@ -11,16 +11,12 @@ from datetime import datetime
 import toolz as tz
 
 from bcbio import utils
-from bcbio.bam import sambamba
 from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import config_utils, run_info
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
-from bcbio.variation import coverage as cov
-from bcbio.variation import bedutils
-
 
 # ## High level functions to generate summary
 
@@ -111,14 +107,15 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import fastqc, kraken, qsignature, qualimap, samtools, picard, srna, umi, variant
+    from bcbio.qc import (coverage, fastqc, kraken, qsignature, qualimap,
+                          samtools, picard, srna, umi, variant)
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
              "qualimap": qualimap.run,
              "qualimap_rnaseq": qualimap.run_rnaseq,
              "qsignature": qsignature.run,
-             "coverage": _run_coverage_qc,
+             "coverage": coverage.run,
              "variants": variant.run,
              "kraken": kraken.run,
              "picard": picard.run,
@@ -305,67 +302,6 @@ def _summary_csv_by_researcher(summary_yaml, researcher, descrs, data):
                                                      for x in metrics]
                     writer.writerow(row)
     return out_file
-
-# ## Coverage
-
-def _run_coverage_qc(bam_file, data, out_dir):
-    """Run coverage QC analysis"""
-    out = dict()
-
-    if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
-        cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
-        merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
-        target_name = "coverage"
-    elif dd.get_coverage_interval(data) != "genome":
-        merged_bed_file = dd.get_variant_regions_merged(data)
-        target_name = "variant_regions"
-    else:
-        merged_bed_file = None
-        target_name = "genome"
-
-    avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
-    out['Avg_coverage'] = avg_depth
-
-    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
-    from bcbio.qc import samtools
-    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
-
-    out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
-    out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])
-    out["Mapped_paired_reads"] = int(samtools_stats["Mapped_paired_reads"])
-    out['Duplicates'] = dups = int(samtools_stats["Duplicates"])
-
-    if total_reads:
-        out["Mapped_reads_pct"] = 100.0 * mapped / total_reads
-    if mapped:
-        out['Duplicates_pct'] = 100.0 * dups / mapped
-
-    if dd.get_coverage_interval(data) == "genome":
-        mapped_unique = mapped - dups
-    else:
-        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-    out['Mapped_unique_reads'] = mapped_unique
-
-    if merged_bed_file:
-        ontarget = sambamba.number_of_mapped_reads(
-            data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
-        out["Ontarget_unique_reads"] = ontarget
-        if mapped_unique:
-            out["Ontarget_pct"] = 100.0 * ontarget / mapped_unique
-            out['Offtarget_pct'] = 100.0 * (mapped_unique - ontarget) / mapped_unique
-            if dd.get_coverage_interval(data) != "genome":
-                # Skip padded calculation for WGS even if the "coverage" file is specified
-                # the padded statistic makes only sense for exomes and panels
-                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
-                ontarget_padded = sambamba.number_of_mapped_reads(
-                    data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
-                out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
-        if total_reads:
-            out['Usable_pct'] = 100.0 * ontarget / total_reads
-
-    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
-                                                              extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-    return out
 
 # ## Galaxy functionality
 
