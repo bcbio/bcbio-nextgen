@@ -1,0 +1,47 @@
+# Run multiple sample validations using Genome in a Bottle inputs
+#
+# Samples:
+#  - NA12878 -- Caucasian female
+#  - NA24385 -- Ashkenazim son
+#
+# http://jimb.stanford.edu/giab
+---
+upload:
+  dir: ../final
+details:
+  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
+    description: NA12878-bwa
+    metadata:
+      sex: female
+      validate_batch: NA12878
+      validate_sample: bwa
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      remove_lcr: true
+      tools_off: [vqsr, gemini]
+      variantcaller: [samtools, freebayes, platypus, gatk-haplotype]
+      validate: giab-NA12878/truth_small_variants.vcf.gz
+      validate_regions: giab-NA12878/truth_regions.bed
+  - files: [../input/NA24385_60x.bam]
+    description: NA24385-bwa
+    metadata:
+      sex: male
+      validate_batch: NA24385
+      validate_sample: bwa
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      remove_lcr: true
+      tools_off: [vqsr, gemini]
+      variantcaller: [samtools, freebayes, platypus, gatk-haplotype]
+      validate: giab-NA24385/truth_small_variants.vcf.gz
+      validate_regions: giab-NA24385/truth_regions.bed

@@ -5,6 +5,7 @@ sub-clonal populations within a potentially mixed population. This attempts
 to infer these sub-clones to help improve variant calls and interpretation
 especially in complex cancer samples.
 """
+from __future__ import print_function
 import collections
 
 from bcbio.heterogeneity import bubbletree, phylowgs, theta
@@ -81,7 +82,7 @@ def estimate(items, batch, config):
             hetfn = hetcallers[hetcaller]
         except KeyError:
             hetfn = None
-            print "%s not yet implemented" % hetcaller
+            print("%s not yet implemented" % hetcaller)
         if hetfn:
             hetout = hetfn(variants[0], calls, paired)
             if hetout:

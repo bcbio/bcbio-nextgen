@@ -13,6 +13,57 @@ The pipeline runs in parallel in two different ways:
    Machine to machine communication occurs via messaging, using the
    `IPython parallel`_ framework.
 
+.. _tuning-cores:
+
+Tuning core and memory usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio has two ways to specify core usage, helping provide options for
+parallelizing different types of processes:
+
+- Total available cores: specified with ``-n`` on the commandline, this tells
+  bcbio how many total cores to use. This applies either to a local multicore
+  run or a distributed job.
+
+- Maximum cores to use for multicore processing of individual jobs. You specify
+  this in the ``resource`` section of either a sample YAML file
+  (:ref:`sample-resources`) or ``bcbio_system.yaml``. Ideally you specify this
+  in the ``default`` section (along with memory usage). For example, this would
+  specify that processes using multiple cores can get up to 16 cores with 2G of
+  memory per core::
+
+      resources:
+        default:
+          memory: 2G
+          cores: 16
+          jvm_opts: ["-Xms750m", "-Xmx2000m"]
+
+bcbio uses these settings, along with memory requests, to determine how to
+partition jobs. For example, if you had ``-n 32`` and ``cores: 16`` for a run on
+a single 32 core machine, this would run two simultaneous bwa mapping jobs using
+16 cores each.
+
+Memory specifications (both in ``memory`` and ``jvm_opts``) are per-core. bcbio
+takes care of adjusting this memory to match the cores used. In the example
+above, if bcbio was running a 16 core java proecess, it would use 32Gb of memory
+for the JVM, adjusting ``Xmx`` and ``Xms`` to match cores used. Internally bcbio
+looks at the memory and CPU usage on a machine and matches your configuration
+options to the available system resources. It will scale down core requests if
+memory is limiting, avoiding over-scheduling resources during the run. You
+ideally want to set both ``memory`` and ``jvm_opts`` to match the average memory
+per core on the run machine and adjust upwards if this does not provide enough
+memory for some processes during the run.
+
+For single machine runs with a small number of samples, you generally want to
+set ``cores`` close to or equal the number of total cores you're allocating to
+the job with ``-n``. This will allow individual samples to process as fast as
+possible and take advantage of multicore software.
+
+For distributed jobs, you want to set ``cores`` to match the available cores on
+a single node in your cluster, then use ``-n`` as a multiple of this to
+determine how many nodes to spin up. For example, ``cores: 16`` and ``-n 64``
+would try to make four 16 core machines available for analysis.
+
 Multiple cores
 ~~~~~~~~~~~~~~
 Running using multiple cores only requires setting the ``-n``
@@ -101,6 +152,10 @@ There are also special ``-r`` resources parameters to support pipeline configura
 - ``-r conmem=4`` -- Specify the memory for the controller process, in Gb. This
   currently applies to SLURM processing and defaults to 4Gb.
 
+- ``-r minconcores=2`` -- The minimum number of cores to use for the controller
+  process. The controller one works on a single core but this can help in
+  queues where you can only specify multicore jobs.
+
 - ``-r mincores=16`` -- Specify the minimum number of cores to batch together
   for parallel single core processes like variant calling. This will run
   multiple processes together under a single submission to allow sharing of
@@ -119,8 +174,52 @@ There are also special ``-r`` resources parameters to support pipeline configura
 .. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
 
 Troubleshooting
-===============
-**IPython parallelization problems**:
+~~~~~~~~~~~~~~~
+Diagnosing job failures
+=======================
+
+Parallel jobs can often terminate with rather generic failures like any of the
+following:
+
+- ``joblib/parallel.py", ... TypeError: init() takes at least 3 arguments (2 given)``
+- ``Multiprocessing exception:``
+- ``CalledProcessError: Command '<command line that failed>``
+
+These errors unfortunately don't help diagnose the problem, and you'll likely
+see the actual error triggering this generic exception earlier in the run. This
+error can often be hard to find due to parallelization.
+
+If you run into a confusing failure like this, the best approach is to re-run
+with a single core::
+
+    bcbio_nextgen.py your_input.yaml -n 1
+
+which should produce a more helpful debug message right above the failure.
+
+It's also worth re-trying the failed command line outside of bcbio to look for
+errors. You can find the failing command by cross-referencing the error message
+with command lines in ``log/bcbio-nextgen-commands.log``. You may have to change
+temporary directories (``tx/tmp**``) in some of the job outputs. Reproducing the
+error outside of bcbio is a good first step to diagnosing and fixing the
+underlying issue.
+
+No parallelization where expected
+=================================
+
+This may occure if the current execution is a re-run of a previous project:
+
+- Files in ``checkpoints_parallel/*.done`` tell bcbio not to parallelize already
+  executed pipeline tasks. This makes restarts faster by avoiding re-starting a
+  cluster (when using distributed runs) for finished stages. If that behaviour
+  is not desired for a task, removing the checkpoint file will get things
+  parallelizing again.
+
+- If the processing of a task is nearly finished the last jobs of this task will be
+  running and bcbio will wait for those to finish.
+
+IPython parallelization problems
+================================
+
 Networking problems on clusters can prevent the IPython parallelization
 framework from working properly. Be sure that the compute nodes on your
 cluster are aware of IP addresses that they can use to communicate
@@ -140,17 +239,6 @@ and `hostname` by the machine's own hostname, should be aded to ``/etc/hosts``
 on each compute node. This will probably involve contacting your local
 cluster administrator.
 
-**No parallelization where expected**: This may occure if the current execution
-is a re-run of a previous project:
-
-- There will be a file in `checkpoints_parallel/full.done` that tells bcbio not
-  to parallelize at certain tasks of already executed tasks of the pipeline.
-  That tries to avoid re-starting a cluster (when using distributed runs) for
-  stages that have finished. If that behaviour is not desired for a task, removing
-  the checkpoint file will get things parallelizing again.
-- If the processing of a task is nearly finished the last jobs of this task will be
-  running and bcbio will wait for those to finish.
-
 .. _memory-management:
 
 Memory management
@@ -161,11 +249,7 @@ The memory information specified in the system configuration
 processes. The values are specified on a *memory-per-core* basis and
 thus bcbio-nextgen handles memory scheduling by:
 
-- Determining available cores and memory per machine. It uses the
-  local machine for multicore runs. For parallel runs, it spawns a job
-  on the schedule queue and extracts the system information from that
-  machine. This expects a homogeneous set of machines within a
-  cluster queue.
+- :ref:`parallel-machine`
 
 - Calculating the memory and core usage.
   The system configuration :ref:`config-resources` contains the
@@ -183,10 +267,35 @@ thus bcbio-nextgen handles memory scheduling by:
 
 As a result of these calculations, the cores used during processing
 will not always correspond to the maximum cores provided in the input
-`-n` parameter. The goal is rather to intelligently maximize cores and
+``-n`` parameter. The goal is rather to intelligently maximize cores and
 memory while staying within system resources. Note that memory
 specifications are for a single core, and the pipeline takes care of
 adjusting this to actual cores used during processing.
+
+.. _parallel-machine:
+
+Determining available cores and memory per machine
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio automatically tries to determine the total available memory and cores per
+machine for balancing resource usage. For multicore runs, it retrieves total
+memory from the current machine. For parallel runs, it spawns a job on the queue
+and extracts the system information from that machine. This expects a
+homogeneous set of machines within a cluster queue. You can see the determined
+cores and total memory in ``provenance/system-ipython-queue.yaml``.
+
+For heterogeneous clusters or other cases where bcbio does not correctly
+identify available system resources, you can manually set the machine cores and
+total memory in the ``resource`` section of either a sample YAML file
+(:ref:`sample-resources`) or ``bcbio_system.yaml``::
+
+    resources:
+      machine:
+        memory: 48.0
+        cores: 16
+
+The memory usage is total available on the machine in Gb, so this specifies that
+individual machines have 48Gb of total memory and 16 cores.
 
 Tuning systems for scale
 ~~~~~~~~~~~~~~~~~~~~~~~~

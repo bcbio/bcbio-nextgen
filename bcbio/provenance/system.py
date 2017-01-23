@@ -191,9 +191,15 @@ def _combine_machine_info(xs):
     else:
         raise NotImplementedError("Add logic to pick specification from non-homogeneous clusters.")
 
-def get_info(dirs, parallel):
+def get_info(dirs, parallel, resources=None):
     """Retrieve cluster or local filesystem resources from pre-retrieved information.
     """
+    # Allow custom specification of cores/memory in resources
+    if resources and isinstance(resources, dict) and "machine" in resources:
+        minfo = resources["machine"]
+        assert "memory" in minfo, "Require memory specification (Gb) in machine resources: %s" % minfo
+        assert "cores" in minfo, "Require core specification in machine resources: %s" % minfo
+        return minfo
     if parallel["type"] in ["ipython"] and not parallel["queue"] == "localrun":
         cache_file = _get_cache_file(dirs, parallel)
         if utils.file_exists(cache_file):

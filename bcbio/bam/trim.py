@@ -3,7 +3,9 @@
 import os
 import sys
 
-from bcbio.utils import (file_exists, append_stem, replace_directory)
+from bcbio.utils import (file_exists, append_stem, replace_directory,
+                         safe_makedir, splitext_plus)
+from bcbio.bam.fastq import is_fastq
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.provenance import do
@@ -20,14 +22,18 @@ SUPPORTED_ADAPTERS = {
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
 def trim_adapters(data):
-    to_trim = [x for x in data["files"] if x is not None]
+    to_trim = [x for x in data["files"] if x is not None and is_fastq(x)]
+    if not to_trim:
+        return data["files"]
+
     logger.info("Trimming low quality ends and read through adapter "
                 "sequence from %s." % (", ".join(to_trim)))
-    out_dir = os.path.join(dd.get_work_dir(data), "trimmed")
+    out_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed"))
     config = dd.get_config(data)
-    return _trim_adapters(to_trim, out_dir, config)
+    name = dd.get_sample_name(data)
+    return _trim_adapters(to_trim, out_dir, name, config)
 
-def _trim_adapters(fastq_files, out_dir, config):
+def _trim_adapters(fastq_files, out_dir, name, config):
     """
     for small insert sizes, the read length can be longer than the insert
     resulting in the reverse complement of the 3' adapter being sequenced.
@@ -39,11 +45,17 @@ def _trim_adapters(fastq_files, out_dir, config):
     """
     quality_format = _get_quality_format(config)
     to_trim = _get_sequences_to_trim(config, SUPPORTED_ADAPTERS)
-    out_files = replace_directory(append_stem(fastq_files, ".trimmed"), out_dir)
-    out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, config)
+    out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
+    log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
+    out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, log_file, config)
+    if file_exists(log_file):
+        content = open(log_file).read().replace(fastq_files[0], name)
+        if len(fastq_files) > 1:
+            content = content.replace(fastq_files[1], name)
+        open(log_file, 'w').write(content)
     return out_files
 
-def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
+def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, config):
     """Trimming with cutadapt, using version installed with bcbio-nextgen.
 
     Uses the system executable to find the version next to our Anaconda Python.
@@ -53,13 +65,15 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, config):
         return out_files
     cmd = _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files)
     if len(fastq_files) == 1:
-        of1 = out_files[0]
+        of = [out_files[0], log_file]
         message = "Trimming %s in single end mode with cutadapt." % (fastq_files[0])
-        with file_transaction(config, of1) as of1_tx:
+        with file_transaction(config, of) as of_tx:
+            of1_tx, log_tx = of_tx
             do.run(cmd.format(**locals()), message)
     else:
-        with file_transaction(config, out_files) as tx_out_files:
-            of1_tx, of2_tx = tx_out_files
+        of = out_files + [log_file]
+        with file_transaction(config, of) as tx_out_files:
+            of1_tx, of2_tx, log_tx = tx_out_files
             tmp_fq1 = append_stem(of1_tx, ".tmp")
             tmp_fq2 = append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
@@ -86,39 +100,41 @@ def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files):
     # this behavior might not be what we want; we could also do two or
     # more passes of cutadapt
     cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
-    adapter_cmd = " ".join(map(lambda x: "--adapter=" + x, adapters))
+    adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
     base_cmd = ("{cutadapt} --times=2 --quality-base={quality_base} "
                 "--quality-cutoff=5 --format=fastq "
                 "{adapter_cmd} ").format(**locals())
-    if len(fastq_files) == 1:
-        return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
+    if len(fastq_files) == 2:
+        # support for the single-command paired trimming introduced in
+        # cutadapt 1.8
+        adapter_cmd = adapter_cmd.replace("-a ", "-A ")
+        base_cmd += "{adapter_cmd} ".format(adapter_cmd=adapter_cmd)
+        return _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd)
     else:
-        return _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd)
+        return _cutadapt_se_cmd(fastq_files, out_files, base_cmd)
 
 def _cutadapt_se_cmd(fastq_files, out_files, base_cmd):
     """
-    this has to use the -o option, not redirect to stdout in order for gzipping to be
-    honored
+    this has to use the -o option, not redirect to stdout in order for
+    gzipping to be supported
     """
     min_length = MINIMUM_LENGTH
     cmd = base_cmd + " --minimum-length={min_length} ".format(**locals())
     fq1 = objectstore.cl_input(fastq_files[0])
     of1 = out_files[0]
-    cmd += " -o {of1} " + str(fq1)
+    cmd += " -o {of1_tx} " + str(fq1)
+    cmd = "%s | tee > {log_tx}" % cmd
     return cmd
 
-def _cutadapt_pe_nosickle(fastq_files, out_files, quality_format, base_cmd):
+def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd):
     """
-    sickle has an issue with 0 length reads, here is the open issue for it:
-    https://github.com/najoshi/sickle/issues/32
-    until that is resolved, this is a workaround which avoids using sickle
+    run cutadapt in paired end mode
     """
     fq1, fq2 = [objectstore.cl_input(x) for x in fastq_files]
     of1, of2 = out_files
     base_cmd += " --minimum-length={min_length} ".format(min_length=MINIMUM_LENGTH)
-    first_cmd = base_cmd + " -o {tmp_fq1} -p {tmp_fq2} " + fq1 + " " + fq2
-    second_cmd = base_cmd + " -o {of2_tx} -p {of1_tx} {tmp_fq2} {tmp_fq1}"
-    return first_cmd + ";" + second_cmd + "; rm {tmp_fq1} {tmp_fq2} "
+    first_cmd = base_cmd + " -o {of1_tx} -p {of2_tx} " + fq1 + " " + fq2
+    return first_cmd + "| tee > {log_tx};"
 
 def _get_sequences_to_trim(config, builtin):
     builtin_adapters = _get_builtin_adapters(config, builtin)

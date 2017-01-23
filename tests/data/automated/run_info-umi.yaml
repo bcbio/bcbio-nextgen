@@ -1,0 +1,22 @@
+fc_date: '20161023'
+fc_name: 'umitest'
+upload:
+  dir: upload
+details:
+  - algorithm:
+      aligner: bwa
+      recalibrate: false
+      realign: false
+      #umi_type: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX-umis.fastq
+      umi_type: fastq_name
+      variantcaller: freebayes
+      variant_regions: ../data/automated/variant_regions-bam.bed
+      coverage: ../data/automated/coverage_transcripts-bam.bed
+    resources:
+      fgbio:
+        options: [--edits, 2, --min-reads, 3]
+    analysis: variant2
+    description: Test1
+    genome_build: hg19
+    files: [../data/100326_FC6107FAAXX/7_wumis_R1.fq.gz, ../data/100326_FC6107FAAXX/7_wumis_R2.fq.gz]
+    #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam

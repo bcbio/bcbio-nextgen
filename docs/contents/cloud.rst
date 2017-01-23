@@ -28,7 +28,7 @@ Python::
 
     wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
     bash Miniconda-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bcbio bcbio-nextgen-vm
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
 We support both Linux and Mac OSX as clients for running remote AWS bcbio clusters.
@@ -76,7 +76,7 @@ Extra software
 We're not able to automatically install some useful tools in pre-built docker
 containers due to licensing restrictions. Variant calling with GATK requires a
 manual download from the `GATK download`_ site for academic users.  Commercial
-users `need a license`_ for GTAK and for somatic calling with muTect. To make these jars available,
+users `need a license`_ for GATK and for somatic calling with muTect. To make these jars available,
 upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
 include the correct GATK and muTect directives during your run.  Alternatively,
 you can also manually specify the path to the jars using a global

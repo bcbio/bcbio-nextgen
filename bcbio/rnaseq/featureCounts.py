@@ -1,7 +1,7 @@
 import os
 import shutil
 import bcbio.bam as bam
-from bcbio.utils import (file_exists, safe_makedir)
+from bcbio.utils import (file_exists, safe_makedir, append_stem)
 from bcbio.pipeline import config_utils
 from bcbio.bam import is_paired
 from bcbio.provenance import do
@@ -25,6 +25,7 @@ def count(data):
     out_dir = os.path.join(work_dir, "htseq-count")
     safe_makedir(out_dir)
     count_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts"
+    summary_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts.summary"
     if file_exists(count_file):
         return count_file
 
@@ -39,12 +40,30 @@ def count(data):
 
     message = ("Count reads in {tx_count_file} mapping to {gtf_file} using "
                "featureCounts")
-    with file_transaction(data, count_file) as tx_count_file:
+    with file_transaction(data, [count_file, summary_file]) as tx_files:
+        tx_count_file, tx_summary_file = tx_files
         do.run(cmd.format(**locals()), message.format(**locals()))
     fixed_count_file = _format_count_file(count_file, data)
+    fixed_summary_file = _change_sample_name(
+        summary_file, dd.get_sample_name(data), data=data)
     shutil.move(fixed_count_file, count_file)
+    shutil.move(fixed_summary_file, summary_file)
 
     return count_file
+
+def _change_sample_name(in_file, sample_name, data=None):
+    """Fix name in feature counts log file to get the same
+       name in multiqc report.
+    """
+    out_file = append_stem(in_file, "_fixed")
+    with file_transaction(data, out_file) as tx_out:
+        with open(tx_out, "w") as out_handle:
+            with open(in_file) as in_handle:
+                for line in in_handle:
+                    if line.startswith("Status"):
+                        line = "Status\t%s.bam" % sample_name
+                    print >>out_handle, line.strip()
+    return out_file
 
 def _format_count_file(count_file, data):
     """
@@ -62,7 +81,6 @@ def _format_count_file(count_file, data):
     with file_transaction(data, out_file) as tx_out_file:
         df_sub.to_csv(tx_out_file, sep="\t", index_label="id", header=False)
     return out_file
-
 
 def _strand_flag(data):
     """

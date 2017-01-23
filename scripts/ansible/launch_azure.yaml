@@ -1,0 +1,71 @@
+# Launch analysis environment on Google Cloud with existing data volume.
+# For bcbio analyses, volume expected to contain bcbio installation
+# in /mnt/work/bcbio
+# Makes it easy to stop/start analyses that fit on a single node and disk.
+#
+# Notes
+# Add login information:
+# https://azure.microsoft.com/en-us/documentation/articles/resource-group-create-service-principal-portal/
+# New portal: https://portal.azure.com
+# Classic portal: https://manage.windowsazure.com
+# CLI: azure role assignment create --objectId xxx  -o Owner -c /subscriptions/xxx
+#
+# Use resource manager _rm_ versions of Ansible
+# https://docs.ansible.com/ansible/guide_azure.html
+#
+# Persistent storage
+# https://azure.microsoft.com/en-us/documentation/articles/storage-azure-cli/
+# https://azure.microsoft.com/en-us/documentation/articles/storage-how-to-use-files-linux/
+# Or create initial data disk
+# azure storage container create
+#
+# resize instance: azure vm set --vm-size Standard_A3 qr1hi qr1hi-lightning-dev3-shell
+#
+# Other ansible examples:
+# https://github.com/harishbagewadielluru/ansible-azure
+#
+# Permissions issues creating Compute VMs
+# https://social.msdn.microsoft.com/Forums/Windowsserver/en-US/3878c3ee-d59e-486f-ae17-bcbe2f071bf1/user-cant-create-new-vm-despite-owning-the-resource-group?forum=windowsazuremanagement
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Launch instance
+      azure_rm_virtualmachine:
+        image: '{{ image_id }}'
+        vm_size: '{{ instance_type }}'
+        name: '{{ run_name }}'
+        resource_group: '{{ resource_group }}'
+        storage_account_name: '{{ storage_account_name }}'
+        admin_username: ubuntu
+        ssh_password_enabled: false
+        ssh_public_keys: '{{ ssh_public_keys }}'
+        os_type: Linux
+      register : azure
+    - name: Find public IP of new machine
+      shell: azure vm show {{ resource_group }} {{ run_name }} | grep 'Public IP address' | awk -F ':' '{print $3}'
+      register: public_ip
+    - name: Add new instance to host group
+      local_action: add_host hostname={{ public_ip.stdout }} groupname=launched
+    - name: Wait for SSH
+      local_action: wait_for host={{ public_ip.stdout }} port=22 state=started
+    - name: Attach working volume
+      command: azure vm disk attach {{ resource_group }} {{ run_name }} https://{{ storage_account_name }}.blob.core.windows.net/vhds/{{ volume }}.vhd
+    - name: Get rid of SSH "Are you sure you want to continue connecting (yes/no)?" query
+      shell: ssh-keyscan {{ public_ip.stdout }} >> $HOME/.ssh/known_hosts
+
+- hosts: launched
+  remote_user: ubuntu
+  gather_facts: true
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Mount work volume
+      become: true
+      mount: name=/disk/work src=/dev/sdc fstype=ext4 state=mounted
+    - name: Add bcbio to path
+      lineinfile: line="export PATH=/disk/work/bcbio/bin:$PATH" dest=~/.bashrc
+    - apt: name="{{ item }}" update_cache=yes
+      become: true
+      with_items: [git, unzip, wget, tar, gzip, bzip2]

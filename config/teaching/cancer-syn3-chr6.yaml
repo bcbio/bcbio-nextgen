@@ -12,7 +12,7 @@ details:
     remove_lcr: true
     variant_regions: ../input/NGv3-chr6-hg38.bed
     min_allele_fraction: 2
-    variantcaller: [vardict, mutect, freebayes]
+    variantcaller: [vardict, freebayes, varscan]
     ensemble:
       numpass: 2
     svcaller: [lumpy, manta]
@@ -31,7 +31,7 @@ details:
     realign: false
     variant_regions: ../input/NGv3-chr6-hg38.bed
     min_allele_fraction: 2
-    variantcaller: [vardict, mutect, freebayes]
+    variantcaller: [vardict, freebayes, varscan]
     ensemble:
       numpass: 2
     svcaller: [lumpy, manta]

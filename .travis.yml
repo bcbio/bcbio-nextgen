@@ -1,6 +1,5 @@
 sudo: required
 dist: trusty
-
 language: generic
 
 env:
@@ -16,19 +15,23 @@ before_install:
 install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
-  - conda install --yes -c bioconda -c r bcbio-nextgen-vm -q
+  - conda install --yes -c bioconda -c conda-forge bcbio-nextgen-vm bcbio-nextgen -q
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
-  # Update to bcbio-nextgen latest code within the container
+  # Update to latest bcbio-nextgen code externally and within the container
+  - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio
+  - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*
+  - ~/install/bcbio-vm/anaconda/bin/python setup.py install
   - bcbio_vm.py devel setup_install
   - pip install cwl_runner
 
 script:
-  - cd tests
-  - bash run_tests.sh docker
-  - bash run_tests.sh docker_ipython
+  - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
+  # Currently turned off to reduce test run times on Travis
+  #- docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
+  - py.test tests/bcbio_vm -v -m docker
 
 notifications:
-    email: false
-    slack:
-        secure: LztOFaO6HFB2Pu+zMOhB42MUMdP+AwjHr2l3fDZtQk8uMsKZ/XcpDhnGJii39VbkPUyN5yT2r42hJzL/s+2MX6g8zS3wsYh7lJN9XC7483tmzlO66yo/OTQ3xC9r0TmR/O3whDEKVj+kroOc7MMltLNwIyEIpFXe5Od8WFrd2Sg=
+  email: false
+  slack:
+    secure: iMn3Iih7cVmWci7A/Rpozc9Fn5IDKr3o6Y7XAWHEBiOEFlBwkC3oHFZxTC1+wZQiDNR87yVF9z3+FhYTYizpUeCPMddfNLMzdcO0EGtpckZOzX7aaFjqQCWhtucDnDQYaHhZIPKATrWvpPSYm7bpyp/p9cqgE/a9uvFLRMrIyzM=

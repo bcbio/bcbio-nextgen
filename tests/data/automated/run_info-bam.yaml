@@ -1,3 +1,5 @@
+fc_date: '20150229'
+fc_name: 'develtest'
 upload:
   dir: upload
   # method: galaxy
@@ -18,27 +20,29 @@ details:
       validate_batch: b1
       validate_sample: test-val
   - algorithm:
-      #quality_bin: [prealignment, postrecal]
       #archive: cram
       align_split_size: 15000
+      save_diskspace: true
       #align_prep_method: grabix
       aligner: bwa
       #aligner: false
       #bam_clean: picard
       #bam_sort: coordinate
-      #mark_duplicates: false
+      # mark_duplicates: false
       recalibrate: false
       realign: false
       #realign: gatk
       #recalibrate: gatk
       variantcaller: freebayes
+      #variantcaller: [gatk, gatk-haplotype]
       #effects: vep
+      #effects_transcripts: canonical
       #svcaller: [lumpy, cnvkit, manta, metasv]
-      #svcaller: cnvkit
+      svcaller: [cnvkit, seq2c, lumpy, delly]
       #remove_lcr: true
+      tools_on: [qualimap_full]
       tools_off: [gemini]
       mixup_check: qsignature
-      #variantcaller: [gatk, gatk-haplotype]
       quality_format: standard
       nomap_split_size: 50
       nomap_split_targets: 100
@@ -48,8 +52,6 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     resources:
-      vep:
-        options: [--pick]
       novoalign:
         options: [-o, FullNW]
       tmp:
@@ -69,20 +71,17 @@ details:
     #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
     #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
-  # - algorithm:
-  #     aligner: bwa
-  #     variantcaller: freebayes
-  #     realign: false
-  #     recalibrate: false
-  #     mark_duplicates: samtools
-  #     quality_format: Standard
-  #     variant_regions: ../data/automated/variant_regions-bam.bed
-  #     nomap_split_size: 500
-  #     # svcaller: [delly, lumpy, cn.mops]
-  #   metadata:
-  #     batch: TestBatch1
-  #   analysis: variant2
-  #   description: Test2
-  #   genome_build: hg19
-  #   lane: 8
-  #   files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam]
+#  - algorithm:
+#      aligner: bwa
+#      align_split_size: false
+#      mark_duplicates: false
+#      variantcaller: freebayes
+#      variant_regions: ../data/automated/variant_regions-bam.bed
+#      nomap_split_size: 500
+#    metadata:
+#      batch: TestBatch1
+#    analysis: variant2
+#    description: Test2
+#    genome_build: hg19
+#    lane: 8
+#    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam]

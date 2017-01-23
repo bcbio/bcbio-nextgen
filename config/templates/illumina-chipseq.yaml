@@ -2,6 +2,14 @@
 ---
 details:
 - analysis: chip-seq
+  # In order to do paired peak calling, samples should belong to the
+  # same batch ("batch" under "metadata" below") and have a "phenotype"
+  # field stating either "input" or chip". For each batch there
+  # should be a sample with "chip" phenotype and a sample with "input"
+  # phenotype (no more than two samples per batch)
+  metadata:
+     batch: your-batch-name
+     phenotype: chip # or input
   genome_build: mm10
   algorithm:
     aligner: bowtie2

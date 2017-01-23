@@ -4,29 +4,29 @@ from datetime import datetime
 import collections
 import functools
 import os
-import sys
 import gzip
 import pytz
 import re
 import socket
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import pylab
 import pandas as pd
 import cPickle as pickle
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl
 
-#plt.style.use('ggplot')
+mpl = utils.LazyImport("matplotlib")
+plt = utils.LazyImport("matplotlib.pyplot")
+pylab = utils.LazyImport("pylab")
 
-mpl.use('Agg')
-pylab.rcParams['image.cmap'] = 'viridis'
-pylab.rcParams['figure.figsize'] = (35.0, 12.0)
-#pylab.rcParams['figure.figsize'] = (100, 100)
-pylab.rcParams['figure.dpi'] = 300
-pylab.rcParams['font.size'] = 25
+def _setup_matplotlib():
+    # plt.style.use('ggplot')
+    mpl.use('Agg')
+    pylab.rcParams['image.cmap'] = 'viridis'
+    pylab.rcParams['figure.figsize'] = (35.0, 12.0)
+    # pylab.rcParams['figure.figsize'] = (100, 100)
+    pylab.rcParams['figure.dpi'] = 300
+    pylab.rcParams['font.size'] = 25
 
 def get_bcbio_nodes(path):
     """Fetch the local nodes (-c local) that contain collectl files from
@@ -79,6 +79,7 @@ def plot_inline_jupyter(plot):
     """ Plots inside the output cell of a jupyter notebook if %matplotlib magic
         is defined.
     """
+    _setup_matplotlib()
     try:
         get_ipython()
         plt.show(plot)
@@ -158,6 +159,7 @@ def add_common_plot_features(plot, steps):
     """Add plot features common to all plots, such as bcbio step
     information.
     """
+    _setup_matplotlib()
     plot.yaxis.set_tick_params(labelright=True)
     plot.set_xlabel('')
 
@@ -166,13 +168,13 @@ def add_common_plot_features(plot, steps):
 
     ymax = plot.get_ylim()[1]
     ticks = {}
-    for tstamp, step in steps.iteritems():
+    for tstamp, step in steps.items():
         if step == 'finished':
             continue
         plot.vlines(tstamp, 0, ymax, linestyles='dashed')
         tstamp = mpl.dates.num2epoch(mpl.dates.date2num(tstamp))
         ticks[tstamp] = step
-    tick_kvs = sorted(ticks.iteritems())
+    tick_kvs = sorted(ticks.items())
     top_axis = plot.twiny()
     top_axis.set_xlim(*plot.get_xlim())
     top_axis.set_xticks([k for k, v in tick_kvs])
@@ -366,10 +368,11 @@ def resource_usage(bcbio_log, cluster, rawdir, verbose):
 def generate_graphs(data_frames, hardware_info, steps, outdir,
                     verbose=False):
     """Generate all graphs for a bcbio run."""
+    _setup_matplotlib()
     # Hash of hosts containing (data, hardware, steps) tuple
     collectl_info = collections.defaultdict(dict)
 
-    for host, data_frame in data_frames.iteritems():
+    for host, data_frame in data_frames.items():
         if verbose:
             print('Generating CPU graph for {}...'.format(host))
         graph, data_cpu = graph_cpu(data_frame, steps, hardware_info[host]['num_cpus'])

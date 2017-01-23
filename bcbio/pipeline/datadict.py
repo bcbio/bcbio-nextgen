@@ -14,14 +14,27 @@ LOOKUPS = {
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
                   "default": 1},
     "svprioritize": {"keys": ['config', 'algorithm', 'svprioritize']},
-    "problem_region_dir": {"keys": ["config", "algorithm", "problem_region_dir"]},
+    "effects_transcripts": {"keys": ["config", "algorithm", "effects_transcripts"], "default": "all"},
     "genome_build": {"keys": ["genome_build"]},
     "gtf_file": {"keys": ['genome_resources', 'rnaseq', 'transcripts'],
                  "checker": file_exists},
+    "transcriptome_fasta": {"keys": ["config", "algorithm", "transcriptome_fasta"],
+                            "default": None},
+    "singlecell_quantifier": {"keys": ["config", "algorithm",
+                                       "singlecell_quantifier"],
+                            "default": "rapmap"},
+    "positional_umi": {"keys": ["config", "algorithm", "positional_umi"]},
     "tx2gene": {"keys": ["tx2gene"]},
-    "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna-transcripts'],
+    "ref_file": {"keys": ["reference", "fasta", "base"]},
+    "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna_transcripts'],
                       "checker": file_exists},
-    "mirbase_ref": {"keys": ['genome_resources', 'srnaseq', 'mirbase'],
+    "srna_trna_file": {"keys": ['genome_resources', 'srnaseq', 'trna_fasta'],
+                      "checker": file_exists},
+    "mirdeep2_file": {"keys": ['genome_resources', 'srnaseq', 'mirdeep2_fasta'],
+                      "checker": file_exists},
+    "mirbase_hairpin": {"keys": ['genome_resources', 'srnaseq', 'mirbase_hairpin'],
+                      "checker": file_exists},
+    "mirbase_mature": {"keys": ['genome_resources', 'srnaseq', 'mirbase_mature'],
                       "checker": file_exists},
     "gene_bed": {"keys": ['genome_resources', 'rnaseq', 'gene_bed'],
                  "checker": file_exists},
@@ -34,24 +47,29 @@ LOOKUPS = {
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
+    "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno']},
     "analysis": {"keys": ["analysis"]},
     "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "batch": {"keys": ["metadata", "batch"]},
+    "mark_duplicates": {"keys": ["config", "algorithm", "mark_duplicates"], "default": True},
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
+    "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
-    "work_bam": {"keys": ["work_bam"]},
+    "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
+    "spikein_counts": {"keys": ["spikein_counts"]},
     "count_file": {"keys": ["count_file"]},
-    "combined_counts": {"keys": ["combined_counts"]},
     "mirna_counts": {"keys": ["mirna_counts"]},
     "isomir_counts": {"keys": ["isomir_counts"]},
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
+    "combined_counts": {"keys": ["combined_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
-    "ref_file": {"keys": ["reference", "fasta", "base"]},
+    "genome_context_files": {"keys": ["reference", "genome_context"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "combined_fpkm": {"keys": ['combined_fpkm']},
     "combined_fpkm_isoform": {"keys": ['combined_fpkm_isoform']},
@@ -67,6 +85,9 @@ LOOKUPS = {
                  "default": "illumina"},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
                        "default": "standard"},
+    "algorithm_qc": {"keys": ['config', 'algorithm', 'qc'], "default": []},
+    "summary_qc": {"keys": ['summary', 'qc'], "default": {}},
+    "summary_metrics": {"keys": ['summary', 'metrics'], "default": {}},
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
                  "default": []},
     "custom_trim": {"keys": ['config', 'algorithm', 'custom_trim'],
@@ -86,6 +107,7 @@ LOOKUPS = {
                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": []},
+    "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},
@@ -99,11 +121,26 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
+    "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
     "callable_regions": {"keys": ["regions", "callable"]},
+    "avg_coverage": {"keys": ["regions", "avg_coverage"]},
+    "coverage_depth_bed": {"keys": ["regions", "coverage_depth_bed"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
-    "offtarget_stats": {"keys": ["regions", "offtarget_stats"]},
+    "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
+    "salmon": {"keys": ["salmon"]},
+    "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
+    "sample_barcodes": {"keys": ["config", "algorithm", "sample_barcodes"]},
+    "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
+                          "default": []},
+    "minimum_barcode_depth": {"keys": ["config", "algorithm", "minimum_barcode_depth"],
+                              "default": 100000},
+    "cellular_barcode_correction": {"keys": ["config", "algorithm",
+                                             "cellular_barcode_correction"],
+                                    "default": 1},
+    "kallisto_quant": {"keys": ["kallisto_quant"]},
+    "salmon_dir": {"keys": ["salmon_dir"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},
     "sailfish_tidy": {"keys": ["sailfish_tidy"]},
@@ -112,14 +149,16 @@ LOOKUPS = {
     "sample_callable": {"keys": ["regions", "sample_callable"]},
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
-    "report": {"keys": ["config", "algorithm", "report"]},
     "coverage_depth_min": {"keys": ["config", "algorithm", "coverage_depth_min"],
                            "default": 4},
     "joint_group_size": {"keys": ["config", "algorithm", "joint_group_size"],
                          "default": 200},
-    "coverage": {"keys": ["config", "algorithm", "coverage"]},
+    "report": {"keys": ["config", "algorithm", "report"]},
+    "work_bam": {"keys": ["work_bam"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
     "align_bam": {"keys": ["align_bam"]},
+    "disc_bam": {"keys": ["work_bam_plus", "disc"]},
+    "sr_bam": {"keys": ["work_bam_plus", "sr"]},
     "align_prep_method": {"keys": ["config", "algorithm", "align_prep_method"], "default": "grabix"},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
@@ -146,6 +185,19 @@ def get_input_sequence_files(data, default=None):
         assert len(data["files"]) == 1, data["files"]
         file1, file2 = data["files"][0], None
     return file1, file2
+
+def get_umi_consensus(data):
+    """Retrieve UMI for consensus based preparation.
+
+    We specify this either as a separate fastq file or embedded
+    in the read name as `fastq_name`.`
+    """
+    consensus_choices = (["fastq_name"])
+    umi = tz.get_in(["config", "algorithm", "umi_type"], data)
+    if umi and (umi in consensus_choices or os.path.exists(umi)):
+        assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
+            "Using consensus UMI inputs requires marking duplicates"
+        return umi
 
 def get_dexseq_gff(config, default=None):
     """
@@ -226,3 +278,9 @@ def get_in_samples(samples, fn):
         if fn(sample[0], None):
             return fn(sample[0])
     return None
+
+def get_keys(lookup):
+    """
+    return the keys used to look up a function in the datadict
+    """
+    return tz.get_in((lookup, "keys"), LOOKUPS, None)

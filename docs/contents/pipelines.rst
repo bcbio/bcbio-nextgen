@@ -28,7 +28,7 @@ current implementation:
 - Additional work to `improve variant filtering`_, providing methods to
   remove low complexity regions (LCRs) that can bias indel results. We also
   tuned `GATK's Variant Quality Score Recalibrator`_ (VQSR) and compared it with
-  hard filtering. VQSR requires a large number of variants and we use
+  cutoff-based soft filtering. VQSR requires a large number of variants and we use
   it in bcbio with GATK HaplotypeCaller when your :ref:`algorithm-config`
   contains high depth samples (``coverage_depth`` is not low) and you are
   calling on the whole genome (``coverage_interval`` is genome) or have more
@@ -47,17 +47,20 @@ bcbio automates post-variant calling annotation to make
 the outputs easier to feed directly into your biological analysis. We annotate
 variant effects using `snpEff`_ or `Variant Effect Predictor`_ (VEP), and
 prepare a `GEMINI database`_ that associates variants with multiple
-external annotations in a SQL-based query interface.
+external annotations in a SQL-based query interface. GEMINI databases have the
+most associated external information for human samples (GRCh37/hg19 and hg38)
+but are available for any organism with the database populated using the VCF
+INFO column and predicted effects.
 
 .. _Genome in a Bottle: http://www.genomeinabottle.org/
 .. _variant evaluation framework: https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/
 .. _FreeBayes and BAM post-alignment processing: https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
 .. _improve variant filtering: http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/
 .. _FreeBayes: https://github.com/ekg/freebayes
-.. _GATK UnifiedGenotyper: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_genotyper_UnifiedGenotyper.html
-.. _GATK HaplotypeCaller: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_haplotypecaller_HaplotypeCaller.html
+.. _GATK UnifiedGenotyper: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_genotyper_UnifiedGenotyper.php
+.. _GATK HaplotypeCaller: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php
 .. _samtools mpileup: http://samtools.sourceforge.net/mpileup.shtml
-.. _GATK's Variant Quality Score Recalibrator: http://www.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_sting_gatk_walkers_variantrecalibration_VariantRecalibrator.html
+.. _GATK's Variant Quality Score Recalibrator: https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_variantrecalibration_VariantRecalibrator.php
 .. _bwa mem: http://bio-bwa.sourceforge.net/
 .. _novoalign: http://www.novocraft.com
 .. _snpEff: http://snpeff.sourceforge.net/
@@ -81,7 +84,7 @@ the :ref:`automated-sample-config` with one of the default templates:
   Run GATK best practices, including Base Quality Score Recalibration,
   realignment and HaplotypeCaller variant calling. This requires a license from
   Broad for commercial use. You need to manually install GATK along with bcbio
-  using downloads from the GATK Broad site or Appistry (see :ref:`extra-install`).
+  using downloads from the GATK Broad site or Appistry (see :ref:`toolplus-install`).
 
 You may also want to enable :ref:`svs-pipeline` for detection of larger events,
 which work with either caller. Another good source of inspiration are the
@@ -91,6 +94,8 @@ callers and resolution of ensemble calls is generally only useful with a small
 population where you are especially concerned about sensitivity. Single
 caller detection with FreeBayes or GATK HaplotypeCaller provide good resolution
 of events.
+
+.. _population-calling:
 
 Population calling
 ==================
@@ -110,7 +115,7 @@ Batching samples results in output VCFs and GEMINI databases containing
 all merged sample calls. bcbio has two methods to call samples together:
 
 - Batch or pooled calling -- This calls all samples simultaneously by feeding
-  them to the variant caller. This works for smaller batch sizes (< 50 samples)
+  them to the variant caller. This works for smaller batch sizes (< 100 samples)
   as memory requirements become limiting in larger pools. This is the default
   approach taken when you specify a ``variantcaller`` in the
   :ref:`variant-config` configuration.
@@ -135,6 +140,8 @@ all merged sample calls. bcbio has two methods to call samples together:
         jointcaller: gatk-haplotype-joint
       metadata:
         batch: Batch1
+
+.. _cancer-calling:
 
 Cancer variant calling
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -165,7 +172,7 @@ processing parameters.
 
 Cancer calling handles both tumor-normal paired calls and tumor-only calling.
 For tumor-only samples, bcbio will try to remove likely germline variants
-present in the public databases like 1000 genome and ExAC, and not in COSMID.
+present in the public databases like 1000 genomes and ExAC, and not in COSMIC.
 This runs as long as you have a local GEMINI installation and marks likely
 germline variants with a ``LowPriority`` filter. `This post has more details
 <http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
@@ -183,6 +190,47 @@ heterogeneity and structural variability that define cancer genomes.
 
 .. _full evaluation of cancer calling: http://bcb.io/2015/03/05/cancerval/
 .. _synthetic dataset 3 from the ICGC-TCGA DREAM challenge: https://www.synapse.org/#!Synapse:syn312572/wiki/62018
+
+.. _somatic-w-germline-variants:
+
+Somatic with germline variants
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For tumor/normal somatic samples, bcbio can call both somatic (tumor-specific)
+and germline (pre-existing) variants. The typical outputs of
+:ref:`cancer-calling` are likely somatic variants acquired by the cancer, but
+pre-existing germline risk variants are often also diagnostic.
+
+bcbio enables calling both somatic and germline variants within a single
+pipeline run. Since the algorithms for calling both are different, you specify
+which callers to use for each step in the :ref:`variant-config` configuration::
+
+    description: your-normal
+    variantcaller:
+       somatic: vardict
+       germline: freebayes
+
+bcbio does a single alignment for the normal sample, then splits at the variant
+calling steps. In this example, you'd get FreeBayes germline calls labeled as
+``your-normal-germline`` and VarDict somatic calls for the tumor sample linked
+to this normal.
+
+Germline calling supports multiple callers, and other configuration options like
+ensemble and structural variant calling inherit from the remainder configuration. For
+example, to use 3 callers for somatic and germline calling, create ensemble calls
+for both and include germline and somatic events from two structural variant
+callers::
+
+    variantcaller:
+       somatic: [vardict, varscan, mutect2]
+       germline: [freebayes, gatk-haplotype, platypue]
+    ensemble:
+       numpass: 2
+    svcaller: [manta, cnvkit]
+
+Tumor-only inputs mix somatic and germline variants, making it difficult to
+separate events. For tumor-only cases we suggest running standard
+:ref:`cancer-calling`. bcbio will attempt to distinguish somatic and germline
+mutations using the presence of variants in population databases.
 
 .. _svs-pipeline:
 
@@ -231,28 +279,30 @@ control, adapter trimming, alignment, variant calling, transcriptome
 reconstruction and post-alignment quantitation at the level of the gene
 and isoform.
 
-We currently recommend to not perform adapter trimming for runs not using the
-Tophat2 aligner. Adapter trimming is very slow, and aligners that soft clip the
-ends of reads such as STAR and hisat2, or algorithms using pseudoalignments like
-Sailfish handle contaminant sequences at the ends properly. This makes trimming
-unnecessary. Tophat2 does not perform soft clipping so if that is the aligner
-tha is chosen, trimming must still be done.
-
 We recommend using the STAR aligner for all genomes where there are no alt
 alleles. For genomes such as hg38 that have alt alleles, hisat2 should be used
-as it handles the alts correctly and STAR does not yet.
+as it handles the alts correctly and STAR does not yet. Use Tophat2 only
+if you do not have enough RAM available to run STAR (about 30 GB).
+
+Our current recommendation is to run adapter trimming only if using the Tophat2
+aligner. Adapter trimming is very slow, and aligners that soft clip the ends of
+reads such as STAR and hisat2, or algorithms using pseudoalignments like
+Sailfish handle contaminant sequences at the ends properly. This makes trimming
+unnecessary. Tophat2 does not perform soft clipping so if using Tophat2,
+trimming must still be done.
 
 Sailfish, which is an extremely fast alignment-free method of quantitation, is
 run for all experiments. Sailfish can accurately quantitate the expression of
 genes, even ones which are hard to quantitate with other methods (see `this
 paper <http://www.genomebiology.com/2015/16/1/177>`_ for example). It also
 quantitates at the transcript level which can help gene-level analyses (see
-`this paper <http://f1000research.com/articles/4-1521/v1>`_ for example) It is
-likely in the future we will recommend skipping alignment and just using
-Sailfish for all experiments not needing transcriptome reconstruction or variant
-calling. Right now we recommend doing an align-and-quantitate method such as
-STAR and looking at a matrix of counts and also running Sailfish and looking at
-the output of both algorithms when performing a downstream analysis.
+`this paper <http://f1000research.com/articles/4-1521/v1>`_ for example).
+We recommend using the Sailfish quantitation rather than the counts from
+featureCounts to perform downstream quantification.
+
+Although we do not recommend using the featureCount based counts, the alignments
+are still useful because they give you many more quality metrics than the
+pseudoalignments from Sailfish.
 
 After a bcbio RNA-seq run there will be in the ``upload`` directory a directory
 for each sample which contains a BAM file of the aligned and unaligned reads, a
@@ -262,9 +312,53 @@ for each sample which contains a BAM file of the aligned and unaligned reads, a
 In addition to directories for each sample, in the ``upload`` directory there is
 a project directory which contains a YAML file describing some summary
 statistics for each sample and some provenance data about the bcbio run. In that
-directory is also a ``combined.counts`` file which can be used as a starting
-point for performing differential expression calling using any count-based
-method such as EdgeR, DESeq2 or voom+limma, etc.
+directory is also a ``combined.counts`` file with the featureCounts derived
+counts per cell.
+
+fast RNA-seq
+~~~~~~~~~~~~
+This mode of ``bcbio-nextgen`` quantitates transcript expression using `Salmon
+<http://salmon.readthedocs.org/en/latest/>`_ and does nothing else. It is an
+order of magnitude faster or more than running the full RNA-seq analysis. The
+cost of the increased speed is that you will have much less information about
+your samples at the end of the run, which can make troubleshooting trickier.
+Invoke with ``analysis: fastrna-seq``.
+
+single-cell RNA-seq
+~~~~~~~~~~~~~~~~~~~
+bcbio-nextgen supports universal molecular identifiers (UMI) based single-cell
+RNA-seq analyses. If your single-cell prep does not use universal molecular
+identifiers (UMI), you can most likely just run the standard RNA-seq pipeline
+and use the results from that. The UMI are used to discard reads which
+are possibly PCR duplicates and is very helpful for removing some of the
+PCR duplicate noise that can dominate single-cell experiments.
+
+Unlike the standard RNA-seq pipeline, the single-cell pipeline expects the FASTQ
+input files to not be separated by cellular barcode, so each file is a mix of
+cells identified by a cellular barcode (CB), and unique reads from a transcript
+are identified with a UMI. bcbio-nextgen inspects each read, identifies the
+cellular barcode and UMI and puts them in the read name. Then the reads are
+aligned to the transcriptome with `RapMap <https://github.com/COMBINE-lab/RapMap>`_
+and the number of reads aligning to each transcript is counted for each cellular
+barcode. The output is a table of counts with transcripts as the rows and
+columns as the cellular barcodes for each input FASTQ file.
+
+Optionally the reads can be quantitated with ``kallisto`` to output transcript
+compatibility counts rather than counts per gene
+(`TCC paper <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0970-8>`_)
+``kallisto`` is free for academic use, but if you are a commerical entity,
+you need a `license <https://pachterlab.github.io/kallisto/download>`_ from
+UC Berkeley.
+
+To extract the UMI and cellular barcodes from the read, bcbio-nextgen
+needs to know where the UMI and the cellular barcode are expected to be
+in the read. Currently there is support for two schemes, the inDrop system from
+the Harvard single-cell core facility and CEL-seq. If bcbio-nextgen does not
+support your UMI and barcoding scheme, please open up an issue and we will
+help implement support for it.
+
+Most of the heavy lifting for this part of `bcbio-nextgen` is implemented in
+the `umis <https://github.com/vals/umis>`_ repository.
 
 smallRNA-seq
 ~~~~~~~~~~~~
@@ -310,8 +404,7 @@ inside ``tdrmapper`` or final project folder.
 ChIP-seq
 ~~~~~~~~
 bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning with
-bowtie2. It doesn't do anything other than get the samples into a state
-where a peak caller like MACS2 can be used.
+bowtie2. It does alignment and peak calling with MACS2.
 
 - Adapter trimming:
   - `cutadapt`_
@@ -333,8 +426,8 @@ Standard
 This pipeline implements ``alignment`` and ``qc`` tools. Furthermore, it will
 run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It
 uses SNPs signature to create a distance matrix that helps easily to create
-groups. The project yaml file will show number of total samples analyzed, number
-of very similar samples, and samples that could be duplicated.
+groups. The project yaml file will show the number of total samples analyzed,
+the number of very similar samples, and samples that could be duplicated.
 
 .. _qsignature: http://sourceforge.net/p/adamajava/wiki/qSignature/
 

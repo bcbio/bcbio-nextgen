@@ -1,18 +1,11 @@
 """Perform realignment of BAM files around indels using the GATK toolkit.
 """
 import os
-import shutil
-from contextlib import closing
-
 import pysam
 
-from bcbio import bam, broad
-from bcbio.bam import ref
 from bcbio.log import logger
-from bcbio.utils import file_exists
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.pipeline.shared import subset_bam_by_region, subset_variant_regions
-from bcbio.provenance import do
+from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline.shared import subset_variant_regions
 
 # ## GATK realignment
 
@@ -87,7 +80,7 @@ def has_aligned_reads(align_bam, region=None):
             regions = [tuple(r) for r in pybedtools.BedTool(region)]
         else:
             regions = [region]
-    with closing(pysam.Samfile(align_bam, "rb")) as cur_bam:
+    with pysam.Samfile(align_bam, "rb") as cur_bam:
         if region is not None:
             for region in regions:
                 if isinstance(region, basestring):

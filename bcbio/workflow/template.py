@@ -4,6 +4,7 @@ Provides an automated way to generate a full set of analysis files from an inpu
 YAML template. Default templates are provided for common approaches which can be tweaked
 as needed.
 """
+from __future__ import print_function
 import collections
 import contextlib
 import copy
@@ -13,22 +14,29 @@ import glob
 import itertools
 import os
 import shutil
-import urllib2
+from six.moves import urllib
 
 import toolz as tz
 import yaml
+import sys
 
 from bcbio import utils
 from bcbio.bam import fastq, sample_name
 from bcbio.distributed import objectstore
 from bcbio.upload import s3
-from bcbio.pipeline import run_info
+from bcbio.pipeline import config_utils, run_info
 from bcbio.workflow.xprize import HelpArgParser
+from bcbio.log import setup_script_logging
 
 def parse_args(inputs):
     parser = HelpArgParser(
         description="Create a bcbio_sample.yaml file from a standard template and inputs")
     parser = setup_args(parser)
+    args = parser.parse_args(inputs)
+    if args.template.endswith("csv"):
+        parser.print_help()
+        print("\nError: Looks like you've swapped the order of the metadata CSV and template YAML arguments, it should go YAML first, CSV second.")
+        sys.exit(1)
     return parser.parse_args(inputs)
 
 def setup_args(parser):
@@ -39,6 +47,9 @@ def setup_args(parser):
     parser.add_argument("input_files", nargs="*", help="Input read files, in BAM or fastq format")
     parser.add_argument("--only-metadata", help="Ignore samples not present in metadata CSV file",
                         action="store_true", default=False)
+    parser.add_argument("--force-single", help="Treat all files as single reads",
+                        action="store_true", default=False)
+    setup_script_logging()
     return parser
 
 # ## Prepare sequence data inputs
@@ -73,8 +84,7 @@ KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
               ".txt.bz2": "fastq", ".bz2": "fastq"}
 
-
-def _prep_items_from_base(base, in_files):
+def _prep_items_from_base(base, in_files, force_single=False):
     """Prepare a set of configuration items for input files.
     """
     details = []
@@ -86,12 +96,12 @@ def _prep_items_from_base(base, in_files):
         if ext == "bam":
             for f in files:
                 details.append(_prep_bam_input(f, i, base))
-        elif ext == "fastq":
+        elif ext in ["fastq", "fq", "fasta"]:
             files = list(files)
-            for fs in fastq.combine_pairs(files):
+            for fs in fastq.combine_pairs(files, force_single):
                 details.append(_prep_fastq_input(fs, base))
         else:
-            print("Ignoring ynexpected input file types %s: %s" % (ext, list(files)))
+            print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
     return details
 
 def _expand_file(x):
@@ -131,6 +141,8 @@ def name_to_config(template):
         with objectstore.open(template) as in_handle:
             txt_config = in_handle.read()
     elif os.path.isfile(template):
+        if template.endswith(".csv"):
+            raise ValueError("Expected YAML file for template and found CSV, are arguments switched? %s" % template)
         with open(template) as in_handle:
             txt_config = in_handle.read()
         with open(template) as in_handle:
@@ -138,11 +150,11 @@ def name_to_config(template):
     else:
         base_url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
-            with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
+            with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
                 txt_config = in_handle.read()
-            with contextlib.closing(urllib2.urlopen(base_url % template)) as in_handle:
+            with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
                 config = yaml.load(in_handle)
-        except (urllib2.HTTPError, urllib2.URLError):
+        except (urllib.error.HTTPError, urllib.error.URLError):
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)
     return config, txt_config
@@ -173,7 +185,7 @@ def _write_config_file(items, global_vars, template, project_name, out_dir,
             out["upload"]["region"] = r_base.region
     if global_vars:
         out["globals"] = global_vars
-    for k, v in template.iteritems():
+    for k, v in template.items():
         if k not in ["details"]:
             out[k] = v
     if os.path.exists(out_config_file):
@@ -293,6 +305,7 @@ def _add_ped_metadata(name, metadata):
 
     http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped
     """
+    ignore = set(["-9", "undefined", "unknown", "."])
     def _ped_mapping(x, valmap):
         try:
             x = int(x)
@@ -305,12 +318,19 @@ def _add_ped_metadata(name, metadata):
     def _ped_to_gender(x):
         return _ped_mapping(x, {1: "male", 2: "female"})
     def _ped_to_phenotype(x):
-        return _ped_mapping(x, {1: "unaffected", 2: "affected"})
+        known_phenotypes = set(["unaffected", "affected", "tumor", "normal"])
+        if x in known_phenotypes:
+            return x
+        else:
+            return _ped_mapping(x, {1: "unaffected", 2: "affected"})
+    def _ped_to_batch(x):
+        if x not in ignore and x != "0":
+            return x
     with open(metadata["ped"]) as in_handle:
         for line in in_handle:
             parts = line.split("\t")[:6]
             if parts[1] == str(name):
-                for index, key, convert_fn in [(4, "sex", _ped_to_gender), (0, "batch", lambda x: x),
+                for index, key, convert_fn in [(4, "sex", _ped_to_gender), (0, "batch", _ped_to_batch),
                                                (5, "phenotype", _ped_to_phenotype)]:
                     val = convert_fn(parts[index])
                     if val is not None and key not in metadata:
@@ -338,7 +358,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     if len(item_md) > 0:
         if "metadata" not in item:
             item["metadata"] = {}
-        for k, v in item_md.iteritems():
+        for k, v in item_md.items():
             if v:
                 if k in TOP_LEVEL:
                     item[k] = v
@@ -350,8 +370,8 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
                     item["metadata"][k] = v
     elif len(metadata) > 0:
         warn = "Dropped sample" if only_metadata else "Added minimal sample information"
-        print "WARNING: %s: metadata not found for %s, %s" % (warn, item["description"],
-                                                              os.path.basename(item["files"][0]))
+        print("WARNING: %s: metadata not found for %s, %s" % (warn, item["description"],
+                                                              os.path.basename(item["files"][0])))
         keep_sample = not only_metadata
     if tz.get_in(["metadata", "ped"], item):
         item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
@@ -386,16 +406,46 @@ def _convert_to_relpaths(data, work_dir):
                 data[topk][k] = os.path.relpath(v, work_dir)
     return data
 
+def _check_all_metadata_found(metadata, items):
+    """Print warning if samples in CSV file are missing in folder"""
+    for name in metadata:
+        seen = False
+        for sample in items:
+            if sample['files'][0].find(name) > -1:
+                seen = True
+        if not seen:
+            print("WARNING: sample not found %s" % name)
+
+def _copy_to_configdir(items, out_dir):
+    """Copy configuration files like PED inputs to working config directory.
+    """
+    out = []
+    for item in items:
+        ped_file = tz.get_in(["metadata", "ped"], item)
+        if ped_file and os.path.exists(ped_file):
+            ped_config_file = os.path.join(out_dir, "config", os.path.basename(ped_file))
+            if not os.path.exists(ped_config_file):
+                shutil.copy(ped_file, ped_config_file)
+            item["metadata"]["ped"] = ped_config_file
+        out.append(item)
+    return out
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
+    run_info.validate_yaml(template_txt, args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", [])
+    if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
+        config, _ = config_utils.load_system_config(args.systemconfig)
+        for iname, retriever in args.integrations.items():
+            if iname in config:
+                inputs += retriever.get_files(metadata, config[iname])
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
-                 for item in _prep_items_from_base(base_item, inputs)]
+                 for item in _prep_items_from_base(base_item, inputs, args.force_single)]
     items = [x for x in raw_items if x]
-
+    _check_all_metadata_found(metadata, items)
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if hasattr(args, "relpaths") and args.relpaths:
@@ -403,22 +453,23 @@ def setup(args):
     out_config_file = _write_template_config(template_txt, project_name, out_dir)
     if md_file:
         shutil.copyfile(md_file, os.path.join(out_dir, "config", os.path.basename(md_file)))
+    items = _copy_to_configdir(items, out_dir)
     if len(items) == 0:
-        print
-        print "Template configuration file created at: %s" % out_config_file
-        print "Edit to finalize custom options, then prepare full sample config with:"
-        print "  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
-            (out_config_file, project_name)
+        print()
+        print("Template configuration file created at: %s" % out_config_file)
+        print("Edit to finalize custom options, then prepare full sample config with:")
+        print("  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
+            (out_config_file, project_name))
     else:
         out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir,
                                              remotes)
-        print
-        print "Configuration file created at: %s" % out_config_file
-        print "Edit to finalize and run with:"
-        print "  cd %s" % work_dir
-        print "  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file)
+        print()
+        print("Configuration file created at: %s" % out_config_file)
+        print("Edit to finalize and run with:")
+        print("  cd %s" % work_dir)
+        print("  bcbio_nextgen.py ../config/%s" % os.path.basename(out_config_file))
         if remotes.get("base"):
             remote_path = os.path.join(remotes["base"], os.path.basename(out_config_file))
             s3.upload_file_boto(out_config_file, remote_path)
-            print "Also uploaded to AWS S3 in %s" % remotes["base"]
-            print "Run directly with bcbio_vm.py run %s" % remote_path
+            print("Also uploaded to AWS S3 in %s" % remotes["base"])
+            print("Run directly with bcbio_vm.py run %s" % remote_path)

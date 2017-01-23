@@ -1,5 +1,5 @@
 import os
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, safe_makedir
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -32,13 +32,30 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         gtf_file = dd.get_gtf_file(data)
         splicesites = os.path.join(os.path.dirname(gtf_file),
                                    "ref-transcripts-splicesites.txt")
+        if not file_exists(splicesites):
+            splicesites = create_splicesites_file(gtf_file, align_dir, data)
         cmd += "--known-splicesite-infile {splicesites} "
     message = "Aligning %s and %s with hisat2." %(fastq_file, pair_file)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_out_file)
         do.run(cmd.format(**locals()), message)
     data = dd.set_work_bam(data, out_file)
     return data
+
+def create_splicesites_file(gtf_file, align_dir, data):
+    """
+    if not pre-created, make a splicesites file to use with hisat2
+    """
+    out_file = os.path.join(align_dir, "ref-transcripts-splicesites.txt")
+    if file_exists(out_file):
+        return out_file
+    safe_makedir(align_dir)
+    hisat2_ss = config_utils.get_program("hisat2_extract_splice_sites.py", data)
+    cmd = "{hisat2_ss} {gtf_file} > {tx_out_file}"
+    message = "Creating hisat2 splicesites file from %s." % gtf_file
+    with file_transaction(out_file) as tx_out_file:
+        do.run(cmd.format(**locals()), message)
+    return out_file
 
 def _get_quality_flag(data):
     qual_format = dd.get_quality_format(data)

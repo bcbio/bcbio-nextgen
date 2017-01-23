@@ -9,7 +9,25 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import annotation, bamprep, ploidy
+from bcbio.variation import annotation, bamprep, bedutils, ploidy
+
+def standard_cl_params(items):
+    """Shared command line parameters for GATK programs.
+
+    Handles no removal of duplicate reads for amplicon or
+    non mark duplicate experiments. If we have pre-aligned inputs we
+    ignore the value or mark duplicates (since they may already be
+    marked in the input BAM).
+    """
+    out = []
+    def _skip_duplicates(data):
+        return (dd.get_coverage_interval(data) == "amplicon" or
+                (dd.get_aligner(data) and not dd.get_mark_duplicates(data)))
+    if any(_skip_duplicates(d) for d in items):
+        broad_runner = broad.runner_from_config(items[0]["config"])
+        if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
+            out += ["-drf", "DuplicateRead"]
+    return out
 
 def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
     """Shared preparation work for GATK variant calling.
@@ -24,18 +42,18 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
     if coverage_depth_min and coverage_depth_min < 4:
         confidence = "4.0"
-        params += ["--standard_min_confidence_threshold_for_calling", confidence,
-                   "--standard_min_confidence_threshold_for_emitting", confidence]
+        params += ["--standard_min_confidence_threshold_for_calling", confidence]
     for a in annotation.get_gatk_annotations(config):
         params += ["--annotation", a]
     for x in align_bams:
         params += ["-I", x]
     if dbsnp:
         params += ["--dbsnp", dbsnp]
-    variant_regions = tz.get_in(["algorithm", "variant_regions"], config)
+    variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+    params += standard_cl_params(items)
     broad_runner = broad.runner_from_config(config)
     return broad_runner, params
 
@@ -95,9 +113,15 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             # Enable non-diploid calling in GATK 3.3+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
                 params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
-            if _joint_calling(items):  # Prepare gVCFs if doing joint calling
+            # Prepare gVCFs if doing joint calling
+            if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
                 params += ["--emitRefConfidence", "GVCF", "--variant_index_type", "LINEAR",
                            "--variant_index_parameter", "128000"]
+                # Set GQ banding to not be single GQ resolution
+                # No recommended default but try to balance resolution and size
+                # http://gatkforums.broadinstitute.org/gatk/discussion/7051/recommendation-best-practices-gvcf-gq-bands
+                for boundary in [10, 20, 30, 40, 60, 80]:
+                    params += ["-GQB", str(boundary)]
             resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]

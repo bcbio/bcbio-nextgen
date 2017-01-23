@@ -60,7 +60,8 @@ def create(parallel, dirs, config):
                                         extra_params={"resources": parallel["resources"],
                                                       "mem": parallel["mem"],
                                                       "tag": parallel.get("tag"),
-                                                      "run_local": parallel.get("run_local")},
+                                                      "run_local": parallel.get("run_local"),
+                                                      "local_controller": parallel.get("local_controller")},
                                         retries=parallel.get("retries"))
 
 def per_machine_target_cores(cores, num_jobs):

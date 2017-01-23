@@ -3,7 +3,6 @@
 http://varscan.sourceforge.net/
 """
 
-import contextlib
 import os
 import sys
 
@@ -118,8 +117,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_varscan_opts(config, tmp_dir)
-                remove_zerocoverage = r"ifne grep -v -P '\t0\t\t$'"
-                varscan_cmd = ("varscan {jvm_opts} somatic "
+                remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
+                export = utils.local_path_export()
+                varscan_cmd = ("{export} varscan {jvm_opts} somatic "
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
                                "--output-snp {tx_snp} --output-indel {tx_indel} "
@@ -204,18 +204,15 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
         return "\t".join(line)
 
     if len(line) > 10:
-        #print line
         Ifreq = line[8].split(":").index("FREQ")
-        #print repr(Ifreq)
         ndat = line[9].split(":")
         tdat = line[10].split(":")
-        #print ndat
-        #print tdat
-        somatic_status = line[7].split(";")  # SS=<number>
         # HACK: The position of the SS= changes, so we just search for it
-        somatic_status = [item for item in somatic_status
-                          if item.startswith("SS=")][0]
-        somatic_status = int(somatic_status.split("=")[1])  # Get the number
+        ss_vals = [item for item in line[7].split(";") if item.startswith("SS=")]
+        if len(ss_vals) > 0:
+            somatic_status = int(ss_vals[0].split("=")[1])  # Get the number
+        else:
+            somatic_status = None
 
         try:
             ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
@@ -270,7 +267,7 @@ def _create_sample_list(in_bams, vcf_file):
     out_file = "%s-sample_list.txt" % os.path.splitext(vcf_file)[0]
     with open(out_file, "w") as out_handle:
         for in_bam in in_bams:
-            with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+            with pysam.Samfile(in_bam, "rb") as work_bam:
                 for rg in work_bam.header.get("RG", []):
                     out_handle.write("%s\n" % rg["SM"])
     return out_file
@@ -291,7 +288,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # VarScan fails to generate a header on files that start with
     # zerocoverage calls; strip these with grep, we're not going to
     # call on them
-    remove_zerocoverage = r"ifne grep -v -P '\t0\t\t$'"
+    remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
     # we use ifne from moreutils to ensure we process only on files with input, skipping otherwise
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
@@ -299,7 +296,8 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
         fix_ambig_ref = vcfutils.fix_ambiguous_cl()
         fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-        cmd = ("{mpileup} | {remove_zerocoverage} | "
+        export = utils.local_path_export()
+        cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
                 "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 "
                 "  --vcf-sample-list {sample_list} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "

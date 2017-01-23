@@ -1,12 +1,12 @@
-version: 25
+version: 33
 
 aliases:
   human: true
-  snpeff: hg19
-  ensembl: homo_sapiens_vep_83_GRCh37
+  snpeff: GRCh37.75
+  ensembl: homo_sapiens_vep_87_GRCh37
 
 variation:
-  dbsnp: ../variation/dbsnp_138.vcf.gz
+  dbsnp: ../variation/dbsnp-147.vcf.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
@@ -14,10 +14,12 @@ variation:
   cosmic: ../variation/cosmic-v68-hg19.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
-  encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed
-  dbnsfp: ../variation/dbNSFP_v3.0b2c.gz
+  encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
+  dbnsfp: ../variation/dbNSFP.txt.gz
+  dbscsnv: ../variation/dbscSNV.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
+  genesplicer: ../variation/genesplicer/
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
@@ -29,8 +31,11 @@ rnaseq:
   rRNA_fa: ../rnaseq/rRNA.fa
 
 srnaseq:
-    srna-transcripts: ../srnaseq/srna-transcripts.gtf
-    mirbase: ../srnaseq/hairpin.fa
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+    trna_fasta: ../srnaseq/trna_mature_pre.fa
 
 coverage:
   coverage_problem_dir: ../coverage/problem_regions

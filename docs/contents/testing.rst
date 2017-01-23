@@ -50,6 +50,8 @@ remove the ``work`` intermediates to cleanup disk space after confirming the
 results. All of these locations are configurable and this project structure is
 only a recommendation.
 
+.. _logging-output:
+
 Logging
 =======
 
@@ -132,16 +134,14 @@ can take more than 24 hours on machines using multiple cores.
 
 First get the input configuration file, fastq reads, reference materials and analysis regions::
 
-    mkdir -p NA12878-exome-eval/config NA12878-exome-eval/input NA12878-exome-eval/work
-    cd NA12878-exome-eval/config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
-    cd ../input
+    mkdir -p NA12878-exome-eval
+    cd NA12878-exome-eval
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
     bash NA12878-exome-methodcmp-getdata.sh
 
 Finally run the analysis, distributed on 8 local cores, with::
 
-    cd ../work
+    cd work
     bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 
 The ``grading-summary.csv`` contains detailed comparisons of the results
@@ -182,6 +182,30 @@ The configuration and data file has downloads for exome only and whole genome
 analyses. It enables exome by default, but you can use the larger whole genome
 evaluation by uncommenting the relevant parts of the configuration and retrieval
 script.
+
+Cancer-like mixture with Genome in a Bottle samples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example simulates somatic cancer calling using a mixture of two Genome in a
+Bottle samples, NA12878 as the "tumor" mixed with NA24385 as the background.
+The `Hartwig Medical Foundation <http://www.hartwigmedicalfoundation.nl/en/>`_
+and `Utrecht Medical Center
+<http://www.umcutrecht.nl/en/Research/Research-programs/Cancer>`_ generated this
+"tumor/normal" pair by physical mixing of samples prior to sequencing. The GiaB
+FTP directory has `more details on the design and truth sets
+<ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/use_cases/mixtures/UMCUTRECHT_NA12878_NA24385_mixture_10052016/README-NA12878_NA24385_mixture.txt>`_.
+The sample has variants at 15% and 30%, providing the ability to look at lower
+frequency mutations.
+
+To get the data::
+
+    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385-getdata.sh
+    bash cancer-giab-na12878-na24385-getdata.sh
+
+Then run the analysis with::
+
+    cd work
+    bcbio_nextgen.py ../config/cancer-giab-na12878-na24385.yaml -n 16
 
 Structural variant calling -- whole genome NA12878 (50x)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,11 +295,6 @@ information about the pipeline. To run the analysis:
     cd input
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
     wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     NISTIntegratedCalls_13datasets_130719_allcall_UGHapMerge_HetHomVarPASS_VQSRv2.17_all_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs.vcf.gz
-    wget ftp://ftp-trace.ncbi.nih.gov/giab/ftp/data/NA12878/variant_calls/NIST/\
-     union13callableMQonlymerged_addcert_nouncert_excludesimplerep_excludesegdups_excludedecoy_excludeRepSeqSTRs_noCNVs_v2.17.bed.gz
-    gunzip *.vcf.gz *.bed.gz
 
 - Retrieve configuration input file::
 
@@ -300,23 +319,44 @@ Test suite
 
 The test suite exercises the scripts driving the analysis, so are a
 good starting point to ensure correct installation. Tests use the
-`nose`_ test runner pre-installed as part of the pipeline. Grab the latest
-source code::
+`pytest`_ framework. The tests are available in the bcbio source code::
 
      $ git clone https://github.com/chapmanb/bcbio-nextgen.git
 
-To run the standard tests::
+There is a small wrapper script that finds the py.test and other dependencies
+pre-installed with bcbio you can use to run tests::
 
-     $ cd bcbio-nextgen/tests
+     $ cd tests
      $ ./run_tests.sh
 
-To run specific subsets of the tests::
+You can use this to run specific test targets::
 
+     $ ./run_tests.sh cancer
      $ ./run_tests.sh rnaseq
-     $ ./run_tests.sh speed=2
      $ ./run_tests.sh devel
      $ ./run_tests.sh docker
-     $ ./run_tests.sh devel_ipython
+
+Optionally, you can run pytest directly from the bcbio install to tweak more
+options. It will be in ``/path/to/bcbiio/anaconda/bin/py.test``. Pass
+``-s`` to ``py.test`` to see the stdout log, and ``-v`` to make py.test optput more
+verbose. The tests are marked with labels which you can use to run a
+specific subsets of the tests using the ``-m`` argument::
+
+     $ py.test -m rnaseq
+
+To run unit tests::
+
+     $ py.test tests/unit
+
+To run integration pipeline tests::
+
+     $ py.test tests/integration
+
+To run tests which use bcbio_vm::
+
+     $ py.test tests/bcbio_vm
+
+To see the test coverage, add the ``--cov=bcbio`` argument to ``py.test``.
 
 By default the test suite will use your installed system configuration
 for running tests, substituting the test genome information instead of
@@ -325,4 +365,4 @@ using full genomes. If you need a specific testing environment, copy
 ``tests/data/automated/post_process.yaml`` to provide a test-only
 configuration.
 
-.. _nose: http://somethingaboutorange.com/mrl/projects/nose/
+.. _pytest: http://doc.pytest.org/en/latest/

@@ -41,15 +41,7 @@ def _split_by_regions(dirname, out_ext, in_key):
     def _do_work(data):
         # XXX Need to move retrieval of regions into preparation to avoid
         # need for files when running in non-shared filesystems
-        callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
-        if not callable_regions:
-            raise ValueError("Did not find any callable regions for sample: %s\n"
-                             "Check 'align/%s/*-callableblocks.bed' and 'regions' to examine callable regions"
-                             % (dd.get_sample_name(data), dd.get_sample_name(data)))
-        with open(callable_regions) as in_handle:
-            regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
-                       (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
-                                                                       not xs[0].startswith(("track", "browser",)))]
+        regions = _get_parallel_regions(data)
         bam_file = data[in_key]
         if bam_file is None:
             return None, []
@@ -65,6 +57,26 @@ def _split_by_regions(dirname, out_ext, in_key):
                                 "%s%s" % (base_out, out_ext))
         return out_file, part_info
     return _do_work
+
+def _get_parallel_regions(data):
+    callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
+    if not callable_regions:
+        raise ValueError("Did not find any callable regions for sample: %s\n"
+                            "Check 'align/%s/*-callableblocks.bed' and 'regions' to examine callable regions"
+                            % (dd.get_sample_name(data), dd.get_sample_name(data)))
+    with open(callable_regions) as in_handle:
+        regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
+                    (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
+                                                                    not xs[0].startswith(("track", "browser",)))]
+    return regions
+
+def get_parallel_regions(samples):
+    """CWL target to retrieve a list of callable regions for parallelization.
+    """
+    regions = _get_parallel_regions(samples[0])
+    return [{"region": "%s:%s-%s" % (c, s, e)} for c, s, e in regions]
+    # testing use
+    # return [{"region": "chrM:0-16571"}]
 
 def _add_combine_info(output, combine_map, file_key):
     """Do not actually combine, but add details for later combining work.
@@ -116,8 +128,7 @@ def parallel_prep_region(samples, run_parallel):
     for data in [x[0] for x in samples]:
         if data.get("work_bam"):
             data["align_bam"] = data["work_bam"]
-        a = data["config"]["algorithm"]
-        if (not a.get("recalibrate") and not a.get("realign") and not a.get("variantcaller", "gatk")):
+        if (not dd.get_recalibrate(data) and not dd.get_realign(data) and not dd.get_variantcaller(data)):
             extras.append([data])
         elif not data.get(file_key):
             extras.append([data])
@@ -129,13 +140,7 @@ def parallel_prep_region(samples, run_parallel):
 def delayed_bamprep_merge(samples, run_parallel):
     """Perform a delayed merge on regional prepared BAM files.
     """
-    needs_merge = False
-    for data in samples:
-        if (data[0]["config"]["algorithm"].get("merge_bamprep", True) and
-              "combine" in data[0]):
-            needs_merge = True
-            break
-    if needs_merge:
+    if any("combine" in data[0] for data in samples):
         return run_parallel("delayed_bam_merge", samples)
     else:
         return samples

@@ -9,11 +9,12 @@ import contextlib
 import itertools
 import functools
 import random
-import ConfigParser
+from six.moves import configparser
 import collections
 import fnmatch
 import subprocess
 import sys
+import types
 
 import toolz as tz
 import yaml
@@ -221,6 +222,17 @@ def file_exists(fname):
     except OSError:
         return False
 
+
+def get_size(path):
+    """ Returns the size in bytes if `path` is a file,
+        or the size of all files in `path` if it's a directory.
+        Analogous to `du -s`.
+    """
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    return sum(get_size(os.path.join(path, f)) for f in os.listdir(path))
+
+
 def file_uptodate(fname, cmp_fname):
     """Check if a file exists, is non-empty and is more recent than cmp_fname.
     """
@@ -244,14 +256,16 @@ def save_diskspace(fname, reason, config):
     disk by replacing them with a short message.
     """
     if config["algorithm"].get("save_diskspace", False):
-        with open(fname, "w") as out_handle:
-            out_handle.write("File removed to save disk space: %s" % reason)
+        for ext in ["", ".bai"]:
+            if os.path.exists(fname + ext):
+                with open(fname + ext, "w") as out_handle:
+                    out_handle.write("File removed to save disk space: %s" % reason)
 
 def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -305,6 +319,13 @@ def file_plus_index(fname):
     else:
         return [fname]
 
+def remove_plus(orig):
+    """Remove a fils, including biological index files.
+    """
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+        if os.path.exists(orig + ext):
+             remove_safe(orig + ext)
+
 def copy_plus(orig, new):
     """Copy a fils, including biological index files.
     """
@@ -315,6 +336,8 @@ def copy_plus(orig, new):
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """
+    if not os.path.exists(orig):
+        raise RuntimeError("File not found: %s" % orig)
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
@@ -428,7 +451,7 @@ def merge_config_files(fnames):
     out = _load_yaml(fnames[0])
     for fname in fnames[1:]:
         cur = _load_yaml(fname)
-        for k, v in cur.iteritems():
+        for k, v in cur.items():
             if k in out and isinstance(out[k], dict):
                 out[k].update(v)
             else:
@@ -442,7 +465,7 @@ def deepish_copy(org):
     http://writeonly.wordpress.com/2009/05/07/deepcopy-is-a-pig-for-simple-data/
     """
     out = dict().fromkeys(org)
-    for k, v in org.iteritems():
+    for k, v in org.items():
         if isinstance(v, dict):
             out[k] = deepish_copy(v)
         else:
@@ -622,7 +645,7 @@ def Rscript_cmd():
 
     Prefers Rscript version installed via conda to a system version.
     """
-    rscript = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "Rscript"))
+    rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
     if rscript:
         return rscript
     else:
@@ -644,7 +667,7 @@ def R_package_path(package):
     cmd = """{rscript} -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
-    except subprocess.CalledProcessError, e:
+    except subprocess.CalledProcessError as e:
         return None
     for line in output.split("\n"):
         if "[1]" not in line:
@@ -657,21 +680,46 @@ def R_package_path(package):
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
     """
-    perl = which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "perl"))
+    perl = which(os.path.join(get_bcbio_bin(), "perl"))
     if perl:
         return perl
     else:
         return which("perl")
 
-def get_perl_exports(tooldir=None):
-    """Environmental exports to use conda install perl and site library.
+def get_perl_exports(tmpdir=None):
+    """Environmental exports to use conda installed perl.
     """
-    from bcbio import install
-    if tooldir is None:
-        tooldir = install.get_defaults().get("tooldir", "/usr/local")
-    perllib = "%s/lib/perl5" % tooldir
     perl_path = os.path.dirname(perl_cmd())
-    return "export PATH=%s:$PATH && export PERL5LIB=%s:$PERL5LIB" % (perl_path, perllib)
+    out = "unset PERL5LIB && export PATH=%s:$PATH" % (perl_path)
+    if tmpdir:
+        out += " && export TMPDIR=%s" % (tmpdir)
+    return out
+
+
+def get_bcbio_env():
+    env = os.environ.copy()
+    env["PATH"] = append_path(get_bcbio_bin(), env['PATH'])
+    return env
+
+
+def append_path(bin, path, at_start=True):
+    if at_start:
+        tmpl = "{bin}:{path}"
+    else:
+        tmpl = "{path}:{bin}"
+    return tmpl.format(bin=bin, path=path)
+
+
+def get_bcbio_bin():
+    return os.path.dirname(os.path.realpath(sys.executable))
+
+
+def local_path_export(at_start=True):
+    path = get_bcbio_bin()
+    if at_start:
+        return "export PATH=%s:$PATH && " % (path)
+    else:
+        return "export PATH=$PATH:%s && " % (path)
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
@@ -716,8 +764,68 @@ def max_command_length():
     try:
         arg_max = os.sysconf('SC_ARG_MAX')
         env_lines = len(os.environ) * 4
-        env_chars = sum([len(x) + len(y) for x, y in os.environ.iteritems()])
+        env_chars = sum([len(x) + len(y) for x, y in os.environ.items()])
         arg_length = arg_max - env_lines - 2048
     except ValueError:
         arg_length = DEFAULT_MAX_LENGTH
     return arg_length if arg_length > 0 else DEFAULT_MAX_LENGTH
+
+
+def get_abspath(path, pardir=None):
+    if pardir is None:
+        pardir = os.getcwd()
+    path = os.path.expandvars(path)
+    return os.path.normpath(os.path.join(pardir, path))
+
+def sort_filenames(filenames):
+    """
+    sort a list of files by filename only, ignoring the directory names
+    """
+    basenames = [os.path.basename(x) for x in filenames]
+    indexes = [i[0] for i in sorted(enumerate(basenames), key=lambda x:x[1])]
+    return [filenames[x] for x in indexes]
+
+# LazyImport from NIPY
+# https://github.com/nipy/nitime/blob/master/nitime/lazyimports.py
+
+class LazyImport(types.ModuleType):
+    """
+    This class takes the module name as a parameter, and acts as a proxy for
+    that module, importing it only when the module is used, but effectively
+    acting as the module in every other way (including inside IPython with
+    respect to introspection and tab completion) with the *exception* of
+    reload()- reloading a :class:`LazyImport` raises an :class:`ImportError`.
+    >>> mlab = LazyImport('matplotlib.mlab')
+    No import happens on the above line, until we do something like call an
+    ``mlab`` method or try to do tab completion or introspection on ``mlab``
+    in IPython.
+    >>> mlab
+    <module 'matplotlib.mlab' will be lazily loaded>
+    Now the :class:`LazyImport` will do an actual import, and call the dist
+    function of the imported module.
+    >>> mlab.dist(1969,2011)
+    42.0
+    """
+    def __getattribute__(self, x):
+        # This method will be called only once, since we'll change
+        # self.__class__ to LoadedLazyImport, and __getattribute__ will point
+        # to module.__getattribute__
+        name = object.__getattribute__(self, '__name__')
+        __import__(name)
+        # if name above is 'package.foo.bar', package is returned, the docs
+        # recommend that in order to get back the full thing, that we import
+        # and then lookup the full name is sys.modules, see:
+        # http://docs.python.org/library/functions.html#__import__
+        module = sys.modules[name]
+        # Now that we've done the import, cutout the middleman and make self
+        # act as the imported module
+        class LoadedLazyImport(types.ModuleType):
+            __getattribute__ = module.__getattribute__
+            __repr__ = module.__repr__
+        object.__setattr__(self, '__class__', LoadedLazyImport)
+        # The next line will make "reload(l)" a silent no-op
+        # sys.modules[name] = self
+        return module.__getattribute__(x)
+    def __repr__(self):
+        return "<module '%s' will be lazily loaded>" %\
+                object.__getattribute__(self,'__name__')

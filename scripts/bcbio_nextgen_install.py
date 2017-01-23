@@ -68,7 +68,8 @@ def bootstrap_bcbionextgen(anaconda, args):
 def install_conda_pkgs(anaconda):
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "-c", "bioconda",
+    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes",
+                           "-c", "bioconda", "-c", "conda-forge",
                            "--file", os.path.basename(REMOTES["requirements"])])
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
@@ -93,7 +94,7 @@ def install_anaconda_python(args):
         dist = args.distribution if args.distribution else _guess_distribution()
         url = REMOTES["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
-            subprocess.check_call(["wget", url])
+            subprocess.check_call(["wget", "--no-check-certificate", url])
         subprocess.check_call("bash %s -b -p %s" %
                               (os.path.basename(url), anaconda_dir), shell=True)
     return {"conda": conda,
@@ -218,11 +219,15 @@ if __name__ == "__main__":
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
+    parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
+                        action="append", default=[],
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv",
+                                 "battenberg", "kraken"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",
                                  "canFam3", "dm3", "galGal4", "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
-                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "Zv9", "GRCz10"])
+                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
                         choices=["bowtie", "bowtie2", "bwa", "novoalign", "rtg", "snap", "star", "ucsc", "hisat2"])

@@ -87,3 +87,15 @@ class WorldWatcher:
             out = {"files": file_changes,
                    "world": world_changes}
             yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+
+
+def initialize_watcher(samples):
+    """
+    check to see if cwl_reporting is set for any samples,
+    and if so, initialize a WorldWatcher object from a set of samples,
+    """
+    work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    ww = WorldWatcher(work_dir,
+                      is_on=any([dd.get_cwl_reporting(d[0]) for d in samples]))
+    ww.initialize(samples)
+    return ww

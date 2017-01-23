@@ -1,0 +1,31 @@
+upload:
+  dir: upload
+details:
+  - analysis: scRNA-seq
+    algorithm:
+      umi_type: harvard-indrop-v3
+      singlecell_quantifier: rapmap
+      minimum_barcode_depth: 0
+      sample_barcodes: ../data/Harvard-inDrop/sample-index.txt
+      cellular_barcodes: [../data/Harvard-inDrop/bc1.txt, ../data/Harvard-inDrop/bc2.txt]
+    description: Test1
+    files:
+      - ../data/Harvard-inDrop/klein-v3_R1.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R2.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R3.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R4.fq.gz
+    genome_build: mm9
+  - analysis: scRNA-seq
+    algorithm:
+      umi_type: harvard-indrop-v3
+      singlecell_quantifier: rapmap
+      minimum_barcode_depth: 0
+      sample_barcodes: ../data/Harvard-inDrop/sample-index.txt
+      cellular_barcodes: [../data/Harvard-inDrop/bc1.txt, ../data/Harvard-inDrop/bc2.txt]
+    description: Test2
+    files:
+      - ../data/Harvard-inDrop/klein-v3_R1.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R2.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R3.fq.gz
+      - ../data/Harvard-inDrop/klein-v3_R4.fq.gz
+    genome_build: mm9

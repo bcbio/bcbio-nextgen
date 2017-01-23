@@ -1,11 +1,9 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
-import sys
 
 from bcbio import bam, broad, utils
 from bcbio.bam import fastq
-from bcbio.bam import cram
 from bcbio.distributed import objectstore
 from bcbio.pipeline import alignment
 from bcbio.utils import file_exists, safe_makedir, splitext_plus
@@ -39,8 +37,7 @@ def get_fastq_files(data):
     for in_file in ready_files:
         if not objectstore.is_remote(in_file):
             assert os.path.exists(in_file), "%s does not exist." % in_file
-    return ((ready_files[0] if len(ready_files) > 0 else None),
-            (ready_files[1] if len(ready_files) > 1 else None))
+    return ready_files
 
 def _gzip_fastq(in_file):
     """
@@ -91,13 +88,6 @@ def _convert_bam_to_fastq(in_file, work_dir, data, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
     out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
-
-    qual_bin_method = config["algorithm"].get("quality_bin")
-    if (qual_bin_method == "prealignment" or
-         (isinstance(qual_bin_method, list) and "prealignment" in qual_bin_method)):
-        out_bindir = safe_makedir(os.path.join(out_dir, "qualbin"))
-        in_file = cram.illumina_qual_bin(in_file, data["sam_ref"], out_bindir, config)
-
     out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
                  os.path.splitext(os.path.basename(in_file))[0], x))
                  for x in ["1", "2"]]
@@ -133,14 +123,13 @@ def _merge_list_fastqs(files, out_file, config):
         raise ValueError("Not all of the files to merge are fastq files: %s " % (files))
     assert all(map(utils.file_exists, files)), ("Not all of the files to merge "
                                                 "exist: %s" % (files))
-    if not os.path.exists(out_file):
-        files = [_bzip_gzip(fn) for fn in files]
+    if not file_exists(out_file):
+        files = [_gzip_fastq(fn) for fn in files]
         if len(files) == 1:
             os.symlink(files[0], out_file)
             return out_file
-        gz_files = [_gzip_fastq(fn) for fn in files]
         with file_transaction(out_file) as file_txt_out:
-            files_str = " ".join(list(gz_files))
+            files_str = " ".join(list(files))
             cmd = "cat {files_str} > {file_txt_out}".format(**locals())
-            do.run(cmd, "merge fastq files")
+            do.run(cmd, "merge fastq files %s" % files)
     return out_file

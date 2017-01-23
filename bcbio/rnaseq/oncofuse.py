@@ -12,11 +12,17 @@ from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+import bcbio.pipeline.datadict as dd
+from bcbio.log import logger
 
 # ## oncofuse fusion trancript detection
 
 def run(data):
-    #cmd line: java -Xmx1G -jar Oncofuse.jar input_file input_type tissue_type output_file
+    if not aligner_supports_fusion(data):
+        aligner = dd.get_aligner(data)
+        logger.warning("Fusion mode is not supported for the %s aligner, "
+                       "skipping. " % aligner)
+        return None
     config = data["config"]
     genome_build = data.get("genome_build", "")
     input_type, input_dir, input_file = _get_input_para(data)
@@ -33,16 +39,15 @@ def run(data):
     out_file = os.path.join(input_dir, "oncofuse_out.txt")
     if file_exists(out_file):
         return out_file
-    oncofuse_jar = config_utils.get_jar("Oncofuse",
-                                        config_utils.get_program("oncofuse", config, "dir"))
+    oncofuse = config_utils.get_program("oncofuse", config)
 
     tissue_type = _oncofuse_tissue_arg_from_config(data)
     resources = config_utils.get_resources("oncofuse", config)
     if not file_exists(out_file):
-        cl = ["java"]
+        cl = [oncofuse]
         cl += resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"])
         with file_transaction(data, out_file) as tx_out_file:
-            cl += ["-jar", oncofuse_jar, input_file, input_type, tissue_type, tx_out_file]
+            cl += [input_file, input_type, tissue_type, tx_out_file]
             cmd = " ".join(cl)
             try:
                 do.run(cmd, "oncofuse fusion detection", data)
@@ -53,6 +58,11 @@ def run(data):
 
 def is_non_zero_file(fpath):
     return True if os.path.isfile(fpath) and os.path.getsize(fpath) > 0 else False
+
+def aligner_supports_fusion(data):
+    SUPPORTED_ALIGNERS = ["tophat2", "tophat", "star"]
+    aligner = dd.get_aligner(data)
+    return aligner and aligner.lower() in SUPPORTED_ALIGNERS
 
 def _get_input_para(data):
     TOPHAT_FUSION_OUTFILE = "fusions.out"
@@ -149,20 +159,21 @@ def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, d
     """
     out_file = disambig_out_file
     fusiondict = {}
-    for my_line in open(star_junction_file, "r"):
-        my_line_split = my_line.strip().split("\t")
-        if len(my_line_split) < 10:
-            continue
-        fusiondict[my_line_split[9]] = my_line.strip("\n")
-    samfile = pysam.Samfile(contamination_bam, "rb")
-    for my_read in samfile:
-        if 0x4 & my_read.flag or my_read.is_secondary:  # flag 0x4 means unaligned
-            continue
-        if my_read.qname in fusiondict:
-            fusiondict.pop(my_read.qname)
+    with open(star_junction_file, "r") as in_handle:
+        for my_line in in_handle:
+            my_line_split = my_line.strip().split("\t")
+            if len(my_line_split) < 10:
+                continue
+            fusiondict[my_line_split[9]] = my_line.strip("\n")
+    with pysam.Samfile(contamination_bam, "rb") as samfile:
+        for my_read in samfile:
+            if my_read.is_unmapped or my_read.is_secondary:
+                continue
+            if my_read.qname in fusiondict:
+                fusiondict.pop(my_read.qname)
     with file_transaction(data, out_file) as tx_out_file:
-        myhandle = open(tx_out_file, 'w')
-        for my_key in fusiondict:
-            print(fusiondict[my_key], file=myhandle)
+        with open(tx_out_file, 'w') as myhandle:
+            for my_key in fusiondict:
+                print(fusiondict[my_key], file=myhandle)
 
     return out_file

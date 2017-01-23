@@ -28,6 +28,11 @@ SUPPORTED_REMOTES = ("s3://",)
 BIODATA_INFO = {"s3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
 REGIONS_NEWPERMS = {"s3": ["eu-central-1"]}
 
+if six.PY3:
+    BIGNUM = float("inf")
+else:
+    BIGNUM = sys.maxint
+
 
 @six.add_metaclass(abc.ABCMeta)
 class FileHandle(object):
@@ -87,7 +92,7 @@ class FileHandle(object):
         pass
 
     @abc.abstractmethod
-    def read(self, size):
+    def read(self, size=BIGNUM):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -122,7 +127,7 @@ class S3Handle(FileHandle):
         for chunk in self._key:
             yield self._decompress(chunk)
 
-    def read(self, size):
+    def read(self, size=BIGNUM):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -206,7 +211,7 @@ class BlobHandle(FileHandle):
             blob_name=self._blob_name,
             x_ms_range=range_id)
 
-    def read(self, size):
+    def read(self, size=BIGNUM):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -410,6 +415,8 @@ class AmazonS3(StorageManager):
         command = " ".join(command)
         if filename.endswith(".gz") and unpack:
             command = "%(command)s | gunzip -c" % {"command": command}
+        elif filename.endswith(".bz2") and unpack:
+            command = "%(command)s | bunzip2 -c" % {"command": command}
         if anonpipe:
             command = "<(%(command)s)" % {"command": command}
 
@@ -449,6 +456,8 @@ class AmazonS3(StorageManager):
                 raise
 
         s3_key = s3_bucket.get_key(file_info.key)
+        if s3_key is None:
+            raise ValueError("Did not find S3 key: %s" % filename)
         return S3Handle(s3_key)
 
 
@@ -540,10 +549,19 @@ class AzureBlob(StorageManager):
                           blob=file_info.blob,
                           chunk_size=cls._BLOB_CHUNK_DATA_SIZE)
 
+class ArvadosKeep:
+    """Files stored in Arvados Keep. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("keep:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, AzureBlob):
+    for manager in (AmazonS3, AzureBlob, ArvadosKeep):
         if manager.check_resource(resource):
             return manager()
 

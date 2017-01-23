@@ -25,7 +25,6 @@ and PRIORITIZED_NORMAL_CODES dictionaries
 """
 import re
 import os
-import collections
 import toolz as tz
 import itertools
 from bcbio.utils import file_exists

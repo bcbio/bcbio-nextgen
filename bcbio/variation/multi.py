@@ -6,9 +6,11 @@ calling simultaneously.
 import collections
 import os
 
+from six import iteritems
 import toolz as tz
 
 from bcbio import utils
+from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 
 # ## Group batches to process together
@@ -31,9 +33,10 @@ def bam_needs_processing(data):
     """Check if a work input needs processing for parallelization.
     """
     return ((data.get("work_bam") or data.get("align_bam")) and
-            any(tz.get_in(["config", "algorithm", x], data) for x in
-                ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
-                 "jointcaller"]))
+            (any(tz.get_in(["config", "algorithm", x], data) for x in
+                 ["variantcaller", "mark_duplicates", "recalibrate", "realign", "svcaller",
+                  "jointcaller", "variant_regions"])
+             or any(k in data for k in ["cwl_keys", "output_cwl_keys"])))
 
 def get_batch_for_key(data):
     """Retrieve batch information useful as a unique key for the sample.
@@ -46,9 +49,9 @@ def get_batch_for_key(data):
 
 def _get_batches(data, require_bam=True):
     if bam_needs_processing(data) or not require_bam:
-        batches = tz.get_in(("metadata", "batch"), data, data["description"])
+        batches = dd.get_batch(data) or dd.get_sample_name(data)
     else:
-        batches = data["description"]
+        batches = dd.get_sample_name(data)
     if not isinstance(batches, (list, tuple)):
         batches = [batches]
     return batches
@@ -108,8 +111,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
     singles = []
     batch_groups = collections.defaultdict(list)
     for args in xs:
-        assert len(args) == 1
-        data = args[0]
+        data = utils.to_single_data(args)
         caller, batch = caller_batch_fn(data)
         region = _list_to_tuple(data["region"]) if "region" in data else ()
         if batch is not None:
@@ -120,7 +122,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
             data = prep_data_fn(data, [data])
             singles.append(data)
     batches = []
-    for batch, items in batch_groups.iteritems():
+    for batch, items in iteritems(batch_groups):
         batch_data = utils.deepish_copy(_pick_lead_item(items))
         # For nested primary batches, split permanently by batch
         if tz.get_in(["metadata", "batch"], batch_data):
@@ -143,7 +145,7 @@ def group_batches(xs):
     Only batches files if joint calling not specified.
     """
     def _caller_batches(data):
-        caller = tz.get_in(("config", "algorithm", "variantcaller"), data, "gatk")
+        caller = tz.get_in(("config", "algorithm", "variantcaller"), data)
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         batch = tz.get_in(("metadata", "batch"), data) if not jointcaller else None
         return caller, batch
@@ -243,7 +245,8 @@ def split_variants_by_sample(data):
     if "group_orig" not in data:
         return [[data]]
     # cancer tumor/normal
-    elif vcfutils.get_paired_phenotype(data):
+    elif (vcfutils.get_paired_phenotype(data)
+            and "tumor" in [vcfutils.get_paired_phenotype(d) for d in get_orig_items(data)]):
         out = []
         for i, sub_data in enumerate(get_orig_items(data)):
             if vcfutils.get_paired_phenotype(sub_data) == "tumor":

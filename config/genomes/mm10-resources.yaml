@@ -1,8 +1,8 @@
-version: 14
+version: 21
 
 aliases:
-  snpeff: GRCm38.78
-  ensembl: mus_musculus_vep_83_GRCm38
+  snpeff: GRCm38.86
+  ensembl: mus_musculus_vep_86_GRCm38
 
 variation:
   dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz
@@ -18,5 +18,8 @@ rnaseq:
   rRNA_fa: ../rnaseq/rRNA.fa
 
 srnaseq:
-    srna-transcripts: ../srnaseq/srna-transcripts.gtf
-    mirbase: ../srnaseq/hairpin.fa
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+    trna_fasta: ../srnaseq/trna_mature_pre.fa

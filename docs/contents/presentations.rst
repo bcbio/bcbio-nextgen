@@ -1,6 +1,45 @@
 Presentations
 =============
 
+- `MIT Bioinformatics Interest Group
+  <http://openwetware.org/wiki/BioMicroCenter:BIG_meeting#2016-2017_academic_year>`_
+  about how Common Workflow Language
+  `enables interoperability with multiple workflow engines <https://gist.github.com/chapmanb/f1ccdd2e2e23b0383b6e6857b59a431b>`_
+  (3 November 2016): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/big2016_bcbio_cwl/big2016_bcbiocwl.pdf>`_
+  and `video <https://youtu.be/375QSYmaidk>`_
+
+- `Broad Institute <http://www.broadinstitute.org/>`_ software engineering
+  seminar about bcbio validation and intergration with Common Workflow Language
+  and Workflow Definition Language (28 September 2016): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/broad_engineering2016_bcbio/broad2016_bcbio.pdf>`_
+
+- Materials from :ref:`teaching` at the `Summer 2016 NGS Data Analysis Course
+  at Harvard Chan School <http://bioinformatics.sph.harvard.edu/training/>`_
+  (11 August 2016): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2016b_teaching/ngscourse2016b_teaching.pdf>`_
+
+- `Bioinformatics Open Source Conference (BOSC) 2016
+  <http://www.open-bio.org/wiki/BOSC_2016>`_ lightning talk on bcbio and common
+  workflow language (8 July 2016): `slides
+  <http://f1000research.com/slides/5-1639>`_ and `video <https://youtu.be/kMoAWjHhOVc>`_.
+
+- Materials from :ref:`teaching` from the `Spring 2016 NGS Data Analysis Course
+  at Harvard Chan School
+  <https://wiki.harvard.edu/confluence/display/hbctraining/NGS+Data+Analysis+Course+Application%2C+Spring+2016>`_
+  (28 April 2016): `slides
+  <https://github.com/chapmanb/bcbb/raw/master/talks/ngscourse2016_teaching/ngscourse2016_teaching.pdf>`_
+
+- Statistical Genetics and Network Science Meeting at `Channing Division of
+  Network Medicine
+  <http://www.brighamandwomens.org/Research/depts/Medicine/Channing/default.aspx>`_
+  (23 March 2016): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/cdnm2016_bcbio/cdnm2016_bcbio.pdf>`_
+
+- Presentation at `Curoverse <https://curoverse.com/>`_ Brown Bag Seminar on
+  bcbio and in progress integration work with `Common Workflow Language
+  <http://www.commonwl.org/>`_ and `Arvados <https://arvados.org/>`_
+  (11 January 2016):
+  `slides <https://github.com/chapmanb/bcbb/blob/master/talks/curoverse2016bb_bcbio/curoverse2016bb_bcbio.pdf>`_
+
 - Materials from :ref:`teaching` oriented example at Cold Spring Harbor
   Laboratory's `Advanced Sequencing Technology and Applications course
   <http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15>`_.

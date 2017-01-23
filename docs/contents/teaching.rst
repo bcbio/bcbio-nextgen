@@ -57,11 +57,10 @@ matched normal::
       sex: female
 
 Next it defines parameters for running the analysis. First we pick our aligner
-(bwa mem) and allow parallelization by splitting into 5 million read chunks::
+(bwa mem)::
 
     algorithm:
       aligner: bwa
-      align_split_size: 5000000
 
 Post-alignment, we mark duplicates but do not perform recalibration and realignment::
 
@@ -75,7 +74,7 @@ an ensemble method that combines results for any found in 2 out of 3::
 
       variant_regions: ../input/NGv3-chr6-hg38.bed
       min_allele_fraction: 2
-      variantcaller: [vardict, mutect, freebayes]
+      variantcaller: [vardict, freebayes, varscan]
       ensemble:
         numpass: 2
 
@@ -107,8 +106,10 @@ Output files
 Output files are in ``~/run/cancer-syn3-chr6/final``, extracted from the full
 work directory in ``~/run/cancer-syn3-chr6/work``.
 
-The directories with sample information are in ``syn3-tumor/``. These include the
-aligned BAMs (along with separated split and discordant reads in individual files)::
+The directories with sample information are in ``syn3-tumor/``. Aligned BAMs
+include a ``-ready.bam`` file with all of the original reads (including split
+and discordants) and separate files with only the split (``-sr.bam``) and
+discordant (``-disc.bam``) reads::
 
     syn3-tumor-ready.bam
     syn3-tumor-ready.bam.bai
@@ -117,19 +118,14 @@ aligned BAMs (along with separated split and discordant reads in individual file
     syn3-tumor-disc.bam
     syn3-tumor-disc.bam.bai
 
-Quality control calculation::
-
-    qc/bamtools
-    qc/fastqc
-
 SNP and indel calls for 3 callers, plus combined ensemble calls::
 
     syn3-tumor-ensemble.vcf.gz
     syn3-tumor-ensemble.vcf.gz.tbi
     syn3-tumor-freebayes.vcf.gz
     syn3-tumor-freebayes.vcf.gz.tbi
-    syn3-tumor-mutect.vcf.gz
-    syn3-tumor-mutect.vcf.gz.tbi
+    syn3-tumor-varscan.vcf.gz
+    syn3-tumor-varscan.vcf.gz.tbi
     syn3-tumor-vardict.vcf.gz
     syn3-tumor-vardict.vcf.gz.tbi
 
@@ -156,21 +152,21 @@ Validation results from comparisons against truth set, including plots::
     syn3-tumor-validate.png
 
 The top level directory for the project, ``2015-11-18_syn3-cshl/`` has files
-relevant to the entire run. These include provenance information, with log files
-of all commands run and program versions used::
+relevant to the entire run. There is a consolidated quality control report::
+
+    multiqc/multiqc_report.html
+
+Povenance information, with log files of all commands run and program versions used::
 
     bcbio-nextgen.log
     bcbio-nextgen-commands.log
     programs.txt
+    data_versions.csv
 
 A top level summary of metrics for alignment, variant calling and coverage that
 is useful downstream::
 
     project-summary.yaml
-
-A full coverage report for assessing potentially missed regions in the genome::
-
-    report
 
 Preparing and Running
 ~~~~~~~~~~~~~~~~~~~~~

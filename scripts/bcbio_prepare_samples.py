@@ -1,6 +1,6 @@
 #!/usr/bin/env python -Es
 """
-Script that creates bcbio-compatible inputs in case of multiple files samples 
+Script that creates bcbio-compatible inputs in case of multiple files samples
 """
 
 
@@ -8,12 +8,12 @@ import os
 import yaml
 from collections import defaultdict
 from argparse import ArgumentParser
-from cluster_helper import cluster as ipc
 from bcbio import log
 from bcbio.log import logger
 from bcbio.install import _get_data_dir
 from bcbio import utils
 from bcbio.bam import is_bam
+from bcbio.pipeline.sra import is_gsm
 from bcbio.bam.fastq import is_fastq, combine_pairs
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed import clargs, resources, prun
@@ -37,40 +37,54 @@ def _header(fn):
     return l
 
 
-def _get_samples_to_process(fn, out_dir, config):
+def _get_samples_to_process(fn, out_dir, config, force_single):
     """parse csv file with one line per file. It will merge
     all files that have the same description name"""
+    out_dir = os.path.abspath(out_dir)
     samples = defaultdict(list)
     with open(fn) as handle:
         for l in handle:
             cols = l.strip().split(",")
-            if len(cols) < 2:
-                raise ValueError("Line needs 2 values: file and name.")
-            if utils.file_exists(cols[0]):
-                samples[cols[1]].append(cols)
-            else:
-                logger.info("skipping %s, File doesn't exist." % cols[0])
-    for sample, items in samples.iteritems():
+            if len(cols) > 0:
+                if len(cols) < 2:
+                    raise ValueError("Line needs 2 values: file and name.")
+                if utils.file_exists(cols[0]) or is_gsm(cols[0]):
+                    if cols[0].find(" ") > -1:
+                        new_name = os.path.abspath(cols[0].replace(" ", "_"))
+                        logger.warning("Space finds in %s. Linked to %s." % (cols[0], new_name))
+                        logger.warning("Please, avoid names with spaces in the future.")
+                        utils.symlink_plus(os.path.abspath(cols[0]), new_name)
+                        cols[0] = new_name
+                    samples[cols[1]].append(cols)
+                else:
+                    logger.info("skipping %s, File doesn't exist." % cols[0])
+    for sample, items in samples.items():
         if is_fastq(items[0][0], True):
             fn = "fq_merge"
             ext = ".fastq.gz"
         elif is_bam(items[0][0]):
             fn = "bam_merge"
             ext = ".bam"
-        files = [os.path.abspath(fn_file[0]) for fn_file in items]
-        samples[sample] = [{'files': _check_paired(files), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
+        elif is_gsm(items[0][0]):
+            fn = "query_gsm"
+            ext = ".fastq.gz"
+        files = [os.path.abspath(fn_file[0]) if not is_gsm(fn_file[0]) else fn_file[0] for fn_file in items]
+        samples[sample] = [{'files': _check_paired(files, force_single), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
     return [samples[sample] for sample in samples]
 
 
-def _check_paired(files):
+def _check_paired(files, force_single):
     """check if files are fastq(.gz) and paired"""
     if files[0].endswith(".bam"):
         return files
-    return combine_pairs(files)
+    elif is_gsm(files[0]):
+        return files
+    return combine_pairs(files, force_single)
 
 
 def get_cluster_view(p):
     """get ipython running"""
+    from cluster_helper import cluster as ipc
     return ipc.cluster_view(p['scheduler'], p['queue'], p['num_jobs'], p['cores_per_job'], start_wait=p['timeout'], extra_params={"resources": p['resources'], "mem": p['mem'], "tag": p['tag'], "run_local": False})
 
 
@@ -85,6 +99,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Merge fastq or bam files")
     parser.add_argument("--csv", required=True, help="csv file with metadata")
     parser.add_argument("--out", required=True, help="output dir")
+    parser.add_argument("--force-single", action='store_true', default=False, help="Treat all files as single reads")
     parser.add_argument("-n", "--numcores", type=int,
                         default=1, help="Number of concurrent jobs to process.")
     parser.add_argument("-c", "--cores-per-job", type=int,
@@ -122,7 +137,7 @@ if __name__ == "__main__":
     dirs = {'work': os.path.abspath(os.getcwd())}
     system.write_info(dirs, parallel, config)
     sysinfo = system.machine_info()[0]
-    samples = _get_samples_to_process(args.csv, out_dir, config)
+    samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single)
     parallel = resources.calculate(parallel, [samples], sysinfo, config)
 
     with prun.start(parallel, samples, config, dirs) as run_parallel:

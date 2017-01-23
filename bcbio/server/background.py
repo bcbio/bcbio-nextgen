@@ -6,7 +6,7 @@ Modified from: https://github.com/vukasin/tornado-subprocess
 
 Copyright (c) 2012, Vukasin Toroman <vukasin@toroman.name>
 """
-
+from __future__ import print_function
 import subprocess
 import tornado.ioloop
 import time
@@ -80,7 +80,7 @@ class GenericSubprocess (object):
                     data = os.read(fd, 4096)
                     if len(data) == 0:
                         break
-                    print data.rstrip()
+                    print(data.rstrip())
                 except:
                     break
     @property

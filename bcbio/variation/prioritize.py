@@ -21,16 +21,15 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import population, vcfutils
-from bcbio.variation import multi as vmulti
 
-def handle_vcf_calls(vcf_file, data):
+def handle_vcf_calls(vcf_file, data, orig_items):
     """Prioritize VCF calls based on external annotations supplied through GEMINI.
     """
-    if not _do_prioritize(data):
+    if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        if population.do_db_build([data]):
-            gemini_db = population.create_gemini_db(vcf_file, data)
+        if population.do_db_build(orig_items):
+            gemini_db = population.create_gemini_db_orig(vcf_file, data)
             if gemini_db:
                 priority_file = _prep_priority_filter(gemini_db, data)
                 return _apply_priority_filter(vcf_file, priority_file, data)
@@ -69,7 +68,7 @@ def _prep_priority_filter(gemini_db, data):
     """
     from gemini import GeminiQuery
     out_file = "%s-priority.tsv" % utils.splitext_plus(gemini_db)[0]
-    if not utils.file_exists(out_file):
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         ref_chroms = set([x.name for x in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         with file_transaction(data, out_file) as tx_out_file:
             gq = GeminiQuery(gemini_db)
@@ -144,18 +143,18 @@ def _find_known(row):
         out.append("clinvar")
     return out
 
-def _do_prioritize(data):
+def _do_prioritize(items):
     """Determine if we should perform prioritization.
 
     Currently done on tumor-only input samples.
     """
-    if vcfutils.get_paired_phenotype(data):
-        has_tumor = False
-        has_normal = False
-        orig_items = vmulti.get_orig_items(data) if tz.get_in(["metadata", "batch"], data) else [data]
-        for sub_data in orig_items:
-            if vcfutils.get_paired_phenotype(sub_data) == "tumor":
-                has_tumor = True
-            elif vcfutils.get_paired_phenotype(sub_data) == "normal":
-                has_normal = True
-        return has_tumor and not has_normal
+    if not any("tumoronly-prioritization" in dd.get_tools_off(d) for d in items):
+        if vcfutils.get_paired_phenotype(items[0]):
+            has_tumor = False
+            has_normal = False
+            for sub_data in items:
+                if vcfutils.get_paired_phenotype(sub_data) == "tumor":
+                    has_tumor = True
+                elif vcfutils.get_paired_phenotype(sub_data) == "normal":
+                    has_normal = True
+            return has_tumor and not has_normal

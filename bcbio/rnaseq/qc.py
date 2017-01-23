@@ -8,7 +8,6 @@ except ImportError:
     pd, sm = None, None
 
 from bcbio import bam
-import bcbio.pipeline.datadict as dd
 
 def starts_by_depth(bam_file, data, sample_size=10000000):
     """

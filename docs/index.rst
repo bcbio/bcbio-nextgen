@@ -28,12 +28,14 @@ Contents:
    contents/configuration
    contents/parallel
    contents/cloud
+   contents/cwl
    contents/outputs
    contents/code
    contents/sequencer
    contents/internals
    contents/presentations
    contents/teaching
+   contents/citations
 
 
 Indices and tables
@@ -42,4 +44,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

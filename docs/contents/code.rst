@@ -79,6 +79,9 @@ The most useful modules inside ``bcbio``, ordered by likely interest:
 - ``broad`` -- Code to handle calling Broad tools like GATK and
   Picard, as well as other Java-based programs.
 
+:ref:`code-devel-infrastructure`
+.. _code-devel-infrastructure:
+
 Development infrastructure
 ==========================
 

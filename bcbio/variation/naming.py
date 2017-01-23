@@ -104,7 +104,7 @@ def handle_synonyms(in_file, ref_file, genome_build, work_dir, data):
     Handles tab delimited file formats like BED and VCF where the contig
     is in the first column.
     """
-    if genome_build in GMAP:
+    if genome_build in GMAP and ref_file:
         mappings = GMAP[genome_build]
         contigs = set([c.name for c in ref.file_contigs(ref_file)])
         out_file = os.path.join(work_dir, "%s-fixed_contigs%s" % utils.splitext_plus(os.path.basename(in_file)))

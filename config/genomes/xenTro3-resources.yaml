@@ -1,5 +1,5 @@
-version: 6
+version: 9
 
 aliases:
-  ensembl: xenopus_tropicalis_vep_83_JGI_4.2
-  snpeff: JGI_4.2.78
+  ensembl: xenopus_tropicalis_vep_86_JGI_4.2
+  snpeff: JGI_4.2.86

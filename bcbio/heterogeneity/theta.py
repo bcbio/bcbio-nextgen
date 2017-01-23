@@ -19,7 +19,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do
-from bcbio.structural import cnvkit, convert
+from bcbio.structural import convert
 
 def run(vrn_info, cnvs_by_name, somatic_info):
     """Run THetA analysis given output from CNV caller on a tumor/normal pair.
@@ -28,6 +28,7 @@ def run(vrn_info, cnvs_by_name, somatic_info):
     if not cmd:
         logger.info("THetA scripts not found in current PATH. Skipping.")
     else:
+        from bcbio.structural import cnvkit
         work_dir = _sv_workdir(somatic_info.tumor_data)
         assert "cnvkit" in cnvs_by_name, "THetA requires CNVkit calls"
         cnv_info = cnvkit.export_theta(cnvs_by_name["cnvkit"], somatic_info.tumor_data)
@@ -189,7 +190,7 @@ def _safe_run_theta(input_file, out_dir, output_ext, args, data):
                    "--FORCE", "-d", tx_out_dir]
             try:
                 do.run(cmd, "Run THetA to calculate purity", log_error=False)
-            except subprocess.CalledProcessError, msg:
+            except subprocess.CalledProcessError as msg:
                 if ("Number of intervals must be greater than 1" in str(msg) or
                       "This sample isn't a good candidate for THetA analysis" in str(msg)):
                     with open(os.path.join(tx_out_dir, os.path.basename(skip_file)), "w") as out_handle:

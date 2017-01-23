@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 """Setup file and install script for NextGen sequencing analysis scripts.
 """
-import sys
 import os
 from setuptools import setup, find_packages
 
-version = "0.9.6a"
+version = "1.0.2a0"
 
 def write_version_py():
     version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline',
@@ -23,13 +22,14 @@ def write_version_py():
 
 install_requires = [] # install dependencies via conda
 zip_safe = False
-scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts/bcbio_prepare_samples.py']
+scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts/bcbio_prepare_samples.py',
+           'scripts/bcbio_fastq_umi_prep.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",
       version=version,
-      author="Brad Chapman and bcbio-nextgen contributors",
-      author_email="chapmanb@50mail.com",
+      author="bcbio community",
+      author_email="biovalidation@googlegroups.com",
       description="Best-practice pipelines for fully automated high throughput sequencing analysis",
       long_description=(open('README.rst').read()),
       license="MIT",

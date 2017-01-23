@@ -5,23 +5,24 @@ https://sourceforge.net/p/scalpel/code/ci/master/tree/
 
 from __future__ import print_function
 import os
+import shutil
 
 try:
     import vcf
 except ImportError:
     vcf = None
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils
-from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
+from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, vcfutils
+from bcbio.variation import annotation, bedutils, vcfutils
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
 def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
-    variant_regions = utils.get_in(config, ("algorithm", "variant_regions"))
-    target = subset_variant_regions(variant_regions, region, out_file, items)
+    variant_regions = bedutils.population_variant_regions(items)
+    target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
             target_bed = target
@@ -35,7 +36,10 @@ def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
                     chrom, start, end = region
                     with open(tx_tmp_bed, "w") as out_handle:
                         print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
-        return ["--bed", remove_lcr_regions(target_bed, items)]
+        if any(dd.get_coverage_interval(x) == "genome" for x in items):
+            target_bed = shared.remove_highdepth_regions(target_bed, items)
+            target_bed = shared.remove_lcr_regions(target_bed, items)
+        return ["--bed", target_bed]
     else:
         return []
 
@@ -99,24 +103,27 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
                 raise ValueError(message)
             input_bams = " ".join("%s" % x for x in align_bams)
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
+            tx_tmp_path = "%s-scalpel-work" % utils.splitext_plus(tx_out_file)[0]
             if os.path.exists(tmp_path):
                 utils.remove_safe(tmp_path)
             opts = " ".join(_scalpel_options_from_config(items, config, out_file, region, tmp_path))
-            opts += " --dir %s" % tmp_path
+            opts += " --dir %s" % tx_tmp_path
             min_cov = "3"  # minimum coverage
             opts += " --mincov %s" % min_cov
-            perl_exports = utils.get_perl_exports()
+            perl_exports = utils.get_perl_exports(os.path.dirname(tx_out_file))
             cmd = ("{perl_exports} && "
                    "scalpel-discovery --single {opts} --ref {ref_file} --bam {input_bams} ")
             do.run(cmd.format(**locals()), "Genotyping with Scalpel", {})
+            shutil.move(tx_tmp_path, tmp_path)
             # parse produced variant file further
             scalpel_tmp_file = bgzip_and_index(os.path.join(tmp_path, "variants.indel.vcf"), config)
             compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
             bcftools_cmd_chi2 = get_scalpel_bcftools_filter_expression("chi2", config)
             sample_name_str = items[0]["name"][1]
             fix_ambig = vcfutils.fix_ambiguous_cl()
-            cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | sed 's/sample_name/{sample_name_str}/g' "
-                   "| {fix_ambig} | vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort "
+            cl2 = ("{bcftools_cmd_chi2} {scalpel_tmp_file} | "
+                   r"sed 's/FORMAT\tsample\(_name\)\{{0,1\}}/FORMAT\t{sample_name_str}/g' "
+                   "| {fix_ambig} | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort "
                    "{compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -140,9 +147,8 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                 ann_file = _run_scalpel_caller(align_bams, items, ref_file,
                                                assoc_files, region, out_file)
                 return ann_file
-            vcffilter = config_utils.get_program("vcffilter", config)
             vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-            perl_exports = utils.get_perl_exports()
+            perl_exports = utils.get_perl_exports(os.path.dirname(tx_out_file))
             tmp_path = "%s-scalpel-work" % utils.splitext_plus(out_file)[0]
             db_file = os.path.join(tmp_path, "main", "somatic.db")
             if not os.path.exists(db_file + ".dir"):

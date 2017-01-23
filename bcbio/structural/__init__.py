@@ -6,22 +6,27 @@ import operator
 
 import toolz as tz
 
+from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly,
-                              lumpy, manta, metasv, prioritize, plot, validate, wham)
+                              lumpy, manta, metasv, prioritize, plot,
+                              seq2c, validate, wham)
 from bcbio.variation import vcfutils
 
 # Stratify callers by stage -- see `run` documentation below for definitions
 _CALLERS = {
-  "initial": {"cnvkit": cnvkit.run,
-              "battenberg": battenberg.run},
+  "precall": {"seq2c": seq2c.precall},
+  "initial": {"cnvkit": cnvkit.run},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run,
-               "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run},
+               "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
+               "battenberg": battenberg.run, "seq2c": seq2c.run},
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
+_GLOBAL_BATCHING = set(["seq2c"])
 
-def _get_svcallers(data):
+def get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
     if svs is None:
         svs = []
@@ -32,7 +37,7 @@ def _get_svcallers(data):
 def _handle_multiple_svcallers(data, stage):
     """Retrieve configured structural variation caller, handling multiple.
     """
-    svs = _get_svcallers(data)
+    svs = get_svcallers(data)
     # special cases -- prioritization
     if stage == "ensemble" and dd.get_svprioritize(data):
         svs.append("prioritize")
@@ -40,8 +45,8 @@ def _handle_multiple_svcallers(data, stage):
     for svcaller in svs:
         if svcaller in _CALLERS[stage]:
             base = copy.deepcopy(data)
-            base["config"]["algorithm"]["svcaller"] = svs
-            base["config"]["algorithm"]["svcaller_active"] = svcaller
+            base["config"]["algorithm"]["svcaller"] = svcaller
+            base["config"]["algorithm"]["svcaller_orig"] = svs
             out.append(base)
     return out
 
@@ -50,21 +55,24 @@ def finalize_sv(samples, config):
     """
     by_bam = collections.OrderedDict()
     for x in samples:
+        batch = dd.get_batch(x) or [dd.get_sample_name(x)]
         try:
-            by_bam[x["align_bam"]].append(x)
+            by_bam[x["align_bam"], tuple(batch)].append(x)
         except KeyError:
-            by_bam[x["align_bam"]] = [x]
+            by_bam[x["align_bam"], tuple(batch)] = [x]
     by_batch = collections.OrderedDict()
     lead_batches = {}
     for grouped_calls in by_bam.values():
         def orig_svcaller_order(x):
-            return _get_svcallers(x).index(x["config"]["algorithm"]["svcaller_active"])
+            orig_callers = tz.get_in(["config", "algorithm", "svcaller_orig"], x)
+            cur_caller = tz.get_in(["config", "algorithm", "svcaller"], x)
+            return orig_callers.index(cur_caller)
         sorted_svcalls = sorted([x for x in grouped_calls if "sv" in x],
                                 key=orig_svcaller_order)
         final = grouped_calls[0]
         if len(sorted_svcalls) > 0:
             final["sv"] = reduce(operator.add, [x["sv"] for x in sorted_svcalls])
-        del final["config"]["algorithm"]["svcaller_active"]
+        final["config"]["algorithm"]["svcaller"] = final["config"]["algorithm"].pop("svcaller_orig")
         batch = dd.get_batch(final) or dd.get_sample_name(final)
         batches = batch if isinstance(batch, (list, tuple)) else [batch]
         lead_batches[dd.get_sample_name(final)] = batches[0]
@@ -89,26 +97,31 @@ def validate_sv(data):
     """
     return [[validate.evaluate(data)]]
 
-def run(samples, run_parallel, stage):
-    """Run structural variation detection.
+def batch_for_sv(samples):
+    """Prepare a set of samples for parallel structural variant calling.
 
-    The stage indicates which level of structural variant calling to run.
-      - initial, run prior to other callers and variant calling
-      - standard, regular batch calling
-      - ensemble, post-calling, combine other callers or prioritize results
+    CWL input target -- groups samples into batches and structural variant
+    callers for parallel processing.
     """
+    to_process, extras, background = _batch_split_by_sv(samples, "standard")
+    out = [cwlutils.samples_to_records(xs) for xs in to_process.values()] + extras
+    return out
+
+def _batch_split_by_sv(samples, stage):
     to_process = collections.OrderedDict()
     extras = []
     background = []
-    for data in (xs[0] for xs in samples):
+    for data in (utils.to_single_data(x) for x in samples):
         ready_data = _handle_multiple_svcallers(data, stage)
         if len(ready_data) > 0:
             background.append(data)
             for x in ready_data:
-                svcaller = x["config"]["algorithm"].get("svcaller_active")
+                svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
-                if stage == "ensemble":  # no batching for ensemble methods
+                if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
                     batch = "%s-%s" % (dd.get_sample_name(x), batch)
+                elif svcaller in _GLOBAL_BATCHING:  # All samples batched together for analyses
+                    batch = "all"
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
                 for b in batches:
                     try:
@@ -117,23 +130,35 @@ def run(samples, run_parallel, stage):
                         to_process[(svcaller, b)] = [x]
         else:
             extras.append([data])
-    processed = run_parallel("detect_sv", ([xs, background, xs[0]["config"], stage]
+    return to_process, extras, background
+
+def run(samples, run_parallel, stage):
+    """Run structural variation detection.
+
+    The stage indicates which level of structural variant calling to run.
+      - precall, perform initial sample based assessment of samples
+      - initial, callers that can be used in subsequent structural variation steps (cnvkit -> lumpy)
+      - standard, regular batch calling
+      - ensemble, post-calling, combine other callers or prioritize results
+    """
+    to_process, extras, background = _batch_split_by_sv(samples, stage)
+    processed = run_parallel("detect_sv", ([xs, background, stage]
                                            for xs in to_process.values()))
     finalized = (run_parallel("finalize_sv", [([xs[0] for xs in processed], processed[0][0]["config"])])
                  if len(processed) > 0 else [])
     return extras + finalized
 
-def detect_sv(items, all_items, config, stage):
+def detect_sv(items, all_items=None, stage="standard"):
     """Top level parallel target for examining structural variation.
     """
-    svcaller = config["algorithm"].get("svcaller_active")
+    svcaller = items[0]["config"]["algorithm"].get("svcaller")
     caller_fn = _CALLERS[stage].get(svcaller)
     out = []
     if svcaller and caller_fn:
-        if (svcaller in _NEEDS_BACKGROUND and
+        if (all_items and svcaller in _NEEDS_BACKGROUND and
                 not vcfutils.is_paired_analysis([x.get("align_bam") for x in items], items)):
-            names = set([tz.get_in(["rgnames", "sample"], x) for x in items])
-            background = [x for x in all_items if tz.get_in(["rgnames", "sample"], x) not in names]
+            names = set([dd.get_sample_name(x) for x in items])
+            background = [x for x in all_items if dd.get_sample_name(x) not in names]
             for svdata in caller_fn(items, background):
                 out.append([svdata])
         else:
@@ -147,6 +172,9 @@ def detect_sv(items, all_items, config, stage):
 # ## configuration
 
 def parallel_multiplier(items):
-    """Use more resources (up to available limits) if we have multiple SV callers.
+    """Use more resources (up to available limits) if we have multiple QC samples/svcallers.
     """
-    return max([1] + [len(_get_svcallers(xs[0])) for xs in items])
+    machines = []
+    for data in (xs[0] for xs in items):
+        machines.append(max(1, len(get_svcallers(data)), len(dd.get_algorithm_qc(data))))
+    return sum(machines)

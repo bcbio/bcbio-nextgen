@@ -7,8 +7,8 @@ https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/plink_to_vcf.py
 Requires:
 
 plink: http://pngu.mgh.harvard.edu/~purcell/plink/
-PLINK/SEQ: http://atgu.mgh.harvard.edu/plinkseq/
-bx-python: https://bitbucket.org/james_taylor/bx-python/wiki/Home
+PLINK/SEQ: https://atgu.mgh.harvard.edu/plinkseq/
+bx-python: https://github.com/bxlab/bx-python
 
 You also need the genome reference file in 2bit format:
 http://genome.ucsc.edu/FAQ/FAQformat.html#format7
@@ -146,7 +146,7 @@ def fix_nonref_positions(in_file, ref_file):
                     if parts[0] not in ignore_chrs:
                         try:
                             ref_base = ref2bit[parts[0]].get(pos-1, pos).upper()
-                        except Exception, msg:
+                        except Exception as msg:
                             print "Skipping line. Failed to retrieve reference base for %s\n%s" % (str(parts), msg)
                     parts = fix_vcf_line(parts, ref_base)
                     if parts is not None:

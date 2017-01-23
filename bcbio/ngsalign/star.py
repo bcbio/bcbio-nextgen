@@ -3,7 +3,7 @@ import sys
 import shutil
 import subprocess
 import contextlib
-from distutils.version import LooseVersion
+from collections import namedtuple
 
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -19,17 +19,6 @@ CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
-    max_hits = 10
-    srna = True if data["analysis"].lower().startswith("smallrna-seq") else False
-    srna_opts = ""
-    if srna:
-        max_hits = 1000
-        srna_opts = "--alignIntronMax 1"
-    config = data["config"]
-    out_prefix = os.path.join(align_dir, dd.get_lane(data))
-    out_file = out_prefix + "Aligned.out.sam"
-    out_dir = os.path.join(align_dir, "%s_star" % dd.get_lane(data))
-
     if not ref_file:
         logger.error("STAR index not found. We don't provide the STAR indexes "
                      "by default because they are very large. You can install "
@@ -37,49 +26,77 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
                      "--aligners star --genomes genome-build-name --data")
         sys.exit(1)
 
-    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
-    if file_exists(final_out):
-        data = _update_data(final_out, out_dir, names, data)
+    max_hits = 10
+    srna = True if data["analysis"].lower().startswith("smallrna-seq") else False
+    srna_opts = ""
+    if srna:
+        max_hits = 1000
+        srna_opts = "--alignIntronMax 1"
+    config = data["config"]
+    star_dirs = _get_star_dirnames(align_dir, data, names)
+    if file_exists(star_dirs.final_out):
+        data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
         return data
+
     star_path = config_utils.get_program("STAR", config)
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = dd.get_num_cores(data)
     gtf_file = dd.get_gtf_file(data)
+    if ref_file.endswith("chrLength"):
+        ref_file = os.path.dirname(ref_file)
 
-    safe_makedir(align_dir)
-    cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
-           "--runThreadN {num_cores} --outFileNamePrefix {out_prefix} "
-           "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
-           "--outStd SAM {srna_opts} "
-           "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
-    cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file)
-    cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
-    cmd += _read_group_option(names)
-    fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
-    if fusion_mode:
-        cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                "--chimScoreSeparation 5 "
-                "--chimOutType WithinSAM ")
-    strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
-                                "unstranded").lower()
-    if strandedness == "unstranded" and not srna:
-        cmd += " --outSAMstrandField intronMotif "
-
-    if not srna:
-        cmd += " --quantMode TranscriptomeSAM "
-
-    with file_transaction(data, final_out) as tx_final_out:
+    with file_transaction(data, align_dir) as tx_align_dir:
+        tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
+        tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
+        safe_makedir(tx_align_dir)
+        safe_makedir(tx_out_dir)
+        cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
+            "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
+            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
+            "--outStd SAM {srna_opts} "
+            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
+        cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
+        cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
+        cmd += _read_group_option(names)
+        fusion_mode = utils.get_in(data, ("config", "algorithm", "fusion_mode"), False)
+        if fusion_mode:
+            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                    "--chimScoreSeparation 5 "
+                    "--chimOutType WithinSAM ")
+        strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
+                                    "unstranded").lower()
+        if strandedness == "unstranded" and not srna:
+            cmd += " --outSAMstrandField intronMotif "
+        if not srna:
+            cmd += " --quantMode TranscriptomeSAM "
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
         do.run(cmd.format(**locals()), run_message, None)
+        print("hello")
 
-    data = _update_data(final_out, out_dir, names, data)
+    data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
     return data
+
+
+StarOutDirs = namedtuple(
+    'StarOutDirs',
+    ['out_dir', 'out_file', 'out_prefix', 'final_out']
+)
+
+
+def _get_star_dirnames(align_dir, data, names):
+    ALIGNED_OUT_FILE = "Aligned.out.sam"
+    out_prefix = os.path.join(align_dir, dd.get_lane(data))
+    out_file = out_prefix + ALIGNED_OUT_FILE
+    out_dir = os.path.join(align_dir, "%s_star" % dd.get_lane(data))
+    final_out = os.path.join(out_dir, "{0}.bam".format(names["sample"]))
+    return StarOutDirs(out_dir, out_file, out_prefix, final_out)
+
 
 def _add_sj_index_commands(fq1, ref_file, gtf_file):
     """
-    newer versions of STAR can generate splice junction databases on the fly
+    newer versions of STAR can generate splice junction databases on thephfly
     this is preferable since we can tailor it to the read lengths
     """
     if _has_sj_index(ref_file):

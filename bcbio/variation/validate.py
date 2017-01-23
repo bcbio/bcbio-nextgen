@@ -13,6 +13,7 @@ import subprocess
 import time
 
 from pysam import VariantFile
+from six import iteritems
 import toolz as tz
 import yaml
 
@@ -23,14 +24,14 @@ from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import validateplot, vcfutils, multi, naming
+from bcbio.variation import annotation, bedutils, validateplot, vcfutils, multi, naming
 
 # ## Individual sample comparisons
 
 def _get_validate(data):
     """Retrieve items to validate, from single samples or from combined joint calls.
     """
-    if data.get("vrn_file") and "validate" in data["config"]["algorithm"]:
+    if data.get("vrn_file") and tz.get_in(["config", "algorithm", "validate"], data):
         return data
     elif "group_orig" in data:
         for sub in multi.get_orig_items(data):
@@ -84,11 +85,36 @@ def _get_caller_supplement(caller, data):
             caller = "%s/%s" % (caller, icaller)
     return caller
 
+def _normalize_cwl_inputs(items):
+    """Extract variation and validation data from CWL input list of batched samples.
+    """
+    with_validate = []
+    vrn_files = []
+    for data in items:
+        if tz.get_in(["config", "algorithm", "validate"], data):
+            with_validate.append(data)
+        if data.get("vrn_file"):
+            vrn_files.append(data["vrn_file"])
+    if len(with_validate) == 0:
+        return items[0]
+    else:
+        assert len(set([tz.get_in(["config", "algorithm", "validate"], data) for data in with_validate])) == 1
+        assert len(set(vrn_files)) == 1
+        data = with_validate[0]
+        data["vrn_file"] = vrn_files[0]
+        return data
+
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
+    if isinstance(data, (list, tuple)):
+        data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
     if toval_data:
+        caller = _get_caller(toval_data)
+        sample = dd.get_sample_name(toval_data)
+        base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
+
         if isinstance(toval_data["vrn_file"], (list, tuple)):
             raise NotImplementedError("Multiple input files for validation: %s" % toval_data["vrn_file"])
         else:
@@ -97,24 +123,50 @@ def compare_to_rm(data):
         rm_interval_file = _gunzip(normalize_input_path(toval_data["config"]["algorithm"].get("validate_regions"),
                                                         toval_data),
                                    toval_data)
-        caller = _get_caller(toval_data)
-        sample = dd.get_sample_name(toval_data)
-        base_dir = utils.safe_makedir(os.path.join(toval_data["dirs"]["work"], "validate", sample, caller))
-        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data["genome_build"], base_dir, data)
+        rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data, prefix="validateregions-",
+                                               bedprep_dir=utils.safe_makedir(os.path.join(base_dir, "bedprep")))
+        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data.get("genome_build"), base_dir, data)
         rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),
-                                                   data["genome_build"], base_dir, data)
+                                                   data.get("genome_build"), base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
         if not vcfutils.vcf_has_variants(vrn_file):
             # RTG can fail on totally empty files. Skip these since we have nothing.
             pass
+        # empty validation file, every call is a false positive
+        elif not vcfutils.vcf_has_variants(rm_file):
+            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data)
+            data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "rtg":
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
+            eval_files = _annotate_validations(eval_files, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
+        elif vmethod == "hap.py":
+            data["validate"] = _run_happy_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
         elif vmethod == "bcbio.variation":
             data["validate"] = _run_bcbio_variation(vrn_file, rm_file, rm_interval_file, base_dir,
                                                     sample, caller, toval_data)
     return [[data]]
+
+def _annotate_validations(eval_files, data):
+    """Add annotations about potential problem regions to validation VCFs.
+    """
+    for key in ["tp", "tp-calls", "fp", "fn"]:
+        if eval_files.get(key):
+            eval_files[key] = annotation.add_genome_context(eval_files[key], data)
+    return eval_files
+
+# ## Empty truth sets
+
+def _setup_call_fps(vrn_file, rm_bed, base_dir, data):
+    """Create set of false positives for inputs with empty truth sets.
+    """
+    out_file = os.path.join(base_dir, "fp.vcf.gz")
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = ("bcftools view -R {rm_bed} -f 'PASS,.' {vrn_file} -O z -o {tx_out_file}")
+            do.run(cmd.format(**locals()), "Prepare false positives with empty reference", data)
+    return {"fp": out_file}
 
 # ## Real Time Genomics vcfeval
 
@@ -126,7 +178,7 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
     """Parse output TP FP and FN files to generate metrics for plotting.
     """
     out_file = os.path.join(base_dir, "validate-summary.csv")
-    if not utils.file_uptodate(out_file, eval_files["tp"]):
+    if not utils.file_uptodate(out_file, eval_files.get("tp", eval_files["fp"])):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
@@ -135,12 +187,30 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
                 for metric in ["tp", "fp", "fn"]:
                     for vtype, bcftools_types in [("SNPs", "--types snps"),
                                                   ("Indels", "--exclude-types snps")]:
-                        in_file = eval_files[metric]
-                        cmd = ("bcftools view {bcftools_types} {in_file} | grep -v ^# | wc -l")
-                        count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                        in_file = eval_files.get(metric)
+                        if in_file and os.path.exists(in_file):
+                            cmd = ("bcftools view {bcftools_types} {in_file} | grep -v ^# | wc -l")
+                            count = int(subprocess.check_output(cmd.format(**locals()), shell=True))
+                        else:
+                            count = 0
                         writer.writerow(base + [vtype, metric, count])
     eval_files["summary"] = out_file
     return eval_files
+
+def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
+    """Prepare input VCF and BED files for validation.
+    """
+    if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
+        rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
+    if len(vcfutils.get_samples(vrn_file)) > 1:
+        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+        sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
+        vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
+    if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
+        vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
+
+    interval_bed = _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data)
+    return vrn_file, rm_file, interval_bed
 
 def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
     """Run evaluation of a caller against the truth set using rtg vcfeval.
@@ -149,26 +219,32 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
     if not utils.file_exists(os.path.join(out_dir, "done")):
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
-        if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
-            rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
-        if len(vcfutils.get_samples(vrn_file)) > 1:
-            base, ext = utils.splitext_plus(vrn_file)
-            sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
-            vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
-        if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
-            vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
+        vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
 
-        interval_bed = _get_merged_intervals(rm_interval_file, base_dir, data)
-        ref_dir, ref_filebase = os.path.split(dd.get_ref_file(data))
-        rtg_ref = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
-                                                "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
-        assert os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
-                                         "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
-        cmd = ["rtg", "vcfeval", "--threads", "6",
+        rtg_ref = tz.get_in(["reference", "rtg"], data)
+        assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
+                                                     "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
+        # handle CWL where we have a reference to a single file in the RTG directory
+        if os.path.isfile(rtg_ref):
+            rtg_ref = os.path.dirname(rtg_ref)
+
+        # get core and memory usage from standard configuration
+        threads = min(dd.get_num_cores(data), 6)
+        resources = config_utils.get_resources("rtg", data["config"])
+        memory = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms500m", "-Xmx1500m"]),
+                                          {"algorithm": {"memory_adjust": {"magnitude": threads,
+                                                                           "direction": "increase"}}})
+        jvm_stack = [x for x in memory if x.startswith("-Xms")]
+        jvm_mem = [x for x in memory if x.startswith("-Xmx")]
+        jvm_stack = jvm_stack[0] if len(jvm_stack) > 0 else "-Xms500m"
+        jvm_mem = jvm_mem[0].replace("-Xmx", "") if len(jvm_mem) > 0 else "3g"
+        cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
         cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
-        cmd = "export RTG_JAVA_OPTS='-Xms1g' && export RTG_MEM=5g && " + " ".join(cmd)
+        mem_export = "%s export RTG_JAVA_OPTS='%s' && export RTG_MEM=%s" % (utils.local_path_export(),
+                                                                            jvm_stack, jvm_mem)
+        cmd = mem_export + " && " + " ".join(cmd)
         do.run(cmd, "Validate calls using rtg vcfeval", data)
     out = {"fp": os.path.join(out_dir, "fp.vcf.gz"),
            "fn": os.path.join(out_dir, "fn.vcf.gz")}
@@ -191,6 +267,7 @@ def _pick_best_quality_score(vrn_file):
     (RTG=AVR/GATK=VQSLOD/MuTect=t_lod_fstar, otherwise GQ, otherwise QUAL, otherwise DP.)
 
     For MuTect, it's not clear how to get t_lod_fstar, the right quality score, into VCF cleanly.
+    MuTect2 has TLOD in the INFO field.
     """
     # pysam fails on checking reference contigs if input is empty
     if not vcfutils.vcf_has_variants(vrn_file):
@@ -207,20 +284,22 @@ def _pick_best_quality_score(vrn_file):
                 break
             if rec.info.get("VQSLOD") is not None:
                 scores["INFO=VQSLOD"] += 1
+            if rec.info.get("TLOD") is not None:
+                scores["INFO=TLOD"] += 1
             for skey in ["AVR", "GQ", "DP"]:
-                if rec.samples[0].get(skey) is not None:
+                if len(rec.samples) > 0 and rec.samples[0].get(skey) is not None:
                     scores[skey] += 1
             if rec.qual:
                 scores["QUAL"] += 1
-    for key in ["AVR", "INFO=VQSLOD", "GQ", "QUAL", "DP"]:
+    for key in ["AVR", "INFO=VQSLOD", "INFO=TLOD", "GQ", "QUAL", "DP"]:
         if scores[key] > 0:
             return key
     raise ValueError("Did not find quality score for validation from %s" % vrn_file)
 
-def _get_merged_intervals(rm_interval_file, base_dir, data):
+def _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data):
     """Retrieve intervals to run validation on, merging reference and callable BED files.
     """
-    a_intervals = get_analysis_intervals(data)
+    a_intervals = get_analysis_intervals(data, vrn_file, base_dir)
     if a_intervals:
         final_intervals = shared.remove_lcr_regions(a_intervals, [data])
         if rm_interval_file:
@@ -255,23 +334,72 @@ def _get_merged_intervals(rm_interval_file, base_dir, data):
         final_intervals = shared.remove_lcr_regions(rm_interval_file, [data])
     return final_intervals
 
-def get_analysis_intervals(data):
+def _callable_from_gvcf(data, vrn_file, out_dir):
+    """Retrieve callable regions based on ref call regions in gVCF.
+
+    Uses https://github.com/lijiayong/gvcf_regions
+    """
+    methods = {"freebayes": "freebayes", "platypus": "platypus",
+               "gatk-haplotype": "gatk"}
+    gvcf_type = methods.get(dd.get_variantcaller(data))
+    if gvcf_type:
+        out_file = os.path.join(out_dir, "%s-gcvf-coverage.bed" %
+                                utils.splitext_plus(os.path.basename(vrn_file))[0])
+        if not utils.file_uptodate(out_file, vrn_file):
+            with file_transaction(data, out_file) as tx_out_file:
+                cmd = ("gvcf_regions.py --gvcf_type {gvcf_type} {vrn_file} "
+                       "| bedtools merge > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Convert gVCF to BED file of callable regions")
+        return out_file
+
+def get_analysis_intervals(data, vrn_file, base_dir):
     """Retrieve analysis regions for the current variant calling pipeline.
     """
+    if vrn_file and "gvcf" in dd.get_tools_on(data):
+        callable_bed = _callable_from_gvcf(data, vrn_file, base_dir)
+        if callable_bed:
+            return callable_bed
+
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
+    elif dd.get_callable_regions(data):
+        return dd.get_callable_regions(data)
     elif data.get("align_bam"):
-        return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)
+        return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)[0]
     elif data.get("work_bam"):
-        return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)
+        return callable.sample_callable_bed(data["work_bam"], dd.get_ref_file(data), data)[0]
     elif data.get("work_bam_callable"):
-        return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)
-    else:
-        for key in ["callable_regions", "variant_regions"]:
-            intervals = data["config"]["algorithm"].get(key)
-            if intervals:
-                return intervals
+        return callable.sample_callable_bed(data["work_bam_callable"], dd.get_ref_file(data), data)[0]
+    elif tz.get_in(["config", "algorithm", "callable_regions"], data):
+        return tz.get_in(["config", "algorithm", "callable_regions"], data)
+    elif tz.get_in(["config", "algorithm", "variant_regions"], data):
+        return tz.get_in(["config", "algorithm", "variant_regions"], data)
 
+# ## hap.py
+
+def _run_happy_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
+    """Validation with hap.py: https://github.com/Illumina/hap.py
+
+    XXX Does not yet parse out metrics for plotting.
+    """
+    out_dir = utils.safe_makedir(os.path.join(base_dir, "happy"))
+    out_prefix = os.path.join(out_dir, "val")
+    if not utils.file_exists(out_prefix + ".summary.csv"):
+        vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
+        cmd = ["hap.py", "-V", "-f", interval_bed, "-r", dd.get_ref_file(data),
+               "-l", ",".join(_get_location_list(interval_bed)),
+               "-o", out_prefix, rm_file, vrn_file]
+        do.run(cmd, "Validate calls using hap.py", data)
+    return {"vcf": out_prefix + ".vcf.gz"}
+
+def _get_location_list(interval_bed):
+    """Retrieve list of locations to analyze from input BED file.
+    """
+    import pybedtools
+    regions = collections.OrderedDict()
+    for region in pybedtools.BedTool(interval_bed):
+        regions[str(region.chrom)] = None
+    return regions.keys()
 
 # ## bcbio.variation comparison -- deprecated approach
 
@@ -318,7 +446,7 @@ def _create_validate_config(vrn_file, rm_file, rm_interval_file, base_dir, data)
     """
     ref_call = {"file": str(rm_file), "name": "ref", "type": "grading-ref",
                 "fix-sample-header": True, "remove-refcalls": True}
-    a_intervals = get_analysis_intervals(data)
+    a_intervals = get_analysis_intervals(data, vrn_file, base_dir)
     if a_intervals:
         a_intervals = shared.remove_lcr_regions(a_intervals, [data])
     if rm_interval_file:
@@ -345,13 +473,15 @@ def _flatten_grading(stats):
     for vtype in vtypes:
         yield vtype, cat, stats[cat][cat].get(vtype, 0)
     for vtype in vtypes:
-        for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).iteritems()):
-            for vreason, val in sorted(vitems.iteritems()):
+        for vclass, vitems in sorted(iteritems(stats["discordant"].get(vtype, {}))):
+            for vreason, val in sorted(iteritems(vitems)):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 
 def _has_grading_info(samples):
-    for data in (x[0] for x in samples):
+    for data in samples:
+        if data.get("validate"):
+            return True
         for variant in data.get("variants", []):
             if variant.get("validate"):
                 return True
@@ -360,8 +490,10 @@ def _has_grading_info(samples):
 def _group_validate_samples(samples):
     extras = []
     validated = collections.defaultdict(list)
-    for data in (x[0] for x in samples):
+    for data in samples:
         is_v = False
+        if data.get("validate"):
+            is_v = True
         for variant in data.get("variants", []):
             if variant.get("validate"):
                 is_v = True
@@ -380,13 +512,17 @@ def _group_validate_samples(samples):
 
 def summarize_grading(samples):
     """Provide summaries of grading results across all samples.
+
+    Handles both traditional pipelines (validation part of variants) and CWL
+    pipelines (validation at top level)
     """
+    samples = [utils.to_single_data(d) for d in samples]
     if not _has_grading_info(samples):
-        return samples
-    validate_dir = utils.safe_makedir(os.path.join(samples[0][0]["dirs"]["work"], "validate"))
+        return [[d] for d in samples]
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))
     header = ["sample", "caller", "variant.type", "category", "value"]
     validated, out = _group_validate_samples(samples)
-    for vname, vitems in validated.iteritems():
+    for vname, vitems in iteritems(validated):
         out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
         with open(out_csv, "w") as out_handle:
             writer = csv.writer(out_handle)
@@ -394,33 +530,42 @@ def summarize_grading(samples):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                for variant in data.get("variants", []):
-                    if variant.get("validate"):
-                        variant["validate"]["grading_summary"] = out_csv
-                        if tz.get_in(["validate", "grading"], variant):
-                            for row in _get_validate_plotdata_yaml(variant, data):
+                validations = [variant.get("validate") for variant in data.get("variants", [])]
+                validations = [v for v in validations if v]
+                if len(validations) == 0 and "validate" in data:
+                    validations = [data.get("validate")]
+                for validate in validations:
+                    if validate:
+                        validate["grading_summary"] = out_csv
+                        if validate.get("grading"):
+                            for row in _get_validate_plotdata_yaml(validate["grading"], data):
                                 writer.writerow(row)
                                 plot_data.append(row)
-                        else:
-                            plot_files.append(variant["validate"]["summary"])
+                        elif validate.get("summary") and not validate.get("summary") == "None":
+                            if isinstance(validate["summary"], (list, tuple)):
+                                plot_files.extend(list(set(validate["summary"])))
+                            else:
+                                plot_files.append(validate["summary"])
         if plot_files:
             plots = validateplot.classifyplot_from_plotfiles(plot_files, out_csv)
         elif plot_data:
             plots = validateplot.create(plot_data, header, 0, data["config"],
                                         os.path.splitext(out_csv)[0])
         else:
-            plots = None
+            plots = []
         for data in vitems:
+            if data.get("validate"):
+                data["validate"]["grading_plots"] = plots
             for variant in data.get("variants", []):
                 if variant.get("validate"):
                     variant["validate"]["grading_plots"] = plots
             out.append([data])
     return out
 
-def _get_validate_plotdata_yaml(variant, data):
+def _get_validate_plotdata_yaml(grading_file, data):
     """Retrieve validation plot data from grading YAML file (old style).
     """
-    with open(variant["validate"]["grading"]) as in_handle:
+    with open(grading_file) as in_handle:
         grade_stats = yaml.load(in_handle)
     for sample_stats in grade_stats:
         sample = sample_stats["sample"]
@@ -476,9 +621,9 @@ def _read_call_freqs(in_file, sample_name):
             if rec.filter.keys() == ["PASS"]:
                 for name, sample in rec.samples.items():
                     if name == sample_name:
-                        alt, depth = bubbletree.sample_alt_and_depth(sample)
-                        if depth > 0:
-                            out[_get_key(rec)] = float(alt) / float(depth)
+                        alt, depth, freq = bubbletree.sample_alt_and_depth(rec, sample)
+                        if freq is not None:
+                            out[_get_key(rec)] = freq
     return out
 
 def _read_truth_freqs(in_file):

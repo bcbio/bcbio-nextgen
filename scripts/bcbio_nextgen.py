@@ -81,6 +81,10 @@ def parse_cl_args(in_args):
         parser.add_argument("-s", "--scheduler",
                             choices=["lsf", "sge", "torque", "slurm", "pbspro"],
                             help="Scheduler to use for ipython parallel")
+        parser.add_argument("--local_controller",
+                            default=False,
+                            action="store_true",
+                            help="run controller locally")
         parser.add_argument("-q", "--queue",
                             help=("Scheduler queue to run jobs on, for "
                                   "ipython parallel"))
@@ -109,8 +113,10 @@ def parse_cl_args(in_args):
                             action="store_true")
         # Hidden arguments passed downstream
         parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
+        parser.add_argument("--force-single", help="Treat all files as single reads",
+                            action="store_true", default=False)
     args = parser.parse_args(in_args)
-    if hasattr(args, "workdir"):
+    if hasattr(args, "workdir") and args.workdir:
         args.workdir = utils.safe_makedir(os.path.abspath(args.workdir))
     if hasattr(args, "global_config"):
         error_msg = _sanity_check_args(args)
@@ -161,6 +167,8 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     if kwargs.get("workflow", "") == "template":
         if args.only_metadata:
             inputs.append("--only-metadata")
+        if args.force_single:
+            inputs.append("--force-single")
         kwargs["inputs"] = inputs
         return kwargs
     elif len(inputs) == 1:
@@ -224,4 +232,3 @@ if __name__ == "__main__":
             os.chdir(workdir)
             kwargs.update(new_kwargs)
         main(**kwargs)
-

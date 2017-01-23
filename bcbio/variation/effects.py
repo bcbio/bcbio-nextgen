@@ -4,7 +4,6 @@ Supported:
   snpEff: http://sourceforge.net/projects/snpeff/
   VEP: http://www.ensembl.org/info/docs/tools/vep/index.html
 """
-from distutils.version import LooseVersion
 import os
 import glob
 import shutil
@@ -17,6 +16,7 @@ import yaml
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 from bcbio.variation import vcfutils
 
@@ -28,9 +28,12 @@ def add_to_vcf(in_file, data, effect_todo=None):
     if effect_todo:
         stats = None
         if effect_todo == "snpeff":
-            ann_vrn_file, stats_file = snpeff_effects(in_file, data)
-            if utils.file_exists(stats_file):
-                stats = {"effects-stats": stats_file}
+            ann_vrn_file, stats_files = snpeff_effects(in_file, data)
+            if stats_files:
+                stats = {}
+                for key, val in zip(["effects-stats", "effects-stats-csv"], stats_files):
+                    if utils.file_exists(val):
+                        stats[key] = val
         elif effect_todo == "vep":
             ann_vrn_file = run_vep(in_file, data)
         else:
@@ -128,15 +131,23 @@ def run_vep(in_file, data):
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
+                config_args, config_fields, prediction_fields = [], [], []
                 if is_human:
-                    dbnsfp_args, dbnsfp_fields = _get_dbnsfp(data)
-                    loftee_args, loftee_fields = _get_loftee(data)
-                    prediction_args = ["--sift", "b", "--polyphen", "b"]
-                    prediction_fields = ["PolyPhen", "SIFT"]
-                else:
-                    dbnsfp_args, dbnsfp_fields = [], []
-                    loftee_args, loftee_fields = [], []
-                    prediction_args, prediction_fields = [], []
+                    plugin_fns = {"dbnsfp": _get_dbnsfp, "loftee": _get_loftee, "dbscsnv": _get_dbscsnv,
+                                  "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
+                    plugins = tz.get_in(("config", "resources", "vep", "plugins"), data, ["dbnsfp", "loftee"])
+                    for plugin in plugins:
+                        plugin_args, plugin_fields = plugin_fns[plugin](data)
+                        config_args += plugin_args
+                        config_fields += plugin_fields
+                    config_args += ["--sift", "b", "--polyphen", "b"]
+                    prediction_fields += ["PolyPhen", "SIFT"]
+                    # Use HGVS by default, requires indexing the reference genome
+                    config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
+                    config_fields += ["HGVSc", "HGVSp"]
+                if (dd.get_effects_transcripts(data).startswith("canonical")
+                      or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
+                    config_args += ["--pick"]
                 std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
                               "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
@@ -145,27 +156,9 @@ def run_vep(in_file, data):
                       ["--species", ensembl_name,
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
-                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical", "--ccds",
-                       "--fields", ",".join(std_fields + dbnsfp_fields + loftee_fields)] + \
-                       prediction_args + dbnsfp_args + loftee_args
-
-                if tz.get_in(("config", "algorithm", "clinical_reporting"), data, False):
-
-                    # In case of clinical reporting, we need one and only one
-                    # variant per gene
-                    # From the VEP docs:
-                    # "Pick once line of consequence data per variant,
-                    # including transcript-specific columns. Consequences are
-                    # chosen by the canonical, biotype status and length of the
-                    # transcript, along with the ranking of the consequence
-                    # type according to this table. This is the best method to
-                    # use if you are interested only in one consequence per
-                    #  variant.
-
-                    cmd += ["--pick"]
-
-                    # TODO investigate hgvs reporting but requires indexing the reference file
-                    # cmd += ["--hgvs", "--shift-hgvs", "--fasta", dd.get_ref_file(data)]
+                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
+                       "--gene_phenotype", "--ccds",
+                       "--fields", ",".join(std_fields + config_fields)] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
@@ -182,9 +175,11 @@ def _get_dbnsfp(data):
     https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
+    annotations = tz.get_in(("config", "resources", "vep", "dbnsfp_fields"), data,
+                            ['RadialSVM_score', 'RadialSVM_pred', 'LR_score', 'LR_pred', 'MutationTaster_score',
+                             'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred', 'PROVEAN_score', 'PROVEAN_pred',
+                             'MetaSVM_score', 'MetaSVM_pred', 'CADD_raw', 'CADD_phred', 'Reliability_index'])
     if dbnsfp_file and os.path.exists(dbnsfp_file):
-        annotations = ["RadialSVM_score", "RadialSVM_pred", "LR_score", "LR_pred",
-                       "CADD_raw", "CADD_phred", "Reliability_index"]
         return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
     else:
         return [], []
@@ -200,6 +195,52 @@ def _get_loftee(data):
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args, annotations
 
+def _get_dbscsnv(data):
+    """
+    dbscSNV includes all potential human SNVs within splicing consensus regions
+    (-3 to +8 at the 5' splice site and -12 to +2 at the 3' splice site), i.e. scSNVs,
+    related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
+    https://github.com/Ensembl/VEP_plugins/blob/master/dbscSNV.pm
+    """
+    dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
+    annotations = ["ada_score","rf_score"]
+    if dbscsnv_file and os.path.exists(dbscsnv_file):
+        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)], annotations
+    else:
+        return [], []
+
+def _get_maxentscan(data):
+    """
+    The plugin executes the logic from one of the scripts depending on which
+    splice region the variant overlaps:
+        score5.pl : last 3 bases of exon    --> first 6 bases of intron
+        score3.pl : last 20 bases of intron --> first 3 bases of exon
+    The plugin reports the reference, alternate and difference (REF - ALT) maximumentropy scores.
+    https://github.com/Ensembl/VEP_plugins/blob/master/MaxEntScan.pm
+    """
+
+    maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan_score3.pl", data["config"])))
+    annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
+    if maxentscan_dir and os.path.exists(maxentscan_dir):
+        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
+    else:
+        return [], []
+
+def _get_genesplicer(data):
+    """
+    This is a plugin for the Ensembl Variant Effect Predictor (VEP) that
+    runs GeneSplicer (https://ccb.jhu.edu/software/genesplicer/) to get splice site predictions.
+    https://github.com/Ensembl/VEP_plugins/blob/master/GeneSplicer.pm
+    """
+
+    genesplicer_dir = os.path.dirname(os.path.realpath(config_utils.get_program("genesplicer", data["config"])))
+    genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
+    annotations = ["genesplicer"]
+    if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], annotations
+    else:
+        return [], []
+
 # ## snpEff variant effects
 
 def snpeff_version(args=None, data=None):
@@ -208,7 +249,6 @@ def snpeff_version(args=None, data=None):
         raw_version = ""
     snpeff_version = "".join([x for x in str(raw_version)
                               if x in set(string.digits + ".")])
-    assert snpeff_version, "Did not find snpEff version information"
     return snpeff_version
 
 def snpeff_effects(vcf_in, data):
@@ -223,12 +263,7 @@ def _snpeff_args_from_config(data):
     """Retrieve snpEff arguments supplied through input configuration.
     """
     config = data["config"]
-    args = []
-    # Use older EFF formatting instead of new combined ANN formatting until
-    # GEMINI supports ANN. Only used for small variants, not SVs.
-    svcaller = tz.get_in(["config", "algorithm", "svcaller_active"], data)
-    if not svcaller and LooseVersion(snpeff_version(data=data)) >= LooseVersion("4.1"):
-        args += ["-formatEff", "-classic"]
+    args = ["-hgvs"]
     # General supplied arguments
     resources = config_utils.get_resources("snpeff", config)
     if resources.get("options"):
@@ -236,9 +271,16 @@ def _snpeff_args_from_config(data):
     # cancer specific calling arguments
     if vcfutils.get_paired_phenotype(data):
         args += ["-cancer"]
-    # Provide options tuned to reporting variants in clinical environments
-    if config["algorithm"].get("clinical_reporting"):
-        args += ["-canon", "-hgvs"]
+
+    effects_transcripts = dd.get_effects_transcripts(data)
+    if effects_transcripts in set(["canonical_cancer"]):
+        _, snpeff_base_dir = get_db(data)
+        canon_list_file = os.path.join(snpeff_base_dir, "transcripts", "%s.txt" % effects_transcripts)
+        if not utils.file_exists(canon_list_file):
+            raise ValueError("Cannot find expected file for effects_transcripts: %s" % canon_list_file)
+        args += ["-canonList", canon_list_file]
+    elif effects_transcripts == "canonical" or tz.get_in(("config", "algorithm", "clinical_reporting"), data):
+        args += ["-canon"]
     return args
 
 def get_db(data):
@@ -268,14 +310,21 @@ def get_snpeff_files(data):
     else:
         return {}
 
-def get_cmd(cmd_name, datadir, config, out_file):
+def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     """Retrieve snpEff base command line.
     """
-    resources = config_utils.get_resources("snpeff", config)
-    memory = " ".join(resources.get("jvm_opts", ["-Xms750m", "-Xmx5g"]))
-    snpeff = config_utils.get_program("snpEff", config)
+    resources = config_utils.get_resources("snpeff", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
+    # scale by cores, defaulting to 2x base usage to ensure we have enough memory
+    # for single core runs to use with human genomes
+    jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                 {"direction": "increase",
+                                                                  "magnitude": max(2, dd.get_cores(data))}}})
+    memory = " ".join(jvm_opts)
+    snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    cmd = "{snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
+    export = utils.local_path_export()
+    cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 
 def _run_snpeff(snp_in, out_format, data):
@@ -290,6 +339,7 @@ def _run_snpeff(snp_in, out_format, data):
     ext = utils.splitext_plus(snp_in)[1] if out_format == "vcf" else ".tsv"
     out_file = "%s-effects%s" % (utils.splitext_plus(snp_in)[0], ext)
     stats_file = "%s-stats.html" % utils.splitext_plus(out_file)[0]
+    csv_file = "%s-stats.csv" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(out_file):
         config_args = " ".join(_snpeff_args_from_config(data))
         if ext.endswith(".gz"):
@@ -297,13 +347,13 @@ def _run_snpeff(snp_in, out_format, data):
         else:
             bgzip_cmd = ""
         with file_transaction(data, out_file) as tx_out_file:
-            snpeff_cmd = get_cmd("eff", datadir, data["config"], tx_out_file)
+            snpeff_cmd = _get_snpeff_cmd("eff", datadir, data, tx_out_file)
             cmd = ("{snpeff_cmd} {config_args} -noLog -i vcf -o {out_format} "
-                   "-s {stats_file} {snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
+                   "-csvStats {csv_file} -s {stats_file} {snpeff_db} {snp_in} {bgzip_cmd} > {tx_out_file}")
             do.run(cmd.format(**locals()), "snpEff effects", data)
     if ext.endswith(".gz"):
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file, stats_file
+    return out_file, [stats_file, csv_file]
 
 # ## back-compatibility
 

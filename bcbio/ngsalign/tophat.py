@@ -5,7 +5,6 @@ http://tophat.cbcb.umd.edu
 import os
 import shutil
 import sys
-from contextlib import closing
 import glob
 import subprocess
 
@@ -21,15 +20,10 @@ from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.distributed.transaction import file_transaction
-from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio import bam
 from bcbio import broad
 import bcbio.pipeline.datadict as dd
-
-
-_out_fnames = ["accepted_hits.sam", "junctions.bed",
-               "insertions.bed", "deletions.bed"]
 
 
 def _set_quality_flag(options, data):
@@ -122,7 +116,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     if file_exists(final_out):
         return final_out
 
-    out_file = os.path.join(out_dir, "accepted_hits.sam")
+    out_file = os.path.join(out_dir, "accepted_hits.bam")
     unmapped = os.path.join(out_dir, "unmapped.bam")
     files = [ref_file, fastq_file]
     if not file_exists(out_file):
@@ -136,13 +130,12 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
                 options["mate-std-dev"] = d_stdev
                 files.append(pair_file)
             options["output-dir"] = tx_out_dir
-            options["no-convert-bam"] = True
             options["no-coverage-search"] = True
             options["no-mixed"] = True
             tophat_runner = sh.Command(config_utils.get_program("tophat",
                                                                 config))
             ready_options = {}
-            for k, v in options.iteritems():
+            for k, v in options.items():
                 ready_options[k.replace("-", "_")] = v
             # tophat requires options before arguments,
             # otherwise it silently ignores them
@@ -150,25 +143,25 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             cmd = "%s %s" % (sys.executable, str(tophat_ready.bake(*files)))
             do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
     if pair_file and _has_alignments(out_file):
-        fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.sam" % out_base),
+        fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
                            ref_file, config)
     else:
         fixed = out_file
-    fixed = merge_unmapped(fixed, unmapped, config)
-    fixed = _fix_unmapped(fixed, config, names)
+    fixed_unmapped = _fix_unmapped(fixed, unmapped, data)
+    fixed = merge_unmapped(fixed, fixed_unmapped, config)
+    fixed = _add_rg(fixed, config, names)
     fixed = bam.sort(fixed, config)
     picard = broad.runner_from_path("picard", config)
     # set the contig order to match the reference file so GATK works
-    fixed = picard.run_fn("picard_reorder", out_file, data["sam_ref"],
-                          os.path.splitext(out_file)[0] + ".picard.bam")
+    fixed = picard.run_fn("picard_reorder", fixed, data["sam_ref"],
+                          os.path.splitext(fixed)[0] + ".picard.bam")
     fixed = fix_insert_size(fixed, config)
     if not file_exists(final_out):
         symlink_plus(fixed, final_out)
     return final_out
 
-def merge_unmapped(mapped_sam, unmapped_bam, config):
-    merged_bam = os.path.join(os.path.dirname(mapped_sam), "merged.bam")
-    bam_file = bam.sam_to_bam(mapped_sam, config)
+def merge_unmapped(bam_file, unmapped_bam, config):
+    merged_bam = os.path.join(os.path.dirname(bam_file), "merged.bam")
     if not file_exists(merged_bam):
         merged_bam = bam.merge([bam_file, unmapped_bam], merged_bam, config)
     return merged_bam
@@ -194,51 +187,43 @@ def _fix_mates(orig_file, out_file, ref_file, config):
     if not file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
             samtools = config_utils.get_program("samtools", config)
-            cmd = "{samtools} view -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
+            cmd = "{samtools} view -bS -h -t {ref_file}.fai -F 8 {orig_file} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Fix mate pairs in TopHat output", {})
     return out_file
 
-def _fix_unmapped(unmapped_file, config, names):
-    """
-    the unmapped.bam file from Tophat 2.0.9 is missing some things
-    1) the RG tag is missing from the reads
-    2) MAPQ is set to 255 instead of 0
-    3) for reads where both are unmapped, the mate_is_unmapped flag is not set correctly
-    """
-    out_file = os.path.splitext(unmapped_file)[0] + "_fixed.bam"
-    if file_exists(out_file):
-        return out_file
+def _add_rg(unmapped_file, config, names):
+    """Add the missing RG header."""
     picard = broad.runner_from_path("picard", config)
     rg_fixed = picard.run_fn("picard_fix_rgs", unmapped_file, names)
-    fixed = bam.sort(rg_fixed, config, "queryname")
-    with closing(pysam.Samfile(fixed)) as work_sam:
-        with file_transaction(config, out_file) as tx_out_file:
-            tx_out = pysam.Samfile(tx_out_file, "wb", template=work_sam)
-            for read1 in work_sam:
-                if not read1.is_paired:
-                    if read1.is_unmapped:
-                        read1.mapq = 0
-                    tx_out.write(read1)
-                    continue
-                read2 = work_sam.next()
-                if read1.qname != read2.qname:
-                    continue
-                if read1.is_unmapped and not read2.is_unmapped:
-                    read1.mapq = 0
-                    read1.tid = read2.tid
-                if not read1.is_unmapped and read2.is_unmapped:
-                    read2.mapq = 0
-                    read2.tid = read1.tid
-                if read1.is_unmapped and read2.is_unmapped:
-                    read1.mapq = 0
-                    read2.mapq = 0
-                    read1.mate_is_unmapped = True
-                    read2.mate_is_unmapped = True
-                tx_out.write(read1)
-                tx_out.write(read2)
-            tx_out.close()
+    return rg_fixed
+
+
+def _fix_unmapped(mapped_file, unmapped_file, data):
+    """
+    The unmapped.bam file up until at least Tophat 2.1.1 is broken in various
+    ways, see https://github.com/cbrueffer/tophat-recondition for details.
+    Run TopHat-Recondition to fix these issues.
+    """
+    out_file = os.path.splitext(unmapped_file)[0] + "_fixup.bam"
+    if file_exists(out_file):
+        return out_file
+
+    assert os.path.dirname(mapped_file) == os.path.dirname(unmapped_file)
+
+    cmd = config_utils.get_program("tophat-recondition", data)
+    cmd += " -q"
+    tophat_out_dir = os.path.dirname(mapped_file)
+    tophat_logfile = os.path.join(tophat_out_dir, 'tophat-recondition.log')
+
+    with file_transaction(data, tophat_logfile) as tx_logfile:
+        cmd += ' --logfile %s' % tx_logfile
+        cmd += " -m %s" % mapped_file
+        cmd += " -u %s" % unmapped_file
+        cmd += " %s" % tophat_out_dir
+        do.run(cmd, "Fixing unmapped reads with Tophat-Recondition.", None)
 
     return out_file
+
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data,):
     out_files = tophat_align(fastq_file, pair_file, ref_file, names["lane"],
@@ -274,7 +259,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, {"lane": out_base},
                                   work_dir, data, extra_args)
     dists = []
-    with closing(pysam.Samfile(out_sam)) as work_sam:
+    with pysam.Samfile(out_sam) as work_sam:
         for read in work_sam:
             if read.is_proper_pair and read.is_read1:
                 dists.append(abs(read.isize) - 2 * read.rlen)
@@ -291,7 +276,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
         return None, None
 
 def _calculate_average_read_length(sam_file):
-    with closing(pysam.Samfile(sam_file)) as work_sam:
+    with pysam.Samfile(sam_file) as work_sam:
         count = 0
         read_lengths = []
         for read in work_sam:
@@ -335,8 +320,11 @@ def _get_bowtie_with_reference(config, ref_file, version):
 
 
 def _tophat_major_version(config):
-    cmd =  [sys.executable, config_utils.get_program("tophat", config, default="tophat"),
-            "--version"]
+    cmd =  [
+        sys.executable,
+        config_utils.get_program("tophat", config, default="tophat"),
+        "--version"
+    ]
 
     # tophat --version returns strings like this: Tophat v2.0.4
     version_string = str(subprocess.check_output(cmd)).strip().split()[1]

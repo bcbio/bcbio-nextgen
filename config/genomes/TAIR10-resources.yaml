@@ -1,4 +1,9 @@
-version: 2
+version: 6
 
 aliases:
-  snpeff: athalianaTair10
+  snpeff: athaliana130
+
+srnaseq:
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa

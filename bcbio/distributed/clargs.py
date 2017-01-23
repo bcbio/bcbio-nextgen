@@ -4,14 +4,17 @@
 def to_parallel(args, module="bcbio.distributed"):
     """Convert input arguments into a parallel dictionary for passing to processing.
     """
-    ptype, cores = _get_cores_and_type(args.numcores, getattr(args, "paralleltype", None),
+    ptype, cores = _get_cores_and_type(args.numcores,
+                                       getattr(args, "paralleltype", None),
                                        args.scheduler)
+    local_controller = getattr(args, "local_controller", False)
     parallel = {"type": ptype, "cores": cores,
                 "scheduler": args.scheduler, "queue": args.queue,
                 "tag": args.tag, "module": module,
                 "resources": args.resources, "timeout": args.timeout,
                 "retries": args.retries,
-                "run_local": args.queue == "localrun"}
+                "run_local": args.queue == "localrun",
+                "local_controller": local_controller}
     return parallel
 
 def _get_cores_and_type(numcores, paralleltype, scheduler):

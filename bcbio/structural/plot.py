@@ -5,8 +5,6 @@ variants.
 """
 import os
 
-import pybedtools
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -75,7 +73,7 @@ def _add_regional_coverage_plot(items, plot):
         out.append(data)
     return out
 
-def _prioritize_plot_regions(region_bt, data):
+def _prioritize_plot_regions(region_bt, data, out_dir=None):
     """Avoid plotting large numbers of regions due to speed issues. Prioritize most interesting.
 
     XXX For now, just removes larger regions and avoid plotting thousands of regions.
@@ -84,6 +82,8 @@ def _prioritize_plot_regions(region_bt, data):
     max_plots = 1000
     max_size = 100 * 1000 # 100kb
     out_file = "%s-priority%s" % utils.splitext_plus(region_bt.fn)
+    if out_dir:
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
     num_plots = 0
     if not utils.file_uptodate(out_file, region_bt.fn):
         with file_transaction(data, out_file) as tx_out_file:
@@ -110,7 +110,7 @@ def by_regions(items):
         breakpoints = breakpoints_by_caller(bed_files)
         if merged:
             priority_merged = _prioritize_plot_regions(merged, items[0])
-            out_file = plot_multiple_regions_coverage(items, out_file,
+            out_file = plot_multiple_regions_coverage(items, out_file, items[0],
                                                       priority_merged, breakpoints)
             items = _add_regional_coverage_plot(items, out_file)
     return items

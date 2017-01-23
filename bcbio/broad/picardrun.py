@@ -2,7 +2,6 @@
 """
 import os
 import collections
-from contextlib import closing
 
 import pysam
 
@@ -294,7 +293,7 @@ def bed2interval(align_file, bed, out_file=None):
     if out_file is None:
         out_file = base + ".interval"
 
-    with closing(pysam.Samfile(align_file, "r" if ext.endswith(".sam") else "rb")) as in_bam:
+    with pysam.Samfile(align_file, "r" if ext.endswith(".sam") else "rb") as in_bam:
         header = in_bam.text
 
     def reorder_line(line):

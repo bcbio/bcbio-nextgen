@@ -1,5 +1,19 @@
-version: 1
+version: 6
 
 aliases:
-  ensembl: rattus_norvegicus_vep_83_Rnor_6.0
-  # not yet available in snpEff/Ensembl 79
+  ensembl: rattus_norvegicus_vep_86_Rnor_6.0
+  snpeff: Rnor_6.0.86
+rnaseq:
+  transcripts: ../rnaseq/ref-transcripts.gtf
+  transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
+  transcriptome_index:
+    tophat: ../rnaseq/tophat/rn6_transcriptome.ver
+  dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
+  refflat: ../rnaseq/ref-transcripts.refFlat
+  rRNA_fa: ../rnaseq/rRNA.fa
+srnaseq:
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+ 

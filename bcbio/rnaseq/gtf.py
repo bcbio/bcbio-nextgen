@@ -63,11 +63,13 @@ def gtf_to_bed(gtf, alt_out_dir=None):
             raise IOError("Cannot write transcript BED output file %s" % out_file)
         else:
             out_file = os.path.join(alt_out_dir, os.path.basename(out_file))
+    if file_exists(out_file):
+        return out_file
     with open(out_file, "w") as out_handle:
         db = get_gtf_db(gtf)
         for feature in db.features_of_type('transcript', order_by=("seqid", "start", "end")):
             chrom = feature.chrom
-            start = feature.start
+            start = feature.start - 1
             end = feature.end
             attributes = feature.attributes.keys()
             strand = feature.strand
@@ -269,7 +271,7 @@ def _biotype_lookup_fn(gtf):
     else:
         return None
 
-def tx2genefile(gtf, out_file=None):
+def tx2genefile(gtf, out_file=None, data=None):
     """
     write out a file of transcript->gene mappings.
     use the installed tx2gene.csv if it exists, else write a new one out
@@ -279,9 +281,9 @@ def tx2genefile(gtf, out_file=None):
         return installed_tx2gene
     if file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
-            for k, v in transcript_to_gene(gtf).iteritems():
+            for k, v in transcript_to_gene(gtf).items():
                 out_handle.write(",".join([k, v]) + "\n")
     return out_file
 
@@ -301,6 +303,8 @@ def is_qualimap_compatible(gtf):
     Qualimap needs a very specific GTF format or it fails, so skip it if
     the GTF is not in that format
     """
+    if not gtf:
+        return False
     db = get_gtf_db(gtf)
     def qualimap_compatible(feature):
         gene_id = feature.attributes.get('gene_id', [None])[0]
@@ -312,3 +316,39 @@ def is_qualimap_compatible(gtf):
         if qualimap_compatible(feature):
             return True
     return False
+
+def canonical_transcripts(gtf, out_file):
+    """
+    given a GTF file, produce a new GTF file with only the longest transcript
+    for each gene
+    function lifted from:
+    https://pythonhosted.org/gffutils/_modules/gffutils/helpers.html
+    """
+    if file_exists(out_file):
+        return out_file
+    db = get_gtf_db(gtf)
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for gene in db.features_of_type('gene'):
+                exon_list = []
+                for ti, transcript in enumerate(db.children(gene, level=1)):
+                    cds_len = 0
+                    total_len = 0
+                    exons = list(db.children(transcript, level=1))
+                    for exon in exons:
+                        exon_length = len(exon)
+                        if exon.featuretype == 'CDS':
+                            cds_len += exon_length
+                        total_len += exon_length
+
+                    exon_list.append((cds_len, total_len, transcript, exons))
+
+                # If we have CDS, then use the longest coding transcript
+                if max(i[0] for i in exon_list) > 0:
+                    best = sorted(exon_list)[0]
+                # Otherwise, just choose the longest
+                else:
+                    best = sorted(exon_list, key=lambda x: x[1])[0]
+                for exon in db.children(best[2], level=1):
+                    out_handle.write(str(exon) + "\n")
+    return out_file

@@ -1,20 +1,14 @@
 """Prepare bcbio workflows from input YAML files.
-
-This organizes the metadata and other information about workflows,
-providing the necessary information to translate into CWL. The goal is to
-eventually replace pipeline/main.py workflows with generalized
-versions of this code.
 """
 import copy
-import collections
 import pprint
 
-def variant(variables):
-    """Variant calling workflow implementation in CWL.
+import toolz as tz
 
-    The logic here is general, aside from `steps` and could be re-used for
-    non-variable pipelines. This is an attempt to get the approach right before
-    supporting everything with CWL.
+ALWAYS_AVAILABLE = ["description"]
+
+def generate(variables, steps, final_outputs):
+    """Generate all of the components of a CWL workflow from input steps.
 
     file_vs and std_vs are the list of world variables, split into those that
     reference files (and need declaration at each step) and those that don't
@@ -23,71 +17,6 @@ def variant(variables):
     creation of the CWL files.
     """
     file_vs, std_vs = _split_variables([_flatten_nested_input(v) for v in variables])
-    s = collections.namedtuple("s", "name parallel inputs noinputs outputs")
-    w = collections.namedtuple("w", "name parallel workflow internal")
-    align = [s("prep_align_inputs", "single-split",
-               [["files"]], [],
-               [_cwl_file_world(["files"], ".gbi"),
-                _cwl_nonfile_world(["config", "algorithm", "quality_format"]),
-                _cwl_nonfile_world(["align_split"], allow_missing=True)]),
-             s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "indexes"], ["reference", "fasta", "base"],
-                ["reference", "bwa", "indexes"]], [],
-               [_cwl_file_world(["work_bam"]),
-                _cwl_file_world(["align_bam"]),
-                _cwl_file_world(["hla", "fastq"], allow_missing=True),
-                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai")]),
-             s("merge_split_alignments", "single-merge",
-               [["work_bam"], ["align_bam"], ["work_bam-plus", "disc"], ["work_bam-plus", "sr"],
-                ["hla", "fastq"]],
-               [["align_split"], ["config", "algorithm", "quality_format"]],
-               [_cwl_file_world(["align_bam"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "disc"], ".bai"),
-                _cwl_file_world(["work_bam-plus", "sr"], ".bai"),
-                _cwl_file_world(["hla", "fastq"], allow_missing=True)])]
-    steps = [w("alignment", "multi-parallel", align,
-               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("prep_samples", "multi-parallel",
-               [["config", "algorithm", "variant_regions"]], [],
-               [_cwl_file_world(["config", "algorithm", "variant_regions"], allow_missing=True),
-                _cwl_file_world(["config", "algorithm", "variant_regions_merged"], allow_missing=True)]),
-             s("postprocess_alignment", "multi-parallel",
-               [["align_bam"], ["config", "algorithm", "variant_regions_merged"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
-               [_cwl_nonfile_world(["config", "algorithm", "coverage_interval"]),
-                _cwl_file_world(["regions", "callable"]),
-                _cwl_file_world(["regions", "sample_callable"]),
-                _cwl_file_world(["regions", "nblock"]),
-                _cwl_file_world(["regions", "highdepth"], allow_missing=True),
-                _cwl_file_world(["regions", "offtarget_stats"])]),
-             s("call_hla", "multi-parallel",
-               [["hla", "fastq"]], [],
-               [_cwl_nonfile_world(["hla", "hlacaller"], allow_missing=True),
-                _cwl_file_world(["hla", "call_file"], allow_missing=True)]),
-             s("combine_sample_regions", "multi-combined",
-               [["regions", "callable"], ["regions", "nblock"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"]], [],
-               [_cwl_file_world(["config", "algorithm", "callable_regions"]),
-                _cwl_file_world(["config", "algorithm", "non_callable_regions"]),
-                _cwl_nonfile_world(["config", "algorithm", "callable_count"], "int")]),
-             s("pipeline_summary", "multi-parallel",
-               [["align_bam"],
-                ["reference", "fasta", "indexes"], ["reference", "fasta", "base"]], [],
-               [_cwl_file_world(["summary", "qc"])]),
-             s("coverage_report", "multi-parallel",
-               [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
-                ["config", "algorithm", "coverage"],
-                ["config", "algorithm", "variant_regions"], ["regions", "offtarget_stats"]], [],
-               [_cwl_file_world(["coverage", "all"], allow_missing=True),
-                _cwl_file_world(["coverage", "problems"], allow_missing=True)]),
-             s("qc_report_summary", "multi-combined",
-               [["align_bam"],
-                ["reference", "fasta", "base"], ["reference", "fasta", "indexes"],
-                ["summary", "qc"], ["coverage", "all"], ["coverage", "problems"]], [],
-               [_cwl_file_world(["coverage", "report"], allow_missing=True)])
-             ]
     parallel_ids = []
     for step in steps:
         if hasattr(step, "workflow"):
@@ -95,10 +24,11 @@ def variant(variables):
             wf_outputs = []
             wf_steps = []
             for i, wf_step in enumerate(step.workflow):
-                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids)
+                inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs, outputs))
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, [_clean_record(x) for x in inputs],
+                                 outputs, wf_step.programs, wf_step.disk))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
                                              nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
@@ -106,7 +36,7 @@ def variant(variables):
             for wf_step in wf_steps:
                 yield wf_step
             wf_outputs = [v for v in wf_outputs
-                          if v["id"] not in set(["#%s" % _get_string_vid(x) for x in step.internal])]
+                          if v["id"] not in set(["%s" % _get_string_vid(x) for x in step.internal])]
             yield "upload", wf_outputs
             wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
             yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
@@ -116,11 +46,8 @@ def variant(variables):
             inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
             parallel_ids = _find_split_vs(outputs, step.parallel)
-            yield "step", step.name, step.parallel, inputs, outputs
-    # Final outputs
-    outputs = [["align_bam"], ["summary", "qc"], ["config", "algorithm", "callable_regions"]]
-    outputs = [["align_bam"], ["summary", "qc"]]
-    yield "upload", [_get_upload_output(x, file_vs) for x in outputs]
+            yield "step", step.name, step.parallel, inputs, outputs, step.programs, step.disk
+    yield "upload", [_get_upload_output(x, file_vs) for x in final_outputs]
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
@@ -130,7 +57,7 @@ def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """
     internal_generated_ids = []
     for vignore in to_ignore:
-        vignore_id = "#%s" % _get_string_vid(vignore)
+        vignore_id = "%s" % _get_string_vid(vignore)
         # ignore anything we generate internally, but not those we need to pull in
         # from the external process'
         if vignore_id in [v["id"] for v in wf_outputs]:
@@ -139,7 +66,7 @@ def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     cur_ids = set([v["id"] for v in out])
     for v in new:
         outv = copy.deepcopy(v)
-        outv["id"] = "#%s" % get_base_id(v["id"])
+        outv["id"] = "%s" % get_base_id(v["id"])
         if outv["id"] not in cur_ids and outv["id"] not in ignore_ids:
             if nested_inputs and v["id"] in nested_inputs:
                 outv = _flatten_nested_input(outv)
@@ -156,10 +83,14 @@ def _merge_wf_outputs(new, cur, parallel):
     for v in new:
         outv = {}
         outv["source"] = v["id"]
-        outv["id"] = "#%s" % get_base_id(v["id"])
+        outv["id"] = "%s" % get_base_id(v["id"])
         outv["type"] = v["type"]
+        if "secondaryFiles" in v:
+            outv["secondaryFiles"] = v["secondaryFiles"]
+        if tz.get_in(["outputBinding", "secondaryFiles"], v):
+            outv["secondaryFiles"] = tz.get_in(["outputBinding", "secondaryFiles"], v)
         new_ids.add(outv["id"])
-        if parallel == "single-split":
+        if parallel in ["single-split", "batch-split"]:
             outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
@@ -174,10 +105,9 @@ def _extract_from_subworkflow(vs, step):
     out = []
     for var in vs:
         internal = False
-        parts = var["id"].split(".")
+        parts = var["id"].split("/")
         if len(parts) > 1:
-            ns = parts[0].replace("#", "")
-            if ns in substep_ids:
+            if parts[0] in substep_ids:
                 internal = True
         if not internal:
             var.pop("source", None)
@@ -188,113 +118,77 @@ def _find_split_vs(out_vs, parallel):
     """Find variables created by splitting samples.
     """
     # split parallel job
-    if parallel == "single-parallel":
+    if parallel in ["single-parallel", "batch-parallel"]:
         return [v["id"] for v in out_vs]
     else:
         return []
 
-def _get_step_inputs(step, file_vs, std_vs, parallel_ids):
+def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     """Retrieve inputs for a step from existing variables.
 
     Potentially nests inputs to deal with merging split variables. If
     we split previously and are merging now, then we only nest those
     combing from the split process.
     """
-    skip_inputs = set([_get_string_vid(x) for x in step.noinputs])
-    inputs = [_get_variable(x, file_vs) for x in step.inputs] + \
-             [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+    inputs = []
+    skip_inputs = set([])
+    for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
+        is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
+        if is_record_input:
+            unpack_inputs = _unpack_record(orig_input, is_combine=step.parallel in ["multi-combined"])
+            inputs.extend(unpack_inputs)
+            skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in unpack_inputs])
+        else:
+            inputs.append(orig_input)
+    inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
-    if step.parallel in ["single-merge"]:
+    if step.parallel in ["single-merge", "batch-merge"]:
         if parallel_ids:
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
             parallel_ids = []
-    elif step.parallel in ["multi-combined"]:
+    elif step.parallel in ["multi-combined", "multi-batch"]:
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
-
     return inputs, parallel_ids, nested_inputs
 
+def _unpack_record(rec, is_combine=False):
+    """Unpack a record object, extracting individual elements.
+
+    Handles standard single records (extract each member) and arrays of records
+    after parallelization (is_combine=True, extract each member into a list).
+    """
+    out = []
+    for field in rec["type"]["fields"]:
+        if is_combine:
+            value_from = "$(self.map(function(x) { return x['%s']; }))" % field["name"]
+        else:
+            value_from = "$(self['%s'])" % field["name"]
+        out.append({"id": "%s" % field["name"], "type": field["type"],
+                    "source": rec["id"], "valueFrom": value_from})
+    return out
+
+def _clean_record(var):
+    """Remove record source information from an input variant.
+    """
+    out = copy.deepcopy(var)
+    for attr in ["source", "valueFrom"]:
+        out.pop(attr, None)
+    return out
+
 def _get_step_outputs(step, outputs, file_vs, std_vs):
-    file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
-    file_output = [_clean_output_extras(x) for x in file_output]
+    if len(outputs) == 1 and outputs[0]["type"] == "record":
+        file_output = [_create_record(outputs[0]["id"], step.name, step.inputs, step.unlist, file_vs, std_vs)]
+        std_output = []
+    else:
+        file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
     file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
-    if step.parallel in ["single-split", "multi-combined"]:
+    if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
     return file_output + std_output, file_vs, std_vs
-
-def _cwl_nonfile_world(key, outtype="string", allow_missing=False):
-    """Retrieve a non-file value from a key in the bcbio world object.
-    """
-    converter = ["if (val === null || val === undefined)",
-                 "  return null;",
-                 "else",
-                 "  return val;"]
-    return _cwl_get_from_world(key, converter, [outtype, 'null'] if allow_missing else outtype)
-
-def _cwl_file_world(key, extension="", allow_missing=False):
-    """Retrieve a file, or array of files, from a key in the bcbio world object.
-    """
-    secondary_str = (", 'secondaryFiles': [{'class': 'File', 'path': dir + val + '%s'}]" % extension) if extension else ""
-    converter = ["if (val === null || val === undefined)",
-                 "  return null;",
-                 "else if (typeof val === 'string' || val instanceof String)",
-                 "  return {'path': dir + val, 'class': 'File'%s};" % secondary_str,
-                 "else if (val.length != null && val.length > 0) {",
-                 "  var vals = val;",
-                 "  return vals.map(function(val){return {'path': dir + val, 'class': 'File'%s};});}" % secondary_str,
-                 "else",
-                 "  return null;"]
-    return _cwl_get_from_world(key, converter, ["File", 'null'] if allow_missing else "File", extension)
-
-def _cwl_get_from_world(key, convert_val, valtype, extension=""):
-    """Generic function to retrieve specific results from a bcbio world object.
-
-    The generic javascript provides `dir`, the directory containing the output files
-    potentially remapped externally for Docker containers and `val` -- the value of
-    the `key` attribute from the bcbio world object.
-
-    Will handle both single sample world outputs (a dictionary) as well as multiple world
-    objects (when samples get batched together). It determines which case based on
-    looking at the world object string and determining if it's a list or a dictionary.
-    """
-    keygetter = "".join(["['%s']" % k for k in key])
-    getter = ["${",
-              " function world_to_val(world) {",
-              "   var dir = self[0].path.replace(/\/[^\/]*$/,'') + '/';",
-              "   var val = world%s;" % keygetter] + \
-              ["   %s" % v for v in convert_val] + \
-              [" }",
-               ' if (self[0].contents.lastIndexOf("[{", 0) === 0)',
-               "   return JSON.parse(self[0].contents).map(function(w){return world_to_val(w)});",
-               " else",
-               "   return world_to_val(JSON.parse(self[0].contents));",
-               "}"]
-    out = {"id": key,
-           "type": valtype,
-           "outputBinding": {"glob": "cwl-*-world.json",
-                             "loadContents": True,
-                             "outputEval": "\n".join(getter)}}
-    if extension:
-        out["outputBinding"]["secondaryFiles"] = [extension]
-    return out
-
-def _cwl_file_glob(key, file_pattern, extension=""):
-    """Retrieve an output CWL file, and extensions, using glob on the filesystem.
-    """
-    file_glob = ["${",
-                 "   var name = JSON.parse(inputs.rgnames)['sample'];",
-                 "   return %s;" % file_pattern,
-                 "}"]
-    out = {"id": key,
-           "type": "File",
-           "outputBinding": {"glob": "\n".join(file_glob)}}
-    if extension:
-        out["outputBinding"]["secondaryFiles"] = [extension]
-    return out
 
 def _flatten_nested_input(v):
     """Flatten a parallel scatter input -- we only get one of them to tools.
@@ -336,24 +230,73 @@ def _get_variable(vid, variables):
             return copy.deepcopy(v)
     raise ValueError("Did not find variable %s in \n%s" % (vid, pprint.pformat(variables)))
 
-def _clean_output_extras(v):
-    """Remove extra variables we don't want in output.
+def _handle_special_inputs(inputs, variables):
+    """Adjust input variables based on special cases.
 
-    We want secondaryFiles nested in outputBinding.
+    This case handles inputs where we are optional or can have flexible choices.
+
+    XXX Need to better expose this at a top level definition.
     """
-    out = copy.deepcopy(v)
-    for not_in_output in ["secondaryFiles"]:
-        if not_in_output in out and not_in_output in out.get("outputBinding", {}):
-            out.pop(not_in_output, None)
+    optional = [["config", "algorithm", "coverage"],
+                ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "validate"],
+                ["config", "algorithm", "validate_regions"]]
+    all_vs = set([get_base_id(v["id"]) for v in variables])
+    out = []
+    for input in inputs:
+        if input == ["reference", "aligner", "indexes"]:
+            found_indexes = False
+            for v in variables:
+                vid = get_base_id(v["id"]).split("__")
+                if vid[0] == "reference" and vid[-1] == "indexes":
+                    out.append(vid)
+                    found_indexes = True
+            assert found_indexes, "Found no aligner indexes in %s" % [v["id"] for v in variables]
+        elif input in optional:
+            if _get_string_vid(input) in all_vs:
+                out.append(input)
+        else:
+            out.append(input)
     return out
 
 def _get_upload_output(vid, variables):
     v = _nest_variable(_get_variable(vid, variables))
-    v["source"] = v["id"]
-    v["id"] = "#%s" % get_base_id(v["id"])
-    v["linkMerge"] = "merge_flattened"
+    v["outputSource"] = v["id"]
+    v["id"] = get_base_id(v["id"])
     v.pop("secondaryFiles", None)
-    return _clean_output_extras(v)
+    v["type"].pop("secondaryFiles", None)
+    return v
+
+def _create_record(name, step_name, inputs, unlist, file_vs, std_vs):
+    """Create an input record by rearranging inputs.
+
+    Batching processes create records that reformat the inputs for
+    parallelization.
+    """
+    unlist = set([_get_string_vid(x) for x in unlist])
+    fields = []
+    input_vids = set([_get_string_vid(v) for v in inputs])
+    added = set([])
+    for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
+        # unpack record inside this record and un-nested inputs to avoid double nested
+        if tz.get_in(["type", "type"], raw_v) == "record":
+            nested_vs = _unpack_record(raw_v)
+            unlist = unlist | set([get_base_id(x["id"]) for x in nested_vs])
+        else:
+            nested_vs = [raw_v]
+        for orig_v in nested_vs:
+            if orig_v["id"] not in added:
+                cur_v = {}
+                cur_v["name"] = get_base_id(orig_v["id"])
+                cur_v["type"] = orig_v["type"]
+                if cur_v["name"] in unlist:
+                    cur_v = _flatten_nested_input(cur_v)
+                fields.append(_nest_variable(cur_v))
+                added.add(orig_v["id"])
+    return {"id": "%s/%s" % (step_name, name),
+            "type": {"name": name,
+                     "type": "record",
+                     "fields": fields}}
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.
@@ -364,11 +307,14 @@ def _create_variable(orig_v, step, variables):
     except ValueError:
         v = copy.deepcopy(orig_v)
         if not isinstance(v["id"], basestring):
-            v["id"] = "#" + _get_string_vid(v["id"])
+            v["id"] = _get_string_vid(v["id"])
     for key, val in orig_v.items():
         if key not in ["id", "type"]:
             v[key] = val
-    return _convert_to_step_id(v, step)
+    if v.get("type") == "null" and orig_v.get("type") != "null":
+        v["type"] = orig_v["type"]
+    v["id"] = "%s/%s" % (step.name, get_base_id(v["id"]))
+    return v
 
 def _merge_variables(new, cur):
     """Add any new variables to the world representation in cur.
@@ -393,32 +339,32 @@ def _merge_variables(new, cur):
     return out
 
 def get_base_id(vid):
-    """Retrieve the base id for a variant, ignoring prefixes and steps.
+    """Retrieve the base id for a variant, ignoring workflow/step prefixes.
     """
-    assert vid[0] == "#", vid
-    parts = vid[1:].split(".")
-    return parts[-1]
-
-def _convert_to_step_id(v, step):
-    """Convert a variable to include the identifier of a specific step.
-    """
-    v["id"] = "#%s.%s" % (step.name, get_base_id(v["id"]))
-    return v
+    return vid.split("/")[-1]
 
 def _split_variables(variables):
-    """Split variables passed into file-based and non-file.
+    """Split variables into always passed (std) and specified (file).
 
-    We always pass non-file variables to each step but need to
-    explicitly define file variables so they can be linked in.
+    We always pass some variables to each step but need to
+    explicitly define file and algorithm variables so they can
+    be linked in as needed.
     """
     file_vs = []
     std_vs = []
     for v in variables:
         cur_type = v["type"]
         while isinstance(cur_type, dict):
-            cur_type = cur_type["items"]
-        if cur_type == "File" or isinstance(cur_type, (list, tuple)) and "File" in cur_type or cur_type == "null":
+            if "items" in cur_type:
+                cur_type = cur_type["items"]
+            else:
+                cur_type = cur_type["type"]
+        if (cur_type in ["File", "null", "record"] or
+              (isinstance(cur_type, (list, tuple)) and
+               ("File" in cur_type or {'items': 'File', 'type': 'array'} in cur_type))):
             file_vs.append(v)
-        else:
+        elif v["id"] in ALWAYS_AVAILABLE:
             std_vs.append(v)
+        else:
+            file_vs.append(v)
     return file_vs, std_vs

@@ -12,19 +12,18 @@ https://github.com/AstraZeneca-NGS/VarDict
 specify 'vardict-perl'.
 """
 import os
-import itertools
 import sys
+from six.moves import zip
 
 import toolz as tz
 import pybedtools
 
 from bcbio import broad, utils
-from bcbio.bam import highdepth
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, vcfutils
+from bcbio.variation import annotation, bamprep, bedutils, vcfutils
 
 def _is_bed_file(target):
     return target and isinstance(target, basestring) and os.path.isfile(target)
@@ -72,7 +71,7 @@ def _enforce_max_region_size(in_file, data):
     return out_file
 
 def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
-                  out_file=None):
+                out_file=None):
     """Run VarDict variant calling.
     """
     if vcfutils.is_paired_analysis(align_bams, items):
@@ -103,12 +102,14 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            target = shared.subset_variant_regions(dd.get_variant_regions(items[0]), region,
-                                                   out_file, do_merge=False)
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        with file_transaction(items[0], raw_file) as tx_out_file:
+            vrs = bedutils.population_variant_regions(items)
+            target = shared.subset_variant_regions(
+                vrs, region, out_file, items=items, do_merge=False)
             num_bams = len(align_bams)
             sample_vcf_names = []  # for individual sample names, given batch calling may be required
-            for bamfile, item in itertools.izip(align_bams, items):
+            for bamfile, item in zip(align_bams, items):
                 # prepare commands
                 sample = dd.get_sample_name(item)
                 vardict = get_vardict_command(items[0])
@@ -117,24 +118,27 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 opts = (" ".join(_vardict_options_from_config(items, config, out_file, target))
                         if _is_bed_file(target) else "")
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
+                var2vcf_opts = " -v 50 " if dd.get_avg_coverage(items[0]) > 5000 else ""
+                fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+                fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
-                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
-                        "-N {sample} -b {bamfile} {opts} "
-                        "| {strandbias}"
-                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                        "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
+                         os.path.dirname(utils.Rscript_cmd()))
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                       "-N {sample} -b {bamfile} {opts} "
+                       "| {strandbias}"
+                       "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| bcftools filter -i 'QUAL >= 0' "
+                       "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
-                    temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
+                    temp_file_prefix = raw_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
-                    tmp_out += ".gz" if out_file.endswith("gz") else ""
+                    tmp_out += ".gz" if raw_file.endswith("gz") else ""
                     sample_vcf_names.append(tmp_out)
                     with file_transaction(item, tmp_out) as tx_tmp_file:
                         if not _is_bed_file(target):
@@ -152,10 +156,12 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
                 vcfutils.merge_variant_files(orig_files=sample_vcf_names,
-                                                out_file=tx_out_file, ref_file=ref_file,
-                                                config=config, region=bamprep.region_to_gatk(region))
-    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
-                if assoc_files.get("dbsnp") else out_file)
+                                             out_file=tx_out_file, ref_file=ref_file,
+                                             config=config, region=bamprep.region_to_gatk(region))
+        if assoc_files.get("dbsnp"):
+            annotation.add_dbsnp(raw_file, assoc_files["dbsnp"], items[0], out_file)
+        else:
+            utils.symlink_plus(raw_file, out_file)
     return out_file
 
 def _safe_to_float(x):
@@ -234,7 +240,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        with file_transaction(items[0], raw_file) as tx_out_file:
             target = shared.subset_variant_regions(dd.get_variant_regions(items[0]), region,
                                                    out_file, do_merge=True)
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -246,7 +253,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     ann_file = _run_vardict_caller(align_bams, items, ref_file,
                                                    assoc_files, region, out_file)
                     return ann_file
-                vcffilter = config_utils.get_program("vcffilter", config)
                 vardict = get_vardict_command(items[0])
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 strandbias = "testsomatic.R"
@@ -257,8 +263,9 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 opts = " ".join(_vardict_options_from_config(items, config, out_file, target))
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if highdepth.get_median_coverage(items[0]) > 5000 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
+                var2vcf_opts = " -v 50 " if dd.get_avg_coverage(items[0]) > 5000 else ""
+                fix_ambig_ref = vcfutils.fix_ambiguous_cl()
+                fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
                 if any("vardict_somatic_filter" in tz.get_in(("config", "algorithm", "tools_off"), data, [])
                        for data in items):
@@ -275,18 +282,22 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                    (os.path.join(os.path.dirname(sys.executable), "py"),
                                      0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                r_setup = "unset R_HOME && export PATH=%s:$PATH && " % os.path.dirname(utils.Rscript_cmd())
-                cmd = ("{r_setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
+                         os.path.dirname(utils.Rscript_cmd()))
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "{freq_filter} "
-                       "{somatic_filter} | {fix_ambig} | {remove_dup} | {vcfstreamsort} "
+                       "| bcftools filter -i 'QUAL >= 0' "
+                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
-    out_file = (annotation.add_dbsnp(out_file, assoc_files["dbsnp"], config)
-                if assoc_files.get("dbsnp") else out_file)
+        if assoc_files.get("dbsnp"):
+            annotation.add_dbsnp(raw_file, assoc_files["dbsnp"], items[0], out_file)
+        else:
+            utils.symlink_plus(raw_file, out_file)
     return out_file
 
 def get_vardict_command(data):

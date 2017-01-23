@@ -12,10 +12,12 @@ import math
 import os
 
 import yaml
+from six import iteritems
 import toolz as tz
 
 from bcbio import utils
 from bcbio.log import logger
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -40,7 +42,7 @@ def combine_calls(batch_id, samples, data):
         else:
             config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
             callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
-                                     edata["sam_ref"], edata)
+                                    edata["sam_ref"], edata)
             callinfo["vrn_file"] = vcfutils.bgzip_and_index(callinfo["vrn_file"], data["config"])
         edata["config"]["algorithm"]["variantcaller"] = "ensemble"
         edata["vrn_file"] = callinfo["vrn_file"]
@@ -60,7 +62,7 @@ def combine_calls_parallel(samples, run_parallel):
     batch_groups, extras = _group_by_batches(samples, _has_ensemble)
     out = []
     if batch_groups:
-        processed = run_parallel("combine_calls", ((b, xs, xs[0]) for b, xs in batch_groups.iteritems()))
+        processed = run_parallel("combine_calls", ((b, xs, xs[0]) for b, xs in iteritems(batch_groups)))
         for batch_id, callinfo in processed:
             for data in batch_groups[batch_id]:
                 data["variants"].insert(0, callinfo)
@@ -132,6 +134,7 @@ def _bcbio_variation_ensemble(vrn_files, out_file, ref_file, config_file, base_d
     cmd = ["bcbio-variation"] + jvm_opts + java_args + \
           ["variant-ensemble", config_file, ref_file, out_file] + vrn_files
     with utils.chdir(base_dir):
+        cmd = "%s %s" % (utils.local_path_export(), " ".join(str(x) for x in cmd))
         do.run(cmd, "Ensemble calling: %s" % os.path.basename(base_dir))
 
 def _run_ensemble(batch_id, vrn_files, config_file, base_dir, ref_file, data):
@@ -163,7 +166,7 @@ def _write_config_file(batch_id, caller_names, base_dir, data):
     econfig = {"ensemble": algorithm["ensemble"],
                "names": caller_names,
                "prep-inputs": False}
-    intervals = validate.get_analysis_intervals(data)
+    intervals = validate.get_analysis_intervals(data, None, base_dir)
     if intervals:
         econfig["intervals"] = os.path.abspath(intervals)
     with open(config_file, "w") as out_handle:
@@ -187,13 +190,22 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf.gz".format(batch_id))
     if not utils.file_exists(out_vcf_file):
         num_pass = _get_num_pass(edata, len(vrn_files))
-        cmd = [config_utils.get_program("bcbio-variation-recall", edata["config"]),
-               "ensemble", "--cores=%s" % edata["config"]["algorithm"].get("num_cores", 1),
-               "--numpass", str(num_pass), "--names", ",".join(callers)]
-        # Remove filtered calls, do not try to rescue
-        cmd += ["--nofiltered"]
-        cmd += [out_vcf_file, dd.get_ref_file(edata)] + vrn_files
-        do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
+        cmd = [
+            config_utils.get_program(
+                "bcbio-variation-recall", edata["config"]),
+            "ensemble",
+            "--cores=%s" % edata["config"]["algorithm"].get("num_cores", 1),
+            "--numpass", str(num_pass),
+            "--names", ",".join(callers)
+        ]
+        # Remove filtered calls, do not try to rescue, unless configured
+        if not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata):
+            cmd += ["--nofiltered"]
+
+        with file_transaction(edata, out_vcf_file) as tx_out_file:
+            cmd += [tx_out_file, dd.get_ref_file(edata)] + vrn_files
+            cmd = "%s %s" % (utils.local_path_export(), " ".join(str(x) for x in cmd))
+            do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
     in_data = utils.deepish_copy(edata)
     in_data["vrn_file"] = out_vcf_file
     return {"variantcaller": "ensemble",

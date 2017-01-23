@@ -3,13 +3,16 @@
 https://github.com/ekg/freebayes
 """
 
+from distutils.version import LooseVersion
 import os
+import subprocess
 import sys
 
 import toolz as tz
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -33,11 +36,19 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     Checks for empty sets of target regions after filtering for high depth,
     in which case we should skip the FreeBayes run.
     """
-    opts = []
-    opts += ["--ploidy", str(ploidy.get_ploidy(items, region))]
-
-    variant_regions = bedutils.merge_overlaps(utils.get_in(config, ("algorithm", "variant_regions")),
-                                              items[0])
+    opts = ["--genotype-qualities", "--strict-vcf"]
+    cur_ploidy = ploidy.get_ploidy(items, region)
+    base_ploidy = ploidy.get_ploidy(items)
+    opts += ["--ploidy", str(cur_ploidy)]
+    # Adjust min fraction when trying to call more sensitively in certain
+    # regions. This is primarily meant for pooled mitochondrial calling.
+    if (isinstance(region, (list, tuple)) and chromhacks.is_mitochondrial(region[0])
+          and cur_ploidy >= base_ploidy and "--min-alternate-fraction" not in opts and "-F" not in opts):
+        opts += ["--min-alternate-fraction", "0.01"]
+    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+    # Produce gVCF output
+    if any("gvcf" in dd.get_tools_on(d) for d in items):
+        opts += ["--gvcf", "--gvcf-chunk", "50000"]
     no_target_regions = False
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
@@ -66,7 +77,7 @@ def _add_somatic_opts(opts, paired):
                                                           "min_allele_fraction"), 10)) / 100.0
         opts += " --min-alternate-fraction %s" % min_af
     # Recommended settings for cancer calling
-    opts += (" --pooled-discrete --pooled-continuous --genotype-qualities "
+    opts += (" --pooled-discrete --pooled-continuous "
              "--report-genotype-likelihood-max --allele-balance-priors-off")
     return opts
 
@@ -89,6 +100,16 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
 
     return call_file
 
+def _clean_freebayes_fmt_cl():
+    """For FreeBayes pre 1.1.0, need to remove problematic DPR FORMAT annotation.
+
+    This can be removed after bcbio 1.0.1 release which will default to
+    FreeBayes 1.1.0
+    """
+    version = subprocess.check_output(["freebayes", "--version"])
+    version = LooseVersion(version.split("version:")[-1].strip().replace("v", ""))
+    return "bcftools annotate -x FMT/DPR |" if version < LooseVersion("1.1.0") else ""
+
 def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None, somatic=None):
     """Detect SNPs and indels with FreeBayes.
@@ -103,7 +124,6 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             freebayes = config_utils.get_program("freebayes", config)
-            vcffilter = config_utils.get_program("vcffilter", config)
             input_bams = " ".join("-b %s" % x for x in align_bams)
             opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
             if no_target_regions:
@@ -113,17 +133,21 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 # Recommended options from 1000 genomes low-complexity evaluation
                 # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
                 opts += " --min-repeat-entropy 1"
+                # Remove partial observations, which cause a preference for heterozygote calls
+                # https://github.com/ekg/freebayes/issues/234#issuecomment-205331765
+                opts += " --no-partial-observations"
                 if somatic:
                     opts = _add_somatic_opts(opts, somatic)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-                cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} | "
-                       "{vcffilter} -f 'QUAL > 5' -s | {fix_ambig} | "
-                       "bcftools view -a - 2> /dev/null | "
+                cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
+                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
+                       "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                       "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
-                       "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
+                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                        "{compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -158,18 +182,20 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
             else:
                 opts = " ".join(opts)
                 opts += " --min-repeat-entropy 1"
+                opts += " --no-partial-observations"
                 opts = _add_somatic_opts(opts, paired)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
+                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cl = ("{freebayes} -f {ref_file} {opts} "
                       "{paired.tumor_bam} {paired.normal_bam} "
-                      "| vcffilter -f 'QUAL > 5' -s "
+                      """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                       "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
-                      "| {fix_ambig} | bcftools view -a - 2> /dev/null | "
+                      "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                      "vcfallelicprimitives --keep-geno | vcffixup - | vcfstreamsort | "
-                      "vt normalize -n -r {ref_file} -q - 2> /dev/null | vcfuniqalleles "
+                      "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
+                      "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                       "{compress_cmd} > {tx_out_file}")
                 do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
@@ -189,14 +215,20 @@ def _check_lods(parts, tumor_thresh, normal_thresh):
     except ValueError:
         return True
     try:
-        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",")]
-        tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",") if x != "."]
+        if tumor_gls:
+            tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
+        else:
+            tumor_lod = -1.0
     # No GL information, no tumor call (so fail it)
     except IndexError:
         tumor_lod = -1.0
     try:
-        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",")]
-        normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",") if x != "."]
+        if normal_gls:
+            normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
+        else:
+            normal_lod = normal_thresh
     # No GL inofmration, no normal call (so pass it)
     except IndexError:
         normal_lod = normal_thresh
@@ -219,7 +251,9 @@ def _check_freqs(parts):
     except ValueError:
         af_index = None
     if af_index is None and ao_index is None:
-        raise NotImplementedError("Unexpected format annotations: %s" % parts[0])
+        # okay to skip if a gVCF record
+        if parts[4].find("<*>") == -1:
+            raise NotImplementedError("Unexpected format annotations: %s" % parts[8])
     def _calc_freq(item):
         try:
             if ao_index is not None and ro_index is not None:
@@ -228,6 +262,8 @@ def _check_freqs(parts):
                 freq = ao / float(ao + ro)
             elif af_index is not None:
                 freq = float(item.split(":")[af_index])
+            else:
+                freq = 0.0
         except (IndexError, ValueError, ZeroDivisionError):
             freq = 0.0
         return freq

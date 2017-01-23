@@ -96,18 +96,22 @@ Contributors
 
 - `Miika Ahdesmaki`_, AstraZeneca
 - `Luca Beltrame`_, IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
+- `Christian Brueffer`_, Lund University, Lund, Sweden
 - `Alla Bushoy`_, AstraZeneca
 - `Guillermo Carrasco`_, Science for Life Laboratory, Stockholm
 - `Nick Carriero <http://www.simonsfoundation.org/about-us/staff/staff-bios/#nick-carriero-ph-d>`_, Simons Foundation
 - `Brad Chapman`_, Harvard Chan Bioinformatics Core
 - `Saket Choudhary`_, University Of Southern California
 - `Peter Cock`_, The James Hutton Institute
+- `Matthias De Smet <https://github.com/matthdsm>`_, Center for Medical Genetics, Ghent University Hospital, Belgium
 - `Matt Edwards`_, MIT
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
+- `Oliver Hofmann <https://github.com/ohofmann>`_, Wolfson Wohl Cancer Research Center
 - `John Kern <https://github.com/kern3020>`_
 - `Rory Kirchner`_, Harvard Chan Bioinformatics Core
+- `Tetiana Khotiainsteva <https://github.com/tetianakh>`_, Ardigen
 - `Jakub Nowacki`_, AstraZeneca
 - `John Morrissey <https://github.com/jwm>`_, Harvard Chan Bioinformatics Core
 - `Lorena Pantano <https://github.com/lpantano>`_, Harvard Chan Bioinformatics Core
@@ -115,13 +119,15 @@ Contributors
 - `James Porter`_, The University of Chicago
 - `Valentine Svensson`_, Science for Life Laboratory, Stockholm
 - `Paul Tang`_, UCSF
+- `Stephen Turner`_, University of Virginia
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
-- `Vlad Saveliev`_, AstraZeneca
+- `Vlad Saveliev`_, Center for Algorithmic Biotechnology, St. Petersburg University
 
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
 .. _Luca Beltrame: https://github.com/lbeltrame
+.. _Christian Brueffer: https://github.com/cbrueffer
 .. _Guillermo Carrasco: https://github.com/guillermo-carrasco
 .. _Alla Bushoy: https://github.com/abushoy
 .. _Brad Chapman: https://github.com/chapmanb
@@ -133,6 +139,7 @@ Contributors
 .. _James Porter: https://github.com/porterjamesj
 .. _Valentine Svensson: https://github.com/vals
 .. _Paul Tang: https://github.com/tanglingfung
+.. _Stephen Turner: https://github.com/stephenturner
 .. _Roman Valls: https://github.com/brainstorm
 .. _Kevin Ying: https://github.com/kevyin
 .. _Jeff Hammerbacher: https://github.com/hammer

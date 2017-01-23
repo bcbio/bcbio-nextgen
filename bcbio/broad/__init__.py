@@ -6,6 +6,7 @@
 from contextlib import closing
 from distutils.version import LooseVersion
 import re
+import sys
 import os
 import subprocess
 
@@ -73,6 +74,8 @@ def _clean_java_out(version_str):
     for line in version_str.split("\n"):
         if line.startswith("Picked up"):
             pass
+        if line.find("setlocale") > 0:
+            pass
         else:
             out.append(line)
     return "\n".join(out)
@@ -80,11 +83,16 @@ def _clean_java_out(version_str):
 def _check_for_bad_version(version, program):
     if version.find("bad major version") >= 0 or version.find("UnsupportedClassVersionError") >= 0:
         raise ValueError("Problem getting version for %s. "
-                         "This often indicates you're not running Java 1.7:\n%s" % (program, version))
+                         "This often indicates you're not running the correct Java version:\n%s"
+                         % (program, version))
 
-def get_gatk_version(gatk_jar):
-    cl = ["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", gatk_jar, "-version"]
-    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
+def get_gatk_version(gatk_jar=None):
+    if gatk_jar:
+        cl = " ".join(["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", gatk_jar, "-version"])
+    else:
+        cl = gatk_cmd("gatk", ["-Xms128m", "-Xmx256m"] + get_default_jvm_opts(), ["-version"])
+    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
         # versions earlier than 2.4 do not have explicit version command,
         # parse from error output from GATK
@@ -217,20 +225,33 @@ class BroadRunner:
         p.stdout.close()
         return version
 
-    def has_gatk(self):
-        try:
-            self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
-            return True
-        except ValueError, msg:
-            if "Could not find jar" in str(msg):
+    def _has_gatk_conda_wrapper(self):
+        cmd = gatk_cmd("gatk", [], ["--version"])
+        if cmd:
+            try:
+                stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                return stdout.find("GATK jar file not found") == -1
+            except subprocess.CalledProcessError:
                 return False
-            else:
-                raise
+
+    def has_gatk(self):
+        if self._has_gatk_conda_wrapper():
+            return True
+        else:
+            jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"], allow_missing=True)
+            return jar is not None
 
     def cl_gatk(self, params, tmp_dir, memscale=None):
         support_nt = set()
         support_nct = set(["BaseRecalibrator"])
-        gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+        if self._has_gatk_conda_wrapper():
+            gatk_jar = None
+        else:
+            gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"], allow_missing=True)
+            if not gatk_jar:
+                raise ValueError("GATK processing requested but gatk or older jar install not found: "
+                                 "http://bcbio-nextgen.readthedocs.io/en/latest/contents/"
+                                 "installation.html#gatk-and-mutect-mutect2")
         cores = self._config["algorithm"].get("num_cores", 1)
         config = self._config
         if cores and int(cores) > 1:
@@ -241,10 +262,8 @@ class BroadRunner:
                 params.extend(["-nt", str(cores)])
             elif prog in support_nct:
                 params.extend(["-nct", str(cores)])
-                if config["algorithm"].get("memory_adjust") is None:
-                    config = utils.deepish_copy(config)
-                    config["algorithm"]["memory_adjust"] = {"direction": "increase",
-                                                            "magnitude": int(cores) // 2}
+                memscale = config["algorithm"]["memory_adjust"] = {"direction": "increase",
+                                                                   "magnitude": max(1, int(cores) // 2)}
         if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9"):
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
@@ -259,7 +278,16 @@ class BroadRunner:
             jvm_opts += get_default_jvm_opts(tmp_dir)
         if "keyfile" in self._gatk_resources:
             params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
-        return ["java"] + jvm_opts + ["-jar", gatk_jar] + [str(x) for x in params]
+        if gatk_jar:
+            return " ".join(["java"] + jvm_opts + ["-jar", gatk_jar] + [str(x) for x in params])
+        else:
+            cmd = gatk_cmd("gatk", jvm_opts, params)
+            if cmd:
+                return cmd
+            else:
+                raise ValueError("GATK processing requested but gatk or older jar install not found: "
+                                 "http://bcbio-nextgen.readthedocs.io/en/latest/contents/"
+                                 "installation.html#gatk-and-mutect-mutect2")
 
     def cl_mutect(self, params, tmp_dir):
         """Define parameters to run the mutect paired algorithm.
@@ -278,9 +306,9 @@ class BroadRunner:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
             cl = self.cl_gatk(params, tmp_dir, memscale=memscale)
-            atype_index = cl.index("-T") if cl.count("-T") > 0 \
-                          else cl.index("--analysis_type")
-            prog = cl[atype_index + 1]
+            atype_index = params.index("-T") if params.count("-T") > 0 \
+                          else params.index("--analysis_type")
+            prog = params[atype_index + 1]
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
 
@@ -302,7 +330,10 @@ class BroadRunner:
         if self._gatk_version is not None:
             return self._gatk_version
         else:
-            gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"])
+            if self._has_gatk_conda_wrapper():
+                gatk_jar = None
+            else:
+                gatk_jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"], allow_missing=True)
             self._gatk_version = get_gatk_version(gatk_jar)
             return self._gatk_version
 
@@ -333,12 +364,16 @@ class BroadRunner:
         full_version = self.get_gatk_version()
         # Working with a recent version if using nightlies
         if full_version.startswith("nightly-"):
-            return "2.8"
+            return "3.6"
         parts = full_version.split("-")
         if len(parts) == 4:
             appistry_release, version, subversion, githash = parts
         elif len(parts) == 3:
             version, subversion, githash = parts
+        elif len(parts) == 2:
+            version, subversion = parts
+        elif len(parts) == 1:
+            version = parts[0]
         # version was not properly implemented in earlier GATKs
         else:
             version = "2.3"
@@ -363,7 +398,7 @@ class BroadRunner:
             # XXX Cannot currently set JVM opts with picard-tools script
             return [self._picard_ref, command]
 
-    def _get_jar(self, command, alts=None):
+    def _get_jar(self, command, alts=None, allow_missing=False):
         """Retrieve the jar for running the specified command.
         """
         dirs = []
@@ -376,12 +411,15 @@ class BroadRunner:
                 try:
                     check_file = config_utils.get_jar(check_cmd, dir_check)
                     return check_file
-                except ValueError, msg:
+                except ValueError as msg:
                     if str(msg).find("multiple") > 0:
                         raise
                     else:
                         pass
-        raise ValueError("Could not find jar %s in %s:%s" % (command, self._picard_ref, self._gatk_dir))
+        if allow_missing:
+            return None
+        else:
+            raise ValueError("Could not find jar %s in %s:%s" % (command, self._picard_ref, self._gatk_dir))
 
 def _get_picard_ref(config):
     """Handle retrieval of Picard for running, handling multiple cases:
@@ -407,20 +445,36 @@ def _get_picard_ref(config):
     return picard
 
 def runner_from_config(config, program="gatk"):
-    return BroadRunner(_get_picard_ref(config),
-                       config_utils.get_program(program, config, "dir"),
-                       config)
+    # Try to retrieve old style GATK
+    try:
+        pdir = config_utils.get_program(program, config, "dir")
+    # otherwise use new-style bioconda
+    except ValueError:
+        pdir = None
+    return BroadRunner(_get_picard_ref(config), pdir, config)
 
 def runner_from_config_safe(config):
     """Retrieve a runner, returning None if GATK is not available.
     """
     try:
         return runner_from_config(config)
-    except ValueError, msg:
+    except ValueError as msg:
         if str(msg).find("Could not find directory in config for gatk") >= 0:
             return None
         else:
             raise
+
+def gatk_cmd(name, jvm_opts, params):
+    """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
+    """
+    gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
+    # if we can't find via the local executable, fallback to being in the path
+    if not gatk_cmd:
+        gatk_cmd = utils.which(name)
+    if gatk_cmd:
+        return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
+            (os.path.dirname(gatk_cmd), gatk_cmd,
+             " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):
@@ -429,9 +483,11 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        cmd = [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
+        Rpath = os.path.dirname(utils.Rscript_cmd())
+        cmd = ["unset", "JAVA_HOME", "&&", "export", "PATH=%s:$PATH" % Rpath, "&&"] + \
+              [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
-        do.run(cmd, "Picard: %s" % subcmd)
+        do.run(" ".join(cmd), "Picard: %s" % subcmd)
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.

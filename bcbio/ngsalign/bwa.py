@@ -3,8 +3,6 @@
 import os
 import subprocess
 
-import toolz as tz
-
 from bcbio.pipeline import config_utils
 from bcbio import bam, utils
 from bcbio.distributed import objectstore
@@ -43,7 +41,8 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 bwa_cmd = _get_bwa_mem_cmd(data, out_file, ref_file, "-")
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
-                cmd = ("{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
+                cmd = ("unset JAVA_HOME && "
+                       "{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
                        "| {bwa_cmd} | ")
                 cmd = cmd.format(**locals()) + tobam_cl
@@ -104,7 +103,7 @@ def _can_use_mem(fastq_file, data, read_min_size=None):
            "{seqtk} sample -s42 - {tocheck} | "
            "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
     count_out = subprocess.check_output(cmd.format(**locals()), shell=True,
-                                        executable="/bin/bash", stderr=open("/dev/null", "w"))
+                                        executable="/bin/bash")
     if not count_out.strip():
         raise IOError("Failed to check fastq file sizes with: %s" % cmd.format(**locals()))
     shorter = 0
@@ -117,7 +116,11 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted output BAM.
     """
     pair_file = pair_file if pair_file else ""
+    # back compatible -- older files were named with lane information, use sample name now
     out_file = os.path.join(align_dir, "{0}-sort.bam".format(names["lane"]))
+    if not utils.file_exists(out_file):
+        umi_ext = "-cumi" if "umi_bam" in data else ""
+        out_file = os.path.join(align_dir, "{0}-sort{1}.bam".format(dd.get_sample_name(data), umi_ext))
     qual_format = data["config"]["algorithm"].get("quality_format", "").lower()
     min_size = None
     if data.get("align_split") or fastq_file.endswith(".sdf"):
@@ -149,7 +152,8 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """Perform bwa-mem alignment on supported read lengths.
     """
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
-        cmd = "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file), tobam_cl)
+        cmd = ("unset JAVA_HOME && "
+               "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file), tobam_cl))
         do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
                 [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     return out_file
@@ -169,7 +173,7 @@ def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, 
             _run_bwa_align(pair_file, ref_file, tx_sai2_file, config)
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
         align_type = "sampe" if sai2_file else "samse"
-        cmd = ("{bwa} {align_type} -r '{rg_info}' {ref_file} {sai1_file} {sai2_file} "
+        cmd = ("unset JAVA_HOME && {bwa} {align_type} -r '{rg_info}' {ref_file} {sai1_file} {sai2_file} "
                "{fastq_file} {pair_file} | ")
         cmd = cmd.format(**locals()) + tobam_cl
         do.run(cmd, "bwa %s" % align_type, data)
@@ -213,18 +217,19 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     if dd.get_quality_format(data).lower() == "illumina":
         logger.info("bwa mem does not support the phred+64 quality format, "
                     "converting %s and %s to phred+33.")
-        fastq_file = fastq.groom(fastq_file, in_qual="fastq-illumina", data=data)
+        fastq_file = fastq.groom(fastq_file, data, in_qual="fastq-illumina")
         if pair_file:
-            pair_file = fastq.groom(pair_file, in_qual="fastq-illumina", data=data)
+            pair_file = fastq.groom(pair_file, data, in_qual="fastq-illumina")
     bwa = config_utils.get_program("bwa", data["config"])
     gtf_file = dd.get_gtf_file(data)
     gtf_fasta = index_transcriptome(gtf_file, ref_file, data)
     args = " ".join(_bwa_args_from_config(data["config"]))
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
+    samtools = config_utils.get_program("samtools", data["config"])
     cmd = ("{bwa} mem {args} -a -t {num_cores} {gtf_fasta} {fastq_file} "
-           "{pair_file} | samtools view -bhS - > {tx_out_file}")
+           "{pair_file} | {samtools} view -bhS - > {tx_out_file}")
 
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
         do.run(cmd.format(**locals()), message)
     data = dd.set_transcriptome_bam(data, out_file)

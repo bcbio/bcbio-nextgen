@@ -12,19 +12,17 @@ import toolz as tz
 import numpy as np
 import pandas as pd
 import pybedtools
-try:
-    import matplotlib as mpl
-    mpl.use('Agg', force=True)
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-except ImportError:
-    mpl, plt, sns = None, None, None
 
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import convert
 from bcbio.distributed.transaction import file_transaction
+from bcbio.variation import ploidy
+
+mpl = utils.LazyImport("matplotlib")
+plt = utils.LazyImport("matplotlib.pyplot")
+sns = utils.LazyImport("seaborn")
 
 EVENT_SIZES = [(100, 450), (450, 2000), (2000, 4000), (4000, 20000), (20000, 60000),
                (60000, int(1e6))]
@@ -39,12 +37,12 @@ def _stat_str(x, n):
 def cnv_to_event(name, data):
     """Convert a CNV to an event name.
     """
-    ploidy = dd.get_ploidy(data)
+    cur_ploidy = ploidy.get_ploidy([data])
     if name.startswith("cnv"):
         num = max([int(x) for x in name.split("_")[0].replace("cnv", "").split(";")])
-        if num < ploidy:
+        if num < cur_ploidy:
             return "DEL"
-        elif num > ploidy:
+        elif num > cur_ploidy:
             return "DUP"
         else:
             return name
@@ -113,6 +111,7 @@ def _plot_evaluation(df_csv):
         not_found = ", ".join([x for x in ['mpl', 'plt', 'sns'] if eval(x) is None])
         logger.info("No validation plot. Missing imports: %s" % not_found)
         return None
+    mpl.use('Agg', force=True)
     df = pd.read_csv(df_csv).fillna("0%")
     out = {}
     for event in df["svtype"].unique():

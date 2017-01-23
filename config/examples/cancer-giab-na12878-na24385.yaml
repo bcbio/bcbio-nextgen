@@ -1,0 +1,43 @@
+details:
+- algorithm:
+    aligner: bwa
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    platform: illumina
+    quality_format: standard
+    variantcaller: [vardict, mutect2, freebayes, mutect, varscan, tnhaplotyper]
+    ensemble:
+      numpass: 2
+    validate: ../input/na12878-na24385-somatic-truth.vcf.gz
+    validate_regions: ../input/na12878-na24385-somatic-truth-regions.bed
+  analysis: variant2
+  description: 24385-12878-30-200
+  files: [../input/24385-12878-30-200_R1_001.fastq.gz, ../input/24385-12878-30-200_R2_001.fastq.gz]
+  genome_build: GRCh37
+  metadata:
+    batch: 24385
+    phenotype: tumor
+    validate_sample: NA12878/NA24385 mixture
+- algorithm:
+    aligner: bwa
+    mark_duplicates: true
+    recalibrate: false
+    realign: false
+    platform: illumina
+    quality_format: standard
+    variantcaller: [vardict, mutect2, freebayes, mutect, varscan, tnhaplotyper]
+    ensemble:
+      numpass: 2
+  analysis: variant2
+  description: 24385-200
+  files: [../input/24385-200_AH5G7WCCXX_S4_L004_R1_001.fastq.gz, ../input/24385-200_AH5G7WCCXX_S4_L004_R2_001.fastq.gz]
+  genome_build: GRCh37
+  metadata:
+    batch: 24385
+    phenotype: normal
+    validate_sample: NA12878/NA24385 mixture
+fc_date: '20161212'
+fc_name: giab-mixture
+upload:
+  dir: ../final

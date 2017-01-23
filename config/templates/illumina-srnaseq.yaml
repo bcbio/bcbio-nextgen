@@ -6,5 +6,6 @@ details:
       aligner: star
       # change adapter according project
       adapters: ["TGGAATTCTCGGGTGC"] 
+      expression_caller: [trna, seqcluster, mirdeep2]
       species: hsa
     genome_build: hg19

@@ -1,5 +1,6 @@
 """Support integration with Illumina sequencer machines.
 """
+from __future__ import print_function
 import glob
 import json
 import os
@@ -28,7 +29,7 @@ def check_and_postprocess(args):
         lane_details = nglims.get_runinfo(config["galaxy_url"], config["galaxy_apikey"], dname,
                                           utils.get_in(config, ("process", "storedir")))
         if isinstance(lane_details, dict) and "error" in lane_details:
-            print "Flowcell not found in Galaxy: %s" % lane_details
+            print("Flowcell not found in Galaxy: %s" % lane_details)
         else:
             lane_details = _tweak_lane(lane_details, dname)
             fcid_ss = samplesheet.from_flowcell(dname, lane_details)
@@ -70,7 +71,7 @@ def _start_processing(dname, sample_file, config):
             "fc_dir": to_remote(dname)}
     # call a remote server
     if utils.get_in(config, ("process", "server")):
-        print "%s/run?args=%s" % (utils.get_in(config, ("process", "server")), json.dumps(args))
+        print("%s/run?args=%s" % (utils.get_in(config, ("process", "server")), json.dumps(args)))
         requests.get(url="%s/run" % utils.get_in(config, ("process", "server")),
                      params={"args": json.dumps(args)})
     # submit to a cluster scheduler

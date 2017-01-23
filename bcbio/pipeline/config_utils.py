@@ -5,10 +5,12 @@ import collections
 import glob
 import math
 import os
+import pprint
 import sys
 import yaml
 
 import toolz as tz
+from six import iteritems
 
 class CmdNotFound(Exception):
     pass
@@ -28,22 +30,22 @@ def update_w_custom(config, lane_info):
     for analysis_type in name_remaps.get(base_name, [base_name]):
         custom = config.get("custom_algorithms", {}).get(analysis_type)
         if custom:
-            for key, val in custom.iteritems():
+            for key, val in iteritems(custom):
                 config["algorithm"][key] = val
     # apply any algorithm details specified with the lane
-    for key, val in lane_info.get("algorithm", {}).iteritems():
+    for key, val in iteritems(lane_info.get("algorithm", {})):
         config["algorithm"][key] = val
     # apply any resource details specified with the lane
-    for prog, pkvs in lane_info.get("resources", {}).iteritems():
+    for prog, pkvs in iteritems(lane_info.get("resources", {})):
         if prog not in config["resources"]:
             config["resources"][prog] = {}
-        for key, val in pkvs.iteritems():
+        for key, val in iteritems(pkvs):
             config["resources"][prog][key] = val
     return config
 
 # ## Retrieval functions
 
-def load_system_config(config_file=None, work_dir=None):
+def load_system_config(config_file=None, work_dir=None, allow_missing=False):
     """Load bcbio_system.yaml configuration file, handling standard defaults.
 
     Looks for configuration file in default location within
@@ -58,11 +60,13 @@ def load_system_config(config_file=None, work_dir=None):
         test_config = os.path.join(base_dir, "galaxy", config_file)
         if os.path.exists(test_config):
             config_file = test_config
+        elif allow_missing:
+            config_file = None
         else:
             raise ValueError("Could not find input system configuration file %s, "
                              "including inside standard directory %s" %
                              (config_file, os.path.join(base_dir, "galaxy")))
-    config = load_config(config_file)
+    config = load_config(config_file) if config_file else {}
     if docker_config:
         assert work_dir is not None, "Need working directory to merge docker config"
         config_file = os.path.join(work_dir, "%s-merged%s" % os.path.splitext(os.path.basename(config_file)))
@@ -79,15 +83,15 @@ def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
     """
     out = copy.deepcopy(container_config)
-    for k, v in host_config.iteritems():
+    for k, v in iteritems(host_config):
         if k in set(["galaxy_config"]):
             out[k] = v
         elif k == "resources":
-            for pname, resources in v.iteritems():
+            for pname, resources in iteritems(v):
                 if not isinstance(resources, dict) and pname not in out[k]:
                     out[k][pname] = resources
                 else:
-                    for rname, rval in resources.iteritems():
+                    for rname, rval in iteritems(resources):
                         if (rname in set(["cores", "jvm_opts", "memory"])
                               or pname in set(["gatk", "mutect"])):
                             if pname not in out[k]:
@@ -130,9 +134,11 @@ def load_config(config_file):
     with open(config_file) as in_handle:
         config = yaml.load(in_handle)
     config = _expand_paths(config)
+    if 'resources' not in config:
+        config['resources'] = {}
     # lowercase resource names, the preferred way to specify, for back-compatibility
     newr = {}
-    for k, v in config["resources"].iteritems():
+    for k, v in iteritems(config["resources"]):
         if k.lower() != k:
             newr[k.lower()] = v
     config["resources"].update(newr)
@@ -188,23 +194,24 @@ def get_program(name, config, ptype="cmd", default=None):
 
 def _get_check_program_cmd(fn):
     def wrap(name, pconfig, config, default):
-        program = expand_path(fn(name, pconfig, config, default))
         is_ok = lambda f: os.path.isfile(f) and os.access(f, os.X_OK)
-        if is_ok(program): return program
-
-        for adir in os.environ['PATH'].split(":"):
-            if is_ok(os.path.join(adir, program)):
-                return os.path.join(adir, program)
-        # support bioconda installed programs
-        if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
-            return (os.path.join(os.path.dirname(sys.executable), name))
-        # find system bioconda installed programs if using private code install
         bcbio_system = config.get("bcbio_system", None)
         if bcbio_system:
             system_bcbio_path = os.path.join(os.path.dirname(bcbio_system),
                                              os.pardir, "anaconda", "bin", name)
             if is_ok(system_bcbio_path):
                 return system_bcbio_path
+        # support bioconda installed programs
+        if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
+            return (os.path.join(os.path.dirname(sys.executable), name))
+        # find system bioconda installed programs if using private code install
+        program = expand_path(fn(name, pconfig, config, default))
+        if is_ok(program):
+            return program
+        # search the PATH now
+        for adir in os.environ['PATH'].split(":"):
+            if is_ok(os.path.join(adir, program)):
+                return os.path.join(adir, program)
         raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
     return wrap
 
@@ -260,6 +267,8 @@ def is_nested_config_arg(x):
 def get_algorithm_config(xs):
     """Flexibly extract algorithm configuration for a sample from any function arguments.
     """
+    if isinstance(xs, dict):
+        xs = [xs]
     for x in xs:
         if is_std_config_arg(x):
             return x["algorithm"]
@@ -268,7 +277,7 @@ def get_algorithm_config(xs):
         elif isinstance(x, (list, tuple)) and is_nested_config_arg(x[0]):
             return x[0]["config"]["algorithm"]
     raise ValueError("Did not find algorithm configuration in items: {0}"
-                     .format(xs))
+                     .format(pprint.pformat(xs)))
 
 def get_dataarg(args):
     """Retrieve the world 'data' argument from a set of input parameters.
@@ -331,6 +340,19 @@ def convert_to_bytes(mem_str):
     else:
         return int(mem_str)
 
+def adjust_cores_to_mb_target(target_mb, mem_str, cores):
+    """Scale core usage to match a Mb/core target.
+
+    Useful for memory dependent programs where we don't have control
+    over memory usage so need to scale cores.
+    """
+    cur_mb = convert_to_bytes(mem_str) / 1024.0
+    scale = target_mb / cur_mb
+    if scale >= 1:
+        return cores
+    else:
+        return max(1, int(math.ceil(scale * cores)))
+
 def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     """Adjust memory based on number of cores utilized.
     """
@@ -346,7 +368,7 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
             else:
                 raise ValueError("Unexpected decrease in memory: %s by %s" % (val, magnitude))
         amount = int(new_amount)
-    elif direction == "increase":
+    elif direction == "increase" and magnitude > 1:
         # for increases with multiple cores, leave small percentage of
         # memory for system to maintain process running resource and
         # avoid OOM killers
@@ -388,7 +410,7 @@ def use_vqsr(algs):
     vqsr_supported = collections.defaultdict(int)
     coverage_intervals = set([])
     for alg in algs:
-        callers = alg.get("variantcaller", "gatk")
+        callers = alg.get("variantcaller")
         if isinstance(callers, basestring):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
@@ -398,7 +420,10 @@ def use_vqsr(algs):
         for c in callers:
             if c in vqsr_callers:
                 vqsr_supported[c] += 1
-                coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+                if "vqsr" in alg.get("tools_on", []):  # VQSR turned on:
+                    coverage_intervals.add("genome")
+                else:
+                    coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
     if len(vqsr_supported) > 0:
         num_samples = max(vqsr_supported.values())
         if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:

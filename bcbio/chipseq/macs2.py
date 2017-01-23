@@ -3,16 +3,16 @@ import os
 import subprocess
 
 from bcbio import utils
-from bcbio.log import logger
 from bcbio.provenance import do
-import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
+from bcbio import bam
 
 HS = {"hg19": "2.7e9",
       "GRCh37": "2.7e9",
+      "hg38": "2.7e9",
       "mm10": "1.87e9"}
 
-def run(name, chip_bam, input_bam, genome_build, out_dir, config):
+def run(name, chip_bam, input_bam, genome_build, out_dir, method, config):
     """
     Run macs2 for chip and input samples avoiding
     errors due to samples.
@@ -26,13 +26,15 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
     options = " ".join(config_utils.get_resources("macs2", config).get("options", ""))
     if genome_build not in HS and options.find("-g") == -1:
         raise ValueError("This %s genome doesn't have a pre-set value."
-                          "You an add specific values using resources"
-                          "option in the YAML file."
-                          "Check Chip-seq configuration in"
+                          "You can add specific values using resources "
+                          "option for macs2 in the YAML file (-g genome_size)."
+                          "Check Chip-seq configuration in "
                           "bcbio-nextgen documentation.")
-    genome_size = HS[genome_build]
+
+    genome_size = "" if options.find("-g") > -1 else "-g %s" % HS[genome_build]
+    paired = "-f BAMPE" if bam.is_paired(chip_bam) else ""
     with utils.chdir(out_dir):
-        cmd = _macs2_cmd()
+        cmd = _macs2_cmd(method)
         try:
             do.run(cmd.format(**locals()), "macs2 for %s" % name)
             utils.move_safe(macs2_file, out_file)
@@ -45,8 +47,15 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, config):
                                  "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#sample-specific-resources")
     return out_file
 
-def _macs2_cmd():
+def _macs2_cmd(method="chip"):
     """Main command for macs2 tool."""
-    cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam}"
-            " -g {genome_size} -n {name} -B {options}")
+    if method.lower() == "chip":
+        cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam}"
+                " {genome_size} -n {name} -B {options}")
+    elif method.lower() == "atac":
+        cmd = ("{macs2} callpeak -t {chip_bam} --nomodel "
+               " {paired} {genome_size} -n {name} -B {options}"
+               " --nolambda --keep-dup all")
+    else:
+        raise ValueError("chip_method should be chip or atac.")
     return cmd

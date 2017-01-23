@@ -19,6 +19,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 from bcbio.srna import mirdeep
+from bcbio.rnaseq import spikein
 
 def run_prepare(*data):
     """
@@ -27,6 +28,11 @@ def run_prepare(*data):
     out_dir = os.path.join(dd.get_work_dir(data[0][0]), "seqcluster", "prepare")
     out_dir = os.path.abspath(safe_makedir(out_dir))
     prepare_dir = os.path.join(out_dir, "prepare")
+    tools = dd.get_expression_caller(data[0][0])
+    if len(tools) == 0:
+        logger.info("You didn't specify any other expression caller tool."
+                       "You can add to the YAML file:"
+                       "expression_caller:[trna, seqcluster, mirdeep2]")
     fn = []
     for sample in data:
         name = sample[0]["rgnames"]['sample']
@@ -43,6 +49,9 @@ def run_prepare(*data):
                 with open(seq_out, 'w') as seq_handle:
                     prepare._create_matrix_uniq_seq(sample_l, seq_l, ma_handle, seq_handle, min_shared)
 
+    for sample in data:
+        sample[0]["seqcluster_prepare_ma"] = ma_out
+        sample[0]["seqcluster_prepare_fastq"] = seq_out
     return data
 
 def run_align(*data):
@@ -54,12 +63,19 @@ def run_align(*data):
     seq_out = op.join(out_dir, "seqs.fastq")
     bam_dir = op.join(work_dir, "align")
     new_bam_file = op.join(bam_dir, "seqs.bam")
+    tools = dd.get_expression_caller(data[0][0])
     if not file_exists(new_bam_file):
         sample = process_alignment(data[0][0], [seq_out, None])
         bam_file = dd.get_work_bam(sample[0][0])
         shutil.move(bam_file, new_bam_file)
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
+    for sample in data:
+        sample[0]["align_bam"] = sample[0]["clean_fastq"]
+        sample[0]["work_bam"] = new_bam_file
+
+    if "mirdeep2" in tools:
+        novel_db = mirdeep.run(data)
     return data
 
 def run_cluster(*data):
@@ -67,14 +83,15 @@ def run_cluster(*data):
     Run seqcluster cluster to detect smallRNA clusters
     """
     sample = data[0][0]
+    tools = dd.get_expression_caller(data[0][0])
     work_dir = dd.get_work_dir(sample)
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
-    bam_file = op.join(work_dir, "align", "seqs.bam")
-    cluster_dir = _cluster(bam_file, prepare_dir, out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
-    report_file = _report(sample, dd.get_ref_file(sample))
-    sample["seqcluster"] = out_dir
+    bam_file = data[0][0]["work_bam"]
+    if "seqcluster" in tools:
+        sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"], out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+        sample["report"] = _report(sample, dd.get_ref_file(sample))
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:
@@ -82,19 +99,18 @@ def run_cluster(*data):
         sample = dd.set_isomir_counts(sample, out_mirna[1])
 
     out_novel = _make_isomir_counts(data, "seqbuster_novel", op.join(work_dir, "mirdeep2"), "_novel")
-    novel_db = mirdeep.run(data)
     if out_novel:
         sample = dd.set_novel_mirna_counts(sample, out_novel[0])
         sample = dd.set_novel_isomir_counts(sample, out_novel[1])
     data[0][0] = sample
+    data = spikein.combine_spikein(data)
     return data
 
-def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
+def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
     seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
-    ma_file = op.join(prepare_dir, "seqs.ma")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
         annotation_file = "-g " + annotation_file
@@ -104,7 +120,10 @@ def _cluster(bam_file, prepare_dir, out_dir, reference, annotation_file=None):
     if not file_exists(op.join(out_dir, "counts.tsv")):
         cmd = ("{seqcluster} cluster -o {out_dir} -m {ma_file} -a {bam_file} -r {reference} {annotation_file}")
         do.run(cmd.format(**locals()), "Running seqcluster.")
-    return out_dir
+    counts = op.join(out_dir, "counts.tsv")
+    stats = op.join(out_dir, "read_stats.tsv")
+    json = op.join(out_dir, "seqcluster.json")
+    return {'out_dir': out_dir, 'count_file': counts, 'stat_file': stats, 'json': json}
 
 def _report(data, reference):
     """
@@ -128,49 +147,41 @@ def report(data):
     summary_file = op.join(out_dir, "summary.csv")
     with file_transaction(summary_file) as out_tx:
         with open(out_tx, 'w') as out_handle:
-            print >>out_handle, "sample_id,size_stats,miraligner,group"
+            print >>out_handle, "sample_id,%s" % _guess_header(data[0][0])
             for sample in data:
                 info = sample[0]
                 group = _guess_group(info)
+                files = info["seqbuster"] if "seqbuster" in info else "None"
                 print >>out_handle, ",".join([dd.get_sample_name(info),
-                                              info['size_stats'],
-                                              info['seqbuster'], group])
-    _create_rmd(summary_file)
+                                              group])
+    _modify_report(work_dir, out_dir)
     return summary_file
+
+def _guess_header(info):
+    """Add the first group to get report with some factor"""
+    value = "group"
+    if "metadata" in info:
+        if info["metadata"]:
+            return ",".join(map(str, info["metadata"].keys()))
+    return value
 
 def _guess_group(info):
     """Add the first group to get report with some factor"""
     value = "fake"
     if "metadata" in info:
         if info["metadata"]:
-            key, value = info['metadata'].popitem()
+            return ",".join(map(str, info["metadata"].values()))
     return value
 
-def _create_rmd(summary_fn):
-    """Create relatie path files for Rmd report"""
-    root_path, fn = op.split(os.path.abspath(summary_fn))
-    out_file = op.join(root_path, fn.replace(".csv", "_re.csv"))
-    with open(summary_fn) as in_handle:
-        with open(out_file, 'w') as out_handle:
-            for line in in_handle:
-                cols = line.strip().split(",")
-                fix_line = ",".join([op.relpath(c, root_path) if op.exists(c) else c for c in cols])
-                print >>out_handle, fix_line
-    report_file = _modify_report(root_path, out_file)
-
-    return out_file, report_file
-
-def _modify_report(summary_path, summary_fn):
+def _modify_report(summary_path, out_dir):
     """Read Rmd template and dump with project path."""
     summary_path = op.abspath(summary_path)
     template = op.normpath(op.join(op.dirname(op.realpath(template_seqcluster.__file__)), "report.rmd"))
     content = open(template).read()
-    out_content = string.Template(content).safe_substitute({'path_abs': summary_path,
-                                                            'path_summary': os.path.join(summary_path, summary_fn)})
-    out_file = op.join(op.dirname(summary_fn), "srna_report.rmd")
+    out_content = string.Template(content).safe_substitute({'path_abs': summary_path})
+    out_file = op.join(out_dir, "srna_report.rmd")
     with open(out_file, 'w') as out_handle:
         print >>out_handle, out_content
-
     return out_file
 
 def _make_isomir_counts(data, srna_type="seqbuster", out_dir=None, stem=""):

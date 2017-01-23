@@ -1,0 +1,61 @@
+upload:
+  dir: /data/upload
+resources:
+  tmp:
+    dir: /tmp/variantcall_tmp
+details:
+  - analysis: variant2
+    algorithm:
+      # --- Alignment pre-processing
+      quality_format: Standard
+      align_split_size: 9000
+      # --- Alignment
+      platform: illumina
+      aligner: bwa
+      disambiguate:
+       - mm9
+      # --- Alignment post-processing
+      mark_duplicates: true
+      recalibrate: false
+      realign: false
+      remove_lcr: true
+      save_diskspace: true
+      # --- Variant calling
+      nomap_split_size: 250
+      nomap_split_targets: 200
+      variantcaller: vardict
+      svcaller:
+       - cnvkit
+       - manta
+      svprioritize: /bcbio-nextgen/tests/data/automated/variant_regions-variantcall.bed      
+      # Put path to background VCF here; variants in this VCF will be ignored in
+      # downstream analysis
+      background: 
+      coverage_depth_max: 10000
+      coverage_depth_min: 4
+      ploidy: 2
+      # In percent
+      min_allele_fraction: 10
+      # Only possible when using GATK
+      phasing: false
+      # --- Functional annotation
+      # VEP already includes dbNSFP
+      effects: vep
+      effects_transcripts: canonical
+      # QC and archiving
+      tools_on: 
+       - qualimap
+       - multiqc
+       - pbgzip
+      tools_off:
+       - upload_alignment
+      mixup_check: false
+      kraken: minikraken
+      variant_regions: /bcbio-nextgen/tests/data/automated/variant_regions-variantcall.bed
+      coverage: /bcbio-nextgen/tests/data/automated/variant_regions-variantcall.bed
+    description: Test1
+    metadata:
+      batch: TestBatch1
+    genome_build: hg19
+    files: [/bcbio-nextgen/tests/data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, /bcbio-nextgen/tests/data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
+    lane: 7

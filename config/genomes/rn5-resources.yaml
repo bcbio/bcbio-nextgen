@@ -1,7 +1,7 @@
-version: 9
+version: 10
 
 aliases:
-  snpeff: Rnor_5.0.78
+  snpeff: Rnor_5.0.75
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

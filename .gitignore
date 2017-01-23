@@ -23,3 +23,6 @@ cwl/*-workflow
 .env
 *~
 \#*
+.idea/
+__pycache__
+.coverage

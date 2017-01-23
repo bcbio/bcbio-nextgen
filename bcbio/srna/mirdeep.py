@@ -4,11 +4,11 @@ import os.path as op
 
 import pysam
 
+from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir, chdir, get_perl_exports
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import config_utils
 
 
 def run(data):
@@ -17,22 +17,34 @@ def run(data):
     genome = dd.get_ref_file(data[0][0])
     mirdeep2 = os.path.join(os.path.dirname(sys.executable), "miRDeep2.pl")
     perl_exports = get_perl_exports()
-    mirbase = op.abspath(op.dirname(dd.get_mirbase_ref(data[0][0])))
-    species = dd.get_species(data[0][0])
-    hairpin = op.join(mirbase, "hairpin.fa")
-    mature = op.join(mirbase, "mature.fa")
-    rfam_file = op.join(mirbase, "Rfam_for_miRDeep.fa")
+    hairpin, mature, species = "none", "none", "na"
+    rfam_file = dd.get_mirdeep2_file(data[0][0])
+    if file_exists(dd.get_mirbase_hairpin(data[0][0])):
+        species = dd.get_species(data[0][0])
+        hairpin = dd.get_mirbase_hairpin(data[0][0])
+        mature = dd.get_mirbase_mature(data[0][0])
+
+    logger.debug("Preparing for mirdeep2 analysis.")
     bam_file = op.join(work_dir, "align", "seqs.bam")
     seqs_dir = op.join(work_dir, "seqcluster", "prepare")
     collapsed = op.join(seqs_dir, "seqs.ma")
     out_dir = op.join(work_dir, "mirdeep2")
     out_file = op.join(out_dir, "result_res.csv")
     safe_makedir(out_dir)
+    if not file_exists(rfam_file):
+        logger.warning("mirdeep2 Rfam file not instaled. Skipping...")
+        return None
+    if not file_exists(mirdeep2):
+        logger.warning("mirdeep2 executable file not found. Skipping...")
+        return None
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{perl_exports} && {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -d -P -t {species} -z res").format(**locals())
-        if file_exists(mirdeep2) and not file_exists(out_file) and file_exists(mature) and file_exists(rfam_file):
-            do.run(cmd.format(**locals()), "Running mirdeep2.")
+        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res").format(**locals())
+        if not file_exists(out_file):
+            try:
+                do.run(cmd.format(**locals()), "Running mirdeep2.")
+            except:
+                logger.warning("mirdeep2 failed. Please report the error to https://github.com/lpantano/mirdeep2_core/issues.")
         if file_exists(out_file):
             novel_db = _parse_novel(out_file, dd.get_species(data[0][0]))
             return novel_db
@@ -61,7 +73,7 @@ def _prepare_inputs(ma_fn, bam_file, out_dir):
 
     return fixed_fa, fixed_bam
 
-def _parse_novel(csv_file,sps="new"):
+def _parse_novel(csv_file, sps="new"):
     """Create input of novel miRNAs from miRDeep2"""
     read = 0
     seen = set()

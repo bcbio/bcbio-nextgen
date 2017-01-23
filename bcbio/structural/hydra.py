@@ -8,7 +8,6 @@ import os
 import copy
 import collections
 import subprocess
-from contextlib import closing
 
 import pysam
 
@@ -34,7 +33,7 @@ def select_unaligned_read_pairs(in_bam, extra, out_dir, config):
                                           ("WRITE_READS_FILES", "false"),
                                           ("SORT_ORDER", "queryname")])
     has_reads = False
-    with closing(pysam.Samfile(nomap_bam, "rb")) as in_pysam:
+    with pysam.Samfile(nomap_bam, "rb") as in_pysam:
         for read in in_pysam:
             if read.is_paired:
                 has_reads = True
@@ -54,13 +53,13 @@ def remove_nopairs(in_bam, out_dir, config):
                                           os.path.splitext(os.path.basename(in_bam))))
     if not utils.file_exists(out_bam):
         read_counts = collections.defaultdict(int)
-        with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+        with pysam.Samfile(in_bam, "rb") as in_pysam:
             for read in in_pysam:
                 if read.is_paired:
                     read_counts[read.qname] += 1
-        with closing(pysam.Samfile(in_bam, "rb")) as in_pysam:
+        with pysam.Samfile(in_bam, "rb") as in_pysam:
             with file_transaction(out_bam) as tx_out_bam:
-                with closing(pysam.Samfile(tx_out_bam, "wb", template=in_pysam)) as out_pysam:
+                with pysam.Samfile(tx_out_bam, "wb", template=in_pysam) as out_pysam:
                     for read in in_pysam:
                         if read_counts[read.qname] == 2:
                             out_pysam.write(read)

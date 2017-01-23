@@ -13,6 +13,7 @@ from bcbio import bam, broad
 from bcbio.log import logger
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.pipeline import datadict as dd
 from bcbio.variation.realign import has_aligned_reads
 
 # ## GATK recalibration
@@ -20,8 +21,8 @@ from bcbio.variation.realign import has_aligned_reads
 def prep_recal(data):
     """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
     """
-    if data["config"]["algorithm"].get("recalibrate", True) in [True, "gatk"]:
-        logger.info("Recalibrating %s with GATK" % str(data["name"]))
+    if dd.get_recalibrate(data) in [True, "gatk"]:
+        logger.info("Recalibrating %s with GATK" % str(dd.get_sample_name(data)))
         ref_file = data["sam_ref"]
         config = data["config"]
         dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)

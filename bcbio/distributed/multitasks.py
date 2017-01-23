@@ -6,17 +6,62 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
-from bcbio.rnaseq import (sailfish)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, qcsummary, sample,
+from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
-from bcbio.variation import (bamprep, bedutils, coverage, genotype, ensemble,
+from bcbio.qc import multiqc, qsignature
+from bcbio.variation import (bamprep, genotype, ensemble,
                              joint, multi, population, recalibrate, validate,
                              vcfutils)
 
 @utils.map_wrap
+def run_tagcount(*args):
+    return umi.tagcount(*args)
+
+@utils.map_wrap
+def run_filter_barcodes(*args):
+    return umi.filter_barcodes(*args)
+
+@utils.map_wrap
+def run_barcode_histogram(*args):
+    return umi.barcode_histogram(*args)
+
+@utils.map_wrap
+def run_umi_transform(*args):
+    return umi.umi_transform(*args)
+
+@utils.map_wrap
+def demultiplex_samples(*args):
+    return umi.demultiplex_samples(*args)
+
+@utils.map_wrap
+def run_kallisto_singlecell(*args):
+    return kallisto.run_kallisto_singlecell(*args)
+
+@utils.map_wrap
+def run_salmon_reads(*args):
+    return salmon.run_salmon_reads(*args)
+
+@utils.map_wrap
+def run_salmon_bam(*args):
+    return salmon.run_salmon_bam(*args)
+
+@utils.map_wrap
+def run_salmon_index(*args):
+    return salmon.run_salmon_index(*args)
+
+@utils.map_wrap
 def run_sailfish(*args):
     return sailfish.run_sailfish(*args)
+
+@utils.map_wrap
+def run_sailfish_index(*args):
+    return sailfish.run_sailfish_index(*args)
+
+@utils.map_wrap
+def run_rapmap_align(*args):
+    return rapmap.run_rapmap_align(*args)
 
 @utils.map_wrap
 def prepare_sample(*args):
@@ -103,20 +148,24 @@ def pipeline_summary(*args):
     return qcsummary.pipeline_summary(*args)
 
 @utils.map_wrap
-def coverage_report(*args):
-    return qcsummary.coverage_report(*args)
+def qc_to_rec(*args):
+    return qcsummary.qc_to_rec(*args)
 
 @utils.map_wrap
 def qsignature_summary(*args):
-    return qcsummary.qsignature_summary(*args)
+    return qsignature.summary(*args)
 
 @utils.map_wrap
-def qc_report_summary(*args):
-    return qcsummary.report_summary(*args)
+def multiqc_summary(*args):
+    return multiqc.summary(*args)
 
 @utils.map_wrap
 def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
+
+@utils.map_wrap
+def rnaseq_quantitate(*args):
+    return rnaseq.quantitate(*args)
 
 @utils.map_wrap
 def run_cufflinks(*args):
@@ -147,6 +196,26 @@ def combine_bam(*args):
     return shared.combine_bam(*args)
 
 @utils.map_wrap
+def batch_for_variantcall(*args):
+    return genotype.batch_for_variantcall(*args)
+
+@utils.map_wrap
+def vc_output_record(*args):
+    return genotype.vc_output_record(*args)
+
+@utils.map_wrap
+def variantcall_batch_region(*args):
+    return genotype.variantcall_batch_region(*args)
+
+@utils.map_wrap
+def concat_batch_variantcalls(*args):
+    return genotype.concat_batch_variantcalls(*args)
+
+@utils.map_wrap
+def get_parallel_regions(*args):
+    return region.get_parallel_regions(*args)
+
+@utils.map_wrap
 def variantcall_sample(*args):
     return genotype.variantcall_sample(*args)
 
@@ -165,6 +234,10 @@ def merge_variant_files(*args):
 @utils.map_wrap
 def call_hla(*args):
     return hla.call_hla(*args)
+
+@utils.map_wrap
+def batch_for_sv(*args):
+    return structural.batch_for_sv(*args)
 
 @utils.map_wrap
 def detect_sv(*args):
@@ -191,20 +264,16 @@ def prep_gemini_db(*args):
     return population.prep_gemini_db(*args)
 
 @utils.map_wrap
-def combine_bed(*args):
-    return bedutils.combine(*args)
-
-@utils.map_wrap
-def calc_callable_loci(*args):
-    return callable.calc_callable_loci(*args)
-
-@utils.map_wrap
 def combine_sample_regions(*args):
     return callable.combine_sample_regions(*args)
 
 @utils.map_wrap
 def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
+
+@utils.map_wrap
+def summarize_grading_vc(*args):
+    return validate.summarize_grading(*args)
 
 @utils.map_wrap
 def run_disambiguate(*args):

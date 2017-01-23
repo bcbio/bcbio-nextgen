@@ -1,7 +1,6 @@
 """Functionality to query and extract information from aligned BAM files.
 """
 import collections
-import contextlib
 import os
 import itertools
 import signal
@@ -27,9 +26,10 @@ def is_paired(bam_file):
     http://stackoverflow.com/a/12451083/252589
     """
     bam_file = objectstore.cl_input(bam_file)
+    sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "sambamba view -h {bam_file} | head -50000 | "
-           "sambamba view -S -F paired /dev/stdin  | head -1 | wc -l")
+           "{sambamba} view -h {bam_file} | head -50000 | "
+           "{sambamba} view -S -F paired /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -57,17 +57,20 @@ def index(in_bam, config, check_timestamp=True):
         for fname in [index_file, alt_index_file]:
             utils.remove_safe(fname)
         sambamba = _get_sambamba(config)
+        assert sambamba, "Did not find sambamba for indexing"
         samtools = config_utils.get_program("samtools", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, index_file) as tx_index_file:
             assert tx_index_file.find(".bam.bai") > 0
             tx_bam_file = tx_index_file.replace(".bam.bai", ".bam")
             utils.symlink_plus(in_bam, tx_bam_file)
-            if sambamba:
+            try:
                 cmd = "{sambamba} index -t {num_cores} {tx_bam_file}"
-            else:
-                cmd = "{samtools} index {tx_bam_file}"
-            do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
+                do.run(cmd.format(**locals()), "Index BAM file with sambamba: %s" % os.path.basename(in_bam))
+            except subprocess.CalledProcessError:
+                cmd = "{samtools} index {in_bam} {tx_index_file}"
+                do.run(cmd.format(**locals()), "Backup single thread index of BAM file with samtools: %s"
+                       % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
 
 def remove(in_bam):
@@ -97,7 +100,7 @@ def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as work_bam:
+    with pysam.Samfile(in_bam, "rb") as work_bam:
         n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
@@ -111,24 +114,22 @@ def get_aligned_reads(in_bam, data):
     total = float(align + unaligned)
     return 1.0 * align / total
 
-def downsample(in_bam, data, target_counts, read_filter="", always_run=False,
-               work_dir=None):
+def downsample(in_bam, data, target_counts, work_dir=None):
     """Downsample a BAM file to the specified number of target counts.
     """
     index(in_bam, data["config"])
     ds_pct = get_downsample_pct(in_bam, target_counts, data)
-    if always_run and not ds_pct:
-        ds_pct = 1.0
     if ds_pct:
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)
         if work_dir:
             out_file = os.path.join(work_dir, os.path.basename(out_file))
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                sambamba = config_utils.get_program("sambamba", data["config"])
+                samtools = config_utils.get_program("samtools", data["config"])
                 num_cores = dd.get_num_cores(data)
-                cmd = ("{sambamba} view -t {num_cores} {read_filter} -f bam -o {tx_out_file} "
-                       "--subsample={ds_pct:.3} --subsampling-seed=42 {in_bam}")
+                ds_pct = "42." + "{ds_pct:.3}".format(ds_pct=ds_pct).replace("0.", "")
+                cmd = ("{samtools} view -O BAM -@ {num_cores} -o {tx_out_file} "
+                       "-s {ds_pct} {in_bam}")
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
 
@@ -141,21 +142,22 @@ def check_header(in_bam, rgnames, ref_file, config):
 def _check_sample(in_bam, rgnames):
     """Ensure input sample name matches expected run group names.
     """
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+    with pysam.Samfile(in_bam, "rb") as bamfile:
         rg = bamfile.header.get("RG", [{}])
     msgs = []
     warnings = []
     if len(rg) > 1:
         warnings.append("Multiple read groups found in input BAM. Expect single RG per BAM.")
-    elif len(rg) == 0:
+    if len(rg) == 0:
         msgs.append("No read groups found in input BAM. Expect single RG per BAM.")
-    elif rg[0].get("SM") != rgnames["sample"]:
+    if len(rg) > 0 and any(x.get("SM") != rgnames["sample"] for x in rg):
         msgs.append("Read group sample name (SM) does not match configuration `description`: %s vs %s"
                     % (rg[0].get("SM"), rgnames["sample"]))
     if len(msgs) > 0:
         raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
                          + "\n".join(msgs) +
-                         "\nSetting `bam_clean: picard` in the configuration can often fix this issue.")
+                         "\nSetting `bam_clean: picard` or `bam_clean: fixrg`\n"
+                         "in the configuration can often fix this issue.")
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
               "\n".join(warnings))
@@ -164,7 +166,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
     """
     ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
-    with contextlib.closing(pysam.Samfile(in_bam, "rb")) as bamfile:
+    with pysam.Samfile(in_bam, "rb") as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
     problems = []
     warnings = []
@@ -421,7 +423,7 @@ def _get_sort_stem(in_bam, order):
 def sample_name(in_bam):
     """Get sample name from BAM file.
     """
-    with contextlib.closing(pysam.AlignmentFile(in_bam, "rb", check_sq=False)) as in_pysam:
+    with pysam.AlignmentFile(in_bam, "rb", check_sq=False) as in_pysam:
         try:
             if "RG" in in_pysam.header:
                 return in_pysam.header["RG"][0]["SM"]
@@ -437,13 +439,16 @@ def estimate_read_length(bam_file, nreads=1000):
         lengths = [len(x.seq) for x in reads]
     return int(numpy.median(lengths))
 
-def estimate_fragment_size(bam_file, nreads=1000):
+def estimate_fragment_size(bam_file, nreads=5000):
     """
     estimate median fragment size of a SAM/BAM file
     """
     with open_samfile(bam_file) as bam_handle:
         reads = tz.itertoolz.take(nreads, bam_handle)
-        lengths = [x.tlen for x in reads]
+        # it would be good to skip spliced paired reads.
+        lengths = [x.template_length for x in reads if x.template_length > 0]
+    if not lengths:
+        return 0
     return int(numpy.median(lengths))
 
 def filter_stream_cmd(bam_file, data, filter_flag):
@@ -464,7 +469,7 @@ def filter_primary(bam_file, data):
     out_file = stem + ".primary" + ext
     if utils.file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         cmd = filter_primary_stream_cmd(bam_file, data)
         cmd += "> {tx_out_file}"
         do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %

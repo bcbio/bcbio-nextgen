@@ -1,3 +1,6 @@
+resources:
+  bcbio_prioritize:
+    jvm_opts: [-Xms1g, -Xmx3g]
 upload:
   dir: upload
 fc_date: '130728'
@@ -15,12 +18,16 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller:
+        somatic: [vardict, freebayes, varscan]
+        germline: [freebayes, platypus]
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [cnvkit]
+      svcaller: [lumpy]
+      #svcaller: [cnvkit]
       #hetcaller: bubbletree
+      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor
@@ -34,16 +41,20 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller:
+        somatic: [vardict, freebayes, varscan]
+        germline: [freebayes, platypus]
       indelcaller: sid
+      coverage_interval: genome
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [cnvkit]
+      svcaller: [lumpy]
+      #svcaller: [cnvkit]
       #tools_on: [svplots]
-      tools_off: [vardict_somatic_filter]
+      tools_off: [vardict_somatic_filter, gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
-      svprioritize: ../data/automated/variant_regions-cancer.bed
+      svprioritize: cancer/az-cancer-panel
   - analysis: variant2
     description: c-tumor2
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -56,12 +67,17 @@ details:
       mark_duplicates: True
       recalibrate: false
       realign: false
-      variantcaller: [vardict, mutect, freebayes, varscan]
+      variantcaller:
+        somatic: [vardict, freebayes, varscan]
+        germline: [freebayes, platypus]
       indelcaller: sid
       ensemble:
         numpass: 2
+        use_filtered: true
       min_allele_fraction: 5.0
+      svcaller: [lumpy]
       #tools_on: [svplots]
-      svcaller: [cnvkit]
+      #svcaller: [cnvkit]
+      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: ../data/automated/variant_regions-cancer.bed

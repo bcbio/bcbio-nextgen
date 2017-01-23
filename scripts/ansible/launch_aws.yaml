@@ -1,0 +1,62 @@
+# Launch analysis environment on AWS with existing data volume.
+# For bcbio analyses, volume expected to contain bcbio installation
+# in /mnt/work/bcbio
+# Makes it easy to stop/start analyses that fit on a single node and EBS volume.
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Launch EC2 instance
+      register: ec2
+      local_action:
+        module: ec2
+        group: "{{ security_group }}"
+        instance_type: "{{ instance_type }}"
+        spot_price: "{{ spot_price }}"
+        image: "{{ image_id }}"
+        keypair: "{{ keypair }}"
+        vpc_subnet_id: "{{ vpc_subnet }}"
+        instance_profile_name: "{{ iam_role }}"
+        region: "{{ region }}"
+        assign_public_ip: yes
+        count: 1
+        wait: yes
+        state: present
+    - name: Attach working volume
+      local_action: ec2_vol instance={{ item.id }} id={{ volume }} device_name=/dev/xvdf state=present region={{ region }}
+      with_items: "{{ ec2.instances }}"
+    - name: Add new instance to host group
+      local_action:
+        module: add_host
+        hostname: "{{ item.public_dns_name }}"
+        groupname: launched
+        # Get rid of SSH "Are you sure you want to continue connecting (yes/no)?" query
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      with_items: "{{ ec2.instances }}"
+    - name: Wait for SSH
+      local_action: wait_for host={{ item.public_ip }} port=22 state=started
+      with_items: "{{ ec2.instances }}"
+
+- hosts: launched
+  remote_user: ubuntu
+  gather_facts: true
+  tasks:
+    - include_vars: project_vars.yaml
+    - name: Create ext4 filesystem if not present
+      filesystem: fstype=ext4 dev=/dev/xvdf
+      become: true
+    - name: Mount work volume
+      become: true
+      mount: name=/mnt/work src=/dev/xvdf fstype=ext4 state=mounted
+    - name: Create bcbio directory if missing
+      file: path=/mnt/work/bcbio state=directory owner=ubuntu
+      become: true
+    - name: Add bcbio to path
+      lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
+    - apt: update_cache=yes
+      become: true
+    - apt: name="{{ item }}"
+      become: true
+      with_items: [git, unzip, wget, tar, gzip, bzip2]

@@ -1,17 +1,19 @@
 """Utilities for working with fastq files.
 """
 
-from itertools import izip, product
+from six.moves import zip
+from itertools import product
 import os
 import random
 import gzip
+import sys
 
 from Bio import SeqIO
 from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio import utils
-from bcbio.utils import open_possible_gzip
+from bcbio.utils import open_possible_gzip, sort_filenames
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 
@@ -76,7 +78,7 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
         fq1_single_handle = open(tmp_out_files[2], "w")
         fq2_single_handle = open(tmp_out_files[3], "w")
 
-        for fq1_record, fq2_record in izip(fq1_in, fq2_in):
+        for fq1_record, fq2_record in zip(fq1_in, fq2_in):
             if len(fq1_record.seq) >= min_length and len(fq2_record.seq) >= min_length:
                 fq1_out_handle.write(fq1_record.format(quality_format))
                 fq2_out_handle.write(fq2_record.format(quality_format))
@@ -103,47 +105,57 @@ def rstrip_extra(fname):
                 break
     return fname
 
-def combine_pairs(input_files):
+def combine_pairs(input_files, force_single=False):
     """ calls files pairs if they are completely the same except
     for one has _1 and the other has _2 returns a list of tuples
     of pairs or singles.
     From bipy.utils (https://github.com/roryk/bipy/blob/master/bipy/utils.py)
     Adjusted to allow different input paths or extensions for matching files.
     """
-    PAIR_FILE_IDENTIFIERS = set(["1", "2"])
+    PAIR_FILE_IDENTIFIERS = set(["1", "2", "3", "4"])
 
     pairs = []
     used = set([])
     for in_file in input_files:
+        matches = set([])
         if in_file in used:
             continue
-        for comp_file in input_files:
-            if comp_file in used or comp_file == in_file:
-                continue
-            a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
-            b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
-            if len(a) != len(b):
-                continue
-            s = dif(a,b)
-            if len(s) > 1:
-                continue #there is only 1 difference
-            if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
-                  b[s[0]] in PAIR_FILE_IDENTIFIERS):
-                # if the 1/2 isn't the last digit before a separator, skip
-                # this skips stuff like 2P 2A, often denoting replicates, not
-                # read pairings
-                if len(b) > (s[0] + 1):
-                    if (b[s[0]+1] not in ("_", "-", ".")):
-                        continue
-                # if the 1/2 is not a separator or prefaced with R, skip
-                if b[s[0]- 1] in ("R", "_", "-", "."):
-                    used.add(in_file)
-                    used.add(comp_file)
-                    if b[s[0]] == "2":
-                        pairs.append([in_file, comp_file])
-                    else:
-                        pairs.append([comp_file, in_file])
-                    break
+        if not force_single:
+            for comp_file in input_files:
+                if comp_file in used or comp_file == in_file:
+                    continue
+                a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
+                b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
+                if len(a) != len(b):
+                    continue
+                s = dif(a,b)
+                # no differences, then its the same file stem
+                if len(s) == 0:
+                    logger.error("%s and %s have the same stem, so we don't know "
+                                 "how to assign it to the sample data in the CSV. To "
+                                 "get around this you can rename one of the files. "
+                                 "If they are meant to be the same sample run in two "
+                                 "lanes, combine them first with the "
+                                 "bcbio_prepare_samples.py script."
+                                 "(http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#multiple-files-per-sample)"
+                                 % (in_file, comp_file))
+                    sys.exit(1)
+                if len(s) > 1:
+                    continue #there is only 1 difference
+                if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
+                      b[s[0]] in PAIR_FILE_IDENTIFIERS):
+                    # if the 1/2 isn't the last digit before a separator, skip
+                    # this skips stuff like 2P 2A, often denoting replicates, not
+                    # read pairings
+                    if len(b) > (s[0] + 1):
+                        if (b[s[0]+1] not in ("_", "-", ".")):
+                            continue
+                    # if the 1/2 is not a separator or prefaced with R, skip
+                    if b[s[0]- 1] in ("R", "_", "-", "."):
+                        matches.update([in_file, comp_file])
+                        used.update([in_file, comp_file])
+            if matches:
+                pairs.append(sort_filenames(list(matches)))
         if in_file not in used:
             pairs.append([in_file])
             used.add(in_file)

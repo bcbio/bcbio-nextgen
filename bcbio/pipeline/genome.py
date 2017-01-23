@@ -1,6 +1,6 @@
 """Read genome build configurations from Galaxy *.loc and bcbio-nextgen resource files.
 """
-import ConfigParser
+from six.moves import configparser
 import glob
 import os
 import sys
@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 
 import toolz as tz
 import yaml
+from six import iteritems
 
 from bcbio import utils
 from bcbio.distributed import objectstore
@@ -43,10 +44,10 @@ def get_resources(genome, ref_file, data):
 def _ensure_annotations(resources, data):
     """Prepare any potentially missing annotations for downstream processing in a local directory.
     """
-    out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
-                                              "inputs", "data", "annotations"))
     transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
     if transcript_gff and utils.file_exists(transcript_gff):
+        out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
+                                                  "inputs", "data", "annotations"))
         resources["rnaseq"]["gene_bed"] = gtf.gtf_to_bed(transcript_gff, out_dir)
     return resources
 
@@ -63,19 +64,27 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     input_dir = os.path.join(base_dir, "inputs")
     if isinstance(xs, dict):
         out = {}
-        for k, v in xs.iteritems():
+        for k, v in iteritems(xs):
             if k not in ignore_keys and v and isinstance(v, basestring):
                 if v.lower() == "none":
                     out[k] = None
                 elif os.path.exists(v) or objectstore.is_remote(v):
-                    out[k] = os.path.normpath(os.path.join(base_dir, objectstore.download(v, input_dir)))
+                    dl = objectstore.download(v, input_dir)
+                    if dl:
+                        out[k] = os.path.normpath(os.path.join(base_dir, dl))
+                    else:
+                        out[k] = v
                 else:
                     out[k] = v
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
         if os.path.exists(xs) or objectstore.is_remote(xs):
-            out = os.path.normpath(os.path.join(base_dir, objectstore.download(xs, input_dir)))
+            dl = objectstore.download(xs, input_dir)
+            if dl:
+                out = os.path.normpath(os.path.join(base_dir, dl))
+            else:
+                out = xs
         else:
             out = xs
     else:
@@ -164,7 +173,7 @@ def _get_galaxy_tool_info(galaxy_base):
     ini_file = os.path.join(galaxy_base, "universe_wsgi.ini")
     info = {"tool_data_table_config_path": os.path.join(galaxy_base, "tool_data_table_conf.xml"),
             "tool_data_path": os.path.join(galaxy_base, "tool-data")}
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(ini_file)
     if "app:main" in config.sections():
         for option in config.options("app:main"):
@@ -200,11 +209,20 @@ def get_refs(genome_build, aligner, galaxy_base, data):
             base = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
             if os.path.isdir(base):
                 indexes = glob.glob(os.path.join(base, "*"))
-            else:
+            elif name != "samtools":
                 indexes = glob.glob("%s*" % utils.splitext_plus(base)[0])
-            out[name_remap.get(name, name)] = {"indexes": indexes}
+            else:
+                indexes = []
+            out[name_remap.get(name, name)] = {}
             if os.path.exists(base) and os.path.isfile(base):
                 out[name_remap.get(name, name)]["base"] = base
+            if indexes:
+                out[name_remap.get(name, name)]["indexes"] = indexes
+        # add additional indices relative to the base
+        if tz.get_in(["fasta", "base"], out):
+            ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
+            out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
+                                                       "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
     return out
 
 def get_builds(galaxy_base):
@@ -250,6 +268,8 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
         if not os.path.exists(ref_dir):
             if target in INPLACE_INDEX:
                 ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
+                # Need to add genome resources so we can retrieve GTF files for STAR
+                data["genome_resources"] = get_resources(data["genome_build"], ref_file, data)
                 INPLACE_INDEX[target](ref_file, ref_dir, data)
             else:
                 # XXX Currently only supports genomes from S3 us-east-1 bucket.
@@ -264,8 +284,8 @@ def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
                     do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
     ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
     if data.get("genome_build"):
-        gresources = get_resources(data["genome_build"], ref_file, data)
-        if data.get("files") and population.do_db_build([data], need_bam=False, gresources=gresources):
+        if (data.get("files") and population.do_db_build([data], need_bam=False)
+              and population.support_gemini_orig(data)):
             # symlink base GEMINI directory to work directory, avoiding write/space issues
             out_gemini_dir = utils.safe_makedir(os.path.join(os.path.dirname(ref_dir), "gemini_data"))
             orig_gemini_dir = install.get_gemini_dir()

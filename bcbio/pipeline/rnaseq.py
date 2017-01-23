@@ -1,12 +1,42 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish)
+                          express, variation, stringtie, sailfish, spikein)
 from bcbio.ngsalign import bowtie2, alignprep
-from bcbio.variation import vardict
+from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten
+from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
+
+
+def fast_rnaseq(samples, run_parallel):
+    samples = run_parallel("run_salmon_index", [samples])
+    samples = run_parallel("run_salmon_reads", samples)
+    samples = sailfish.combine_sailfish(samples)
+    return samples
+
+def singlecell_rnaseq(samples, run_parallel):
+    quantifier = dd.get_in_samples(samples, dd.get_singlecell_quantifier)
+    quantifier = quantifier.lower()
+    samples = run_parallel("run_umi_transform", samples)
+    demultiplexed = run_parallel("demultiplex_samples", samples)
+    # break demultiplixed lanes into their own samples
+    samples = []
+    for lane in demultiplexed:
+        for index in lane:
+            samples.append([index])
+    samples = run_parallel("run_filter_barcodes", samples)
+    samples = run_parallel("run_barcode_histogram", samples)
+    if quantifier == "rapmap":
+        samples = run_parallel("run_rapmap_align", samples)
+        samples = run_parallel("run_tagcount", samples)
+    elif quantifier == "kallisto":
+        samples = run_parallel("run_kallisto_singlecell", samples)
+    else:
+        logger.error(("%s is not supported for singlecell RNA-seq "
+                      "quantification." % quantifier))
+        sys.exit(1)
+    return samples
 
 def rnaseq_variant_calling(samples, run_parallel):
     """
@@ -17,6 +47,10 @@ def rnaseq_variant_calling(samples, run_parallel):
     return samples
 
 def run_rnaseq_variant_calling(data):
+    """
+    run RNA-seq variant calling, variation file is stored in `vrn_file`
+    in the datadict
+    """
     variantcaller = dd.get_variantcaller(data)
     if isinstance(variantcaller, list) and len(variantcaller) > 1:
         logger.error("Only one variantcaller can be run for RNA-seq at "
@@ -29,6 +63,9 @@ def run_rnaseq_variant_calling(data):
         data = variation.rnaseq_gatk_variant_calling(data)
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
+        if dd.get_vrn_file(data):
+            vrn_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), "rnaedit", data)
+            data = dd.set_vrn_file(data, vrn_file)
     return [[data]]
 
 def run_rnaseq_joint_genotyping(*samples):
@@ -39,16 +76,22 @@ def run_rnaseq_joint_genotyping(*samples):
     if "gatk" not in variantcaller:
         return samples
     ref_file = dd.get_ref_file(data)
-    out_file = os.path.join(dd.get_work_dir(data, "."), "variation", "combined.vcf")
     if variantcaller and "gatk" in variantcaller:
         vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
-        out_file = variation.gatk_joint_calling(data, vrn_files, ref_file, out_file)
+        out_file = variation.gatk_joint_calling(data, vrn_files, ref_file)
+        vrn_file = vcfanno.run_vcfanno(out_file, "rnaedit", data)
         updated_samples = []
         for data in dd.sample_data_iterator(samples):
-            data = dd.set_square_vcf(data, out_file)
+            data = dd.set_square_vcf(data, vrn_file)
             updated_samples.append([data])
         return updated_samples
     return samples
+
+def quantitate(data):
+    data = to_single_data(data)
+    data = generate_transcript_counts(data)[0][0]
+    data = sailfish.run_sailfish(data)[0][0]
+    return [[data]]
 
 def quantitate_expression_parallel(samples, run_parallel):
     """
@@ -57,6 +100,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     """
     data = samples[0][0]
     samples = run_parallel("generate_transcript_counts", samples)
+    samples = run_parallel("run_sailfish_index", [samples])
     samples = run_parallel("run_sailfish", samples)
     samples = sailfish.combine_sailfish(samples)
     if "cufflinks" in dd.get_expression_caller(data):
@@ -84,24 +128,28 @@ def generate_transcript_counts(data):
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
 
-    if dd.get_transcriptome_align(data) and not dd.get_transcriptome_bam(data):
-        file1, file2 = None, None
-
+    if dd.get_transcriptome_align(data):
+        # to create a disambiguated transcriptome file realign with bowtie2
         if dd.get_disambiguate(data):
+            logger.info("Aligning to the transcriptome with bowtie2 using the "
+                        "disambiguated reads.")
             bam_path = data["work_bam"]
             fastq_paths = alignprep._bgzip_from_bam(bam_path, data["dirs"], data["config"], is_retry=False, output_infix='-transcriptome')
             if len(fastq_paths) == 2:
                 file1, file2 = fastq_paths
             else:
                 file1, file2 = fastq_paths[0], None
+            ref_file = dd.get_ref_file(data)
+            data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
         else:
             file1, file2 = dd.get_input_sequence_files(data)
-
-        ref_file = dd.get_ref_file(data)
-        logger.info("Transcriptome alignment was flagged to run, but the "
-                    "transcriptome BAM file was not found. Aligning to the "
-                    "transcriptome with bowtie2.")
-        data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
+        if not dd.get_transcriptome_bam(data):
+            ref_file = dd.get_ref_file(data)
+            logger.info("Transcriptome alignment was flagged to run, but the "
+                        "transcriptome BAM file was not found. Aligning to the "
+                        "transcriptome with bowtie2.")
+            data = bowtie2.align_transcriptome(file1, file2, ref_file, data)
+    data = spikein.counts_spikein(data)
     return [[data]]
 
 def run_stringtie_expression(data):
@@ -126,7 +174,8 @@ def combine_express(samples, combined):
                   dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
     gtf_file = dd.get_gtf_file(samples[0][0])
     isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
-    isoform_to_gene_file = express.isoform_to_gene_name(gtf_file, isoform_to_gene_file)
+    isoform_to_gene_file = express.isoform_to_gene_name(
+        gtf_file, isoform_to_gene_file, dd.sample_data_iterator(samples).next())
     if len(to_combine) > 0:
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
@@ -253,6 +302,7 @@ def combine_files(samples):
         dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
     else:
         dexseq_combined = None
+    samples = spikein.combine_spikein(samples)
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         data = dd.set_combined_counts(data, combined)

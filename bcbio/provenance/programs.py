@@ -33,10 +33,12 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
-_manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks", "cnvkit", "gatk-framework",
-                   "grabix", "htseq", "lumpy-sv", "manta", "metasv", "oncofuse",
+_manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks",
+                   "cnvkit", "gatk-framework", "hisat2", "sailfish", "salmon",
+                   "grabix", "htseq", "lumpy-sv", "manta", "metasv", "mirdeep2", "oncofuse",
                    "picard", "phylowgs", "platypus-variant",
-                   "rna-star", "rtg-tools", "sambamba", "samblaster", "scalpel", "snpeff", "vardict",
+                   "rna-star", "rtg-tools", "sambamba", "samblaster", "scalpel",
+                   "seqbuster", "snpeff", "vardict",
                    "vardict-java", "varscan", "variant-effect-predictor", "vt", "wham"]
 
 def _broad_versioner(type):
@@ -213,11 +215,13 @@ def _get_versions_manifest(manifest_dir):
     all_pkgs = _manifest_progs + [p.get("name", p["cmd"]) for p in _cl_progs] + [p["name"] for p in _alt_progs]
     if os.path.exists(manifest_dir):
         out = []
-        for plist in ["toolplus", "brew", "python", "r", "debian", "custom"]:
+        for plist in ["toolplus", "python", "r", "debian", "custom"]:
             pkg_file = os.path.join(manifest_dir, "%s-packages.yaml" % plist)
             if os.path.exists(pkg_file):
                 with open(pkg_file) as in_handle:
                     pkg_info = yaml.safe_load(in_handle)
+                if not pkg_info:
+                    continue
                 added = []
                 for pkg in all_pkgs:
                     if pkg in pkg_info:

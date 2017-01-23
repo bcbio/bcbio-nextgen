@@ -8,7 +8,6 @@ and FreeBayes's N+1 approach (https://groups.google.com/d/msg/freebayes/-GK4zI6N
 as implemented in bcbio.variation.recall (https://github.com/chapmanb/bcbio.variation.recall).
 """
 import collections
-import contextlib
 import math
 import os
 
@@ -37,7 +36,7 @@ def _get_callable_regions(data):
     else:
         work_bam = list(tz.take(1, filter(lambda x: x.endswith(".bam"), data["work_bams"])))
         if work_bam:
-            with contextlib.closing(pysam.Samfile(work_bam[0], "rb")) as pysam_bam:
+            with pysam.Samfile(work_bam[0], "rb") as pysam_bam:
                 regions = [(chrom, 0, length) for (chrom, length) in zip(pysam_bam.references,
                                                                          pysam_bam.lengths)]
         else:
@@ -170,5 +169,7 @@ def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file,
     if todo == "square":
         cmd += ["--caller", variantcaller]
     cmd += [out_file, ref_file, input_file]
-    do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)))
+    bcbio_env = utils.get_bcbio_env()
+    cmd = " ".join(str(x) for x in cmd)
+    do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)), env=bcbio_env)
     return out_file
