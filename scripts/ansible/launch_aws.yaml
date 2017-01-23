@@ -20,6 +20,7 @@
         vpc_subnet_id: "{{ vpc_subnet }}"
         instance_profile_name: "{{ iam_role }}"
         region: "{{ region }}"
+        zone: "{{ zone }}"
         assign_public_ip: yes
         count: 1
         wait: yes
