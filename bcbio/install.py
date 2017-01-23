@@ -293,7 +293,7 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
     if "vep" in args.datatarget:
         _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
-    if 'gemini' in args.datatarget:
+    if 'gemini' in args.datatarget and ("hg19" in args.genomes or "GRCh37" in args.genomes):
         gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
         extras = []
         if "cadd" in args.datatarget:
