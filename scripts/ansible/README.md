@@ -87,7 +87,7 @@ Use this information to create a configuration file called `project_vars.yaml`:
     keypair: kunkel-keypair
     iam_role: bcbio_full_s3_access
     region: us-east-1
-	zone: us-east-1a
+    zone: us-east-1a
 
 With this in place you can launch your instance with:
 
