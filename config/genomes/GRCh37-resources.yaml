@@ -1,4 +1,4 @@
-version: 30
+version: 31
 
 aliases:
   human: true
@@ -29,6 +29,13 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+srnaseq:
+    srna_transcripts: ../srnaseq/srna-transcripts.gtf
+    mirbase_hairpin: ../srnaseq/hairpin.fa
+    mirbase_mature: ../srnaseq/mature.fa
+    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+    trna_fasta: ../srnaseq/trna_mature_pre.fa
 
 coverage:
   coverage_problem_dir: ../coverage/problem_regions
