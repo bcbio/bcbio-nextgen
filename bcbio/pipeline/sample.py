@@ -220,7 +220,7 @@ def postprocess_alignment(data):
                            "callable": callable_bed,
                            "highdepth": covinfo.highdepth,
                            "sample_callable": covinfo.callable,
-                           "coverage_bed": covinfo.coverage,
+                           "coverage_depth_bed": covinfo.depth,
                            "avg_coverage": covinfo.avg_coverage}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
