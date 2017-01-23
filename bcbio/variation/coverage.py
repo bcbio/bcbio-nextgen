@@ -79,39 +79,52 @@ def calculate(bam_file, data):
     prefix = os.path.join(
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
         "%s-coverage" % (dd.get_sample_name(data)))
-    out_file = prefix + ".depth.bed"
+    depth_file = prefix + ".depth.bed"
     callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
     variant_regions_avg_cov = get_average_coverage(data, bam_file, variant_regions, "variant_regions")
-    if not utils.file_uptodate(out_file, bam_file):
+    if not utils.file_uptodate(callable_file, bam_file):
         ref_file = dd.get_ref_file(data)
-        cmd = ["goleft", "depth", "--windowsize", str(params["window_size"]), "--q", "1",
+        cmd = ["goleft", "depth", "--q", "1",
                "--mincov", str(params["min"]), "--reference", ref_file,
-               "--processes", str(dd.get_num_cores(data)), "--stats", "--ordered"]
-        window_file = "%s-tocalculate-windows.bed" % utils.splitext_plus(out_file)[0]
-        if not utils.file_uptodate(window_file, bam_file):
-            with file_transaction(data, window_file) as tx_out_file:
-                if not variant_regions:
-                    variant_regions = "%s-genome.bed" % utils.splitext_plus(tx_out_file)[0]
-                    with open(variant_regions, "w") as out_handle:
-                        for c in shared.get_noalt_contigs(data):
-                            out_handle.write("%s\t%s\t%s\n" % (c.name, 0, c.size))
-                pybedtools.BedTool().window_maker(w=params["parallel_window_size"],
-                                                  b=pybedtools.BedTool(variant_regions)).saveas(tx_out_file)
-        cmd += ["--bed", window_file]
+               "--processes", str(dd.get_num_cores(data)), "--ordered"]
         max_depth = _get_max_depth(variant_regions_avg_cov, params, data)
         if max_depth:
             cmd += ["--maxmeandepth", str(int(max_depth))]
-        with file_transaction(data, out_file) as tx_out_file:
-            with utils.chdir(os.path.dirname(tx_out_file)):
-                tx_callable_file = tx_out_file.replace(".depth.bed", ".callable.bed")
-                prefix = tx_out_file.replace(".depth.bed", "")
+        with file_transaction(data, depth_file) as tx_depth_file:
+            with utils.chdir(os.path.dirname(tx_depth_file)):
+                tx_callable_file = tx_depth_file.replace(".depth.bed", ".callable.bed")
+                prefix = tx_depth_file.replace(".depth.bed", "")
                 cmd += ["--prefix", prefix, bam_file]
                 bcbio_env = utils.get_bcbio_env()
                 msg = "Calculate coverage: %s" % dd.get_sample_name(data)
                 do.run(cmd, msg, env=bcbio_env)
                 shutil.move(tx_callable_file, callable_file)
-    return out_file, callable_file, _extract_highdepth(callable_file, data), variant_regions_avg_cov
+    final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
+    return depth_file, final_callable, _extract_highdepth(final_callable, data), variant_regions_avg_cov
+
+def _create_genome_regions(callable_file, data):
+    """Create whole genome contigs we want to process, only non-alts.
+
+    Skips problem contigs like HLAs for downstream analysis.
+    """
+    variant_regions = "%s-genome.bed" % utils.splitext_plus(callable_file)[0]
+    with file_transaction(data, variant_regions) as tx_variant_regions:
+        with open(tx_variant_regions, "w") as out_handle:
+            for c in shared.get_noalt_contigs(data):
+                out_handle.write("%s\t%s\t%s\n" % (c.name, 0, c.size))
+    return variant_regions
+
+def _subset_to_variant_regions(callable_file, variant_regions, data):
+    """Subset output callable file to only variant regions of interest.
+    """
+    out_file = "%s-vrsubset.bed" % utils.splitext_plus(callable_file)[0]
+    if not utils.file_uptodate(out_file, callable_file):
+        if not variant_regions:
+            variant_regions = _create_genome_regions(callable_file, data)
+        with file_transaction(data, out_file) as tx_out_file:
+            pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
+    return out_file
 
 def _extract_highdepth(callable_file, data):
     out_file = callable_file.replace(".callable.bed", ".highdepth.bed")

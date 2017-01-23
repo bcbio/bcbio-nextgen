@@ -124,7 +124,7 @@ LOOKUPS = {
     "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
     "callable_regions": {"keys": ["regions", "callable"]},
     "avg_coverage": {"keys": ["regions", "avg_coverage"]},
-    "coverage_bed": {"keys": ["regions", "coverage_bed"]},
+    "coverage_depth_bed": {"keys": ["regions", "coverage_depth_bed"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},

@@ -2,6 +2,8 @@
 
 - Improve lumpy structural variant runs from pre-aligned BAM files, using
   extract_sv_reads to avoid need to resort input files. Thanks to Neill Gibson.
+- Speed up post-alignment callability calculations by using default parameters
+  to goleft depth. Thanks to Brent Pedersen.
 - Upload of pipeline results to iRODS. Thanks to Matthias De Smet.
 - Add duplicate removal to post-FreeBayes processing. Thanks to Neill Gibson.
 - Support latest svtyper (0.1.1) for lumpy to provide speed improvements. Will
