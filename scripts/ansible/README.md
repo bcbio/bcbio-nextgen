@@ -53,7 +53,11 @@ to create these:
 
 or use the [AWS console](https://aws.amazon.com/) or saws. You need:
 
-- An AWS Virtual Private Cloud (VPC). A default VPC is fine.
+- An AWS image ID for your region. Select this from the
+  [Ubuntu Amazon EC2 AMI Locator](http://cloud-images.ubuntu.com/locator/ec2/)
+  using an option with Instance Type `hvm:ebs-ssd`.
+- An AWS Virtual Private Cloud (VPC) subnet. Using a default VPC is fine, we
+  don't need any special features.
 - A security group allowing port 22 ssh access to the machines. For the
   automated bcbio-vm setup, this is called `bcbio_cluster_sg`.
 - The name of a [keypair](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName) 
@@ -86,7 +90,7 @@ Use this information to create a configuration file called `project_vars.yaml`:
 
 With this in place you can launch your instance with:
 
-    ansible-playbook -vvv launch_aws.yaml
+    ansible-playbook -i localhost -vvv launch_aws.yaml
 
 This creates the instance, attaches the data volume, mounts the volume as
 `/mnt/work` and installs basic system tools. Get the Public DNS name of the
