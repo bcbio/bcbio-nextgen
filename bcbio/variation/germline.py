@@ -26,7 +26,7 @@ def split_somatic(items):
     germline = []
     for somatic_group in somatic_groups:
         paired = vcfutils.get_paired(somatic_group)
-        if paired.normal_data:
+        if paired and paired.normal_data:
             cur = utils.deepish_copy(paired.normal_data)
             vc = dd.get_variantcaller(cur)
             if isinstance(vc, dict) and "germline" in vc:
