@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from bcbio.bam import ref, sambamba
+from bcbio.bam import ref, sambamba, utils
 from bcbio.distributed import transaction
 from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd
@@ -69,23 +69,33 @@ def run(bam_file, data, out_dir):
 
     region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
                                                               extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-    #_goleft_indexcov(bam_file, data, out_dir)
+    indexcov_files = _goleft_indexcov(bam_file, data, out_dir)
+    out_files = [x for x in [region_coverage_file] + indexcov_files if x and utils.file_exists(x)]
+    out = {"metrics": out}
+    if len(out_files) > 0:
+        out["base"] = out_files[0]
+        out["secondary"] = out_files[1:]
     return out
 
 def _goleft_indexcov(bam_file, data, out_dir):
     """Use goleft indexcov to estimate coverage distributions using BAM index.
     """
-    out_dir = os.path.join(out_dir, "indexcov")
-    with transaction.tx_tmpdir(data) as tmp_dir:
-        gender_chroms = [x.name for x in ref.file_contigs(dd.get_ref_file(data)) if chromhacks.is_sex(x.name)]
-        if gender_chroms:
-            gender_args = "--sex %s" % " ".join(gender_chroms)
-        else:
-            gender_args = ""
-        cmd = "goleft indexcov --directory {tmp_dir} {gender_args} -- {bam_file}"
-        try:
-            do.run(cmd.format(**locals()), "QC: goleft indexcov")
-        except subprocess.CalledProcessError as msg:
-            if "no usable chromosomes in bam" not in str(msg):
-                raise
-    raise NotImplementedError
+    out_dir = utils.safe_makedir(os.path.join(out_dir, "indexcov"))
+    out_files = [os.path.join(out_dir, "%s-indexcov.%s" % (dd.get_sample_name(data), ext))
+                 for ext in ["roc", "ped", "bed.gz"]]
+    if not utils.file_uptodate(out_files[-1], bam_file):
+        with transaction.tx_tmpdir(data) as tmp_dir:
+            tmp_dir = utils.safe_makedir(os.path.join(tmp_dir, dd.get_sample_name(data)))
+            gender_chroms = [x.name for x in ref.file_contigs(dd.get_ref_file(data)) if chromhacks.is_sex(x.name)]
+            gender_args = "--sex %s" % (",".join(gender_chroms)) if gender_chroms else ""
+            cmd = "goleft indexcov --directory {tmp_dir} {gender_args} -- {bam_file}"
+            try:
+                do.run(cmd.format(**locals()), "QC: goleft indexcov")
+            except subprocess.CalledProcessError as msg:
+                if "indexcov: no usable" not in str(msg):
+                    raise
+            for out_file in out_files:
+                orig_file = os.path.join(tmp_dir, os.path.basename(out_file))
+                if utils.file_exists(orig_file):
+                    utils.copy_plus(orig_file, out_file)
+    return [x for x in out_files if utils.file_exists(out_file)]

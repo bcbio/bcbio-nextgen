@@ -130,6 +130,8 @@ def _run_qc_tools(bam_file, data):
         qc_files = None
         if out and isinstance(out, dict):
             if "base" in out:
+                if "metrics" in out:
+                    metrics.update(out.pop("metrics"))
                 qc_files = out
             else:
                 metrics.update(out)
