@@ -20,6 +20,7 @@
         vpc_subnet_id: "{{ vpc_subnet }}"
         instance_profile_name: "{{ iam_role }}"
         region: "{{ region }}"
+        zone: "{{ zone }}"
         assign_public_ip: yes
         count: 1
         wait: yes
@@ -41,9 +42,17 @@
 
 - hosts: launched
   remote_user: ubuntu
-  gather_facts: true
+  gather_facts: no
+  pre_tasks:
+    - raw: sudo apt-get -y install python-simplejson
+    - action: setup
   tasks:
     - include_vars: project_vars.yaml
+    - apt: update_cache=yes
+      become: true
+    - apt: name="{{ item }}"
+      become: true
+      with_items: [git, unzip, wget, tar, gzip, bzip2]
     - name: Create ext4 filesystem if not present
       filesystem: fstype=ext4 dev=/dev/xvdf
       become: true
@@ -55,8 +64,3 @@
       become: true
     - name: Add bcbio to path
       lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
-    - apt: update_cache=yes
-      become: true
-    - apt: name="{{ item }}"
-      become: true
-      with_items: [git, unzip, wget, tar, gzip, bzip2]
