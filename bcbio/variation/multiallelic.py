@@ -64,6 +64,6 @@ def _decompose(in_file, data, passonly=False):
                    "| vt normalize -n -r %s - "
                    """| awk '{ gsub("./-65", "./."); print $0 }'"""
                    "%s"
-                   "| bgzip -c > %s")
+                   "| sed -e 's/Number=A/Number=1/g' | bgzip -c > %s")
             do.run(cmd % (in_file, ref_file, sample_filter, tx_out_file), "Multi-allelic to single allele")
     return vcfutils.bgzip_and_index(out_file, data["config"])
