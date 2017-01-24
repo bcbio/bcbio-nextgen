@@ -244,7 +244,7 @@ def _detect_rRNA(data):
     transcripts = set([x[1] for x in rrna_features if x])
     if not (transcripts and tidy_file):
         return {'rRNA': "NA", "rRNA_rate": "NA"}
-    count_table = pd.read_csv(tidy_file, sep="\t")
+    count_table = pd.read_csv(tidy_file, sep="\t", dtype={'sample': str})
     sample_table = count_table[count_table["sample"].isin([sample])]
     rrna_exp = map(float, sample_table[sample_table["id"].isin(transcripts)]["numreads"])
     total_exp = map(float, sample_table["numreads"])
