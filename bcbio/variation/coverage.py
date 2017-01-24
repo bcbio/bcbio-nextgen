@@ -127,7 +127,7 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
     return out_file
 
 def _extract_highdepth(callable_file, data):
-    out_file = callable_file.replace(".callable.bed", ".highdepth.bed")
+    out_file = "%s-highdepth.bed" % utils.splitext_plus(callable_file)[0]
     if not utils.file_uptodate(out_file, callable_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(callable_file) as in_handle:

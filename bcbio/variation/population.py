@@ -5,10 +5,8 @@ database of variations for query and evaluation.
 """
 import collections
 import csv
-from distutils.version import LooseVersion
 import os
 
-from six import iteritems
 import toolz as tz
 
 from bcbio import install, utils
@@ -288,7 +286,7 @@ def prep_db_parallel(samples, parallel_fn):
     batch_groups, singles, out_retrieve, extras = _group_by_batches(samples, _has_variant_calls)
     to_process = []
     has_batches = False
-    for (name, caller), info in iteritems(batch_groups):
+    for (name, caller), info in batch_groups.items():
         fnames = [x[0] for x in info]
         to_process.append([fnames, (str(name), caller, True), [x[1] for x in info], extras])
         has_batches = True
