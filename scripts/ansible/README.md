@@ -35,59 +35,67 @@ Tools used on your local machine:
   -- automate starting up instances
 - [saws](https://github.com/donnemartin/saws) -- manage and query running
   instances.
+- [bcbio-vm](http://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html#aws-setup)
+  -- automates creation of AWS resources
 
-You can install these into an isolated conda environment and setup with:
+Install these into an isolated conda environment and setup with:
 
     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
+    ./tools/bin/conda install -c conda-forge -c bioconda bcbio-nextgen-vm
     ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
 
-You'll need to create some basic AWS infrastructure to do runs. You can use the
-automation in
-[bcbio-vm](http://bcbio-nextgen.readthedocs.io/en/latest/contents/cloud.html#aws-setup)
-to create these:
+bcbio-vm has an automated script to setup the AWS infrastructure from running:
 
-    bcbio_vm.py aws iam
-    bcbio_vm.py aws vpc
+    bcbio_vm.py aws ansible us-east-1d --keypair
 
-or use the [AWS console](https://aws.amazon.com/) or saws. You need:
+Replace `us-east-1d` with the AWS availability zone you'd like to run in. This
+creates a `project_vars.yaml` file with the following information:
 
-- An AWS image ID for your region. Select this from the
+- An AWS image ID for your region, selected from
   [Ubuntu Amazon EC2 AMI Locator](http://cloud-images.ubuntu.com/locator/ec2/)
   using an option with Instance Type `hvm:ebs-ssd`.
-- An AWS Virtual Private Cloud (VPC) subnet. Using a default VPC is fine, we
-  don't need any special features.
-- A security group allowing port 22 ssh access to the machines. For the
-  automated bcbio-vm setup, this is called `bcbio_cluster_sg`.
+- An AWS Virtual Private Cloud (VPC) subnet.
+- A security group allowing port 22 ssh access to the machines.
 - The name of a [keypair](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName) 
   to use for ssh access, where you have the private key stored locally. If you
-  used the bcbio-vm automated setup, you'll have a keypair named `bcbio` in
-  `~/.bcbio/aws_keypairs/bcbio`.
-- Optionally, an IAM role that allows access to S3 resources. This makes it
-  easier to push/pull data to the instance. The bcbio-vm automation creates one
-  called `bcbio_full_s3_access`.
+  used the bcbio-vm automated setup, you'll have a private keypair in
+  `aws_keypairs/bcbio`.
+- An IAM role that allows access to S3 resources. This makes it
+  easier to push/pull data to the instance.
 
-Finally, create a volume that will contain the run and bcbio installation. It
-should be in the same availability zone as your created VPC (`aws ec2
-describe-subnets`). You can create this in the AWS console in the Volumes tab,
-or using saws/aws:
+You can also use the [AWS console](https://aws.amazon.com/) or saws to create
+these manually.
 
-       aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
-       aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
+Create a volume that will contain the run and bcbio installation. It
+should be in the same availability zone as specified above. You can create this
+in the AWS console in the Volumes tab, or using saws/aws:
 
-Use this information to create a configuration file called `project_vars.yaml`:
+    aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
+    aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
+
+Add your volume ID to the `project_vars.yaml` configuration file:
 
     instance_type: t2.small
     spot_price: null
-    image_id: ami-2d39803a
-    vpc_subnet: subnet-0817ce51
-    volume: vol-79ce2ede
-    security_group: bcbio_cluster_sg
-    keypair: kunkel-keypair
+    volume: vol-50ed15c1
+    keypair: bcbio
+    image_id: ami-6edd3078
+    vpc_subnet: subnet-3628576d
     iam_role: bcbio_full_s3_access
+    security_group: bcbio_cluster_sg
     region: us-east-1
-    zone: us-east-1a
+    zone: us-east-1d
+
+Edit `~/.ssh/config` to enable clean connections to AWS instances:
+
+    Host *.amazonaws.com
+      StrictHostKeyChecking no
+      UserKnownHostsFile=/dev/null
+      IdentityFile /path/to/aws_keypairs/bcbio
+      IdentitiesOnly yes
+      ControlPath ~/.ssh/%r@%h:%p
 
 With this in place you can launch your instance with:
 
@@ -101,7 +109,7 @@ created machine with:
 
 Then ssh into your machine with:
 
-    ssh -i /path/to/your/private.key ubuntu@ec2-XX-XXX-XXX-XXX.compute-1.amazonaws.com
+    ssh ubuntu@ec2-XX-XXX-XXX-XXX.compute-1.amazonaws.com
 
 On the first run with a new data volume, install bcbio and setup a work
 directory for running following the instructions in 'Running bcbio.' Then you're
