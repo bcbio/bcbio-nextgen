@@ -163,6 +163,9 @@ def add_common_plot_features(plot, steps):
     plot.yaxis.set_tick_params(labelright=True)
     plot.set_xlabel('')
 
+    if plot.legend_ is not None:
+        plot.legend_.remove()
+
     ymax = plot.get_ylim()[1]
     ticks = {}
     for tstamp, step in steps.items():
