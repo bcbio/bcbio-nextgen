@@ -137,19 +137,15 @@ def run_vep(in_file, data):
                                   "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = tz.get_in(("config", "resources", "vep", "plugins"), data, ["dbnsfp", "loftee", "dbscsnv"])
                     for plugin in plugins:
-                        plugin_args, plugin_fields = plugin_fns[plugin](data)
+                        plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
-                        config_fields += plugin_fields
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     prediction_fields += ["PolyPhen", "SIFT"]
                     # Use HGVS by default, requires indexing the reference genome
                     config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
-                    config_fields += ["HGVSc", "HGVSp"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick"]
-                std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
-                              "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
@@ -159,7 +155,7 @@ def run_vep(in_file, data):
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
                        "--protein", "--tsl", "--appris", "--gmaf", "--maf_1kg", "--maf_esp", "--maf_exac",
-                       "--pubmed", "--variant_class", "--fields", ",".join(std_fields + config_fields)] + config_args
+                       "--pubmed", "--variant_class"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
@@ -195,9 +191,9 @@ def _get_dbnsfp(data):
                     "clinvar_rs", "clinvar_clnsig", "clinvar_trait", "clinvar_golden_stars", "Interpro_domain", "GTEx_V6_gene", "GTEx_V6_tissue"]
 
     if dbnsfp_file and os.path.exists(dbnsfp_file):
-        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
+        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
     else:
-        return [], []
+        return []
 
 def _get_loftee(data):
     """Retrieve loss of function plugin parameters for LOFTEE.
@@ -206,9 +202,8 @@ def _get_loftee(data):
     ancestral_file = tz.get_in(("genome_resources", "variation", "ancestral"), data)
     if not ancestral_file or not os.path.exists(ancestral_file):
         ancestral_file = "false"
-    annotations = ["LoF", "LoF_filter", "LoF_flags"]
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
-    return args, annotations
+    return args
 
 def _get_dbscsnv(data):
     """
@@ -220,9 +215,9 @@ def _get_dbscsnv(data):
     dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
     annotations = ["ada_score","rf_score"]
     if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)], annotations
+        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)]
     else:
-        return [], []
+        return []
 
 def _get_maxentscan(data):
     """
@@ -237,9 +232,9 @@ def _get_maxentscan(data):
     maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan_score3.pl", data["config"])))
     annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
-        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
+        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)]
     else:
-        return [], []
+        return []
 
 def _get_genesplicer(data):
     """
@@ -252,9 +247,9 @@ def _get_genesplicer(data):
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
     annotations = ["genesplicer"]
     if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
-        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], annotations
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)]
     else:
-        return [], []
+        return []
 
 # ## snpEff variant effects
 
