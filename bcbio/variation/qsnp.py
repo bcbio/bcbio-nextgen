@@ -16,8 +16,6 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils
 from bcbio.variation.vcfutils import get_paired_bams, bgzip_and_index, combine_variant_files, PairedData
 
-from six import iteritems
-
 def is_installed(config):
     """Check for qsnp installation on machine.
     """
@@ -135,9 +133,9 @@ def _create_input(paired, out_file, ref_file, snp_file, qsnp_file):
     ini_file["[ids]"]["donor"] = paired.tumor_name
     ini_file["[outputFiles]"]["vcf"] = out_file
     with open(qsnp_file, "w") as out_handle:
-        for k, v in iteritems(ini_file):
+        for k, v in ini_file.items():
             out_handle.write("%s\n" % k)
-            for opt, value in iteritems(v):
+            for opt, value in v.items():
                 if value != "":
                     out_handle.write("%s = %s\n" % (opt, value))
 

@@ -8,7 +8,6 @@ from xml.etree import ElementTree
 
 import toolz as tz
 import yaml
-from six import iteritems
 
 from bcbio import utils
 from bcbio.distributed import objectstore
@@ -64,7 +63,7 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
     input_dir = os.path.join(base_dir, "inputs")
     if isinstance(xs, dict):
         out = {}
-        for k, v in iteritems(xs):
+        for k, v in xs.items():
             if k not in ignore_keys and v and isinstance(v, basestring):
                 if v.lower() == "none":
                     out[k] = None

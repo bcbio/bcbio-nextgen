@@ -10,7 +10,6 @@ import sys
 import yaml
 
 import toolz as tz
-from six import iteritems
 
 class CmdNotFound(Exception):
     pass
@@ -30,16 +29,16 @@ def update_w_custom(config, lane_info):
     for analysis_type in name_remaps.get(base_name, [base_name]):
         custom = config.get("custom_algorithms", {}).get(analysis_type)
         if custom:
-            for key, val in iteritems(custom):
+            for key, val in custom.items():
                 config["algorithm"][key] = val
     # apply any algorithm details specified with the lane
-    for key, val in iteritems(lane_info.get("algorithm", {})):
+    for key, val in lane_info.get("algorithm", {}).items():
         config["algorithm"][key] = val
     # apply any resource details specified with the lane
-    for prog, pkvs in iteritems(lane_info.get("resources", {})):
+    for prog, pkvs in lane_info.get("resources", {}).items():
         if prog not in config["resources"]:
             config["resources"][prog] = {}
-        for key, val in iteritems(pkvs):
+        for key, val in pkvs.items():
             config["resources"][prog][key] = val
     return config
 
@@ -83,15 +82,15 @@ def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
     """
     out = copy.deepcopy(container_config)
-    for k, v in iteritems(host_config):
+    for k, v in host_config.items():
         if k in set(["galaxy_config"]):
             out[k] = v
         elif k == "resources":
-            for pname, resources in iteritems(v):
+            for pname, resources in v.items():
                 if not isinstance(resources, dict) and pname not in out[k]:
                     out[k][pname] = resources
                 else:
-                    for rname, rval in iteritems(resources):
+                    for rname, rval in resources.items():
                         if (rname in set(["cores", "jvm_opts", "memory"])
                               or pname in set(["gatk", "mutect"])):
                             if pname not in out[k]:
@@ -138,7 +137,7 @@ def load_config(config_file):
         config['resources'] = {}
     # lowercase resource names, the preferred way to specify, for back-compatibility
     newr = {}
-    for k, v in iteritems(config["resources"]):
+    for k, v in config["resources"].items():
         if k.lower() != k:
             newr[k.lower()] = v
     config["resources"].update(newr)

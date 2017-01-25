@@ -180,9 +180,9 @@ def _install_container_bcbio_system(datadir):
             expose_config = yaml.load(in_handle)
     else:
         expose_config = {"resources": {}}
-    for pname, vals in iteritems(config["resources"]):
+    for pname, vals in config["resources"].items():
         expose_vals = {}
-        for k, v in iteritems(vals):
+        for k, v in vals.items():
             if k in expose:
                 expose_vals[k] = v
         if len(expose_vals) > 0 and pname not in expose_config["resources"]:

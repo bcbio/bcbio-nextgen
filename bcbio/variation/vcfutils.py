@@ -8,7 +8,6 @@ import os
 import shutil
 import subprocess
 
-from six import iteritems
 import toolz as tz
 
 from six.moves import zip
@@ -284,7 +283,7 @@ def _check_samples_nodups(fnames):
     for f in fnames:
         for s in get_samples(f):
             counts[s] += 1
-    duplicates = [s for s, c in iteritems(counts) if c > 1]
+    duplicates = [s for s, c in counts.items() if c > 1]
     if duplicates:
         raise ValueError("Duplicate samples found in inputs %s: %s" % (duplicates, fnames))
 

@@ -13,7 +13,6 @@ import subprocess
 import time
 
 from pysam import VariantFile
-from six import iteritems
 import toolz as tz
 import yaml
 
@@ -473,8 +472,8 @@ def _flatten_grading(stats):
     for vtype in vtypes:
         yield vtype, cat, stats[cat][cat].get(vtype, 0)
     for vtype in vtypes:
-        for vclass, vitems in sorted(iteritems(stats["discordant"].get(vtype, {}))):
-            for vreason, val in sorted(iteritems(vitems)):
+        for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).items()):
+            for vreason, val in sorted(vitems.items()):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 
@@ -522,7 +521,7 @@ def summarize_grading(samples):
     validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))
     header = ["sample", "caller", "variant.type", "category", "value"]
     validated, out = _group_validate_samples(samples)
-    for vname, vitems in iteritems(validated):
+    for vname, vitems in validated.items():
         out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
         with open(out_csv, "w") as out_handle:
             writer = csv.writer(out_handle)

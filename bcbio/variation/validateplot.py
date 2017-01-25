@@ -6,7 +6,6 @@ differences.
 import collections
 import os
 
-from six import iteritems
 import numpy as np
 import pandas as pd
 
@@ -339,7 +338,7 @@ def get_group_floors(df, cat_labels):
             group_maxes[stype].append(max(group["value"]))
         group_maxes[name].append(max(group["value"]))
     out = {}
-    for k, vs in iteritems(group_maxes):
+    for k, vs in group_maxes.items():
         if k in group_diffs:
             out[k] = max(max(group_diffs[stype]), min(vs))
         else:

@@ -10,9 +10,6 @@ import sys
 import resource
 import tempfile
 
-from six import iteritems
-import yaml
-
 from bcbio import log, heterogeneity, hla, structural, utils
 from bcbio.cwl.inspect import initialize_watcher
 from bcbio.distributed import prun
@@ -430,10 +427,10 @@ def _pair_samples_with_pipelines(run_info_yaml, config):
         usample.pop("algorithm", None)
         if "resources" not in usample:
             usample["resources"] = {}
-        for prog, pkvs in iteritems(resources):
+        for prog, pkvs in resources.items():
             if prog not in usample["resources"]:
                 usample["resources"][prog] = {}
-            for key, val in iteritems(pkvs):
+            for key, val in pkvs.items():
                 usample["resources"][prog][key] = val
         config = config_utils.update_w_custom(config, usample)
         sample["resources"] = {}
