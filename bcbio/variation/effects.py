@@ -136,10 +136,8 @@ def run_vep(in_file, data):
                     plugin_fns = {"dbnsfp": _get_dbnsfp, "loftee": _get_loftee, "dbscsnv": _get_dbscsnv,
                                   "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = ["dbnsfp", "loftee", "dbscsnv"]
-                    if "vep_plugin_maxentscan" in dd.get_tools_on(data):
-                        plugins.append("maxentscan")
-                    if "vep_plugin_genesplicer" in dd.get_tools_on(data):
-                        plugins.append("genesplicer")
+                    if "vep_splicesite_annotations" in dd.get_tools_on(data):
+                        plugins += ["maxentscan","genesplicer"]
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
