@@ -135,21 +135,21 @@ def run_vep(in_file, data):
                 if is_human:
                     plugin_fns = {"dbnsfp": _get_dbnsfp, "loftee": _get_loftee, "dbscsnv": _get_dbscsnv,
                                   "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
-                    plugins = tz.get_in(("config", "resources", "vep", "plugins"), data, ["dbnsfp", "loftee"])
+                    plugins = ["dbnsfp", "loftee", "dbscsnv"]
+                    if "vep_plugin_maxentscan" in dd.get_tools_on(data):
+                        plugins.append("maxentscan")
+                    if "vep_plugin_genesplicer" in dd.get_tools_on(data):
+                        plugins.append("genesplicer")
                     for plugin in plugins:
-                        plugin_args, plugin_fields = plugin_fns[plugin](data)
+                        plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
-                        config_fields += plugin_fields
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     prediction_fields += ["PolyPhen", "SIFT"]
                     # Use HGVS by default, requires indexing the reference genome
                     config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
-                    config_fields += ["HGVSc", "HGVSp"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick"]
-                std_fields = ["Consequence", "Codons", "Amino_acids", "Gene", "SYMBOL", "Feature",
-                              "EXON"] + prediction_fields + ["Protein_position", "BIOTYPE", "CANONICAL", "CCDS"]
                 resources = config_utils.get_resources("vep", data["config"])
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
@@ -157,8 +157,9 @@ def run_vep(in_file, data):
                        "--no_stats",
                        "--cache", "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
-                       "--gene_phenotype", "--ccds",
-                       "--fields", ",".join(std_fields + config_fields)] + config_args
+                       "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
+                       "--protein", "--tsl", "--appris", "--gmaf", "--maf_1kg", "--maf_esp", "--maf_exac",
+                       "--pubmed", "--variant_class"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
@@ -175,14 +176,28 @@ def _get_dbnsfp(data):
     https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
-    annotations = tz.get_in(("config", "resources", "vep", "dbnsfp_fields"), data,
-                            ['RadialSVM_score', 'RadialSVM_pred', 'LR_score', 'LR_pred', 'MutationTaster_score',
-                             'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred', 'PROVEAN_score', 'PROVEAN_pred',
-                             'MetaSVM_score', 'MetaSVM_pred', 'CADD_raw', 'CADD_phred', 'Reliability_index'])
+    annotations = ["LRT_score", "LRT_converted_rankscore", "LRT_pred", "LRT_Omega",
+                    "MutationTaster_score", "MutationTaster_converted_rankscore", "MutationTaster_pred", "MutationTaster_model", "MutationTaster_AAE",
+                    "MutationAssessor_UniprotID", "MutationAssessor_variant", "MutationAssessor_score", "MutationAssessor_score_rankscore", "MutationAssessor_pred",
+                    "FATHMM_score", "FATHMM_converted_rankscore", "FATHMM_pred",
+                    "PROVEAN_score", "PROVEAN_converted_rankscore", "PROVEAN_pred",
+                    "Transcript_id_VEST3", "Transcript_var_VEST3", "VEST3_score", "VEST3_rankscore",
+                    "MetaSVM_score", "MetaSVM_rankscore", "MetaSVM_pred", "MetaLR_score", "MetaLR_rankscore", "MetaLR_pred",
+                    "Reliability_index", "M-CAP_score", "M-CAP_rankscore", "M-CAP_pred",
+                    "CADD_raw", "CADD_raw_rankscore", "CADD_phred", "DANN_score", "DANN_rankscore",
+                    "fathmm-MKL_coding_score", "fathmm-MKL_coding_rankscore", "fathmm-MKL_coding_pred", "fathmm-MKL_coding_group",
+                    "Eigen_coding_or_noncoding", "Eigen-raw", "Eigen-phred", "Eigen-PC-raw", "Eigen-PC-phred", "Eigen-PC-raw_rankscore",
+                    "GenoCanyon_score", "GenoCanyon_score_rankscore", "integrated_fitCons_score", "integrated_fitCons_score_rankscore", "integrated_confidence_value",
+                    "GM12878_fitCons_score", "GM12878_fitCons_score_rankscore", "GM12878_confidence_value",
+                    "H1-hESC_fitCons_score", "H1-hESC_fitCons_score_rankscore", "H1-hESC_confidence_value", "HUVEC_fitCons_score", "HUVEC_fitCons_score_rankscore", "HUVEC_confidence_value",
+                    "GERP++_NR", "GERP++_RS", "GERP++_RS_rankscore", "phyloP100way_vertebrate", "phyloP100way_vertebrate_rankscore", "phyloP20way_mammalian", "phyloP20way_mammalian_rankscore",
+                    "phastCons100way_vertebrate", "phastCons100way_vertebrate_rankscore", "phastCons20way_mammalian", "phastCons20way_mammalian_rankscore", "SiPhy_29way_pi", "SiPhy_29way_logOdds", "SiPhy_29way_logOdds_rankscore",
+                    "clinvar_rs", "clinvar_clnsig", "clinvar_trait", "clinvar_golden_stars", "Interpro_domain", "GTEx_V6_gene", "GTEx_V6_tissue"]
+
     if dbnsfp_file and os.path.exists(dbnsfp_file):
-        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))], annotations
+        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
     else:
-        return [], []
+        return []
 
 def _get_loftee(data):
     """Retrieve loss of function plugin parameters for LOFTEE.
@@ -191,9 +206,8 @@ def _get_loftee(data):
     ancestral_file = tz.get_in(("genome_resources", "variation", "ancestral"), data)
     if not ancestral_file or not os.path.exists(ancestral_file):
         ancestral_file = "false"
-    annotations = ["LoF", "LoF_filter", "LoF_flags"]
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
-    return args, annotations
+    return args
 
 def _get_dbscsnv(data):
     """
@@ -205,9 +219,9 @@ def _get_dbscsnv(data):
     dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
     annotations = ["ada_score","rf_score"]
     if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)], annotations
+        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)]
     else:
-        return [], []
+        return []
 
 def _get_maxentscan(data):
     """
@@ -222,9 +236,9 @@ def _get_maxentscan(data):
     maxentscan_dir = os.path.dirname(os.path.realpath(config_utils.get_program("maxentscan_score3.pl", data["config"])))
     annotations = ["maxentscan_alt","maxentscan_diff","maxentscan_ref"]
     if maxentscan_dir and os.path.exists(maxentscan_dir):
-        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)], annotations
+        return ["--plugin", "MaxEntScan,%s" % (maxentscan_dir)]
     else:
-        return [], []
+        return []
 
 def _get_genesplicer(data):
     """
@@ -237,9 +251,9 @@ def _get_genesplicer(data):
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
     annotations = ["genesplicer"]
     if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
-        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)], annotations
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_dir,genesplicer_training)]
     else:
-        return [], []
+        return []
 
 # ## snpEff variant effects
 
