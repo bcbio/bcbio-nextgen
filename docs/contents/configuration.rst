@@ -851,8 +851,9 @@ lists with multiple options:
   ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
   that pass filters. ``gemini_vcfanno`` uses the new vcfanno/vcf2db for creating
   GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other
-  organisms. ``vcfanno_expand`` decompresses and expands the genotype columns in
-  the GEMINI database (if applicable). This enables standard SQL queries on the database.
+  organisms. ``vcf2db_expand`` decompresses and expands the genotype columns in
+  the vcfanno prepared GEMINI databases, enabling standard SQL queries on
+  genotypes and depths.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 
