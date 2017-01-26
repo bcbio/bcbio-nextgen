@@ -493,20 +493,21 @@ def _bgzip_from_fastq(data):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
     in_file = data["in_file"]
-    config = data["config"]
-    grabix = config_utils.get_program("grabix", config)
-    needs_convert = config["algorithm"].get("quality_format", "").lower() == "illumina"
+    needs_convert = dd.get_quality_format(data).lower() == "illumina"
     if in_file.endswith(".gz") and not objectstore.is_remote(in_file):
-        needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, grabix, needs_convert)
+        if needs_convert:
+            needs_bgzip, needs_gunzip = True, True
+        else:
+            needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, data)
     elif in_file.endswith(".bz2"):
         needs_bgzip, needs_gunzip = True, True
-    elif objectstore.is_remote(in_file) and not tz.get_in(["algorithm", "align_split_size"], config):
+    elif objectstore.is_remote(in_file) and not tz.get_in(["config", "algorithm", "align_split_size"], data):
         needs_bgzip, needs_gunzip = False, False
     else:
         needs_bgzip, needs_gunzip = True, False
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
     if needs_bgzip or needs_gunzip or needs_convert or objectstore.is_remote(in_file):
-        out_file = _bgzip_file(in_file, config, work_dir,
+        out_file = _bgzip_file(in_file, data["config"], work_dir,
                                needs_bgzip, needs_gunzip, needs_convert)
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
@@ -545,15 +546,12 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
                                                                      needs_gunzip, needs_convert))
     return out_file
 
-def _check_gzipped_input(in_file, grabix, needs_convert):
+def _check_gzipped_input(in_file, data):
     """Determine if a gzipped input file is blocked gzip or standard.
-
     """
-    # grabix is not parsing bgzip output from FASTQ correctly and will hang
-    # indexing indefinitely. Until we can identify the issue, we re-bgzip everyting
-    return True, True
-    # is_bgzip = subprocess.check_output([grabix, "check", in_file])
-    # if is_bgzip.strip() == "yes" and not needs_convert:
-    #     return False, False
-    # else:
-    #     return True, True
+    grabix = config_utils.get_program("grabix", data["config"])
+    is_bgzip = subprocess.check_output([grabix, "check", in_file])
+    if is_bgzip.strip() == "yes":
+        return False, False
+    else:
+        return True, True

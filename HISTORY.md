@@ -1,5 +1,7 @@
 ## 1.0.2 (in progress)
 
+- Re-add checks for pre-bgzipped fastq inputs to alignment preparation thanks to
+  a fix for grabix to handle Illumina bgzip outputs.
 - Improve lumpy structural variant runs from pre-aligned BAM files, using
   extract_sv_reads to avoid need to resort input files. Thanks to Neill Gibson.
 - Speed up post-alignment callability calculations by using default parameters
