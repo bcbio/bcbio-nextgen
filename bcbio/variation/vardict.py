@@ -145,13 +145,20 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                             vcfutils.write_empty_vcf(tx_tmp_file, config, samples=[sample])
                         else:
                             cmd += " > {tx_tmp_file}"
-                            do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+                            try:
+                                do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+                            except:
+                                vcfutils.write_empty_vcf(tx_tmp_file, config, samples=[sample])
+
                 else:
                     if not _is_bed_file(target):
                         vcfutils.write_empty_vcf(tx_out_file, config, samples=[sample])
                     else:
                         cmd += " > {tx_out_file}"
-                        do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+                        try:
+                            do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
+                        except:
+                            vcfutils.write_empty_vcf(tx_out_file, config, samples=[sample])
             if num_bams > 1:
                 # N.B. merge_variant_files wants region in 1-based end-inclusive
                 # coordinates. Thus use bamprep.region_to_gatk
