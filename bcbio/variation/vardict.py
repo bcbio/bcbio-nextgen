@@ -131,7 +131,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                          os.path.dirname(utils.Rscript_cmd()))
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
-                       "| {strandbias}"
+                       "| {strandbias} "
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
                        "| bcftools filter -i 'QUAL >= 0' "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
