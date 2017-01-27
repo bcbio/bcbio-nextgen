@@ -185,10 +185,8 @@ def intersect_two(f1, f2, work_dir, data):
                 do.run(cmd.format(**locals()), "Intersect BED files", data)
         return out_file
 
-def get_padded_bed_file(bed_file, padding, data, bedprep_dir=None):
-    if not bedprep_dir:
-        bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
-    out_file = os.path.join(bedprep_dir, "%s-padded.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
+def get_padded_bed_file(out_dir, bed_file, padding, data):
+    out_file = os.path.join(out_dir, "%s-padded.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
     if utils.file_uptodate(out_file, bed_file):
         return out_file
     fai_file = ref.fasta_idx(dd.get_ref_file(data))

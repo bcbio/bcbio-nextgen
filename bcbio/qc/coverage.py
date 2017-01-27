@@ -17,8 +17,7 @@ def run(bam_file, data, out_dir):
     out = dict()
 
     if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
-        cov_bed_file = bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
-        merged_bed_file = bedutils.merge_overlaps(cov_bed_file, data)
+        merged_bed_file = dd.get_coverage_merged(data)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
         merged_bed_file = dd.get_variant_regions_merged(data)
@@ -30,7 +29,7 @@ def run(bam_file, data, out_dir):
     avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
     out['Avg_coverage'] = avg_depth
 
-    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, out_dir)
+    samtools_stats_dir = os.path.join(out_dir, os.path.pardir, 'samtools')
     from bcbio.qc import samtools
     samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
 
@@ -60,7 +59,7 @@ def run(bam_file, data, out_dir):
             if dd.get_coverage_interval(data) != "genome":
                 # Skip padded calculation for WGS even if the "coverage" file is specified
                 # the padded statistic makes only sense for exomes and panels
-                padded_bed_file = bedutils.get_padded_bed_file(merged_bed_file, 200, data)
+                padded_bed_file = bedutils.get_padded_bed_file(out_dir, merged_bed_file, 200, data)
                 ontarget_padded = sambamba.number_of_mapped_reads(
                     data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
                 out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique

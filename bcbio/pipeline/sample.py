@@ -191,6 +191,14 @@ def clean_inputs(data):
     data["config"]["algorithm"]["variant_regions"] = clean_vr
     data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
 
+    if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
+        if not utils.get_in(data, ("config", "algorithm", "coverage_orig")):
+            data["config"]["algorithm"]["coverage_orig"] = dd.get_coverage(data)
+        clean_cov_bed = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
+        merged_cov_bed = merge_overlaps(clean_cov_bed, data)
+        data["config"]["algorithm"]["coverage"] = clean_cov_bed
+        data["config"]["algorithm"]["coverage_merged"] = merged_cov_bed
+
     if 'seq2c' in get_svcallers(data):
         seq2c_ready_bed = prep_seq2c_bed(data)
         if not seq2c_ready_bed:
