@@ -363,7 +363,7 @@ def _merge_target_information(samples):
     # Reporting in MultiQC only if the target is the same across samples
     if len(coverage_beds) == 1:
         cov_bed = list(coverage_beds)[0]
-        if cov_bed is not None:
+        if cov_bed not in [None, "None"]:
             if vcr_orig and vcr_orig == cov_bed:
                 info["coverage_bed_info"] = info["variants_regions_info"]
             else:

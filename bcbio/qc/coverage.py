@@ -97,4 +97,4 @@ def _goleft_indexcov(bam_file, data, out_dir):
                 orig_file = os.path.join(tmp_dir, os.path.basename(out_file))
                 if utils.file_exists(orig_file):
                     utils.copy_plus(orig_file, out_file)
-    return [x for x in out_files if utils.file_exists(out_file)]
+    return [x for x in out_files if utils.file_exists(x)]
