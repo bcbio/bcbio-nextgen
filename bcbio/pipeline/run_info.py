@@ -687,6 +687,7 @@ def validate_yaml(yaml_in, yaml_fn):
         return
     conf = """{"extends": "relaxed",
                "rules": {"trailing-spaces": {"level": "warning"},
+                         "new-lines": {"level": "warning"},
                          "new-line-at-end-of-file": {"level": "warning"}}}"""
     if utils.file_exists(yaml_in):
         with open(yaml_in) as in_handle:
