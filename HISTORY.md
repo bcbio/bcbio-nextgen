@@ -16,6 +16,7 @@
   (use `bcbio_conda install -c bioconda svtyper=0.1.1` to test in development)
 - Work towards supporting a Python 3 compatible bcbio codebase. Thanks to
   Michael Crusoe.
+- Fix double uploading of fast RNA-seq quantification.
 
 ## 1.0.1 (17 January 2017)
 

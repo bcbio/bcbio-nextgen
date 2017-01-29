@@ -277,7 +277,8 @@ def _get_variant_file(x, key, suffix=""):
     return out
 
 def _maybe_add_sailfish_files(algorithm, sample, out):
-    if dd.get_sailfish_dir(sample):
+    analysis = dd.get_analysis(sample)
+    if dd.get_sailfish_dir(sample) and analysis != "fastrna-seq":
         out.append({"path": dd.get_sailfish_dir(sample),
                     "type": "directory",
                     "ext": "sailfish"})
