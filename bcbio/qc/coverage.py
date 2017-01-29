@@ -87,6 +87,8 @@ def _goleft_indexcov(bam_file, data, out_dir):
             tmp_dir = utils.safe_makedir(os.path.join(tmp_dir, dd.get_sample_name(data)))
             gender_chroms = [x.name for x in ref.file_contigs(dd.get_ref_file(data)) if chromhacks.is_sex(x.name)]
             gender_args = "--sex %s" % (",".join(gender_chroms)) if gender_chroms else ""
+            # XXX Skip gender args until we can correctly specify #1793
+            gender_args = ""
             cmd = "goleft indexcov --directory {tmp_dir} {gender_args} -- {bam_file}"
             try:
                 do.run(cmd.format(**locals()), "QC: goleft indexcov")
