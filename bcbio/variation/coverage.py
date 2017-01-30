@@ -215,7 +215,6 @@ def checkpoint(stem):
         return wrapper
     return check_file
 
-@checkpoint("_summary")
 def _calculate_percentiles(in_file, sample, data=None, cutoffs=None):
     """
     Parse pct bases per region to summarize it in
@@ -229,31 +228,32 @@ def _calculate_percentiles(in_file, sample, data=None, cutoffs=None):
                 has_data = True
                 break
     if not has_data:
-        return in_file
+        return []
     out_file = append_stem(in_file, "_summary")
     out_total_file = append_stem(in_file, "_total_summary")
-    dt = pd.read_csv(in_file, sep="\t", index_col=False)
-    pct = dict()
-    pct_bases = dict()
-    size = np.array(dt["chromEnd"]) - np.array(dt["chromStart"])
-    for cutoff in [h for h in list(dt) if h.startswith("percentage")]:
-        if cutoffs and int(cutoff.split("percentage")[1]) in cutoffs:
-            a = np.array(dt[cutoff])
-            for p_point in [0.01, 10, 25, 50, 75, 90, 99.9]:
-                q = np.percentile(a, p_point)
-                pct[(cutoff, p_point)] = q
-            pct_bases[cutoff] = sum(size * a)/float(sum(size))
+    if not utils.file_exists(out_file) or not utils.file_exists(out_total_file):
+        dt = pd.read_csv(in_file, sep="\t", index_col=False)
+        pct = dict()
+        pct_bases = dict()
+        size = np.array(dt["chromEnd"]) - np.array(dt["chromStart"])
+        for cutoff in [h for h in list(dt) if h.startswith("percentage")]:
+            if cutoffs and int(cutoff.split("percentage")[1]) in cutoffs:
+                a = np.array(dt[cutoff])
+                for p_point in [0.01, 10, 25, 50, 75, 90, 99.9]:
+                    q = np.percentile(a, p_point)
+                    pct[(cutoff, p_point)] = q
+                pct_bases[cutoff] = sum(size * a) / float(sum(size))
 
-    with file_transaction(data, out_total_file) as tx_file:
-        with open(tx_file, 'w') as out_handle:
-            print >>out_handle, "cutoff_reads\tbases_pct\tsample"
-            for k in pct_bases:
-                print >>out_handle, "\t".join(map(str, [k, pct_bases[k], sample]))
-    with file_transaction(data, out_file) as tx_file:
-        with open(tx_file, 'w') as out_handle:
-            print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
-            for k in pct:
-                print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
+        with file_transaction(data, out_total_file) as tx_file:
+            with open(tx_file, 'w') as out_handle:
+                print >>out_handle, "cutoff_reads\tbases_pct\tsample"
+                for k in pct_bases:
+                    print >>out_handle, "\t".join(map(str, [k, pct_bases[k], sample]))
+        with file_transaction(data, out_file) as tx_file:
+            with open(tx_file, 'w') as out_handle:
+                print >>out_handle, "cutoff_reads\tregion_pct\tbases_pct\tsample"
+                for k in pct:
+                    print >>out_handle, "\t".join(map(str, [k[0], k[1], pct[k], sample]))
     # To move metrics to multiqc, will remove older files
     # when bcbreport accepts these one, to avoid errors
     # while porting everything to multiqc
@@ -262,7 +262,7 @@ def _calculate_percentiles(in_file, sample, data=None, cutoffs=None):
     out_total_fixed = os.path.join(os.path.dirname(out_file), "%s_bcbio_coverage_avg.txt" % sample)
     copy_plus(out_file, out_file_fixed)
     copy_plus(out_total_file, out_total_fixed)
-    return out_file_fixed
+    return [out_file_fixed, out_total_fixed]
 
 def _read_regions(fn):
     """
@@ -341,7 +341,7 @@ def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
     """
     bed_file = dd.get_coverage(data)
     if not bed_file or not utils.file_exists(bed_file):
-        return None
+        return []
     work_dir = safe_makedir(out_dir)
     cleaned_bed = clean_file(bed_file, data, prefix="cov-", simple=True)
 
@@ -360,5 +360,5 @@ def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
                 cmdl = sambamba.make_command(data, "depth region", in_bam, cleaned_bed, depth_thresholds=depth_thresholds)
                 cmdl += " | sed 's/# chrom/chrom/' > " + out_tx
                 do.run(cmdl, "Run coverage regional analysis for {}".format(sample))
-        parse_file = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data, cutoffs=cutoffs)
-    return os.path.abspath(parse_file)
+        out_files = _calculate_percentiles(os.path.abspath(parse_file), sample, data=data, cutoffs=cutoffs)
+    return [os.path.abspath(x) for x in out_files]

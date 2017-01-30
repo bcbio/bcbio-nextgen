@@ -1,5 +1,6 @@
 """Coverage based QC calculations.
 """
+import glob
 import os
 import subprocess
 
@@ -66,10 +67,12 @@ def run(bam_file, data, out_dir):
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-    region_coverage_file = cov.coverage_region_detailed_stats(data, out_dir,
-                                                              extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
+    out_files = cov.coverage_region_detailed_stats(data, out_dir,
+                                                   extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
+    for ext in ["coverage.bed", "summary.bed"]:
+        out_files += [x for x in glob.glob(os.path.join(out_dir, "*%s" % ext)) if os.path.isfile(x)]
     indexcov_files = _goleft_indexcov(bam_file, data, out_dir)
-    out_files = [x for x in [region_coverage_file] + indexcov_files if x and utils.file_exists(x)]
+    out_files += [x for x in indexcov_files if x and utils.file_exists(x)]
     out = {"metrics": out}
     if len(out_files) > 0:
         out["base"] = out_files[0]
