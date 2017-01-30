@@ -126,6 +126,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
+                py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
                          os.path.dirname(utils.Rscript_cmd()))
@@ -133,6 +134,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                       """| {py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' """
                        "| bcftools filter -i 'QUAL >= 0' "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
@@ -282,6 +284,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                    (os.path.join(os.path.dirname(sys.executable), "py"),
                                      0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
+                py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
                          os.path.dirname(utils.Rscript_cmd()))
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
@@ -289,6 +292,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "| {strandbias} "
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
+                       """| {py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' """
                        "{freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
                        "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "

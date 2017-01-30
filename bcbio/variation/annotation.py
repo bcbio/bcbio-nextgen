@@ -121,10 +121,8 @@ def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
                 out_handle.write('fields=["ID"]\n')
                 out_handle.write('names=["rs_ids"]\n')
                 out_handle.write('ops=["concat"]\n')
-            py_cl = os.path.join(os.path.dirname(sys.executable), "py")
             ref_file = dd.get_ref_file(data)
             cmd = ("vcfanno {conf_file} {orig_file} | "
-                   """{py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' | """
                    "bcftools annotate --set-id +'%INFO/rs_ids' -o {tx_out_file} -O z")
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
     return vcfutils.bgzip_and_index(out_file, data["config"])
