@@ -426,12 +426,11 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
     # files
     work_dir = utils.safe_makedir(os.path.join(dirs["work"], "align_prep"))
     out_file_1 = os.path.join(work_dir, "%s%s-1.fq.gz" % (os.path.splitext(os.path.basename(bam_file))[0], output_infix))
-    if bam.is_paired(bam_file):
-        out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
-    else:
-        out_file_2 = None
+    out_file_2 = out_file_1.replace("-1.fq.gz", "-2.fq.gz")
     needs_retry = False
     if is_retry or not utils.file_exists(out_file_1):
+        if not bam.is_paired(bam_file):
+            out_file_2 = None
         with file_transaction(config, out_file_1) as tx_out_file:
             for f in [tx_out_file, out_file_1, out_file_2]:
                 if f and os.path.exists(f):
@@ -461,7 +460,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
     if needs_retry:
         return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
     else:
-        return [x for x in [out_file_1, out_file_2] if x is not None]
+        return [x for x in [out_file_1, out_file_2] if x is not None and utils.file_exists(x)]
 
 @utils.map_wrap
 @zeromq_aware_logging
