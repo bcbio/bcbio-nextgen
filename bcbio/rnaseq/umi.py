@@ -9,6 +9,7 @@ import json
 import os
 import copy
 import glob
+import sys
 from itertools import repeat, chain
 
 import bcbio.pipeline.datadict as dd
@@ -61,7 +62,13 @@ def umi_transform(data):
     if file_exists(transform):
         transform_file = transform
     else:
-        transform_data = transforms[transform]
+        transform_data = transforms.get(transform, "")
+        if not transform_data:
+            logger.error(
+                "The UMI transform can be specified as either a file or a "
+                "bcbio-supported transform. Either the file %s does not exist "
+                "or the transform is not supported by bcbio.")
+            sys.exit(1)
         transform_file = os.path.join(umi_dir, transform + ".json")
         transform_file = write_transform_file(transform_data, transform_file)
     out_base = dd.get_sample_name(data) + ".umitransformed.fq.gz"
