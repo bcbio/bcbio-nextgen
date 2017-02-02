@@ -97,6 +97,9 @@ def _get_jvm_opts(data, out_file):
 def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
     """Detect SNPs and indels with VarDict.
+
+    var2vcf_valid uses -A flag which reports all alleles and improves sensitivity:
+    https://github.com/AstraZeneca-NGS/VarDict/issues/35#issuecomment-276738191
     """
     config = items[0]["config"]
     if out_file is None:
@@ -133,7 +136,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
-                       "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| {var2vcf} -A -N {sample} -E -f {freq} {var2vcf_opts} "
                        """| {py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' """
                        "| bcftools filter -i 'QUAL >= 0' "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
