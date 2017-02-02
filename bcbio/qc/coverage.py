@@ -81,7 +81,12 @@ def run(bam_file, data, out_dir):
 
 def _goleft_indexcov(bam_file, data, out_dir):
     """Use goleft indexcov to estimate coverage distributions using BAM index.
+
+    Only used for whole genome runs as captures typically don't have enough data
+    to be useful for index-only summaries.
     """
+    if not dd.get_coverage_interval(data) == "genome":
+        return []
     out_dir = utils.safe_makedir(os.path.join(out_dir, "indexcov"))
     out_files = [os.path.join(out_dir, "%s-indexcov.%s" % (dd.get_sample_name(data), ext))
                  for ext in ["roc", "ped", "bed.gz"]]
