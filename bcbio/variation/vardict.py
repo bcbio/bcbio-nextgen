@@ -20,6 +20,7 @@ import pybedtools
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -215,7 +216,7 @@ def depth_freq_filter(line, tumor_index, aligner):
         ssfs = [x for x in parts[7].split(";") if x.startswith("SSF=")]
         pval = _safe_to_float(ssfs[0].split("=")[-1] if ssfs else None)
         fname = None
-        if dp is not None and af is not None:
+        if not chromhacks.is_sex(parts[0]) and dp is not None and af is not None:
             if dp * af < 6:
                 if aligner == "bwa" and nm is not None and mq is not None:
                     if (mq < 55.0 and nm > 1.0) or (mq < 60.0 and nm > 2.0):
@@ -225,7 +226,7 @@ def depth_freq_filter(line, tumor_index, aligner):
                 if qual is not None and qual < 45:
                     fname = "LowAlleleDepth"
         if af is not None and qual is not None and pval is not None:
-            if af < 0.2 and qual < 55 and pval > 0.06:
+            if af < 0.2 and qual < 45 and pval > 0.06:
                 fname = "LowFreqQuality"
         if fname:
             if parts[6] in set([".", "PASS"]):
