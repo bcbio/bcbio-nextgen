@@ -470,8 +470,11 @@ Coverage information
   variant calling and deep panel calling in cancer samples, where we tune
   regional/amplicon analyses to maximize sensitivity.
   [genome, regional, amplicon]
--  ``coverage_depth_min`` Minimum depth of coverage. Regions with less reads
-   will not get called. Defaults to 4. Setting lower than 4 will trigger
+-  ``coverage_depth_min`` Minimum depth of coverage. When calculating regions to
+   call in, bcbio may exclude regions with less than this many reads. It is not
+   a hard filter for variant calling, but rather a guideline for determining
+   callable regions. It's primarily useful when trying to call on very low depth
+   samples. Defaults to 4. Setting lower than 4 will trigger
    low-depth calling options for GATK.
 
 .. _analysis_regions-config:
@@ -481,7 +484,7 @@ Analysis regions
 
 These BED files define the regions of the genome to analyze and report on.
 ``variant_regions`` adjusts regions for small variant (SNP and indel) calling.
-`sv_regions`` defines regions for structural variant calling if different than
+``sv_regions`` defines regions for structural variant calling if different than
 ``variant_regions``. For coverage-based quality control metrics, we first use
 ``coverage`` if specified, then ``sv_regions`` if specified, then
 ``variant_regions``. See the section on :ref:`input-file-preparation` for tips
