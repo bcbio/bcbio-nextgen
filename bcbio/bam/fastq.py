@@ -97,7 +97,7 @@ def filter_reads_by_length(fq1, fq2, quality_format, min_length=20):
 def rstrip_extra(fname):
     """Strip extraneous, non-discriminative filename info from the end of a file.
     """
-    to_strip = ("_R", "_", "fastq", ".", "-")
+    to_strip = ("_R", ".R", "-R", "_", "fastq", ".", "-")
     while fname.endswith(to_strip):
         for x in to_strip:
             if fname.endswith(x):
