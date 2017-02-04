@@ -99,7 +99,7 @@ Edit `~/.ssh/config` to enable clean connections to AWS instances:
 
 With this in place you can launch your instance with:
 
-    ansible-playbook -i localhost -vvv launch_aws.yaml
+    ansible-playbook -i 'localhost,' -vvv launch_aws.yaml
 
 This creates the instance, attaches the data volume, mounts the volume as
 `/mnt/work` and installs basic system tools. Get the Public DNS name of the

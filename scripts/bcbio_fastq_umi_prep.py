@@ -27,16 +27,15 @@ transform_json = r"""{
 """
 
 def run_single(args):
-    add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq)
+    add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, cores=8)
 
 @utils.map_wrap
 @zeromq_aware_logging
 def add_umis_to_fastq_parallel(out_base, read1_fq, read2_fq, umi_fq, config):
-    add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq)
+    add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, cores=1)
 
-def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq):
+def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, cores=1):
     print("Processing", read1_fq, read2_fq, umi_fq)
-    cores = 8
     out1_fq = out_base + "_R1.fq.gz"
     out2_fq = out_base + "_R2.fq.gz"
     transform_json_file = out_base + "-transform.json"
@@ -84,7 +83,7 @@ def run_autopair(args):
         base_name = os.path.join(outdir, os.path.commonprefix([r1, r2, r3]).rstrip("_R"))
         ready_to_run.append([base_name, r1, r3, r2, {"algorithm": {}, "resources": {}}])
 
-    parallel = {"type": "local", "cores": len(ready_to_run), "progs": []}
+    parallel = {"type": "local", "cores": args.cores, "progs": []}
     run_multicore(add_umis_to_fastq_parallel, ready_to_run, {"algorithm": {}}, parallel)
 
 if __name__ == "__main__":
@@ -92,6 +91,7 @@ if __name__ == "__main__":
     sp = parser.add_subparsers(title="[sub-commands]")
 
     p = sp.add_parser("autopair", help="Automatically pair R1/R2/R3 fastq inputs")
+    p.add_argument("-c", "--cores", default=1, type=int, help="Number of cores to run in parallel")
     p.add_argument("--outdir", default="with_umis", help="Output directory to write UMI prepped fastqs")
     p.add_argument("files", nargs="*", help="All fastq files to pair and process")
     p.set_defaults(func=run_autopair)

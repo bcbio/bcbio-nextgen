@@ -724,7 +724,7 @@ files (read 1, read 2, and UMIs) into paired reads with UMIs in the fastq names.
 This can run on a single set of files or autopair an entire directory of fastq
 files::
 
-   bcbio_fastq_umi_prep.py autopair <list> <of> <fastq> <files>
+   bcbio_fastq_umi_prep.py autopair -c <cores_to_use> <list> <of> <fastq> <files>
 
 Configuration options for UMIs:
 
