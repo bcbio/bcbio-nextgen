@@ -535,7 +535,7 @@ Variant calling
    Omit to ignore. [scalpel, pindel, sid, false]
 - ``effects`` Method used to calculate expected variant effects. Defaults to
   `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
-  with support for `dbNSFP`_ annotation, when downloaded using
+  with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
   :ref:`datatarget-install`. [snpeff, vep, false]
 - ``effects_transcripts`` Define the transcripts to use for effect prediction
   annotation. Options ``all``: Standard Ensembl transcript list (the default);
@@ -851,6 +851,8 @@ lists with multiple options:
   forces gVCF output for callers that support it (GATK HaplotypeCaller,
   FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
   for variant filtration, even for smaller sample sizes.
+  ``vep_splicesite_annotations`` enables the use of the MaxEntScan and GeneSplicer plugin for VEP.
+  Both optional plugins add extra splice site annotations.
   ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
   that pass filters. ``gemini_vcfanno`` uses the new vcfanno/vcf2db for creating
   GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other

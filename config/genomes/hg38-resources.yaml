@@ -16,7 +16,7 @@ variation:
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   qsignature: ../variation/qsignature.txt
-  genesplicer: ../variation/genesplicer/
+  genesplicer: ../variation/genesplicer
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
