@@ -50,7 +50,7 @@ details:
       min_allele_fraction: 10
       svcaller: [lumpy]
       #svcaller: [cnvkit]
-      #tools_on: [svplots]
+      tools_on: [damage_filter]
       tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: cancer/az-cancer-panel

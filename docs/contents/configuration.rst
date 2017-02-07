@@ -858,7 +858,8 @@ lists with multiple options:
   GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other
   organisms. ``vcf2db_expand`` decompresses and expands the genotype columns in
   the vcfanno prepared GEMINI databases, enabling standard SQL queries on
-  genotypes and depths.
+  genotypes and depths. ``damage_filter`` filters somatic calls for DNA damage
+  artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 

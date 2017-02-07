@@ -7,7 +7,7 @@ from bcbio import utils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import annotation, effects, genotype, germline, prioritize
+from bcbio.variation import annotation, damage, effects, genotype, germline, prioritize
 from bcbio.variation import multi as vmulti
 
 # ## Genotyping
@@ -39,6 +39,9 @@ def postprocess_variants(items):
         data["vrn_file"] = prioritize.handle_vcf_calls(data["vrn_file"], data, orig_items)
         logger.info("Germline extraction for %s" % cur_name)
         data = germline.extract(data, orig_items)
+
+        data = damage.run_filter(data["vrn_file"], dd.get_align_bam(data), dd.get_ref_file(data),
+                                 data, orig_items)
     if orig_vrn_file and os.path.samefile(data["vrn_file"], orig_vrn_file):
         data["vrn_file"] = orig_vrn_file
     return [[data]]
