@@ -188,7 +188,7 @@ def _get_dbnsfp(data):
                     "H1-hESC_fitCons_score", "H1-hESC_fitCons_score_rankscore", "H1-hESC_confidence_value", "HUVEC_fitCons_score", "HUVEC_fitCons_score_rankscore", "HUVEC_confidence_value",
                     "GERP++_NR", "GERP++_RS", "GERP++_RS_rankscore", "phyloP100way_vertebrate", "phyloP100way_vertebrate_rankscore", "phyloP20way_mammalian", "phyloP20way_mammalian_rankscore",
                     "phastCons100way_vertebrate", "phastCons100way_vertebrate_rankscore", "phastCons20way_mammalian", "phastCons20way_mammalian_rankscore", "SiPhy_29way_pi", "SiPhy_29way_logOdds", "SiPhy_29way_logOdds_rankscore",
-                    "clinvar_rs", "clinvar_clnsig", "clinvar_trait", "clinvar_golden_stars", "Interpro_domain", "GTEx_V6_gene", "GTEx_V6_tissue"]
+                    "clinvar_rs", "clinvar_clnsig", "clinvar_trait", "clinvar_golden_stars", "GTEx_V6_gene", "GTEx_V6_tissue"]
 
     if dbnsfp_file and os.path.exists(dbnsfp_file):
         return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
