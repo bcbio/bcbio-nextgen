@@ -105,7 +105,7 @@ def rstrip_extra(fname):
                 break
     return fname
 
-def combine_pairs(input_files, force_single=False):
+def combine_pairs(input_files, force_single=False, full_name=False):
     """ calls files pairs if they are completely the same except
     for one has _1 and the other has _2 returns a list of tuples
     of pairs or singles.
@@ -124,8 +124,15 @@ def combine_pairs(input_files, force_single=False):
             for comp_file in input_files:
                 if comp_file in used or comp_file == in_file:
                     continue
-                a = rstrip_extra(utils.splitext_plus(os.path.basename(in_file))[0])
-                b = rstrip_extra(utils.splitext_plus(os.path.basename(comp_file))[0])
+                if full_name:
+                    in_file_name = in_file
+                    comp_file_name = comp_file
+                else:
+                    in_file_name = os.path.basename(in_file)
+                    comp_file_name = os.path.basename(comp_file)
+
+                a = rstrip_extra(utils.splitext_plus(in_file_name)[0])
+                b = rstrip_extra(utils.splitext_plus(comp_file_name)[0])
                 if len(a) != len(b):
                     continue
                 s = dif(a,b)
@@ -139,6 +146,7 @@ def combine_pairs(input_files, force_single=False):
                                  "bcbio_prepare_samples.py script."
                                  "(http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#multiple-files-per-sample)"
                                  % (in_file, comp_file))
+                    # continue
                     sys.exit(1)
                 if len(s) > 1:
                     continue #there is only 1 difference

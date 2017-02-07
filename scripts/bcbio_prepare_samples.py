@@ -73,13 +73,31 @@ def _get_samples_to_process(fn, out_dir, config, force_single):
     return [samples[sample] for sample in samples]
 
 
+def _check_stems(files):
+    """check if stem names are the same and use full path then"""
+    used = set()
+    for fn in files:
+        if os.path.basename(fn) in used:
+            logger.error("%s stem is multiple times in your file list, "
+                         "so we don't know "
+                         "how to assign it to the sample data in the CSV. "
+                         "We are gonna use full path to make a difference, "
+                         "that means paired files should be in the same folder. "
+                         "If this is a problem, you should rename the files you want "
+                         "to merge. Sorry, no possible magic here." % os.path.basename(fn)
+                         )
+            return True
+        used.add(os.path.basename(fn))
+    return False
+
 def _check_paired(files, force_single):
     """check if files are fastq(.gz) and paired"""
+    full_name = _check_stems(files)
     if files[0].endswith(".bam"):
         return files
     elif is_gsm(files[0]):
         return files
-    return combine_pairs(files, force_single)
+    return combine_pairs(files, force_single, full_name)
 
 
 def get_cluster_view(p):
