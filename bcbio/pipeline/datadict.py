@@ -70,6 +70,7 @@ LOOKUPS = {
     "combined_counts": {"keys": ["combined_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "genome_context_files": {"keys": ["reference", "genome_context"]},
+    "viral_files": {"keys": ["reference", "viral"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "combined_fpkm": {"keys": ['combined_fpkm']},
     "combined_fpkm_isoform": {"keys": ['combined_fpkm_isoform']},

@@ -4,6 +4,9 @@
   a fix for grabix to handle Illumina bgzip outputs.
 - Provide DNA damage filtering for low frequency sequencing errors in somatic
   samples. Use `tools_on: [damage_filter]`
+- Add viral detection for variant calling DNA-seq cancer samples. Uses
+  virus sequences from TCGA GDC distribution and provides simple counts of
+  unmapped reads against viral sequences in MultiQC report.
 - Improve lumpy structural variant runs from pre-aligned BAM files, using
   extract_sv_reads to avoid need to resort input files. Thanks to Neill Gibson.
 - Speed up post-alignment callability calculations by using default parameters

@@ -22,6 +22,7 @@ from bcbio.pipeline import alignment, config_utils, genome
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics, programs, versioncheck
 from bcbio.provenance import data as provenancedata
+from bcbio.qc import viral
 from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
@@ -169,6 +170,9 @@ def add_reference_resources(data, remote_retriever=None):
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     if "genome_context" not in data["reference"]:
         data["reference"]["genome_context"] = annotation.get_context_files(data)
+    if "viral" not in data["reference"]:
+        data["reference"]["viral"] = viral.get_files(data)
+
     data = _fill_validation_targets(data)
     data = _fill_prioritization_targets(data)
     data = _fill_capture_regions(data)

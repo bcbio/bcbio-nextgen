@@ -93,7 +93,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             raise ValueError("Unexpected summary qc: %s" % sum_qc)
         for program, pfiles in sum_qc.items():
             if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
+                pfiles = [pfiles["base"]] + pfiles.get("secondary", [])
             # CWL: presents output files as single file plus associated secondary files
             elif isinstance(pfiles, basestring):
                 if os.path.exists(pfiles):

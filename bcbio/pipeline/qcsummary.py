@@ -17,6 +17,7 @@ from bcbio.pipeline import config_utils, run_info
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
+from bcbio.variation import vcfutils
 
 # ## High level functions to generate summary
 
@@ -95,6 +96,8 @@ def get_qc_tools(data):
             to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
         to_run += ["qsignature", "coverage", "variants", "picard"]
+        if vcfutils.get_paired([data]):
+            to_run += ["viral"]
     if dd.get_umi_consensus(data):
         to_run += ["umi"]
     return to_run
@@ -108,7 +111,7 @@ def _run_qc_tools(bam_file, data):
         :returns: dict with output of different tools
     """
     from bcbio.qc import (coverage, fastqc, kraken, qsignature, qualimap,
-                          samtools, picard, srna, umi, variant)
+                          samtools, picard, srna, umi, variant, viral)
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -119,7 +122,8 @@ def _run_qc_tools(bam_file, data):
              "variants": variant.run,
              "kraken": kraken.run,
              "picard": picard.run,
-             "umi": umi.run}
+             "umi": umi.run,
+             "viral": viral.run}
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}

@@ -297,7 +297,7 @@ def _flatten_file_with_secondary(input, out_dir):
     """
     out = []
     orig_dir = os.path.dirname(input["base"])
-    for finfo in [input["base"]] + input["secondary"]:
+    for finfo in [input["base"]] + input.get("secondary", []):
         cur_dir = os.path.dirname(finfo)
         if cur_dir != orig_dir and cur_dir.startswith(orig_dir):
             cur_out_dir = os.path.join(out_dir, cur_dir.replace(orig_dir + "/", ""))
