@@ -45,6 +45,7 @@
   gather_facts: no
   pre_tasks:
     - raw: sudo apt-get -y install python-simplejson
+      ignore_errors: true
     - action: setup
   tasks:
     - include_vars: project_vars.yaml
@@ -64,3 +65,4 @@
     - apt: name="{{ item }}"
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
+      ignore_errors: true
