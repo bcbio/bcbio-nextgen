@@ -173,7 +173,7 @@ def _get_dbnsfp(data):
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
     annotations = ["LRT_score", "LRT_converted_rankscore", "LRT_pred", "LRT_Omega",
-                    "MutationTaster_score", "MutationTaster_converted_rankscore", "MutationTaster_pred", "MutationTaster_model", "MutationTaster_AAE",
+                    "MutationTaster_score", "MutationTaster_converted_rankscore", "MutationTaster_pred", "MutationTaster_model",
                     "MutationAssessor_UniprotID", "MutationAssessor_variant", "MutationAssessor_score", "MutationAssessor_score_rankscore", "MutationAssessor_pred",
                     "FATHMM_score", "FATHMM_converted_rankscore", "FATHMM_pred",
                     "PROVEAN_score", "PROVEAN_converted_rankscore", "PROVEAN_pred",
