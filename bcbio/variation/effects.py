@@ -243,7 +243,7 @@ def _get_genesplicer(data):
 
     genesplicer_exec = os.path.realpath(config_utils.get_program("genesplicer", data["config"]))
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
-    if genesplicer_dir and os.path.exists(genesplicer_dir) and genesplicer_training and os.path.exists(genesplicer_training) :
+    if genesplicer_exec and os.path.exists(genesplicer_exec) and genesplicer_training and os.path.exists(genesplicer_training) :
         return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_exec,genesplicer_training)]
     else:
         return []
