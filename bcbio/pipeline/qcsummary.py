@@ -17,7 +17,7 @@ from bcbio.pipeline import config_utils, run_info
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
-from bcbio.variation import vcfutils
+from bcbio.variation import damage, vcfutils
 
 # ## High level functions to generate summary
 
@@ -98,6 +98,8 @@ def get_qc_tools(data):
         to_run += ["qsignature", "coverage", "variants", "picard"]
         if vcfutils.get_paired([data]):
             to_run += ["viral"]
+        if damage.should_filter([data]):
+            to_run += ["damage"]
     if dd.get_umi_consensus(data):
         to_run += ["umi"]
     return to_run
@@ -110,7 +112,7 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import (coverage, fastqc, kraken, qsignature, qualimap,
+    from bcbio.qc import (coverage, damage, fastqc, kraken, qsignature, qualimap,
                           samtools, picard, srna, umi, variant, viral)
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
@@ -119,6 +121,7 @@ def _run_qc_tools(bam_file, data):
              "qualimap_rnaseq": qualimap.run_rnaseq,
              "qsignature": qsignature.run,
              "coverage": coverage.run,
+             "damage": damage.run,
              "variants": variant.run,
              "kraken": kraken.run,
              "picard": picard.run,

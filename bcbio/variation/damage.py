@@ -35,10 +35,7 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
                                                 os.path.basename(out_plot))
                     if utils.file_exists(tx_plot_file):
                         shutil.move(tx_plot_file, out_plot)
-        # work around issue with vcfanno/vcfgo
-        prep_cmd = ("sed 's/ACGTNacgtnPLUS,Number=10,/ACGTNacgtnPLUS,Number=.,/' |"
-                    "sed 's/ACGTNacgtnMINUS,Number=10,/ACGTNacgtnMINUS,Number=.,/' ")
-        out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"], prep_cmd=prep_cmd)
+        out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
         data["vrn_file"] = out_file
         out_plot_files = [x for x in out_plot_files if utils.file_exists(x)]
         data["damage_plots"] = out_plot_files
