@@ -9,6 +9,8 @@
   unmapped reads against viral sequences in MultiQC report.
 - Improve lumpy structural variant runs from pre-aligned BAM files, using
   extract_sv_reads to avoid need to resort input files. Thanks to Neill Gibson.
+- Move VCF files from SV prioritization to final upload directory. Thanks to
+  Miika Ahdesmaki.
 - Speed up post-alignment callability calculations by using default parameters
   to goleft depth. Thanks to Brent Pedersen.
 - Always use specified cores for analysis re-runs in local multicore mode.

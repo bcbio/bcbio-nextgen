@@ -36,8 +36,9 @@ def run(items):
         work_dir = _sv_workdir(data)
         priority_files = [_prioritize_vcf(vcaller, vfile, prioritize_by, post_prior_fn, work_dir, data)
                           for vcaller, vfile, post_prior_fn in inputs]
-        priority_tsv = _combine_files(priority_files, work_dir, data)
-        data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv})
+        priority_tsv = _combine_files([xs[0] for xs in priority_files], work_dir, data)
+        data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv,
+                           "raw_files": dict(zip([xs[0] for xs in inputs], [xs[1] for xs in priority_files]))})
     data = _cnv_prioritize(data)
     return [data]
 
@@ -78,8 +79,8 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
     """
     sample = dd.get_sample_name(data)
     out_file = os.path.join(work_dir, "%s-%s-prioritize.tsv" % (sample, caller))
-    if not utils.file_exists(out_file):
-        data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
+    simple_vcf = os.path.join(work_dir, "%s-%s-simple.vcf.gz" % (sample, caller))
+    if not utils.file_exists(simple_vcf):
         gene_list = _find_gene_list_from_bed(prioritize_by, out_file, data)
         # If we have a standard gene list we can skip BED based prioritization
         if gene_list:
@@ -94,24 +95,25 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                     jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
                     export = utils.local_path_export()
                     cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
-                        " -k {prioritize_by}")
+                           " -k {prioritize_by}")
                     do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
         if post_prior_fn:
             priority_vcf = post_prior_fn(priority_vcf, work_dir, data)
-        simple_vcf = "%s-simple.vcf.gz" % utils.splitext_plus(priority_vcf)[0]
-        if not utils.file_exists(simple_vcf):
-            with file_transaction(data, simple_vcf) as tx_out_file:
-                fusion_file = os.path.join(data_dir, "fusion_pairs.txt")
-                opts = ""
-                if os.path.exists(fusion_file):
-                    opts += " --known_fusion_pairs %s" % fusion_file
-                if not gene_list:
-                    opts += " --gene_list %s" % os.path.join(data_dir, "az-cancer-panel.txt")
-                else:
-                    opts += " --gene_list %s" % gene_list
-                cmd = "simple_sv_annotation.py {opts} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
-        simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
+
+        data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
+        with file_transaction(data, simple_vcf) as tx_out_file:
+            fusion_file = os.path.join(data_dir, "fusion_pairs.txt")
+            opts = ""
+            if os.path.exists(fusion_file):
+                opts += " --known_fusion_pairs %s" % fusion_file
+            if not gene_list:
+                opts += " --gene_list %s" % os.path.join(data_dir, "az-cancer-panel.txt")
+            else:
+                opts += " --gene_list %s" % gene_list
+            cmd = "simple_sv_annotation.py {opts} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
+    simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
+    if not utils.file_uptodate(out_file, simple_vcf):
         with file_transaction(data, out_file) as tx_out_file:
             export = utils.local_path_export()
             cmd = ("{export} zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
@@ -121,7 +123,7 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                    "I$LOF,I$SIMPLE_ANN,"
                    "S${sample}$SR,S${sample}$PE,S${sample}$PR}}' > {tx_out_file}")
             do.run(cmd.format(**locals()), "Prioritize: convert to tab delimited")
-    return out_file
+    return out_file, simple_vcf
 
 def _combine_files(tsv_files, work_dir, data):
     """Combine multiple priority tsv files into a final sorted output.

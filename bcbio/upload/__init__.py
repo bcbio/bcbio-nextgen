@@ -209,6 +209,13 @@ def _maybe_add_sv(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], plot_name),
                                 "variantcaller": svcall["variantcaller"]})
+            if "raw_files" in svcall:
+                for caller, fname in svcall["raw_files"].items():
+                    ext = utils.splitext_plus(fname)[-1][1:]
+                    out.append({"path": fname,
+                                "type": ext,
+                                "ext": "%s-%s" % (svcall["variantcaller"], caller),
+                                "variantcaller": svcall["variantcaller"]})
             for extra in ["subclones", "contamination"]:
                 svfile = svcall.get(extra)
                 if svfile and os.path.exists(svfile):
