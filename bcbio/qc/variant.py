@@ -26,7 +26,7 @@ def run(bam_file, data, out_dir):
         return {"base": out[0], "secondary": out[1:]}
 
 def _snpeff_stats(data, out_dir):
-    vcinfo = _get_active_vcinfo(data)
+    vcinfo = get_active_vcinfo(data)
     if vcinfo and vcinfo.get("vrn_stats"):
         effects_csv = tz.get_in(["vrn_stats", "effects-stats-csv"], vcinfo)
         if effects_csv and utils.file_exists(effects_csv):
@@ -36,7 +36,7 @@ def _snpeff_stats(data, out_dir):
                 shutil.copy(effects_csv, tx_out_file)
             return out_file
 
-def _get_active_vcinfo(data):
+def get_active_vcinfo(data):
     """Use first caller if ensemble is not active
     """
     callers = dd.get_variantcaller(data)
@@ -57,7 +57,7 @@ def _get_active_vcinfo(data):
 def _bcftools_stats(data, out_dir):
     """Run bcftools stats.
     """
-    vcinfo = _get_active_vcinfo(data)
+    vcinfo = get_active_vcinfo(data)
     if vcinfo:
         out_dir = utils.safe_makedir(out_dir)
         vcf_file = vcinfo["vrn_file"]
