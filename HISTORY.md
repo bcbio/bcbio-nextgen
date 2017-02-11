@@ -1,5 +1,7 @@
 ## 1.0.2 (in progress)
 
+- Fix FreeBayes paired somatic calling by generalizing support for finding
+  non-ordered tumor/normal placement in VCF.
 - Re-add checks for pre-bgzipped fastq inputs to alignment preparation thanks to
   a fix for grabix to handle Illumina bgzip outputs.
 - Provide DNA damage filtering for low frequency sequencing errors in somatic

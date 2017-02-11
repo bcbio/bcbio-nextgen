@@ -281,8 +281,9 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     var2vcf_opts += " -M "  # this makes VarDict soft filter non-differential variants
                     somatic_filter = ("| sed 's/\\\\.*Somatic\\\\/Somatic/' "
                                       "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
-                                      "| %s -x 'bcbio.variation.freebayes.call_somatic(x)'" %
-                                      os.path.join(os.path.dirname(sys.executable), "py"))
+                                      """| %s -c 'from bcbio.variation import freebayes; """
+                                      """freebayes.call_somatic("%s", "%s")' """
+                                      % (sys.executable, paired.tumor_name, paired.normal_name))
                     freq_filter = ("| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
                                    "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
                                    (os.path.join(os.path.dirname(sys.executable), "py"),

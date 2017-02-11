@@ -187,11 +187,13 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
                 clean_fmt_cmd = _clean_freebayes_fmt_cl()
+                bcbio_py = sys.executable
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cl = ("{freebayes} -f {ref_file} {opts} "
                       "{paired.tumor_bam} {paired.normal_bam} "
                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
-                      "| {py_cl} -x 'bcbio.variation.freebayes.call_somatic(x)' "
+                      """| {bcbio_py} -c 'from bcbio.variation import freebayes; """
+                      """freebayes.call_somatic("{paired.tumor_name}", "{paired.normal_name}")' """
                       "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
@@ -205,7 +207,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
 
 # ## Filtering
 
-def _check_lods(parts, tumor_thresh, normal_thresh):
+def _check_lods(parts, tumor_thresh, normal_thresh, indexes):
     """Ensure likelihoods for tumor and normal pass thresholds.
 
     Skipped if no FreeBayes GL annotations available.
@@ -215,7 +217,7 @@ def _check_lods(parts, tumor_thresh, normal_thresh):
     except ValueError:
         return True
     try:
-        tumor_gls = [float(x) for x in parts[9].split(":")[gl_index].split(",") if x != "."]
+        tumor_gls = [float(x) for x in parts[indexes["tumor"]].strip().split(":")[gl_index].split(",") if x != "."]
         if tumor_gls:
             tumor_lod = max(tumor_gls[i] - tumor_gls[0] for i in range(1, len(tumor_gls)))
         else:
@@ -224,7 +226,7 @@ def _check_lods(parts, tumor_thresh, normal_thresh):
     except IndexError:
         tumor_lod = -1.0
     try:
-        normal_gls = [float(x) for x in parts[10].split(":")[gl_index].split(",") if x != "."]
+        normal_gls = [float(x) for x in parts[indexes["normal"]].strip().split(":")[gl_index].split(",") if x != "."]
         if normal_gls:
             normal_lod = min(normal_gls[0] - normal_gls[i] for i in range(1, len(normal_gls)))
         else:
@@ -234,7 +236,7 @@ def _check_lods(parts, tumor_thresh, normal_thresh):
         normal_lod = normal_thresh
     return normal_lod >= normal_thresh and tumor_lod >= tumor_thresh
 
-def _check_freqs(parts):
+def _check_freqs(parts, indexes):
     """Ensure frequency of tumor to normal passes a reasonable threshold.
 
     Avoids calling low frequency tumors also present at low frequency in normals,
@@ -267,7 +269,7 @@ def _check_freqs(parts):
         except (IndexError, ValueError, ZeroDivisionError):
             freq = 0.0
         return freq
-    tumor_freq, normal_freq = _calc_freq(parts[9]), _calc_freq(parts[10])
+    tumor_freq, normal_freq = _calc_freq(parts[indexes["tumor"]]), _calc_freq(parts[indexes["normal"]])
     return normal_freq <= 0.001 or normal_freq <= tumor_freq / thresh_ratio
 
 def remove_missingalt(line):
@@ -283,11 +285,10 @@ def remove_missingalt(line):
             return None
     return line
 
-def call_somatic(line):
+def call_somatic(tumor_name, normal_name):
     """Call SOMATIC variants from tumor/normal calls, adding REJECT filters and SOMATIC flag.
 
-    Assumes tumor/normal called with tumor first and normal second, as done in bcbio
-    implementation.
+    Works from stdin and writes to stdout, finding positions of tumor and normal samples.
 
     Uses MuTect like somatic filter based on implementation in speedseq:
     https://github.com/cc2qe/speedseq/blob/e6729aa2589eca4e3a946f398c1a2bdc15a7300d/bin/speedseq#L62
@@ -306,17 +307,13 @@ def call_somatic(line):
     """
     # Thresholds are like phred scores, so 3.5 = phred35
     tumor_thresh, normal_thresh = 3.5, 3.5
-    if line.startswith("#CHROM"):
-        headers = ['##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic event">',
+    new_headers = ['##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description="Somatic event">\n',
                    ('##FILTER=<ID=REJECT,Description="Not somatic due to normal call frequency '
-                    'or phred likelihoods: tumor: %s, normal %s.">')
-                    % (int(tumor_thresh * 10), int(normal_thresh * 10))]
-        return "\n".join(headers) + "\n" + line
-    elif line.startswith("#"):
-        return line
-    else:
+                    'or phred likelihoods: tumor: %s, normal %s.">\n')
+                   % (int(tumor_thresh * 10), int(normal_thresh * 10))]
+    def _output_filter_line(line, indexes):
         parts = line.split("\t")
-        if _check_lods(parts, tumor_thresh, normal_thresh) and _check_freqs(parts):
+        if _check_lods(parts, tumor_thresh, normal_thresh, indexes) and _check_freqs(parts, indexes):
             parts[7] = parts[7] + ";SOMATIC"
         else:
             if parts[6] in set([".", "PASS"]):
@@ -324,7 +321,26 @@ def call_somatic(line):
             else:
                 parts[6] += ";REJECT"
         line = "\t".join(parts)
-        return line
+        sys.stdout.write(line)
+    def _write_header(header):
+        for hline in header[:-1] + new_headers + [header[-1]]:
+            sys.stdout.write(hline)
+    header = []
+    indexes = None
+    for line in sys.stdin:
+        if not indexes:
+            if line.startswith("#"):
+                header.append(line)
+            else:
+                parts = header[-1].rstrip().split("\t")
+                indexes = {"tumor": parts.index(tumor_name), "normal": parts.index(normal_name)}
+                _write_header(header)
+                _output_filter_line(line, indexes)
+        else:
+            _output_filter_line(line, indexes)
+    # no calls, only output the header
+    if not indexes:
+        _write_header(header)
 
 def _clean_freebayes_output(line):
     """Clean FreeBayes output to make post-processing with GATK happy.
