@@ -15,7 +15,7 @@ def run(bam_file, data, out_dir):
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
                 cmd = ["dkfzbiasfilter_summarize.py", "--sample=%s" % dd.get_sample_name(data),
-                       "--outfile=%s" % tx_out_file]
+                       "--outfile=%s" % tx_out_file, data["vrn_file"]]
                 do.run(cmd, "Summarize damage filtering")
         if utils.file_exists(out_file):
             out["base"] = out_file
