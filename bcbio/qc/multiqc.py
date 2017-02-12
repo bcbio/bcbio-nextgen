@@ -146,7 +146,8 @@ def _create_config_file(out_dir, samples):
                        "Ts_Tv_ratio": False,
                        "Number_of_variants_before_filter": False},
             "samtools": {"error_rate": False}},
-           "module_order": ["bcbio", "samtools", "bcftools", "picard", "qualimap", "snpeff", "fastqc"]}
+           "module_order": ["bcbio", "samtools", "goleft_indexcov", "bcftools", "picard", "qualimap",
+                            "snpeff", "fastqc"]}
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file

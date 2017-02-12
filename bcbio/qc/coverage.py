@@ -101,10 +101,18 @@ def _goleft_indexcov(bam_file, data, out_dir):
             try:
                 do.run(cmd.format(**locals()), "QC: goleft indexcov")
             except subprocess.CalledProcessError as msg:
-                if "indexcov: no usable" not in str(msg):
+                if not ("indexcov: no usable" in str(msg) or
+                        ("indexcov: expected" in str(msg) and "sex chromosomes, found:" in str(msg))):
                     raise
             for out_file in out_files:
                 orig_file = os.path.join(tmp_dir, os.path.basename(out_file))
                 if utils.file_exists(orig_file):
                     utils.copy_plus(orig_file, out_file)
+    # MultiQC needs non-gzipped/BED inputs so unpack the file
+    out_bed = out_files[-1].replace(".bed.gz", ".tsv")
+    if utils.file_exists(out_files[-1]) and not utils.file_exists(out_bed):
+        with transaction.file_transaction(data, out_bed) as tx_out_bed:
+            cmd = "gunzip -c %s > %s" % (out_files[-1], tx_out_bed)
+            do.run(cmd, "Unpack indexcov BED file")
+    out_files[-1] = out_bed
     return [x for x in out_files if utils.file_exists(x)]
