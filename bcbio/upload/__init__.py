@@ -84,7 +84,7 @@ def _get_files_scrnaseq(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_transcriptome_alignment(sample, out)
-    out = _maybe_add_counts(algorithm, sample, out)
+    out = _maybe_add_scrnaseq(algorithm, sample, out)
     out = _maybe_add_barcode_histogram(algorithm, sample, out)
     return _add_meta(out, sample)
 
@@ -391,6 +391,18 @@ def _maybe_add_counts(algorithm, sample, out):
         out.append({"path": stats_file,
                     "type": "count_stats",
                     "ext": "ready"})
+    return out
+
+def _maybe_add_scrnaseq(algorithm, sample, out):
+    count_file = dd.get_count_file(sample)
+    if not count_file:
+        return out
+    out.append({"path": count_file,
+             "type": "mtx"})
+    out.append({"path": count_file + ".rownames",
+             "type": "rownames"})
+    out.append({"path": count_file + ".colnames",
+             "type": "colnames"})
     return out
 
 def _maybe_add_barcode_histogram(algorithm, sample, out):

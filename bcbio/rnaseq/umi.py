@@ -165,7 +165,7 @@ def tagcount(data):
     bam = dd.get_transcriptome_bam(data)
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     sample_dir = os.path.join(umi_dir, dd.get_sample_name(data))
-    out_file = os.path.join(sample_dir, dd.get_sample_name(data) + ".counts")
+    out_file = os.path.join(sample_dir, dd.get_sample_name(data) + ".mtx")
     if file_exists(out_file):
         data = dd.set_count_file(data, out_file)
         return [[data]]
@@ -175,9 +175,11 @@ def tagcount(data):
     cb_histogram = os.path.join(sample_dir, "cb-histogram.txt")
     positional = "--positional" if dd.get_positional_umi(data, False) else ""
     message = "Counting alignments of transcripts in %s." % bam
-    cmd = ("{umis} tagcount {positional} --cb_cutoff {cutoff} --cb_histogram "
-           "{cb_histogram} {bam} {tx_out_file}")
-    with file_transaction(out_file) as tx_out_file:
+    cmd = ("{umis} tagcount {positional} --cb_cutoff {cutoff} --sparse "
+           "--cb_histogram {cb_histogram} {bam} {tx_out_file}")
+    out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
+    with file_transaction(out_files) as tx_out_files:
+        tx_out_file = out_files[0]
         do.run(cmd.format(**locals()), message)
     data = dd.set_count_file(data, out_file)
     return [[data]]

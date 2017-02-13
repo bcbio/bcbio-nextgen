@@ -27,6 +27,7 @@
 - Work towards supporting a Python 3 compatible bcbio codebase. Thanks to
   Michael Crusoe.
 - Fix double uploading of fast RNA-seq quantification.
+- Output single-cell RNA-seq counts in annotated MatrixMarket format.
 
 ## 1.0.1 (17 January 2017)
 
