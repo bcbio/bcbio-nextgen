@@ -24,6 +24,7 @@ The script requires:
     pysam (http://code.google.com/p/pysam/)
     wigToBigWig from UCSC (http://hgdownload.cse.ucsc.edu/admin/exe/)
 If a configuration file is used, then PyYAML is also required (http://pyyaml.org/)
+along with bcbio
 """
 import os
 import sys
@@ -34,14 +35,14 @@ from contextlib import contextmanager, closing
 
 import pysam
 
-from bcbio.pipeline.config_utils import load_config, get_program
-
 def main(bam_file, config_file=None, chrom='all', start=0, end=None,
          outfile=None, normalize=False, use_tempfile=False):
     if config_file:
+        from bcbio.pipeline.config_utils import load_config, get_program
         config = load_config(config_file)
     else:
-        config = {"program": {"ucsc_bigwig" : "wigToBigWig"}}
+        config = {"program": {"ucsc_bigwig": "wigToBigWig"}}
+        get_program = None
     if outfile is None:
         outfile = "%s.bigwig" % os.path.splitext(bam_file)[0]
     if start > 0:
@@ -65,7 +66,7 @@ def main(bam_file, config_file=None, chrom='all', start=0, end=None,
                                                    normalize)
         try:
             if wig_valid:
-                convert_to_bigwig(wig_file, chr_sizes, config, outfile)
+                convert_to_bigwig(wig_file, chr_sizes, config, outfile, get_program=get_program)
         finally:
             os.remove(wig_file)
 
@@ -103,15 +104,16 @@ def write_bam_track(bam_file, regions, config, out_handle, normalize):
                 is_valid = True
     return sizes, is_valid
 
-def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None):
+def convert_to_bigwig(wig_file, chr_sizes, config, bw_file=None, get_program=None):
     if not bw_file:
         bw_file = "%s.bigwig" % (os.path.splitext(wig_file)[0])
     size_file = "%s-sizes.txt" % (os.path.splitext(wig_file)[0])
     with open(size_file, "w") as out_handle:
         for chrom, size in chr_sizes:
             out_handle.write("%s\t%s\n" % (chrom, size))
+    cmd = get_program("ucsc_bigwig", config, default="wigToBigWig") if get_program else "wigToBigWig"
     try:
-        cl = [get_program("ucsc_bigwig", config, default="wigToBigWig"), wig_file, size_file, bw_file]
+        cl = [cmd, wig_file, size_file, bw_file]
         subprocess.check_call(cl)
     finally:
         os.remove(size_file)
