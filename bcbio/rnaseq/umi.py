@@ -5,12 +5,14 @@ code written from it.
 https://github.com/vals/umis
 """
 import pandas as pd
+import scipy.io
 import json
 import os
 import copy
 import glob
 import sys
 from itertools import repeat, chain
+from collections import namedtuple
 
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -19,6 +21,57 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.bam.fastq import open_fastq
 from bcbio.log import logger
+
+class SparseMatrix(object):
+
+    def __init__(self, matrix=None, rownames=None, colnames=None):
+        self.matrix = matrix
+        self.rownames = rownames
+        self.colnames = colnames
+
+    def __repr__(self):
+        return "%d x %d matrix of class %s" %(len(self.rownames),
+                                              len(self.colnames),
+                                              type(self.matrix))
+
+    def read(self, filename, rowprefix=None, colprefix=None, delim=":"):
+        """read a sparse matrix, loading row and column name files. if
+        specified, will add a prefix to the row or column names"""
+
+        self.matrix = scipy.io.mmread(filename)
+        with open(filename + ".rownames") as in_handle:
+            self.rownames = [x.strip() for x in in_handle]
+            if rowprefix:
+                self.rownames = [rowprefix + delim + x for x in self.rownames]
+        with open(filename + ".colnames") as in_handle:
+            self.colnames = [x.strip() for x in in_handle]
+            if colprefix:
+                self.colnames = [colprefix + delim + x for x in self.colnames]
+
+    def write(self, filename):
+        """read a sparse matrix, loading row and column name files"""
+        if file_exists(filename):
+            return filename
+        out_files = [filename, filename + ".rownames", filename + ".colnames"]
+        with file_transaction(out_files) as tx_out_files:
+            with open(tx_out_files[0], "w") as out_handle:
+                scipy.io.mmwrite(out_handle, scipy.sparse.csr_matrix(self.matrix))
+            pd.Series(self.rownames).to_csv(tx_out_files[1], index=False)
+            pd.Series(self.colnames).to_csv(tx_out_files[2], index=False)
+        return filename
+
+    def cat(self, newsm, byrow=False):
+        if self.matrix is None:
+            self.matrix = newsm.matrix
+            self.colnames = newsm.colnames
+            self.rownames = newsm.rownames
+        else:
+            catter = scipy.sparse.vstack if byrow else scipy.sparse.hstack
+            self.matrix = catter((self.matrix, newsm.matrix))
+            if byrow:
+                self.rownames = self.rownames + newsm.rownames
+            else:
+                self.colnames = self.colnames + newsm.colnames
 
 transforms = {"harvard-indrop":
               {"read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
@@ -179,7 +232,7 @@ def tagcount(data):
            "--cb_histogram {cb_histogram} {bam} {tx_out_file}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
     with file_transaction(out_files) as tx_out_files:
-        tx_out_file = out_files[0]
+        tx_out_file = tx_out_files[0]
         do.run(cmd.format(**locals()), message)
     data = dd.set_count_file(data, out_file)
     return [[data]]
@@ -270,3 +323,28 @@ def split_demultiplexed_sampledata(data, demultiplexed):
         datadict["files"] = [fastq]
         datadicts.append(datadict)
     return datadicts
+
+def concatenate_sparse_counts(*samples):
+    work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    umi_dir = os.path.join(work_dir, "umis")
+    out_file = os.path.join(umi_dir, "tagcounts.mtx")
+    if file_exists(out_file):
+        return out_file
+    files = [dd.get_count_file(data) for data in
+             dd.sample_data_iterator(samples)
+             if dd.get_count_file(data)]
+    descriptions = [dd.get_sample_name(data) for data in
+                    dd.sample_data_iterator(samples) if dd.get_count_file(data)]
+    if not files:
+        return samples
+    counts = SparseMatrix()
+    counts.read(filename=files.pop(), colprefix=descriptions.pop())
+    for filename, description in zip(files, descriptions):
+        newcounts = SparseMatrix()
+        newcounts.read(filename=filename, colprefix=description)
+        counts.cat(newcounts)
+    counts.write(out_file)
+    newsamples = []
+    for data in dd.sample_data_iterator(samples):
+        newsamples.append([dd.set_combined_counts(data, out_file)])
+    return newsamples

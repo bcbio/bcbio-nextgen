@@ -559,7 +559,16 @@ def _get_files_project(sample, upload_config):
     if dd.get_novel_isomir_counts(sample):
         out.append({"path": dd.get_novel_isomir_counts(sample)})
     if dd.get_combined_counts(sample):
-        out.append({"path": dd.get_combined_counts(sample)})
+        count_file = dd.get_combined_counts(sample)
+        if sample["analysis"].lower() == "scrna-seq":
+            out.append({"path": count_file,
+                    "type": "mtx"})
+            out.append({"path": count_file + ".rownames",
+                    "type": "rownames"})
+            out.append({"path": count_file + ".colnames",
+                    "type": "colnames"})
+        else:
+            out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_annotated_combined_counts(sample):
         out.append({"path": dd.get_annotated_combined_counts(sample)})
     if dd.get_combined_fpkm(sample):

@@ -163,6 +163,12 @@ def run_tagcount(*args):
         return ipython.zip_args(apply(umi.tagcount, *args))
 
 @require(umi)
+def run_concatenate_sparse_counts(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(umi.concatenate_sparse_counts, *args))
+
+@require(umi)
 def run_barcode_histogram(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):

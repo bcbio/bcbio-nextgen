@@ -30,6 +30,7 @@ def singlecell_rnaseq(samples, run_parallel):
     if quantifier == "rapmap":
         samples = run_parallel("run_rapmap_align", samples)
         samples = run_parallel("run_tagcount", samples)
+        samples = run_parallel("run_concatenate_sparse_counts", [samples])
     elif quantifier == "kallisto":
         samples = run_parallel("run_kallisto_singlecell", samples)
     else:

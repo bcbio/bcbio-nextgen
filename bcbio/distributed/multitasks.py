@@ -20,6 +20,10 @@ def run_tagcount(*args):
     return umi.tagcount(*args)
 
 @utils.map_wrap
+def run_concatenate_sparse_counts(*args):
+    return umi.concatenate_sparse_counts(*args)
+
+@utils.map_wrap
 def run_filter_barcodes(*args):
     return umi.filter_barcodes(*args)
 
