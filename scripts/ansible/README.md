@@ -72,7 +72,7 @@ Create a volume that will contain the run and bcbio installation. It
 should be in the same availability zone as specified above. You can create this
 in the AWS console in the Volumes tab, or using saws/aws:
 
-    aws ec2 create-volume --size 300 --availability-zone us-east-1d --encrypted
+    aws ec2 create-volume --encrypted --volume-type gp2 --size 300 --availability-zone us-east-1d
     aws ec2 create-tags --resources vol-00df42a6 --tags Key=Name,Value=exome-validation
 
 Add your volume ID to the `project_vars.yaml` configuration file:
@@ -219,3 +219,58 @@ To optimize resource usage, especially for single sample projects, edit
       memory: 3G
       cores: 16
       jvm_opts: ["-Xms750m", "-Xmx3500m"]
+
+# Running with Toil
+
+This in progress documentation describes running bcbio generated CWL using
+[Toil autoscaling on AWS](http://toil.readthedocs.io/en/latest/running/cloud.html).
+
+- Look up an appropriate CoreOS AMI for [your zone](https://github.com/BD2KGenomics/toil/issues/1470):
+
+        aws ec2 describe-images \
+          --output table --query 'Images[*].{AMI:ImageId,Description:Description}' \
+          --filters Name=owner-id,Values=679593333241 Name=description,Values='*stable*'
+
+- Find a [Docker Toil tag](https://quay.io/repository/ucsc_cgl/toil?tag=latest&tab=tags)
+  corresponding to the version you're running (if not a stable release):
+
+        curl -s 'https://quay.io/api/v1/repository/ucsc_cgl/toil/tag/?limit=20' \
+          | jq '.tags[] | (.name)'
+
+- Pick a VPC subnet to run in. This subnet needs to enalbe auto-assign public IP
+  addresses.
+
+- Launch the cluster
+
+        export TOIL_AWS_ZONE=us-east-1d
+        export TOIL_AWS_AMI=ami-61659e77
+        export TOIL_APPLIANCE_SELF='quay.io/ucsc_cgl/toil:3.7.0a1.dev346-6a452b988d092f55f6da966de8248dd9c1a53a85'
+        toil launch-cluster -p aws bcbio --nodeType=t2.small --keyPairName=bcbio \
+          --vpcSubnet subnet-3628576d
+
+- Find local IP of machine (for Mesos LEADER_PRIVATE_IP):
+
+- Attach to Docker container in head node:
+
+        aws ec2 describe-instances | grep PrivateIp
+        toil ssh-cluster toil-bcbio
+
+- Run bcbio CWL toil test jobStore
+
+        mkdir /home/run && cd /home/run
+        wget -O test_bcbio_cwl.tar.gz https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz
+        tar -xzvpf test_bcbio_cwl.tar.gz
+        cd test_bcbio_cwl-master
+        <edit run_toil_aws.sh to change LEADER_PRIVATE_IP, from above) and JOB_STORE s3 bucket>
+        bash run_toil_aws.sh
+
+TODO list:
+  - cgcloud versioning, need development version of Toil: https://github.com/BD2KGenomics/toil/issues/1458
+  - Get screen inside appliance working: Must be connected to a terminal.
+  - Excessive logs
+```
+ip-10-0-0-66.ec2.internal 2017-02-14 17:55:35,221 preemptable-scaler INFO toil.provisioners.clusterScaler: Limiting the estimated number of necessary preemptable nodes (3) to the configured maximum (2).
+ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,504 scaler INFO toil.provisioners.clusterScaler: Adding 0 preemptable nodes to compensate for a deficit of 0 non-preemptable ones.
+ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,505 scaler INFO toil.provisioners.clusterScaler: Estimating that cluster needs 0 non-preemptable nodes of shape _Shape(wallTime=3600, memory=8589934592, cores=2, disk=0), from current size of 0, given a queue size of 0, the number of jobs per node estimated to be 1.0, an alpha parameter of 0.8 and a run-time length correction of 1.0.
+```
+  - Swap to using Ubuntu instead of relying on manual CoreOS Amazon approvals.
