@@ -250,12 +250,13 @@ This in progress documentation describes running bcbio generated CWL using
 
 - Find local IP of machine (for Mesos LEADER_PRIVATE_IP):
 
+        aws ec2 describe-instances | grep PrivateIp
+
 - Attach to Docker container in head node:
 
-        aws ec2 describe-instances | grep PrivateIp
         toil ssh-cluster toil-bcbio
 
-- Run bcbio CWL toil test jobStore
+- Run bcbio CWL toil test
 
         mkdir /home/run && cd /home/run
         wget -O test_bcbio_cwl.tar.gz https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz
@@ -264,7 +265,7 @@ This in progress documentation describes running bcbio generated CWL using
         <edit run_toil_aws.sh to change LEADER_PRIVATE_IP, from above) and JOB_STORE s3 bucket>
         bash run_toil_aws.sh
 
-TODO list:
+TODO:
   - cgcloud versioning, need development version of Toil: https://github.com/BD2KGenomics/toil/issues/1458
   - Get screen inside appliance working: Must be connected to a terminal.
   - Excessive logs
