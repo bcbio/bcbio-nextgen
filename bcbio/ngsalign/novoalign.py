@@ -10,6 +10,7 @@ import subprocess
 from bcbio import bam, utils
 from bcbio.ngsalign import alignprep, postalign
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.utils import (memoize_outfile, file_exists)
