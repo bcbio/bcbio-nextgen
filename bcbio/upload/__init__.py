@@ -33,6 +33,21 @@ def from_sample(sample):
             approach.update_file(finfo, sample, upload_config)
     return [[sample]]
 
+def get_all_upload_paths_from_sample(sample):
+    upload_path_mapping = dict()
+    upload_config = sample.get("upload")
+    if upload_config:
+        method = upload_config.get("method", "filesystem")
+        if method == "filesystem":
+            approach = _approaches[method]
+            for finfo in _get_files_project(sample, upload_config):
+                path = approach.get_upload_path(finfo, None, upload_config)
+                upload_path_mapping[finfo["path"]] = path
+            for finfo in _get_files(sample):
+                path = approach.get_upload_path(finfo, sample, upload_config)
+                upload_path_mapping[finfo["path"]] = path
+    return upload_path_mapping
+
 # ## File information from sample
 
 def _get_files(sample):
