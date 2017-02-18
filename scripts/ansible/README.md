@@ -225,25 +225,18 @@ To optimize resource usage, especially for single sample projects, edit
 This in progress documentation describes running bcbio generated CWL using
 [Toil autoscaling on AWS](http://toil.readthedocs.io/en/latest/running/cloud.html).
 
-- Look up an appropriate CoreOS AMI for [your zone](https://github.com/BD2KGenomics/toil/issues/1470):
-
-        aws ec2 describe-images \
-          --output table --query 'Images[*].{AMI:ImageId,Description:Description}' \
-          --filters Name=owner-id,Values=679593333241 Name=description,Values='*stable*'
-
 - Find a [Docker Toil tag](https://quay.io/repository/ucsc_cgl/toil?tag=latest&tab=tags)
   corresponding to the version you're running (if not a stable release):
 
         curl -s 'https://quay.io/api/v1/repository/ucsc_cgl/toil/tag/?limit=20' \
           | jq '.tags[] | (.name)'
 
-- Pick a VPC subnet to run in. This subnet needs to enalbe auto-assign public IP
+- Pick a VPC subnet to run in. This subnet needs to enable auto-assign public IP
   addresses.
 
 - Launch the cluster
 
         export TOIL_AWS_ZONE=us-east-1d
-        export TOIL_AWS_AMI=ami-61659e77
         export TOIL_APPLIANCE_SELF='quay.io/ucsc_cgl/toil:3.7.0a1.dev346-6a452b988d092f55f6da966de8248dd9c1a53a85'
         toil launch-cluster -p aws bcbio --nodeType=t2.small --keyPairName=bcbio \
           --vpcSubnet subnet-3628576d
@@ -265,6 +258,10 @@ This in progress documentation describes running bcbio generated CWL using
         <edit run_toil_aws.sh to change LEADER_PRIVATE_IP, from above) and JOB_STORE s3 bucket>
         bash run_toil_aws.sh
 
+- Current status, can spin up and start cluster with spot instance worker nodes.
+  The current CWL workflow is not staging files into S3 so can't find files on remote
+  runner machines. Get tracebacks like: https://gist.github.com/chapmanb/b84a3cfe64bb37aa05a83111cbcc5a9a
+
 TODO:
   - cgcloud versioning, need development version of Toil: https://github.com/BD2KGenomics/toil/issues/1458
   - Get screen inside appliance working: Must be connected to a terminal.
@@ -275,3 +272,14 @@ ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,504 scaler INFO toil.provisioners.
 ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,505 scaler INFO toil.provisioners.clusterScaler: Estimating that cluster needs 0 non-preemptable nodes of shape _Shape(wallTime=3600, memory=8589934592, cores=2, disk=0), from current size of 0, given a queue size of 0, the number of jobs per node estimated to be 1.0, an alpha parameter of 0.8 and a run-time length correction of 1.0.
 ```
   - Swap to using Ubuntu instead of relying on manual CoreOS Amazon approvals.
+
+## Debugging tips
+
+- Look up an appropriate CoreOS AMI for
+  [your zone](https://github.com/BD2KGenomics/toil/issues/1470). This is only
+  necessary if Toil can't automatically find an image:
+
+        aws ec2 describe-images \
+          --output table --query 'Images[*].{AMI:ImageId,Description:Description}' \
+          --filters Name=owner-id,Values=679593333241 Name=description,Values='*stable*'
+        export TOIL_AWS_AMI=ami-61659e77
