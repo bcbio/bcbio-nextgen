@@ -68,7 +68,7 @@ def summary(*samples):
                 if "summary" not in data:
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
-                file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)  # keep this line after out.append([data])
+                file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
                 if file_list_final:
                     data["summary"]["multiqc"]["secondary"].append(file_list_final)
         out.append([data])
@@ -88,7 +88,10 @@ def _save_uploaded_file_list(samples, file_list_work, out_dir):
     upload_paths = []
     for path in paths:
         if path in upload_path_mapping:
-            upload_paths.append(upload_path_mapping[path])
+            upload_path = upload_path_mapping[path]
+            upload_base = samples[0]["upload"]["dir"]
+            upload_relpath = os.path.relpath(upload_path, upload_base)
+            upload_paths.append(upload_relpath)
     if not upload_paths:
         return None
     with open(file_list_final, "w") as f:
