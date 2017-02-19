@@ -26,6 +26,8 @@
   (use `bcbio_conda install -c bioconda svtyper=0.1.1` to test in development)
 - Work towards supporting a Python 3 compatible bcbio codebase. Thanks to
   Michael Crusoe.
+- Reduce VarDict maximum BED region sizes for better memory usage. Thanks to
+  Nikolai Karulin, Oliver Hofmann, Miika Ahdesmaki and Zhongwu Lai.
 - Fix double uploading of fast RNA-seq quantification.
 - Output single-cell RNA-seq counts in annotated MatrixMarket format.
 

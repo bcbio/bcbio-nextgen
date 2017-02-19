@@ -49,14 +49,16 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     return opts
 
 def _enforce_max_region_size(in_file, data):
-    """Ensure we don't have any chunks in the region greater than 1Mb.
+    """Ensure we don't have any chunks in the region greater than 20kb.
 
-    Larger sections have high memory usage on VarDictJava and failures
-    on VarDict. This creates minimum windows from the input BED file
-    to avoid these issues. Downstream VarDict merging sorts out any
-    variants across windows.
+    VarDict memory usage depends on size of individual windows in the input
+    file. This breaks regions into 20kb chunks with 250bp overlaps. 20kb gives
+    ~1Gb/core memory usage and the overlaps avoid missing indels spanning a
+    gap. Downstream VarDict merging sorts out any variants across windows.
+
+    https://github.com/AstraZeneca-NGS/VarDictJava/issues/64
     """
-    max_size = 1e6
+    max_size = 20000
     overlap_size = 250
     def _has_larger_regions(f):
         return any(r.stop - r.start > max_size for r in pybedtools.BedTool(f))
