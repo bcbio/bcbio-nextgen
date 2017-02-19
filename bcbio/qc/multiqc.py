@@ -22,6 +22,7 @@ from bcbio.pipeline import config_utils
 from bcbio.bam import ref
 from bcbio.structural import annotate
 from bcbio.variation import bedutils
+from bcbio.upload import get_all_upload_paths_from_sample
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -33,6 +34,7 @@ def summary(*samples):
     out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "multiqc"))
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
+    file_list = os.path.join(out_dir, "list_files.txt")
     samples = _report_summary(samples, os.path.join(out_dir, "report"))
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
@@ -41,7 +43,7 @@ def summary(*samples):
             if _one_exists(in_files):
                 with utils.chdir(out_dir):
                     _create_config_file(out_dir, samples)
-                    input_list_file = _create_list_file(in_files, out_dir)
+                    input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
                         export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
                     else:
@@ -60,12 +62,42 @@ def summary(*samples):
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.bed"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.txt"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
+                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.yaml"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
+                data_files.append(file_list)
                 if "summary" not in data:
                     data["summary"] = {}
                 data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
+                file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
+                if file_list_final:
+                    data["summary"]["multiqc"]["secondary"].append(file_list_final)
         out.append([data])
     return out
+
+def _save_uploaded_file_list(samples, file_list_work, out_dir):
+    if not utils.file_exists(file_list_work):
+        return None
+    file_list_final = os.path.join(out_dir, "list_files_final.txt")
+    upload_path_mapping = dict()
+    for sample in samples:
+        upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
+    if not upload_path_mapping:
+        return None
+    with open(file_list_work) as f:
+        paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
+    upload_paths = []
+    for path in paths:
+        if path in upload_path_mapping:
+            upload_path = upload_path_mapping[path]
+            upload_base = samples[0]["upload"]["dir"]
+            upload_relpath = os.path.relpath(upload_path, upload_base)
+            upload_paths.append(upload_relpath)
+    if not upload_paths:
+        return None
+    with open(file_list_final, "w") as f:
+        for path in upload_paths:
+            f.write(path + '\n')
+    return file_list_final
 
 def _one_exists(input_files):
     """
@@ -129,10 +161,10 @@ def _group_by_samplename(samples):
         out[(dd.get_sample_name(data), dd.get_align_bam(data))].append(data)
     return [xs[0] for xs in out.values()]
 
-def _create_list_file(dirs, out_dir):
-    out_file = os.path.join(out_dir, "list_files.txt")
+def _create_list_file(paths, out_file):
     with open(out_file, "w") as f:
-        f.write('\n'.join(dirs))
+        for path in paths:
+            f.write(path + '\n')
     return out_file
 
 def _create_config_file(out_dir, samples):
@@ -232,7 +264,7 @@ def _report_summary(samples, out_dir):
             # messages. We need to generalize coverage reporting and re-include.
             # try:
             #     do.run(cmd, "Prepare coverage summary", log_error=False)
-# except subprocess.CalledProcessError as msg:
+            # except subprocess.CalledProcessError as msg:
             #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
             if utils.file_exists("report-ready.html"):
                 shutil.move("report-ready.html", out_report)
