@@ -7,6 +7,7 @@ validity of pipeline updates and algorithm changes.
 import collections
 import contextlib
 import csv
+import hashlib
 import os
 import shutil
 import subprocess
@@ -87,21 +88,30 @@ def _get_caller_supplement(caller, data):
 def _normalize_cwl_inputs(items):
     """Extract variation and validation data from CWL input list of batched samples.
     """
-    with_validate = []
+    with_validate = {}
     vrn_files = []
     for data in items:
         if tz.get_in(["config", "algorithm", "validate"], data):
-            with_validate.append(data)
+            with_validate[_checksum(tz.get_in(["config", "algorithm", "validate"], data))] = data
         if data.get("vrn_file"):
             vrn_files.append(data["vrn_file"])
     if len(with_validate) == 0:
         return items[0]
     else:
-        assert len(set([tz.get_in(["config", "algorithm", "validate"], data) for data in with_validate])) == 1
+        assert len(with_validate) == 1, len(with_validate)
         assert len(set(vrn_files)) == 1
-        data = with_validate[0]
+        data = with_validate.values()[0]
         data["vrn_file"] = vrn_files[0]
         return data
+
+def _checksum(in_file, block_size=65536):
+    """sha256 checksum, thanks to: https://gist.github.com/rji/b38c7238128edf53a181
+    """
+    cs = hashlib.sha256()
+    with open(in_file, "rb") as f:
+        for block in iter(lambda: f.read(block_size), b''):
+            cs.update(block)
+    return cs.hexdigest()
 
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
