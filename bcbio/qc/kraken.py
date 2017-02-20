@@ -35,7 +35,7 @@ def run(bam_file, data, out_dir):
         num_cores = data["config"]["algorithm"].get("num_cores", 1)
         fn_file = data["files_orig"][0] if dd.get_save_diskspace(data) else data["files"][0]
         if fn_file.endswith("bam"):
-            logger.info("kraken: need fasta files as input")
+            logger.info("kraken: need fastq files as input")
             return {"kraken_report": "null"}
         with tx_tmpdir(data) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):

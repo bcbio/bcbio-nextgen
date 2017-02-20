@@ -4,7 +4,7 @@
   non-ordered tumor/normal placement in VCF.
 - Re-add checks for pre-bgzipped fastq inputs to alignment preparation thanks to
   a fix for grabix to handle Illumina bgzip outputs.
-- Provide DNA damage filtering for low frequency sequencing errors in somatic
+- Provide DNA damage annotation for low frequency sequencing errors in somatic
   samples. Use `tools_on: [damage_filter]`
 - Add viral detection for variant calling DNA-seq cancer samples. Uses
   virus sequences from TCGA GDC distribution and provides simple counts of
@@ -16,6 +16,8 @@
 - Provide whole genome coverage plots with goleft indexcov. Thanks to Brent Pedersen.
 - Speed up post-alignment callability calculations by using default parameters
   to goleft depth. Thanks to Brent Pedersen.
+- Allow custom vcfanno configuration files for variant annotation and
+  GEMINI database creation, using `vcfanno` configuration parameter.
 - Always use specified cores for analysis re-runs in local multicore mode.
   Avoids confusing core behavior with checkpoints on re-starts of analysis in
   a previous work directory.

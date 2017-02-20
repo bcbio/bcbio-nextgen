@@ -30,7 +30,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
         gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
         ped_file = create_ped_file(samples + extras, gemini_vcf)
         # Use original approach for hg19/GRCh37 pending additional testing
-        if support_gemini_orig(data) and not any("gemini_vcfanno" in dd.get_tools_on(d) for d in samples):
+        if support_gemini_orig(data) and not any(dd.get_vcfanno(d) for d in samples):
             gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
         else:
             gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
@@ -46,13 +46,16 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
         return None
     if not utils.file_exists(gemini_db):
         data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
-        ann_file = vcfanno.run_vcfanno(gemini_vcf, "gemini", data, data_basepath)
+        conf_files = dd.get_vcfanno(data)
+        if not conf_files:
+            conf_files = ["gemini"]
+        ann_file = vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath)
         with file_transaction(data, gemini_db) as tx_gemini_db:
             vcf2db = config_utils.get_program("vcf2db.py", data)
             if "vcf2db_expand" in dd.get_tools_on(data):
-                vcf2db_args= ["--expand", "gt_types", "--expand", "gt_ref_depths", "--expand", "gt_alt_depths"]
+                vcf2db_args = ["--expand", "gt_types", "--expand", "gt_ref_depths", "--expand", "gt_alt_depths"]
             else:
-                vcf2db_args=[]
+                vcf2db_args = []
             cmd = [vcf2db, ann_file, ped_file, tx_gemini_db] + vcf2db_args
             do.run(cmd, "GEMINI: create database with vcf2db")
     return gemini_db

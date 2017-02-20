@@ -533,15 +533,6 @@ Variant calling
    (for Appistry MuTect users only). Currently an experimental option that adds
    these indel calls to MuTect's SNP-only output. Only one caller supported.
    Omit to ignore. [scalpel, pindel, sid, false]
-- ``effects`` Method used to calculate expected variant effects. Defaults to
-  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
-  with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
-  :ref:`datatarget-install`. [snpeff, vep, false]
-- ``effects_transcripts`` Define the transcripts to use for effect prediction
-  annotation. Options ``all``: Standard Ensembl transcript list (the default);
-  ``canonical``: Report single canonical transcripts (``-canon`` in snpEff,
-  ``-pick`` in VEP); ``canonical_cancer`` Canonical transcripts with hand
-  curated changes for more common cancer transcripts (effects snpEff only).
 -  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
    for human variant calling. `Heng Li's variant artifacts paper`_ provides
    these regions, which cover ~2% of the genome but contribute to a large
@@ -604,6 +595,29 @@ Somatic variant calling
   in the tumor sample of a tumor/normal pair.
 
 .. _sv-config:
+
+Variant annotation
+==================
+
+- ``effects`` Method used to calculate expected variant effects. Defaults to
+  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
+  with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
+  :ref:`datatarget-install`. [snpeff, vep, false]
+- ``effects_transcripts`` Define the transcripts to use for effect prediction
+  annotation. Options ``all``: Standard Ensembl transcript list (the default);
+  ``canonical``: Report single canonical transcripts (``-canon`` in snpEff,
+  ``-pick`` in VEP); ``canonical_cancer`` Canonical transcripts with hand
+  curated changes for more common cancer transcripts (effects snpEff only).
+- ``vcfanno`` Configuration files for `vcfanno
+  <https://github.com/brentp/vcfanno>`_, allowing use of the new vcfanno/vcf2db
+  approach for creating GEMINI databases. The default is ``[gemini]`` for all
+  organisms except GRCh37/hg19, which defaults to the older GEMINI loading approach.
+  bcbio installs pre-prepared configuration files in
+  ``genomes/build/config/vcfanno`` or you can specify the full path to a
+  ``/path/your/anns.conf`` and optionally an equivalently
+  named ``/path/your/anns.lua`` file. This value can be a list so you can
+  supplement the existing annotation file with: ``[gemini, /path/your/anns.conf]``.
+  or replace it by only specifying your file.
 
 Structural variant calling
 ==========================
@@ -854,12 +868,11 @@ lists with multiple options:
   ``vep_splicesite_annotations`` enables the use of the MaxEntScan and GeneSplicer plugin for VEP.
   Both optional plugins add extra splice site annotations.
   ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
-  that pass filters. ``gemini_vcfanno`` uses the new vcfanno/vcf2db for creating
-  GEMINI databases in GRCh37/hg19. vcfanno/vcf2db is the default for all other
-  organisms. ``vcf2db_expand`` decompresses and expands the genotype columns in
+  that pass filters. ``vcf2db_expand`` decompresses and expands the genotype columns in
   the vcfanno prepared GEMINI databases, enabling standard SQL queries on
-  genotypes and depths. ``damage_filter`` filters somatic calls for DNA damage
-  artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
+  genotypes and depths. ``damage_filter`` annotates low frequency somatic calls
+  in INFO/DKFZBias for DNA damage artifacts using
+  `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 

@@ -47,7 +47,7 @@ LOOKUPS = {
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
-    "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno']},
+    "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno'], "default": []},
     "analysis": {"keys": ["analysis"]},
     "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
