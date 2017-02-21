@@ -5,7 +5,6 @@ http://qualimap.bioinfo.cipf.es/
 import glob
 import os
 
-import lxml.html
 import pandas as pd
 import pybedtools
 import toolz as tz
@@ -84,6 +83,7 @@ def _parse_qualimap_metrics(report_file, data):
     """
     if not utils.file_exists(report_file):
         return {}
+    import lxml.html
     out = {}
     parsers = {"Globals": _parse_qualimap_globals,
                "Globals (inside of regions)": _parse_qualimap_globals_inregion,
@@ -272,6 +272,7 @@ def _parse_qualimap_rnaseq(table):
 def _parse_rnaseq_qualimap_metrics(report_file):
     """Extract useful metrics from the qualimap HTML report file.
     """
+    import lxml.html
     out = {}
     parsers = ["Reads alignment", "Reads genomic origin", "Transcript coverage profile"]
     root = lxml.html.parse(report_file).getroot()
