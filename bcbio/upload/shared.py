@@ -10,8 +10,8 @@ def get_file_timestamp(f):
 
 def up_to_date(new, orig):
     if os.path.isdir(orig["path"]):
-        return (os.path.exists(new) and
-                get_file_timestamp(new) >= orig["mtime"])
+        if os.path.exists(new):
+            return get_file_timestamp(new) >= orig["mtime"]
     else:
         return (utils.file_exists(new) and
                 get_file_timestamp(new) >= orig["mtime"])

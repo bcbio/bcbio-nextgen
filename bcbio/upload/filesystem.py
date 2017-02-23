@@ -11,7 +11,6 @@ def update_file(finfo, sample_info, config, pass_uptodate=False):
     """Update the file in local filesystem storage.
     """
     storage_dir = utils.safe_makedir(_get_storage_dir(finfo, config))
-    
     if finfo.get("type") == "directory":
         return _copy_finfo_directory(finfo, storage_dir)
     else:
@@ -71,6 +70,7 @@ def _copy_finfo(finfo, storage_dir, pass_uptodate=False):
 def _copy_finfo_directory(finfo, out_dir):
     """Copy a directory into the final output directory.
     """
+    out_dir = _get_dir_upload_path(finfo, out_dir)
     if not shared.up_to_date(out_dir, finfo):
         logger.info("Storing directory in local filesystem: %s" % out_dir)
         if os.path.exists(out_dir):
