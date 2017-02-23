@@ -132,7 +132,7 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
     if file_exists(out_file):
         return out_dir
     files = dd.get_input_sequence_files(data)
-    readlength = fastq.estimate_read_length(files[0])
+    readlength = bam.fastq.estimate_read_length(files[0])
     if readlength % 2 == 0:
         readlength -= 1
     kmersize = min(readlength, 31)
