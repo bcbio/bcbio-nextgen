@@ -87,9 +87,10 @@ def _is_record_output(out_keys):
 
 def _add_resources(data, runtime):
     if "config" in data:
-        data["config"]["resources"] = {"default": {"cores": runtime["cores"],
-                                                    "memory": "%sM" % int(float(runtime["ram"]) / runtime["cores"])}}
-        data["config"]["algorithm"]["num_cores"] = runtime["cores"]
+        data["config"]["resources"] = {"default": {"cores": int(runtime["cores"]),
+                                                   "memory": "%sM" % int(float(runtime["ram"]) /
+                                                                         float(runtime["cores"]))}}
+        data["config"]["algorithm"]["num_cores"] = int(runtime["cores"])
     return data
 
 def _world_from_cwl(fnargs, work_dir):
@@ -115,10 +116,10 @@ def _world_from_cwl(fnargs, work_dir):
             parallel = val
             continue
         if key == "sentinel-runtime":
-            runtime = json.loads(val)
+            runtime = dict(tz.partition(2, val.split(",")))
             continue
         if key == "sentinel-outputs":
-            output_cwl_keys = json.loads(val)
+            output_cwl_keys = val.split(",")
             continue
         # starting a new record -- duplicated key
         if key in passed_keys:

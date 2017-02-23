@@ -55,8 +55,9 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
+    bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
-               "coresMin": cores, "ramMin": mem_mb_total}
+               "coresMin": cores, "ramMin": mem_mb_total, "outdirMin": bcbio_docker_disk}
     if file_estimates and disk:
         total_estimate = 0
         for key, multiplier in disk.items():
@@ -64,6 +65,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
                 total_estimate += int(multiplier * file_estimates[key])
         if total_estimate:
             cwl_res["tmpdirMin"] = total_estimate
+            cwl_res["outdirMin"] += total_estimate
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
@@ -71,12 +73,12 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
            "arguments": [],
            "inputs": [],
            "outputs": []}
-    out["arguments"].append({"position": 0, "valueFrom": "sentinel-runtime=$(runtime)"})
+    out["arguments"].append({"position": 0, "valueFrom":
+                             "sentinel-runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
     std_inputs = [{"id": "sentinel-parallel", "type": "string",
                    "default": parallel},
                   {"id": "sentinel-outputs", "type": "string",
-                   "default": json.dumps([workflow.get_base_id(x["id"]) for x in outputs],
-                                         sort_keys=True, separators=(',', ':'))}]
+                   "default": ",".join([workflow.get_base_id(x["id"]) for x in outputs])}]
     inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
