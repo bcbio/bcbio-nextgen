@@ -287,7 +287,8 @@ def _handle_special_yaml_cases(v):
     """Handle values that pass integer, boolean or list values.
     """
     if ";" in v:
-        v = v.split(";")
+        # split lists and remove accidental empty values
+        v = [x for x in v.split(";") if x != ""]
     elif isinstance(v, list):
         v = v
     else:
