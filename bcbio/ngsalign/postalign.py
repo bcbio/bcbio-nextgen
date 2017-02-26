@@ -168,9 +168,11 @@ def _get_fgbio_options(data):
     """Get adjustable, through resources, or default options for fgbio.
     """
     group_opts = ["--edits", "--min-map-q"]
-    cons_opts = ["--min-reads"]
+    cons_opts = ["--min-reads", "--min-consensus-base-quality", "--min-input-base-quality"]
     defaults = {"--min-reads": "1",
                 "--min-map-q": "1",
+                "--min-consensus-base-quality": "13",
+                "--min-input-base-quality": "2",
                 "--edits": "1"}
     ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
     assert len(ropts) % 2 == 0, "Expect even number of options for fgbio" % ropts
