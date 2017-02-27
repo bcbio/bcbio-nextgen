@@ -785,6 +785,8 @@ Single-cell RNA sequencing
   cellular barcodes. Requires a set of known barcodes to be passed with the
   ``cellular_barcodes`` option. Defaults to 1. Set to 0 to turn off
   error correction.
+- ``sample_barcodes`` A text file with one barcode per line of expected sample
+  barcodes.
 
 smallRNA sequencing
 ===================
