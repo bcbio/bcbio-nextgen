@@ -18,13 +18,31 @@ from bcbio.variation import vcfutils
 _CALLERS = {
   "precall": {"seq2c": seq2c.precall},
   "initial": {"cnvkit": cnvkit.run},
-  "standard": {"cn.mops": cn_mops.run, "manta": manta.run,
+  "standard": {"cn.mops": cn_mops.run, "manta": manta.run, "cnvkit": cnvkit.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
                "battenberg": battenberg.run, "seq2c": seq2c.run},
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _GLOBAL_BATCHING = set(["seq2c"])
+
+def _get_callers(items, stage):
+    """Retrieve available callers for the provided stage.
+
+    Handles special cases like CNVkit that can be in initial or standard
+    depending on if fed into Lumpy analysis.
+    """
+    callers = _CALLERS[stage]
+    if "cnvkit" in callers:
+        has_lumpy = any("lumpy" in get_svcallers(d) or lumpy in d["config"]["algorithm"].get("svcaller_orig", [])
+                        for d in items)
+        if has_lumpy and any("lumpy_usecnv" in dd.get_tools_on(d) for d in items):
+            if stage != "initial":
+                del callers["cnvkit"]
+        else:
+            if stage != "standard":
+                del callers["cnvkit"]
+    return callers
 
 def get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
@@ -43,7 +61,7 @@ def _handle_multiple_svcallers(data, stage):
         svs.append("prioritize")
     out = []
     for svcaller in svs:
-        if svcaller in _CALLERS[stage]:
+        if svcaller in _get_callers([data], stage):
             base = copy.deepcopy(data)
             base["config"]["algorithm"]["svcaller"] = svcaller
             base["config"]["algorithm"]["svcaller_orig"] = svs
@@ -152,7 +170,7 @@ def detect_sv(items, all_items=None, stage="standard"):
     """Top level parallel target for examining structural variation.
     """
     svcaller = items[0]["config"]["algorithm"].get("svcaller")
-    caller_fn = _CALLERS[stage].get(svcaller)
+    caller_fn = _get_callers(items, stage).get(svcaller)
     out = []
     if svcaller and caller_fn:
         if (all_items and svcaller in _NEEDS_BACKGROUND and

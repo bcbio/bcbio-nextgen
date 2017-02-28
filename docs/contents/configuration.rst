@@ -875,6 +875,7 @@ lists with multiple options:
   genotypes and depths. ``damage_filter`` annotates low frequency somatic calls
   in INFO/DKFZBias for DNA damage artifacts using
   `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
+  ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy calling.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 

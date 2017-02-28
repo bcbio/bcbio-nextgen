@@ -181,7 +181,7 @@ def _bedpes_from_cnv_caller(data, work_dir):
     supported = set(["cnvkit"])
     cns_file = None
     for sv in data.get("sv", []):
-        if sv["variantcaller"] in supported and "cns" in sv:
+        if sv["variantcaller"] in supported and "cns" in sv and "lumpy_usecnv" in dd.get_tools_on(data):
             cns_file = sv["cns"]
             break
     if not cns_file:
