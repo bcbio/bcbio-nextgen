@@ -32,6 +32,8 @@
   Nikolai Karulin, Oliver Hofmann, Miika Ahdesmaki and Zhongwu Lai.
 - Require `tools_on: [lumpy_usecnv]` to pre-run CNVkit as input to Lumpy, allowing
   Lumpy and CNVkit to run in parallel otherwise.
+- Avoid issues with CNVkit bin size estimates for normal associated with
+  multiple tumors. Thanks to Ho Danliang.
 - Fix double uploading of fast RNA-seq quantification.
 - Output single-cell RNA-seq counts in annotated MatrixMarket format.
 

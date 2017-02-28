@@ -24,7 +24,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [lumpy]
+      svcaller: [cnvkit, lumpy, gridss]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -33,7 +33,7 @@ details:
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
     genome_build: hg19
     metadata:
-      batch: [TumorOnly, PairedBatch]
+      batch: PairedBatch
       phenotype: tumor
     algorithm:
       aligner: bwa
@@ -48,7 +48,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [lumpy]
+      svcaller: [cnvkit, lumpy, gridss]
       #svcaller: [cnvkit]
       tools_on: [damage_filter]
       tools_off: [vardict_somatic_filter]
@@ -74,7 +74,7 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [lumpy]
+      svcaller: [cnvkit, lumpy, gridss]
       #tools_on: [svplots]
       #svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed

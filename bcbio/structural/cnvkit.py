@@ -8,6 +8,7 @@ import operator
 import os
 import sys
 import tempfile
+import subprocess
 
 import pybedtools
 import numpy as np
@@ -18,6 +19,7 @@ from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
@@ -313,7 +315,13 @@ def _cnvkit_coverage(data, bed_file, input_type):
 def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Create target and antitarget regions from target and access files.
     """
-    target_bed = os.path.join(work_dir, "%s.target.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
+    batch = dd.get_batch(data) or dd.get_sample_name(data)
+    basename = os.path.splitext(os.path.basename(raw_target_bed))[0]
+    target_bed = os.path.join(work_dir, "%s-%s.target.bed" % (basename, batch))
+    # back compatible with previous runs to avoid re-calculating
+    target_bed_old = os.path.join(work_dir, "%s.target.bed" % basename)
+    if utils.file_uptodate(target_bed_old, raw_target_bed):
+        target_bed = target_bed_old
     if not utils.file_uptodate(target_bed, raw_target_bed):
         with file_transaction(data, target_bed) as tx_out_file:
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
@@ -321,8 +329,12 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
             if bin_estimates.get("target"):
                 cmd += ["--avg-size", str(bin_estimates["target"])]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
-    antitarget_bed = os.path.join(work_dir, "%s.antitarget.bed" % os.path.splitext(os.path.basename(raw_target_bed))[0])
-    if not os.path.exists(antitarget_bed):
+    antitarget_bed = os.path.join(work_dir, "%s-%s.antitarget.bed" % (basename, batch))
+    antitarget_bed_old = os.path.join(work_dir, "%s.antitarget.bed" % basename)
+    # back compatible with previous runs to avoid re-calculating
+    if utils.file_uptodate(antitarget_bed_old, raw_target_bed):
+        antitarget_bed = antitarget_bed_old
+    if not utils.file_uptodate(antitarget_bed, raw_target_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
             bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
@@ -334,7 +346,9 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
 def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Estimate good coverage bin sizes for target regions based on coverage.
     """
-    out_file = os.path.join(work_dir, "%s-bin_estimate.txt" % os.path.splitext(os.path.basename(raw_target_bed))[0])
+    batch = dd.get_batch(data) or dd.get_sample_name(data)
+    out_file = os.path.join(work_dir, "%s-%s-bin_estimate.txt" % (
+        os.path.splitext(os.path.basename(raw_target_bed))[0], batch))
     method_map = {"genome": "wgs", "regional": "hybrid", "amplicon": "amplicon"}
     if not os.path.exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
@@ -342,7 +356,12 @@ def _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work
                    "-m", method_map[cov_interval], "-t", raw_target_bed,
                    "-g", access_bed]
             cmd = " ".join(cmd) + " > " + tx_out_file
-            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit coverage bin estimation")
+            try:
+                do.run(_prep_cmd(cmd, tx_out_file), "CNVkit coverage bin estimation", log_error=False)
+            except subprocess.CalledProcessError:
+                logger.info("Bin size estimate failed, using default values")
+                with open(tx_out_file, "w") as out_handle:
+                    out_handle.write("Bin size estimate failed, using default values")
     avg_bin_sizes = {}
     estimate_map = {"On-target": "target", "Off-target": "antitarget",
                     "Genome": "target", "Targets (sampling)": "target"}
