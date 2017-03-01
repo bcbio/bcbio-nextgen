@@ -147,7 +147,8 @@ def _get_input_files(samples, base_dir, tx_out_dir):
     # Back compatible -- to migrate to explicit specifications in input YAML
     staged_files += ["trimmed", "htseq-count/*summary"]
     # Add in created target_info file
-    staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
+    if os.path.isfile(os.path.join(base_dir, "report", "metrics", "target_info.yaml")):
+        staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
     return sorted(list(set(staged_files)))
 
 def _in_temp_directory(f):

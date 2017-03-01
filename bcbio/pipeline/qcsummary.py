@@ -136,12 +136,12 @@ def _run_qc_tools(bam_file, data):
         out = qc_fn(bam_file, data, cur_qc_dir)
         qc_files = None
         if out and isinstance(out, dict):
-            if "base" in out:
-                if "metrics" in out:
-                    metrics.update(out.pop("metrics"))
-                qc_files = out
+            if "metrics" in out:
+                metrics.update(out.pop("metrics"))
             else:
                 metrics.update(out)
+            if "base" in out:
+                qc_files = out
         elif out and isinstance(out, basestring) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
