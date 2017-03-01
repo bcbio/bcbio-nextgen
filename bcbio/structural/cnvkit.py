@@ -86,12 +86,29 @@ def _run_cnvkit_cancer(items, background):
     """
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     normal_data = [x for x in items if dd.get_sample_name(x) != paired.tumor_name]
-    ckouts = _run_cnvkit_shared([paired.tumor_data], normal_data)
+    tumor_ready, normal_ready = _match_batches(paired.tumor_data, normal_data[0] if normal_data else None)
+    ckouts = _run_cnvkit_shared([tumor_ready], [normal_ready] if normal_ready else [])
     if not ckouts:
         return items
     assert len(ckouts) == 1
     tumor_data = _associate_cnvkit_out(ckouts, [paired.tumor_data], is_somatic=True)
     return tumor_data + normal_data
+
+def _match_batches(tumor, normal):
+    """Fix batch names for shared tumor/normals to ensure matching
+     """
+    def _get_batch(x):
+        b = dd.get_batch(x)
+        return [b] if not isinstance(b, (list, tuple)) else b
+    if normal:
+        tumor = copy.deepcopy(tumor)
+        normal = copy.deepcopy(normal)
+        cur_batch = list(set(_get_batch(tumor)) & set(_get_batch(normal)))
+        assert len(cur_batch) == 1, "No batch overlap: %s and %s" % (_get_batch(tumor), _get_batch(normal))
+        cur_batch = cur_batch[0]
+        tumor["metadata"]["batch"] = cur_batch
+        normal["metadata"]["batch"] = cur_batch
+    return tumor, normal
 
 def _run_cnvkit_population(items, background):
     """Run CNVkit on a population of samples.
@@ -303,8 +320,13 @@ def _cnvkit_coverage(data, bed_file, input_type):
     if cnntype is None:
         assert bed_file.endswith(".bed"), "Unexpected BED file extension for coverage %s" % bed_file
         cnntype = ""
+    batch = dd.get_batch(data) or dd.get_sample_name(data)
     base = _bam_to_outbase(bam_file, work_dir)
-    out_file = "%s.%s" % (base, ext)
+    out_file = "%s-%s.%s" % (base, batch, ext)
+    out_file_old = "%s.%s" % (base, ext)
+    # back compatible with previous runs to avoid re-calculating
+    if utils.file_exists(out_file_old):
+        out_file = out_file_old
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "coverage", "-p", str(dd.get_cores(data)), bam_file, bed_file, "-o", tx_out_file]
