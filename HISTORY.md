@@ -17,7 +17,8 @@
 - Speed up post-alignment callability calculations by using default parameters
   to goleft depth. Thanks to Brent Pedersen.
 - Allow custom vcfanno configuration files for variant annotation and
-  GEMINI database creation, using `vcfanno` configuration parameter.
+  GEMINI database creation, using `vcfanno` configuration parameter. Optionally
+  allows use of `vcfanno` without GEMINI database creation.
 - Always use specified cores for analysis re-runs in local multicore mode.
   Avoids confusing core behavior with checkpoints on re-starts of analysis in
   a previous work directory.

@@ -23,19 +23,32 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     name, caller, is_batch = call_info
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
-    multisample_vcf = get_multisample_vcf(fnames, name, caller, data)
-    gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
-    if not utils.file_exists(gemini_db) and use_gemini:
+    gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
+    if use_gemini:
         passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
-        gemini_vcf = multiallelic.to_single(multisample_vcf, data, passonly=passonly)
-        ped_file = create_ped_file(samples + extras, gemini_vcf)
-        # Use original approach for hg19/GRCh37 pending additional testing
-        if support_gemini_orig(data) and not any(dd.get_vcfanno(d) for d in samples):
-            gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
-        else:
-            gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
+        gemini_vcf = multiallelic.to_single(gemini_vcf, data, passonly=passonly)
+    gemini_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
+    gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
+    if vcfutils.vcf_has_variants(gemini_vcf):
+        if not utils.file_exists(gemini_db) and use_gemini:
+            ped_file = create_ped_file(samples + extras, gemini_vcf)
+            # Use original approach for hg19/GRCh37 pending additional testing
+            if support_gemini_orig(data) and not any(dd.get_vcfanno(d) for d in samples):
+                gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
+            else:
+                gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
-                              "vcf": multisample_vcf if is_batch else None}]]
+                              "vcf": gemini_vcf}]]
+
+def _run_vcfanno(gemini_vcf, data, use_gemini=False):
+    data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
+    conf_files = dd.get_vcfanno(data)
+    if not conf_files and use_gemini:
+        conf_files = ["gemini"]
+    if conf_files:
+        return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath)
+    else:
+        return gemini_vcf
 
 def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     """Generalized vcfanno/vcf2db workflow for loading variants into a GEMINI database.
@@ -45,11 +58,6 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     if not vcfutils.vcf_has_variants(gemini_vcf):
         return None
     if not utils.file_exists(gemini_db):
-        data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
-        conf_files = dd.get_vcfanno(data)
-        if not conf_files:
-            conf_files = ["gemini"]
-        ann_file = vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath)
         with file_transaction(data, gemini_db) as tx_gemini_db:
             vcf2db = config_utils.get_program("vcf2db.py", data)
             if "vcf2db_expand" in dd.get_tools_on(data):
@@ -299,7 +307,8 @@ def prep_db_parallel(samples, parallel_fn):
         has_batches = True
     for name, caller, data, fname in singles:
         to_process.append([[fname], (str(name), caller, False), [data], extras])
-    if len(samples) > 0 and not do_db_build([x[0] for x in samples]) and not has_batches:
+    if (len(samples) > 0 and not do_db_build([x[0] for x in samples])
+          and not has_batches and not any(dd.get_vcfanno(x[0] for x in samples))):
         return samples
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}

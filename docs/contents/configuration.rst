@@ -594,7 +594,7 @@ Somatic variant calling
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
   in the tumor sample of a tumor/normal pair.
 
-.. _sv-config:
+.. _config-variant-annotation:
 
 Variant annotation
 ==================
@@ -617,7 +617,11 @@ Variant annotation
   ``/path/your/anns.conf`` and optionally an equivalently
   named ``/path/your/anns.lua`` file. This value can be a list so you can
   supplement the existing annotation file with: ``[gemini, /path/your/anns.conf]``.
-  or replace it by only specifying your file.
+  or replace it by only specifying your file. You can run only vcfanno without
+  GEMINI database creation by setting ``tools_off: [gemini]`` and explicitly
+  setting ``vcfanno: [gemini]`` (or any other configurations you want).
+
+.. _sv-config:
 
 Structural variant calling
 ==========================
@@ -843,7 +847,9 @@ lists with multiple options:
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
   needed. ``gemini`` avoids creation of a `GEMINI database`_ of variants for downstream
-  query during variant calling pipelines. ``vardict_somatic_filter`` disables
+  query during variant calling pipelines. Also skips vcfanno annotation unless
+  turned on explicitly with ``vcfanno`` in :ref:`config-variant-annotation`.
+  ``vardict_somatic_filter`` disables
   running a post calling filter for VarDict to remove variants found in normal
   samples. Without ``vardict_somatic_filter`` in paired analyses no soft
   filtering of germline variants is performed but all high quality variants pass.
