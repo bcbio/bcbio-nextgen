@@ -38,10 +38,11 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, cnvkit, manta, metasv]
-      svcaller: [cnvkit, seq2c, lumpy, delly]
+      svcaller: [cnvkit, seq2c, lumpy, delly, gridss]
       #remove_lcr: true
       tools_on: [qualimap_full]
       tools_off: [gemini]
+      vcfanno: [gemini]
       mixup_check: qsignature
       quality_format: standard
       nomap_split_size: 50
