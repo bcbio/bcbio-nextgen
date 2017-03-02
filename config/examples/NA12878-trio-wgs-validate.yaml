@@ -25,7 +25,7 @@ details:
       variantcaller: [freebayes, gatk-haplotype]
       remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
-      validate_region: giab-NA12878/truth_regions.bed
+      validate_regions: giab-NA12878/truth_regions.bed
   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
     description: NA12891
     metadata:

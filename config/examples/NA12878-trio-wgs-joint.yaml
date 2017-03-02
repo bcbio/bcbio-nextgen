@@ -29,7 +29,7 @@ details:
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
-      validate_region: giab-NA12878/truth_regions.bed
+      validate_regions: giab-NA12878/truth_regions.bed
   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
     description: NA12891-1
     metadata:
@@ -73,7 +73,7 @@ details:
       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint, samtools-joint]
       remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
-      validate_region: giab-NA12878/truth_regions.bed
+      validate_regions: giab-NA12878/truth_regions.bed
   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
     description: NA12891-3
     metadata:
@@ -117,7 +117,7 @@ details:
       variantcaller: [freebayes, gatk-haplotype, platypus, samtools]
       remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
-      validate_region: giab-NA12878/truth_regions.bed
+      validate_regions: giab-NA12878/truth_regions.bed
 #  # snap, batch calling
 #  - files: [../input/NA12878_1.fastq.gz, ../input/NA12878_2.fastq.gz]
 #    description: NA12878-2
@@ -134,7 +134,7 @@ details:
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
 #      remove_lcr: true
 #      validate: giab-NA12878/truth_small_variants.vcf.gz
-#      validate_region: giab-NA12878/truth_regions.bed
+#      validate_regions: giab-NA12878/truth_regions.bed
 #  - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
 #    description: NA12891-2
 #    metadata:
@@ -178,7 +178,7 @@ details:
 #       jointcaller: [freebayes-joint, gatk-haplotype-joint, platypus-joint]
 #       remove_lcr: true
 #       validate: giab-NA12878/truth_small_variants.vcf.gz
-#       validate_region: giab-NA12878/truth_regions.bed
+#       validate_regions: giab-NA12878/truth_regions.bed
 #   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]
 #     description: NA12891-4
 #     metadata:
@@ -222,4 +222,4 @@ details:
 #      variantcaller: [freebayes, gatk-haplotype, platypus]
 #      remove_lcr: true
 #      validate: giab-NA12878/truth_small_variants.vcf.gz
-#      validate_region: giab-NA12878/truth_regions.bed
+#      validate_regions: giab-NA12878/truth_regions.bed
