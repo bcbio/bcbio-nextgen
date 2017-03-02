@@ -136,10 +136,14 @@ def _run_qc_tools(bam_file, data):
         out = qc_fn(bam_file, data, cur_qc_dir)
         qc_files = None
         if out and isinstance(out, dict):
+            # Check for metrics output, two cases:
+            # 1. output with {"metrics"} and files ("base")
             if "metrics" in out:
                 metrics.update(out.pop("metrics"))
-            else:
+            # 2. a dictionary of metrics
+            elif "base" not in out:
                 metrics.update(out)
+            # Check for files only output
             if "base" in out:
                 qc_files = out
         elif out and isinstance(out, basestring) and os.path.exists(out):
