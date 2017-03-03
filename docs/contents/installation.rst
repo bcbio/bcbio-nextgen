@@ -242,7 +242,6 @@ approximately 35Gb of storage during preparation and ~25Gb after::
     4.4G  vep
     23.5G total
 
-
 Troubleshooting
 ===============
 
@@ -284,54 +283,6 @@ Finally, having a ``.pydistutils.cfg`` file in your home directory can mess with
 where the libraries get installed. If you have this file in your
 home directory, temporarily renaming it to something else may fix
 your installation issue.
-
-Old bcbio version support
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The upgrade approach changed slightly as of 0.7.5 to be more
-consistent.  In earlier versions, to get a full upgrade leave out the
-``--data`` argument since that was the default. The best approach if
-you find the arguments are out of date is to do a ``bcbio_nextgen.py
-upgrade -u stable`` to get the latest version, then proceed
-again. Pre 0.7.0 versions won't have the ``upgrade`` command and need
-``bcbio_nextgen.py -u stable`` to get up to date.
-
-.. _private-install:
-
-local/private bcbio installation
-================================
-
-This is for if you have a previously installed version of bcbio-nextgen and you
-want to make changes to the code and test them without disrupting your
-installation.
-
-Install `Miniconda`_::
-
-  wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-  bash Miniconda2-latest-Linux-x86_64.sh
-
-With Miniconda installed create a (private) conda environment to be used for
-this bcbio installation::
-
-  conda create -n bcbio pip distribute
-
-The environment can then be switched on with `source activate bcbio` and off
-with `source deactivate`. Activate the environment and install bcbio within it::
-
-  source activate bcbio
-  conda install --yes -c bioconda bcbio-nextgen # This will install dependencies
-  git clone https://github.com/chapmanb/bcbio-nextgen.git
-  cd bcbio-nextgen
-  python setup.py install
-  ln -s path-to-bcbio/anaconda/bin/* path-to-bcbio/anaconda/envs/bioconda/bin/
-
-If you want to use a different (e.g., system-wide) bcbio installation for
-genomes, indices and the various tools point to that
-installation's `bcbio_system.yaml`, for example::
-
-  bcbio_nextgen.py /path-to-your-system-wide/bcbio_system.yaml ../config/NA12878-exome-methodcmp.yaml -n 16 ...
-
-.. _Miniconda: http://conda.pydata.org/miniconda.html
 
 Manual process
 ==============
