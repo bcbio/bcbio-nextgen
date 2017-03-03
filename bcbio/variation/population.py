@@ -64,7 +64,7 @@ def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
                 vcf2db_args = ["--expand", "gt_types", "--expand", "gt_ref_depths", "--expand", "gt_alt_depths"]
             else:
                 vcf2db_args = []
-            cmd = [vcf2db, ann_file, ped_file, tx_gemini_db] + vcf2db_args
+            cmd = [vcf2db, gemini_vcf, ped_file, tx_gemini_db] + vcf2db_args
             do.run(cmd, "GEMINI: create database with vcf2db")
     return gemini_db
 
