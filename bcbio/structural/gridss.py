@@ -44,8 +44,7 @@ def _run_gridss(inputs, background, work_dir):
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(inputs[0], out_file) as tx_out_file:
             htsjdk_opts = ["-Dsamjdk.create_index=true", "-Dsamjdk.use_async_io_read_samtools=true",
-                           "-Dsamjdk.use_async_io_write_samtools=true", "-Dsamjdk.use_async_io_write_tribble=true",
-                           "-Dsamjdk.compression_level=1"]
+                           "-Dsamjdk.use_async_io_write_samtools=true", "-Dsamjdk.use_async_io_write_tribble=true"]
             cores = dd.get_cores(inputs[0])
             resources = config_utils.get_resources("gridss", inputs[0]["config"])
             jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx4g"])
