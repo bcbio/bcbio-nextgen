@@ -104,7 +104,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
                 for ai, (val, label) in enumerate(zip(vals, labels)):
                     cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)),
                                               ai + 0.35), va='center', size=7)
-                cur_plot.locator_params(nbins=len(cats) + 2, axis="y", tight=True)
+                cur_plot.locator_params(nbins=len(cats) + (2 if len(cats) > 2 else 1), axis="y", tight=True)
                 if mi == 0:
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
                     cur_plot.set_yticklabels(cats, size=8, va="bottom")
