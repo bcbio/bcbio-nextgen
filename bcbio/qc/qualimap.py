@@ -4,6 +4,7 @@ http://qualimap.bioinfo.cipf.es/
 """
 import glob
 import os
+import shutil
 
 import pandas as pd
 import pybedtools
@@ -75,7 +76,11 @@ def run(bam_file, data, out_dir):
             tx_results_file = os.path.join(tx_results_dir, "genome_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
-    return {"base": results_file,
+    # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order 
+    # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):
+    base_results_file = os.path.join(out_dir, os.path.basename(results_file))
+    shutil.copyfile(results_file, base_results_file)
+    return {"base": base_results_file,
             "secondary": glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*.txt"))}
 
 def _parse_qualimap_metrics(report_file, data):
