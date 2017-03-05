@@ -143,7 +143,7 @@ def sailfish_index(gtf_file, ref_file, data, build, kmer_size):
     sailfish = config_utils.get_program("sailfish", data["config"])
     num_cores = dd.get_num_cores(data)
     gtf_fa = create_combined_fasta(data, out_dir)
-    if file_exists(out_dir + "versionInfo.json"):
+    if file_exists(os.path.join(out_dir, "versionInfo.json")):
         return out_dir
     with file_transaction(data, out_dir) as tx_out_dir:
         cmd = ("{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} "
