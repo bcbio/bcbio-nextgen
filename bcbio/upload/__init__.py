@@ -8,6 +8,7 @@ import toolz as tz
 from bcbio import log, utils
 from bcbio.upload import shared, filesystem, galaxy, s3, irods
 from bcbio.pipeline import run_info
+from bcbio.variation import vcfutils
 import bcbio.pipeline.datadict as dd
 
 _approaches = {"filesystem": filesystem,
@@ -118,12 +119,7 @@ def _add_meta(xs, sample=None, config=None):
             raise ValueError("Unexpected path for upload: %s" % x)
         x["mtime"] = shared.get_file_timestamp(x["path"])
         if sample and "sample" not in x:
-            if isinstance(sample["name"], (tuple, list)):
-                name = sample["name"][-1]
-            else:
-                name = "%s-%s" % (sample["name"],
-                                  run_info.clean_name(sample["description"]))
-            x["sample"] = name
+            x["sample"] = dd.get_sample_name(sample)
         if config:
             if "fc_name" in config and "fc_date" in config:
                 x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
@@ -259,12 +255,15 @@ def _maybe_add_sv(algorithm, sample, out):
 def _sample_variant_file_in_population(x):
     """Check if a sample file is the same as the population file.
 
-    This is true for batches where we don't extract into samples.
+    This is true for batches where we don't extract into samples and do not
+    run decomposition for gemini.
     '"""
     if "population" in x:
         a = _get_variant_file(x, ("population", "vcf"))
         b = _get_variant_file(x, ("vrn_file",))
-        if a and b and len(a) > 0 and len(b) > 0 and os.path.getsize(a[0]["path"]) == os.path.getsize(b[0]["path"]):
+        decomposed = tz.get_in(("population", "decomposed"), x)
+        if (a and b and not decomposed and len(a) > 0 and len(b) > 0 and
+              vcfutils.get_samples(a[0]["path"]) == vcfutils.get_samples(b[0]["path"])):
             return True
     return False
 
@@ -495,6 +494,19 @@ def _has_alignment_file(algorithm, sample):
 
 # ## File information from full project
 
+def _add_batch(x, sample):
+    """Potentially add batch name to an upload file.
+    """
+    added = False
+    for batch in sorted(dd.get_batches(sample) or [], key=len, reverse=True):
+        if batch and os.path.basename(x["path"]).startswith("%s-" % batch):
+            x["batch"] = batch
+            added = True
+            break
+    if not added:
+        x["batch"] = dd.get_sample_name(sample)
+    return x
+
 def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
@@ -543,7 +555,9 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": pop_db,
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
-            out.extend(_get_variant_file(x, ("population", "vcf")))
+            suffix = "-annotated-decomposed" if tz.get_in(("population", "decomposed"), x) else "-annotated"
+            out.extend([_add_batch(x, sample)
+                        for x in _get_variant_file(x, ("population", "vcf"), suffix=suffix)])
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})

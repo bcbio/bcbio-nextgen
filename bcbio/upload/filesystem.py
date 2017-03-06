@@ -49,6 +49,10 @@ def _get_file_upload_path(finfo, storage_dir):
         out_file = os.path.join(storage_dir, "%s-%s%s%s" % (finfo["sample"], finfo["ext"],
                                                             "-" if (".txt" in finfo["type"]) else ".",
                                                             finfo["type"]))
+    elif "batch" in finfo and "ext" in finfo and "type" in finfo:
+        out_file = os.path.join(storage_dir, "%s-%s%s%s" % (finfo["batch"], finfo["ext"],
+                                                            "-" if (".txt" in finfo["type"]) else ".",
+                                                            finfo["type"]))
     else:
         out_file = os.path.join(storage_dir, os.path.basename(finfo["path"]))
     return os.path.abspath(out_file)

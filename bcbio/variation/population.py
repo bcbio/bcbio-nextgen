@@ -38,7 +38,8 @@ def prep_gemini_db(fnames, call_info, samples, extras):
             else:
                 gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
-                              "vcf": gemini_vcf}]]
+                              "vcf": gemini_vcf,
+                              "decomposed": use_gemini}]]
 
 def _run_vcfanno(gemini_vcf, data, use_gemini=False):
     data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None

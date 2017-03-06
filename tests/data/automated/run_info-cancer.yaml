@@ -51,7 +51,8 @@ details:
       svcaller: [cnvkit, lumpy, gridss]
       #svcaller: [cnvkit]
       tools_on: [damage_filter]
-      tools_off: [vardict_somatic_filter]
+      tools_off: [vardict_somatic_filter, gemini]
+      vcfanno: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: cancer/az-cancer-panel
   - analysis: variant2
