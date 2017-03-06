@@ -67,10 +67,11 @@ def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=Fal
     """Remove centromere and short end regions from an existing BED file of regions to target.
     """
     out_bed = os.path.join("%s-noexclude.bed" % (utils.splitext_plus(base_file)[0]))
-    exclude_bed = prepare_exclude_file(items, base_file)
-    with file_transaction(items[0], out_bed) as tx_out_bed:
-        pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed),
-                                              A=remove_entire_feature, nonamecheck=True).saveas(tx_out_bed)
+    if not utils.file_uptodate(out_bed, orig_bed):
+        exclude_bed = prepare_exclude_file(items, base_file)
+        with file_transaction(items[0], out_bed) as tx_out_bed:
+            pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed),
+                                                  A=remove_entire_feature, nonamecheck=True).saveas(tx_out_bed)
     if utils.file_exists(out_bed):
         return out_bed
     else:

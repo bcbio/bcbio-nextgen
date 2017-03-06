@@ -342,9 +342,9 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     target_bed = os.path.join(work_dir, "%s-%s.target.bed" % (basename, batch))
     # back compatible with previous runs to avoid re-calculating
     target_bed_old = os.path.join(work_dir, "%s.target.bed" % basename)
-    if utils.file_uptodate(target_bed_old, raw_target_bed):
+    if utils.file_exists(target_bed_old):
         target_bed = target_bed_old
-    if not utils.file_uptodate(target_bed, raw_target_bed):
+    if not utils.file_exists(target_bed):
         with file_transaction(data, target_bed) as tx_out_file:
             cmd = [_get_cmd(), "target", raw_target_bed, "--split", "-o", tx_out_file]
             bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
@@ -354,9 +354,9 @@ def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     antitarget_bed = os.path.join(work_dir, "%s-%s.antitarget.bed" % (basename, batch))
     antitarget_bed_old = os.path.join(work_dir, "%s.antitarget.bed" % basename)
     # back compatible with previous runs to avoid re-calculating
-    if utils.file_uptodate(antitarget_bed_old, raw_target_bed):
+    if os.path.exists(antitarget_bed_old):
         antitarget_bed = antitarget_bed_old
-    if not utils.file_uptodate(antitarget_bed, raw_target_bed):
+    if not os.path.exists(antitarget_bed):
         with file_transaction(data, antitarget_bed) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_bed, target_bed, "-o", tx_out_file]
             bin_estimates = _cnvkit_coverage_bin_estimate(raw_target_bed, access_bed, cov_interval, work_dir, data)
