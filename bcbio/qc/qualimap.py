@@ -4,6 +4,7 @@ http://qualimap.bioinfo.cipf.es/
 """
 import glob
 import os
+import shutil
 
 import pandas as pd
 import pybedtools
@@ -75,8 +76,12 @@ def run(bam_file, data, out_dir):
             tx_results_file = os.path.join(tx_results_dir, "genome_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
-    return {"base": results_file,
-            "secondary": glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*.txt"))}
+    # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order 
+    # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):
+    base_results_file = os.path.join(out_dir, os.path.basename(results_file))
+    shutil.copyfile(results_file, base_results_file)
+    return {"base": base_results_file,
+            "secondary": _find_qualimap_secondary_files(results_dir)}
 
 def _parse_qualimap_metrics(report_file, data):
     """Extract useful metrics from the qualimap HTML report file.
@@ -294,26 +299,33 @@ def run_rnaseq(bam_file, data, out_dir):
     # MultiQC (for parsing additional data) picks the sample name after the dir as follows:
     #   <sample name>/raw_data_qualimapReport/insert_size_histogram.txt
     results_dir = os.path.join(out_dir, dd.get_sample_name(data))
+    results_file = os.path.join(results_dir, "rnaseq_qc_results.txt")
     report_file = os.path.join(results_dir, "qualimapReport.html")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
     single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
-    if not utils.file_exists(report_file):
-        with file_transaction(data, results_dir) as tx_out_dir:
-            utils.safe_makedir(tx_out_dir)
-            raw_file = os.path.join(tx_out_dir, "rnaseq_qc_results.txt")
+    if not utils.file_exists(results_file):
+        with file_transaction(data, results_dir) as tx_results_dir:
+            utils.safe_makedir(tx_results_dir)
             bam.index(bam_file, config)
-            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_out_dir, gtf_file, single_end, library)
+            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_results_dir, gtf_file, single_end, library)
             do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
-            cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), raw_file)
+            tx_results_file = os.path.join(tx_results_dir, "rnaseq_qc_results.txt")
+            cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
     metrics.update(_detect_rRNA(data))
     metrics.update({"Average_insert_size": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
-    return metrics
+    # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order
+    # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):
+    base_results_file = os.path.join(out_dir, os.path.basename(results_file))
+    shutil.copyfile(results_file, base_results_file)
+    return {"base": base_results_file,
+            "secondary": _find_qualimap_secondary_files(results_dir),
+            "metrics": metrics}
 
 def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
     """
@@ -330,3 +342,11 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
            "-a proportional -bam {bam_file} -p {library} "
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
     return cmd
+
+def _find_qualimap_secondary_files(results_dir):
+    return (
+        glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
+        glob.glob(os.path.join(results_dir, '*.txt')) +
+        glob.glob(os.path.join(results_dir, "css", "*")) +
+        glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
+        glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))
