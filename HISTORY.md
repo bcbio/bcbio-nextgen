@@ -1,4 +1,4 @@
-## 1.0.2 (in progress)
+## 1.0.2 (7 March 2017)
 
 - Fix FreeBayes paired somatic calling by generalizing support for finding
   non-ordered tumor/normal placement in VCF.
