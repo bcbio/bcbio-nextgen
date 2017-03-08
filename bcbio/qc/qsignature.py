@@ -126,7 +126,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
     :returns: (list) with samples that could be duplicated
 
     """
-    import lxml
+    import lxml.etree as etree
     name = {}
     error, warnings, similar = set(), set(), set()
     same, replicate, related = 0, 0.1, 0.18
@@ -138,7 +138,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
             with file_transaction(data, warning_file) as warn_tx_file:
                 with open(out_tx_file, 'w') as out_handle:
                     with open(warn_tx_file, 'w') as warn_handle:
-                        et = lxml.etree.parse(in_handle)
+                        et = etree.parse(in_handle)
                         for i in list(et.iter('file')):
                             name[i.attrib['id']] = os.path.basename(i.attrib['name']).replace(".qsig.vcf", "")
                         for i in list(et.iter('comparison')):
