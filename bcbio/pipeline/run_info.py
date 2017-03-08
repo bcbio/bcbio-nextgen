@@ -843,6 +843,14 @@ def _add_algorithm_defaults(algorithm):
         if k in convert_to_list:
             if v and not isinstance(v, (list, tuple)) and not isinstance(v, dict):
                 algorithm[k] = [v]
+            # ensure dictionary specified inputs get converted into individual lists
+            elif v and not isinstance(v, (list, tuple)) and isinstance(v, dict):
+                new = {}
+                for innerk, innerv in v.items():
+                    if innerv and not isinstance(innerv, (list, tuple)) and not isinstance(innerv, dict):
+                        innerv = [innerv]
+                    new[innerk] = innerv
+                algorithm[k] = new
             elif v is None:
                 algorithm[k] = []
         elif k in convert_to_single:
