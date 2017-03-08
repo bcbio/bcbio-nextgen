@@ -1,3 +1,8 @@
+## 1.0.3 (in progress)
+
+- Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
+- Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
+
 ## 1.0.2 (7 March 2017)
 
 - Fix FreeBayes paired somatic calling by generalizing support for finding
