@@ -9,7 +9,9 @@ calling across all samples.
 import os
 import subprocess
 from collections import defaultdict
+
 import pybedtools as bt
+import toolz as tz
 
 from bcbio import utils
 from bcbio.variation.vcfutils import get_paired_phenotype
@@ -103,12 +105,27 @@ def prep_seq2c_bed(data):
 
     return ready_file
 
+def _get_seq2c_options(data):
+    """Get adjustable, through resources, or default options for seq2c.
+    """
+    cov2lr_opts = ["-F"]
+    defaults = {}
+    ropts = config_utils.get_resources("seq2c", data["config"]).get("options", [])
+    assert len(ropts) % 2 == 0, "Expect even number of options for seq2c" % ropts
+    defaults.update(dict(tz.partition(2, ropts)))
+    cov2lr_out, lr2gene_out = [], []
+    for k, v in defaults.items():
+        if k in cov2lr_opts:
+            cov2lr_out += [str(k), str(v)]
+        else:
+            lr2gene_out += [str(k), str(v)]
+    return " ".join(cov2lr_out), " ".join(lr2gene_out)
+
 def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_names):
     output_fpath = os.path.join(work_dir, "calls_combined.tsv")
     cov2lr = "cov2lr.pl"
     lr2gene = "lr2gene.pl"
-    control_opt = ""
-    lr2gene_opt = ""
+    control_opt, lr2gene_opt = _get_seq2c_options(items[0])
     if control_sample_names:
         control_opt = "-c " + ":".join(control_sample_names)
         lr2gene_opt = "-c"

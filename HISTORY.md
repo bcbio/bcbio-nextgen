@@ -4,6 +4,8 @@
   chromosome region runs. Thanks to Ho Danliang.
 - Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
+- Allow specification of seq2c options through resources. Thanks to Sally Luke
+  and Marisa Cunha.
 
 ## 1.0.2 (7 March 2017)
 
