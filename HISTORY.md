@@ -1,5 +1,7 @@
 ## 1.0.3 (in progress)
 
+- Fix FreeBayes somatic and multi-sample calling order to be consistent between
+  chromosome region runs. Thanks to Ho Danliang.
 - Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
 
