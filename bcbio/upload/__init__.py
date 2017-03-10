@@ -477,12 +477,13 @@ def _maybe_add_trna(algorithm, sample, out):
     return out
 
 def _maybe_add_peaks(algorithm, sample, out):
-    for caller in dd.get_peakcaller(sample):
-        out_dir = os.path.join(dd.get_work_dir(sample), caller, dd.get_sample_name(sample))
-        if os.path.exists(out_dir):
-            out.append({"path": out_dir,
-                        "type": "directory",
-                        "ext": caller})
+    out_dir = sample.get("peaks_files", {})
+    for caller in out_dir:
+        for fn in out_dir[caller]:
+            if os.path.exists(fn):
+                out.append({"path": fn,
+                             "dir": caller,
+                             "ext": utils.splitext_plus(fn)[1]})
     return out
 
 def _has_alignment_file(algorithm, sample):
