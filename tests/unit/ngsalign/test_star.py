@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import pytest
 
-from bcbio.ngsalign.star import _get_star_dirnames
 from bcbio.pipeline import datadict as dd
 
 
@@ -19,6 +18,7 @@ def names():
 
 
 def test_get_star_dirnames(data, names):
+    from bcbio.ngsalign.star import _get_star_dirnames
     align_dir = '/path/to/align/dir'
     lane = dd.get_lane(data)
     result = _get_star_dirnames(align_dir, data, names)
