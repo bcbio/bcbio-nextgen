@@ -81,7 +81,7 @@ def run(bam_file, data, out_dir):
     base_results_file = os.path.join(out_dir, os.path.basename(results_file))
     shutil.copyfile(results_file, base_results_file)
     return {"base": base_results_file,
-            "secondary": _find_qualimap_secondary_files(results_dir)}
+            "secondary": _find_qualimap_secondary_files(results_dir, base_results_file)}
 
 def _parse_qualimap_metrics(report_file, data):
     """Extract useful metrics from the qualimap HTML report file.
@@ -324,7 +324,7 @@ def run_rnaseq(bam_file, data, out_dir):
     base_results_file = os.path.join(out_dir, os.path.basename(results_file))
     shutil.copyfile(results_file, base_results_file)
     return {"base": base_results_file,
-            "secondary": _find_qualimap_secondary_files(results_dir),
+            "secondary": _find_qualimap_secondary_files(results_dir, base_results_file),
             "metrics": metrics}
 
 def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
@@ -343,10 +343,16 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
     return cmd
 
-def _find_qualimap_secondary_files(results_dir):
-    return (
-        glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
-        glob.glob(os.path.join(results_dir, '*.txt')) +
-        glob.glob(os.path.join(results_dir, "css", "*")) +
-        glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
-        glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))
+def _find_qualimap_secondary_files(results_dir, base_file):
+    """Retrieve additional files, avoiding double uploading the base file.
+    """
+    def not_dup(x):
+        is_dup = (os.path.basename(x) == os.path.basename(base_file) and
+                  os.path.getsize(x) == os.path.getsize(base_file))
+        return not is_dup
+    return filter(not_dup,
+                  glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
+                  glob.glob(os.path.join(results_dir, '*.txt')) +
+                  glob.glob(os.path.join(results_dir, "css", "*")) +
+                  glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
+                  glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))
