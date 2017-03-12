@@ -2,6 +2,7 @@
 
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
   chromosome region runs. Thanks to Ho Danliang.
+- Update validation plots to support matplotlib 2.0.
 - Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
 - Allow specification of seq2c options through resources. Thanks to Sally Luke

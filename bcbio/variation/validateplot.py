@@ -66,7 +66,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
     colors = ["light grey", "greyish"]
     data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
     plt.ioff()
-    sns.set(style='white')
+    plt.style.use('seaborn-white')
     vtypes = sorted(df["vtype"].unique(), reverse=True)
     if not callers:
         callers = sorted(df["caller"].unique())
@@ -81,7 +81,6 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
     fig, axs = plt.subplots(len(vtypes) * len(groups), len(metrics))
     fig.text(.5, .95, title if title else "", horizontalalignment='center', size=14)
     for vi, vtype in enumerate(vtypes):
-        sns.set_palette(sns.xkcd_palette([colors[vi]]))
         for gi, group in enumerate(groups):
             for mi, (metric, label) in enumerate(metrics):
                 row_plots = axs if len(vtypes) * len(groups) == 1 else axs[vi * len(groups) + gi]
@@ -92,7 +91,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
                     if cur_data:
                         vals.append(cur_data[metric])
                         labels.append(cur_data[label])
-                cur_plot.barh(np.arange(len(vals)), vals)
+                cur_plot.barh(np.arange(len(vals)), vals, color=sns.xkcd_palette([colors[vi]]))
                 all_vals = []
                 for k, d in data_dict.items():
                     if k[-1] == vtype:
@@ -102,12 +101,12 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
                 cur_plot.set_xlim(0, metric_max)
                 pad = 0.1 * metric_max
                 for ai, (val, label) in enumerate(zip(vals, labels)):
-                    cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)),
-                                              ai + 0.35), va='center', size=7)
+                    cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)), ai),
+                                      va='center', size=7)
                 cur_plot.locator_params(nbins=len(cats) + (2 if len(cats) > 2 else 1), axis="y", tight=True)
                 if mi == 0:
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
-                    cur_plot.set_yticklabels(cats, size=8, va="bottom")
+                    cur_plot.set_yticklabels([""] + cats, size=8, va="center")
                     cur_plot.set_title("%s: %s" % (vtype, group), fontsize=12, loc="left")
                 else:
                     cur_plot.get_yaxis().set_ticks([])
