@@ -9,6 +9,27 @@ import pprint
 
 import toolz as tz
 
+from bcbio import utils
+
+def to_rec(samples):
+    """Convert inputs into CWL records, useful for single item parallelization.
+    """
+    recs = samples_to_records([utils.to_single_data(x) for x in samples])
+    return [[x] for x in recs]
+
+def normalize_missing(xs):
+    """Normalize missing values to avoid string 'None' inputs.
+    """
+    if isinstance(xs, dict):
+        for k, v in xs.items():
+            xs[k] = normalize_missing(v)
+    elif isinstance(xs, (list, tuple)):
+        xs = [normalize_missing(x) for x in xs]
+    elif isinstance(xs, basestring):
+        if xs == "None":
+            xs = None
+    return xs
+
 def _get_all_cwlkeys(items):
     """Retrieve cwlkeys from inputs, handling defaults which can be null.
 

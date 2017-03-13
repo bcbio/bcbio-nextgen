@@ -6,6 +6,7 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
+from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
@@ -94,6 +95,10 @@ def postprocess_alignment(*args):
 @utils.map_wrap
 def prep_samples(*args):
     return sample.prep_samples(*args)
+
+@utils.map_wrap
+def prep_samples_to_rec(*args):
+    return cwlutils.to_rec(*args)
 
 @utils.map_wrap
 def srna_annotation(*args):
