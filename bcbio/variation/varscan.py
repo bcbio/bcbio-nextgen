@@ -33,7 +33,7 @@ def run_varscan(align_bams, items, ref_file, assoc_files,
     return call_file
 
 
-def _get_varscan_opts(config, tmp_dir):
+def _get_jvm_opts(config, tmp_dir):
     """Retrieve common options for running VarScan.
     Handles jvm_opts, setting user and country to English to avoid issues
     with different locales producing non-compliant VCF.
@@ -116,7 +116,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         snp_file = base + "-snp.vcf"
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
-                jvm_opts = _get_varscan_opts(config, tmp_dir)
+                jvm_opts = _get_jvm_opts(config, tmp_dir)
                 remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
                 export = utils.local_path_export()
                 varscan_cmd = ("{export} varscan {jvm_opts} somatic "
@@ -292,7 +292,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # we use ifne from moreutils to ensure we process only on files with input, skipping otherwise
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
-        jvm_opts = _get_varscan_opts(config, tmp_dir)
+        jvm_opts = _get_jvm_opts(config, tmp_dir)
         min_af = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
         fix_ambig_ref = vcfutils.fix_ambiguous_cl()
         fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
