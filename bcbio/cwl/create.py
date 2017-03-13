@@ -73,6 +73,19 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
            "arguments": [],
            "inputs": [],
            "outputs": []}
+    if programs:
+        def resolve_package(p):
+            out = {}
+            parts = p.split("=")
+            if len(parts) == 2:
+                out["package"] = parts[0]
+                out["version"] = [parts[1]]
+            else:
+                out["package"] = p
+            out["specs"] = ["https://anaconda.org/bioconda/%s" % out["package"]]
+            return out
+        out["hints"].append({"class": "SoftwareRequirement",
+                             "packages": [resolve_package(p) for p in programs]})
     out["arguments"].append({"position": 0, "valueFrom":
                              "sentinel-runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
     std_inputs = [{"id": "sentinel-parallel", "type": "string",
