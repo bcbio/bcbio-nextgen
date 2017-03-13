@@ -293,13 +293,14 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
         jvm_opts = _get_varscan_opts(config, tmp_dir)
+        min_af = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
         fix_ambig_ref = vcfutils.fix_ambiguous_cl()
         fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
         export = utils.local_path_export()
         cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
                 "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 "
-                "  --vcf-sample-list {sample_list} --output-vcf --variants | "
+                "  --vcf-sample-list {sample_list} --min-var-freq {min_af} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "
                 "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
         do.run(cmd.format(**locals()), "Varscan", None,
