@@ -61,10 +61,10 @@ def _prepare_bam(bam_file, bed_file, config):
     if not bam_file or not bed_file:
         return bam_file
     out_file = utils.append_stem(bam_file, '_filter')
-    samtools = config_utils.get_program("samtools", config)
+    bedtools = config_utils.get_program("bedtools", config)
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out:
-            cmd = "{samtools} view -bh -L {bed_file} {bam_file} > {tx_out}"
+            cmd = "{bedtools} subtract -nonamecheck -A -a {bam_file} -b {bed_file} > {tx_out}"
             do.run(cmd.format(**locals()), "Clean %s" % bam_file)
     return out_file
 
