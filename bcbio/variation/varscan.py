@@ -47,6 +47,17 @@ def _get_jvm_opts(config, tmp_dir):
     jvm_opts += broad.get_default_jvm_opts(tmp_dir)
     return " ".join(jvm_opts)
 
+
+def _varscan_options_from_config(config):
+    """Retrieve additional options for VarScan from the configuration.
+    """
+    opts = []
+    resources = config_utils.get_resources("varscan", config)
+    if resources.get("options"):
+        opts += resources["options"]
+    return opts
+
+
 def _safe_to_float(x):
     if x is None:
         return None
@@ -117,13 +128,14 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
         with file_transaction(config, indel_file, snp_file) as (tx_indel, tx_snp):
             with tx_tmpdir(items[0]) as tmp_dir:
                 jvm_opts = _get_jvm_opts(config, tmp_dir)
+                opts = " ".join(_varscan_options_from_config(config))
                 remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
                 export = utils.local_path_export()
                 varscan_cmd = ("{export} varscan {jvm_opts} somatic "
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
                                "--output-snp {tx_snp} --output-indel {tx_indel} "
-                               " --output-vcf --min-coverage 5 --p-value 0.98 "
+                               " --output-vcf --min-coverage 5 --p-value 0.98 {opts} "
                                "--strand-filter 1 ")
                 # add minimum AF
                 min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
@@ -292,13 +304,14 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
     # http://manpages.ubuntu.com/manpages/natty/man1/ifne.1.html
     with tx_tmpdir(items[0]) as tmp_dir:
         jvm_opts = _get_jvm_opts(config, tmp_dir)
+        opts = " ".join(_varscan_options_from_config(config))
         min_af = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
         fix_ambig_ref = vcfutils.fix_ambiguous_cl()
         fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
         export = utils.local_path_export()
         cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
-                "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 "
+                "ifne varscan {jvm_opts} mpileup2cns --min-coverage 5 --p-value 0.98 {opts} "
                 "  --vcf-sample-list {sample_list} --min-var-freq {min_af} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "
                 "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
