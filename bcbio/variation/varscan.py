@@ -126,10 +126,9 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                                " --output-vcf --min-coverage 5 --p-value 0.98 "
                                "--strand-filter 1 ")
                 # add minimum AF
-                if "--min-var-freq" not in varscan_cmd:
-                    min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
-                                                                      "min_allele_fraction"), 10)) / 100.0
-                    varscan_cmd += "--min-var-freq {min_af} "
+                min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
+                                                                  "min_allele_fraction"), 10)) / 100.0
+                varscan_cmd += "--min-var-freq {min_af} "
                 do.run(varscan_cmd.format(**locals()), "Varscan", None, None)
 
         to_combine = []
