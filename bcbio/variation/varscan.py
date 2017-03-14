@@ -51,7 +51,7 @@ def _get_jvm_opts(config, tmp_dir):
 def _varscan_options_from_config(config):
     """Retrieve additional options for VarScan from the configuration.
     """
-    opts = ["--min-coverage 5", "--p-value 0.98"]
+    opts = ["--min-coverage 5", "--p-value 0.98", "--strand-filter 1"]
     resources = config_utils.get_resources("varscan", config)
     if resources.get("options"):
         opts += resources["options"]
@@ -135,7 +135,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                                " <({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
                                "--output-snp {tx_snp} --output-indel {tx_indel} "
-                               " --output-vcf --strand-filter 1 {opts} ")
+                               " --output-vcf {opts} ")
                 # add minimum AF
                 min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                                   "min_allele_fraction"), 10)) / 100.0
