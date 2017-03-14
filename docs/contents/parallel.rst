@@ -87,7 +87,7 @@ Run an analysis using ipython for parallel execution::
 
     bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
-The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque, slurm)``.
+The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque, slurm, pbspro)``.
 
 The ``-q`` flag specifies the queue to submit jobs to.
 
@@ -260,8 +260,8 @@ thus bcbio-nextgen handles memory scheduling by:
   the available memory per core without getting out of memory system
   errors.
 
-- Passing total memory usage along to schedulers. The Torque, SGE and
-  SLURM schedulers use this information to allocate memory to
+- Passing total memory usage along to schedulers. The SLURM, SGE,
+  Torque and PBSPro schedulers use this information to allocate memory to
   processes, avoiding issues with other scheduled programs using
   available memory on a shared machine.
 
