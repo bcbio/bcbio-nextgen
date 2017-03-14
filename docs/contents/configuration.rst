@@ -653,7 +653,7 @@ Structural variant calling
 HLA typing
 ==========
 - ``hlacaller`` -- Perform identification of highly polymorphic HLAs with human
-  build 38 (hg38). The recommended options is ``optitype``, using the `OptiType
+  build 38 (hg38). The recommended option is ``optitype``, using the `OptiType
   <https://github.com/FRED-2/OptiType>`_ caller. Also supports using the `bwa
   HLA typing implementation
   <https://github.com/lh3/bwa/blob/master/README-alt.md#hla-typing>`_ with ``bwakit``
@@ -1040,7 +1040,7 @@ novoalign, write a sample resource specification like::
       analysis: variant2
       resources:
         novoalign:
-          options: [-o, FullNW]
+          options: ["-o", "FullNW", "--rOQ"]
         tmp:
           dir: tmp/sampletmpdir
 
