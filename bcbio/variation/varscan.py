@@ -132,10 +132,10 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                 remove_zerocoverage = r"{ ifne grep -v -P '\t0\t\t$' || true; }"
                 export = utils.local_path_export()
                 varscan_cmd = ("{export} varscan {jvm_opts} somatic "
-                               " <({normal_mpileup_cl} | {remove_zerocoverage}) "
+                               "<({normal_mpileup_cl} | {remove_zerocoverage}) "
                                "<({tumor_mpileup_cl} | {remove_zerocoverage}) "
                                "--output-snp {tx_snp} --output-indel {tx_indel} "
-                               " --output-vcf {opts} ")
+                               "--output-vcf {opts} ")
                 # add minimum AF
                 min_af = float(utils.get_in(paired.tumor_config, ("algorithm",
                                                                   "min_allele_fraction"), 10)) / 100.0
@@ -310,10 +310,10 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
         py_cl = os.path.join(os.path.dirname(sys.executable), "py")
         export = utils.local_path_export()
         cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
-                "ifne varscan {jvm_opts} mpileup2cns {opts} "
-                "--vcf-sample-list {sample_list} --min-var-freq {min_af} --output-vcf --variants | "
+               "ifne varscan {jvm_opts} mpileup2cns {opts} "
+               "--vcf-sample-list {sample_list} --min-var-freq {min_af} --output-vcf --variants | "
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "
-                "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
+               "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
         do.run(cmd.format(**locals()), "Varscan", None,
                 [do.file_exists(out_file)])
     os.remove(sample_list)
