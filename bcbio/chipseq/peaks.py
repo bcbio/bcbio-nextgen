@@ -2,6 +2,7 @@
 """
 import os
 import copy
+import toolz as tz
 
 from bcbio.log import logger
 from bcbio import bam, utils
@@ -46,10 +47,10 @@ def calling(data):
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name ))
-    # encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
+    encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
-    # chip_bam = _prepare_bam(chip_bam, dd.get_variant_regions(data), data['config'])
-    # input_bam = _prepare_bam(input_bam, dd.get_variant_regions(data), data['config'])
+    chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
+    input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
                          dd.get_chip_method(data), data["config"])
     data.update({"peaks_files": out_files})
