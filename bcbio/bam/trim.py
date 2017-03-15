@@ -154,7 +154,13 @@ def _get_sequences_to_trim(config, builtin):
         trim_sequences += [str(Seq(sequence)) for sequence in v]
         trim_sequences += [str(Seq(sequence).reverse_complement()) for
                            sequence in v]
-    return trim_sequences
+    out = []
+    for trim in trim_sequences:
+        if file_exists(trim):
+            out.append("file:%s" % trim)
+        else:
+            out.append(trim)
+    return out
 
 def _get_quality_format(config):
     SUPPORTED_FORMATS = ["illumina", "standard"]
