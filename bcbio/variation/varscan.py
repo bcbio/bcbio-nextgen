@@ -58,15 +58,6 @@ def _varscan_options_from_config(config):
     return opts
 
 
-def _safe_to_float(x):
-    if x is None:
-        return None
-    else:
-        try:
-            return float(x)
-        except ValueError:
-            return None
-
 def spv_freq_filter(line, tumor_index):
     """Filter VarScan calls based on the SPV value and frequency.
 
@@ -84,9 +75,9 @@ def spv_freq_filter(line, tumor_index):
     else:
         parts = line.split("\t")
         sample_ft = {a: v for (a, v) in zip(parts[8].split(":"), parts[9 + tumor_index].split(":"))}
-        freq = _safe_to_float(sample_ft.get("FREQ"))
+        freq = utils.safe_to_float(sample_ft.get("FREQ"))
         spvs = [x for x in parts[7].split(";") if x.startswith("SPV=")]
-        spv = _safe_to_float(spvs[0].split("=")[-1] if spvs else None)
+        spv = utils.safe_to_float(spvs[0].split("=")[-1] if spvs else None)
         fname = None
         if spv is not None and freq is not None:
             if spv < 0.05 and freq > 0.35:
