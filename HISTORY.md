@@ -1,12 +1,12 @@
 ## 1.0.3 (in progress)
 
-- Several updates to the VarScan support: honor options specified in the
-  resource config section; honor min_allele_frac option and set --strand-filter
-  flag in the single-sample case; general cleanups. Thanks to Christian Brueffer.
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
   chromosome region runs. Thanks to Ho Danliang.
 - Fix CNVkit outputs to upload into output directory. Thanks to Sven-Eric
   Schelhorn.
+- Several updates to the VarScan support: honor options specified in the
+  resource config section; honor min_allele_frac option and set --strand-filter
+  flag in the single-sample case; general cleanups. Thanks to Christian Brueffer.
 - Update validation plots to support matplotlib 2.0.
 - Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.

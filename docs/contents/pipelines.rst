@@ -210,9 +210,10 @@ which callers to use for each step in the :ref:`variant-config` configuration::
        germline: freebayes
 
 bcbio does a single alignment for the normal sample, then splits at the variant
-calling steps. In this example, you'd get FreeBayes germline calls labeled as
-``your-normal-germline`` and VarDict somatic calls for the tumor sample linked
-to this normal.
+calling steps using this normal sample to do germline calling. In this example,
+you'd get FreeBayes germline calls labeled as ``your-normal-germline`` and
+VarDict somatic calls for the tumor sample linked to this normal. This generates
+a single set of somatic and germline calls for the tumor and normal pair.
 
 Germline calling supports multiple callers, and other configuration options like
 ensemble and structural variant calling inherit from the remainder configuration. For
