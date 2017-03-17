@@ -30,6 +30,7 @@ from bcbio.bam.fastq import open_fastq
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
+ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 
 def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,
              integrations=None):
@@ -763,7 +764,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
             item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
-                                                  ignore_keys=ALGORITHM_NOPATH_KEYS)
+                                                  ignore_keys=ALGORITHM_NOPATH_KEYS,
+                                                  fileonly_keys=ALGORITHM_FILEONLY_KEYS)
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))

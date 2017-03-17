@@ -52,10 +52,16 @@ def _ensure_annotations(resources, data):
 
 # ## Utilities
 
-def abs_file_paths(xs, base_dir=None, ignore_keys=None):
+def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_key=None):
     """Normalize any file paths found in a subdirectory of configuration input.
+
+    base_dir -- directory to normalize relative paths to
+    ignore_keys -- algorithm key names to ignore normalize for (keywords, not files/directories)
+    fileonly_keys -- algorithm key names to only expand files (not directories)
+    cur_key -- current key when calling recursively
     """
     ignore_keys = set([]) if ignore_keys is None else set(ignore_keys)
+    fileonly_keys = set([]) if fileonly_keys is None else set(fileonly_keys)
     if base_dir is None:
         base_dir = os.getcwd()
     orig_dir = os.getcwd()
@@ -67,20 +73,16 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None):
             if k not in ignore_keys and v and isinstance(v, basestring):
                 if v.lower() == "none":
                     out[k] = None
-                elif os.path.exists(v) or objectstore.is_remote(v):
-                    dl = objectstore.download(v, input_dir)
-                    if dl:
-                        out[k] = os.path.normpath(os.path.join(base_dir, dl))
-                    else:
-                        out[k] = v
                 else:
-                    out[k] = v
+                    out[k] = abs_file_paths(v, base_dir, ignore_keys, fileonly_keys, k)
+            elif isinstance(v, (list, tuple)):
+                out[k] = [abs_file_paths(x, base_dir, ignore_keys, fileonly_keys, k) for x in v]
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
         if os.path.exists(xs) or objectstore.is_remote(xs):
             dl = objectstore.download(xs, input_dir)
-            if dl:
+            if dl and cur_key not in ignore_keys and not (cur_key in fileonly_keys and not os.path.isfile(dl)):
                 out = os.path.normpath(os.path.join(base_dir, dl))
             else:
                 out = xs

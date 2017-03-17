@@ -12,6 +12,8 @@
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
 - Allow specification of seq2c options through resources. Thanks to Sally Luke
   and Marisa Cunha.
+- Provide absolute paths for relative paths to files in algorithm list inputs.
+  Thanks to Matthias De Smet.
 
 ## 1.0.2 (7 March 2017)
 
