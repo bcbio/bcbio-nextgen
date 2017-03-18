@@ -38,7 +38,7 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     opts += ["-Q", "10"]
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
-        opts += resources["options"]
+        opts += [str(x) for x in resources["options"]]
     assert _is_bed_file(target)
     if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
             for x in items):
