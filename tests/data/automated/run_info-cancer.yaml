@@ -44,7 +44,6 @@ details:
         somatic: [vardict, freebayes, varscan]
         germline: [freebayes, platypus]
       indelcaller: sid
-      coverage_interval: genome
       ensemble:
         numpass: 2
       min_allele_fraction: 10

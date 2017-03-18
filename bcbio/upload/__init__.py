@@ -113,13 +113,21 @@ def _get_files_chipseq(sample):
     return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):
+    """Add top level information about the sample or flowcell to output.
+
+    Sorts outputs into sample names (sample input) and project (config input).
+    """
     out = []
     for x in xs:
         if not isinstance(x["path"], basestring) or not os.path.exists(x["path"]):
             raise ValueError("Unexpected path for upload: %s" % x)
         x["mtime"] = shared.get_file_timestamp(x["path"])
-        if sample and "sample" not in x:
-            x["sample"] = dd.get_sample_name(sample)
+        if sample:
+            sample_name = dd.get_sample_name(sample)
+            if "sample" not in x:
+                x["sample"] = sample_name
+            elif x["sample"] != sample_name:
+                x["run"] = sample_name
         if config:
             if "fc_name" in config and "fc_date" in config:
                 x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
@@ -202,21 +210,33 @@ def _maybe_add_heterogeneity(algorithm, sample, out):
                             "ext": "%s-%s-plot" % (hetinfo["caller"], plot_type)})
     return out
 
+def _get_batch_name(sample):
+    """Retrieve batch name for use in SV calling outputs.
+
+    Handles multiple batches split via SV calling.
+    """
+    batch = dd.get_batch(sample) or dd.get_sample_name(sample)
+    if isinstance(batch, (list, tuple)) and len(batch) > 1:
+        batch = dd.get_sample_name(sample)
+    return batch
+
 def _maybe_add_sv(algorithm, sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
+        batch = _get_batch_name(sample)
         for svcall in sample["sv"]:
             if svcall.get("variantcaller") == "seq2c":
-                out.extend(_get_variant_file(svcall, ("coverage",), suffix="-coverage"))
-                out.extend(_get_variant_file(svcall, ("calls",)))
+                out.extend(_get_variant_file(svcall, ("coverage",), suffix="-coverage", sample=batch))
+                out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
-                out.extend(_get_variant_file(svcall, (key,)))
-            out.extend(_get_variant_file(svcall, ("call_file",), suffix="-call"))
-            out.extend(_get_variant_file(svcall, ("priority",), suffix="-priority"))
+                out.extend(_get_variant_file(svcall, (key,), sample=batch))
+            out.extend(_get_variant_file(svcall, ("call_file",), suffix="-call", sample=batch))
+            out.extend(_get_variant_file(svcall, ("priority",), suffix="-priority", sample=batch))
             if "plot" in svcall:
                 for plot_name, fname in svcall["plot"].items():
                     ext = os.path.splitext(fname)[-1].replace(".", "")
                     out.append({"path": fname,
+                                "sample": batch,
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], plot_name),
                                 "variantcaller": svcall["variantcaller"]})
@@ -224,6 +244,7 @@ def _maybe_add_sv(algorithm, sample, out):
                 for caller, fname in svcall["raw_files"].items():
                     ext = utils.splitext_plus(fname)[-1][1:]
                     out.append({"path": fname,
+                                "sample": batch,
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], caller),
                                 "variantcaller": svcall["variantcaller"]})
@@ -232,6 +253,7 @@ def _maybe_add_sv(algorithm, sample, out):
                 if svfile and os.path.exists(svfile):
                     ext = os.path.splitext(svfile)[-1].replace(".", "")
                     out.append({"path": svfile,
+                                "sample": batch,
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], extra),
                                 "variantcaller": svcall["variantcaller"]})
@@ -248,6 +270,7 @@ def _maybe_add_sv(algorithm, sample, out):
                     for vfile, ext in to_u:
                         vext = os.path.splitext(vfile)[-1].replace(".", "")
                         out.append({"path": vfile,
+                                    "sample": batch,
                                     "type": vext,
                                     "ext": "sv-validate%s" % ext})
     return out
@@ -267,7 +290,7 @@ def _sample_variant_file_in_population(x):
             return True
     return False
 
-def _get_variant_file(x, key, suffix=""):
+def _get_variant_file(x, key, suffix="", sample=None):
     """Retrieve VCF file with the given key if it exists, handling bgzipped.
     """
     out = []
@@ -295,7 +318,14 @@ def _get_variant_file(x, key, suffix=""):
                         "type": ftype,
                         "ext": "%s%s" % (x["variantcaller"], suffix),
                         "variantcaller": x["variantcaller"]})
-    return out
+    if sample:
+        out_sample = []
+        for x in out:
+            x["sample"] = sample
+            out_sample.append(x)
+        return out_sample
+    else:
+        return out
 
 def _maybe_add_sailfish_files(algorithm, sample, out):
     analysis = dd.get_analysis(sample)

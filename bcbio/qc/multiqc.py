@@ -159,7 +159,11 @@ def _group_by_samplename(samples):
     """
     out = collections.defaultdict(list)
     for data in samples:
-        out[(dd.get_sample_name(data), dd.get_align_bam(data))].append(data)
+        batch = dd.get_batch(data) or dd.get_sample_name(data)
+        if not isinstance(batch, (list, tuple)):
+            batch = [batch]
+        batch = tuple(batch)
+        out[(dd.get_sample_name(data), dd.get_align_bam(data), batch)].append(data)
     return [xs[0] for xs in out.values()]
 
 def _create_list_file(paths, out_file):
