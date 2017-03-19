@@ -172,8 +172,8 @@ def _get_dbnsfp(data):
     https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
     """
     dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
-    annotations = ['RadialSVM_score', 'RadialSVM_pred', 'LR_score', 'LR_pred', 'MutationTaster_score',
-                   'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred', 'PROVEAN_score', 'PROVEAN_pred',
+    annotations = ['MutationTaster_score', 'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred',
+                   'PROVEAN_score', 'PROVEAN_pred',
                    'MetaSVM_score', 'MetaSVM_pred', 'CADD_raw', 'CADD_phred', 'Reliability_index']
 
     if dbnsfp_file and os.path.exists(dbnsfp_file):
