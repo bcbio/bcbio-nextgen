@@ -90,6 +90,13 @@ multiple samples using the template workflow command::
        samplename,description,phenotype,batch
        normal.bam,two_normal,normal,Batch1;Batch2
 
+  For dictionary inputs like :ref:`somatic-w-germline-variants` setups, you can
+  separate items in a dictionary with colons and double colons, and also use
+  semicolons for lists::
+
+       samplename,description,phenotype,variantcaller
+       tumor.bam,sample1,tumor,germline:freebayes;gatk-haplotype::somatic:vardict;freebayes
+
   The name of the metadata file, minus the ``.csv`` extension, is a
   short name identifying the current project. The script creates a
   ``project1`` directory containing the sample configuration in
