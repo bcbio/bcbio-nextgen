@@ -101,13 +101,17 @@ def quantitate_expression_parallel(samples, run_parallel):
     """
     data = samples[0][0]
     samples = run_parallel("generate_transcript_counts", samples)
-    samples = run_parallel("run_sailfish_index", [samples])
-    samples = run_parallel("run_sailfish", samples)
     samples = sailfish.combine_sailfish(samples)
     if "cufflinks" in dd.get_expression_caller(data):
         samples = run_parallel("run_cufflinks", samples)
     if "stringtie" in dd.get_expression_caller(data):
         samples = run_parallel("run_stringtie_expression", samples)
+    if "sailfish" in dd.get_expression_caller(data):
+        samples = run_parallel("run_sailfish_index", [samples])
+        samples = run_parallel("run_sailfish", samples)
+    else:
+        samples = run_parallel("run_salmon_index", [samples])
+        samples = run_parallel("run_salmon_reads", samples)
     return samples
 
 def quantitate_expression_noparallel(samples, run_parallel):

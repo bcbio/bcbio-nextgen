@@ -15,6 +15,9 @@
   and Marisa Cunha.
 - Provide absolute paths for relative paths to files in algorithm list inputs.
   Thanks to Matthias De Smet.
+- Switch to Salmon from Sailfish as default alignment-free RNA-seq
+  quantification algorithm.
+- Add `sailfish` as a valid option for `expression_caller`.
 
 ## 1.0.2 (7 March 2017)
 

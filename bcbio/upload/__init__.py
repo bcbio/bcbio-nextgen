@@ -329,14 +329,17 @@ def _get_variant_file(x, key, suffix="", sample=None):
 
 def _maybe_add_sailfish_files(algorithm, sample, out):
     analysis = dd.get_analysis(sample)
-    if dd.get_sailfish_dir(sample) and analysis != "fastrna-seq":
+    sailfish_dir = os.path.join(dd.get_work_dir(sample), "sailfish",
+                                dd.get_sample_name(sample), "quant")
+    if os.path.exists(sailfish_dir):
         out.append({"path": dd.get_sailfish_dir(sample),
                     "type": "directory",
                     "ext": "sailfish"})
     return out
 
 def _maybe_add_salmon_files(algorithm, sample, out):
-    salmon_dir = os.path.join(dd.get_work_dir(sample), "salmon", dd.get_sample_name(sample), "quant")
+    salmon_dir = os.path.join(dd.get_work_dir(sample), "salmon",
+                              dd.get_sample_name(sample), "quant")
     if os.path.exists(salmon_dir):
         out.append({"path": salmon_dir,
                     "type": "directory",
