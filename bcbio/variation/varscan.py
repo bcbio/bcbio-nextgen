@@ -54,7 +54,7 @@ def _varscan_options_from_config(config):
     opts = ["--min-coverage 5", "--p-value 0.98", "--strand-filter 1"]
     resources = config_utils.get_resources("varscan", config)
     if resources.get("options"):
-        opts += resources["options"]
+        opts += [str(x) for x in resources["options"]]
     return opts
 
 
