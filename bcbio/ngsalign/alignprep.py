@@ -11,6 +11,7 @@ import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.bam import cram
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
@@ -46,8 +47,8 @@ def create_inputs(data):
     # preparation converts illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
     data = _set_align_split_size(data)
+    out = []
     if tz.get_in(["config", "algorithm", "align_split_size"], data):
-        out = []
         if approach == "rtg":
             splits = rtg.calculate_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
         else:
@@ -56,9 +57,12 @@ def create_inputs(data):
             cur_data = copy.deepcopy(data)
             cur_data["align_split"] = split
             out.append([cur_data])
-        return out
     else:
-        return [[data]]
+        out.append([data])
+    if "output_cwl_keys" in data:
+        out = cwlutils.samples_to_records([utils.to_single_data(x) for x in out],
+                                          ["files", "align_split", "config__algorithm__quality_format"])
+    return out
 
 def _set_align_split_size(data):
     """Set useful align_split_size, generating an estimate if it doesn't exist.

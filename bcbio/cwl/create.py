@@ -164,13 +164,15 @@ def _step_template(name, run_file, inputs, outputs, parallel):
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if parallel in "multi-parallel" or len(inp["id"].split("/")) > 1:
+        if (parallel in "multi-parallel" or len(inp["id"].split("/")) > 1
+              or len(inp.get("source", "").split("/")) > 1):
             scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,
            "in": sinputs,
            "out": [{"id": workflow.get_base_id(output["id"])} for output in outputs]}
     if parallel in ["single-parallel", "multi-parallel", "batch-parallel"]:
+        assert scatter_inputs, "Did not find items to scatter on: %s" % name
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
     return out

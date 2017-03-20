@@ -23,14 +23,16 @@ def generate(variables, steps, final_outputs):
             wf_inputs = []
             wf_outputs = []
             wf_steps = []
+            print "---", step.name
             for i, wf_step in enumerate(step.workflow):
                 inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel, [_clean_record(x) for x in inputs],
+                wf_steps.append(("step", wf_step.name, wf_step.parallel,
+                                 [_wf_clean_record(x, step.internal) for x in inputs],
                                  outputs, wf_step.programs, wf_step.disk))
-                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs, step.internal, wf_step.parallel,
-                                             nested_inputs)
+                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs,
+                                             step.internal, wf_step.parallel, nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
             yield "wf_start", wf_inputs
             for wf_step in wf_steps:
@@ -49,18 +51,30 @@ def generate(variables, steps, final_outputs):
             yield "step", step.name, step.parallel, inputs, outputs, step.programs, step.disk
     yield "upload", [_get_upload_output(x, file_vs) for x in final_outputs]
 
+
+def _wf_clean_record(v, internal):
+    """Clean external records input into workflow steps.
+
+    These get unpacked at the top level of the workflow.
+    """
+    if "source" in v:
+        is_internal_rec = get_base_id(v["source"]) in [_get_string_vid(x) for x in internal]
+        if not is_internal_rec:
+            return _clean_record(v)
+    return v
+
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
 
     Skips inputs that are internally generated or generated and ignored, keeping
-    only as inputs those that we do not generate interally.
+    only as inputs those that we do not generate internally.
     """
     internal_generated_ids = []
     for vignore in to_ignore:
-        vignore_id = "%s" % _get_string_vid(vignore)
+        vignore_id = _get_string_vid(vignore)
         # ignore anything we generate internally, but not those we need to pull in
-        # from the external process'
-        if vignore_id in [v["id"] for v in wf_outputs]:
+        # from the external process
+        if vignore_id not in [v["id"] for v in wf_outputs]:
             internal_generated_ids.append(vignore_id)
     ignore_ids = set(internal_generated_ids + [v["id"] for v in wf_outputs])
     cur_ids = set([v["id"] for v in out])
@@ -179,7 +193,8 @@ def _clean_record(var):
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if len(outputs) == 1 and outputs[0]["type"] == "record":
-        file_output = [_create_record(outputs[0]["id"], step.name, step.inputs, step.unlist, file_vs, std_vs)]
+        file_output = [_create_record(outputs[0]["id"], outputs[0].get("fields", []),
+                                      step.name, step.inputs, step.unlist, file_vs, std_vs)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
@@ -267,15 +282,37 @@ def _get_upload_output(vid, variables):
     v["type"].pop("secondaryFiles", None)
     return v
 
-def _create_record(name, step_name, inputs, unlist, file_vs, std_vs):
-    """Create an input record by rearranging inputs.
+def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs):
+    """Create an output record by rearranging inputs.
 
     Batching processes create records that reformat the inputs for
     parallelization.
     """
-    unlist = set([_get_string_vid(x) for x in unlist])
+    if field_defs:
+        fields = []
+        inherit = []
+        for fdef in field_defs:
+            if not fdef.get("type"):
+                inherit.append(fdef["id"])
+            else:
+                fields.append({"name": _get_string_vid(fdef["id"]),
+                               "type": fdef["type"]})
+        if inherit:
+            fields.extend(_infer_record_outputs(inputs, unlist + inherit, file_vs, std_vs, inherit))
+    else:
+        fields = _infer_record_outputs(inputs, unlist, file_vs, std_vs)
+    return {"id": "%s/%s" % (step_name, name),
+            "type": {"name": name,
+                     "type": "record",
+                     "fields": fields}}
+
+def _infer_record_outputs(inputs, unlist, file_vs, std_vs, to_include=None):
+    """Infer the outputs of a record from the original inputs
+    """
     fields = []
+    unlist = set([_get_string_vid(x) for x in unlist])
     input_vids = set([_get_string_vid(v) for v in inputs])
+    to_include = set([_get_string_vid(x) for x in to_include]) if to_include else None
     added = set([])
     for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
         # unpack record inside this record and un-nested inputs to avoid double nested
@@ -285,7 +322,7 @@ def _create_record(name, step_name, inputs, unlist, file_vs, std_vs):
         else:
             nested_vs = [raw_v]
         for orig_v in nested_vs:
-            if orig_v["id"] not in added:
+            if orig_v["id"] not in added and (not to_include or get_base_id(orig_v["id"]) in to_include):
                 cur_v = {}
                 cur_v["name"] = get_base_id(orig_v["id"])
                 cur_v["type"] = orig_v["type"]
@@ -293,10 +330,7 @@ def _create_record(name, step_name, inputs, unlist, file_vs, std_vs):
                     cur_v = _flatten_nested_input(cur_v)
                 fields.append(_nest_variable(cur_v))
                 added.add(orig_v["id"])
-    return {"id": "%s/%s" % (step_name, name),
-            "type": {"name": name,
-                     "type": "record",
-                     "fields": fields}}
+    return fields
 
 def _create_variable(orig_v, step, variables):
     """Create a new output variable, potentially over-writing existing or creating new.

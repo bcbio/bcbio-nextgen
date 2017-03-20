@@ -85,6 +85,10 @@ def trim_srna_sample(*args):
     return srna.trim_srna_sample(*args)
 
 @utils.map_wrap
+def process_alignment_to_rec(*args):
+    return cwlutils.to_rec(*args)
+
+@utils.map_wrap
 def process_alignment(*args):
     return sample.process_alignment(*args)
 

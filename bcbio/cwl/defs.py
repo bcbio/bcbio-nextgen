@@ -59,11 +59,14 @@ def w(name, parallel, workflow, internal):
     Workflow = collections.namedtuple("Workflow", "name parallel workflow internal")
     return Workflow(name, parallel, workflow, internal)
 
-def cwlout(key, valtype, extensions=None):
+def cwlout(key, valtype=None, extensions=None, fields=None):
     """Definition of an output variable, defining the type and associated secondary files.
     """
-    out = {"id": key,
-           "type": valtype}
+    out = {"id": key}
+    if valtype:
+        out["type"] = valtype
+    if fields:
+        out["fields"] = fields
     if extensions:
         out["secondaryFiles"] = extensions
     return out
@@ -73,19 +76,20 @@ def _variant_shared():
                [["files"],
                 ["config", "algorithm", "align_split_size"],
                 ["config", "algorithm", "aligner"]],
-               [cwlout(["files"], "File", [".gbi"]),
-                cwlout(["config", "algorithm", "quality_format"], "string"),
-                cwlout(["align_split"], ["string", "null"])],
-               ["bgzip", "pbgzip"],
+               [cwlout("process_alignment_rec", "record",
+                       fields=[cwlout(["files"]),
+                               cwlout(["config", "algorithm", "quality_format"], "string"),
+                               cwlout(["align_split"], ["string", "null"])])],
+               ["pbgzip", "grabix", "htslib", "biobambam"],
                {"files": 1.5}),
              s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "base"], ["align_split"],
+               [["process_alignment_rec"],
+                ["reference", "fasta", "base"],
                 ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
                 ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
                 ["reference", "aligner", "indexes"],
                 ["config", "algorithm", "aligner"],
-                ["config", "algorithm", "mark_duplicates"],
-                ["config", "algorithm", "quality_format"]],
+                ["config", "algorithm", "mark_duplicates"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
                 cwlout(["hla", "fastq"], ["File", "null"]),
@@ -133,7 +137,7 @@ def variant():
                 ["validate", "tp"], ["validate", "fp"], ["validate", "fn"]],
                [cwlout("vc_rec", "record")])]
     align = [w("alignment", "multi-parallel", align_wf,
-               [["align_split"], ["files"], ["process_alignment_rec"],
+               [["align_split"], ["process_alignment_rec"],
                 ["work_bam"], ["config", "algorithm", "quality_format"]]),
              s("prep_samples_to_rec", "multi-batch",
                [["config", "algorithm", "coverage"],
