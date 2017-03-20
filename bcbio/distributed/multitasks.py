@@ -93,6 +93,12 @@ def process_alignment(*args):
     return sample.process_alignment(*args)
 
 @utils.map_wrap
+def postprocess_alignment_to_rec(*args):
+    default_keys = ["config__algorithm__coverage_interval", "config__algorithm__seq2c_bed_ready",
+                    "config__algorithm__coverage", "config__algorithm__coverage_merged"]
+    return cwlutils.to_rec(*args, default_keys=default_keys)
+
+@utils.map_wrap
 def postprocess_alignment(*args):
     return sample.postprocess_alignment(*args)
 

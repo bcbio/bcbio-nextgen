@@ -11,10 +11,10 @@ import toolz as tz
 
 from bcbio import utils
 
-def to_rec(samples):
+def to_rec(samples, default_keys=None):
     """Convert inputs into CWL records, useful for single item parallelization.
     """
-    recs = samples_to_records([utils.to_single_data(x) for x in samples])
+    recs = samples_to_records([utils.to_single_data(x) for x in samples], default_keys)
     return [[x] for x in recs]
 
 def normalize_missing(xs):
@@ -26,8 +26,12 @@ def normalize_missing(xs):
     elif isinstance(xs, (list, tuple)):
         xs = [normalize_missing(x) for x in xs]
     elif isinstance(xs, basestring):
-        if xs == "None":
+        if xs.lower() == "none":
             xs = None
+        elif xs.lower() == "true":
+            xs = True
+        elif xs.lower() == "false":
+            xs = False
     return xs
 
 def _get_all_cwlkeys(items, default_keys=None):
@@ -44,7 +48,8 @@ def _get_all_cwlkeys(items, default_keys=None):
                             "config__algorithm__validate_regions_merged",
                             "validate__summary",
                             "validate__tp", "validate__fp", "validate__fn",
-                            "config__algorithm__coverage", "config__algorithm__coverage_merged"])
+                            "config__algorithm__coverage", "config__algorithm__coverage_merged"
+        ])
     all_keys = set([])
     for data in items:
         all_keys.update(set(data["cwl_keys"]))
@@ -106,6 +111,9 @@ def samples_to_records(samples, default_keys=None):
                 if not val: val = []
                 elif not isinstance(val, (list, tuple)): val = [val]
                 data = tz.update_in(data, key, lambda x: val)
+            # Booleans are problematic for CWL serialization, convert into string representation
+            if isinstance(tz.get_in(key, data), bool):
+                data = tz.update_in(data, key, lambda x: str(tz.get_in(key, data)))
         data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         out.append(data)
     return out

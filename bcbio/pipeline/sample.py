@@ -212,7 +212,7 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    data = utils.to_single_data(data)
+    data = cwlutils.normalize_missing(utils.to_single_data(data))
     bam_file = data.get("align_bam") or data.get("work_bam")
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)

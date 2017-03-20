@@ -23,7 +23,6 @@ def generate(variables, steps, final_outputs):
             wf_inputs = []
             wf_outputs = []
             wf_steps = []
-            print "---", step.name
             for i, wf_step in enumerate(step.workflow):
                 inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
