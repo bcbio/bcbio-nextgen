@@ -9,15 +9,10 @@ from bcbio import utils
 from bcbio.bam import fastq
 from bcbio.distributed import prun
 from bcbio.pipeline.config_utils import load_config
-from bcbio.provenance import programs
-from bcbio.variation import vcfutils
+
+from tests.conftest import make_workdir, get_post_process_yaml
 
 import pytest
-from tests.conftest import make_workdir
-from tests.conftest import get_post_process_yaml
-
-sys.path.append(os.path.dirname(__file__))
-
 
 class TestRunInfo(object):
 
@@ -25,6 +20,7 @@ class TestRunInfo(object):
     def test_programs(self, data_dir):
         """Identify programs and versions used in analysis.
         """
+        from bcbio.provenance import programs
         with make_workdir() as workdir:
             config = load_config(get_post_process_yaml(data_dir, workdir))
             print programs._get_versions(config)
@@ -60,6 +56,7 @@ class TestVCFUtil(object):
     def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
+        from bcbio.variation import vcfutils
         files = [
             os.path.join(self.var_dir, "S1-variants.vcf"),
             os.path.join(self.var_dir, "S2-variants.vcf")
@@ -87,6 +84,7 @@ class TestVCFUtil(object):
     def test_2_vcf_exclusion(self):
         """Exclude samples from VCF files.
         """
+        from bcbio.variation import vcfutils
         with make_workdir() as workdir:
             config = load_config(
                 get_post_process_yaml(self.automated_dir, workdir))
@@ -102,6 +100,7 @@ class TestVCFUtil(object):
     def test_3_vcf_split_combine(self):
         """Split a VCF file into SNPs and indels, then combine back together.
         """
+        from bcbio.variation import vcfutils
         with make_workdir() as workdir:
             config = load_config(get_post_process_yaml(
                 self.automated_dir, workdir))
@@ -124,6 +123,7 @@ class TestVCFUtil(object):
     def test_4_vcf_sample_select(self, install_test_files, data_dir):
         """Select a sample from a VCF file.
         """
+        from bcbio.variation import vcfutils
         fname = os.path.join(self.var_dir, "S1_S2-combined.vcf.gz")
         out_file = "%s-sampleselect%s" % utils.splitext_plus(fname)
         out_file = vcfutils.select_sample(fname, "S2", out_file, {})

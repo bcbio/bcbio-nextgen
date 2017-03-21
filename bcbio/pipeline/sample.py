@@ -12,6 +12,7 @@ import re
 import toolz as tz
 
 from bcbio import utils, bam, broad
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.pipeline.merge import merge_bam_files
@@ -31,7 +32,6 @@ from bcbio.bam import skewer
 from bcbio.structural.seq2c import prep_seq2c_bed
 from bcbio.variation.bedutils import clean_file, merge_overlaps
 from bcbio.structural import get_svcallers
-
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -175,6 +175,7 @@ def prep_samples(*items):
     """
     out = []
     for data in (utils.to_single_data(x) for x in items):
+        data = cwlutils.normalize_missing(data)
         data = clean_inputs(data)
         out.append([data])
     return out
@@ -191,7 +192,7 @@ def clean_inputs(data):
     data["config"]["algorithm"]["variant_regions"] = clean_vr
     data["config"]["algorithm"]["variant_regions_merged"] = merged_vr
 
-    if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
+    if dd.get_coverage(data):
         if not utils.get_in(data, ("config", "algorithm", "coverage_orig")):
             data["config"]["algorithm"]["coverage_orig"] = dd.get_coverage(data)
         clean_cov_bed = clean_file(dd.get_coverage(data), data, prefix="cov-", simple=True)
@@ -211,7 +212,7 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    data = utils.to_single_data(data)
+    data = cwlutils.normalize_missing(utils.to_single_data(data))
     bam_file = data.get("align_bam") or data.get("work_bam")
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)

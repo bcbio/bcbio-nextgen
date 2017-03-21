@@ -211,7 +211,11 @@ def _combine_qc_samples(samples):
     """
     by_bam = collections.defaultdict(list)
     for data in [utils.to_single_data(x) for x in samples]:
-        by_bam[dd.get_align_bam(data)].append(data)
+        batch = dd.get_batch(data) or dd.get_sample_name(data)
+        if not isinstance(batch, (list, tuple)):
+            batch = [batch]
+        batch = tuple(batch)
+        by_bam[(dd.get_align_bam(data), batch)].append(data)
     out = []
     for data_group in by_bam.values():
         data = data_group[0]

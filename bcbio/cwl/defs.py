@@ -59,11 +59,14 @@ def w(name, parallel, workflow, internal):
     Workflow = collections.namedtuple("Workflow", "name parallel workflow internal")
     return Workflow(name, parallel, workflow, internal)
 
-def cwlout(key, valtype, extensions=None):
+def cwlout(key, valtype=None, extensions=None, fields=None):
     """Definition of an output variable, defining the type and associated secondary files.
     """
-    out = {"id": key,
-           "type": valtype}
+    out = {"id": key}
+    if valtype:
+        out["type"] = valtype
+    if fields:
+        out["fields"] = fields
     if extensions:
         out["secondaryFiles"] = extensions
     return out
@@ -73,25 +76,27 @@ def _variant_shared():
                [["files"],
                 ["config", "algorithm", "align_split_size"],
                 ["config", "algorithm", "aligner"]],
-               [cwlout(["files"], "File", [".gbi"]),
-                cwlout(["config", "algorithm", "quality_format"], "string"),
-                cwlout(["align_split"], ["string", "null"])],
-               ["bgzip", "pbgzip"],
+               [cwlout("process_alignment_rec", "record",
+                       fields=[cwlout(["files"]),
+                               cwlout(["config", "algorithm", "quality_format"], "string"),
+                               cwlout(["align_split"], ["string", "null"])])],
+               ["pbgzip", "grabix", "htslib", "biobambam"],
                {"files": 1.5}),
              s("process_alignment", "single-parallel",
-               [["files"], ["reference", "fasta", "base"], ["align_split"],
+               [["process_alignment_rec"],
+                ["reference", "fasta", "base"],
                 ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
                 ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
                 ["reference", "aligner", "indexes"],
                 ["config", "algorithm", "aligner"],
-                ["config", "algorithm", "mark_duplicates"],
-                ["config", "algorithm", "quality_format"]],
+                ["config", "algorithm", "mark_duplicates"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
                 cwlout(["hla", "fastq"], ["File", "null"]),
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
-               ["aligner", "samtools", "sambamba"],
+               ["bwa", "bwakit", "novoalign", "snap-aligner=1.0dev.97", "samtools", "sambamba",
+                "fgbio", "umis", "biobambam"],
                {"files": 1.5}),
              s("merge_split_alignments", "single-merge",
                [["work_bam"], ["align_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
@@ -100,7 +105,7 @@ def _variant_shared():
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
                 cwlout(["hla", "fastq"], ["File", "null"])],
-               ["biobambam"],
+               ["biobambam", "samtools"],
                {"files": 3})]
     return align
 
@@ -132,19 +137,24 @@ def variant():
                 ["validate", "tp"], ["validate", "fp"], ["validate", "fn"]],
                [cwlout("vc_rec", "record")])]
     align = [w("alignment", "multi-parallel", align_wf,
-               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("prep_samples", "multi-parallel",
+               [["align_split"], ["process_alignment_rec"],
+                ["work_bam"], ["config", "algorithm", "quality_format"]]),
+             s("prep_samples_to_rec", "multi-batch",
                [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
                 ["reference", "fasta", "base"]],
+               [cwlout("prep_samples_rec", "record")]),
+             s("prep_samples", "multi-parallel",
+               ["prep_samples_rec"],
                [cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
                 cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
                 cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
-                cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])]),
-             s("postprocess_alignment", "multi-parallel",
+                cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])],
+               ["htslib", "pbgzip", "bedtools"]),
+             s("postprocess_alignment_to_rec", "multi-batch",
                [["align_bam"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "variant_regions"],
@@ -156,6 +166,9 @@ def variant():
                 ["config", "algorithm", "seq2c_bed_ready"],
                 ["config", "algorithm", "recalibrate"],
                 ["reference", "fasta", "base"]],
+               [cwlout("postprocess_alignment_rec", "record")]),
+             s("postprocess_alignment", "multi-parallel",
+               [["postprocess_alignment_rec"]],
                [cwlout(["config", "algorithm", "coverage_interval"], "string"),
                 cwlout(["config", "algorithm", "variant_regions"], "File"),
                 cwlout(["config", "algorithm", "variant_regions_merged"], "File"),
@@ -167,14 +180,16 @@ def variant():
                 cwlout(["regions", "callable"], "File"),
                 cwlout(["regions", "sample_callable"], "File"),
                 cwlout(["regions", "nblock"], "File"),
-                cwlout(["regions", "highdepth"], ["File", "null"])]),
+                cwlout(["regions", "highdepth"], ["File", "null"])],
+               ["sambamba", "goleft", "bedtools", "htslib"]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
                 ["reference", "fasta", "base"]],
                [cwlout(["config", "algorithm", "callable_regions"], "File"),
                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
-                cwlout(["config", "algorithm", "callable_count"], "int")])]
+                cwlout(["config", "algorithm", "callable_count"], "int")],
+               ["bedtools", "htslib"])]
     hla = [s("call_hla", "multi-parallel",
              [["hla", "fastq"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),

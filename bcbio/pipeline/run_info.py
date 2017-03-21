@@ -30,6 +30,7 @@ from bcbio.bam.fastq import open_fastq
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "phasing", "svcaller", "hetcaller", "jointcaller", "tools_off", "mixup_check"]
+ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 
 def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,
              integrations=None):
@@ -763,7 +764,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
             item["upload"] = upload
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
-                                                  ignore_keys=ALGORITHM_NOPATH_KEYS)
+                                                  ignore_keys=ALGORITHM_NOPATH_KEYS,
+                                                  fileonly_keys=ALGORITHM_FILEONLY_KEYS)
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
@@ -834,7 +836,7 @@ def _add_algorithm_defaults(algorithm):
                 "validate": None,
                 "validate_regions": None}
     convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
-                           "vcfanno"])
+                           "vcfanno", "adapters", "custom_trim"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
         if k not in algorithm:
@@ -843,6 +845,14 @@ def _add_algorithm_defaults(algorithm):
         if k in convert_to_list:
             if v and not isinstance(v, (list, tuple)) and not isinstance(v, dict):
                 algorithm[k] = [v]
+            # ensure dictionary specified inputs get converted into individual lists
+            elif v and not isinstance(v, (list, tuple)) and isinstance(v, dict):
+                new = {}
+                for innerk, innerv in v.items():
+                    if innerv and not isinstance(innerv, (list, tuple)) and not isinstance(innerv, dict):
+                        innerv = [innerv]
+                    new[innerk] = innerv
+                algorithm[k] = new
             elif v is None:
                 algorithm[k] = []
         elif k in convert_to_single:

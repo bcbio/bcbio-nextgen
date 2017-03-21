@@ -210,9 +210,10 @@ which callers to use for each step in the :ref:`variant-config` configuration::
        germline: freebayes
 
 bcbio does a single alignment for the normal sample, then splits at the variant
-calling steps. In this example, you'd get FreeBayes germline calls labeled as
-``your-normal-germline`` and VarDict somatic calls for the tumor sample linked
-to this normal.
+calling steps using this normal sample to do germline calling. In this example,
+you'd get FreeBayes germline calls labeled as ``your-normal-germline`` and
+VarDict somatic calls for the tumor sample linked to this normal. This generates
+a single set of somatic and germline calls for the tumor and normal pair.
 
 Germline calling supports multiple callers, and other configuration options like
 ensemble and structural variant calling inherit from the remainder configuration. For
@@ -291,22 +292,23 @@ Sailfish handle contaminant sequences at the ends properly. This makes trimming
 unnecessary. Tophat2 does not perform soft clipping so if using Tophat2,
 trimming must still be done.
 
-Sailfish, which is an extremely fast alignment-free method of quantitation, is
-run for all experiments. Sailfish can accurately quantitate the expression of
+Salmon, which is an extremely fast alignment-free method of quantitation, is
+run for all experiments. Salmon can accurately quantitate the expression of
 genes, even ones which are hard to quantitate with other methods (see `this
-paper <http://www.genomebiology.com/2015/16/1/177>`_ for example). It also
-quantitates at the transcript level which can help gene-level analyses (see
+paper <http://www.genomebiology.com/2015/16/1/177>`_ for example for Sailfish,
+which performs similarly to Salmon.). Salmon can also
+quantitate at the transcript level which can help gene-level analyses (see
 `this paper <http://f1000research.com/articles/4-1521/v1>`_ for example).
-We recommend using the Sailfish quantitation rather than the counts from
+We recommend using the Salmon quantitation rather than the counts from
 featureCounts to perform downstream quantification.
 
 Although we do not recommend using the featureCount based counts, the alignments
 are still useful because they give you many more quality metrics than the
-pseudoalignments from Sailfish.
+quasi-alignments from Salmon.
 
 After a bcbio RNA-seq run there will be in the ``upload`` directory a directory
 for each sample which contains a BAM file of the aligned and unaligned reads, a
-``Sailfish`` directory with the output of Sailfish, including TPM values, and a
+``sailfish`` directory with the output of Salmon, including TPM values, and a
 ``qc`` directory with plots from FastQC and qualimap.
 
 In addition to directories for each sample, in the ``upload`` directory there is

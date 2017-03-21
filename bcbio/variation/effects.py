@@ -133,8 +133,7 @@ def run_vep(in_file, data):
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 config_args = []
                 if is_human:
-                    plugin_fns = {"loftee": _get_loftee,
-                                  "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
+                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = ["loftee"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
                         plugins += ["maxentscan","genesplicer"]

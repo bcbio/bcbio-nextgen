@@ -6,6 +6,7 @@ from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
+from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
@@ -84,8 +85,19 @@ def trim_srna_sample(*args):
     return srna.trim_srna_sample(*args)
 
 @utils.map_wrap
+def process_alignment_to_rec(*args):
+    return cwlutils.to_rec(*args)
+
+@utils.map_wrap
 def process_alignment(*args):
     return sample.process_alignment(*args)
+
+@utils.map_wrap
+def postprocess_alignment_to_rec(*args):
+    default_keys = ["config__algorithm__coverage_interval", "config__algorithm__seq2c_bed_ready",
+                    "config__algorithm__coverage", "config__algorithm__coverage_merged",
+                    "config__algorithm__coverage_orig"]
+    return cwlutils.to_rec(*args, default_keys=default_keys)
 
 @utils.map_wrap
 def postprocess_alignment(*args):
@@ -94,6 +106,10 @@ def postprocess_alignment(*args):
 @utils.map_wrap
 def prep_samples(*args):
     return sample.prep_samples(*args)
+
+@utils.map_wrap
+def prep_samples_to_rec(*args):
+    return cwlutils.to_rec(*args)
 
 @utils.map_wrap
 def srna_annotation(*args):

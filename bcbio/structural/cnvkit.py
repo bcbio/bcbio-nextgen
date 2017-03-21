@@ -63,9 +63,9 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
                 ckout = _add_plots_to_output(ckout, data)
-            if "sv" not in data:
-                data["sv"] = []
-            data["sv"].append(ckout)
+        if "sv" not in data:
+            data["sv"] = []
+        data["sv"].append(ckout)
         out.append(data)
     return out
 
@@ -143,11 +143,16 @@ def _prep_cmd(cmd, tx_out_file):
     cmd = " ".join(cmd) if isinstance(cmd, (list, tuple)) else cmd
     return "export TMPDIR=%s && %s" % (os.path.dirname(tx_out_file), cmd)
 
-def _bam_to_outbase(bam_file, work_dir):
+def _bam_to_outbase(bam_file, work_dir, data):
     """Convert an input BAM file into CNVkit expected output.
+
+    Handles previous non-batch cases to avoid re-calculating,
+    returning both new and old values:
     """
+    batch = dd.get_batch(data) or dd.get_sample_name(data)
     out_base = os.path.splitext(os.path.basename(bam_file))[0].split(".")[0]
-    return os.path.join(work_dir, out_base)
+    base = os.path.join(work_dir, out_base)
+    return "%s-%s" % (base, batch), base
 
 def _run_cnvkit_shared(inputs, backgrounds):
     """Shared functionality to run CNVkit, parallelizing over multiple BAM files.
@@ -159,7 +164,9 @@ def _run_cnvkit_shared(inputs, backgrounds):
     ckouts = []
     for cur_input in inputs:
         cur_raw_work_dir = utils.safe_makedir(os.path.join(_sv_workdir(cur_input), "raw"))
-        out_base = _bam_to_outbase(dd.get_align_bam(cur_input), cur_raw_work_dir)
+        out_base, out_base_old = _bam_to_outbase(dd.get_align_bam(cur_input), cur_raw_work_dir, cur_input)
+        if utils.file_exists(out_base_old + ".cns"):
+            out_base = out_base_old
         ckouts.append({"cnr": "%s.cnr" % out_base,
                        "cns": "%s.cns" % out_base,
                        "back_cnn": background_cnn})
@@ -320,10 +327,9 @@ def _cnvkit_coverage(data, bed_file, input_type):
     if cnntype is None:
         assert bed_file.endswith(".bed"), "Unexpected BED file extension for coverage %s" % bed_file
         cnntype = ""
-    batch = dd.get_batch(data) or dd.get_sample_name(data)
-    base = _bam_to_outbase(bam_file, work_dir)
-    out_file = "%s-%s.%s" % (base, batch, ext)
-    out_file_old = "%s.%s" % (base, ext)
+    base, base_old = _bam_to_outbase(bam_file, work_dir, data)
+    out_file = "%s.%s" % (base, ext)
+    out_file_old = "%s.%s" % (base_old, ext)
     # back compatible with previous runs to avoid re-calculating
     if utils.file_exists(out_file_old):
         out_file = out_file_old

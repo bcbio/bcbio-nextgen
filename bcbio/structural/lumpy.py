@@ -227,18 +227,6 @@ def run_svtyper_prioritize(call):
         return _run_svtyper(in_file, dd.get_align_bam(data), sr_bam, call.get("exclude_file"), data)
     return _run
 
-def _older_svtyper_version(svtyper):
-    """Allows setup of options for older and newer svtyper.
-
-    Can remove after bcbio 1.0.2 release.
-    """
-    version = None
-    for line in subprocess.check_output([svtyper, "-h"]).split("\n"):
-        if line.startswith("version"):
-            version = line.replace("$", "").strip().split()[-1].replace("v", "")
-            break
-    return not version or LooseVersion(version) < "0.1.0"
-
 def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
 
@@ -268,12 +256,8 @@ def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
                                 out_handle.write(line)
                     for region in ref.file_contigs(dd.get_ref_file(data), data["config"]):
                         out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
-                if _older_svtyper_version(svtyper):
-                    svtyper_extra_opts = "-M -S {sr_bam}"
-                else:
-                    svtyper_extra_opts = ""
                 cmd = ("bcftools view {in_file} {regions_to_rm} | "
-                       "{python} {svtyper} -B {full_bam} " + svtyper_extra_opts + " | "
+                       "{python} {svtyper} -B {full_bam} | "
                        "bcftools annotate -h {header_file} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")

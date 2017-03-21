@@ -93,7 +93,8 @@ def finalize_sv(samples, config):
         final["config"]["algorithm"]["svcaller"] = final["config"]["algorithm"].pop("svcaller_orig")
         batch = dd.get_batch(final) or dd.get_sample_name(final)
         batches = batch if isinstance(batch, (list, tuple)) else [batch]
-        lead_batches[dd.get_sample_name(final)] = batches[0]
+        if len(batches) > 1:
+            lead_batches[dd.get_sample_name(final)] = batches[0]
         for batch in batches:
             try:
                 by_batch[batch].append(final)
@@ -102,11 +103,9 @@ def finalize_sv(samples, config):
     out = []
     for batch, items in by_batch.items():
         if any("svplots" in dd.get_tools_on(d) for d in items):
-            plot_items = plot.by_regions(items)
-        else:
-            plot_items = items
-        for data in plot_items:
-            if lead_batches[dd.get_sample_name(data)] == batch:
+            items = plot.by_regions(items)
+        for data in items:
+            if lead_batches.get(dd.get_sample_name(data)) in [batch, None]:
                 out.append([data])
     return out
 

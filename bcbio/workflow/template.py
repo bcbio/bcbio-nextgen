@@ -284,9 +284,15 @@ def _pname_and_metadata(in_file):
     return _safe_name(base), md, global_vars, md_file
 
 def _handle_special_yaml_cases(v):
-    """Handle values that pass integer, boolean or list values.
+    """Handle values that pass integer, boolean, list or dictionary values.
     """
-    if ";" in v:
+    if "::" in v:
+        out = {}
+        for part in v.split("::"):
+            k_part, v_part = part.split(":")
+            out[k_part] = v_part.split(";")
+        v = out
+    elif ";" in v:
         # split lists and remove accidental empty values
         v = [x for x in v.split(";") if x != ""]
     elif isinstance(v, list):

@@ -126,7 +126,7 @@ def _parse_qsignature_output(in_file, out_file, warning_file, data):
     :returns: (list) with samples that could be duplicated
 
     """
-    import lxml
+    import lxml.etree
     name = {}
     error, warnings, similar = set(), set(), set()
     same, replicate, related = 0, 0.1, 0.18

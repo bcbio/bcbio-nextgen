@@ -478,6 +478,19 @@ def deepish_copy(org):
                     out[k] = v      # ints
     return out
 
+def safe_to_float(x):
+    """Convert to float, handling None and non-float inputs.
+
+    Useful for cleaning complicated output from variant callers.
+    """
+    if x is None:
+        return None
+    else:
+        try:
+            return float(x)
+        except ValueError:
+            return None
+
 def get_in(d, t, default=None):
     """
     look up if you can get a tuple of values from a nested dictionary,

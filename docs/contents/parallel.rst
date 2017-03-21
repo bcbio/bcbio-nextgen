@@ -45,7 +45,7 @@ a single 32 core machine, this would run two simultaneous bwa mapping jobs using
 
 Memory specifications (both in ``memory`` and ``jvm_opts``) are per-core. bcbio
 takes care of adjusting this memory to match the cores used. In the example
-above, if bcbio was running a 16 core java proecess, it would use 32Gb of memory
+above, if bcbio was running a 16 core java process, it would use 32Gb of memory
 for the JVM, adjusting ``Xmx`` and ``Xms`` to match cores used. Internally bcbio
 looks at the memory and CPU usage on a machine and matches your configuration
 options to the available system resources. It will scale down core requests if
@@ -87,7 +87,7 @@ Run an analysis using ipython for parallel execution::
 
     bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 
-The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque, slurm)``.
+The ``-s`` flag specifies a type of scheduler to use ``(lsf, sge, torque, slurm, pbspro)``.
 
 The ``-q`` flag specifies the queue to submit jobs to.
 
@@ -260,8 +260,8 @@ thus bcbio-nextgen handles memory scheduling by:
   the available memory per core without getting out of memory system
   errors.
 
-- Passing total memory usage along to schedulers. The Torque, SGE and
-  SLURM schedulers use this information to allocate memory to
+- Passing total memory usage along to schedulers. The SLURM, SGE,
+  Torque and PBSPro schedulers use this information to allocate memory to
   processes, avoiding issues with other scheduled programs using
   available memory on a shared machine.
 

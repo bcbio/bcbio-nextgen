@@ -90,6 +90,13 @@ multiple samples using the template workflow command::
        samplename,description,phenotype,batch
        normal.bam,two_normal,normal,Batch1;Batch2
 
+  For dictionary inputs like :ref:`somatic-w-germline-variants` setups, you can
+  separate items in a dictionary with colons and double colons, and also use
+  semicolons for lists::
+
+       samplename,description,phenotype,variantcaller
+       tumor.bam,sample1,tumor,germline:freebayes;gatk-haplotype::somatic:vardict;freebayes
+
   The name of the metadata file, minus the ``.csv`` extension, is a
   short name identifying the current project. The script creates a
   ``project1`` directory containing the sample configuration in
@@ -444,7 +451,7 @@ Alignment
 Alignment postprocessing
 ========================
 
--  ``mark_duplicates`` Identify and remove variants [true, false]
+-  ``mark_duplicates`` Mark duplicated reads [true, false].
    If true, will perform streaming duplicate marking with
    `biobambam's bammarkduplicates or bamsormadup
    <https://github.com/gt1/biobambam>`_.
@@ -556,7 +563,7 @@ Variant calling
      - ``platypus-joint`` Combine platypus calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``platypus`` variant calling.
-     - ``samtools-joint`` Combine platypus calls using bcbio.variation.recall
+     - ``samtools-joint`` Combine samtools calls using bcbio.variation.recall
        with squaring off at all positions found in each individual
        sample. Requires ``samtools`` variant calling.
 - ``joint_group_size`` Specify the maximum number of gVCF samples to feed into
@@ -653,7 +660,7 @@ Structural variant calling
 HLA typing
 ==========
 - ``hlacaller`` -- Perform identification of highly polymorphic HLAs with human
-  build 38 (hg38). The recommended options is ``optitype``, using the `OptiType
+  build 38 (hg38). The recommended option is ``optitype``, using the `OptiType
   <https://github.com/FRED-2/OptiType>`_ caller. Also supports using the `bwa
   HLA typing implementation
   <https://github.com/lh3/bwa/blob/master/README-alt.md#hla-typing>`_ with ``bwakit``
@@ -761,8 +768,8 @@ RNA sequencing
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
 - ``expression_caller`` A list of optional expression callers to turn on.
-  Supports ['cufflinks', 'express', 'stringtie']. Sailish and count based
-  expression estimation are run by default.
+  Supports ['cufflinks', 'express', 'stringtie', 'sailfish']. Salmon and count
+  based expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 
@@ -1040,7 +1047,7 @@ novoalign, write a sample resource specification like::
       analysis: variant2
       resources:
         novoalign:
-          options: [-o, FullNW]
+          options: ["-o", "FullNW", "--rOQ"]
         tmp:
           dir: tmp/sampletmpdir
 

@@ -38,7 +38,7 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     opts += ["-Q", "10"]
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
-        opts += resources["options"]
+        opts += [str(x) for x in resources["options"]]
     assert _is_bed_file(target)
     if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
             for x in items):
@@ -172,15 +172,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
             utils.symlink_plus(raw_file, out_file)
     return out_file
 
-def _safe_to_float(x):
-    if x is None:
-        return None
-    else:
-        try:
-            return float(x)
-        except ValueError:
-            return None
-
 def depth_freq_filter(line, tumor_index, aligner):
     """Command line to filter VarDict calls based on depth, frequency and quality.
 
@@ -210,13 +201,13 @@ def depth_freq_filter(line, tumor_index, aligner):
     else:
         parts = line.split("\t")
         sample_ft = {a: v for (a, v) in zip(parts[8].split(":"), parts[9 + tumor_index].split(":"))}
-        qual = _safe_to_float(parts[5])
-        dp = _safe_to_float(sample_ft.get("DP"))
-        af = _safe_to_float(sample_ft.get("AF"))
-        nm = _safe_to_float(sample_ft.get("NM"))
-        mq = _safe_to_float(sample_ft.get("MQ"))
+        qual = utils.safe_to_float(parts[5])
+        dp = utils.safe_to_float(sample_ft.get("DP"))
+        af = utils.safe_to_float(sample_ft.get("AF"))
+        nm = utils.safe_to_float(sample_ft.get("NM"))
+        mq = utils.safe_to_float(sample_ft.get("MQ"))
         ssfs = [x for x in parts[7].split(";") if x.startswith("SSF=")]
-        pval = _safe_to_float(ssfs[0].split("=")[-1] if ssfs else None)
+        pval = utils.safe_to_float(ssfs[0].split("=")[-1] if ssfs else None)
         fname = None
         if not chromhacks.is_sex(parts[0]) and dp is not None and af is not None:
             if dp * af < 6:

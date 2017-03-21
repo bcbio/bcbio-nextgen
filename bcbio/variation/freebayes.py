@@ -91,24 +91,15 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
             call_file = _run_freebayes_caller(align_bams, items, ref_file,
                                               assoc_files, region, out_file, somatic=paired)
         else:
-            call_file = _run_freebayes_paired(align_bams, items, ref_file,
-                                              assoc_files, region, out_file)
+            call_file = _run_freebayes_paired([paired.tumor_bam, paired.normal_bam],
+                                              [paired.tumor_data, paired.normal_data],
+                                              ref_file, assoc_files, region, out_file)
     else:
         vcfutils.check_paired_problems(items)
         call_file = _run_freebayes_caller(align_bams, items, ref_file,
                                           assoc_files, region, out_file)
 
     return call_file
-
-def _clean_freebayes_fmt_cl():
-    """For FreeBayes pre 1.1.0, need to remove problematic DPR FORMAT annotation.
-
-    This can be removed after bcbio 1.0.1 release which will default to
-    FreeBayes 1.1.0
-    """
-    version = subprocess.check_output(["freebayes", "--version"])
-    version = LooseVersion(version.split("version:")[-1].strip().replace("v", ""))
-    return "bcftools annotate -x FMT/DPR |" if version < LooseVersion("1.1.0") else ""
 
 def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None, somatic=None):
@@ -139,12 +130,13 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                 if somatic:
                     opts = _add_somatic_opts(opts, somatic)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                # For multi-sample outputs, ensure consistent order
+                samples = ("-s" + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
-                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
                        """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
-                       "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
+                       "| {fix_ambig} | bcftools view {samples} -a - | "
                        "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                        "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                        "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
@@ -185,8 +177,9 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                 opts += " --no-partial-observations"
                 opts = _add_somatic_opts(opts, paired)
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                # For multi-sample outputs, ensure consistent order
+                samples = ("-s " + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
                 fix_ambig = vcfutils.fix_ambiguous_cl()
-                clean_fmt_cmd = _clean_freebayes_fmt_cl()
                 bcbio_py = sys.executable
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cl = ("{freebayes} -f {ref_file} {opts} "
@@ -194,7 +187,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                       """| {bcbio_py} -c 'from bcbio.variation import freebayes; """
                       """freebayes.call_somatic("{paired.tumor_name}", "{paired.normal_name}")' """
-                      "| {fix_ambig} | {clean_fmt_cmd} bcftools view -a - | "
+                      "| {fix_ambig} | bcftools view {samples} -a - | "
                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "

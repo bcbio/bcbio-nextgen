@@ -9,25 +9,54 @@ import pprint
 
 import toolz as tz
 
-def _get_all_cwlkeys(items):
+from bcbio import utils
+
+def to_rec(samples, default_keys=None):
+    """Convert inputs into CWL records, useful for single item parallelization.
+    """
+    recs = samples_to_records([utils.to_single_data(x) for x in samples], default_keys)
+    return [[x] for x in recs]
+
+def normalize_missing(xs):
+    """Normalize missing values to avoid string 'None' inputs.
+    """
+    if isinstance(xs, dict):
+        for k, v in xs.items():
+            xs[k] = normalize_missing(v)
+    elif isinstance(xs, (list, tuple)):
+        xs = [normalize_missing(x) for x in xs]
+    elif isinstance(xs, basestring):
+        if xs.lower() == "none":
+            xs = None
+        elif xs.lower() == "true":
+            xs = True
+        elif xs.lower() == "false":
+            xs = False
+    return xs
+
+def _get_all_cwlkeys(items, default_keys=None):
     """Retrieve cwlkeys from inputs, handling defaults which can be null.
 
     When inputs are null in some and present in others, this creates unequal
     keys in each sample, confusing decision making about which are primary and extras.
     """
-    default_keys = set(["metadata__batch", "config__algorithm__validate",
-                        "config__algorithm__validate_regions",
-                        "config__algorithm__validate_regions_merged",
-                        "validate__summary",
-                        "validate__tp", "validate__fp", "validate__fn",
-                        "config__algorithm__coverage", "config__algorithm__coverage_merged"])
+    if default_keys:
+        default_keys = set(default_keys)
+    else:
+        default_keys = set(["metadata__batch", "config__algorithm__validate",
+                            "config__algorithm__validate_regions",
+                            "config__algorithm__validate_regions_merged",
+                            "validate__summary",
+                            "validate__tp", "validate__fp", "validate__fn",
+                            "config__algorithm__coverage", "config__algorithm__coverage_merged"
+        ])
     all_keys = set([])
     for data in items:
         all_keys.update(set(data["cwl_keys"]))
     all_keys.update(default_keys)
     return all_keys
 
-def split_data_cwl_items(items):
+def split_data_cwl_items(items, default_keys=None):
     """Split a set of CWL output dictionaries into data samples and CWL items.
 
     Handles cases where we're arrayed on multiple things, like a set of regional
@@ -35,12 +64,12 @@ def split_data_cwl_items(items):
     """
     key_lens = set([])
     for data in items:
-        key_lens.add(len(_get_all_cwlkeys([data])))
+        key_lens.add(len(_get_all_cwlkeys([data], default_keys)))
     extra_key_len = min(list(key_lens)) if len(key_lens) > 1 else None
     data_out = []
     extra_out = []
     for data in items:
-        if extra_key_len and len(_get_all_cwlkeys([data])) == extra_key_len:
+        if extra_key_len and len(_get_all_cwlkeys([data], default_keys)) == extra_key_len:
             extra_out.append(data)
         else:
             data_out.append(data)
@@ -62,25 +91,29 @@ def split_data_cwl_items(items):
             data_final.append(data)
         return data_final, dict(cwl_extras)
 
-def samples_to_records(samples):
+def samples_to_records(samples, default_keys=None):
     """Convert samples into output CWL records.
     """
     from bcbio.pipeline import run_info
     RECORD_CONVERT_TO_LIST = set(["config__algorithm__tools_on", "config__algorithm__tools_off",
                                   "reference__genome_context"])
-    all_keys = _get_all_cwlkeys(samples)
+    all_keys = _get_all_cwlkeys(samples, default_keys)
     out = []
     for data in samples:
         for raw_key in sorted(list(all_keys)):
             key = raw_key.split("__")
             if tz.get_in(key, data) is None:
                 data = tz.update_in(data, key, lambda x: None)
+            if raw_key not in data["cwl_keys"]:
                 data["cwl_keys"].append(raw_key)
             if raw_key in RECORD_CONVERT_TO_LIST:
                 val = tz.get_in(key, data)
                 if not val: val = []
                 elif not isinstance(val, (list, tuple)): val = [val]
                 data = tz.update_in(data, key, lambda x: val)
+            # Booleans are problematic for CWL serialization, convert into string representation
+            if isinstance(tz.get_in(key, data), bool):
+                data = tz.update_in(data, key, lambda x: str(tz.get_in(key, data)))
         data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         out.append(data)
     return out

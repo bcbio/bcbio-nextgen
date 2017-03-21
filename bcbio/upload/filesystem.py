@@ -34,10 +34,10 @@ def _get_storage_dir(finfo, config):
     if "dir" not in config:
         raise ValueError("Expect `dir` in upload specification: "
                          "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#upload")
-    if "sample" in finfo:
-        storage_dir = os.path.join(config["dir"], finfo["sample"])
-    elif "run" in finfo:
+    if "run" in finfo:
         storage_dir = os.path.join(config["dir"], finfo["run"])
+    elif "sample" in finfo:
+        storage_dir = os.path.join(config["dir"], finfo["sample"])
     else:
         raise ValueError("Unexpected input file information: %s" % finfo)
     if "dir" in finfo:

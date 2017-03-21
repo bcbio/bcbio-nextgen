@@ -24,7 +24,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [cnvkit, lumpy, gridss]
+      svcaller: [cnvkit, lumpy]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -44,11 +44,10 @@ details:
         somatic: [vardict, freebayes, varscan]
         germline: [freebayes, platypus]
       indelcaller: sid
-      coverage_interval: genome
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [cnvkit, lumpy, gridss]
+      svcaller: [cnvkit, lumpy]
       #svcaller: [cnvkit]
       tools_on: [damage_filter]
       tools_off: [vardict_somatic_filter, gemini]
@@ -75,7 +74,7 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [cnvkit, lumpy, gridss]
+      svcaller: [cnvkit, lumpy]
       #tools_on: [svplots]
       #svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed

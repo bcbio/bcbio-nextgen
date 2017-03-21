@@ -9,7 +9,9 @@ calling across all samples.
 import os
 import subprocess
 from collections import defaultdict
+
 import pybedtools as bt
+import toolz as tz
 
 from bcbio import utils
 from bcbio.variation.vcfutils import get_paired_phenotype
@@ -103,20 +105,38 @@ def prep_seq2c_bed(data):
 
     return ready_file
 
+def _get_seq2c_options(data):
+    """Get adjustable, through resources, or default options for seq2c.
+    """
+    cov2lr_possible_opts = ["-F"]
+    defaults = {}
+    ropts = config_utils.get_resources("seq2c", data["config"]).get("options", [])
+    assert len(ropts) % 2 == 0, "Expect even number of options for seq2c" % ropts
+    defaults.update(dict(tz.partition(2, ropts)))
+    cov2lr_out, lr2gene_out = [], []
+    for k, v in defaults.items():
+        if k in cov2lr_possible_opts:
+            cov2lr_out += [str(k), str(v)]
+        else:
+            lr2gene_out += [str(k), str(v)]
+    return cov2lr_out, lr2gene_out
+
 def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_names):
     output_fpath = os.path.join(work_dir, "calls_combined.tsv")
     cov2lr = "cov2lr.pl"
     lr2gene = "lr2gene.pl"
-    control_opt = ""
-    lr2gene_opt = ""
+    cov2lr_opts, lr2gene_opts = _get_seq2c_options(items[0])
     if control_sample_names:
-        control_opt = "-c " + ":".join(control_sample_names)
-        lr2gene_opt = "-c"
+        cov2lr_opts += ["-c", ":".join(control_sample_names)]
+        if "-c" not in lr2gene_opts:
+            lr2gene_opts += ["-c"]
+    cov2lr_opt = " ".join(cov2lr_opts)
+    lr2gene_opt = " ".join(lr2gene_opts)
 
     if not utils.file_exists(output_fpath):
         with file_transaction(items[0], output_fpath) as tx_out_file:
             export = utils.local_path_export()
-            cmd = ("{export} {cov2lr} -a {control_opt} {read_mapping_file} {coverage_file} | " +
+            cmd = ("{export} {cov2lr} -a {cov2lr_opt} {read_mapping_file} {coverage_file} | " +
                    "{lr2gene} {lr2gene_opt} > {output_fpath}")
             do.run(cmd.format(**locals()), "Seq2C CNV calling")
     return output_fpath
