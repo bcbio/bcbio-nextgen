@@ -61,8 +61,12 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     libtype = sailfish._libtype_string(fq1, fq2, strandedness)
     num_cores = dd.get_num_cores(data)
     index = salmon_index(gtf_file, ref_file, data, salmon_dir)
+    resources = config_utils.get_resources("salmon", dd.get_config(data))
+    params = ""
+    if resources.get("options") is not None:
+        params = " ".join([str(x) for x in resources.get("options", [])])
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
-           "-o {tx_out_dir} ")
+           "-o {tx_out_dir} {params} ")
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
