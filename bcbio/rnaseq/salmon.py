@@ -123,7 +123,7 @@ def run_salmon_index(*samples):
 def salmon_index(gtf_file, ref_file, data, out_dir):
     out_dir = os.path.join(out_dir, "index", sailfish.get_build_string(data))
     if dd.get_disambiguate(data):
-        out_dir = "-".join([out_dir] + dd.get_disambguate(data))
+        out_dir = "-".join([out_dir] + dd.get_disambiguate(data))
     salmon = config_utils.get_program("salmon", dd.get_config(data))
     num_cores = dd.get_num_cores(data)
     if dd.get_transcriptome_fasta(data):
