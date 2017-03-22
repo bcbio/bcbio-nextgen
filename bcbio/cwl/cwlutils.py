@@ -17,6 +17,16 @@ def to_rec(samples, default_keys=None):
     recs = samples_to_records([utils.to_single_data(x) for x in samples], default_keys)
     return [[x] for x in recs]
 
+def to_rec_single(samples, default_keys=None):
+    """Convert output into a list of single CWL records.
+    """
+    out = []
+    for data in samples:
+        recs = samples_to_records([utils.to_single_data(data)], default_keys)
+        assert len(recs) == 1
+        out.append(recs[0])
+    return out
+
 def normalize_missing(xs):
     """Normalize missing values to avoid string 'None' inputs.
     """

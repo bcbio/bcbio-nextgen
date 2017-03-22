@@ -66,7 +66,7 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
             if _is_record_output(out_keys):
                 if parallel in ["multi-batch"]:
                     recs = [_collapse_to_cwl_record(xs) for xs in out]
-                elif parallel in ["single-split"]:
+                elif parallel in ["single-split", "multi-combined"]:
                     recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs)) for xs in out]
                 else:
                     samples = [utils.to_single_data(xs) for xs in out]
@@ -219,7 +219,7 @@ def _combine_cwl_records(recs, fnargs, parallel):
     """
     output_keys = _get_output_cwl_keys(fnargs)
     assert len(output_keys) == 1, output_keys
-    if parallel not in ["multi-batch", "single-split"]:
+    if parallel not in ["multi-batch", "single-split", "multi-combined"]:
         assert len(recs) == 1, pprint.pformat(recs)
         return {output_keys[0]: recs[0]}
     else:
@@ -254,8 +254,8 @@ def _collapse_to_cwl_record(samples):
 def _to_cwl(val):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
-    # files where we list the entire directory as secondary files
-    dir_targets = ["mainIndex"]
+    # aligner and database indices where we list the entire directory as secondary files
+    dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2", "Genome", "GenomeIndexHash")
     if isinstance(val, basestring):
         if os.path.exists(val):
             val = {"class": "File", "path": val}
@@ -269,7 +269,7 @@ def _to_cwl(val):
                 if os.path.exists(idx_file):
                     secondary.append({"class": "File", "path": idx_file})
             cur_dir, cur_file = os.path.split(val["path"])
-            if cur_file in dir_targets:
+            if cur_file.endswith(dir_targets):
                 for fname in os.listdir(cur_dir):
                     if fname != cur_file:
                         secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})

@@ -93,6 +93,19 @@ def process_alignment(*args):
     return sample.process_alignment(*args)
 
 @utils.map_wrap
+def alignment_to_rec(*args):
+    default_keys = ["config__algorithm__align_split_size",
+                    "config__algorithm__aligner",
+                    "config__algorithm__mark_duplicates",
+                    "reference__bwa__indexes",
+                    "reference__snap__indexes",
+                    "reference__bowtie2__indexes",
+                    "reference__novoalign__indexes",
+                    "rgnames__pl", "rgnames__sample", "rgnames__pu",
+                    "rgnames__lane", "rgnames__rg", "rgnames__lb"]
+    return cwlutils.to_rec_single(*args, default_keys=default_keys)
+
+@utils.map_wrap
 def postprocess_alignment_to_rec(*args):
     default_keys = ["config__algorithm__coverage_interval", "config__algorithm__seq2c_bed_ready",
                     "config__algorithm__coverage", "config__algorithm__coverage_merged",

@@ -148,9 +148,10 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
         is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
         if is_record_input:
-            unpack_inputs = _unpack_record(orig_input, is_combine=step.parallel in ["multi-combined"])
-            inputs.extend(unpack_inputs)
-            skip_inputs = skip_inputs | set([get_base_id(v["id"]) for v in unpack_inputs])
+            for unpack_input in _unpack_record(orig_input, file_vs, is_combine=step.parallel in ["multi-combined"]):
+                if unpack_input["id"] not in [x["id"] for x in inputs]:
+                    inputs.append(unpack_input)
+                    skip_inputs.add(get_base_id(unpack_input["id"]))
         else:
             inputs.append(orig_input)
     inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
@@ -166,7 +167,7 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
         inputs = [_nest_variable(x) for x in inputs]
     return inputs, parallel_ids, nested_inputs
 
-def _unpack_record(rec, is_combine=False):
+def _unpack_record(rec, file_vs, is_combine=False):
     """Unpack a record object, extracting individual elements.
 
     Handles standard single records (extract each member) and arrays of records
@@ -193,7 +194,7 @@ def _clean_record(var):
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if len(outputs) == 1 and outputs[0]["type"] == "record":
         file_output = [_create_record(outputs[0]["id"], outputs[0].get("fields", []),
-                                      step.name, step.inputs, step.unlist, file_vs, std_vs)]
+                                      step.name, step.inputs, step.unlist, file_vs, std_vs, step.parallel)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
@@ -281,7 +282,7 @@ def _get_upload_output(vid, variables):
     v["type"].pop("secondaryFiles", None)
     return v
 
-def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs):
+def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs, parallel):
     """Create an output record by rearranging inputs.
 
     Batching processes create records that reformat the inputs for
@@ -297,26 +298,26 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs)
                 fields.append({"name": _get_string_vid(fdef["id"]),
                                "type": fdef["type"]})
         if inherit:
-            fields.extend(_infer_record_outputs(inputs, unlist + inherit, file_vs, std_vs, inherit))
+            fields.extend(_infer_record_outputs(inputs, unlist + inherit, file_vs, std_vs, parallel, inherit))
     else:
-        fields = _infer_record_outputs(inputs, unlist, file_vs, std_vs)
+        fields = _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel)
     return {"id": "%s/%s" % (step_name, name),
             "type": {"name": name,
                      "type": "record",
                      "fields": fields}}
 
-def _infer_record_outputs(inputs, unlist, file_vs, std_vs, to_include=None):
+def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None):
     """Infer the outputs of a record from the original inputs
     """
     fields = []
     unlist = set([_get_string_vid(x) for x in unlist])
-    input_vids = set([_get_string_vid(v) for v in inputs])
+    input_vids = set([_get_string_vid(v) for v in _handle_special_inputs(inputs, file_vs)])
     to_include = set([_get_string_vid(x) for x in to_include]) if to_include else None
     added = set([])
     for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
         # unpack record inside this record and un-nested inputs to avoid double nested
         if tz.get_in(["type", "type"], raw_v) == "record":
-            nested_vs = _unpack_record(raw_v)
+            nested_vs = _unpack_record(raw_v, file_vs)
             unlist = unlist | set([get_base_id(x["id"]) for x in nested_vs])
         else:
             nested_vs = [raw_v]
@@ -327,7 +328,9 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, to_include=None):
                 cur_v["type"] = orig_v["type"]
                 if cur_v["name"] in unlist:
                     cur_v = _flatten_nested_input(cur_v)
-                fields.append(_nest_variable(cur_v))
+                if parallel in set(["batch-single", "multi-batch"]) or to_include:
+                    cur_v = _nest_variable(cur_v)
+                fields.append(cur_v)
                 added.add(orig_v["id"])
     return fields
 
