@@ -18,6 +18,7 @@
 - Switch to Salmon from Sailfish as default alignment-free RNA-seq
   quantification algorithm.
 - Add `sailfish` as a valid option for `expression_caller`.
+- Fix chimeric alignment output option for STAR.
 
 ## 1.0.2 (7 March 2017)
 
