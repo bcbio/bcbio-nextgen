@@ -1,1 +1,2 @@
 bcbio-nextgen=1.0.2
+htslib=1.3
