@@ -209,9 +209,9 @@ def get_refs(genome_build, aligner, galaxy_base, data):
                                                galaxy_config, data)
             base = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
             if os.path.isdir(base):
-                indexes = glob.glob(os.path.join(base, "*"))
+                indexes = sorted(glob.glob(os.path.join(base, "*")))
             elif name != "samtools":
-                indexes = glob.glob("%s*" % utils.splitext_plus(base)[0])
+                indexes = sorted(glob.glob("%s*" % utils.splitext_plus(base)[0]))
             else:
                 indexes = []
             out[name_remap.get(name, name)] = {}

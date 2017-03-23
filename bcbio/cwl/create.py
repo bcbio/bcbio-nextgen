@@ -368,7 +368,7 @@ def _item_to_cwldata(x):
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
             # aligner and database indices where we list the entire directory as secondary files
-            dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2",
+            dir_targets = ("mainIndex", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
                            "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
             assert os.path.isdir(x)
             base_name = None

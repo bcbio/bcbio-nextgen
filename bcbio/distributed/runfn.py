@@ -255,7 +255,7 @@ def _to_cwl(val):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
     # aligner and database indices where we list the entire directory as secondary files
-    dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2",
+    dir_targets = ("mainIndex", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
                    "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
     if isinstance(val, basestring):
         if os.path.exists(val):
