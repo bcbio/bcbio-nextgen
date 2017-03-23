@@ -76,7 +76,7 @@ def run(bam_file, data, out_dir):
             tx_results_file = os.path.join(tx_results_dir, "genome_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
-    # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order 
+    # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order
     # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):
     base_results_file = os.path.join(out_dir, os.path.basename(results_file))
     shutil.copyfile(results_file, base_results_file)
@@ -244,12 +244,13 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
 def _detect_rRNA(data):
     sample = dd.get_sample_name(data)
     gtf_file = dd.get_gtf_file(data)
-    tidy_file = dd.get_sailfish_tidy(data)
+    sailfish_dir = dd.get_sailfish_dir(data)
+    quant = os.path.join(sailfish_dir, "quant.sf")
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
-    if not (transcripts and tidy_file):
+    if not (transcripts and utils.file_exists(quant)):
         return {'rRNA': "NA", "rRNA_rate": "NA"}
-    count_table = pd.read_csv(tidy_file, sep="\t", dtype={'sample': str})
+    count_table = pd.read_csv(quant, sep="\t", dtype={'sample': str})
     sample_table = count_table[count_table["sample"].isin([sample])]
     rrna_exp = map(float, sample_table[sample_table["id"].isin(transcripts)]["numreads"])
     total_exp = map(float, sample_table["numreads"])

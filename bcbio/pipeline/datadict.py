@@ -147,7 +147,6 @@ LOOKUPS = {
     "salmon_dir": {"keys": ["salmon_dir"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},
-    "sailfish_tidy": {"keys": ["sailfish_tidy"]},
     "sailfish_transcript_tpm": {"keys": ["sailfish_transcript_tpm"]},
     "sailfish_gene_tpm": {"keys": ["sailfish_gene_tpm"]},
     "sample_callable": {"keys": ["regions", "sample_callable"]},

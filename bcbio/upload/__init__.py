@@ -643,8 +643,6 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_isoform_to_gene(sample)})
     if dd.get_square_vcf(sample):
         out.append({"path": dd.get_square_vcf(sample)})
-    if dd.get_sailfish_tidy(sample):
-        out.append({"path": dd.get_sailfish_tidy(sample)})
     if dd.get_sailfish_transcript_tpm(sample):
         out.append({"path": dd.get_sailfish_transcript_tpm(sample)})
     if dd.get_sailfish_gene_tpm(sample):
