@@ -87,10 +87,10 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
         out["hints"].append({"class": "SoftwareRequirement",
                              "packages": [resolve_package(p) for p in programs]})
     out["arguments"].append({"position": 0, "valueFrom":
-                             "sentinel-runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
-    std_inputs = [{"id": "sentinel-parallel", "type": "string",
+                             "sentinel_runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
+    std_inputs = [{"id": "sentinel_parallel", "type": "string",
                    "default": parallel},
-                  {"id": "sentinel-outputs", "type": "string",
+                  {"id": "sentinel_outputs", "type": "string",
                    "default": ",".join([workflow.get_base_id(x["id"]) for x in outputs])}]
     inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
@@ -368,7 +368,8 @@ def _item_to_cwldata(x):
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
             # aligner and database indices where we list the entire directory as secondary files
-            dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2", "Genome", "GenomeIndexHash")
+            dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2",
+                           "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
             assert os.path.isdir(x)
             base_name = None
             fnames = sorted(os.listdir(x))

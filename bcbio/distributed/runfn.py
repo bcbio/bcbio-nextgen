@@ -114,13 +114,13 @@ def _world_from_cwl(fnargs, work_dir):
         # extra values pulling in nested indexes
         if key == "ignore":
             continue
-        if key == "sentinel-parallel":
+        if key == "sentinel_parallel":
             parallel = val
             continue
-        if key == "sentinel-runtime":
+        if key == "sentinel_runtime":
             runtime = dict(tz.partition(2, val.split(",")))
             continue
-        if key == "sentinel-outputs":
+        if key == "sentinel_outputs":
             output_cwl_keys = val.split(",")
             continue
         # starting a new record -- duplicated key
@@ -255,7 +255,8 @@ def _to_cwl(val):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
     # aligner and database indices where we list the entire directory as secondary files
-    dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2", "Genome", "GenomeIndexHash")
+    dir_targets = ("mainIndex", ".bwt", ".ebwt", ".bt2",
+                   "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
     if isinstance(val, basestring):
         if os.path.exists(val):
             val = {"class": "File", "path": val}
