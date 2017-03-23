@@ -42,7 +42,10 @@ def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
                 # with a large number of cores but makes use of extra memory,
                 # so we cap at 6 cores.
                 # See issue #1565 for discussion
-                params += ["-nt", str(min(6, cores))]
+                # Recent GATK 3.x versions also have race conditions with multiple
+                # threads, so limit to 1 and keep memory available
+                # https://gatkforums.broadinstitute.org/wdl/discussion/8718/concurrentmodificationexception-in-gatk-3-7-genotypegvcfs
+                # params += ["-nt", str(min(6, cores))]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"}
             else:
                 memscale = None
