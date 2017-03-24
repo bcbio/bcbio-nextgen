@@ -21,14 +21,13 @@ ToDo:
 from __future__ import print_function
 import collections
 import os
-import pprint
+import subprocess
 import sys
 
 from cwl2wdl import generators
 from cwl2wdl import base_classes as cwl2wdl_classes
 import cwltool.load_tool
 import cwltool.workflow
-import wdl
 
 def main(wf_file, json_file):
     main_wf = cwltool.load_tool.load_tool(wf_file, cwltool.workflow.defaultMakeTool)
@@ -37,8 +36,12 @@ def main(wf_file, json_file):
     wdl_file = "%s.wdl" % os.path.splitext(wf_file)[0]
     with open(wdl_file, "w") as out_handle:
         out_handle.write(wdl_doc)
-    # wdl_objects = wdl.load(wdl_file)
-    # print(wdl_objects)
+    _validate(wdl_file)
+
+def _validate(wdl_file):
+    """Run validation on the generated WDL output using wdltool.
+    """
+    subprocess.call(["wdltool", "validate", wdl_file])
 
 def _wf_to_dict(wf):
     """Parse a workflow into cwl2wdl style dictionary.
@@ -136,6 +139,20 @@ def _to_variable_type(x):
     else:
         return var_mapping[x]
 
+def _variable_type_to_read_fn(vartype):
+    """Convert variant types into corresponding WDL standard library functions.
+    """
+    fn_map = {"String": "read_string", "Array[String]": "read_lines",
+              "Array[Array[String]]": "read_tsv",
+              "Object": "read_object", "Array[Object]": "read_objects",
+              "Int": "read_int", "Float": "read_float"}
+    # Read in Files as Strings
+    vartype = vartype.replace("File", "String")
+    # Can't read arrays of Ints/Floats
+    vartype = vartype.replace("Array[Int]", "Array[String]")
+    vartype = vartype.replace("Array[Float]", "Array[String]")
+    return fn_map[vartype]
+
 def _input_to_dict(i):
     """Convert CWL input into dictionary required for a cwl2wdl Input object.
     """
@@ -159,9 +176,11 @@ def _output_to_dict(o):
         name = _id_to_localname(o["id"])
     else:
         name = o["name"]
-    return {"name": name,
-            "variable_type": _to_variable_type(o["type"]),
-            "output": "read_cwl_json('cwl.output.json', '%s')" % name, "is_required": True}
+    out_file = "wdl.output.%s.txt" % name
+    vartype = _to_variable_type(o["type"])
+    read_fn_name = _variable_type_to_read_fn(vartype)
+    return {"name": name, "variable_type": vartype,
+            "output": "%s('%s')" % (read_fn_name, out_file), "is_required": True}
 
 def _id_to_localname(input_id):
     return os.path.basename(input_id).split("#")[1]
