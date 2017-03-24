@@ -1,5 +1,6 @@
 ## 1.0.3 (in progress)
 
+- Support DNApi for de novo adapter detection in small RNA pipeline
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
   chromosome region runs. Thanks to Ho Danliang.
 - Fix structural variant output upload for complex batching cases. Correctly
