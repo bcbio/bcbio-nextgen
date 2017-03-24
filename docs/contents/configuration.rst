@@ -423,7 +423,9 @@ Alignment
 -  ``adapters`` If trimming adapter read through, trim a set of stock
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
-   and polyA tails. Valid items are [truseq, illumina, nextera, polya]
+   and polyA tails. Valid items are [truseq, illumina, nextera, polya].
+   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi. 
+   If you set up this parameter, then bcbio'll use this value instead.
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``align_split_size``: Increase parallelization of alignment. As of 0.9.8,

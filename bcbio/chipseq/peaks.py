@@ -1,19 +1,19 @@
-"""High level parallel SNP and indel calling using multiple variant callers.
+"""High level parallel chip-seq analysis
 """
 import os
 import copy
 import toolz as tz
 
 from bcbio.log import logger
-from bcbio import bam, utils
+from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
-from bcbio.chipseq import macs2
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 
 
 def get_callers():
+    """Get functions related to each caller"""
     from bcbio.chipseq import macs2
     return {"macs2": macs2.run}
 
@@ -46,13 +46,13 @@ def calling(data):
     input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
-    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name ))
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
     chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
     input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
-                         dd.get_chip_method(data), data["config"])
+                          dd.get_chip_method(data), data["config"])
     data.update({"peaks_files": out_files})
     return [[data]]
 
@@ -89,7 +89,7 @@ def _check(sample, data):
     if dd.get_phenotype(sample) == "input":
         return None
     for origin in data:
-        if  dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
+        if dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
             sample["work_bam_input"] = dd.get_work_bam(origin[0])
             return [sample]
     return [sample]

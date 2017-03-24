@@ -11,6 +11,9 @@ Download BIB format: https://github.com/chapmanb/bcbio-nextgen/tree/master/docs/
 Tools
 ~~~~~
 
+* Tsuji J, Weng Z. (2016) DNApi: A De Novo Adapter Prediction Algorithm for Small
+  RNA Sequencing Data. 11(10):e0164228. http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0164228
+
 * Andrews, S. (2010). FastQC: A quality control tool for high throughput sequence data. Bioinformatics. doi:citeulike-article-id:11583827
 
 * Martin, M. (2011). Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.journal, 17(1), 10. doi:10.14806/ej.17.1.200

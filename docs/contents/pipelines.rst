@@ -370,20 +370,26 @@ quality controls, adapter trimming, miRNA/isomiR quantification and other small 
 detection.
 
 - Adapter trimming:
+
   - `cutadapt`_
+  - `dnapi <https://github.com/jnktsj/DNApi>`_ for adapter de-novo detection
 
 - Sequence alignment:
+
   - `STAR`_ for genome annotation
   - bowtie, `bowtie2` and  `hisat2`_ for genome annotation as an option
 
 - Known small RNAs quantification:
+
   - `seqbuster <https://github.com/lpantano/seqbuster>`_ for miRNA annotation
   - `tdrmapper`_ for tRNA fragments annotation
 
 - Quality control:
+
   - `FastQC`_
 
 - Other small RNAs quantification:
+
   - `seqcluster <https://github.com/lpantano/seqcluster>`_
   - `mirDeep2`_ for miRNA prediction
 

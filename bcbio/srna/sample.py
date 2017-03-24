@@ -9,9 +9,14 @@ from collections import Counter
 from contextlib import closing
 from distutils.version import LooseVersion
 
+from seqcluster.libs.fastq import collapse, write_output
 try:
-    from seqcluster.libs.fastq import collapse, write_output
+    from dnapilib.apred import iterative_adapter_prediction
+    error_dnapi = None
 except ImportError:
+    error_dnapi = ("No dnapi installed. Need to give adapter sequence."
+                   "Please, install with bcbio_conda install dnapi -c bioconda"
+                   " or add adapters: ['ADAPTER_SEQ'] to config file.")
     pass
 
 from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
@@ -38,8 +43,11 @@ def trim_srna_sample(data):
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
     adapter = dd.get_adapters(data)
-    if trim_reads and adapter:
-        adapter = adapter[0]
+    if trim_reads and not adapter and error_dnapi:
+        raise ValueError(error_dnapi)
+    adapters = adapter if adapter else _dnapi_prediction(in_file)
+    if trim_reads and adapters:
+        adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         log_out = os.path.join(out_dir, "%s.log" % names)
@@ -58,7 +66,11 @@ def trim_srna_sample(data):
                     cmd = "{cutadapt} {options} {in_file} -o {tx_out_file} -m 17"
                     do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
     else:
-        logger.debug("Skip trimming for: %s" % names)
+        if not trim_reads:
+            logger.debug("Skip trimming for: %s" % names)
+        elif not adapters:
+            logger.info("No adapter founds in %s, this is an issue related"
+                        " to no small RNA enrichment in your sample." % names)
         symlink_plus(in_file, out_file)
     data["clean_fastq"] = out_file
     data["collapse"] = _collapse(data["clean_fastq"])
@@ -92,11 +104,15 @@ def sample_annotation(data):
     data = spikein.counts_spikein(data)
     return [[data]]
 
+def _dnapi_prediction(fn):
+    iterative_result = iterative_adapter_prediction(fn, [1.2, 1.3, 1.4], [9, 11], 50000)
+    return [a[0] for a in iterative_result]
+
 def _cmd_cutadapt():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{cutadapt} --adapter={adapter} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{cutadapt} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
