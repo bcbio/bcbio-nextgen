@@ -3,7 +3,9 @@
 Enables command line access and alternative interfaces to run specific
 functionality within bcbio-nextgen.
 """
+import csv
 import json
+import operator
 import os
 import pprint
 
@@ -57,6 +59,55 @@ def process(args):
         except:
             logger.exception()
             raise
+        if argfile.endswith(".json"):
+            _write_wdl_outputs(argfile, out_keys)
+
+def _write_wdl_outputs(argfile, out_keys):
+    """Write variables as WDL compatible output files.
+
+    Writes individual files prefixed with 'wdl.output' that can be read
+    by WDL standard library functions:
+
+    https://github.com/broadinstitute/wdl/blob/develop/SPEC.md#outputs
+    """
+    out_basename = "wdl.output.%s.txt"
+    with open(argfile) as in_handle:
+        outputs = json.load(in_handle)
+    if _is_record_output(out_keys):
+        recs = outputs[out_keys[0]]
+        if not isinstance(recs, (list, tuple)):
+            recs = [recs]
+        with open(out_basename % out_keys[0], "w") as out_handle:
+            writer = csv.writer(out_handle)
+            keys = sorted(list(set(reduce(operator.add, [r.keys() for r in recs]))))
+            writer.writerow(keys)
+            for rec in recs:
+                writer.writerow([_cwlvar_to_wdl(rec.get(k)) for k in keys])
+    else:
+        for key in out_keys:
+            with open(out_basename % key, "w") as out_handle:
+                vals = _cwlvar_to_wdl(outputs.get(key))
+                if not isinstance(vals, (list, tuple)):
+                    vals = [vals]
+                for val in vals:
+                    if isinstance(val, (list, tuple)):
+                        val = "\t".join([str(x) for x in val])
+                    out_handle.write(str(val) + "\n")
+
+def _cwlvar_to_wdl(var):
+    """Convert a CWL output object into a WDL output.
+
+    This flattens files and other special CWL outputs that are
+    plain strings in WDL.
+    """
+    if isinstance(var, (list, tuple)):
+        return [_cwlvar_to_wdl(x) for x in var]
+    elif isinstance(var, dict):
+        assert var.get("class") == "File", var
+        # XXX handle secondary files
+        return var["path"]
+    else:
+        return var
 
 def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
     """Write output argfile, preparing a CWL ready JSON or YAML representation of the world.
