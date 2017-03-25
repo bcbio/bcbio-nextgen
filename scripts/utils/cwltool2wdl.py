@@ -30,35 +30,44 @@ import cwltool.load_tool
 import cwltool.workflow
 
 def main(wf_file, json_file):
+    wf_file = os.path.abspath(wf_file)
+    out_dir = os.path.dirname(wf_file).replace("-workflow", "-wdl")
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
     main_wf = cwltool.load_tool.load_tool(wf_file, cwltool.workflow.defaultMakeTool)
-    main_wf_dict = cwl2wdl_classes.Workflow(_wf_to_dict(main_wf))
-    wdl_doc = generators.WdlWorkflowGenerator(main_wf_dict).generate_wdl()
-    wdl_file = "%s.wdl" % os.path.splitext(wf_file)[0]
-    with open(wdl_file, "w") as out_handle:
-        out_handle.write(wdl_doc)
+    main_wf_class = cwl2wdl_classes.Workflow(_wf_to_dict(main_wf))
+    for wf_class in [x.task_definition for x in main_wf_class.subworkflows] + [main_wf_class]:
+        wdl_file = os.path.join(out_dir, "%s.wdl" % wf_class.name)
+        wdl_doc = generators.WdlWorkflowGenerator(wf_class).generate_wdl()
+        with open(wdl_file, "w") as out_handle:
+            out_handle.write(wdl_doc)
     _validate(wdl_file)
 
 def _validate(wdl_file):
     """Run validation on the generated WDL output using wdltool.
     """
+    start_dir = os.getcwd()
+    os.chdir(os.path.dirname(wdl_file))
     subprocess.call(["wdltool", "validate", wdl_file])
+    os.chdir(start_dir)
 
 def _wf_to_dict(wf):
-    """Parse a workflow into cwl2wdl style dictionary.
+    """Parse a workflow into cwl2wdl style dictionaries for base and sub-workflows.
     """
     inputs, outputs = _get_wf_inout(wf)
-    out = {"name": _id_to_name(wf.tool["id"]).replace("-", "_"), "inputs": inputs,
+    out = {"name": _id_to_name(wf.tool["id"]).replace("wf-", "").replace("-", "_"), "inputs": inputs,
            "outputs": outputs, "steps": [], "subworkflows": [],
            "requirements": []}
     for step in wf.steps:
-        inputs, outputs = _get_step_inout(step)
-        inputs, scatter = _organize_step_scatter(step, inputs)
-        if isinstance(step.embedded_tool, cwltool.workflow.Workflow):
+        is_subworkflow = isinstance(step.embedded_tool, cwltool.workflow.Workflow)
+        inputs, outputs, remapped = _get_step_inout(step)
+        inputs, scatter = _organize_step_scatter(step, inputs, remapped)
+        if is_subworkflow:
             wf_def = _wf_to_dict(step.embedded_tool)
-            out["subworkflows"].append({"id": wf_def["name"], "definition": wf_def,
+            out["subworkflows"].append({"id": "%s.%s" % (wf_def["name"], wf_def["name"]), "definition": wf_def,
                                         "inputs": inputs, "outputs": outputs, "scatter": scatter})
         else:
-            task_def = _tool_to_dict(step.embedded_tool)
+            task_def = _tool_to_dict(step.embedded_tool, remapped)
             out["steps"].append({"task_id": task_def["name"], "task_definition": task_def,
                                  "inputs": inputs, "outputs": outputs, "scatter": scatter})
     return out
@@ -68,6 +77,12 @@ def _get_step_inout(step):
     """
     inputs = []
     outputs = []
+    remapped = {}
+    assert step.outputs_record_schema["type"] == "record"
+    output_names = set([])
+    for outp in step.outputs_record_schema["fields"]:
+        outputs.append({"id": outp["name"]})
+        output_names.add(outp["name"])
     assert step.inputs_record_schema["type"] == "record"
     for inp in step.inputs_record_schema["fields"]:
         source = inp["source"].split("#")[-1].replace("/", ".")
@@ -76,13 +91,15 @@ def _get_step_inout(step):
             attr_access = "['%s']" % inp["name"]
             if inp["valueFrom"].find(attr_access) > 0:
                 source += ".%s" % inp["name"]
+        # Avoid clashing input and output names, WDL requires unique
+        if inp["name"] in output_names:
+            new_name = inp["name"] + "_input"
+            remapped[inp["name"]] = new_name
+            inp["name"] = new_name
         inputs.append({"id": inp["name"], "value": source})
-    assert step.outputs_record_schema["type"] == "record"
-    for outp in step.outputs_record_schema["fields"]:
-        outputs.append({"id": outp["name"]})
-    return inputs, outputs
+    return inputs, outputs, remapped
 
-def _organize_step_scatter(step, inputs):
+def _organize_step_scatter(step, inputs, remapped):
     """Add scattering information from inputs, remapping input variables.
     """
     def extract_scatter_id(inp):
@@ -97,6 +114,7 @@ def _organize_step_scatter(step, inputs):
         for x in inputs:
             inp_val[x["id"]] = x["value"]
         for scatter_key in [extract_scatter_id(x) for x in step.tool["scatter"]]:
+            scatter_key = remapped.get(scatter_key) or scatter_key
             val = inp_val[scatter_key]
             if len(val.split(".")) in [1, 2]:
                 base_key = val
@@ -153,9 +171,10 @@ def _variable_type_to_read_fn(vartype):
     vartype = vartype.replace("Array[Float]", "Array[String]")
     return fn_map[vartype]
 
-def _input_to_dict(i):
+def _input_to_dict(i, remapped=None):
     """Convert CWL input into dictionary required for a cwl2wdl Input object.
     """
+    if not remapped: remapped = {}
     var_type = _to_variable_type(i["type"])
     if var_type.startswith("Array") and "inputBinding" in i.get("type", {}):
         ib = i["type"]["inputBinding"]
@@ -163,7 +182,8 @@ def _input_to_dict(i):
         ib = i["inputBinding"]
     else:
         ib = {"prefix": None, "itemSeparator": None, "position": None}
-    return {"name": _id_to_localname(i["id"]) if "id" in i else i["name"],
+    name = _id_to_localname(i["id"]) if "id" in i else i["name"]
+    return {"name": remapped.get(name) or name,
             "variable_type": var_type,
             "prefix": ib["prefix"], "separator": ib["itemSeparator"],
             "position": ib["position"], "is_required": True,
@@ -188,13 +208,13 @@ def _id_to_localname(input_id):
 def _id_to_name(input_id):
     return os.path.splitext(os.path.basename(input_id))[0]
 
-def _tool_to_dict(tool):
+def _tool_to_dict(tool, remapped):
     """Parse a tool definition into a cwl2wdl style dictionary.
     """
     out = {"name": _id_to_name(tool.tool["id"]),
            "baseCommand": " ".join(tool.tool["baseCommand"]),
            "arguments": [],
-           "inputs": [_input_to_dict(i) for i in tool.tool["inputs"]],
+           "inputs": [_input_to_dict(i, remapped) for i in tool.tool["inputs"]],
            "outputs": [_output_to_dict(o) for o in tool.tool["outputs"]],
            "requirements": _requirements_to_dict(tool.requirements + tool.hints),
            "stdin": None, "stdout": None}
