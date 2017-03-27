@@ -52,7 +52,7 @@ def create(parallel, dirs, config):
             cores = parallel["num_jobs"] * parallel["cores_per_job"]
         else:
             cores = adj_cores
-            cores = per_machine_target_cores(cores, parallel["num_jobs"] // cores)
+            cores = per_machine_target_cores(cores, parallel["num_jobs"])
         parallel["resources"].append("mincores=%s" % cores)
     return ipython_cluster.cluster_view(parallel["scheduler"].lower(), parallel["queue"],
                                         parallel["num_jobs"], parallel["cores_per_job"],
@@ -71,9 +71,9 @@ def per_machine_target_cores(cores, num_jobs):
     number of machines. This gives up some cores to enable sharing cores with the controller
     and batch script on larger machines.
     """
-    if cores >= 32 and num_jobs <= 1:
+    if cores >= 32 and num_jobs == 1:
         cores = cores - 2
-    elif cores >= 16 and num_jobs <= 2:
+    elif cores >= 16 and num_jobs in [1, 2]:
         cores = cores - 1
     return cores
 
