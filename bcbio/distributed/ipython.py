@@ -71,9 +71,9 @@ def per_machine_target_cores(cores, num_jobs):
     number of machines. This gives up some cores to enable sharing cores with the controller
     and batch script on larger machines.
     """
-    if cores > 30:
+    if cores >= 32 and num_jobs <= 1:
         cores = cores - 2
-    elif cores > 15 and num_jobs < 10:
+    elif cores >= 16 and num_jobs <= 2:
         cores = cores - 1
     return cores
 
