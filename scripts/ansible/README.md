@@ -237,7 +237,7 @@ This in progress documentation describes running bcbio generated CWL using
 - Launch the cluster
 
         export TOIL_AWS_ZONE=us-east-1d
-        export TOIL_APPLIANCE_SELF='quay.io/ucsc_cgl/toil:3.7.0a1.dev346-6a452b988d092f55f6da966de8248dd9c1a53a85'
+        export TOIL_APPLIANCE_SELF='quay.io/ucsc_cgl/toil:3.7.0a1.dev375-587871c5f4f219877af7d8e4f0a1c9544c510e65'
         toil launch-cluster -p aws bcbio --nodeType=t2.small --keyPairName=bcbio \
           --vpcSubnet subnet-3628576d
 
@@ -258,19 +258,10 @@ This in progress documentation describes running bcbio generated CWL using
         <edit run_toil_aws.sh to change LEADER_PRIVATE_IP, from above) and JOB_STORE s3 bucket>
         bash run_toil_aws.sh
 
-- Current status, can spin up and start cluster with spot instance worker nodes.
-  The current CWL workflow is not staging files into S3 so can't find files on remote
-  runner machines. Get tracebacks like: https://gist.github.com/chapmanb/b84a3cfe64bb37aa05a83111cbcc5a9a
-
 TODO:
   - cgcloud versioning, need development version of Toil: https://github.com/BD2KGenomics/toil/issues/1458
+  - Consider how to deal with input files already present in external S3 buckets
   - Get screen inside appliance working: Must be connected to a terminal.
-  - Excessive logs
-```
-ip-10-0-0-66.ec2.internal 2017-02-14 17:55:35,221 preemptable-scaler INFO toil.provisioners.clusterScaler: Limiting the estimated number of necessary preemptable nodes (3) to the configured maximum (2).
-ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,504 scaler INFO toil.provisioners.clusterScaler: Adding 0 preemptable nodes to compensate for a deficit of 0 non-preemptable ones.
-ip-10-0-0-66.ec2.internal 2017-02-14 17:55:37,505 scaler INFO toil.provisioners.clusterScaler: Estimating that cluster needs 0 non-preemptable nodes of shape _Shape(wallTime=3600, memory=8589934592, cores=2, disk=0), from current size of 0, given a queue size of 0, the number of jobs per node estimated to be 1.0, an alpha parameter of 0.8 and a run-time length correction of 1.0.
-```
   - Swap to using Ubuntu instead of relying on manual CoreOS Amazon approvals.
 
 ## Debugging tips
