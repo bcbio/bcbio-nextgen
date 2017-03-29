@@ -80,8 +80,10 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
         raise ValueError("samtools calling not supported with pre-1.0 samtools")
     bcftools_opts = "call -v -m"
     compress_cmd = "| bgzip -c" if tx_out_file.endswith(".gz") else ""
+    fix_ambig = vcfutils.fix_ambiguous_cl()
     cmd = ("{mpileup} "
            "| {bcftools} {bcftools_opts} - "
+           "| {fix_ambig} "
            "| vt normalize -n -q -r {ref_file} - "
            "| sed 's/VCFv4.2/VCFv4.1/' "
            "| sed 's/,Version=3>/>/' "
