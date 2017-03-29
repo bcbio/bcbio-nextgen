@@ -111,7 +111,7 @@ def fix_ambiguous_cl(column=4):
     Some callers include these if present in the reference genome but GATK does
     not like them.
     """
-    return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDX]/, "N", $%s) } {print}'""" % column
+    return r"""awk -F$'\t' -v OFS='\t' '{if ($0 !~ /^#/) gsub(/[KMRYSWBVHDXkmryswbvhdx]/, "N", $%s) } {print}'""" % column
 
 def remove_dup_cl():
     """awk command line to remove duplicate alleles where the ref and alt are the same.
