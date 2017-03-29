@@ -284,6 +284,9 @@ def get_db(data):
     if snpeff_db:
         snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db, "base"))
         if not snpeff_base_dir:
+            # We need to mask '.' characters for CWL/WDL processing, check for them here
+            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace("_", "."), "base"))
+        if not snpeff_base_dir:
             ref_file = utils.get_in(data, ("reference", "fasta", "base"))
             snpeff_base_dir = utils.safe_makedir(os.path.normpath(os.path.join(
                 os.path.dirname(os.path.dirname(ref_file)), "snpeff")))
@@ -298,8 +301,10 @@ def get_snpeff_files(data):
     except ValueError:
         snpeff_db = None
     if snpeff_db:
-        return {snpeff_db: {"base": datadir,
-                            "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
+        # Clean problem characters for CWL/WDL representation
+        clean_snpeff_db = snpeff_db.replace(".", "_")
+        return {clean_snpeff_db: {"base": datadir,
+                                  "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
     else:
         return {}
 

@@ -48,35 +48,44 @@ def _validate(wdl_file):
     """
     start_dir = os.getcwd()
     os.chdir(os.path.dirname(wdl_file))
-    subprocess.call(["wdltool", "validate", wdl_file])
+    print("Validating", wdl_file)
+    subprocess.check_call(["wdltool", "validate", wdl_file])
     os.chdir(start_dir)
 
 def _wf_to_dict(wf):
     """Parse a workflow into cwl2wdl style dictionaries for base and sub-workflows.
     """
     inputs, outputs = _get_wf_inout(wf)
-    out = {"name": _id_to_name(wf.tool["id"]).replace("wf-", "").replace("-", "_"), "inputs": inputs,
+    out = {"name": _id_to_name(_clean_id(wf.tool["id"])), "inputs": inputs,
            "outputs": outputs, "steps": [], "subworkflows": [],
            "requirements": []}
     for step in wf.steps:
         is_subworkflow = isinstance(step.embedded_tool, cwltool.workflow.Workflow)
-        inputs, outputs, remapped = _get_step_inout(step)
+        inputs, outputs, remapped, prescatter = _get_step_inout(step)
         inputs, scatter = _organize_step_scatter(step, inputs, remapped)
         if is_subworkflow:
             wf_def = _wf_to_dict(step.embedded_tool)
             out["subworkflows"].append({"id": "%s.%s" % (wf_def["name"], wf_def["name"]), "definition": wf_def,
-                                        "inputs": inputs, "outputs": outputs, "scatter": scatter})
+                                        "inputs": inputs, "outputs": outputs, "scatter": scatter,
+                                        "prescatter": prescatter})
         else:
             task_def = _tool_to_dict(step.embedded_tool, remapped)
             out["steps"].append({"task_id": task_def["name"], "task_definition": task_def,
-                                 "inputs": inputs, "outputs": outputs, "scatter": scatter})
+                                 "inputs": inputs, "outputs": outputs, "scatter": scatter,
+                                 "prescatter": prescatter})
     return out
+
+def _clean_id(x):
+    """Replace non-allowed characters in WDL input
+    """
+    return x.replace("wf-", "").replace("-", "_")
 
 def _get_step_inout(step):
     """Retrieve set of inputs and outputs connecting steps.
     """
     inputs = []
     outputs = []
+    prescatter = collections.defaultdict(list)
     remapped = {}
     assert step.outputs_record_schema["type"] == "record"
     output_names = set([])
@@ -91,13 +100,27 @@ def _get_step_inout(step):
             attr_access = "['%s']" % inp["name"]
             if inp["valueFrom"].find(attr_access) > 0:
                 source += ".%s" % inp["name"]
+                if isinstance(inp["type"], dict) and isinstance(inp["type"].get("items"), dict):
+                    if inp["type"]["items"].get("type") == "array" and "inputBinding" in inp["type"]:
+                        source, prescatter = _unpack_object_array(inp, source, prescatter)
         # Avoid clashing input and output names, WDL requires unique
         if inp["name"] in output_names:
             new_name = inp["name"] + "_input"
             remapped[inp["name"]] = new_name
             inp["name"] = new_name
         inputs.append({"id": inp["name"], "value": source})
-    return inputs, outputs, remapped
+    return inputs, outputs, remapped, dict(prescatter)
+
+def _unpack_object_array(inp, source, prescatter):
+    """Unpack Array[Object] with a scatter for referencing in input calls.
+
+    There is no shorthand syntax for referencing all items in an array, so
+    we explicitly unpack them with a scatter.
+    """
+    base_rec, attr = source.rsplit(".", 1)
+    new_name = "%s_%s_unpack" % (inp["name"], base_rec.replace(".", "_"))
+    prescatter[base_rec].append((new_name, attr, _to_variable_type(inp["type"]["items"])))
+    return new_name, prescatter
 
 def _organize_step_scatter(step, inputs, remapped):
     """Add scattering information from inputs, remapping input variables.
@@ -143,7 +166,7 @@ def _to_variable_type(x):
     """Convert CWL variables to WDL variables, handling nested arrays.
     """
     var_mapping = {"string": "String", "File": "File", "null": "String",
-                   "long": "Float", "int": "Int"}
+                   "long": "Float", "double": "Float", "int": "Int"}
     if isinstance(x, dict):
         if x["type"] == "record":
             return "Object"
