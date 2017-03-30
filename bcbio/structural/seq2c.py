@@ -21,7 +21,7 @@ from bcbio.provenance import do
 from bcbio.structural import annotate, regions
 from bcbio.log import logger
 from bcbio.variation.coverage import regions_coverage
-from bcbio.variation import bedutils
+from bcbio.variation import bedutils, population
 
 
 def precall(items):
@@ -65,7 +65,7 @@ def run(items):
     coverage_file = _combine_coverages(items, work_dir)
     read_mapping_file = _calculate_mapping_reads(items, work_dir)
 
-    normal_names = [dd.get_sample_name(x) for x in items if get_paired_phenotype(x) == "normal"]
+    normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
     _split_cnv(items, seq2c_calls_file)
 

@@ -130,7 +130,9 @@ def get_affected_status(data):
     affected = set(["tumor", "affected", "2"])
     unaffected = set(["normal", "unaffected", "1"])
     phenotype = str(tz.get_in(["metadata", "phenotype"], data, "")).lower()
-    if phenotype in affected:
+    if dd.get_svclass(data) == "control":
+        return 1
+    elif phenotype in affected:
         return 2
     elif phenotype in unaffected:
         return 1

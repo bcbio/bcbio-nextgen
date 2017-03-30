@@ -253,6 +253,10 @@ The sample configuration file defines ``details`` of each sample to process::
       specifications (1=unaffected, 2=affected). CNVkit uses case/control
       status to determine how to set background samples for CNV calling.
 
+   - ``svclass`` defines a classification for a sample for use in SV
+     case/control setups. When set as ``control`` will put samples into the
+     background samples used for normalization.
+
    - ``ped`` provides a `PED phenotype file
      <http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#ped>`_
      containing sample phenotype and family information. Template creation uses
