@@ -119,6 +119,10 @@ Tune the upgrade with these options:
 - Leave out the ``--data`` option if you don't want to get any upgrades
   of associated genome data.
 
+- Some aligners such as STAR don't have pre-built indices due to the large file
+  sizes of these. You set the number of cores to use for indexing with
+  ``--cores 8``.
+
 .. _datatarget-install:
 
 Customizing data installation

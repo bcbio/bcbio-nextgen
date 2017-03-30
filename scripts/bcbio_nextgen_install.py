@@ -214,6 +214,8 @@ if __name__ == "__main__":
         description="Automatic installation for bcbio-nextgen pipelines")
     parser.add_argument("datadir", help="Directory to install genome data",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
+    parser.add_argument("--cores", default=1,
+                        help="Number of cores to use if local indexing is necessary.")
     parser.add_argument("--tooldir",
                         help="Directory to install 3rd party software tools. Leave unspecified for no tools",
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))), default=None)
