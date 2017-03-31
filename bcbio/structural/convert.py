@@ -45,14 +45,23 @@ def _cnvbed_to_bed(in_file, caller, out_file):
                                         "cnv%s_%s" % (feat.score, caller)])
                              + "\n")
 
+def _bed_to_bed(in_file, caller, out_file):
+    with open(out_file, "w") as out_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
+            for chrom, start, end, gene, svtype in (l.rstrip().split("\t") for l in in_handle):
+                out_handle.write("\t".join([chrom, start, end, "%s_%s" % (svtype, caller)]) + "\n")
+    return out_file
+
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "manta": _vcf_to_bed,
                  "metasv": _vcf_to_bed,
                  "cnvkit": _vcf_to_bed,
+                 "gridss": _vcf_to_bed,
+                 "seq2c": _bed_to_bed,
                  "cn_mops": _cnvbed_to_bed,
                  "wham": _vcf_to_bed}
-SUBSET_BY_SUPPORT = {"cnvkit": ["metasv", "lumpy", "manta"]}
+SUBSET_BY_SUPPORT = {}
 
 def to_bed(call, sample, work_dir, calls, data):
     """Create a simplified BED file from caller specific input.

@@ -12,6 +12,7 @@
 - Update validation plots to support matplotlib 2.0.
 - Enable mixed list/string inputs to germline calling. Thanks to Luca Beltrame.
 - Fix qsignature outfile parsing. Thanks to Oliver Hofmann.
+- Provide seq2c BED output and enable validation of calls.
 - Allow specification of seq2c options through resources. Thanks to Sally Luke
   and Marisa Cunha.
 - Provide absolute paths for relative paths to files in algorithm list inputs.

@@ -31,7 +31,7 @@ def precall(items):
     """
     items = [utils.to_single_data(x) for x in items]
     assert len(items) == 1, "Expect one item to Seq2C coverage calculation"
-    data = utils.to_single_data(items)
+    data = items[0]
     # sv_bed could specify a smaller region than variant coverage, so avoid
     # this sanity check
     # assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
@@ -67,8 +67,7 @@ def run(items):
 
     normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
-    _split_cnv(items, seq2c_calls_file)
-
+    items = _split_cnv(items, seq2c_calls_file)
     return items
 
 def prep_seq2c_bed(data):
@@ -142,6 +141,7 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
     return output_fpath
 
 def _split_cnv(items, calls_fpath):
+    out = []
     for item in items:
         if get_paired_phenotype(item) == "normal":
             continue
@@ -157,6 +157,25 @@ def _split_cnv(items, calls_fpath):
                         if l.split("\t")[0] == sample_name:
                             out.write(l)
         item["sv"][0]["calls"] = out_fname
+        item["sv"][0]["vrn_file"] = to_bed(out_fname, item)
+        out.append(item)
+    return out
+
+def to_bed(in_tsv, data):
+    """Convert seq2c output file into BED output.
+    """
+    call_convert = {"Amp": "DUP", "Del": "DEL"}
+    out_file = "%s.bed" % utils.splitext_plus(in_tsv)[0]
+    if not utils.file_uptodate(out_file, in_tsv):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(in_tsv) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    header = in_handle.readline().split("\t")
+                    for cur in (dict(zip(header, l.split("\t"))) for l in in_handle):
+                        if cur["Amp_Del"] in call_convert:
+                            out_handle.write("\t".join([cur["Chr"], cur["Start"], cur["End"], cur["Gene"],
+                                                        call_convert[cur["Amp_Del"]]]) + "\n")
+    return out_file
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
     sambamba_depth_file = regions_coverage(data, bed_file, bam_file, "sv_regions")

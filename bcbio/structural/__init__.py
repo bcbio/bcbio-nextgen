@@ -63,6 +63,12 @@ def _handle_multiple_svcallers(data, stage):
     for svcaller in svs:
         if svcaller in _get_callers([data], stage):
             base = copy.deepcopy(data)
+            # clean SV callers present in multiple rounds and not this caller
+            final_svs = []
+            for sv in data.get("sv", []):
+                if sv["variantcaller"] == svcaller or sv["variantcaller"] not in svs:
+                    final_svs.append(sv)
+            base["sv"] = final_svs
             base["config"]["algorithm"]["svcaller"] = svcaller
             base["config"]["algorithm"]["svcaller_orig"] = svs
             out.append(base)
@@ -136,7 +142,7 @@ def _batch_split_by_sv(samples, stage):
                 svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
                 if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
-                    batch = "%s-%s" % (dd.get_sample_name(x), batch)
+                    batch = dd.get_sample_name(x)
                 elif svcaller in _GLOBAL_BATCHING:  # All samples batched together for analyses
                     batch = "all"
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
