@@ -483,7 +483,7 @@ def _maybe_add_trimming(algorithm, sample, out):
         out.append({"path": fn,
                     "type": "trimming_stats",
                     "ext": "ready"})
-        return out
+    return out
 
 def _maybe_add_seqbuster(algorithm, sample, out):
     if "seqbuster" not in sample:
