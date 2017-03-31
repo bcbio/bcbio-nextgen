@@ -74,10 +74,10 @@ def extract(data, items):
         vcf_samples = vcfutils.get_samples(data["vrn_file"])
         if (sample_name.endswith("-germline") and len(vcf_samples) == 1
               and sample_name.replace("-germline", "") == vcf_samples[0]):
-            data["vrn_file"] = _fix_germline_samplename(data["vrn_file"], sample_name, data)
+            data["vrn_file"] = fix_germline_samplename(data["vrn_file"], sample_name, data)
     return data
 
-def _fix_germline_samplename(in_file, sample_name, data):
+def fix_germline_samplename(in_file, sample_name, data):
     """Replace germline sample names, originally from normal BAM file.
     """
     out_file = "%s-fixnames%s" % utils.splitext_plus(in_file)
