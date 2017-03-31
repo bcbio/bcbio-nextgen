@@ -141,7 +141,7 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
     return output_fpath
 
 def _split_cnv(items, calls_fpath):
-    out = []
+    out_items = []
     for item in items:
         if get_paired_phenotype(item) == "normal":
             continue
@@ -158,8 +158,8 @@ def _split_cnv(items, calls_fpath):
                             out.write(l)
         item["sv"][0]["calls"] = out_fname
         item["sv"][0]["vrn_file"] = to_bed(out_fname, item)
-        out.append(item)
-    return out
+        out_items.append(item)
+    return out_items
 
 def to_bed(in_tsv, data):
     """Convert seq2c output file into BED output.
