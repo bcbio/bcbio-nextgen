@@ -89,6 +89,7 @@ def sample_annotation(data):
     out_file = op.join(out_dir, names)
     if dd.get_mirbase_hairpin(data):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
+        data['transcriptome_bam'] = _align(data["collapse"], dd.get_mirbase_hairpin(data), out_file, data)
         data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
     else:
         logger.debug("No annotation file from miRBase.")
@@ -146,6 +147,17 @@ def _summary(in_file):
         with open(tx_out_file, 'w') as out_handle:
             for l, c in data.items():
                 out_handle.write("%s %s\n" % (l, c))
+    return out_file
+
+def _align(infile, ref, out_file, data):
+    out_file = "%s.bam" % out_file
+    razers3 = config_utils.get_program("razers3", data["config"])
+    cmd = "{razers3} -dr 0 -i 80 -rr 90 -f -o {tx_out} {ref} {infile}"
+    if not razers3:
+        logger.info("razers3 is not installed, skipping BAM file creation")
+        return None
+    with file_transaction(data, out_file) as tx_out:
+        do.run(cmd.format(**locals()), "Running razers3 against hairpins with %s" % infile)
     return out_file
 
 def _miraligner(fastq_file, out_file, species, db_folder, config):

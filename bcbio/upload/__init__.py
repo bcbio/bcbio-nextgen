@@ -93,6 +93,7 @@ def _get_files_srnaseq(sample):
     out = _maybe_add_trimming(algorithm, sample, out)
     out = _maybe_add_seqbuster(algorithm, sample, out)
     out = _maybe_add_trna(algorithm, sample, out)
+    out = _maybe_add_transcriptome_alignment(sample, out)
     return _add_meta(out, sample)
 
 def _get_files_scrnaseq(sample):
