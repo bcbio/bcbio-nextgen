@@ -157,24 +157,42 @@ def _split_cnv(items, calls_fpath):
                         if l.split("\t")[0] == sample_name:
                             out.write(l)
         item["sv"][0]["calls"] = out_fname
-        item["sv"][0]["vrn_file"] = to_bed(out_fname, item)
+        item["sv"][0]["vrn_file"] = to_vcf(out_fname, item)
         out_items.append(item)
     return out_items
 
-def to_bed(in_tsv, data):
+VCF_HEADER = """##fileformat=VCFv4.1
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=FOLD_CHANGE_LOG,Number=1,Type=Float,Description="Log fold change">
+##INFO=<ID=PROBES,Number=1,Type=Integer,Description="Number of exons in change">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene identified">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+"""
+
+def to_vcf(in_tsv, data):
     """Convert seq2c output file into BED output.
     """
     call_convert = {"Amp": "DUP", "Del": "DEL"}
-    out_file = "%s.bed" % utils.splitext_plus(in_tsv)[0]
+    out_file = "%s.vcf" % utils.splitext_plus(in_tsv)[0]
     if not utils.file_uptodate(out_file, in_tsv):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_tsv) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
+                    out_handle.write(VCF_HEADER + "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t%s\n"
+                                     % (dd.get_sample_name(data)))
                     header = in_handle.readline().split("\t")
                     for cur in (dict(zip(header, l.split("\t"))) for l in in_handle):
                         if cur["Amp_Del"] in call_convert:
-                            out_handle.write("\t".join([cur["Chr"], cur["Start"], cur["End"], cur["Gene"],
-                                                        call_convert[cur["Amp_Del"]]]) + "\n")
+                            svtype = call_convert[cur["Amp_Del"]]
+                            info = "SVTYPE=%s;END=%s;SVLEN=%s;FOLD_CHANGE_LOG=%s;PROBES=%s;GENE=%s" % (
+                                svtype, cur["End"], int(cur["End"]) - int(cur["Start"]),
+                                log, cur["Ab_Seg"], cur["Gene"])
+                            out_handle.write("\t".join([cur["Chr"], cur["Start"], ".", "<%s>" % (svtype),
+                                                        ".", ".", info, "GT", "1/1"]) + "\n")
     return out_file
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
@@ -315,3 +333,25 @@ def _calculate_mapping_reads(items, work_dir):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(data["dirs"]["work"], "structural",
                                            dd.get_sample_name(data), "seq2c"))
+
+"""
+Seq2c columns
+
+Sample
+Gene
+Chromosome
+Start
+End
+Length
+Log2ratio Gene level log2 ratio (median)
+Sig Significance (p-value if >= 3 exons, MAD value if < 3 exons)
+BP_Whole BP or Whole: Value "Whole" means the gene is Del/Amp in whole, Value "BP" means with breakpoint. Empty means no copy number aberration
+Amp_Del Amp or Del: Possible values are: "Amp", "Del", "NA", or empty
+Ab_Seg: No. of segments/exons show aberration.
+Total_Seg: Total segments/exons for the gene
+Ab_log2ratio: The mean log2 ratio for exons with aberration.
+Log2r_Diff Log2ratio Diff: The absolute log2 ratio difference between exons with aberration and other exons
+Ab_Seg_Loc Exons and their location with aberration
+Ab_Samples: No. of samples with the same exon(s) aberration (to catch false positives for exon with high variances)
+Ab_Samples_Pcnt: Percentage of samples with the same exon(s) aberration
+"""
