@@ -21,7 +21,7 @@ from bcbio.provenance import do
 from bcbio.structural import annotate, regions
 from bcbio.log import logger
 from bcbio.variation.coverage import regions_coverage
-from bcbio.variation import bedutils, population
+from bcbio.variation import bedutils, population, vcfutils
 
 
 def precall(items):
@@ -190,10 +190,10 @@ def to_vcf(in_tsv, data):
                             svtype = call_convert[cur["Amp_Del"]]
                             info = "SVTYPE=%s;END=%s;SVLEN=%s;FOLD_CHANGE_LOG=%s;PROBES=%s;GENE=%s" % (
                                 svtype, cur["End"], int(cur["End"]) - int(cur["Start"]),
-                                log, cur["Ab_Seg"], cur["Gene"])
-                            out_handle.write("\t".join([cur["Chr"], cur["Start"], ".", "<%s>" % (svtype),
+                                cur["Log2ratio"], cur["Ab_Seg"], cur["Gene"])
+                            out_handle.write("\t".join([cur["Chr"], cur["Start"], ".", "N", "<%s>" % (svtype),
                                                         ".", ".", info, "GT", "1/1"]) + "\n")
-    return out_file
+    return vcfutils.sort_by_ref(out_file, data)
 
 def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
     sambamba_depth_file = regions_coverage(data, bed_file, bam_file, "sv_regions")
