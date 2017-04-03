@@ -6,6 +6,7 @@ differences.
 import collections
 import os
 
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
@@ -63,6 +64,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
     metric_labels = {"fdr": "False discovery rate",
                      "fnr": "False negative rate"}
     metrics = [("fnr", "tpr"), ("fdr", "spc")]
+    is_mpl2 = LooseVersion(mpl.__version__) >= LooseVersion('2.0')
     colors = ["light grey", "greyish"]
     data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
     plt.ioff()
@@ -100,13 +102,17 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
                 metric_max = max(all_vals)
                 cur_plot.set_xlim(0, metric_max)
                 pad = 0.1 * metric_max
+                ai_adjust = 0.0 if is_mpl2 else 0.35
                 for ai, (val, label) in enumerate(zip(vals, labels)):
-                    cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)), ai),
+                    cur_plot.annotate(label, (pad + (0 if max(vals) > metric_max / 2.0 else max(vals)),
+                                              ai + ai_adjust),
                                       va='center', size=7)
                 cur_plot.locator_params(nbins=len(cats) + (2 if len(cats) > 2 else 1), axis="y", tight=True)
                 if mi == 0:
                     cur_plot.tick_params(axis='y', which='major', labelsize=8)
-                    cur_plot.set_yticklabels([""] + cats, size=8, va="center")
+                    plot_cats = ([""] + cats) if is_mpl2 else cats
+                    plot_va = "center" if is_mpl2 else "bottom"
+                    cur_plot.set_yticklabels(plot_cats, size=8, va=plot_va)
                     cur_plot.set_title("%s: %s" % (vtype, group), fontsize=12, loc="left")
                 else:
                     cur_plot.get_yaxis().set_ticks([])
