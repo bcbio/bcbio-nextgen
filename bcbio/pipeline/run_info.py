@@ -207,8 +207,9 @@ def _fill_validation_targets(data):
     """Fill validation targets pointing to globally installed truth sets.
     """
     ref_file = dd.get_ref_file(data)
-    sv_targets = zip(itertools.repeat("svvalidate"),
-                     tz.get_in(["config", "algorithm", "svvalidate"], data, {}).keys())
+    sv_truth = tz.get_in(["config", "algorithm", "svvalidate"], data, {})
+    sv_targets = (zip(itertools.repeat("svvalidate"), sv_truth.keys()) if isinstance(sv_truth, dict)
+                  else ["svvalidate", sv_truth])
     for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + sv_targets]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val) and not objectstore.is_remote(val):

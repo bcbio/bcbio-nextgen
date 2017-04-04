@@ -28,15 +28,18 @@ sns = utils.LazyImport("seaborn")
 # -- VCF based validation
 
 def _evaluate_vcf(calls, truth_vcf, work_dir, data):
-    out_file = os.path.join("%s-summary.csv" % dd.get_sample_name(data))
-    with file_transaction(data, out_file) as tx_out_file:
-        with open(tx_out_file, "w") as out_handle:
-            writer = csv.writer(out_handle)
-            writer.writerow(["sample", "caller", "vtype", "metric", "value"])
-            for call in calls:
-                for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_callable_regions(data),
-                                                  call["variantcaller"], data):
-                    writer.writerow(stats)
+    out_file = os.path.join(work_dir, os.path.join("%s-sv-validate.csv" % dd.get_sample_name(data)))
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                writer = csv.writer(out_handle)
+                writer.writerow(["sample", "caller", "vtype", "metric", "value"])
+                for call in calls:
+                    for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_callable_regions(data),
+                                                      call["variantcaller"], data):
+
+                        writer.writerow(stats)
+    return out_file
 
 def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, data):
     """Validate a caller VCF against truth within callable regions, returning stratified stats
@@ -182,7 +185,7 @@ def slim_vcf(in_file, data):
     """
     to_remove = ["ANN", "LOF"]
     to_remove_str = tuple(["##INFO=<ID=%s" % x for x in to_remove])
-    in_file = vcfutils.bgzip_and_index(in_file, data)
+    in_file = vcfutils.bgzip_and_index(in_file, data, remove_orig=False)
     out_file = "%s-slim.vcf.gz" % utils.splitext_plus(in_file)[0]
     if not utils.file_uptodate(out_file, in_file):
         cur_remove = []
@@ -389,7 +392,7 @@ def evaluate(data):
             val_summary = _evaluate_vcf(data["sv"], truth_sets, work_dir, data)
             title = "%s structural variants" % dd.get_sample_name(data)
             summary_plots = validateplot.classifyplot_from_valfile(val_summary, outtype="png", title=title)
-            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots}
+            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots[0]}
     return data
 
 if __name__ == "__main__":
