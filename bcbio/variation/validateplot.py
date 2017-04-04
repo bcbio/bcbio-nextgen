@@ -65,7 +65,7 @@ def _do_classifyplot(df, out_file, title=None, size=None, samples=None, callers=
                      "fnr": "False negative rate"}
     metrics = [("fnr", "tpr"), ("fdr", "spc")]
     is_mpl2 = LooseVersion(mpl.__version__) >= LooseVersion('2.0')
-    colors = ["light grey", "greyish"]
+    colors = ["light grey", "greyish"] * 10
     data_dict = df.set_index(["sample", "caller", "vtype"]).T.to_dict()
     plt.ioff()
     plt.style.use('seaborn-white')

@@ -336,6 +336,7 @@ def copy_plus(orig, new):
 def symlink_plus(orig, new):
     """Create relative symlinks and handle associated biological index files.
     """
+    orig = os.path.abspath(orig)
     if not os.path.exists(orig):
         raise RuntimeError("File not found: %s" % orig)
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
