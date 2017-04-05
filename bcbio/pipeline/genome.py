@@ -61,7 +61,8 @@ def _ensure_annotations(resources, data):
 
 # ## Utilities
 
-def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_key=None):
+def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_key=None,
+                   do_download=True):
     """Normalize any file paths found in a subdirectory of configuration input.
 
     base_dir -- directory to normalize relative paths to
@@ -83,13 +84,14 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_
                 if v.lower() == "none":
                     out[k] = None
                 else:
-                    out[k] = abs_file_paths(v, base_dir, ignore_keys, fileonly_keys, k)
+                    out[k] = abs_file_paths(v, base_dir, ignore_keys, fileonly_keys, k, do_download=do_download)
             elif isinstance(v, (list, tuple)):
-                out[k] = [abs_file_paths(x, base_dir, ignore_keys, fileonly_keys, k) for x in v]
+                out[k] = [abs_file_paths(x, base_dir, ignore_keys, fileonly_keys, k, do_download=do_download)
+                          for x in v]
             else:
                 out[k] = v
     elif isinstance(xs, basestring):
-        if os.path.exists(xs) or objectstore.is_remote(xs):
+        if os.path.exists(xs) or (do_download and objectstore.is_remote(xs)):
             dl = objectstore.download(xs, input_dir)
             if dl and cur_key not in ignore_keys and not (cur_key in fileonly_keys and not os.path.isfile(dl)):
                 out = os.path.normpath(os.path.join(base_dir, dl))

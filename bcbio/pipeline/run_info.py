@@ -46,7 +46,8 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     logger.info("Using input YAML configuration: %s" % run_info_yaml)
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
-    run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names)
+    run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names,
+                                      integrations=integrations)
     remote_retriever = None
     for iname, retriever in integrations.items():
         if iname in config:
@@ -74,7 +75,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
             # otherwise we normalize later in distributed.transaction:
             if os.path.expandvars(tmp_dir) == tmp_dir:
                 tmp_dir = utils.safe_makedir(os.path.expandvars(tmp_dir))
-                tmp_dir = genome.abs_file_paths(tmp_dir)
+                tmp_dir = genome.abs_file_paths(tmp_dir, do_downloads=not integrations)
             item["config"]["resources"]["tmp"]["dir"] = tmp_dir
         out.append(item)
     out = _add_provenance(out, dirs, config, add_provenance)
@@ -709,7 +710,7 @@ def validate_yaml(yaml_in, yaml_fn):
         if problem.level == "error":
             raise ValueError(msg)
 
-def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
+def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrations=None):
     """Read run information from a passed YAML file.
     """
     validate_yaml(run_info_yaml, run_info_yaml)
@@ -766,20 +767,22 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None):
         item["algorithm"] = _replace_global_vars(item["algorithm"], global_vars)
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=ALGORITHM_NOPATH_KEYS,
-                                                  fileonly_keys=ALGORITHM_FILEONLY_KEYS)
+                                                  fileonly_keys=ALGORITHM_FILEONLY_KEYS,
+                                                  do_download=not integrations)
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         if item.get("files"):
-            item["files"] = [genome.abs_file_paths(f) for f in item["files"]]
+            item["files"] = [genome.abs_file_paths(f, do_download=not integrations) for f in item["files"]]
         elif "files" in item:
             del item["files"]
         if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
             inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
                                                          item["description"]))
-            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"]), config,
-                                                        remove_orig=False, out_dir=inputs_dir)
+            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"],
+                                                                              do_download=not integrations),
+                                                        config, remove_orig=False, out_dir=inputs_dir)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
         # Add any global resource specifications
