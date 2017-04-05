@@ -75,7 +75,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
             # otherwise we normalize later in distributed.transaction:
             if os.path.expandvars(tmp_dir) == tmp_dir:
                 tmp_dir = utils.safe_makedir(os.path.expandvars(tmp_dir))
-                tmp_dir = genome.abs_file_paths(tmp_dir, do_downloads=not integrations)
+                tmp_dir = genome.abs_file_paths(tmp_dir, do_download=not integrations)
             item["config"]["resources"]["tmp"]["dir"] = tmp_dir
         out.append(item)
     out = _add_provenance(out, dirs, config, add_provenance)
