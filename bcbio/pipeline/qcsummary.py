@@ -84,10 +84,11 @@ def get_qc_tools(data):
             for tool in ["qualimap", "qualimap_full"]]):
         to_run.append("qualimap")
     if analysis.startswith("rna-seq"):
-        if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
-            to_run.append("qualimap_rnaseq")
-        else:
-            logger.debug("GTF not compatible with Qualimap, skipping.")
+        if "qualimap" not in dd.get_tools_off(data):
+            if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
+                to_run.append("qualimap_rnaseq")
+            else:
+                logger.debug("GTF not compatible with Qualimap, skipping.")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
     if not analysis.startswith("smallrna-seq"):
