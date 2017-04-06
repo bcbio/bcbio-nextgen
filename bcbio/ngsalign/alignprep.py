@@ -30,6 +30,7 @@ def create_inputs(data):
 
     Retains back compatibility with bgzip/grabix approach.
     """
+    data = cwlutils.normalize_missing(data)
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
     # CRAM files must be converted to bgzipped fastq, unless not aligning.
     # Also need to prep and download remote files.

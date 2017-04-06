@@ -412,7 +412,10 @@ def _calc_input_estimates(keyvals, integrations=None):
 def _get_file_size(path, integrations):
     """Return file size in megabytes, including querying remote integrations
     """
-    if path.startswith("keep:") and "arvados" in integrations:
-        return integrations["arvados"].file_size(path)
+    integration_map = {"keep:": "arvados", "s3:": "s3"}
+    if path.startswith(tuple(integration_map.keys())):
+        retriever = integrations.get(integration_map[path.split(":")[0] + ":"])
+        if retriever:
+            return retriever.file_size(path)
     elif os.path.exists(path):
         return os.path.getsize(path) / (1024.0 * 1024.0)

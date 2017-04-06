@@ -168,6 +168,7 @@ def add_reference_resources(data, remote_retriever=None):
         data = remote_retriever.get_resources(data["genome_build"], ref_loc, data)
     else:
         data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
+    data["genome_resources"] = genome.add_required_resources(data["genome_resources"])
     if effects.get_type(data) == "snpeff" and "snpeff" not in data["reference"]:
         data["reference"]["snpeff"] = effects.get_snpeff_files(data)
     if "genome_context" not in data["reference"]:
@@ -830,6 +831,7 @@ def _add_algorithm_defaults(algorithm):
                 "tools_off": [],
                 "tools_on": [],
                 "qc": [],
+                "align_split_size": None,
                 "nomap_split_size": 250,
                 "nomap_split_targets": 200,
                 "mark_duplicates": True,

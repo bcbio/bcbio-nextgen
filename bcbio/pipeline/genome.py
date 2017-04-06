@@ -36,11 +36,10 @@ def get_resources(genome, ref_file, data):
         if isinstance(x, basestring) and os.path.exists(os.path.join(base_dir, x)):
             return os.path.normpath(os.path.join(base_dir, x))
         return x
-    resources = _add_required(resources)
     cleaned = utils.dictapply(resources, resource_file_path)
     return _ensure_annotations(cleaned, data)
 
-def _add_required(resources):
+def add_required_resources(resources):
     """Add empty values for required resources referenced in CWL
     """
     required = [["variation", "cosmic"], ["variation", "dbsnp"]]
