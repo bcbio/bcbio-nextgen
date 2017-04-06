@@ -3,6 +3,7 @@
 Enables command line access and alternative interfaces to run specific
 functionality within bcbio-nextgen.
 """
+import collections
 import csv
 import json
 import operator
@@ -160,6 +161,8 @@ def _world_from_cwl(fnargs, work_dir):
     out = []
     data = {}
     passed_keys = []
+    grouped_keys = collections.defaultdict(list)
+    keytype = _check_multikey_order(fnargs)
     for fnarg in fnargs:
         key, val = fnarg.split("=")
         # extra values pulling in nested indexes
@@ -174,22 +177,85 @@ def _world_from_cwl(fnargs, work_dir):
         if key == "sentinel_outputs":
             output_cwl_keys = val.split(",")
             continue
-        # starting a new record -- duplicated key
-        if key in passed_keys:
-            out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
-            data = {}
-            passed_keys = []
-        passed_keys.append(key)
-        key = key.split("__")
-        data = _update_nested(key, _convert_value(val), data)
+        if keytype == "grouped":
+            grouped_keys[key].append(val)
+        else:
+            # starting a new record -- duplicated key
+            if key in passed_keys:
+                out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
+                data = {}
+                passed_keys = []
+            passed_keys.append(key)
+            key = key.split("__")
+            data = _update_nested(key, _convert_value(val), data)
     if data:
         out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
+    if grouped_keys:
+        out = _split_groups_finalize_cwl(dict(grouped_keys), data, work_dir, passed_keys, output_cwl_keys, runtime)
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel, output_cwl_keys
+
+def _check_multikey_order(fnargs):
+    """Determine order of multiple keys for multiple records.
+
+    These can either be specified in order one record at a time, or grouped.
+    """
+    arg_positions = collections.defaultdict(list)
+    for i, fnarg in enumerate(fnargs):
+        key, val = fnarg.split("=")
+        arg_positions[key].append(i)
+    split_pos = 0
+    adjacent_pos = 0
+    for pos_group in arg_positions.values():
+        for a, b in tz.sliding_window(2, pos_group):
+            if b - a == 1:
+                adjacent_pos += 1
+            else:
+                split_pos += 1
+    if adjacent_pos >= split_pos:
+        return "grouped"
+    else:
+        return "nested"
+
+def _split_groups_finalize_cwl(grouped_keys, data, work_dir, passed_keys, output_cwl_keys, runtime):
+    """Split grouped inputs into data objects, finalizing CWL outputs
+    """
+    out = []
+    num_recs = max([len(vs) for vs in grouped_keys.values()])
+    for reci in range(num_recs):
+        data = {}
+        passed_keys = []
+        for key in sorted(grouped_keys.keys()):
+            vals = grouped_keys[key]
+            if len(vals) == num_recs:
+                val = vals[reci]
+            else:
+                val = _resolve_null_vals(key, vals, reci, num_recs)
+            passed_keys.append(key)
+            key = key.split("__")
+            data = _update_nested(key, _convert_value(val), data)
+        out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
+    return out
+
+def _resolve_null_vals(key, vals, reci, num_recs):
+    """Resolve tricky cases with multiple records and missing values.
+
+    CWL runners do not pass an argument if the value is None/null, which
+    can result in unequal values, making us unsure of how to assign
+    values to records. We try to collapse when we can here and otherwise
+    raise an error. This is bad since it doesn't guarantee correct ordering,
+    and we need to revisit approach for generating the command line to
+    avoid this.
+    """
+    unique_vals = set(vals)
+    if len(unique_vals) == 1:
+        return unique_vals.pop()
+    else:
+        raise ValueError("Unsure how to resolve uneven values for %s: %s" % (key, vals))
 
 def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     """Finalize data object with inputs from CWL.
