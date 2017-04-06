@@ -226,6 +226,7 @@ def _fill_validation_targets(data):
 def _fill_capture_regions(data):
     """Fill short-hand specification of BED capture regions.
     """
+    special_targets = {"sv_regions": ("exons", "transcripts")}
     ref_file = dd.get_ref_file(data)
     for target in ["variant_regions", "sv_regions", "coverage"]:
         val = tz.get_in(["config", "algorithm", target], data)
@@ -236,8 +237,9 @@ def _fill_capture_regions(data):
                 installed_vals += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
                                                                           "coverage", val + ext)))
             if len(installed_vals) == 0:
-                raise ValueError("Configuration problem. BED file not found for %s: %s" %
-                                 (target, val))
+                if target not in special_targets or not val.startswith(special_targets[target]):
+                    raise ValueError("Configuration problem. BED file not found for %s: %s" %
+                                    (target, val))
             else:
                 assert len(installed_vals) == 1, installed_vals
                 data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_vals[0])
