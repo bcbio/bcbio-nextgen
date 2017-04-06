@@ -612,8 +612,8 @@ Somatic variant calling
 Variant annotation
 ==================
 
-- ``effects`` Method used to calculate expected variant effects. Defaults to
-  `snpEff`_ and `Ensembl variant effect predictor (VEP)`_ is also available
+- ``effects`` Method used to calculate expected variant effects; defaults to
+  `snpEff`_. `Ensembl variant effect predictor (VEP)`_ is also available
   with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
   :ref:`datatarget-install`. [snpeff, vep, false]
 - ``effects_transcripts`` Define the transcripts to use for effect prediction
