@@ -1,6 +1,7 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
 import copy
+import functools
 import json
 import operator
 import os
@@ -181,7 +182,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
-    sample_json, variables, keyvals = _flatten_samples(samples, out_file)
+    sample_json, variables, keyvals = _flatten_samples(samples, out_file, integrations)
     file_estimates = _calc_input_estimates(keyvals, integrations)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
@@ -215,7 +216,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file, sample_json
 
-def _flatten_samples(samples, base_file):
+def _flatten_samples(samples, base_file, integrations=None):
     """Create a flattened JSON representation of data from the bcbio world map.
     """
     out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
@@ -239,9 +240,10 @@ def _flatten_samples(samples, base_file):
     if "reference__fasta__base" not in out and "reference__fasta" in out:
         out["reference__fasta__base"] = out["reference__fasta"]
         del out["reference__fasta"]
+    out_clean = _clean_final_outputs(copy.deepcopy(out), integrations)
     with open(out_file, "w") as out_handle:
-        json.dump(out, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
-        return out_file, _samplejson_to_inputs(out), out
+        json.dump(out_clean, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
+    return out_file, _samplejson_to_inputs(out), out
 
 def _indexes_to_secondary_files(gresources, genome_build):
     """Convert a list of genome indexes into a single file plus secondary files.
@@ -392,6 +394,36 @@ def _item_to_cwldata(x):
     else:
         return x
 
+def _clean_final_outputs(keyvals, integrations=None):
+    def clean_path(integrations, x):
+        retriever = _get_retriever(x, integrations)
+        if retriever:
+            return retriever.clean_file(x)
+        else:
+            return x
+    return _adjust_files(keyvals, functools.partial(clean_path, integrations))
+
+def _adjust_files(xs, adjust_fn):
+    """Walk over key/value, tuples applying adjust_fn to files.
+    """
+    if isinstance(xs, dict):
+        if "path" in xs:
+            out = {}
+            out["path"] = adjust_fn(xs["path"])
+            for k, vs in xs.items():
+                if k != "path":
+                    out[k] = _adjust_files(vs, adjust_fn)
+            return out
+        else:
+            out = {}
+            for k, vs in xs.items():
+                out[k] = _adjust_files(vs, adjust_fn)
+            return out
+    elif isinstance(xs, (list, tuple)):
+        return [_adjust_files(x, adjust_fn) for x in xs]
+    else:
+        return xs
+
 def _calc_input_estimates(keyvals, integrations=None):
     """Calculate estimations of input file sizes for disk usage approximation.
 
@@ -409,13 +441,16 @@ def _calc_input_estimates(keyvals, integrations=None):
     if len(input_sizes) > 0:
         return {"files": max(input_sizes)}
 
+def _get_retriever(path, integrations):
+    integration_map = {"keep:": "arvados", "s3:": "s3"}
+    if path.startswith(tuple(integration_map.keys())):
+        return integrations.get(integration_map[path.split(":")[0] + ":"])
+
 def _get_file_size(path, integrations):
     """Return file size in megabytes, including querying remote integrations
     """
-    integration_map = {"keep:": "arvados", "s3:": "s3"}
-    if path.startswith(tuple(integration_map.keys())):
-        retriever = integrations.get(integration_map[path.split(":")[0] + ":"])
-        if retriever:
-            return retriever.file_size(path)
+    retriever = _get_retriever(path, integrations)
+    if retriever:
+        return retriever.file_size(path)
     elif os.path.exists(path):
         return os.path.getsize(path) / (1024.0 * 1024.0)
