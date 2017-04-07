@@ -109,7 +109,8 @@ def alignment_to_rec(*args):
 def postprocess_alignment_to_rec(*args):
     default_keys = ["config__algorithm__coverage_interval", "config__algorithm__seq2c_bed_ready",
                     "config__algorithm__coverage", "config__algorithm__coverage_merged",
-                    "config__algorithm__coverage_orig"]
+                    "config__algorithm__coverage_orig", "config__algorithm__variant_regions",
+                    "config__algorithm__variant_regions_merged", "config__algorithm__variant_regions_orig"]
     return cwlutils.to_rec(*args, default_keys=default_keys)
 
 @utils.map_wrap
