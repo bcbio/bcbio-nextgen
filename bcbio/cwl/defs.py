@@ -14,7 +14,7 @@ for each of the defined workflows.
 import collections
 from bcbio.pipeline import datadict as dd
 
-def s(name, parallel, inputs, outputs, programs=None, disk=None, unlist=None):
+def s(name, parallel, inputs, outputs, programs=None, disk=None, cores=None, unlist=None):
     """Represent a step in a workflow.
 
     name -- The run function name, which must match a definition in distributed/multitasks
@@ -25,6 +25,7 @@ def s(name, parallel, inputs, outputs, programs=None, disk=None, unlist=None):
     disk -- Information about disk usage requirements, specified as multipliers of
             input files. Ensures enough disk present when that is a limiting factor
             when selecting cloud node resources.
+    cores -- Maximum cores necessary for this step, for non-multicore processes.
     unlist -- Variables being unlisted by this process. Useful for parallelization splitting and
       batching from multiple variables, like variant calling.
     parallel -- Parallelization approach. There are three different levels of parallelization,
@@ -44,10 +45,10 @@ def s(name, parallel, inputs, outputs, programs=None, disk=None, unlist=None):
         - batch-merge -- Merge sub-components back into a single batch.
         - batch-single -- Run on a single batch.
     """
-    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk unlist")
+    Step = collections.namedtuple("Step", "name parallel inputs outputs programs disk cores unlist")
     if programs is None: programs = []
     if unlist is None: unlist = []
-    return Step(name, parallel, inputs, outputs, programs, disk, unlist)
+    return Step(name, parallel, inputs, outputs, programs, disk, cores, unlist)
 
 def w(name, parallel, workflow, internal):
     """A workflow, allowing specification of sub-workflows for nested parallelization.
@@ -79,12 +80,12 @@ def _variant_shared():
                                cwlout(["config", "algorithm", "quality_format"], "string"),
                                cwlout(["align_split"], ["string", "null"])])],
                ["pbgzip", "grabix", "htslib", "biobambam"],
-               {"files": 1.5}),
+               {"files": 1.5}, cores=1),
              s("process_alignment", "single-parallel",
                [["process_alignment_rec"], ["alignment_rec"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
-                cwlout(["hla", "fastq"], ["File", "null"]),
+                cwlout(["hla", "fastq"], ["File", "null", {"type": "array", "items": "File"}]),
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                ["bwa", "bwakit", "novoalign", "snap-aligner=1.0dev.97", "samtools", "sambamba",
@@ -96,7 +97,7 @@ def _variant_shared():
                [cwlout(["align_bam"], "File", [".bai"]),
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
-                cwlout(["hla", "fastq"], ["File", "null"])],
+                cwlout(["hla", "fastq"], ["File", "null", {"type": "array", "items": "File"}])],
                ["biobambam", "samtools"],
                {"files": 3})]
     return align
@@ -107,14 +108,14 @@ def variant():
     align_wf = _variant_shared()
     vc_wf = [s("get_parallel_regions", "batch-split",
                [["batch_rec"]],
-               [cwlout(["region"], "string")]),
+               [cwlout(["region"], "string")], cores=1),
              s("variantcall_batch_region", "batch-parallel",
                [["batch_rec"], ["region"]],
                [cwlout(["vrn_file_region"], "File", [".tbi"]),
-                cwlout(["region"], "string")]),
+                cwlout(["region"], "string")], cores=1),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region"], ["vrn_file_region"]],
-               [cwlout(["vrn_file"], "File", [".tbi"])]),
+               [cwlout(["vrn_file"], "File", [".tbi"])], cores=1),
              s("postprocess_variants", "batch-single",
                [["batch_rec"], ["vrn_file"]],
                [cwlout(["vrn_file"], "File", [".tbi"])]),
@@ -127,7 +128,7 @@ def variant():
              s("vc_output_record", "batch-single",
                [["batch_rec"], ["vrn_file"], ["validate", "summary"],
                 ["validate", "tp"], ["validate", "fp"], ["validate", "fn"]],
-               [cwlout("vc_rec", "record")])]
+               [cwlout("vc_rec", "record")], cores=1)]
     align = [s("alignment_to_rec", "multi-combined",
                [["files"],
                 ["config", "algorithm", "align_split_size"],
@@ -137,7 +138,7 @@ def variant():
                 ["reference", "aligner", "indexes"],
                 ["config", "algorithm", "aligner"],
                 ["config", "algorithm", "mark_duplicates"]],
-               [cwlout("alignment_rec", "record")]),
+               [cwlout("alignment_rec", "record")], cores=1),
              w("alignment", "multi-parallel", align_wf,
                [["align_split"], ["process_alignment_rec"],
                 ["work_bam"], ["config", "algorithm", "quality_format"]]),
@@ -145,7 +146,7 @@ def variant():
                [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
                 ["reference", "fasta", "base"]],
-               [cwlout("prep_samples_rec", "record")]),
+               [cwlout("prep_samples_rec", "record")], cores=1),
              s("prep_samples", "multi-parallel",
                ["prep_samples_rec"],
                [cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
@@ -155,7 +156,7 @@ def variant():
                 cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
                 cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])],
-               ["htslib", "pbgzip", "bedtools"]),
+               ["htslib", "pbgzip", "bedtools"], cores=1),
              s("postprocess_alignment_to_rec", "multi-batch",
                [["align_bam"],
                 ["config", "algorithm", "coverage_interval"],
@@ -168,7 +169,7 @@ def variant():
                 ["config", "algorithm", "seq2c_bed_ready"],
                 ["config", "algorithm", "recalibrate"],
                 ["reference", "fasta", "base"]],
-               [cwlout("postprocess_alignment_rec", "record")]),
+               [cwlout("postprocess_alignment_rec", "record")], cores=1),
              s("postprocess_alignment", "multi-parallel",
                [["postprocess_alignment_rec"]],
                [cwlout(["config", "algorithm", "coverage_interval"], "string"),
@@ -191,7 +192,7 @@ def variant():
                [cwlout(["config", "algorithm", "callable_regions"], "File"),
                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
                 cwlout(["config", "algorithm", "callable_count"], "int")],
-               ["bedtools", "htslib"])]
+               ["bedtools", "htslib"], cores=1)]
     hla = [s("call_hla", "multi-parallel",
              [["hla", "fastq"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
@@ -207,14 +208,14 @@ def variant():
              ["config", "algorithm", "tools_off"],
              ["reference", "fasta", "base"], ["reference", "rtg"], ["reference", "genome_context"],
              ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
-            [cwlout("batch_rec", "record")],
+            [cwlout("batch_rec", "record")], cores=1,
             unlist=[["config", "algorithm", "variantcaller"]]),
           w("variantcall", "multi-parallel", vc_wf,
             [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
           s("summarize_grading_vc", "multi-combined",
             [["vc_rec"]],
             [cwlout(["validate", "grading_summary"], ["File", "null"]),
-             cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})])]
+             cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})], cores=1)]
     qc = [s("qc_to_rec", "multi-batch",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
              ["genome_build"], ["config", "algorithm", "coverage_interval"],
@@ -224,14 +225,14 @@ def variant():
              ["config", "algorithm", "variant_regions_merged"],
              ["config", "algorithm", "coverage"],
              ["config", "algorithm", "coverage_merged"]],
-            [cwlout("qc_rec", "record")]),
+            [cwlout("qc_rec", "record")], cores=1),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
             [cwlout(["summary", "qc"], ["File", "null"]),
              cwlout(["summary", "metrics"], "string")]),
           s("multiqc_summary", "multi-combined",
             [["qc_rec"], ["summary", "qc"], ["summary", "metrics"]],
-            [cwlout(["summary", "multiqc"], ["File", "null"])])]
+            [cwlout(["summary", "multiqc"], ["File", "null"])], cores=1)]
     steps = align + vc + qc
     final_outputs = [["align_bam"], ["summary", "multiqc"]]
     return steps, final_outputs

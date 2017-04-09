@@ -52,9 +52,11 @@ def _cwl_workflow_template(inputs, top_level=False):
             "outputs": [],
             "steps": []}
 
-def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estimates, disk, samples):
+def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estimates, disk,
+                step_cores, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
-    cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
+    resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
+    cores = step_cores if step_cores else resource_cores
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
@@ -189,9 +191,9 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     steps, wfoutputs = workflow_fn()
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
-            _, name, parallel, inputs, outputs, programs, disk = cur
+            _, name, parallel, inputs, outputs, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs,
-                                    file_estimates, disk, samples)
+                                    file_estimates, disk, cores, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
         elif cur[0] == "upload":
             for output in cur[1]:
