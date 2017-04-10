@@ -23,7 +23,7 @@ def write_version_py():
 install_requires = [] # install dependencies via conda
 zip_safe = False
 scripts = ['scripts/bcbio_nextgen.py', 'scripts/bcbio_setup_genome.py', 'scripts/bcbio_prepare_samples.py',
-           'scripts/bcbio_fastq_umi_prep.py']
+           'scripts/bcbio_fastq_umi_prep.py', 'scripts/cwltool2wdl.py']
 
 write_version_py()
 setup(name="bcbio-nextgen",
