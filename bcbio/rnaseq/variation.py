@@ -123,7 +123,7 @@ def rnaseq_vardict_variant_calling(data):
     bamfile = dd.get_work_bam(data)
     bed_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
     opts = " -c 1 -S 2 -E 3 -g 4 "
-    resources = config_utils.get_resources("vardict", config)
+    resources = config_utils.get_resources("vardict", data)
     if resources.get("options"):
         opts += " ".join([str(x) for x in resources["options"]])
     with file_transaction(data, out_file) as tx_out_file:
