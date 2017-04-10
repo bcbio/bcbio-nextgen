@@ -2,6 +2,7 @@ import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein)
+from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict, vcfanno
 import bcbio.pipeline.datadict as dd
@@ -270,13 +271,19 @@ def combine_files(samples):
     after quantitation, combine the counts/FPKM/TPM/etc into a single table with
     all samples
     """
-    gtf_file = dd.get_gtf_file(samples[0][0], None)
-    dexseq_gff = dd.get_dexseq_gff(samples[0][0])
+    data = samples[0][0]
+    gtf_file = dd.get_gtf_file(data, None)
+    dexseq_gff = dd.get_dexseq_gff(data)
 
     # combine featureCount files
     count_files = filter_missing([dd.get_count_file(x[0]) for x in samples])
     combined = count.combine_count_files(count_files, ext=".counts")
     annotated = count.annotate_combined_count_file(combined, gtf_file)
+
+    # add tx2gene file
+    tx2gene_file = os.path.join(dd.get_work_dir(data), "annotation", "tx2gene.csv")
+    if gtf_file:
+        tx2gene_file = tx2genefile(gtf_file, tx2gene_file)
 
     # combine eXpress files
     express_counts_combined = combine_express(samples, combined)
@@ -298,7 +305,9 @@ def combine_files(samples):
         fpkm_isoform_combined = None
     # combine DEXseq files
     dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
-    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data in samples])
+    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
+                                        in samples])
+
     if to_combine_dexseq:
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
@@ -322,5 +331,7 @@ def combine_files(samples):
             data = dd.set_isoform_to_gene(data, express_counts_combined['isoform_to_gene'])
         if dexseq_combined:
             data = dd.set_dexseq_counts(data, dexseq_combined_file)
+        if gtf_file:
+            data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
     return updated_samples
