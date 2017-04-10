@@ -87,7 +87,7 @@ LOOKUPS = {
                  "default": "illumina"},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
                        "default": "standard"},
-    "algorithm_qc": {"keys": ['config', 'algorithm', 'qc'], "default": []},
+    "algorithm_qc": {"keys": ['config', 'algorithm', 'qc'], "default": [], "always_list": True},
     "summary_qc": {"keys": ['summary', 'qc'], "default": {}},
     "summary_metrics": {"keys": ['summary', 'metrics'], "default": {}},
     "adapters": {"keys": ['config', 'algorithm', 'adapters'],
@@ -163,8 +163,8 @@ LOOKUPS = {
     "disc_bam": {"keys": ["work_bam_plus", "disc"]},
     "sr_bam": {"keys": ["work_bam_plus", "sr"]},
     "align_prep_method": {"keys": ["config", "algorithm", "align_prep_method"], "default": "grabix"},
-    "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": []},
-    "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": []},
+    "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": [], "always_list": True},
+    "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
 }
 
@@ -226,10 +226,13 @@ def get_dexseq_gff(config, default=None):
     else:
         return None
 
-def getter(keys, global_default=None):
+def getter(keys, global_default=None, always_list=False):
     def lookup(config, default=None):
         default = global_default if not default else default
-        return tz.get_in(keys, config, default)
+        val = tz.get_in(keys, config, default)
+        if always_list:
+            if not isinstance(val, (list, tuple)): val = [val]
+        return val
     return lookup
 
 def setter(keys, checker):
@@ -258,7 +261,7 @@ for k, v in LOOKUPS.items():
     keys = v['keys']
     getter_fn = 'get_' + k
     if getter_fn not in _g:
-        _g["get_" + k] = getter(keys, v.get('default', None))
+        _g["get_" + k] = getter(keys, v.get('default', None), v.get("always_list", False))
     setter_fn = 'set_' + k
     if setter_fn not in _g:
         _g["set_" + k] = setter(keys, v.get('checker', None))
