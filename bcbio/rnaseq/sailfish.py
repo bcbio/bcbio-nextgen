@@ -61,7 +61,7 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     message = "Quantifying transcripts in {fq1} and {fq2}."
     with file_transaction(data, quant_dir) as tx_out_dir:
         do.run(cmd.format(**locals()), message.format(**locals()), None)
-        _sleuthify_sailfish(tx_out_dir)
+        sleuthify_sailfish(tx_out_dir)
     return out_file
 
 def estimate_kmer_size(fq):
@@ -74,7 +74,7 @@ def estimate_kmer_size(fq):
         kmer_size = 25
     return kmer_size
 
-def _sleuthify_sailfish(sailfish_dir):
+def sleuthify_sailfish(sailfish_dir):
     """
     if installed, use wasabi to create abundance.h5 output for use with
     sleuth
