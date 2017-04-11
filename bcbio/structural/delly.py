@@ -17,7 +17,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
-from bcbio.variation import vcfutils
+from bcbio.variation import effects, vcfutils
 
 def _get_full_exclude_file(items, work_dir):
     base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
@@ -180,7 +180,8 @@ def run(items):
         delly_sample_vcf = vcfutils.select_sample(combo_vcf, sample,
                                                   "%s-%s%s" % (base, sample, ext), data["config"])
         delly_vcf = _delly_count_evidence_filter(delly_sample_vcf, data)
-        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
+        effects_vcf, _ = effects.add_to_vcf(delly_vcf, data, "snpeff")
+        data["sv"].append({"variantcaller": "delly", "vrn_file": effects_vcf,
                            "exclude": exclude_file})
         out.append(data)
     return out
