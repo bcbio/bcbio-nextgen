@@ -251,11 +251,19 @@ def _resolve_null_vals(key, vals, reci, num_recs):
     and we need to revisit approach for generating the command line to
     avoid this.
     """
+    allowed_uneven = set(["summary__qc"])
     unique_vals = set(vals)
     if len(unique_vals) == 1:
         return unique_vals.pop()
+    elif num_recs == 1:
+        return vals
+    elif key in allowed_uneven and num_recs > len(vals):
+        try:
+            return vals[reci]
+        except IndexError:
+            return None
     else:
-        raise ValueError("Unsure how to resolve uneven values for %s: %s" % (key, vals))
+        raise ValueError("Unsure how to resolve uneven values for %s with %s records: %s" % (key, num_recs, vals))
 
 def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     """Finalize data object with inputs from CWL.
@@ -282,7 +290,11 @@ def _convert_value(val):
             return True
         except ValueError:
             return False
-    if _is_number(val, int):
+    if isinstance(val, (list, tuple)):
+        return [_convert_value(x) for x in val]
+    elif val is None:
+        return val
+    elif _is_number(val, int):
         return int(val)
     elif _is_number(val, float):
         return float(val)
