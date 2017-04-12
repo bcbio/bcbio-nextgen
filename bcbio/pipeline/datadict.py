@@ -70,7 +70,7 @@ LOOKUPS = {
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "combined_counts": {"keys": ["combined_counts"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
-    "genome_context_files": {"keys": ["reference", "genome_context"]},
+    "genome_context_files": {"keys": ["reference", "genome_context"], "default": [], "always_list": True},
     "viral_files": {"keys": ["reference", "viral"]},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "combined_fpkm": {"keys": ['combined_fpkm']},
