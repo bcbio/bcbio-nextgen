@@ -74,9 +74,8 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
     mpileup = prep_mpileup(align_bams, ref_file, config,
                            target_regions=target_regions, want_bcf=True)
     bcftools = config_utils.get_program("bcftools", config)
-    bcftools_version = programs.get_version("bcftools", config=config)
     samtools_version = programs.get_version("samtools", config=config)
-    if LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
+    if samtools_version and LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
         raise ValueError("samtools calling not supported with pre-1.0 samtools")
     bcftools_opts = "call -v -m"
     compress_cmd = "| bgzip -c" if tx_out_file.endswith(".gz") else ""

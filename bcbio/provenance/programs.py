@@ -282,10 +282,11 @@ def get_version(name, dirs=None, config=None):
     if dirs:
         p = _get_program_file(dirs)
     else:
-        p = config["resources"]["program_versions"]
-    with open(p) as in_handle:
-        for line in in_handle:
-            prog, version = line.rstrip().split(",")
-            if prog == name and version:
-                return version
-    raise KeyError("Version information not found for %s in %s" % (name, p))
+        p = tz.get_in(["resources", "program_versions"], config)
+    if p:
+        with open(p) as in_handle:
+            for line in in_handle:
+                prog, version = line.rstrip().split(",")
+                if prog == name and version:
+                    return version
+        raise KeyError("Version information not found for %s in %s" % (name, p))
