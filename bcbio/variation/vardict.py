@@ -134,8 +134,7 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 remove_dup = vcfutils.remove_dup_cl()
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
-                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
-                         os.path.dirname(utils.Rscript_cmd()))
+                setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
@@ -283,8 +282,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                      0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
-                setup = ("unset R_HOME && unset JAVA_HOME && export PATH=%s:$PATH && " %
-                         os.path.dirname(utils.Rscript_cmd()))
+                setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "

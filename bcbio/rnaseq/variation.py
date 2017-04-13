@@ -1,5 +1,5 @@
 import os
-from bcbio.utils import file_exists, Rscript_cmd, safe_makedir
+from bcbio.utils import file_exists, get_R_exports, safe_makedir
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign.postalign import dedup_bam
@@ -117,8 +117,7 @@ def rnaseq_vardict_variant_calling(data):
     var2vcf_opts = "-v 50"
     fix_ambig = vcfutils.fix_ambiguous_cl()
     remove_dup = vcfutils.remove_dup_cl()
-    r_setup = ("unset R_HOME && export PATH=%s:$PATH && "
-                % os.path.dirname(Rscript_cmd()))
+    r_setup = get_R_exports()
     ref_file = dd.get_ref_file(data)
     bamfile = dd.get_work_bam(data)
     bed_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
@@ -128,7 +127,7 @@ def rnaseq_vardict_variant_calling(data):
         opts += " ".join([str(x) for x in resources["options"]])
     with file_transaction(data, out_file) as tx_out_file:
         jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
-        cmd = ("{r_setup}{jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
+        cmd = ("{r_setup} && {jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
                 "-N {sample} -b {bamfile} {opts} {bed_file} "
                 "| {strandbias}"
                 "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "

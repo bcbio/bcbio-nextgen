@@ -1,11 +1,11 @@
 ## 1.0.3 (in progress)
 
-- Support DNApi for de novo adapter detection in small RNA pipeline
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
   chromosome region runs. Thanks to Ho Danliang.
 - Fix structural variant output upload for complex batching cases. Correctly
   handle shared normals and other multi-batch by naming outputs using batches.
   Thanks to Sven-Eric Schelhorn.
+- Support DNApi for de novo adapter detection in small RNA pipeline
 - Several updates to the VarScan support: honor options specified in the
   resource config section; honor min_allele_frac option and set --strand-filter
   flag in the single-sample case; general cleanups. Thanks to Christian Brueffer.
@@ -17,6 +17,8 @@
 - Provide seq2c VCF output and enable validation of calls.
 - Allow specification of seq2c options through resources. Thanks to Sally Luke
   and Marisa Cunha.
+- Avoid using R_LIBS settings for R runs to limit incompatibilities with
+  externally installed R packages.
 - Provide absolute paths for relative paths to files in algorithm list inputs.
   Thanks to Matthias De Smet.
 - Switch to Salmon from Sailfish as default alignment-free RNA-seq

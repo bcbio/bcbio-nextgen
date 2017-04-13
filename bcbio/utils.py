@@ -691,6 +691,9 @@ def R_package_path(package):
             return dirname
     return None
 
+def get_R_exports():
+    return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
+
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
     """
