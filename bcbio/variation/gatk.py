@@ -74,6 +74,9 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
                        "-ploidy", (str(ploidy.get_ploidy(items, region))
                                    if broad_runner.gatk_type() == "restricted" else "2"),
                        "--genotype_likelihoods_model", "BOTH"]
+            resources = config_utils.get_resources("gatk", items[0]["config"])
+            if "options" in resources:
+                params += [str(x) for x in resources.get("options", [])]
             broad_runner.run_gatk(params)
     return out_file
 
