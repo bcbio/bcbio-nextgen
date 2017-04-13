@@ -11,7 +11,7 @@ import yaml
 import toolz as tz
 
 from bcbio import utils
-from bcbio.pipeline import config_utils, version
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 
@@ -163,9 +163,13 @@ def _get_brew_versions():
 def _get_versions(config=None):
     """Retrieve details on all programs available on the system.
     """
-    out = [{"program": "bcbio-nextgen",
-            "version": ("%s-%s" % (version.__version__, version.__git_revision__)
-                        if version.__git_revision__ else version.__version__)}]
+    try:
+        from bcbio.pipeline import version
+        bcbio_version = ("%s-%s" % (version.__version__, version.__git_revision__)
+                         if version.__git_revision__ else version.__version__)
+    except ImportError:
+        bcbio_version = ""
+    out = [{"program": "bcbio-nextgen", "version": bcbio_version}]
     manifest_dir = _get_manifest_dir(config)
     manifest_vs = _get_versions_manifest(manifest_dir)
     if manifest_vs:
