@@ -246,6 +246,8 @@ def _detect_rRNA(data):
     gtf_file = dd.get_gtf_file(data)
     sailfish_dir = dd.get_sailfish_dir(data)
     quant = os.path.join(sailfish_dir, "quant.sf")
+    if not utils.file_exists(quant):
+        quant = os.path.join(sailfish_dir, "quant", "quant.sf")
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
     if not (transcripts and utils.file_exists(quant)):
