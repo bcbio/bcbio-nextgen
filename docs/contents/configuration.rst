@@ -868,8 +868,8 @@ lists with multiple options:
   filtering of germline variants is performed but all high quality variants pass.
   ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this,
   we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality
-  control FastQC usage. ``pbgzip`` turns off use of parallel bgzip
-  during preparation of alignment inputs. ``seqcluster`` turns off use of
+  control FastQC usage. ``pbgzip`` turns off use of bgzip with multiple threads.
+  ``seqcluster`` turns off use of
   seqcluster tool in srnaseq pipeline. ``tumoronly-prioritization`` turns off
   attempted removal of germline variants from tumor only calls using external
   population data sources like ExAC and 1000 genomes.

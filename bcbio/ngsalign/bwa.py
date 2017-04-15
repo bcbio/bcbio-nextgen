@@ -10,6 +10,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.ngsalign import alignprep, novoalign, postalign, rtg
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
+from bcbio.variation import sentieon
 import bcbio.pipeline.datadict as dd
 from bcbio.bam import fastq
 from bcbio.log import logger
@@ -68,7 +69,13 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
         alt_cmd = (" | {bwakit_dir}/k8 {bwakit_dir}/bwa-postalt.js -p {hla_base} {alt_file}")
     else:
         alt_cmd = ""
-    bwa = config_utils.get_program("bwa", data["config"])
+    if dd.get_aligner(data) == "sentieon-bwa":
+        bwa_exe = "sentieon-bwa"
+        exports = sentieon.license_export(data)
+    else:
+        bwa_exe = "bwa"
+        exports = ""
+    bwa = config_utils.get_program(bwa_exe, data["config"])
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     bwa_resources = config_utils.get_resources("bwa", data["config"])
     bwa_params = (" ".join([str(x) for x in bwa_resources.get("options", [])])
@@ -79,7 +86,7 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     # https://sourceforge.net/p/bio-bwa/mailman/message/31514937/
     # http://ehc.ac/p/bio-bwa/mailman/message/32268544/
     mem_usage = "-c 250"
-    bwa_cmd = ("{bwa} mem {pairing} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
+    bwa_cmd = ("{exports}{bwa} mem {pairing} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
                "{ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 

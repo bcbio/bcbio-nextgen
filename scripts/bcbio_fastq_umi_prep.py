@@ -48,8 +48,8 @@ def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, cores=1):
         else:
             fastq_tags_arg = ""
     cmd = ("umis fastqtransform {fastq_tags_arg} "
-           "--fastq1out >(pbgzip -n {cores} -c > {out1_fq}) "
-           "--fastq2out >(pbgzip -n {cores} -c > {out2_fq}) "
+           "--fastq1out >(bgzip --threads {cores} -c > {out1_fq}) "
+           "--fastq2out >(bgzip --threads {cores} -c > {out2_fq}) "
            "{transform_json_file} {read1_fq} "
            "{read2_fq} {umi_fq}")
     do.run(cmd.format(**locals()), "Add UMIs to paired fastq files")

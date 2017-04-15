@@ -43,10 +43,9 @@ details:
       effects: vep
       effects_transcripts: canonical
       # QC and archiving
-      tools_on: 
+      tools_on:
        - qualimap
        - multiqc
-       - pbgzip
       tools_off:
        - upload_alignment
       mixup_check: false

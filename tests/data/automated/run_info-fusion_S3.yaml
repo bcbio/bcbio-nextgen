@@ -25,10 +25,9 @@ details:
        - sailfish
       fusion_mode: true
       # QC and archiving
-      tools_on: 
+      tools_on:
        - qualimap
        - multiqc
-       - pbgzip
       mixup_check: false
       kraken: minikraken
       tools_off:

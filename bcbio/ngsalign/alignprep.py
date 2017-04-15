@@ -281,10 +281,7 @@ def _prep_grabix_indexes(in_files, dirs, data):
     else:
         inputs = [{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
                   for x in in_files if x]
-        if "pbgzip" not in dd.get_tools_off(data):
-            out = [_bgzip_from_fastq(d) for d in inputs]
-        else:
-            out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"])
+        out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"])
     items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
     run_multicore(_grabix_index, items, data["config"])
     return out
