@@ -6,6 +6,8 @@
   handle shared normals and other multi-batch by naming outputs using batches.
   Thanks to Sven-Eric Schelhorn.
 - Support DNApi for de novo adapter detection in small RNA pipeline
+- Move to samtools/bcftools/htslib 1.4. Provides parallel bgzip, removing need
+  for pbgzip and improved concatenation speed for region split VCF files.
 - Several updates to the VarScan support: honor options specified in the
   resource config section; honor min_allele_frac option and set --strand-filter
   flag in the single-sample case; general cleanups. Thanks to Christian Brueffer.

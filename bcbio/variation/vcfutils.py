@@ -311,22 +311,41 @@ def _sort_by_region(fnames, regions, ref_file, config):
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
-    Lightweight approach to merging VCF files split by regions with the same
-    sample information, so no complex merging needed. Handles both plain text
-    and bgzipped/tabix indexed outputs.
+    Uses bcftools concat --naive which only combines samples and does no parsing
+    work, allowing scaling to large file sizes.
+    """
+    if not utils.file_exists(out_file):
+        input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
+        out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+    if out_file.endswith(".gz"):
+        bgzip_and_index(out_file, config)
+    return out_file
+
+def _get_file_list(orig_files, out_file, regions, ref_file, config):
+    """Create file with region sorted list of non-empty VCFs for concatenating.
+    """
+    sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
+    exist_files = [x for x in sorted_files if os.path.exists(x) and vcf_has_variants(x)]
+    if len(exist_files) == 0:  # no non-empty inputs, merge the empty ones
+        exist_files = [x for x in sorted_files if os.path.exists(x)]
+    ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
+    input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
+    with open(input_file_list, "w") as out_handle:
+        for fname in ready_files:
+            out_handle.write(fname + "\n")
+    return input_file_list
+
+def concat_variant_files_catvariants(orig_files, out_file, regions, ref_file, config):
+    """Concatenate multiple variant files from regions into a single output file.
+
+    Uses GATK CatVariants as a lightweight approach to merging VCF files split
+    by regions with the same sample information, so no complex merging needed.
+    Handles both plain text and bgzipped/tabix indexed outputs.
 
     Falls back to bcftools concat if fails due to GATK stringency issues.
     """
     if not utils.file_exists(out_file):
-        sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-        exist_files = [x for x in sorted_files if os.path.exists(x) and vcf_has_variants(x)]
-        if len(exist_files) == 0:  # no non-empty inputs, merge the empty ones
-            exist_files = [x for x in sorted_files if os.path.exists(x)]
-        ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
-        input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
-        with open(input_file_list, "w") as out_handle:
-            for fname in ready_files:
-                out_handle.write(fname + "\n")
+        input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
         failed = False
         with file_transaction(config, out_file) as tx_out_file:
             params = ["org.broadinstitute.gatk.tools.CatVariants",
@@ -363,14 +382,18 @@ def concat_variant_files_bcftools(orig_files, out_file, config):
     else:
         return bgzip_and_index(out_file, config)
 
-def _run_concat_variant_files_bcftools(in_list, out_file, config):
-    """Concatenate variant files using bcftools concat.
+def _run_concat_variant_files_bcftools(in_list, out_file, config, naive=False):
+    """Concatenate variant files using bcftools concat, potentially using the fast naive option.
     """
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
             bcftools = config_utils.get_program("bcftools", config)
             output_type = "z" if out_file.endswith(".gz") else "v"
-            cmd = "{bcftools} concat --allow-overlaps -O {output_type} --file-list {in_list} -o {tx_out_file}"
+            if naive:
+                args = "--naive"
+            else:
+                args = "--allow-overlaps"
+            cmd = "{bcftools} concat {args} -O {output_type} --file-list {in_list} -o {tx_out_file}"
             do.run(cmd.format(**locals()), "bcftools concat variants")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
