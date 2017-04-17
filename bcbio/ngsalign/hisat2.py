@@ -28,13 +28,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     # if assembling transcripts, set flags that cufflinks/stringtie can use
     if dd.get_transcript_assembler(data):
         cmd += "--dta-cufflinks "
-    if dd.get_analysis(data).lower() == "rna-seq":
-        gtf_file = dd.get_gtf_file(data)
-        splicesites = os.path.join(os.path.dirname(gtf_file),
-                                   "ref-transcripts-splicesites.txt")
-        if not file_exists(splicesites):
-            splicesites = create_splicesites_file(gtf_file, align_dir, data)
-        cmd += "--known-splicesite-infile {splicesites} "
+
+    gtf_file = dd.get_gtf_file(data)
+    splicesites = os.path.join(os.path.dirname(gtf_file),
+                               "ref-transcripts-splicesites.txt")
+    if not file_exists(splicesites):
+        splicesites = create_splicesites_file(gtf_file, align_dir, data)
+    cmd += "--known-splicesite-infile {splicesites} "
 
     # apply additional hisat2 options
     cmd += " ".join(_get_options_from_config(data))
