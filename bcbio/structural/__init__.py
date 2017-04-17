@@ -66,7 +66,7 @@ def _handle_multiple_svcallers(data, stage):
             # clean SV callers present in multiple rounds and not this caller
             final_svs = []
             for sv in data.get("sv", []):
-                if sv["variantcaller"] == svcaller or sv["variantcaller"] not in svs:
+                if stage == "ensemble" or sv["variantcaller"] == svcaller or sv["variantcaller"] not in svs:
                     final_svs.append(sv)
             base["sv"] = final_svs
             base["config"]["algorithm"]["svcaller"] = svcaller

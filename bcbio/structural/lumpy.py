@@ -120,7 +120,8 @@ def _sv_workdir(data):
 def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
     """
-    if not all(utils.get_in(data, ("config", "algorithm", "aligner")) in ["bwa", False, None] for data in items):
+    if not all(utils.get_in(data, ("config", "algorithm", "aligner"))
+               in ["bwa", "sentieon-bwa", False, None] for data in items):
         raise ValueError("Require bwa-mem alignment input for lumpy structural variation detection")
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     work_dir = _sv_workdir(paired.tumor_data if paired and paired.tumor_data else items[0])
@@ -142,15 +143,14 @@ def run(items):
     gt_vcfs = {}
     for data in items:
         sample = dd.get_sample_name(data)
-        sr_bam, _ = sshared.get_split_discordants(data, work_dir)
         sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
                                             utils.append_stem(lumpy_vcf, "-%s" % sample),
                                             data["config"])
         if "bnd-genotype" in dd.get_tools_on(data):
-            gt_vcf = _run_svtyper(sample_vcf, dd.get_align_bam(data), sr_bam, exclude_file, data)
+            gt_vcf = _run_svtyper(sample_vcf, dd.get_align_bam(data), exclude_file, data)
         else:
             std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
-            std_gt_vcf = _run_svtyper(std_vcf, dd.get_align_bam(data), sr_bam, exclude_file, data)
+            std_gt_vcf = _run_svtyper(std_vcf, dd.get_align_bam(data), exclude_file, data)
             gt_vcf = vcfutils.concat_variant_files_bcftools(
                 orig_files=[std_gt_vcf, bnd_vcf],
                 out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
@@ -223,11 +223,10 @@ def run_svtyper_prioritize(call):
     """Run svtyper on prioritized outputs, adding in typing for breakends skipped earlier.
     """
     def _run(in_file, work_dir, data):
-        sr_bam, _ = sshared.get_split_discordants(data, work_dir)
-        return _run_svtyper(in_file, dd.get_align_bam(data), sr_bam, call.get("exclude_file"), data)
+        return _run_svtyper(in_file, dd.get_align_bam(data), call.get("exclude_file"), data)
     return _run
 
-def _run_svtyper(in_file, full_bam, sr_bam, exclude_file, data):
+def _run_svtyper(in_file, full_bam, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
 
     Removes calls in high depth regions to avoid slow runtimes:

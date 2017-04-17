@@ -83,12 +83,11 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
     if not utils.file_exists(simple_vcf):
         gene_list = _find_gene_list_from_bed(prioritize_by, out_file, data)
         # If we have a standard gene list we can skip BED based prioritization
+        priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
         if gene_list:
-            priority_vcf = os.path.join(work_dir, os.path.basename(vcf_file))
             utils.symlink_plus(vcf_file, priority_vcf)
         # otherwise prioritize based on BED and proceed
         else:
-            priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
             if not utils.file_exists(priority_vcf):
                 with file_transaction(data, priority_vcf) as tx_out_file:
                     resources = config_utils.get_resources("bcbio_prioritize", data["config"])
@@ -97,8 +96,6 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
                     cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
                            " -k {prioritize_by}")
                     do.run(cmd.format(**locals()), "Prioritize: select in known regions of interest")
-        if post_prior_fn:
-            priority_vcf = post_prior_fn(priority_vcf, work_dir, data)
 
         data_dir = os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py")))
         with file_transaction(data, simple_vcf) as tx_out_file:
@@ -113,6 +110,8 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
             cmd = "simple_sv_annotation.py {opts} -o - {priority_vcf} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "Prioritize: simplified annotation output")
     simple_vcf = vcfutils.bgzip_and_index(vcfutils.sort_by_ref(simple_vcf, data), data["config"])
+    if post_prior_fn:
+        simple_vcf = post_prior_fn(simple_vcf, work_dir, data)
     if not utils.file_uptodate(out_file, simple_vcf):
         with file_transaction(data, out_file) as tx_out_file:
             export = utils.local_path_export()
