@@ -3,9 +3,11 @@ Outputs
 bcbio-nextgen runs in a temporary work directory which contains a
 number of processing intermediates. Pipeline completion extracts the
 final useful output files into a separate directory, specified by the
-:ref:`upload-configuration`. This configuration allows upload to local
+`upload-configuration`_. This configuration allows upload to local
 directories, Galaxy, or Amazon S3. Once extracting and confirming the
 output files, you can delete the temporary directory to save space.
+
+.. _upload-configuration: https://github.com/chapmanb/bcbio-nextgen/blob/master/docs/contents/configuration.rst#upload
 
 Common files
 ============
