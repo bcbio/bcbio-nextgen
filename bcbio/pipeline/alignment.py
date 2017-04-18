@@ -33,6 +33,7 @@ TOOLS = {
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
+    "sentieon-bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
     "novoalign": NgsTool(novoalign.align_pipe, novoalign.align_bam,
                          novoalign.galaxy_location_file, novoalign.remap_index_fn),
     "tophat": NgsTool(tophat.align, None,

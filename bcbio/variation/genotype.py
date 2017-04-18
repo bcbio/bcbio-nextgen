@@ -291,6 +291,7 @@ def get_variantcallers():
             "vardict-perl": vardict.run_vardict,
             "haplotyper": sentieon.run_haplotyper,
             "tnhaplotyper": sentieon.run_tnhaplotyper,
+            "tnscope": sentieon.run_tnscope,
             "qsnp": qsnp.run_qsnp}
 
 def variantcall_sample(data, region=None, align_bams=None, out_file=None):
