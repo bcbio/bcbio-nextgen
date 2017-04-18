@@ -1005,9 +1005,10 @@ and memory and compute resources to devote to them::
   memory. Always specify this as the memory usage for a single core,
   and the pipeline handles scaling this when a process uses multiple
   cores.
-- ``keyfile`` Specify the location of a program specific key file, obtained from
-  the third party software tool. Include the path to a GATK supplied key file
-  to disable the `GATK phone home`_ feature.
+- ``keyfile`` Specify the location of a program specific key file or license
+  server, obtained from a third party software tool. Supports licenses for
+  `novoalign <http://www.novocraft.com/products/novoalign/>`_ and `Sentieon
+  <http://www.sentieon.com/products.html>`_.
 
 For GATK you can individually control memory for variant calling (which uses the
 ``gatk`` memory target) and for framework usage like merging and variant file
@@ -1076,7 +1077,6 @@ at the top level of your sample YAML::
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
 .. _Amazon S3: http://aws.amazon.com/s3/
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
-.. _GATK phone home: http://gatkforums.broadinstitute.org/discussion/1250/what-is-phone-home-and-how-does-it-affect-me
 
 Logging directory
 =================
