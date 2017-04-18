@@ -245,17 +245,14 @@ def _detect_rRNA(data):
     sample = dd.get_sample_name(data)
     gtf_file = dd.get_gtf_file(data)
     sailfish_dir = dd.get_sailfish_dir(data)
-    quant = os.path.join(sailfish_dir, "quant.sf")
-    if not utils.file_exists(quant):
-        quant = os.path.join(sailfish_dir, "quant", "quant.sf")
+    quant = os.path.join(sailfish_dir, "quant", "quant.sf")
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
     if not (transcripts and utils.file_exists(quant)):
         return {'rRNA': "NA", "rRNA_rate": "NA"}
-    count_table = pd.read_csv(quant, sep="\t", dtype={'sample': str})
-    sample_table = count_table[count_table["sample"].isin([sample])]
-    rrna_exp = map(float, sample_table[sample_table["id"].isin(transcripts)]["numreads"])
-    total_exp = map(float, sample_table["numreads"])
+    sample_table = pd.read_csv(quant, sep="\t")
+    rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
+    total_exp = map(float, sample_table["NumReads"])
     rrna = sum(rrna_exp)
     if sum(total_exp) == 0:
         return {'rRNA': str(rrna), 'rRNA_rate': "NA"}
