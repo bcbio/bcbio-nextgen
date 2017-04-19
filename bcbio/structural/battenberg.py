@@ -6,7 +6,7 @@ import os
 
 import toolz as tz
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
@@ -51,8 +51,6 @@ def _do_run(paired):
         bat_datadir = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "battenberg"))
         ignore_file, gl_file = _make_ignore_file(work_dir, ref_file, ignore_file,
                                                  os.path.join(bat_datadir, "impute", "impute_info.txt"))
-        local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                     "lib", "R", "site-library")
         tumor_bam = paired.tumor_bam
         normal_bam = paired.normal_bam
         platform = dd.get_platform(paired.tumor_data)
@@ -65,6 +63,7 @@ def _do_run(paired):
         else:
             gender_str = "-ge %s" % (gender)
         r_export_cmd = utils.get_R_exports()
+        local_sitelib = utils.R_sitelib()
         cmd = ("export R_LIBS_USER={local_sitelib} && {r_export_cmd} && "
                "battenberg.pl -t {cores} -o {work_dir} -r {ref_file}.fai "
                "-tb {tumor_bam} -nb {normal_bam} -e {bat_datadir}/impute/impute_info.txt "

@@ -14,7 +14,7 @@ import numpy as np
 import pysam
 import toolz as tz
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
@@ -53,8 +53,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
     better long term solution with flexible parameters.
     """
     lrr_scale = 10.0 if wide_lrr else 1.0
-    local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                 "lib", "R", "site-library")
+    local_sitelib = utils.R_sitelib()
     base = utils.splitext_plus(vcf_csv)[0]
     r_file = "%s-run.R" % base
     bubbleplot_out = "%s-bubbleplot.pdf" % base

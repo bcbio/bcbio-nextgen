@@ -10,11 +10,11 @@ import subprocess
 import pysam
 import toolz as tz
 
-from bcbio import bam, install, utils
+from bcbio import bam, utils
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-from bcbio.pipeline import config_utils, shared
+from bcbio.pipeline import shared
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
 from bcbio.variation import bedutils, vcfutils
@@ -91,8 +91,7 @@ def _prep_sample_cnvs(cnv_file, data):
 def _run_on_chrom(chrom, work_bams, names, work_dir, items):
     """Run cn.mops on work BAMs for a specific chromosome.
     """
-    local_sitelib = os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                                 "lib", "R", "site-library")
+    local_sitelib = utils.R_sitelib()
     batch = sshared.get_cur_batch(items)
     ext = "-%s-cnv" % batch if batch else "-cnv"
     out_file = os.path.join(work_dir, "%s%s-%s.bed" % (os.path.splitext(os.path.basename(work_bams[0]))[0],

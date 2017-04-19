@@ -668,9 +668,7 @@ def Rscript_cmd():
 def R_sitelib():
     """Retrieve the R site-library installed with the bcbio installer.
     """
-    from bcbio import install
-    return os.path.join(install.get_defaults().get("tooldir", "/usr/local"),
-                        "lib", "R", "site-library")
+    return os.path.join(os.path.dirname(get_bcbio_bin()), "lib", "R", "library")
 
 def R_package_path(package):
     """
