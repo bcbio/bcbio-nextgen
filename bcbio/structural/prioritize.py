@@ -19,7 +19,8 @@ from bcbio.structural import lumpy
 POST_PRIOR_FNS = {"lumpy": lumpy.run_svtyper_prioritize}
 
 def run(items):
-    assert len(items) == 1, "Expect one input to biological prioritization"
+    assert len(items) == 1, ("Expect one input to biological prioritization: %s" %
+                             ", ".join([dd.get_sample_name(d) for d in items]))
     data = items[0]
     inputs = []
     for call in data.get("sv", []):

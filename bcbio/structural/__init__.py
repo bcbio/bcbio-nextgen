@@ -142,7 +142,10 @@ def _batch_split_by_sv(samples, stage):
                 svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
                 if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
-                    batch = dd.get_sample_name(x)
+                    if isinstance(batch, basestring) and batch != dd.get_sample_name(x):
+                        batch += "_%s" % dd.get_sample_name(x)
+                    else:
+                        batch = dd.get_sample_name(x)
                 elif svcaller in _GLOBAL_BATCHING:  # All samples batched together for analyses
                     batch = "all"
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
