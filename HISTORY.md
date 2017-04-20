@@ -1,5 +1,6 @@
 ## 1.0.3 (in progress)
 
+- Allow installs to pull a specific git hash or tag revision of bcbio codebase.
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
   chromosome region runs. Thanks to Ho Danliang.
 - Fix structural variant output upload for complex batching cases. Correctly

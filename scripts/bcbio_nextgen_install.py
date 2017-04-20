@@ -62,8 +62,9 @@ def _clean_args(sys_argv, args):
 
 def bootstrap_bcbionextgen(anaconda, args):
     if args.upgrade == "development":
+        git_tag = "@%s" % args.revision if args.revision != "master" else ""
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
-                               "git+%s#egg=bcbio-nextgen" % REMOTES["gitrepo"]])
+                               "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
 def install_conda_pkgs(anaconda):
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
@@ -239,6 +240,7 @@ if __name__ == "__main__":
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",
                         choices=["stable", "development"], default="stable")
+    parser.add_argument("--revision", help="Specify a git commit hash or tag to install", default="master")
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
