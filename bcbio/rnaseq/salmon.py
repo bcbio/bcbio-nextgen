@@ -81,7 +81,7 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
         message = ("Quantifying transcripts in %s and %s with Salmon."
                    %(fq1, fq2))
         do.run(cmd.format(**locals()), message, None)
-        sailfish.sleuthify_sailfish(tx_out_dir)
+        #sailfish.sleuthify_sailfish(tx_out_dir)
     return out_file
 
 def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
