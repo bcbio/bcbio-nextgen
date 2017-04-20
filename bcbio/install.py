@@ -604,7 +604,7 @@ def add_install_defaults(args):
         with open(install_config) as in_handle:
             default_args = yaml.load(in_handle)
     # if we are upgrading to development, also upgrade the tools
-    if args.upgrade in ["development"]:
+    if args.upgrade in ["development"] and (args.tooldir or "tooldir" in default_args):
         args.tools = True
     if args.tools and args.tooldir is None:
         if "tooldir" in default_args:
