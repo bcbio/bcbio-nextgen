@@ -32,7 +32,7 @@ def _cwl_workflow_template(inputs, top_level=False):
     ready_inputs = []
     for inp in inputs:
         cur_inp = copy.deepcopy(inp)
-        for attr in ["source", "valueFrom"]:
+        for attr in ["source", "valueFrom", "wf_duplicate"]:
             cur_inp.pop(attr, None)
         if top_level:
             cur_inp = workflow._flatten_nested_input(cur_inp)
@@ -100,10 +100,12 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
         inp_tool["id"] = base_id
-        for attr in ["source", "valueFrom"]:
+        if inp.get("wf_duplicate"):
+            inp_tool["id"] += "_toolinput"
+        for attr in ["source", "valueFrom", "wf_duplicate"]:
             inp_tool.pop(attr, None)
-        inp_binding = {"prefix": "%s=" % base_id, "separate": False,
-                       "itemSeparator": ";;", "position": i}
+        inp_binding = {"prefix": "%s=" % base_id,
+                       "separate": False, "itemSeparator": ";;", "position": i}
         inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
         inp_tool = _place_secondary_files(inp_tool, inp_binding)
         out["inputs"].append(inp_tool)
@@ -162,6 +164,8 @@ def _step_template(name, run_file, inputs, outputs, parallel):
     sinputs = []
     for inp in inputs:
         step_inp = {"id": workflow.get_base_id(inp["id"]), "source": inp["id"]}
+        if inp.get("wf_duplicate"):
+            step_inp["id"] += "_toolinput"
         for attr in ["source", "valueFrom"]:
             if attr in inp:
                 step_inp[attr] = inp[attr]

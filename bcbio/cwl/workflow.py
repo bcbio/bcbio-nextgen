@@ -165,6 +165,12 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
+    # avoid inputs/outputs with the same name
+    outputs = [_get_string_vid(x["id"]) for x in step.outputs if not x["type"] == "record"]
+    final_inputs = []
+    for input in inputs:
+        input["wf_duplicate"] = get_base_id(input["id"]) in outputs
+        final_inputs.append(input)
     return inputs, parallel_ids, nested_inputs
 
 def _unpack_record(rec, file_vs, is_combine=False):
