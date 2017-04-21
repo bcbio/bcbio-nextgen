@@ -6,6 +6,7 @@ from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.variation import vardict
+from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio import broad, bam
 from bcbio.variation import vcfutils
 from bcbio.rnaseq import gtf
@@ -55,10 +56,11 @@ def gatk_rnaseq_calling(data):
     broad_runner = broad.runner_from_config(dd.get_config(data))
     ref_file = dd.get_ref_file(data)
     split_bam = dd.get_split_bam(data)
-    out_file = os.path.splitext(split_bam)[0] + ".gvcf"
+    out_file = os.path.splitext(split_bam)[0] + ".vcf"
+    bgzipped_file = out_file + ".gz"
     num_cores = dd.get_num_cores(data)
-    if file_exists(out_file):
-        data = dd.set_vrn_file(data, out_file)
+    if file_exists(bgzipped_file):
+        data = dd.set_vrn_file(data, bgzipped_file)
         return data
     with file_transaction(data, out_file) as tx_out_file:
         params = ["-T", "HaplotypeCaller",
@@ -71,7 +73,8 @@ def gatk_rnaseq_calling(data):
                   "--variant_index_parameter", "128000",
                   "-dontUseSoftClippedBases"]
         broad_runner.run_gatk(params)
-    data = dd.set_vrn_file(data, out_file)
+    bgzip_and_index(out_file, dd.get_config(data))
+    data = dd.set_vrn_file(data, bgzipped_file)
     return data
 
 def gatk_joint_calling(data, vrn_files, ref_file):

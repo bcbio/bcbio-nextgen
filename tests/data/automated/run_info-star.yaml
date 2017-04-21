@@ -6,7 +6,7 @@ details:
   - analysis: RNA-seq
     algorithm:
       fusion_mode: True
-      variantcaller: [vardict]
+      variantcaller: [gatk]
       transcriptome_align: True
       aligner: star
       quality_format: Standard
@@ -14,7 +14,26 @@ details:
       adapters: [truseq, polya]
       expression_caller: [stringtie]
       transcript_assembler: [stringtie, cufflinks]
+    metadata:
+      batch: TestBatch1
     description: Test1
     files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
     genome_build: mm9
     lane: 1
+  - analysis: RNA-seq
+    algorithm:
+      fusion_mode: True
+      variantcaller: [gatk]
+      transcriptome_align: True
+      aligner: star
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      expression_caller: [stringtie]
+      transcript_assembler: [stringtie, cufflinks]
+    metadata:
+      batch: TestBatch1
+    description: Test2
+    files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
+    genome_build: mm9
+    lane: 2
