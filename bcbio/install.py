@@ -423,6 +423,8 @@ def upgrade_thirdparty_tools(args, remotes):
     s["actions"] = ["install_biolinux"]
     s["fabricrc_overrides"]["system_install"] = args.tooldir
     s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
+    if args.toolconf and os.path.exists(args.toolconf):
+        s["fabricrc_overrides"]["conda_yaml"] = args.toolconf
     cbl = get_cloudbiolinux(remotes)
     sys.path.insert(0, cbl["dir"])
     cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
@@ -694,6 +696,8 @@ def add_subparser(subparsers):
                         action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to upgrade",
                         choices=["stable", "development", "system", "deps", "skip"], default="skip")
+    parser.add_argument("--toolconf", help="YAML configuration file of tools to install", default=None,
+                        type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--revision", help="Specify a git commit hash or tag to install", default="master")
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
