@@ -86,7 +86,13 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         # If we have a standard gene list we can skip BED based prioritization
         priority_vcf = "%s.vcf.gz" % utils.splitext_plus(out_file)[0]
         if gene_list:
-            utils.symlink_plus(vcf_file, priority_vcf)
+            if vcf_file.endswith(".vcf.gz"):
+                utils.symlink_plus(vcf_file, priority_vcf)
+            else:
+                assert vcf_file.endswith(".vcf")
+                utils.symlink_plus(vcf_file, priority_vcf.replace(".vcf.gz", ".vcf"))
+                vcfutils.bgzip_and_index(priority_vcf.replace(".vcf.gz", ".vcf"),
+                                         data["config"], remove_orig=False)
         # otherwise prioritize based on BED and proceed
         else:
             if not utils.file_exists(priority_vcf):
