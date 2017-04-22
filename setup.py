@@ -34,7 +34,7 @@ setup(name="bcbio-nextgen",
       long_description=(open('README.rst').read()),
       license="MIT",
       url="https://github.com/chapmanb/bcbio-nextgen",
-      packages=find_packages(),
+      packages=find_packages(exclude=["tests"]),
       zip_safe=zip_safe,
       scripts=scripts,
       install_requires=install_requires)
