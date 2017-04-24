@@ -53,8 +53,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
             "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
             "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
-            "--outStd BAM_SortedByCoordinate {srna_opts} "
-            "--outSAMtype BAM SortedByCoordinate "
+            "--outStd BAM_Unsorted {srna_opts} "
+            "--outSAMtype BAM Unsorted "
             "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
@@ -71,6 +71,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " --outSAMstrandField intronMotif "
         if not srna:
             cmd += " --quantMode TranscriptomeSAM "
+        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
         do.run(cmd.format(**locals()), run_message, None)
