@@ -1,7 +1,7 @@
-version: 6
+version: 7
 
 aliases:
-  ensembl: rattus_norvegicus_vep_86_Rnor_6.0
+  ensembl: rattus_norvegicus_vep_88_Rnor_6.0
   snpeff: Rnor_6.0.86
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
@@ -16,4 +16,4 @@ srnaseq:
     mirbase_hairpin: ../srnaseq/hairpin.fa
     mirbase_mature: ../srnaseq/mature.fa
     mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
- 
+
