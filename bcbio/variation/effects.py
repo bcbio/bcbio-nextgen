@@ -100,10 +100,10 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
-                cmd = ["%svep_install.pl" % vep_path, "-a", "c", "-s", ensembl_name,
+                cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
                        "-c", vep_dir, "-u", tmp_dir]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
-                cmd = ["%svep_convert_cache.pl" % vep_path, "-species", species, "-version", vepv,
+                cmd = ["%svep_convert_cache" % vep_path, "-species", species, "-version", vepv,
                        "-d", vep_dir]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Convert VEP cache to tabix %s" % ensembl_name)
                 for tmp_fname in os.listdir(tmp_dir):
@@ -129,7 +129,7 @@ def run_vep(in_file, data):
             if vep_dir:
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
-                vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
+                vep = config_utils.get_program("vep", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 config_args = []
                 if is_human:
@@ -155,7 +155,7 @@ def run_vep(in_file, data):
                        "--cache", "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
-                       "--protein", "--tsl", "--appris", "--gmaf", "--maf_1kg", "--maf_esp", "--maf_exac",
+                       "--protein", "--tsl", "--appris", "--af", "--max_af" "--af_1kg", "--af_esp", "--af_exac",
                        "--pubmed", "--variant_class"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
