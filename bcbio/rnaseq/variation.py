@@ -80,10 +80,14 @@ def gatk_rnaseq_calling(data):
 def gatk_joint_calling(data, vrn_files, ref_file):
     joint_file = os.path.join("variation", "joint.vcf")
     out_file = os.path.join("variation", "combined.vcf")
-    if not file_exists(out_file):
+    bgzjoint_file = os.path.join("variation", "joint.vcf.gz")
+    bgzout_file = os.path.join("variation", "combined.vcf.gz")
+    if not file_exists(bgzout_file):
         joint_file = _run_genotype_gvcfs(data, vrn_files, ref_file, joint_file)
         out_file = gatk_filter_rnaseq(data, joint_file, out_file)
-    return out_file
+        bgzip_and_index(joint_file, dd.get_config(data))
+        bgzip_and_index(out_file, dd.get_config(data))
+    return bgzout_file
 
 def _run_genotype_gvcfs(data, vrn_files, ref_file, out_file):
     if not file_exists(out_file):
