@@ -29,7 +29,7 @@ def generate(variables, steps, final_outputs):
                 parallel_ids = _find_split_vs(outputs, wf_step.parallel)
                 wf_steps.append(("step", wf_step.name, wf_step.parallel,
                                  [_wf_clean_record(x, step.internal) for x in inputs],
-                                 outputs, wf_step.programs, wf_step.disk, wf_step.cores))
+                                 outputs, wf_step.image, wf_step.programs, wf_step.disk, wf_step.cores))
                 wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs,
                                              step.internal, wf_step.parallel, nested_inputs)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
@@ -47,7 +47,8 @@ def generate(variables, steps, final_outputs):
             inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
             parallel_ids = _find_split_vs(outputs, step.parallel)
-            yield "step", step.name, step.parallel, inputs, outputs, step.programs, step.disk, step.cores
+            yield ("step", step.name, step.parallel, inputs, outputs, step.image, step.programs,
+                   step.disk, step.cores)
     yield "upload", [_get_upload_output(x, file_vs) for x in final_outputs]
 
 

@@ -39,9 +39,7 @@ def _cwl_workflow_template(inputs, top_level=False):
         ready_inputs.append(cur_inp)
     return {"class": "Workflow",
             "cwlVersion": "v1.0",
-            "hints": [{"class": "DockerRequirement",
-                       "dockerPull": "bcbio/bcbio",
-                       "dockerImageId": "bcbio/bcbio"}],
+            "hints": [],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
                              {"class": "ScatterFeatureRequirement"},
@@ -52,8 +50,8 @@ def _cwl_workflow_template(inputs, top_level=False):
             "outputs": [],
             "steps": []}
 
-def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estimates, disk,
-                step_cores, samples):
+def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
+                file_estimates, disk, step_cores, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     cores = step_cores if step_cores else resource_cores
@@ -61,6 +59,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
                "coresMin": cores, "ramMin": mem_mb_total, "outdirMin": bcbio_docker_disk}
+    docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
+    docker = {"class": "DockerRequirement", "dockerPull": docker_image, "dockerImageId": docker_image}
     if file_estimates and disk:
         total_estimate = 0
         for key, multiplier in disk.items():
@@ -72,7 +72,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, programs, file_estima
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
-           "hints": [cwl_res],
+           "hints": [docker, cwl_res],
            "arguments": [],
            "inputs": [],
            "outputs": []}
@@ -195,8 +195,8 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     steps, wfoutputs = workflow_fn()
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
-            _, name, parallel, inputs, outputs, programs, disk, cores = cur
-            step_file = _write_tool(step_dir, name, inputs, outputs, parallel, programs,
+            _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
+            step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                     file_estimates, disk, cores, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
         elif cur[0] == "upload":
