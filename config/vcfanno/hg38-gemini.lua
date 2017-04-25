@@ -63,9 +63,9 @@ function div2(a, b)
 end
 
 function ratio(vals)
-    vals = vals[1] -- get 2 values per element. ref and alt counts.
+    vals = vals[1] -- get 2 values per element. alt and ref counts.
     if vals[2] == 0 then return "0.0" end
-    return string.format("%.9f", vals[2] / (vals[1] + vals[2]))
+    return string.format("%.9f", vals[1] / (vals[1] + vals[2]))
 end
 
 function clinvar_sig(vals)
