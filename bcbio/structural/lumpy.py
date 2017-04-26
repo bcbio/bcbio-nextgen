@@ -256,7 +256,7 @@ def _run_svtyper(in_file, full_bam, exclude_file, data):
                     for region in ref.file_contigs(dd.get_ref_file(data), data["config"]):
                         out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
                 cmd = ("bcftools view {in_file} {regions_to_rm} | "
-                       "{python} {svtyper} -B {full_bam} | "
+                       "{python} {svtyper} --max_reads 1000 -B {full_bam} | "
                        "bcftools annotate -h {header_file} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")
