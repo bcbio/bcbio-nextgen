@@ -204,31 +204,32 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
     except ValueError:
         return "\t".join(line)
 
-    if len(line) > 10:
+    if len(line) > 9:
         Ifreq = line[8].split(":").index("FREQ")
         ndat = line[9].split(":")
-        tdat = line[10].split(":")
-        # HACK: The position of the SS= changes, so we just search for it
-        ss_vals = [item for item in line[7].split(";") if item.startswith("SS=")]
-        if len(ss_vals) > 0:
-            somatic_status = int(ss_vals[0].split("=")[1])  # Get the number
-        else:
-            somatic_status = None
-
         try:
             ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
         except ValueError:  # illegal binary characters -- set frequency to zero
             ndat[Ifreq] = "0.0"
-        try:
-            tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
-        except ValueError:  # illegal binary characters -- set frequency to zero
-            tdat[Ifreq] = "0.0"
         line[9] = ":".join(ndat)
-        line[10] = ":".join(tdat)
-        if somatic_status == 5:
-            # "Unknown" states are broken in current versions of VarScan
-            # so we just bail out here for now
-            return
+        if len(line) > 10:
+            tdat = line[10].split(":")
+            # HACK: The position of the SS= changes, so we just search for it
+            ss_vals = [item for item in line[7].split(";") if item.startswith("SS=")]
+            if len(ss_vals) > 0:
+                somatic_status = int(ss_vals[0].split("=")[1])  # Get the number
+            else:
+                somatic_status = None
+
+            try:
+                tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
+            except ValueError:  # illegal binary characters -- set frequency to zero
+                tdat[Ifreq] = "0.0"
+            line[10] = ":".join(tdat)
+            if somatic_status == 5:
+                # "Unknown" states are broken in current versions of VarScan
+                # so we just bail out here for now
+                return
 
     #FIXME: VarScan also produces invalid REF records (e.g. CAA/A)
     # This is not handled yet.
