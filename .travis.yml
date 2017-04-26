@@ -30,6 +30,8 @@ script:
   # Currently turned off to reduce test run times on Travis
   #- docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/integration -v -m 'not install_required' --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker
+  # TODO: switch to use CWL docker runs instead of full bcbio/bcbio images
+  #- py.test tests/bcbio_vm -v -m cwl
 
 notifications:
   email: false

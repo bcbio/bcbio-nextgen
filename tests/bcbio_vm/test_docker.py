@@ -53,7 +53,7 @@ class TestCWL():
     Requires https://github.com/chapmanb/bcbio-nextgen-vm
     """
 
-    @pytest.marks('cwl_docker', 'cwl', 'docker')
+    @pytest.marks('cwl_docker', 'cwl')
     def test_2_cwl_docker(install_test_files, data_dir):
         """Create a common workflow language description and run on a
         Docker installation.
