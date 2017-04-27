@@ -1,6 +1,6 @@
 """
 Manage pushing and pulling files from an object store like
-Amazon Web Services S3.
+Amazon Web Services S3 or iRODS.
 """
 # pylint: disable=redefined-builtin
 
@@ -24,7 +24,7 @@ import six
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
 
-SUPPORTED_REMOTES = ("s3://",)
+SUPPORTED_REMOTES = ("s3://","irods://")
 BIODATA_INFO = {"s3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
 REGIONS_NEWPERMS = {"s3": ["eu-central-1"]}
 
@@ -549,6 +549,114 @@ class AzureBlob(StorageManager):
                           blob=file_info.blob,
                           chunk_size=cls._BLOB_CHUNK_DATA_SIZE)
 
+class iRODS(StorageManager):
+
+    """iRODS store Manager."""
+
+    _REMOTE_FILE = collections.namedtuple(
+        "RemoteFile", ["method", "path","ticket"])
+
+    def __init__(self):
+        super(iRODS, self).__init__()
+
+    @classmethod
+    def check_resource(cls, resource):
+        """Check if the received resource can be processed by
+        the current storage manager.
+        """
+        if resource and resource.startswith("irods://"):
+            return True
+
+        return False
+
+    @classmethod
+    def parse_remote(cls, filename):
+        """
+        Parses a remote filename into zone, ticket and path information.
+        Handles iRODS with optional ticket name specified in key:
+            irods://ticket@/path
+        """
+        parts = filename.split("//")[-1].split("@", 1)
+        ticket,path = parts if len(parts) == 2 else (None,parts[0])
+        return cls._REMOTE_FILE("irods","/"+path.lstrip("/"), ticket)
+
+    @classmethod
+    def _cl_icommands_cli(cls, file_info):
+        """
+        Command line required for download using the standard iCommands
+        command line interface.
+        """
+        command = ["iget","-K","-T","-v", "-X","download.iRODS","--retries","5","--lfrestart","lfdownload.iRODS"]
+        if file_info.ticket:
+            command += ["-t",file_info.ticket]
+        command.extend(file_info.path)
+        return (command, "irodscli")
+
+    @classmethod
+    def _download_cl(cls, filename):
+        """
+        Provide potentially streaming download from iRODS using iCommands CLI.
+        """
+        file_info = cls.parse_remote(filename)
+        return cls._cl_icommands_cli(file_info)
+
+
+    @classmethod
+    def download(cls, filename, input_dir, dl_dir=None):
+        """
+        Provide potentially streaming download from iRODS using iCommands CLI.
+        """
+        if not dl_dir:
+            dl_dir = os.path.join(input_dir,os.path.dirname(file_info.path))
+            utils.safe_makedir(dl_dir)
+
+        out_file = os.path.join(dl_dir, os.path.basename(file_info.path))
+
+        if not utils.file_exists(out_file):
+            with file_transaction({}, out_file) as tx_out_file:
+                command, prog = cls._download_cl(filename)
+                if prog == "irodscli":
+                    command.extend([tx_out_file])
+                else:
+                    raise NotImplementedError(
+                        "Unexpected download program %s" % prog)
+                subprocess.check_call(command)
+        return out_file
+
+    @classmethod
+    def cl_input(cls, filename, unpack=True, anonpipe=True):
+        """
+        Return command line input for a file, handling streaming
+        remote cases.
+        """
+        command, prog = cls._download_cl(filename)
+        if prog == "irodscli":
+            command.append("-")
+
+        command = " ".join(command)
+        if filename.endswith(".gz") and unpack:
+            command = "%(command)s | gunzip -c" % {"command": command}
+        elif filename.endswith(".bz2") and unpack:
+            command = "%(command)s | bunzip2 -c" % {"command": command}
+        if anonpipe:
+            command = "<(%(command)s)" % {"command": command}
+
+        return command
+
+    @classmethod
+    def list(cls, path):
+        """
+        Return a list containing the names of the entries in the directory
+        given by path. The list is in arbitrary order.
+        """
+        file_info = cls.parse_remote(path)
+        output = []
+        for key in bucket.get_all_keys(prefix=file_info.key):
+            output.append(cls._S3_FILE % {"bucket": file_info.bucket,
+                                          "key": key.name})
+        return output
+
+
 class ArvadosKeep:
     """Files stored in Arvados Keep. Partial implementation, integration in bcbio-vm.
     """
@@ -561,7 +669,7 @@ class ArvadosKeep:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, AzureBlob, ArvadosKeep):
+    for manager in (AmazonS3, AzureBlob, ArvadosKeep,iRODS):
         if manager.check_resource(resource):
             return manager()
 
