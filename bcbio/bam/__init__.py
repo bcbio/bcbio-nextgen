@@ -35,7 +35,9 @@ def is_paired(bam_file):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
-    if p.returncode == 0 or p.returncode == 141 and stderr.strip() == "":
+    stderr = stderr.strip()
+    if ((p.returncode == 0 or p.returncode == 141) and
+         (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
         return int(stdout) > 0
     else:
         raise ValueError("Failed to check paired status of BAM file: %s" % str(stderr))
