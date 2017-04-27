@@ -20,9 +20,17 @@ def license_export(data):
     resources = config_utils.get_resources("sentieon", data["config"])
     server = resources.get("keyfile")
     if not server:
-        raise ValueError("Need to set resources keyfile with URL of license server or local license file\n"
+        raise ValueError("Need to set resources keyfile with URL:port of license server, local license file or "
+                         "environmental variables to export \n"
                          "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources")
-    return "export SENTIEON_LICENSE=%s && " % server
+    if isinstance(server, basestring):
+        return "export SENTIEON_LICENSE=%s && " % server
+    else:
+        assert isinstance(server, dict), server
+        exports = ""
+        for key, val in server.items():
+            exports += "export %s=%s && " % (key.upper(), val)
+        return exports
 
 def run_tnscope(align_bams, items, ref_file, assoc_files,
                      region=None, out_file=None):

@@ -1008,7 +1008,15 @@ and memory and compute resources to devote to them::
 - ``keyfile`` Specify the location of a program specific key file or license
   server, obtained from a third party software tool. Supports licenses for
   `novoalign <http://www.novocraft.com/products/novoalign/>`_ and `Sentieon
-  <http://www.sentieon.com/products.html>`_.
+  <http://www.sentieon.com/products.html>`_. For more complex Sentieon setups
+  this can also be a dictionary of environmental variables::
+
+      resources:
+        sentieon:
+          keyfile:
+            SENTIEON_LICENSE_SERVER: 100.100.100.100:8888
+            SENTIEON_AUTH_MECH: XXX
+            SENTIEON_AUTH_DATA: signature
 
 For GATK you can individually control memory for variant calling (which uses the
 ``gatk`` memory target) and for framework usage like merging and variant file
