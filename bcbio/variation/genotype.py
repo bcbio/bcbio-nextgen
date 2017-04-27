@@ -195,7 +195,7 @@ def vc_output_record(samples):
     raw = cwlutils.samples_to_records([utils.to_single_data(x) for x in samples])
     shared = {}
     for key in shared_keys:
-        cur = [x for x in [tz.get_in(key, d) for d in raw] if x]
+        cur = list(set([x for x in [tz.get_in(key, d) for d in raw] if x]))
         if len(cur) > 0:
             assert len(cur) == 1, (key, cur)
             shared[tuple(key)] = cur[0]
@@ -362,7 +362,7 @@ def _get_batch_name(items):
     return sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
 
 def _get_batch_variantcaller(items):
-    variantcaller = list(set([get_variantcaller(x) for x in items]))
+    variantcaller = [vc for vc in list(set([get_variantcaller(x) for x in items])) if vc]
     assert len(variantcaller) == 1, "%s\n%s" % (variantcaller, pprint.pformat(items))
     return variantcaller[0]
 

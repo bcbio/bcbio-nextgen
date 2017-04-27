@@ -42,7 +42,7 @@ def process(args):
     if not work_dir:
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
-        fnargs, parallel, out_keys = _world_from_cwl(fnargs[1:], work_dir)
+        fnargs, parallel, out_keys = _world_from_cwl(args.name, fnargs[1:], work_dir)
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
@@ -147,7 +147,7 @@ def _add_resources(data, runtime):
         data["config"]["algorithm"]["num_cores"] = int(runtime["cores"])
     return data
 
-def _world_from_cwl(fnargs, work_dir):
+def _world_from_cwl(fn_name, fnargs, work_dir):
     """Reconstitute a bcbio world data object from flattened CWL-compatible inputs.
 
     Converts the flat CWL representation into a nested bcbio world dictionary.
@@ -191,7 +191,8 @@ def _world_from_cwl(fnargs, work_dir):
     if data:
         out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
     if grouped_keys:
-        out = _split_groups_finalize_cwl(dict(grouped_keys), data, work_dir, passed_keys, output_cwl_keys, runtime)
+        out = _split_groups_finalize_cwl(dict(grouped_keys), data, work_dir, passed_keys, output_cwl_keys,
+                                         runtime, fn_name)
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
@@ -221,7 +222,8 @@ def _check_multikey_order(fnargs):
     else:
         return "nested"
 
-def _split_groups_finalize_cwl(grouped_keys, data, work_dir, passed_keys, output_cwl_keys, runtime):
+def _split_groups_finalize_cwl(grouped_keys, data, work_dir, passed_keys, output_cwl_keys, runtime,
+                               fn_name):
     """Split grouped inputs into data objects, finalizing CWL outputs
     """
     out = []
@@ -234,14 +236,14 @@ def _split_groups_finalize_cwl(grouped_keys, data, work_dir, passed_keys, output
             if len(vals) == num_recs:
                 val = vals[reci]
             else:
-                val = _resolve_null_vals(key, vals, reci, num_recs)
+                val = _resolve_null_vals(fn_name, key, vals, reci, num_recs)
             passed_keys.append(key)
             key = key.split("__")
             data = _update_nested(key, _convert_value(val), data)
         out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
     return out
 
-def _resolve_null_vals(key, vals, reci, num_recs):
+def _resolve_null_vals(fn_name, key, vals, reci, num_recs):
     """Resolve tricky cases with multiple records and missing values.
 
     CWL runners do not pass an argument if the value is None/null, which
@@ -251,13 +253,13 @@ def _resolve_null_vals(key, vals, reci, num_recs):
     and we need to revisit approach for generating the command line to
     avoid this.
     """
-    allowed_uneven = set(["summary__qc"])
+    allowed_uneven = set(["concat_batch_variantcalls", "multiqc_summary"])
     unique_vals = set(vals)
     if len(unique_vals) == 1:
         return unique_vals.pop()
     elif num_recs == 1:
         return vals
-    elif key in allowed_uneven and num_recs > len(vals):
+    elif fn_name in allowed_uneven and num_recs > len(vals):
         try:
             return vals[reci]
         except IndexError:

@@ -268,7 +268,7 @@ def variant():
             "bcbio-qc", ["multiqc", "multiqc-bcbio"],
             cores=1)]
     steps = align + vc + qc
-    final_outputs = [["align_bam"], ["summary", "multiqc"]]
+    final_outputs = [["align_bam"], ["summary", "multiqc"], ["validate", "grading_summary"]]
     return steps, final_outputs
 
 def sv():
