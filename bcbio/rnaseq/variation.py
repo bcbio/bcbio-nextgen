@@ -84,8 +84,8 @@ def gatk_joint_calling(data, vrn_files, ref_file):
     bgzout_file = os.path.join("variation", "combined.vcf.gz")
     if not file_exists(bgzout_file):
         joint_file = _run_genotype_gvcfs(data, vrn_files, ref_file, joint_file)
-        out_file = gatk_filter_rnaseq(data, joint_file, out_file)
         bgzip_and_index(joint_file, dd.get_config(data))
+        out_file = gatk_filter_rnaseq(data, bgzjoint_file, out_file)
         bgzip_and_index(out_file, dd.get_config(data))
     return bgzout_file
 
