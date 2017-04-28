@@ -559,9 +559,19 @@ class ArvadosKeep:
     def download(self, filename, input_dir, dl_dir=None):
         return None
 
+class SevenBridges:
+    """Files stored in SevenBridges. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("sbg:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
+
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, AzureBlob, ArvadosKeep):
+    for manager in (AmazonS3, AzureBlob, ArvadosKeep, SevenBridges):
         if manager.check_resource(resource):
             return manager()
 

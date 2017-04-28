@@ -448,7 +448,7 @@ def _calc_input_estimates(keyvals, integrations=None):
         return {"files": max(input_sizes)}
 
 def _get_retriever(path, integrations):
-    integration_map = {"keep:": "arvados", "s3:": "s3"}
+    integration_map = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics"}
     if path.startswith(tuple(integration_map.keys())):
         return integrations.get(integration_map[path.split(":")[0] + ":"])
 
