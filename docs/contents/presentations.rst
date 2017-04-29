@@ -1,6 +1,11 @@
 Presentations
 =============
 
+- Training course for the `Cancer Genomics Cloud
+  <http://www.cancergenomicscloud.org/>`_, decribing how bcbio uses the Common
+  Workflow Language to run in multiple infrastructures (1 May 2017): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/cgc2017_bcbio_cwl/cgc2017_bcbiocwl.pdf>`_
+
 - `MIT Bioinformatics Interest Group
   <http://openwetware.org/wiki/BioMicroCenter:BIG_meeting#2016-2017_academic_year>`_
   about how Common Workflow Language
