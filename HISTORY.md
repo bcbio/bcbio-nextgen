@@ -30,6 +30,8 @@
 - Add `sailfish` as a valid option for `expression_caller`.
 - Fix chimeric alignment output option for STAR.
 - Remove deprecated tidy counts for Sailfish/Salmon.
+- Allow more possible empty/skip inputs in `variantcaller` and `svcaller`: None,
+  null and empty lists
 
 ## 1.0.2 (7 March 2017)
 

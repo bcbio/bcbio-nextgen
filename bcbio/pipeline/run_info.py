@@ -315,7 +315,8 @@ def _clean_algorithm(data):
                 val = [val]
             # check for cases like [false] or [None]
             if isinstance(val, (list, tuple)):
-                if len(val) == 1 and not val[0] or val[0] == "None":
+                if len(val) == 1 and not val[0] or (isinstance(val[0], basestring)
+                                                    and val[0].lower() in ["none", "false"]):
                     val = False
             data["algorithm"][key] = val
     return data
