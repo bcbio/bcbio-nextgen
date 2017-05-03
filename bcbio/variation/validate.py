@@ -510,7 +510,7 @@ def _group_validate_samples(samples):
             for batch_key in (["metadata", "validate_batch"], ["metadata", "batch"],
                               ["description"]):
                 vname = tz.get_in(batch_key, data)
-                if vname:
+                if vname and not (isinstance(vname, basestring) and vname.lower() in ["none", "false"]):
                     break
             if isinstance(vname, (list, tuple)):
                 vname = vname[0]
