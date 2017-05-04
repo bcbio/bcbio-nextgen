@@ -4,6 +4,7 @@ count number of reads mapping to features of transcripts
 """
 import os
 import pandas as pd
+from collections import defaultdict
 import gffutils
 
 from bcbio.utils import file_exists
@@ -24,15 +25,25 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     if file_exists(out_file):
         return out_file
 
+    row_names = []
+    col_vals = defaultdict(list)
     for i, f in enumerate(files):
+        print "Processing %s." % f
+        vals = []
         if i == 0:
-            df = pd.io.parsers.read_table(f, sep="\t", index_col=0, header=None,
-                                          names=[col_names[0]])
+            with open(f) as in_handle:
+                for line in in_handle:
+                    rname, val = line.strip().split("\t")
+                    row_names.append(rname)
+                    vals.append(int(val))
         else:
-            df = df.join(pd.io.parsers.read_table(f, sep="\t", index_col=0,
-                                                  header=None,
-                                                  names=[col_names[i]]))
+            with open(f) as in_handle:
+                for line in in_handle:
+                    _, val = line.strip().split("\t")
+                    vals.append(int(val))
+        col_vals[col_names[i]] = vals
 
+    df = pd.DataFrame(col_vals, index=row_names)
     df.to_csv(out_file, sep="\t", index_label="id")
     return out_file
 
