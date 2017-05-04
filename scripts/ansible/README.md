@@ -258,10 +258,31 @@ This in progress documentation describes running bcbio generated CWL using
         <edit run_toil_aws.sh to change LEADER_PRIVATE_IP, from above) and JOB_STORE s3 bucket>
         bash run_toil_aws.sh
 
-TODO:
+Current discussion topics:
+
+  - Need to be able to specify root volume sizes. Current 50Gb hardcoded default
+    will fail for larger WGS samples and some test samples.
+  - How does file staging work for shared files used in multiple steps, like
+    BAMs for variant calling? Are they staged once on an AWS machine and re-used
+    or pulled down multiple times? I'm running into disk space errors during
+    runs which indicate they get pulled down multiple times and potentially not
+    removed, or we have two jobs on the same machine with larger files.
+    Re-starting the pipeline allows these jobs to finish.
+  - Restarting jobs with/without `--no-container` while reusing job store. In
+    general, can we adjust Toil parameters without needing to re-setup the
+    jobStore? 
+  - Can we scale down proceses that request too many cores (8 cores on 4 core
+    machine)?
+  - Similarly, how does passing files back to the S3 file store work? The
+    pipeline current stalls on `batch_for_variantcall` which isn't doing much
+    processing work but does aggressively split to run variant calls in
+    parallel, so it return a large number of outputs each of which has the BAM
+    file. I don't see these written to the filestore on S3 but am trying to
+    brainstorm reason why this step takes a very long time to run.
+  - Consider how to deal with input files already present in external S3
+    buckets. Could we avoid copying these into the Toil work bucket if in the
+    right region?
   - cgcloud versioning, need development version of Toil: https://github.com/BD2KGenomics/toil/issues/1458
-  - Consider how to deal with input files already present in external S3 buckets
-  - Get screen inside appliance working: Must be connected to a terminal.
   - Swap to using Ubuntu instead of relying on manual CoreOS Amazon approvals.
 
 ## Debugging tips
