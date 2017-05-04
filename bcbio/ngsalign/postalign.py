@@ -160,7 +160,7 @@ def umi_consensus(data):
                    "fgbio {jvm_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
                    "fgbio {jvm_opts} CallMolecularConsensusReads {cons_opts} "
                    "-S queryname -i /dev/stdin -o /dev/stdout | "
-                   "bamtofastq F={tx_f1_out} F2={tx_f2_out} gz=1")
+                   "bamtofastq F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out
 

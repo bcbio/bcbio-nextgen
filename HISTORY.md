@@ -6,10 +6,13 @@
 - Fix structural variant output upload for complex batching cases. Correctly
   handle shared normals and other multi-batch by naming outputs using batches.
   Thanks to Sven-Eric Schelhorn.
-- Support DNApi for de novo adapter detection in small RNA pipeline
 - Move to samtools/bcftools/htslib 1.4. Provides parallel bgzip, removing need
   for pbgzip and improved concatenation speed for region split VCF files.
-- Improve Lumpy prioritization speeds by adjusting location of breakend genotyping.
+- Improve Lumpy prioritization speeds by adjusting location of breakend
+  genotyping.
+- UMI consensus: pass along metrics about consensus read generation as BAM tags
+  in final file (cD = depth, cE = error rate)
+- Support DNApi for de novo adapter detection in small RNA pipeline
 - Several updates to the VarScan support: honor options specified in the
   resource config section; honor min_allele_frac option and set --strand-filter
   flag in the single-sample case; general cleanups. Thanks to Christian Brueffer.

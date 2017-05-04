@@ -81,13 +81,15 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     bwa_params = (" ".join([str(x) for x in bwa_resources.get("options", [])])
                   if "options" in bwa_resources else "")
     rg_info = novoalign.get_rg_info(data["rgnames"])
+    # For UMI runs, pass along consensus tags
+    c_tags = "-C" if "umi_bam" in data else ""
     pairing = "-p" if not fastq2 else ""
     # Restrict seed occurances to 1/2 of default, manage memory usage for centromere repeats in hg38
     # https://sourceforge.net/p/bio-bwa/mailman/message/31514937/
     # http://ehc.ac/p/bio-bwa/mailman/message/32268544/
     mem_usage = "-c 250"
-    bwa_cmd = ("{exports}{bwa} mem {pairing} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' -v 1 "
-               "{ref_file} {fastq1} {fastq2} ")
+    bwa_cmd = ("{exports}{bwa} mem {pairing} {c_tags} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' "
+               "-v 1 {ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
 def _can_use_mem(fastq_file, data, read_min_size=None):
