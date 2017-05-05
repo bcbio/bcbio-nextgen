@@ -73,6 +73,10 @@ def run_autopair(args):
     ready_to_run = []
     for r1, r2 in to_run:
         target = os.path.commonprefix([r1, r2])
+        # Strip off "_R" at end of _R1/_R2 to allow other index schemes instead of
+        # R1/R2/R3 like R1/R2/I1
+        if target.endswith("_R"):
+            target = target[:]
         r3 = None
         for test_r3 in extras:
             if (os.path.commonprefix([r1, test_r3]) == target and
