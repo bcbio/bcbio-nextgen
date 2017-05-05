@@ -72,23 +72,48 @@ def run_autopair(args):
             extras.append(fnames[0])
     ready_to_run = []
     for r1, r2 in to_run:
-        target = os.path.commonprefix([r1, r2])
-        # Strip off "_R" at end of _R1/_R2 to allow other naming schemes instead of
-        # R1/R2/R3 like R1/R2/I1
-        if target.endswith("_R"):
-            target = target[:-2]
+        target = _commonprefix([r1, r2])
         r3 = None
         for test_r3 in extras:
-            if (os.path.commonprefix([r1, test_r3]) == target and
-                  os.path.commonprefix([r2, test_r3]) == target):
+            if (_commonprefix([r1, test_r3]) == target and
+                  _commonprefix([r2, test_r3]) == target):
                 r3 = test_r3
                 break
         assert r3, (r1, r2, extras)
-        base_name = os.path.join(outdir, os.path.commonprefix([r1, r2, r3]).rstrip("_R"))
-        ready_to_run.append([base_name, r1, r3, r2, {"algorithm": {}, "resources": {}}])
-
+        base_name = os.path.join(outdir, _commonprefix([r1, r2, r3]))
+        r1, r2, umi = _find_umi([r1, r2, r3])
+        ready_to_run.append([base_name, r1, r2, umi, {"algorithm": {}, "resources": {}}])
     parallel = {"type": "local", "cores": args.cores, "progs": []}
     run_multicore(add_umis_to_fastq_parallel, ready_to_run, {"algorithm": {}}, parallel)
+
+def _find_umi(files):
+    """Find UMI file using different naming schemes.
+
+    R1/R2/R3 => R1/R3 with R2 UMI
+    R1/R2/I1 => R1/R2 with I1 UMI
+    """
+    base = os.path.basename(_commonprefix(files))
+    def _file_ext(f):
+        exts = os.path.basename(f).replace(base, "").split("_")
+        exts = [x for x in exts if x]
+        return exts[0]
+    exts = dict([(_file_ext(f), f) for f in files])
+    if "I1" in exts:
+        return exts["R1"], exts["R2"], exts["I1"]
+    else:
+        assert "R3" in exts, exts
+        return exts["R1"], exts["R3"], exts["R2"]
+
+def _commonprefix(files):
+    """Retrieve a common prefix for files without extra _R1 _I1 extensions.
+
+    Allows alternative naming schemes (R1/R2/R3) (R1/R2/I1).
+    """
+    out = os.path.commonprefix(files)
+    out = out.rstrip("_R")
+    out = out.rstrip("_I")
+    out = out.rstrip("_")
+    return out
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add UMIs to fastq read names")
