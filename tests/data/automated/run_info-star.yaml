@@ -12,7 +12,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [stringtie]
+      expression_caller: [stringtie, dexseq]
       transcript_assembler: [stringtie, cufflinks]
     metadata:
       batch: TestBatch1
@@ -29,7 +29,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [stringtie]
+      expression_caller: [stringtie, dexseq]
       transcript_assembler: [stringtie, cufflinks]
     metadata:
       batch: TestBatch1

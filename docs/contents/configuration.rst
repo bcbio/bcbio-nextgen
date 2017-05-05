@@ -428,7 +428,7 @@ Alignment
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
    and polyA tails. Valid items are [truseq, illumina, nextera, polya].
-   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi. 
+   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi.
    If you set up this parameter, then bcbio'll use this value instead.
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
@@ -774,8 +774,8 @@ RNA sequencing
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
 - ``expression_caller`` A list of optional expression callers to turn on.
-  Supports ['cufflinks', 'express', 'stringtie', 'sailfish']. Salmon and count
-  based expression estimation are run by default.
+  Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq']. Salmon
+  and count based expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 

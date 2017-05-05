@@ -35,6 +35,9 @@
 - Remove deprecated tidy counts for Sailfish/Salmon.
 - Allow more possible empty/skip inputs in `variantcaller` and `svcaller`: None,
   null and empty lists
+- Move DEXSeq to be an opt-in expression caller by default.
+- Speed up combination of counts/RPKM/FPKM/TPM of samples into a single table by
+  10x.
 
 ## 1.0.2 (7 March 2017)
 

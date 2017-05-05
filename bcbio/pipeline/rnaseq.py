@@ -120,7 +120,8 @@ def quantitate_expression_noparallel(samples, run_parallel):
     data = samples[0][0]
     if "express" in dd.get_expression_caller(data):
         samples = run_parallel("run_express", samples)
-    samples = run_parallel("run_dexseq", samples)
+    if "dexseq" in dd.get_expression_caller(data):
+        samples = run_parallel("run_dexseq", samples)
     return samples
 
 def generate_transcript_counts(data):
