@@ -80,7 +80,7 @@ def run_autopair(args):
                 r3 = test_r3
                 break
         assert r3, (r1, r2, extras)
-        base_name = os.path.join(outdir, _commonprefix([r1, r2, r3]))
+        base_name = os.path.join(outdir, os.path.basename(_commonprefix([r1, r2, r3])))
         r1, r2, umi = _find_umi([r1, r2, r3])
         ready_to_run.append([base_name, r1, r2, umi, {"algorithm": {}, "resources": {}}])
     parallel = {"type": "local", "cores": args.cores, "progs": []}
