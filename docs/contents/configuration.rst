@@ -58,6 +58,9 @@ multiple samples using the template workflow command::
   files, the template functionality will identify pairs using standard
   conventions (``_1`` and ``_2``, including Illumina extensions like ``_R1``),
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
+  Note that paired-end samples sequentially numbered without leading zeros 
+  (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``, 
+  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info).
 
     The remaining columns can contain:
 
