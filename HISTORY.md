@@ -10,6 +10,8 @@
   for pbgzip and improved concatenation speed for region split VCF files.
 - Improve Lumpy prioritization speeds by adjusting location of breakend
   genotyping.
+- UMI consensus: reduce runtimes to ~2/3 of previous avoiding unnecessary
+  compression and file IO.
 - UMI consensus: pass along metrics about consensus read generation as BAM tags
   in final file (cD = depth, cE = error rate)
 - Support DNApi for de novo adapter detection in small RNA pipeline

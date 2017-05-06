@@ -155,12 +155,17 @@ def umi_consensus(data):
     if not utils.file_uptodate(f1_out, align_bam):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
+            # Improve speeds by avoiding compression read/write bottlenecks
+            io_opts = ("-Dsamjdk.use_async_io_read_samtools=true -Dsamjdk.use_async_io_write_samtools=true "
+                       "-Dsamjdk.compression_level=0")
             group_opts, cons_opts = _get_fgbio_options(data)
+            tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
             cmd = ("unset JAVA_HOME && "
-                   "fgbio {jvm_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
-                   "fgbio {jvm_opts} CallMolecularConsensusReads {cons_opts} "
-                   "-S queryname -i /dev/stdin -o /dev/stdout | "
-                   "bamtofastq F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
+                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
+                   "fgbio {jvm_opts} {io_opts} CallMolecularConsensusReads {cons_opts} "
+                   "--output-per-base-tags=false --sort-order=unsorted "
+                   "-i /dev/stdin -o /dev/stdout | "
+                   "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out
 
