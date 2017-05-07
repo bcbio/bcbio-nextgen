@@ -1,4 +1,4 @@
-## 1.0.3 (in progress)
+## 1.0.3 (7 May 2017)
 
 - Allow installs to pull a specific git hash or tag revision of bcbio codebase.
 - Fix FreeBayes somatic and multi-sample calling order to be consistent between
