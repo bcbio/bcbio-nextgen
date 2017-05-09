@@ -6,7 +6,7 @@ aliases:
   ensembl: homo_sapiens_merged_vep_88_GRCh38
 
 variation:
-  dbsnp: ../variation/dbsnp-147.vcf.gz
+  dbsnp: ../variation/dbsnp-150.vcf.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   dbscsnv: ../variation/dbscSNV.txt.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
