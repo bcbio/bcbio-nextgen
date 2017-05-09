@@ -150,8 +150,8 @@ def run_vep(in_file, data):
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
                       ["--species", ensembl_name,
-                       "--no_stats",
-                       "--cache", "--offline", "--dir", vep_dir,
+                       "--no_stats", "--cache", "--merged"
+                        "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
                        "--protein", "--tsl", "--appris", "--af", "--max_af" "--af_1kg", "--af_esp", "--af_exac",
