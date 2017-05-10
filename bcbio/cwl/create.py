@@ -43,9 +43,7 @@ def _cwl_workflow_template(inputs, top_level=False):
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
                              {"class": "ScatterFeatureRequirement"},
-                             {"class": "StepInputExpressionRequirement"},
-                             {"class": "SubworkflowFeatureRequirement"},
-                             {"class": "InlineJavascriptRequirement"}],
+                             {"class": "SubworkflowFeatureRequirement"}],
             "inputs": ready_inputs,
             "outputs": [],
             "steps": []}
@@ -72,6 +70,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
+           "requirements": [],
            "hints": [docker, cwl_res],
            "arguments": [],
            "inputs": [],
@@ -94,7 +93,11 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     std_inputs = [{"id": "sentinel_parallel", "type": "string",
                    "default": parallel},
                   {"id": "sentinel_outputs", "type": "string",
-                   "default": ",".join([workflow.get_base_id(x["id"]) for x in outputs])}]
+                   "default": ",".join([_get_sentinel_val(v) for v in outputs])},
+                  {"id": "sentinel_inputs", "type": "string",
+                   "default": ",".join(["%s:%s" % (workflow.get_base_id(v["id"]),
+                                                   "record" if workflow.is_cwl_record(v) else "var")
+                                        for v in inputs])}]
     inputs = std_inputs + inputs
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
@@ -104,15 +107,23 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_tool["id"] += "_toolinput"
         for attr in ["source", "valueFrom", "wf_duplicate"]:
             inp_tool.pop(attr, None)
-        inp_binding = {"prefix": "%s=" % base_id,
-                       "separate": False, "itemSeparator": ";;", "position": i}
-        inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
+        if _is_scatter_parallel(parallel) and tz.get_in(["type", "type"], inp) == "array":
+            inp_tool = workflow._flatten_nested_input(inp_tool)
+        if not workflow.is_cwl_record(inp):
+            inp_binding = {"prefix": "%s=" % base_id,
+                           "separate": False, "itemSeparator": ";;", "position": i}
+            inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
         inp_tool = _place_secondary_files(inp_tool, inp_binding)
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
         outp_tool["id"] = workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
+    if any([workflow.is_cwl_record(x) for x in inputs]):
+        out["requirements"] += [{"class": "InlineJavascriptRequirement"},
+                                {"class": "InitialWorkDirRequirement",
+                                 "listing": [{"entryname": "cwl.inputs.json",
+                                              "entry": "$(JSON.stringify(inputs))"}]}]
     with open(out_file, "w") as out_handle:
         def str_presenter(dumper, data):
             if len(data.splitlines()) > 1:  # check for multiline string
@@ -121,6 +132,23 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         yaml.add_representer(str, str_presenter)
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
+
+def _get_sentinel_val(v):
+    """Retrieve expected sentinel value for an output, expanding records.
+    """
+    out = workflow.get_base_id(v["id"])
+    if workflow.is_cwl_record(v):
+        def _get_fields(d):
+            if isinstance(d, dict):
+                if "fields" in d:
+                    return d["fields"]
+                else:
+                    for v in d.values():
+                        fields = _get_fields(v)
+                        if fields:
+                            return fields
+        out += ":%s" % ";".join([x["name"] for x in _get_fields(v)])
+    return out
 
 def _place_input_binding(inp_tool, inp_binding, parallel):
     """Check nesting of variables to determine where to place the input binding.
@@ -157,7 +185,10 @@ def _place_secondary_files(inp_tool, inp_binding):
             inp_tool = tz.update_in(inp_tool, key, lambda x: nested_inp_binding)
     return inp_tool
 
-def _step_template(name, run_file, inputs, outputs, parallel):
+def _is_scatter_parallel(x):
+    return x.endswith("-parallel")
+
+def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
     """Templating function for writing a step to avoid repeating namespaces.
     """
     scatter_inputs = []
@@ -171,14 +202,14 @@ def _step_template(name, run_file, inputs, outputs, parallel):
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if (parallel in "multi-parallel" or len(inp["id"].split("/")) > 1
-              or len(inp.get("source", "").split("/")) > 1):
+        if (_is_scatter_parallel(parallel) and
+              (tz.get_in(["type", "type"], inp) == "array" or (scatter and inp["id"] in scatter))):
             scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,
            "in": sinputs,
            "out": [{"id": workflow.get_base_id(output["id"])} for output in outputs]}
-    if parallel in ["single-parallel", "multi-parallel", "batch-parallel"]:
+    if _is_scatter_parallel(parallel):
         assert scatter_inputs, "Did not find items to scatter on: %s" % name
         out.update({"scatterMethod": "dotproduct",
                     "scatter": scatter_inputs})
@@ -209,12 +240,12 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
             parent_wfs.append(out)
             out = _cwl_workflow_template(cur[1])
         elif cur[0] == "wf_finish":
-            _, name, parallel, inputs, outputs = cur
+            _, name, parallel, inputs, outputs, scatter = cur
             wf_out_file = "wf-%s.cwl" % name
             with open(os.path.join(out_dir, wf_out_file), "w") as out_handle:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
             out = parent_wfs.pop(-1)
-            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel))
+            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel, scatter))
         else:
             raise ValueError("Unexpected workflow value %s" % str(cur))
 

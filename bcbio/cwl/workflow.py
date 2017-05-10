@@ -25,13 +25,20 @@ def generate(variables, steps, final_outputs):
             wf_steps = []
             for i, wf_step in enumerate(step.workflow):
                 inputs, parallel_ids, nested_inputs = _get_step_inputs(wf_step, file_vs, std_vs, parallel_ids, step)
+                # flatten inputs that are scattered on entering a sub-workflow
+                if step.parallel.endswith("-parallel"):
+                    if i == 0:
+                        inputs = [_flatten_nested_input(v) for v in inputs]
+                        wf_scatter = [get_base_id(v["id"]) for v in inputs]
+                    else:
+                        inputs = [_flatten_nested_input(v) if get_base_id(v["id"]) in wf_scatter else v
+                                  for v in inputs]
+                wf_inputs, inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs,
+                                                     step.internal, wf_step.parallel, nested_inputs)
                 outputs, file_vs, std_vs = _get_step_outputs(wf_step, wf_step.outputs, file_vs, std_vs)
-                parallel_ids = _find_split_vs(outputs, wf_step.parallel)
-                wf_steps.append(("step", wf_step.name, wf_step.parallel,
-                                 [_wf_clean_record(x, step.internal) for x in inputs],
+                wf_steps.append(("step", wf_step.name, wf_step.parallel, inputs,
                                  outputs, wf_step.image, wf_step.programs, wf_step.disk, wf_step.cores))
-                wf_inputs = _merge_wf_inputs(inputs, wf_inputs, wf_outputs,
-                                             step.internal, wf_step.parallel, nested_inputs)
+                parallel_ids = _find_split_vs(outputs, wf_step.parallel)
                 wf_outputs = _merge_wf_outputs(outputs, wf_outputs, wf_step.parallel)
             yield "wf_start", wf_inputs
             for wf_step in wf_steps:
@@ -40,7 +47,7 @@ def generate(variables, steps, final_outputs):
                           if v["id"] not in set(["%s" % _get_string_vid(x) for x in step.internal])]
             yield "upload", wf_outputs
             wf_outputs, file_vs, std_vs = _get_step_outputs(step, wf_outputs, file_vs, std_vs)
-            yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs
+            yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs, wf_scatter
             file_vs = _extract_from_subworkflow(file_vs, step)
             std_vs = _extract_from_subworkflow(std_vs, step)
         else:
@@ -50,18 +57,6 @@ def generate(variables, steps, final_outputs):
             yield ("step", step.name, step.parallel, inputs, outputs, step.image, step.programs,
                    step.disk, step.cores)
     yield "upload", [_get_upload_output(x, file_vs) for x in final_outputs]
-
-
-def _wf_clean_record(v, internal):
-    """Clean external records input into workflow steps.
-
-    These get unpacked at the top level of the workflow.
-    """
-    if "source" in v:
-        is_internal_rec = get_base_id(v["source"]) in [_get_string_vid(x) for x in internal]
-        if not is_internal_rec:
-            return _clean_record(v)
-    return v
 
 def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
     """Merge inputs for a sub-workflow, adding any not present inputs in out.
@@ -78,14 +73,20 @@ def _merge_wf_inputs(new, out, wf_outputs, to_ignore, parallel, nested_inputs):
             internal_generated_ids.append(vignore_id)
     ignore_ids = set(internal_generated_ids + [v["id"] for v in wf_outputs])
     cur_ids = set([v["id"] for v in out])
+    remapped_new = []
     for v in new:
+        remapped_v = copy.deepcopy(v)
         outv = copy.deepcopy(v)
-        outv["id"] = "%s" % get_base_id(v["id"])
+        outv["id"] = get_base_id(v["id"])
+        outv["source"] = v["id"]
         if outv["id"] not in cur_ids and outv["id"] not in ignore_ids:
             if nested_inputs and v["id"] in nested_inputs:
                 outv = _flatten_nested_input(outv)
             out.append(outv)
-    return out
+        if remapped_v["id"] in set([v["source"] for v in out]):
+            remapped_v["source"] = get_base_id(remapped_v["id"])
+        remapped_new.append(remapped_v)
+    return out, remapped_new
 
 def _merge_wf_outputs(new, cur, parallel):
     """Merge outputs for a sub-workflow, replacing variables changed in later steps.
@@ -104,8 +105,6 @@ def _merge_wf_outputs(new, cur, parallel):
         if tz.get_in(["outputBinding", "secondaryFiles"], v):
             outv["secondaryFiles"] = tz.get_in(["outputBinding", "secondaryFiles"], v)
         new_ids.add(outv["id"])
-        if parallel in ["single-split", "batch-split"]:
-            outv = _flatten_nested_input(outv)
         out.append(outv)
     for outv in cur:
         if outv["id"] not in new_ids:
@@ -137,25 +136,32 @@ def _find_split_vs(out_vs, parallel):
     else:
         return []
 
+def is_cwl_record(d):
+    """Check if an input is a CWL record, from any level of nesting.
+    """
+    if isinstance(d, dict):
+        if d.get("type") == "record":
+            return d
+        else:
+            recs = filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()])
+            return recs[0] if recs else None
+    else:
+        return None
+
 def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
     """Retrieve inputs for a step from existing variables.
 
     Potentially nests inputs to deal with merging split variables. If
     we split previously and are merging now, then we only nest those
-    combing from the split process.
+    coming from the split process.
     """
     inputs = []
     skip_inputs = set([])
     for orig_input in [_get_variable(x, file_vs) for x in _handle_special_inputs(step.inputs, file_vs)]:
-        is_record_input = tz.get_in(["type", "type"], orig_input) == "record"
-        if is_record_input:
-            for unpack_input in _unpack_record(orig_input, file_vs, is_combine=step.parallel in ["multi-combined"]):
-                if unpack_input["id"] not in [x["id"] for x in inputs]:
-                    inputs.append(unpack_input)
-                    skip_inputs.add(get_base_id(unpack_input["id"]))
-        else:
-            inputs.append(orig_input)
-    inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
+        inputs.append(orig_input)
+    # Only add description and other information for non-record inputs, otherwise batched with records
+    if not any(is_cwl_record(x) for x in inputs):
+        inputs += [v for v in std_vs if get_base_id(v["id"]) not in skip_inputs]
     nested_inputs = []
     if step.parallel in ["single-merge", "batch-merge"]:
         if parallel_ids:
@@ -167,49 +173,25 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
     # avoid inputs/outputs with the same name
-    outputs = [_get_string_vid(x["id"]) for x in step.outputs if not x["type"] == "record"]
+    outputs = [_get_string_vid(x["id"]) for x in step.outputs]
     final_inputs = []
     for input in inputs:
         input["wf_duplicate"] = get_base_id(input["id"]) in outputs
         final_inputs.append(input)
     return inputs, parallel_ids, nested_inputs
 
-def _unpack_record(rec, file_vs, is_combine=False):
-    """Unpack a record object, extracting individual elements.
-
-    Handles standard single records (extract each member) and arrays of records
-    after parallelization (is_combine=True, extract each member into a list).
-    """
-    out = []
-    for field in rec["type"]["fields"]:
-        if is_combine:
-            value_from = "$(self.map(function(x) { return x['%s']; }))" % field["name"]
-        else:
-            value_from = "$(self['%s'])" % field["name"]
-        out.append({"id": "%s" % field["name"], "type": field["type"],
-                    "source": rec["id"], "valueFrom": value_from})
-    return out
-
-def _clean_record(var):
-    """Remove record source information from an input variant.
-    """
-    out = copy.deepcopy(var)
-    for attr in ["source", "valueFrom"]:
-        out.pop(attr, None)
-    return out
-
 def _get_step_outputs(step, outputs, file_vs, std_vs):
-    if len(outputs) == 1 and outputs[0]["type"] == "record":
+    if len(outputs) == 1 and is_cwl_record(outputs[0]):
         file_output = [_create_record(outputs[0]["id"], outputs[0].get("fields", []),
                                       step.name, step.inputs, step.unlist, file_vs, std_vs, step.parallel)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
-    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
     if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
+    std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
+    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
     return file_output + std_output, file_vs, std_vs
 
 def _flatten_nested_input(v):
@@ -237,6 +219,8 @@ def _clean_output(v):
     return out
 
 def _get_string_vid(vid):
+    if isinstance(vid, basestring):
+        return vid
     assert isinstance(vid, (list, tuple)), vid
     return "__".join(vid)
 
@@ -323,9 +307,9 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
     added = set([])
     for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
         # unpack record inside this record and un-nested inputs to avoid double nested
-        if tz.get_in(["type", "type"], raw_v) == "record":
-            nested_vs = _unpack_record(raw_v, file_vs)
-            unlist = unlist | set([get_base_id(x["id"]) for x in nested_vs])
+        cur_record = is_cwl_record(raw_v)
+        if cur_record:
+            unlist = unlist | set([field["name"] for field in cur_record["fields"]])
         else:
             nested_vs = [raw_v]
         for orig_v in nested_vs:

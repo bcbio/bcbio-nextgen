@@ -46,7 +46,7 @@ def process(args):
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
-        parallel, out_keys = None, []
+        parallel, out_keys = None, {}
     with utils.chdir(work_dir):
         log.setup_local_logging(parallel={"wrapper": "runfn"})
         try:
@@ -74,11 +74,12 @@ def _write_wdl_outputs(argfile, out_keys):
     out_basename = "wdl.output.%s.txt"
     with open(argfile) as in_handle:
         outputs = json.load(in_handle)
-    if _is_record_output(out_keys):
-        recs = outputs[out_keys[0]]
+    record_name, record_attrs = _get_record_attrs(out_keys)
+    if record_name:
+        recs = outputs[record_name]
         if not isinstance(recs, (list, tuple)):
             recs = [recs]
-        with open(out_basename % out_keys[0], "w") as out_handle:
+        with open(out_basename % record_name, "w") as out_handle:
             writer = csv.writer(out_handle)
             keys = sorted(list(set(reduce(operator.add, [r.keys() for r in recs]))))
             writer.writerow(keys)
@@ -115,15 +116,16 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
     """
     with open(argfile, "w") as out_handle:
         if argfile.endswith(".json"):
-            if _is_record_output(out_keys):
+            record_name, record_attrs = _get_record_attrs(out_keys)
+            if record_name:
                 if parallel in ["multi-batch"]:
-                    recs = [_collapse_to_cwl_record(xs) for xs in out]
+                    recs = [_collapse_to_cwl_record(xs, record_attrs) for xs in out]
                 elif parallel in ["single-split", "multi-combined"]:
-                    recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs)) for xs in out]
+                    recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs), record_attrs) for xs in out]
                 else:
                     samples = [utils.to_single_data(xs) for xs in out]
-                    recs = [_collapse_to_cwl_record(samples)]
-                json.dump(_combine_cwl_records(recs, fnargs, parallel),
+                    recs = [_collapse_to_cwl_record(samples, record_attrs)]
+                json.dump(_combine_cwl_records(recs, record_name, parallel),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             elif parallel in ["single-split", "multi-combined", "batch-split"]:
                 json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
@@ -134,10 +136,14 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
         else:
             yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
 
-def _is_record_output(out_keys):
-    """Cheap way to check if we're outputting a record, by the name.
+def _get_record_attrs(out_keys):
+    """Check for records, a single key plus output attributes.
     """
-    return len(out_keys) == 1 and out_keys[0].endswith("_rec")
+    if len(out_keys) == 1:
+        attr = out_keys.keys()[0]
+        if out_keys[attr]:
+            return attr, out_keys[attr]
+    return None, None
 
 def _add_resources(data, runtime):
     if "config" in data:
@@ -175,7 +181,9 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
             runtime = dict(tz.partition(2, val.split(",")))
             continue
         if key == "sentinel_outputs":
-            output_cwl_keys = val.split(",")
+            output_cwl_keys = _parse_output_keys(val)
+            continue
+        if key == "sentinel_inputs":
             continue
         if keytype == "grouped":
             grouped_keys[key].append(val)
@@ -190,15 +198,156 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
             data = _update_nested(key, _convert_value(val), data)
     if data:
         out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
-    if grouped_keys:
+
+    # Read inputs from standard files instead of command line
+    if os.path.exists(os.path.join(work_dir, "cwl.inputs.json")):
+        out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime)
+    elif grouped_keys:
+        raise NotImplementedError("Grouped keys should be handled via JSON records")
         out = _split_groups_finalize_cwl(dict(grouped_keys), data, work_dir, passed_keys, output_cwl_keys,
                                          runtime, fn_name)
+
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
     return out, parallel, output_cwl_keys
+
+def _parse_output_keys(val):
+    """Parse expected output keys from string, handling records.
+    """
+    out = {}
+    for k in val.split(","):
+        # record output
+        if ":" in k:
+            name, attrs = k.split(":")
+            out[name] = attrs.split(";")
+        else:
+            out[k] = None
+    return out
+
+def _read_from_cwlinput(in_file, work_dir, runtime):
+    """Read data records from a JSON dump of inputs. Avoids command line flattening of records.
+    """
+    with open(in_file) as in_handle:
+        inputs = json.load(in_handle)
+    output_cwl_keys = _parse_output_keys(inputs["sentinel_outputs"])
+    input_order = collections.OrderedDict([x.split(":") for x in inputs["sentinel_inputs"].split(",")])
+    items_by_key = {}
+    passed_keys = set([])
+    for key, input_val in ((k, v) for (k, v) in inputs.items() if not k.startswith(("sentinel", "ignore"))):
+        if key.endswith("_toolinput"):
+            key = key.replace("_toolinput", "")
+        if input_order[key] == "record":
+            cur_keys, items = _read_cwl_record(input_val)
+            passed_keys |= cur_keys
+            items_by_key[key] = items
+        else:
+            items_by_key[tuple(key.split("__"))] = _cwlvar_to_wdl(input_val)
+    prepped = _merge_cwlinputs(items_by_key, input_order)
+    out = []
+    for data in prepped:
+        if isinstance(data, (list, tuple)):
+            out.append([_finalize_cwl_in(x, work_dir, list(passed_keys), output_cwl_keys, runtime) for x in data])
+        else:
+            out.append(_finalize_cwl_in(data, work_dir, list(passed_keys), output_cwl_keys, runtime))
+    return out
+
+def _merge_cwlinputs(items_by_key, input_order):
+    """Merge multiple cwl records and inputs, handling multiple data items.
+
+    Special cases:
+    - Single record but multiple variables (merging arrayed jobs). Assign lists
+      of variables to the record.
+    """
+    var_items = set([len(items_by_key[tuple(k.split("__"))]) for (k, t) in input_order.items() if t == "var"])
+    rec_items = set([len(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])
+    if var_items:
+        num_items = var_items
+        assert len(num_items) == 1, "Non-consistent variant data counts in CWL input:\n%s" % \
+            (pprint.pformat(items_by_key))
+        items_by_key, num_items = _nest_vars_in_rec(var_items, rec_items, input_order, items_by_key)
+    else:
+        num_items = rec_items
+        assert len(num_items) == 1, "Non-consistent record data counts in CWL input:\n%s" % \
+            (pprint.pformat(items_by_key))
+    out = [{} for _ in range(num_items.pop())]
+    for (cwl_key, cwl_type) in input_order.items():
+        if cwl_type == "var":
+            cwl_key = tuple(cwl_key.split("__"))
+        cur_vals = items_by_key[cwl_key]
+        for i, cur_val in enumerate(cur_vals):
+            if isinstance(cwl_key, (list, tuple)):
+                out[i] = _update_nested(list(cwl_key), cur_val, out[i])
+            else:
+                assert isinstance(cur_val, dict), (cwl_key, cur_val)
+                for k, v in cur_val.items():
+                    out[i] = _update_nested([k], v, out[i], allow_overwriting=True)
+    return out
+
+def _nest_vars_in_rec(var_items, rec_items, input_order, items_by_key):
+    """Nest multiple variable inputs into a single record.
+
+    Custom CWL implementations extract and merge these.
+    """
+    num_items = var_items
+    var_items = list(var_items)[0]
+    if rec_items:
+        rec_items = list(rec_items)[0]
+        if rec_items == 1 and var_items > 1:
+            num_items = set([1])
+            for var_key in (k for (k, t) in input_order.items() if t != "record"):
+                var_key = tuple(var_key.split("__"))
+                items_by_key[var_key] = [items_by_key[var_key]]
+        else:
+            assert var_items == rec_items, (var_items, rec_items)
+    return items_by_key, num_items
+
+def _expand_rec_to_vars(var_items, rec_items, input_order, items_by_key):
+    """Expand record to apply to number of variants.
+
+    Alternative approach to _nest_vars_in_rec
+    to combining a single record with multiple variants.
+    """
+    num_items = var_items
+    var_items = list(var_items)[0]
+    if rec_items:
+        for rec_key in (k for (k, t) in input_order.items() if t == "record"):
+            rec_vals = items_by_key[rec_key]
+            if len(rec_vals) == 1 and var_items > 1:
+                items_by_key[rec_key] = rec_vals * var_items
+            else:
+                assert var_items == len(rec_vals), (var_items, rec_vals)
+    return items_by_key, num_items
+
+def _read_cwl_record(rec):
+    """Read CWL records, handling multiple nesting and batching cases.
+    """
+    keys = set([])
+    out = []
+    if isinstance(rec, dict):
+        is_batched = all([isinstance(v, (list, tuple)) for v in rec.values()])
+        cur = [{} for _ in range(len(rec.values()[0]) if is_batched else 1)]
+        for k in rec.keys():
+            keys.add(k)
+            val = rec[k]
+            val = val if is_batched else [val]
+            for i, v in enumerate(val):
+                v = _cwlvar_to_wdl(v)
+                cur[i] = _update_nested(k.split("__"), v, cur[i])
+        if is_batched:
+            out.append(cur)
+        else:
+            assert len(cur) == 1
+            out.append(cur[0])
+    else:
+        assert isinstance(rec, (list, tuple))
+        for sub_rec in rec:
+            sub_keys, sub_out = _read_cwl_record(sub_rec)
+            keys |= sub_keys
+            out.append(sub_out)
+    return keys, out
 
 def _check_multikey_order(fnargs):
     """Determine order of multiple keys for multiple records.
@@ -217,7 +366,7 @@ def _check_multikey_order(fnargs):
                 adjacent_pos += 1
             else:
                 split_pos += 1
-    if adjacent_pos >= split_pos:
+    if adjacent_pos > 0 and adjacent_pos >= split_pos:
         return "grouped"
     else:
         return "nested"
@@ -342,44 +491,44 @@ def _get_output_cwl_keys(fnargs):
                 return d["output_cwl_keys"]
     raise ValueError("Did not find output_cwl_keys in %s" % (pprint.pformat(fnargs)))
 
-def _combine_cwl_records(recs, fnargs, parallel):
+def _combine_cwl_records(recs, record_name, parallel):
     """Provide a list of nexted CWL records keyed by output key.
 
     Handles batches, where we return a list of records, and single items
     where we return one record.
     """
-    output_keys = _get_output_cwl_keys(fnargs)
-    assert len(output_keys) == 1, output_keys
     if parallel not in ["multi-batch", "single-split", "multi-combined"]:
         assert len(recs) == 1, pprint.pformat(recs)
-        return {output_keys[0]: recs[0]}
+        return {record_name: recs[0]}
     else:
-        return {output_keys[0]: recs}
+        return {record_name: recs}
 
-def _collapse_to_cwl_record_single(data):
+def _collapse_to_cwl_record_single(data, want_attrs):
     """Convert a single sample into a CWL record, based on input keys.
     """
     out = {}
     for key in data["cwl_keys"]:
-        key_parts = key.split("__")
-        out[key] = _to_cwl(tz.get_in(key_parts, data))
+        if key in want_attrs:
+            key_parts = key.split("__")
+            out[key] = _to_cwl(tz.get_in(key_parts, data))
     return out
 
-def _collapse_to_cwl_record(samples):
+def _collapse_to_cwl_record(samples, want_attrs):
     """Convert nested samples from batches into a CWL record, based on input keys.
     """
     input_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
     out = {}
     for key in input_keys:
-        key_parts = key.split("__")
-        vals = []
-        cur = []
-        for d in samples:
-            vals.append(_to_cwl(tz.get_in(key_parts, d)))
-            # Remove nested keys to avoid specifying multiple times
-            cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)
-        samples = cur
-        out[key] = vals
+        if key in want_attrs:
+            key_parts = key.split("__")
+            vals = []
+            cur = []
+            for d in samples:
+                vals.append(_to_cwl(tz.get_in(key_parts, d)))
+                # Remove nested keys to avoid specifying multiple times
+                cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)
+            samples = cur
+            out[key] = vals
     return out
 
 def _to_cwl(val):
@@ -428,7 +577,7 @@ def _dissoc_in(d, key_parts):
         d.pop(key_parts[0], None)
     return d
 
-def _update_nested(key, val, data):
+def _update_nested(key, val, data, allow_overwriting=False):
     """Update the data object, avoiding over-writing with nested dictionaries.
     """
     if isinstance(val, dict):
@@ -437,7 +586,10 @@ def _update_nested(key, val, data):
     else:
         already_there = tz.get_in(key, data) is not None
         if already_there and val:
-            raise ValueError("Duplicated key %s: %s and %s" % (key, val, tz.get_in(key, data)))
+            if not allow_overwriting:
+                raise ValueError("Duplicated key %s: %s and %s" % (key, val, tz.get_in(key, data)))
+            else:
+                already_there = False
         if val or not already_there:
             data = tz.update_in(data, key, lambda x: val)
     return data
