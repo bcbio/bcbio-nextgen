@@ -3,10 +3,10 @@ version: 32
 aliases:
   human: true
   snpeff: GRCh37.75
-  ensembl: homo_sapiens_vep_87_GRCh37
+  ensembl: homo_sapiens_merged_vep_88_GRCh37
 
 variation:
-  dbsnp: ../variation/dbsnp-147.vcf.gz
+  dbsnp: ../variation/dbsnp-150.vcf.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz

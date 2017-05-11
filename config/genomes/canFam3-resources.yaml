@@ -1,12 +1,12 @@
 version: 14
 
 aliases:
-  ensembl: canis_familiaris_vep_86_CanFam3.1
+  ensembl: canis_familiaris_vep_88_CanFam3.1
   snpeff: CanFam3.1.86
 
 variation:
   dbsnp: ../variation/canFam3-dbSNP-2014-05-10.vcf.gz
-  
+
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf

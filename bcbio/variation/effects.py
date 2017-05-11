@@ -100,10 +100,10 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
-                cmd = ["%svep_install.pl" % vep_path, "-a", "c", "-s", ensembl_name,
+                cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
                        "-c", vep_dir, "-u", tmp_dir]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
-                cmd = ["%svep_convert_cache.pl" % vep_path, "-species", species, "-version", vepv,
+                cmd = ["%svep_convert_cache" % vep_path, "-species", species, "-version", vepv,
                        "-d", vep_dir]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Convert VEP cache to tabix %s" % ensembl_name)
                 for tmp_fname in os.listdir(tmp_dir):
@@ -129,13 +129,12 @@ def run_vep(in_file, data):
             if vep_dir:
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
-                vep = config_utils.get_program("variant_effect_predictor.pl", data["config"])
+                vep = config_utils.get_program("vep", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 config_args = []
                 if is_human:
-                    plugin_fns = {"dbnsfp": _get_dbnsfp, "loftee": _get_loftee, "dbscsnv": _get_dbscsnv,
-                                  "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
-                    plugins = ["dbnsfp", "loftee","dbscsnv"]
+                    plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
+                    plugins = ["loftee"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
                         plugins += ["maxentscan","genesplicer"]
                     for plugin in plugins:
@@ -151,11 +150,11 @@ def run_vep(in_file, data):
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
                       ["--species", ensembl_name,
-                       "--no_stats",
-                       "--cache", "--offline", "--dir", vep_dir,
+                       "--no_stats", "--cache", "--merged"
+                        "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
-                       "--protein", "--tsl", "--appris", "--gmaf", "--maf_1kg", "--maf_esp", "--maf_exac",
+                       "--protein", "--tsl", "--appris", "--af", "--max_af" "--af_1kg", "--af_esp", "--af_exac",
                        "--pubmed", "--variant_class"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
@@ -164,22 +163,6 @@ def run_vep(in_file, data):
     if utils.file_exists(out_file):
         vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
-
-def _get_dbnsfp(data):
-    """Retrieve dbNSFP file options for VEP if downloaded and available.
-    Uses high level combined annotations from this GEMINI discussion as a
-    starting point:
-    https://groups.google.com/d/msg/gemini-variation/WeZ6C2YvfUA/mII9uum_pGoJ
-    """
-    dbnsfp_file = tz.get_in(("genome_resources", "variation", "dbnsfp"), data)
-    annotations = ['MutationTaster_score', 'MutationTaster_pred', 'FATHMM_score', 'FATHMM_pred',
-                   'PROVEAN_score', 'PROVEAN_pred',
-                   'MetaSVM_score', 'MetaSVM_pred', 'CADD_raw', 'CADD_phred', 'Reliability_index']
-
-    if dbnsfp_file and os.path.exists(dbnsfp_file):
-        return ["--plugin", "dbNSFP,%s,%s" % (dbnsfp_file, ",".join(annotations))]
-    else:
-        return []
 
 def _get_loftee(data):
     """Retrieve loss of function plugin parameters for LOFTEE.
@@ -190,19 +173,6 @@ def _get_loftee(data):
         ancestral_file = "false"
     args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
     return args
-
-def _get_dbscsnv(data):
-    """
-    dbscSNV includes all potential human SNVs within splicing consensus regions
-    (-3 to +8 at the 5' splice site and -12 to +2 at the 3' splice site), i.e. scSNVs,
-    related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
-    https://github.com/Ensembl/VEP_plugins/blob/master/dbscSNV.pm
-    """
-    dbscsnv_file = tz.get_in(("genome_resources", "variation", "dbscsnv"), data)
-    if dbscsnv_file and os.path.exists(dbscsnv_file):
-        return ["--plugin", "dbscSNV,%s" % (dbscsnv_file)]
-    else:
-        return []
 
 def _get_maxentscan(data):
     """
