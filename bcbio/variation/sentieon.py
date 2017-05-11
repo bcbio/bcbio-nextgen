@@ -44,7 +44,7 @@ def run_tnscope(align_bams, items, ref_file, assoc_files,
         interval = "--interval %s" % (target) if target else ""
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
-            assert paired and paired.normal_bam, "Require normal BAM for Sentieon TNhaplotyper"
+            assert paired and paired.normal_bam, "Require normal BAM for Sentieon TNscope"
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
             license = license_export(items[0])
             cmd = ("{license}sentieon driver -t 1 -r {ref_file} "
