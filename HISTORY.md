@@ -1,5 +1,8 @@
 ## 1.0.4 (in progress)
 
+- Use new Ensembl vep (variant effect predictor) with updated annotations.
+  Thanks to Matthias De Smet.
+
 ## 1.0.3 (7 May 2017)
 
 - Allow installs to pull a specific git hash or tag revision of bcbio codebase.
