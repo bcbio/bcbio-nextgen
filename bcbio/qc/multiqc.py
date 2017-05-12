@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import json
 import mimetypes
 import os
 import pandas as pd
@@ -26,7 +27,7 @@ from bcbio.upload import get_all_upload_paths_from_sample
 
 def summary(*samples):
     """Summarize all quality metrics together"""
-    samples = utils.unpack_worlds(samples)
+    samples = list(utils.flatten(samples))
     work_dir = dd.get_work_dir(samples[0])
     multiqc = config_utils.get_program("multiqc", samples[0]["config"])
     if not multiqc:
@@ -215,7 +216,6 @@ def _report_summary(samples, out_dir):
     except ImportError:
         logger.info("skipping report. No bcbreport installed.")
         return samples
-    # samples = utils.unpack_worlds(samples)
     work_dir = dd.get_work_dir(samples[0])
     parent_dir = utils.safe_makedir(out_dir)
     with utils.chdir(parent_dir):
@@ -316,6 +316,8 @@ def _merge_metrics(samples, out_dir):
     for s in samples:
         s = _add_disambiguate(s)
         m = tz.get_in(['summary', 'metrics'], s)
+        if isinstance(m, basestring):
+            m = json.loads(m)
         if m:
             for me in m.keys():
                 if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):

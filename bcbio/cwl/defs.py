@@ -201,7 +201,7 @@ def variant():
                 cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
-                cwlout(["config", "algorithm", "seq2c_bed_ready"], "File"),
+                cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"]),
                 cwlout(["regions", "callable"], "File"),
                 cwlout(["regions", "sample_callable"], "File"),
                 cwlout(["regions", "nblock"], "File"),
@@ -244,7 +244,7 @@ def variant():
              cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
             "bcbio-base",
             cores=1)]
-    qc = [s("qc_to_rec", "multi-batch",
+    qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
              ["genome_build"], ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
@@ -258,17 +258,21 @@ def variant():
             cores=1),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
-            [cwlout(["summary", "qc"], ["File", "null"]),
-             cwlout(["summary", "metrics"], "string")],
+            [cwlout("qcout_rec", "record",
+                    fields=[cwlout(["summary", "qc"], ["File", "null"]),
+                            cwlout(["summary", "metrics"], "string"),
+                            cwlout("inherit")])],
             "bcbio-qc", ["bcftools", "bedtools", "fastqc", "goleft", "picard", "pythonpy",
                          "qsignature", "qualimap", "sambamba", "samtools"]),
           s("multiqc_summary", "multi-combined",
-            [["qc_rec"], ["summary", "qc"], ["summary", "metrics"]],
+            [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-qc", ["multiqc", "multiqc-bcbio"],
             cores=1)]
     steps = align + vc + qc
-    final_outputs = [["align_bam"], ["summary", "multiqc"], ["validate", "grading_summary"]]
+    final_outputs = [["align_bam"],
+                     cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
+                     ["validate", "grading_summary"]]
     return steps, final_outputs
 
 def sv():

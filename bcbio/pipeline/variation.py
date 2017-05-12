@@ -15,7 +15,7 @@ from bcbio.variation import multi as vmulti
 def postprocess_variants(items):
     """Provide post-processing of variant calls: filtering and effects annotation.
     """
-    data = _get_batch_representative(items, "vrn_file")
+    data, items = _get_batch_representative(items, "vrn_file")
     cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
     logger.info("Finalizing variant calls: %s" % cur_name)
     orig_vrn_file = data.get("vrn_file")
@@ -76,14 +76,15 @@ def _get_batch_representative(items, key):
     batches that have a consistent variant file.
     """
     if isinstance(items, dict):
-        return items
+        return items, items
     else:
         vals = set([])
         out = []
+        items = [utils.to_single_data(x) for x in items]
         for data in items:
             if key in data:
                 vals.add(data[key])
                 out.append(data)
         if len(vals) != 1:
             raise ValueError("Incorrect values for %s: %s" % (key, list(vals)))
-        return out[0]
+        return out[0], items

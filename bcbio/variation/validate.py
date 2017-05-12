@@ -90,7 +90,7 @@ def _normalize_cwl_inputs(items):
     """
     with_validate = {}
     vrn_files = []
-    for data in items:
+    for data in (utils.to_single_data(d) for d in items):
         if tz.get_in(["config", "algorithm", "validate"], data):
             with_validate[_checksum(tz.get_in(["config", "algorithm", "validate"], data))] = data
         if data.get("vrn_file"):
@@ -525,7 +525,7 @@ def summarize_grading(samples):
     Handles both traditional pipelines (validation part of variants) and CWL
     pipelines (validation at top level)
     """
-    samples = [utils.to_single_data(d) for d in samples]
+    samples = list(utils.flatten(samples))
     if not _has_grading_info(samples):
         return [[d] for d in samples]
     validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))

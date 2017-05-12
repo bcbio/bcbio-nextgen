@@ -326,18 +326,13 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
 def concat_batch_variantcalls(items):
     """CWL entry point: combine variant calls from regions into single VCF.
     """
-    items, cwl_extras = cwlutils.split_data_cwl_items(items)
+    items = [utils.to_single_data(x) for x in items]
     batch_name = _get_batch_name(items)
     variantcaller = _get_batch_variantcaller(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
     utils.safe_makedir(os.path.dirname(out_file))
-    if "region" in cwl_extras and "vrn_file_region" in cwl_extras:
-        regions = cwl_extras["region"]
-        vrn_file_regions = cwl_extras["vrn_file_region"]
-    else:
-        regions = [x["region"] for x in items]
-        vrn_file_regions = [x["vrn_file_region"] for x in items]
-    regions = [_region_to_coords(r) for r in regions]
+    regions = [_region_to_coords(r) for r in items[0]["region"]]
+    vrn_file_regions = items[0]["vrn_file_region"]
     out_file = vcfutils.concat_variant_files(vrn_file_regions, out_file, regions,
                                              dd.get_ref_file(items[0]), items[0]["config"])
     return {"vrn_file": out_file}
@@ -369,6 +364,7 @@ def _get_batch_variantcaller(items):
 def variantcall_batch_region(items):
     """CWL entry point: variant call a batch of samples in a region.
     """
+    items = [utils.to_single_data(x) for x in items]
     align_bams = [dd.get_align_bam(x) for x in items]
     variantcaller = _get_batch_variantcaller(items)
     region = list(set([x.get("region") for x in items if "region" in x]))

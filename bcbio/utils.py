@@ -510,8 +510,7 @@ def flatten(l):
 
     """
     for el in l:
-        if isinstance(el, collections.Iterable) and not isinstance(el,
-                                                                   basestring):
+        if isinstance(el, (list, tuple)):
             for sub in flatten(el):
                 yield sub
         else:

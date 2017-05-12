@@ -190,8 +190,13 @@ def _get_step_outputs(step, outputs, file_vs, std_vs):
     if step.parallel in ["single-split", "batch-split", "multi-combined", "multi-batch"]:
         file_output = [_nest_variable(x) for x in file_output]
         std_output = [_nest_variable(x) for x in std_output]
+    # For combined output, ensure at the same level (not nested) as main samples
+    if step.parallel in ["multi-combined"]:
+        file_vs = _merge_variables([_clean_output(_flatten_nested_input(v) if not is_cwl_record(v) else v)
+                                    for v in file_output], file_vs)
+    else:
+        file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
     std_vs = _merge_variables([_clean_output(v) for v in std_output], std_vs)
-    file_vs = _merge_variables([_clean_output(v) for v in file_output], file_vs)
     return file_output + std_output, file_vs, std_vs
 
 def _flatten_nested_input(v):
@@ -266,9 +271,15 @@ def _handle_special_inputs(inputs, variables):
     return out
 
 def _get_upload_output(vid, variables):
-    v = _nest_variable(_get_variable(vid, variables))
-    v["outputSource"] = v["id"]
-    v["id"] = get_base_id(v["id"])
+    if isinstance(vid, dict) and "id" in vid:
+        parent_v = _get_variable(vid["id"], variables)
+        v = copy.deepcopy(vid)
+        v["id"] = _get_string_vid(vid["id"])
+        v["outputSource"] = parent_v["id"]
+    else:
+        v = _nest_variable(_get_variable(vid, variables))
+        v["outputSource"] = v["id"]
+        v["id"] = get_base_id(v["id"])
     v.pop("secondaryFiles", None)
     v["type"].pop("secondaryFiles", None)
     return v
@@ -282,20 +293,29 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
     if field_defs:
         fields = []
         inherit = []
+        inherit_all = False
         for fdef in field_defs:
             if not fdef.get("type"):
-                inherit.append(fdef["id"])
+                if fdef["id"] == "inherit":
+                    inherit_all = True
+                else:
+                    inherit.append(fdef["id"])
             else:
                 fields.append({"name": _get_string_vid(fdef["id"]),
                                "type": fdef["type"]})
-        if inherit:
+        if inherit_all:
+            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel))
+        elif inherit:
             fields.extend(_infer_record_outputs(inputs, unlist + inherit, file_vs, std_vs, parallel, inherit))
     else:
         fields = _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel)
-    return {"id": "%s/%s" % (step_name, name),
-            "type": {"name": name,
-                     "type": "record",
-                     "fields": fields}}
+    out = {"id": "%s/%s" % (step_name, name),
+           "type": {"name": name,
+                    "type": "record",
+                    "fields": fields}}
+    if parallel in ["batch-single", "multi-batch"]:
+        out = _nest_variable(out)
+    return out
 
 def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None):
     """Infer the outputs of a record from the original inputs
@@ -309,7 +329,8 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
         # unpack record inside this record and un-nested inputs to avoid double nested
         cur_record = is_cwl_record(raw_v)
         if cur_record:
-            unlist = unlist | set([field["name"] for field in cur_record["fields"]])
+            #unlist = unlist | set([field["name"] for field in cur_record["fields"]])
+            nested_vs = [{"id": field["name"], "type": field["type"]} for field in cur_record["fields"]]
         else:
             nested_vs = [raw_v]
         for orig_v in nested_vs:
@@ -319,7 +340,7 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
                 cur_v["type"] = orig_v["type"]
                 if cur_v["name"] in unlist:
                     cur_v = _flatten_nested_input(cur_v)
-                if parallel in set(["batch-single", "multi-batch"]) or to_include:
+                if to_include:
                     cur_v = _nest_variable(cur_v)
                 fields.append(cur_v)
                 added.add(orig_v["id"])
@@ -338,7 +359,7 @@ def _create_variable(orig_v, step, variables):
     for key, val in orig_v.items():
         if key not in ["id", "type"]:
             v[key] = val
-    if v.get("type") == "null" and orig_v.get("type") != "null":
+    if orig_v.get("type") != "null":
         v["type"] = orig_v["type"]
     v["id"] = "%s/%s" % (step.name, get_base_id(v["id"]))
     return v

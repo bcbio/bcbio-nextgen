@@ -107,7 +107,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_tool["id"] += "_toolinput"
         for attr in ["source", "valueFrom", "wf_duplicate"]:
             inp_tool.pop(attr, None)
-        if _is_scatter_parallel(parallel) and tz.get_in(["type", "type"], inp) == "array":
+        if _is_scatter_parallel(parallel) and _do_scatter_var(inp, parallel):
             inp_tool = workflow._flatten_nested_input(inp_tool)
         if not workflow.is_cwl_record(inp):
             inp_binding = {"prefix": "%s=" % base_id,
@@ -185,8 +185,19 @@ def _place_secondary_files(inp_tool, inp_binding):
             inp_tool = tz.update_in(inp_tool, key, lambda x: nested_inp_binding)
     return inp_tool
 
-def _is_scatter_parallel(x):
-    return x.endswith("-parallel")
+def _is_scatter_parallel(parallel):
+    return parallel.endswith("-parallel")
+
+def _do_scatter_var(v, parallel):
+    """Logic for scattering a variable.
+    """
+    # For batches, scatter records only at the top level (double nested)
+    if parallel.startswith("batch") and workflow.is_cwl_record(v):
+        return (tz.get_in(["type", "type"], v) == "array" and
+                tz.get_in(["type", "type", "type"], v) == "array")
+    # Otherwise, scatter arrays
+    else:
+        return (tz.get_in(["type", "type"], v) == "array")
 
 def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
     """Templating function for writing a step to avoid repeating namespaces.
@@ -202,8 +213,8 @@ def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
         # scatter on inputs from previous processes that have been arrayed
-        if (_is_scatter_parallel(parallel) and
-              (tz.get_in(["type", "type"], inp) == "array" or (scatter and inp["id"] in scatter))):
+        if (_is_scatter_parallel(parallel) and (_do_scatter_var(inp, parallel)
+                                                or (scatter and inp["id"] in scatter))):
             scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,

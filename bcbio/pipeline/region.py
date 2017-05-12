@@ -8,6 +8,7 @@ import os
 
 import toolz as tz
 
+from bcbio import utils
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.pipeline import datadict as dd
 
@@ -70,9 +71,10 @@ def _get_parallel_regions(data):
                                                                     not xs[0].startswith(("track", "browser",)))]
     return regions
 
-def get_parallel_regions(samples):
+def get_parallel_regions(batch):
     """CWL target to retrieve a list of callable regions for parallelization.
     """
+    samples = [utils.to_single_data(d) for d in batch]
     regions = _get_parallel_regions(samples[0])
     return [{"region": "%s:%s-%s" % (c, s, e)} for c, s, e in regions]
     # testing use
