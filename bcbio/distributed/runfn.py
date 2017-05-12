@@ -191,6 +191,7 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
         else:
             # starting a new record -- duplicated key
             if key in passed_keys:
+                raise NotImplementedError("Multiple keys should be handled via JSON records")
                 out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
                 data = {}
                 passed_keys = []

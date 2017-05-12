@@ -88,6 +88,13 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             return out
         out["hints"].append({"class": "SoftwareRequirement",
                              "packages": [resolve_package(p) for p in programs]})
+    # Use JSON for inputs, rather than command line arguments
+    # Correctly handles multiple values and batching across CWL runners
+    use_commandline_args = False
+    out["requirements"] += [{"class": "InlineJavascriptRequirement"},
+                            {"class": "InitialWorkDirRequirement",
+                                "listing": [{"entryname": "cwl.inputs.json",
+                                            "entry": "$(JSON.stringify(inputs))"}]}]
     out["arguments"].append({"position": 0, "valueFrom":
                              "sentinel_runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
     std_inputs = [{"id": "sentinel_parallel", "type": "string",
@@ -109,21 +116,18 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_tool.pop(attr, None)
         if _is_scatter_parallel(parallel) and _do_scatter_var(inp, parallel):
             inp_tool = workflow._flatten_nested_input(inp_tool)
-        if not workflow.is_cwl_record(inp):
+        if inp["id"].startswith("sentinel") or use_commandline_args:
             inp_binding = {"prefix": "%s=" % base_id,
                            "separate": False, "itemSeparator": ";;", "position": i}
             inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
+        else:
+            inp_binding = None
         inp_tool = _place_secondary_files(inp_tool, inp_binding)
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
         outp_tool["id"] = workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
-    if any([workflow.is_cwl_record(x) for x in inputs]):
-        out["requirements"] += [{"class": "InlineJavascriptRequirement"},
-                                {"class": "InitialWorkDirRequirement",
-                                 "listing": [{"entryname": "cwl.inputs.json",
-                                              "entry": "$(JSON.stringify(inputs))"}]}]
     with open(out_file, "w") as out_handle:
         def str_presenter(dumper, data):
             if len(data.splitlines()) > 1:  # check for multiline string
@@ -165,7 +169,7 @@ def _place_input_binding(inp_tool, inp_binding, parallel):
         inp_tool["inputBinding"] = inp_binding
     return inp_tool
 
-def _place_secondary_files(inp_tool, inp_binding):
+def _place_secondary_files(inp_tool, inp_binding=None):
     """Put secondaryFiles at the level of the File item to ensure indexes get passed.
     """
     def _is_file(val):
@@ -178,7 +182,7 @@ def _place_secondary_files(inp_tool, inp_binding):
             key.append("type")
         if tz.get_in(key, inp_tool):
             inp_tool["secondaryFiles"] = secondary_files
-        else:
+        elif inp_binding:
             nested_inp_binding = copy.deepcopy(inp_binding)
             nested_inp_binding["prefix"] = "ignore="
             nested_inp_binding["secondaryFiles"] = secondary_files

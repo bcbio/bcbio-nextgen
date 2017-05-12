@@ -2,6 +2,8 @@
 
 - Use new Ensembl vep (variant effect predictor) with updated annotations.
   Thanks to Matthias De Smet.
+- CWL: use json input files for passing inputs instead of flattened command
+  line arguments. Improves compatibility with multiple runners.
 
 ## 1.0.3 (7 May 2017)
 
