@@ -163,7 +163,10 @@ def _cnvkit_prioritize(sample, genes, allele_file, metrics_file):
     adf = pd.read_table(allele_file)
     if len(genes) > 0:
         adf = adf[adf["gene"].str.contains("|".join(genes))]
-    adf = adf[["chromosome", "start", "end", "cn", "cn1", "cn2"]]
+    if "cn1" in adf.columns and "cn2" in adf.columns:
+        adf = adf[["chromosome", "start", "end", "cn", "cn1", "cn2"]]
+    else:
+        adf = adf[["chromosome", "start", "end", "cn"]]
     df = pd.merge(mdf, adf, on=["chromosome", "start", "end"])
     df = df[df["cn"] != 2]
     if len(df) > 0:
