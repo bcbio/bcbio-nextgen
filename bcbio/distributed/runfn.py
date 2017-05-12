@@ -169,7 +169,6 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
     data = {}
     passed_keys = []
     grouped_keys = collections.defaultdict(list)
-    keytype = _check_multikey_order(fnargs)
     for fnarg in fnargs:
         key, val = fnarg.split("=")
         # extra values pulling in nested indexes
@@ -186,15 +185,8 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
             continue
         if key == "sentinel_inputs":
             continue
-        if keytype == "grouped":
-            grouped_keys[key].append(val)
         else:
-            # starting a new record -- duplicated key
-            if key in passed_keys:
-                raise NotImplementedError("Multiple keys should be handled via JSON records")
-                out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
-                data = {}
-                passed_keys = []
+            assert key not in passed_keys, "Multiple keys should be handled via JSON records"
             passed_keys.append(key)
             key = key.split("__")
             data = _update_nested(key, _convert_value(val), data)
@@ -202,13 +194,8 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
         out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
 
     # Read inputs from standard files instead of command line
-    if os.path.exists(os.path.join(work_dir, "cwl.inputs.json")):
-        out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel)
-    else:
-        if grouped_keys:
-            raise NotImplementedError("Grouped keys should be handled via JSON records")
-            out = _split_groups_finalize_cwl(dict(grouped_keys), data, work_dir, passed_keys, output_cwl_keys,
-                                             runtime, fn_name)
+    assert os.path.exists(os.path.join(work_dir, "cwl.inputs.json"))
+    out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel)
 
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
@@ -361,73 +348,6 @@ def _read_cwl_record(rec):
             keys |= sub_keys
             out.append(sub_out)
     return keys, out
-
-def _check_multikey_order(fnargs):
-    """Determine order of multiple keys for multiple records.
-
-    These can either be specified in order one record at a time, or grouped.
-    """
-    arg_positions = collections.defaultdict(list)
-    for i, fnarg in enumerate(fnargs):
-        key, val = fnarg.split("=")
-        arg_positions[key].append(i)
-    split_pos = 0
-    adjacent_pos = 0
-    for pos_group in arg_positions.values():
-        for a, b in tz.sliding_window(2, pos_group):
-            if b - a == 1:
-                adjacent_pos += 1
-            else:
-                split_pos += 1
-    if adjacent_pos > 0 and adjacent_pos >= split_pos:
-        return "grouped"
-    else:
-        return "nested"
-
-def _split_groups_finalize_cwl(grouped_keys, data, work_dir, passed_keys, output_cwl_keys, runtime,
-                               fn_name):
-    """Split grouped inputs into data objects, finalizing CWL outputs
-    """
-    out = []
-    num_recs = max([len(vs) for vs in grouped_keys.values()])
-    for reci in range(num_recs):
-        data = {}
-        passed_keys = []
-        for key in sorted(grouped_keys.keys()):
-            vals = grouped_keys[key]
-            if len(vals) == num_recs:
-                val = vals[reci]
-            else:
-                val = _resolve_null_vals(fn_name, key, vals, reci, num_recs)
-            passed_keys.append(key)
-            key = key.split("__")
-            data = _update_nested(key, _convert_value(val), data)
-        out.append(_finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime))
-    return out
-
-def _resolve_null_vals(fn_name, key, vals, reci, num_recs):
-    """Resolve tricky cases with multiple records and missing values.
-
-    CWL runners do not pass an argument if the value is None/null, which
-    can result in unequal values, making us unsure of how to assign
-    values to records. We try to collapse when we can here and otherwise
-    raise an error. This is bad since it doesn't guarantee correct ordering,
-    and we need to revisit approach for generating the command line to
-    avoid this.
-    """
-    allowed_uneven = set(["concat_batch_variantcalls", "multiqc_summary"])
-    unique_vals = set(vals)
-    if len(unique_vals) == 1:
-        return unique_vals.pop()
-    elif num_recs == 1:
-        return vals
-    elif fn_name in allowed_uneven and num_recs > len(vals):
-        try:
-            return vals[reci]
-        except IndexError:
-            return None
-    else:
-        raise ValueError("Unsure how to resolve uneven values for %s with %s records: %s" % (key, num_recs, vals))
 
 def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     """Finalize data object with inputs from CWL.
