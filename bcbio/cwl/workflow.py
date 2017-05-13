@@ -182,8 +182,14 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
 
 def _get_step_outputs(step, outputs, file_vs, std_vs):
     if len(outputs) == 1 and is_cwl_record(outputs[0]):
-        file_output = [_create_record(outputs[0]["id"], outputs[0].get("fields", []),
-                                      step.name, step.inputs, step.unlist, file_vs, std_vs, step.parallel)]
+        # For workflows, no need to create -- inherit from previous step
+        if hasattr(step, "workflow"):
+            out_rec = copy.deepcopy(outputs[0])
+            out_rec["id"] = "%s/%s" % (step.name, out_rec["id"])
+            file_output = [out_rec]
+        else:
+            file_output = [_create_record(outputs[0]["id"], outputs[0].get("fields", []),
+                                          step.name, step.inputs, step.unlist, file_vs, std_vs, step.parallel)]
         std_output = []
     else:
         file_output, std_output = _split_variables([_create_variable(x, step, file_vs) for x in outputs])
