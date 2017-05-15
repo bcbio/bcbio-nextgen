@@ -88,7 +88,7 @@ def _parse_qualimap_metrics(report_file, data):
     """
     if not utils.file_exists(report_file):
         return {}
-    import lxml.html
+    from bs4 import BeautifulSoup
     out = {}
     parsers = {"Globals": _parse_qualimap_globals,
                "Globals (inside of regions)": _parse_qualimap_globals_inregion,
@@ -96,11 +96,12 @@ def _parse_qualimap_metrics(report_file, data):
                "Coverage (inside of regions)": _parse_qualimap_coverage,
                "Insert size": _parse_qualimap_insertsize,
                "Insert size (inside of regions)": _parse_qualimap_insertsize}
-    root = lxml.html.parse(report_file).getroot()
-    for table in root.xpath("//div[@class='table-summary']"):
-        header = table.xpath("h3")[0].text
-        if header in parsers:
-            out.update(parsers[header](table))
+    with open(report_file) as in_handle:
+        root = BeautifulSoup(in_handle.read(), "html.parser")
+    for table in root.find_all("div", class_="table-summary"):
+        h3 = table.find("h3")
+        if h3.text in parsers:
+            out.update(parsers[h3.text](table.find("table")))
     new_names = []
     for metric in out:
         if "qualimap_full" not in tz.get_in(("config", "algorithm", "tools_on"), data, []):
@@ -119,8 +120,8 @@ def _parse_qualimap_globals(table):
     out = {}
     want = {"Mapped reads": _parse_num_pct,
             "Duplication rate": lambda k, v: {k: v}}
-    for row in table.xpath("table/tr"):
-        col, val = [x.text for x in row.xpath("td")]
+    for row in table.find_all("tr"):
+        col, val = [x.text for x in row.find_all("td")]
         if col in want:
             out.update(want[col](col, val))
     return out
@@ -129,8 +130,8 @@ def _parse_qualimap_globals_inregion(table):
     """Retrieve metrics from the global targeted region table.
     """
     out = {}
-    for row in table.xpath("table/tr"):
-        col, val = [x.text for x in row.xpath("td")]
+    for row in table.find_all("tr"):
+        col, val = [x.text for x in row.find_all("td")]
         if col == "Mapped reads":
             out.update(_parse_num_pct("%s (in regions)" % col, val))
     return out
@@ -139,8 +140,8 @@ def _parse_qualimap_coverage(table):
     """Parse summary qualimap coverage metrics.
     """
     out = {}
-    for row in table.xpath("table/tr"):
-        col, val = [x.text for x in row.xpath("td")]
+    for row in table.find_all("tr"):
+        col, val = [x.text for x in row.find_all("td")]
         if col == "Mean":
             out["Coverage (Mean)"] = val
     return out
@@ -149,8 +150,8 @@ def _parse_qualimap_insertsize(table):
     """Parse insert size metrics.
     """
     out = {}
-    for row in table.xpath("table/tr"):
-        col, val = [x.text for x in row.xpath("td")]
+    for row in table.find_all("tr"):
+        col, val = [x.text for x in row.find_all("td")]
         if col == "Median":
             out["Insert size (Median)"] = val
     return out
@@ -264,8 +265,8 @@ def _parse_qualimap_rnaseq(table):
     Retrieve metrics of interest from globals table.
     """
     out = {}
-    for row in table.xpath("table/tr"):
-        col, val = [x.text for x in row.xpath("td")]
+    for row in table.find_all("tr"):
+        col, val = [x.text for x in row.find_all("td")]
         col = col.replace(":", "").strip()
         val = val.replace(",", "")
         m = {col: val}
@@ -277,14 +278,15 @@ def _parse_qualimap_rnaseq(table):
 def _parse_rnaseq_qualimap_metrics(report_file):
     """Extract useful metrics from the qualimap HTML report file.
     """
-    import lxml.html
+    from bs4 import BeautifulSoup
     out = {}
     parsers = ["Reads alignment", "Reads genomic origin", "Transcript coverage profile"]
-    root = lxml.html.parse(report_file).getroot()
-    for table in root.xpath("//div[@class='table-summary']"):
-        header = table.xpath("h3")[0].text
-        if header in parsers:
-            out.update(_parse_qualimap_rnaseq(table))
+    with open(report_file) as in_handle:
+        root = BeautifulSoup(in_handle.read(), "html.parser")
+    for table in root.find_all("div", class_="table-summary"):
+        h3 = table.find("h3")
+        if h3.text in parsers:
+            out.update(_parse_qualimap_rnaseq(table.find("table")))
     return out
 
 def run_rnaseq(bam_file, data, out_dir):
