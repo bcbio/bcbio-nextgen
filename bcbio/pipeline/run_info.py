@@ -795,8 +795,9 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
         for prog, pkvs in resources.items():
             if prog not in item["resources"]:
                 item["resources"][prog] = {}
-            for key, val in pkvs.items():
-                item["resources"][prog][key] = val
+            if pkvs is not None:
+                for key, val in pkvs.items():
+                    item["resources"][prog][key] = val
         for iname, ivals in integrations.items():
             if ivals:
                 if iname not in item:

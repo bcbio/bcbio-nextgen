@@ -430,8 +430,9 @@ def _pair_samples_with_pipelines(run_info_yaml, config):
         for prog, pkvs in resources.items():
             if prog not in usample["resources"]:
                 usample["resources"][prog] = {}
-            for key, val in pkvs.items():
-                usample["resources"][prog][key] = val
+            if pkvs is not None:
+                for key, val in pkvs.items():
+                    usample["resources"][prog][key] = val
         config = config_utils.update_w_custom(config, usample)
         sample["resources"] = {}
         ready_samples.append(sample)
