@@ -5,6 +5,7 @@
 - CWL: use json input files for passing inputs instead of flattened command
   line arguments. Improves compatibility with multiple runners.
 - Remove usage of lxml for qsignature and qualimap to avoid icu library errors.
+- CNVkit: merge adjacent calls with identical copy numbers
 
 ## 1.0.3 (7 May 2017)
 

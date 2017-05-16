@@ -482,6 +482,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
+                   "--filter", "cn",
                    "--ploidy", str(ploidy.get_ploidy([data])),
                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
