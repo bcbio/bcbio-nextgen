@@ -8,12 +8,13 @@ from contextlib import closing
 import copy
 import glob
 import itertools
+import operator
 import os
 import string
 
 import toolz as tz
 import yaml
-from bcbio import install, utils
+from bcbio import install, utils, structural
 from bcbio.bam import ref
 from bcbio.log import logger
 from bcbio.distributed import objectstore
@@ -593,6 +594,20 @@ def _check_variantcaller(item):
             raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
                              "Supported options: %s\n" % (problem, sorted(list(allowed))))
 
+def _check_svcaller(item):
+    """Ensure the provide structural variant caller is valid.
+    """
+    allowed = set(reduce(operator.add, [d.keys() for d in structural._CALLERS.values()]) + [None, False])
+    print item["algorithm"]
+    svs = item["algorithm"].get("svcaller")
+    if not isinstance(svs, (list, tuple)):
+        svs = [svs]
+    problem = [x for x in svs if x not in allowed]
+    if len(problem) > 0:
+        raise ValueError("Unexpected algorithm 'svcaller' parameters: %s\n"
+                         "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
+                                                      sorted(list(allowed))))
+
 def _check_jointcaller(data):
     """Ensure specified jointcaller is valid.
     """
@@ -629,6 +644,7 @@ def _check_sample_config(items, in_file, config):
     [_check_algorithm_values(x) for x in items]
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
+    [_check_svcaller(x) for x in items]
     [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
 
