@@ -188,7 +188,14 @@ def _parse_metrics(metrics):
     total = ["Not aligned", "Aligned to genes", "No feature assigned"]
 
     out = {}
-    total_reads = sum([int(metrics[name]) for name in total])
+    def _safe_int(x):
+        """Handle non integer values like nan
+        """
+        try:
+            return int(x)
+        except ValueError:
+            return 0
+    total_reads = sum([_safe_int(metrics[name]) for name in total])
     out.update({key: val for key, val in metrics.items() if key in correct})
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
