@@ -60,7 +60,9 @@ multiple samples using the template workflow command::
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
   Note that paired-end samples sequentially numbered without leading zeros 
   (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``, 
-  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info).
+  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info). As well, ``.`` characters could be problematics,
+  it's better to avoid this character and use it only as separation
+  for the extension file.
 
     The remaining columns can contain:
 
