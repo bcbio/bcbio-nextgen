@@ -598,7 +598,6 @@ def _check_svcaller(item):
     """Ensure the provide structural variant caller is valid.
     """
     allowed = set(reduce(operator.add, [d.keys() for d in structural._CALLERS.values()]) + [None, False])
-    print item["algorithm"]
     svs = item["algorithm"].get("svcaller")
     if not isinstance(svs, (list, tuple)):
         svs = [svs]
