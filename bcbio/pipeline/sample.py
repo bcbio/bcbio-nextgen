@@ -105,7 +105,7 @@ def _add_hla_files(data):
 def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
-    data = utils.to_single_data(data)
+    data = cwlutils.normalize_missing(utils.to_single_data(data))
     fastq1, fastq2 = dd.get_input_sequence_files(data)
     if alt_input:
         fastq1, fastq2 = alt_input
