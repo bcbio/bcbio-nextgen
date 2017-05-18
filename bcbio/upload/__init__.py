@@ -507,7 +507,7 @@ def _maybe_add_trna(algorithm, sample, out):
     if utils.file_exists(fn):
         out.append({"path": fn,
                     "type": "directory",
-                    "ext": "tdrmapper"})
+                    "ext": "mintmap"})
     return out
 
 def _maybe_add_peaks(algorithm, sample, out):

@@ -103,7 +103,7 @@ def sample_annotation(data):
         data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, sps,  op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
 
     if "trna" in tools:
-        data['trna'] = _trna_annotation(data)
+        data['trna'] = _mint_trna_annotation(data)
 
     data = spikein.counts_spikein(data)
     return [[data]]
@@ -228,6 +228,35 @@ def _trna_annotation(data):
                 cmd = ("{perl_export} && perl {tdrmapper} {trna_ref} {in_file}").format(**locals())
                 do.run(cmd, "tRNA for %s" % name)
                 for filename in glob.glob("*mapped*"):
+                    shutil.move(filename, work_dir)
+    return work_dir
+
+def _mint_trna_annotation(data):
+    """
+    use MINTmap to quantify tRNAs
+    """
+    trna_lookup = op.join(dd.get_srna_mint_lookup(data))
+    trna_space = op.join(dd.get_srna_mint_space(data))
+    trna_other = op.join(dd.get_srna_mint_other(data))
+    name = dd.get_sample_name(data)
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna_mint", name))
+    in_file = op.basename(data["clean_fastq"])
+    mintmap = os.path.realpath(os.path.join(os.path.dirname(sys.executable), "MINTmap.pl"))
+    perl_export = utils.get_perl_exports()
+    if not file_exists(trna_lookup) or not file_exists(mintmap):
+        logger.info("There is no tRNA annotation to run MINTmap.")
+        return work_dir
+    jar_folder = os.path.join(os.path.dirname(mintmap), "MINTplates")
+    out_file = op.join(work_dir, name + "-MINTmap_v1-exclusive-tRFs.expression.txt")
+    if not file_exists(out_file):
+        with tx_tmpdir(data) as txdir:
+            with utils.chdir(txdir):
+                utils.symlink_plus(data["clean_fastq"], op.join(txdir, in_file))
+                cmd = ("{perl_export} && {mintmap} -f {in_file} -p {name} "
+                       "-l {trna_lookup} -s {trna_space} -j {jar_folder} "
+                       "-o {trna_other}").format(**locals())
+                do.run(cmd, "tRNA for %s" % name)
+                for filename in glob.glob("*MINTmap*"):
                     shutil.move(filename, work_dir)
     return work_dir
 

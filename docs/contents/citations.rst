@@ -6,6 +6,13 @@ https://github.com/chapmanb/bcbio-nextgen
 small RNA-seq
 =============
 
+Data was analyzed with bcbio-nextgen (https://github.com/chapmanb/bcbio-nextgen)
+using piDNA to detect the adapter, cutadapt to remove it, STAR/bowtie to align against
+the genome and seqcluster to detect small RNA transcripts. miRNAs were detected using
+miraligner tool with miRBase as the reference miRNA database. tRNA profiles were
+detected using tdrmapper tool. mirdeep2 was used for discovery of novel miRNAs. FastQC
+was used for QC metrics and multiqc for reporting.
+
 Download BIB format: https://github.com/chapmanb/bcbio-nextgen/tree/master/docs/contents/misc/bcbio-smallrna.bib
 
 Tools
