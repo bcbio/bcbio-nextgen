@@ -51,7 +51,7 @@ class IOSafeMultiProcessingSubscriber(logbook.queues.MultiProcessingSubscriber):
             else:
                 raise
 
-def _create_log_handler(config, add_hostname=False, direct_hostname=False):
+def _create_log_handler(config, add_hostname=False, direct_hostname=False, write_toterm=True):
     logbook.set_datetime_format("utc")
     handlers = [logbook.NullHandler()]
     format_str = "".join(["[{record.time:%Y-%m-%dT%H:%MZ}] " if config.get("include_time", True) else "",
@@ -74,8 +74,11 @@ def _create_log_handler(config, add_hostname=False, direct_hostname=False):
         handlers.append(logbook.FileHandler(os.path.join(log_dir, "%s-commands.log" % LOG_NAME),
                                             format_string=format_str, level="DEBUG",
                                             filter=_is_cl))
-    handlers.append(logbook.StreamHandler(sys.stdout, format_string="{record.message}",
-                                          level="DEBUG", filter=_is_stdout))
+    if write_toterm:
+        handlers.append(logbook.StreamHandler(sys.stdout, format_string="{record.message}",
+                                              level="DEBUG", filter=_is_stdout))
+        handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True,
+                                              filter=_not_cl))
 
     email = config.get("email", config.get("resources", {}).get("log", {}).get("email"))
     if email:
@@ -83,9 +86,6 @@ def _create_log_handler(config, add_hostname=False, direct_hostname=False):
         handlers.append(logbook.MailHandler(email, [email],
                                             format_string=email_str,
                                             level='INFO', bubble=True))
-
-    handlers.append(logbook.StreamHandler(sys.stderr, format_string=format_str, bubble=True,
-                                          filter=_not_cl))
     return CloseableNestedSetup(handlers)
 
 def create_base_logger(config=None, parallel=None):
@@ -143,7 +143,7 @@ def setup_local_logging(config=None, parallel=None):
     elif cores > 1:
         handler = logbook.queues.MultiProcessingHandler(mpq)
     else:
-        handler = _create_log_handler(config, direct_hostname=wrapper is not None)
+        handler = _create_log_handler(config, direct_hostname=wrapper is not None, write_toterm=wrapper is None)
     handler.push_thread()
     return handler
 

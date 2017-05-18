@@ -4,6 +4,7 @@ Enables command line access and alternative interfaces to run specific
 functionality within bcbio-nextgen.
 """
 import collections
+import contextlib
 import csv
 import json
 import operator
@@ -48,12 +49,12 @@ def process(args):
     else:
         parallel, out_keys = None, {}
     with utils.chdir(work_dir):
-        log.setup_local_logging(parallel={"wrapper": "runfn"})
-        try:
-            out = fn(fnargs)
-        except:
-            logger.exception()
-            raise
+        with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
+            try:
+                out = fn(fnargs)
+            except:
+                logger.exception()
+                raise
     if argfile:
         try:
             _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir)

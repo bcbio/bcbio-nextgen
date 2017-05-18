@@ -83,7 +83,7 @@ def _do_run(cmd, checks, log_stdout=False, env=None):
     debug_stdout = collections.deque(maxlen=100)
     while 1:
         line = s.stdout.readline()
-        if line:
+        if line.rstrip():
             debug_stdout.append(line)
             if log_stdout:
                 logger_stdout.debug(line.rstrip())
