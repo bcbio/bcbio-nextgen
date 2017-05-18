@@ -167,6 +167,8 @@ def _check_sample(in_bam, rgnames):
 def _check_bam_contigs(in_bam, ref_file, config):
     """Ensure a pre-aligned BAM file matches the expected reference genome.
     """
+    # GATK allows chromosome M to be in multiple locations, skip checking it
+    allowed_outoforder = ["chrM", "MT"]
     ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
     with pysam.Samfile(in_bam, "rb") as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
@@ -174,8 +176,10 @@ def _check_bam_contigs(in_bam, ref_file, config):
     extra_rcs = [x for x in ref_contigs if x not in bam_contigs]
     problems = []
     warnings = []
-    for bc, rc in itertools.izip_longest([x for x in bam_contigs if x not in extra_bcs],
-                                         [x for x in ref_contigs if x not in extra_rcs]):
+    for bc, rc in itertools.izip_longest([x for x in bam_contigs if (x not in extra_bcs and
+                                                                     x not in allowed_outoforder)],
+                                         [x for x in ref_contigs if (x not in extra_rcs and
+                                                                     x not in allowed_outoforder)]):
         if bc != rc:
             if bc and rc:
                 problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
