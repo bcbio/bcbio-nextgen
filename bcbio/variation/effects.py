@@ -136,21 +136,25 @@ def run_vep(in_file, data):
                     plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = ["loftee"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
-                        plugins += ["maxentscan","genesplicer"]
+                        plugins += ["maxentscan", "genesplicer"]
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
                     config_args += ["--sift", "b", "--polyphen", "b"]
+                    # XXX HGVS very slow so turned off for now, need to investigate
                     # Use HGVS by default, requires indexing the reference genome
-                    config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
+                    #config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick"]
+                if ensembl_name.endswith("_merged"):
+                    config_args += ["--merged"]
+                    ensembl_name = ensembl_name.replace("_merged", "")
                 resources = config_utils.get_resources("vep", data["config"])
                 extra_args = [str(x) for x in resources.get("options", [])]
                 cmd = [vep, "--vcf", "-o", "stdout", "-i", in_file] + fork_args + extra_args + \
                       ["--species", ensembl_name,
-                       "--no_stats", "--cache", "--merged",
+                       "--no_stats", "--cache",
                         "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
