@@ -270,7 +270,10 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ext=""):
     target_cnn = [x["file"] for x in cnns if x["cnntype"] == "target"][0]
     antitarget_cnn = [x["file"] for x in cnns if x["cnntype"] == "antitarget"][0]
     data = [x for x in items if dd.get_sample_name(x) == cnns[0]["sample"]][0]
-    out_file = "%s%s.cnr" % (os.path.commonprefix([target_cnn, antitarget_cnn]).replace(".", ""), ext)
+    common_refix = os.path.commonprefix([target_cnn, antitarget_cnn])
+    if common_refix.endswith("."):
+        common_refix = common_refix[:-1]
+    out_file = "%s%s.cnr" % (common_refix, ext)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "fix", "-o", tx_out_file, target_cnn, antitarget_cnn, background_cnn]
