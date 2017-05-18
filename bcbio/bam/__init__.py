@@ -170,9 +170,12 @@ def _check_bam_contigs(in_bam, ref_file, config):
     ref_contigs = [c.name for c in ref.file_contigs(ref_file, config)]
     with pysam.Samfile(in_bam, "rb") as bamfile:
         bam_contigs = [c["SN"] for c in bamfile.header["SQ"]]
+    extra_bcs = [x for x in bam_contigs if x not in ref_contigs]
+    extra_rcs = [x for x in ref_contigs if x not in bam_contigs]
     problems = []
     warnings = []
-    for bc, rc in itertools.izip_longest(bam_contigs, ref_contigs):
+    for bc, rc in itertools.izip_longest([x for x in bam_contigs if x not in extra_bcs],
+                                         [x for x in ref_contigs if x not in extra_rcs]):
         if bc != rc:
             if bc and rc:
                 problems.append("Reference mismatch. BAM: %s Reference: %s" % (bc, rc))
@@ -180,6 +183,10 @@ def _check_bam_contigs(in_bam, ref_file, config):
                 warnings.append("Extra BAM chromosomes: %s" % bc)
             elif rc:
                 warnings.append("Extra reference chromosomes: %s" % rc)
+    for bc in extra_bcs:
+        warnings.append("Extra BAM chromosomes: %s" % bc)
+    for rc in extra_rcs:
+        warnings.append("Extra reference chromosomes: %s" % rc)
     if problems:
         raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
                          "Setting `bam_clean: picard` in the configuration can often fix this issue."
@@ -187,7 +194,6 @@ def _check_bam_contigs(in_bam, ref_file, config):
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
               "\n".join(warnings))
-
 
 def open_samfile(in_file):
     if is_bam(in_file):
