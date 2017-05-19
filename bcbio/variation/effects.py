@@ -101,11 +101,8 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
                 cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
-                       "-c", vep_dir, "-u", tmp_dir]
-                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
-                cmd = ["%svep_convert_cache" % vep_path, "-species", species, "-version", vepv,
-                       "-d", vep_dir]
-                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Convert VEP cache to tabix %s" % ensembl_name)
+                       "-c", vep_dir, "-u", tmp_dir, "--CONVERT"]
+                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s and covert cache to tabix" % ensembl_name)
                 for tmp_fname in os.listdir(tmp_dir):
                     os.remove(os.path.join(tmp_dir, tmp_fname))
                 os.rmdir(tmp_dir)
@@ -131,7 +128,7 @@ def run_vep(in_file, data):
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("vep", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
-                config_args = []
+                config_args = ["--fasta", dd.get_ref_file(data)]
                 if is_human:
                     plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = ["loftee"]
@@ -143,7 +140,7 @@ def run_vep(in_file, data):
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     # XXX HGVS very slow so turned off for now, need to investigate
                     # Use HGVS by default, requires indexing the reference genome
-                    #config_args += ["--hgvs", "--shift_hgvs", "1", "--fasta", dd.get_ref_file(data)]
+                    #config_args += ["--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick"]
