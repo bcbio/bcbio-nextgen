@@ -16,7 +16,7 @@ from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, safe_makedir,
                          append_stem, copy_plus)
 from bcbio import bam, utils
-from bcbio.baim import ref, sambamba
+from bcbio.bam import ref, sambamba
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
