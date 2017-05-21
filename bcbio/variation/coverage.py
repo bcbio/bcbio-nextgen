@@ -15,8 +15,8 @@ import pysam
 from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (file_exists, chdir, safe_makedir,
                          append_stem, copy_plus)
-from bcbio import utils
-from bcbio.bam import ref, sambamba
+from bcbio import bam, utils
+from bcbio.baim import ref, sambamba
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
@@ -84,9 +84,7 @@ def calculate(bam_file, data):
     variant_regions = dd.get_variant_regions_merged(data)
     variant_regions_avg_cov = get_average_coverage(data, bam_file, variant_regions, "variant_regions")
     if not utils.file_uptodate(callable_file, bam_file):
-        ref_file = dd.get_ref_file(data)
-        cmd = ["goleft", "depth", "--q", "1",
-               "--mincov", str(params["min"]), "--reference", ref_file,
+        cmd = ["goleft", "depth", "--q", "1", "--mincov", str(params["min"]),
                "--processes", str(dd.get_num_cores(data)), "--ordered"]
         max_depth = _get_max_depth(variant_regions_avg_cov, params, data)
         if max_depth:
@@ -95,6 +93,9 @@ def calculate(bam_file, data):
             with utils.chdir(os.path.dirname(tx_depth_file)):
                 tx_callable_file = tx_depth_file.replace(".depth.bed", ".callable.bed")
                 prefix = tx_depth_file.replace(".depth.bed", "")
+                bam_ref_file = "%s-bamref.fa" % utils.splitext_plus(bam_file)[0]
+                bam.fai_from_bam(dd.get_ref_file(data), bam_file, bam_ref_file + ".fai", data)
+                cmd += ["--reference", bam_ref_file]
                 cmd += ["--prefix", prefix, bam_file]
                 bcbio_env = utils.get_bcbio_env()
                 msg = "Calculate coverage: %s" % dd.get_sample_name(data)

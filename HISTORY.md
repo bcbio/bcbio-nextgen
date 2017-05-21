@@ -4,6 +4,8 @@
   Thanks to Matthias De Smet.
 - CWL: use json input files for passing inputs instead of flattened command
   line arguments. Improves compatibility with multiple runners.
+- Improved support for pre-aligned BAMs by using contigs in BAM file for
+  coverage calculations.
 - Remove usage of lxml for qsignature and qualimap to avoid icu library errors.
 - CNVkit: merge adjacent calls with identical copy numbers
 

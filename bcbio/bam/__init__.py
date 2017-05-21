@@ -98,6 +98,19 @@ def idxstats(in_bam, data):
             out.append(AlignInfo(contig, int(length), int(aligned), int(unaligned)))
     return out
 
+def fai_from_bam(ref_file, bam_file, out_file, data):
+    """Create a fai index with only contigs in the input BAM file.
+    """
+    contigs = set([x.contig for x in idxstats(bam_file, data)])
+    if not utils.file_uptodate(out_file, bam_file):
+        with open(ref.fasta_idx(ref_file, data["config"])) as in_handle:
+            with file_transaction(data, out_file) as tx_out_file:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in (l for l in in_handle if l.strip()):
+                        if line.split()[0] in contigs:
+                            out_handle.write(line)
+    return out_file
+
 def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
     """
