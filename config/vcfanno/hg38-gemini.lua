@@ -110,6 +110,17 @@ function check_clinvar_aaf(clinvar_sig, max_aaf_all, aaf_cutoff)
     if type(clinvar_sig) ~= "string" then
         clinvar_sig = join(clinvar_sig, ",")
     end
-    return contains(clinvar_sig, "pathogenic") and max_aaf_all > aaf_cutoff
+    if false == contains(clinvar_sig, "pathogenic") then
+        return false
+    end
+    if type(max_aaf_all) ~= "table" then
+        return max_aaf_all > aaf_cutoff
+    end
+    for i, aaf in pairs(max_aaf_all) do
+        if aaf > aaf_cutoff then
+            return true
+        end
+    end
+    return false
 end
 
