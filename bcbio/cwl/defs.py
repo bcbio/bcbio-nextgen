@@ -103,10 +103,23 @@ def _variant_shared():
                {"files": 3})]
     return align
 
-def variant():
-    """Variant calling workflow definition for CWL generation.
+def _variant_hla(checkpoints):
+    """Add hla analysis to workflow, if configured.
     """
-    align_wf = _variant_shared()
+    if not checkpoints.get("hla"):
+        return [], []
+    hla = [s("call_hla", "multi-parallel",
+             [["hla", "fastq"]],
+             [cwlout(["hla", "hlacaller"], ["string", "null"]),
+              cwlout(["hla", "call_file"], ["File", "null"])],
+             "bcbio-vc", ["optitype"])]
+    return hla, []
+
+def _variant_vc(checkpoints):
+    """Add variant calling to workflow, if configured.
+    """
+    if not checkpoints.get("vc"):
+        return [], []
     vc_wf = [s("get_parallel_regions", "batch-split",
                [["batch_rec"]],
                [cwlout(["region"], "string")],
@@ -140,6 +153,44 @@ def variant():
                                cwlout("inherit")])],
                "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                             "htslib", "rtg-tools", "vcfanno"])]
+    vc = [s("batch_for_variantcall", "multi-batch",
+            [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
+             ["metadata", "batch"], ["metadata", "phenotype"],
+             ["regions", "callable"], ["config", "algorithm", "variantcaller"],
+             ["config", "algorithm", "coverage_interval"],
+             ["config", "algorithm", "variant_regions"],
+             ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
+             ["config", "algorithm", "tools_on"],
+             ["config", "algorithm", "tools_off"],
+             ["reference", "fasta", "base"], ["reference", "rtg"], ["reference", "genome_context"],
+             ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
+            [cwlout("batch_rec", "record")],
+            "bcbio-base",
+            cores=1,
+            unlist=[["config", "algorithm", "variantcaller"]]),
+          w("variantcall", "multi-parallel", vc_wf,
+            [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
+          s("summarize_grading_vc", "multi-combined",
+            [["vc_rec"]],
+            [cwlout(["validate", "grading_summary"], ["File", "null"]),
+             cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
+            "bcbio-base",
+            cores=1)]
+    return vc, [["validate", "grading_summary"]]
+
+def _variant_checkpoints(samples):
+    """Check sample configuration to identify required steps in analysis.
+    """
+    checkpoints = {}
+    checkpoints["vc"] = any([dd.get_variantcaller(d) for d in samples])
+    checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
+    return checkpoints
+
+def variant(samples):
+    """Variant calling workflow definition for CWL generation.
+    """
+    checkpoints = _variant_checkpoints(samples)
+    align_wf = _variant_shared()
     align = [s("alignment_to_rec", "multi-combined",
                [["files"],
                 ["config", "algorithm", "align_split_size"],
@@ -212,34 +263,6 @@ def variant():
                 cwlout(["config", "algorithm", "callable_count"], "int")],
                "bcbio-align", ["bedtools", "htslib"],
                cores=1)]
-    hla = [s("call_hla", "multi-parallel",
-             [["hla", "fastq"]],
-             [cwlout(["hla", "hlacaller"], ["string", "null"]),
-              cwlout(["hla", "call_file"], ["File", "null"])],
-             "bcbio-vc", ["optitype"])]
-    vc = [s("batch_for_variantcall", "multi-batch",
-            [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
-             ["metadata", "batch"], ["metadata", "phenotype"],
-             ["regions", "callable"], ["config", "algorithm", "variantcaller"],
-             ["config", "algorithm", "coverage_interval"],
-             ["config", "algorithm", "variant_regions"],
-             ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
-             ["config", "algorithm", "tools_on"],
-             ["config", "algorithm", "tools_off"],
-             ["reference", "fasta", "base"], ["reference", "rtg"], ["reference", "genome_context"],
-             ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"]],
-            [cwlout("batch_rec", "record")],
-            "bcbio-base",
-            cores=1,
-            unlist=[["config", "algorithm", "variantcaller"]]),
-          w("variantcall", "multi-parallel", vc_wf,
-            [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
-          s("summarize_grading_vc", "multi-combined",
-            [["vc_rec"]],
-            [cwlout(["validate", "grading_summary"], ["File", "null"]),
-             cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
-            "bcbio-base",
-            cores=1)]
     qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
              ["genome_build"], ["config", "algorithm", "coverage_interval"],
@@ -265,10 +288,12 @@ def variant():
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-qc", ["multiqc", "multiqc-bcbio"],
             cores=1)]
-    steps = align + vc + qc
+    vc, vc_out = _variant_vc(checkpoints)
+    hla, hla_out = _variant_hla(checkpoints)
+    steps = align + qc + vc + hla
     final_outputs = [["align_bam"],
                      cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
-                     ["validate", "grading_summary"]]
+                    ] + vc_out + hla_out
     return steps, final_outputs
 
 def sv():
@@ -303,7 +328,7 @@ def sv():
     final_outputs = [["align_bam"]]
     return steps, final_outputs
 
-def fastrnaseq():
+def fastrnaseq(samples):
     prep = [s("prep_samples", "multi-parallel",
               [["files"],
                dd.get_keys("sample_name")],
@@ -322,7 +347,7 @@ def fastrnaseq():
     final_outputs = [dd.get_keys('sailfish_dir')]
     return steps, final_outputs
 
-def rnaseq():
+def rnaseq(samples):
     prep = [s("prep_samples", "multi-parallel",
               [["files"],
                dd.get_keys("sample_name")],

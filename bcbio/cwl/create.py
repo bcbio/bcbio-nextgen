@@ -238,7 +238,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     file_estimates = _calc_input_estimates(keyvals, integrations)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
-    steps, wfoutputs = workflow_fn()
+    steps, wfoutputs = workflow_fn(samples)
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
