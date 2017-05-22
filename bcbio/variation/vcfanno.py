@@ -21,7 +21,7 @@ def vcfanno(vcf, out_file, conf_fns, data, basepath=None, lua_fns=None):
         luaflag = "-lua {0}".format(luafn) if luafn and utils.file_exists(luafn) else ""
         basepathflag = "-base-path {0}".format(basepath) if basepath else ""
         cores = dd.get_num_cores(data)
-        cmd = "{vcfanno} -p {cores} {luaflag} {basepathflag} {conffn} {vcf} | bgzip -c > {tx_out_file}"
+        cmd = "{vcfanno} -p {cores} {luaflag} {basepathflag} {conffn} {vcf} | sed -e 's/Number=A/Number=1/g' | bgzip -c > {tx_out_file}"
         message = "Annotating {vcf} with vcfanno, using {conffn}".format(**locals())
         do.run(cmd.format(**locals()), message)
     return out_file
