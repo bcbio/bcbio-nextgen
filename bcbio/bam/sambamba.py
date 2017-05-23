@@ -27,9 +27,9 @@ def make_command(data, cmd, bam_file, bed_file=None,
             "{target} {thresholds} {maxcov} -F \"{query}\"").format(**locals())
 
 def index(data, bam_fpath):
-    cmdl = make_command(data, "index", bam_fpath)
+    cmdl = "sambamba index -t %s %s" % (dd.get_cores(data), bam_fpath)
     indexed_bam = bam_fpath + ".bai"
-    if not utils.file_uptodate(indexed_bam, bam_fpath):
+    if not utils.file_exists(indexed_bam):
         do.run(cmdl, "Indexing BAM file using sambamba")
         if not utils.file_exists(indexed_bam):
             logger.error("Cannot index BAM file " + bam_fpath + " using sambamba.")
