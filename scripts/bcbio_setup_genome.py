@@ -30,6 +30,14 @@ SRNASEQ_DIR = "srnaseq"
 
 ERCC_BUCKET = "bcbio-data.s3.amazonaws.com/"
 
+def extract_if_gzipped(filename):
+    stem, ext = os.path.splitext(filename)
+    if ext == ".gz":
+        subprocess.check_call("gzip -cd %s > %s" % (filename, stem), shell=True)
+        return stem
+    else:
+        return filename
+
 def gff3_to_gtf(gff3_file):
 
     dialect = {'field separator': '; ',
@@ -239,11 +247,20 @@ if __name__ == "__main__":
 
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
+    if not file_exists(args.fasta):
+        print "%s does not exist, exiting." % args.fasta
+        sys.exit(1)
+
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
+    if args.gtf and not file_exists(args.gtf):
+        print "%s does not exist, exiting." % args.gtf
+        sys.exit(1)
     args.srna_gtf = os.path.abspath(args.srna_gtf) if args.srna_gtf else None
 
+    gtf_file = args.gtf
     if args.gff3:
-        args.gtf = gff3_to_gtf(args.gtf)
+        gtf_file = extract_if_gzipped(gtf_file)
+        gtf_file = gff3_to_gtf(gtf_file)
 
     # always make a sequence dictionary
     if "seq" not in args.indexes:
@@ -257,12 +274,13 @@ if __name__ == "__main__":
     os.chdir(build_dir)
     print "Genomes will be installed into %s." % (build_dir)
 
-    fasta_file = install_fasta_file(build_dir, args.fasta, args.build)
+    fasta_file = extract_if_gzipped(args.fasta)
+    fasta_file = install_fasta_file(build_dir, fasta_file, args.build)
     print "Installed genome as %s." % (fasta_file)
     if args.gtf:
         if "bowtie2" not in args.indexes:
             args.indexes.append("bowtie2")
-        gtf_file = install_gtf_file(build_dir, args.gtf, args.build)
+        gtf_file = install_gtf_file(build_dir, gtf_file, args.build)
         print "Installed GTF as %s." % (gtf_file)
 
     if args.ercc:
