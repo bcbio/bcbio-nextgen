@@ -4,6 +4,9 @@
   Thanks to Matthias De Smet.
 - CWL: use json input files for passing inputs instead of flattened command
   line arguments. Improves compatibility with multiple runners.
+- Allow subsetting a pre-aligned BAM to only standard chromosomes, removing non
+  chr1-22,X,Y for human. This allows runs of pre-aligned data with different
+  extra chromosomes than the bcbio reference builds. Thanks to Oliver Hofmann.
 - Improved support for pre-aligned BAMs by using contigs in BAM file for
   coverage calculations.
 - Remove usage of lxml for qsignature and qualimap to avoid icu library errors.

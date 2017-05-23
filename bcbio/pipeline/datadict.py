@@ -90,6 +90,7 @@ LOOKUPS = {
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
     "aligner": {"keys": ['config', 'algorithm', 'aligner']},
+    "bam_clean": {"keys": ['config', 'algorithm', 'bam_clean']},
     "platform": {"keys": ['config', 'algorithm', 'platform'],
                  "default": "illumina"},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],

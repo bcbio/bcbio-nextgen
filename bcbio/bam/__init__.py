@@ -10,7 +10,7 @@ import numpy
 import pysam
 import toolz as tz
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
@@ -110,6 +110,24 @@ def fai_from_bam(ref_file, bam_file, out_file, data):
                         if line.split()[0] in contigs:
                             out_handle.write(line)
     return out_file
+
+def ref_file_from_bam(bam_file, data):
+    """Subset a fasta input file to only a fraction of input contigs.
+    """
+    new_ref = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "inputs", "ref")),
+                           "%s-subset.fa" % dd.get_genome_build(data))
+    if not utils.file_exists(new_ref):
+        with file_transaction(data, new_ref) as tx_out_file:
+            contig_file = "%s-contigs.txt" % utils.splitext_plus(new_ref)[0]
+            with open(contig_file, "w") as out_handle:
+                for contig in [x.contig for x in idxstats(bam_file, data) if x.contig != "*"]:
+                    out_handle.write("%s\n" % contig)
+            cmd = "seqtk subseq -l 100 %s %s > %s" % (dd.get_ref_file(data), contig_file, tx_out_file)
+            do.run(cmd, "Subset %s to BAM file contigs" % dd.get_genome_build(data))
+    ref.fasta_idx(new_ref, data["config"])
+    runner = broad.runner_from_path("picard", data["config"])
+    runner.run_fn("picard_index_ref", new_ref)
+    return {"base": new_ref}
 
 def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.

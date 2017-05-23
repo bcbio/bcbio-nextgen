@@ -299,7 +299,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     """
     if out_file is None or not os.path.exists(out_file) or not os.path.lexists(out_file):
         utils.safe_makedir(os.path.dirname(out_file))
-        sam_ref = data["sam_ref"]
+        ref_file = dd.get_ref_file(data)
         config = data["config"]
         caller_fns = get_variantcallers()
         caller_fn = caller_fns[config["algorithm"].get("variantcaller")]
@@ -314,9 +314,9 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
             bam.index(bam_file, data["config"], check_timestamp=False)
         do_phasing = data["config"]["algorithm"].get("phasing", False)
         call_file = "%s-raw%s" % utils.splitext_plus(out_file) if do_phasing else out_file
-        call_file = caller_fn(align_bams, items, sam_ref, assoc_files, region, call_file)
+        call_file = caller_fn(align_bams, items, ref_file, assoc_files, region, call_file)
         if do_phasing == "gatk":
-            call_file = phasing.read_backed_phasing(call_file, align_bams, sam_ref, region, config)
+            call_file = phasing.read_backed_phasing(call_file, align_bams, ref_file, region, config)
             utils.symlink_plus(call_file, out_file)
     if region:
         data["region"] = region

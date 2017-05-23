@@ -5,9 +5,12 @@ chromosome order, run group information and other BAM formatting.
 This provides a pipeline to prepare and resort an input.
 """
 import os
+import sys
 
 from bcbio import bam, broad, utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.heterogeneity import chromhacks
 from bcbio.ngsalign import novoalign
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -18,7 +21,7 @@ def fixrg(in_bam, names, ref_file, dirs, data):
     addreplacerg does not remove the old read group, causing confusion when
     checking. We use reheader to work around this
     """
-    work_dir = utils.safe_makedir(os.path.join(dirs["work"], "bamclean", dd.get_sample_name(data)))
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-fixrg.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
@@ -30,6 +33,43 @@ def fixrg(in_bam, names, ref_file, dirs, data):
                    "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} -")
             do.run(cmd.format(**locals()), "Fix read groups: %s" % dd.get_sample_name(data))
     return out_file
+
+def remove_extracontigs(in_bam, data):
+    """Remove extra contigs (non chr1-22,X,Y) from an input BAM.
+
+    These extra contigs can often be arranged in different ways, causing
+    incompatibility issues with GATK and other tools. This also fixes the
+    read group header as in fixrg.
+    """
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
+    out_file = os.path.join(work_dir, "%s-noextras.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    if not utils.file_uptodate(out_file, in_bam):
+        with file_transaction(data, out_file) as tx_out_file:
+            target_chroms = [x.name for x in ref.file_contigs(dd.get_ref_file(data))
+                             if chromhacks.is_autosomal_or_sex(x.name)]
+            str_chroms = " ".join(target_chroms)
+            comma_chroms = ",".join(target_chroms)
+            rg_info = novoalign.get_rg_info(data["rgnames"])
+            bcbio_py = sys.executable
+            cmd = ("samtools view -h {in_bam} {str_chroms} | "
+                   """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
+                   """cleanbam.fix_header("{comma_chroms}")' | """
+                   "samtools view -u - | "
+                   "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
+            do.run(cmd.format(**locals()), "bamprep, remove extra contigs: %s" % dd.get_sample_name(data))
+    return out_file
+
+def fix_header(chroms):
+    target_chroms = chroms.split(",")
+    for line in sys.stdin:
+        if line.startswith("@RG"):
+            pass  # skip current read groups, since adding new
+        elif line.startswith("@SQ"):
+            contig = [x for x in line.split("\t") if x.startswith("SN:")][0].split(":")[-1]
+            if contig in target_chroms:
+                sys.stdout.write(line)
+        else:
+            sys.stdout.write(line)
 
 def picard_prep(in_bam, names, ref_file, dirs, data):
     """Prepare input BAM using Picard and GATK cleaning tools.
