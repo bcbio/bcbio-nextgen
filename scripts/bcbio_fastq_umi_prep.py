@@ -94,7 +94,7 @@ def _find_umi(files):
     """
     base = os.path.basename(_commonprefix(files))
     def _file_ext(f):
-        exts = os.path.basename(f).replace(base, "").split("_")
+        exts = utils.splitext_plus(os.path.basename(f).replace(base, ""))[0].split("_")
         exts = [x for x in exts if x]
         return exts[0]
     exts = dict([(_file_ext(f), f) for f in files])
