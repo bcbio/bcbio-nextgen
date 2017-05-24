@@ -1,5 +1,7 @@
 ## 1.0.4 (in progress)
 
+- Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
+  to @semal.
 - Use new Ensembl vep (variant effect predictor) with updated annotations.
   Thanks to Matthias De Smet.
 - CWL: use json input files for passing inputs instead of flattened command

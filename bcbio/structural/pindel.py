@@ -93,7 +93,7 @@ def _run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files,
                                    items, paired)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"),
-                                               ref_file, config)
+                                               ref_file, items[0])
     return ann_file
 
 

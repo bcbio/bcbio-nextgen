@@ -128,7 +128,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"),
-                                               ref_file, config)
+                                               ref_file, items[0])
     return ann_file
 
 def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
@@ -189,7 +189,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
 
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
                                                assoc_files.get("dbsnp"), ref_file,
-                                               config)
+                                               items[0])
     return ann_file
 
 def get_scalpel_bcftools_filter_expression(filter_type, config):

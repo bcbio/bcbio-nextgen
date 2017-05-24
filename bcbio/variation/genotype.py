@@ -313,7 +313,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         for bam_file in align_bams:
             bam.index(bam_file, data["config"], check_timestamp=False)
         do_phasing = data["config"]["algorithm"].get("phasing", False)
-        call_file = "%s-raw%s" % utils.splitext_plus(out_file) if do_phasing else out_file
+        call_file = "%s-unphased%s" % utils.splitext_plus(out_file) if do_phasing else out_file
         call_file = caller_fn(align_bams, items, ref_file, assoc_files, region, call_file)
         if do_phasing == "gatk":
             call_file = phasing.read_backed_phasing(call_file, align_bams, ref_file, region, config)

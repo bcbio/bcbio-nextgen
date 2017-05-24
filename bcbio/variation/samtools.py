@@ -38,7 +38,7 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     if out_file.endswith(".gz"):
         out_file = vcfutils.bgzip_and_index(out_file, config)
     ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams, assoc_files.get("dbsnp"),
-                                               ref_file, config)
+                                               ref_file, items[0])
     return ann_file
 
 def run_samtools(align_bams, items, ref_file, assoc_files, region=None,

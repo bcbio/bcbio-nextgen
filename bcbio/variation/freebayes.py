@@ -113,39 +113,43 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            freebayes = config_utils.get_program("freebayes", config)
-            input_bams = " ".join("-b %s" % x for x in align_bams)
-            opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
-            if no_target_regions:
-                vcfutils.write_empty_vcf(tx_out_file, config, samples=[dd.get_sample_name(d) for d in items])
-            else:
-                opts = " ".join(opts)
-                # Recommended options from 1000 genomes low-complexity evaluation
-                # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
-                opts += " --min-repeat-entropy 1"
-                # Remove partial observations, which cause a preference for heterozygote calls
-                # https://github.com/ekg/freebayes/issues/234#issuecomment-205331765
-                opts += " --no-partial-observations"
-                if somatic:
-                    opts = _add_somatic_opts(opts, somatic)
-                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-                # For multi-sample outputs, ensure consistent order
-                samples = ("-s" + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
-                py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-                cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
-                       """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
-                       "| {fix_ambig} | bcftools view {samples} -a - | "
-                       "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                       "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                       "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
-                       "{compress_cmd} > {tx_out_file}")
-                do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"),
-                                               ref_file, config)
-    return ann_file
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        if not utils.file_exists(raw_file):
+            with file_transaction(items[0], raw_file) as tx_out_file:
+                freebayes = config_utils.get_program("freebayes", config)
+                input_bams = " ".join("-b %s" % x for x in align_bams)
+                opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
+                if no_target_regions:
+                    vcfutils.write_empty_vcf(tx_out_file, config, samples=[dd.get_sample_name(d) for d in items])
+                else:
+                    opts = " ".join(opts)
+                    # Recommended options from 1000 genomes low-complexity evaluation
+                    # https://groups.google.com/d/msg/freebayes/GvxIzjcpbas/1G6e3ArxQ4cJ
+                    opts += " --min-repeat-entropy 1"
+                    # Remove partial observations, which cause a preference for heterozygote calls
+                    # https://github.com/ekg/freebayes/issues/234#issuecomment-205331765
+                    opts += " --no-partial-observations"
+                    if somatic:
+                        opts = _add_somatic_opts(opts, somatic)
+                    compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                    # For multi-sample outputs, ensure consistent order
+                    samples = ("-s" + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
+                    fix_ambig = vcfutils.fix_ambiguous_cl()
+                    py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                    cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
+                           """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
+                           "| {fix_ambig} | bcftools view {samples} -a - | "
+                           "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
+                           "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
+                           "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
+                           "{compress_cmd} > {tx_out_file}")
+                    do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
+            ann_file = annotation.annotate_nongatk_vcf(raw_file, align_bams,
+                                                       assoc_files.get("dbsnp"),
+                                                       ref_file, items[0], out_file)
+            if ann_file != out_file:
+                utils.symlink_plus(ann_file, out_file)
+    return out_file
 
 def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
@@ -162,40 +166,44 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            paired = get_paired_bams(align_bams, items)
-            assert paired.normal_bam, "Require normal BAM for FreeBayes paired calling and filtering"
+        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
+        if not utils.file_exists(raw_file):
+            with file_transaction(items[0], raw_file) as tx_out_file:
+                paired = get_paired_bams(align_bams, items)
+                assert paired.normal_bam, "Require normal BAM for FreeBayes paired calling and filtering"
 
-            freebayes = config_utils.get_program("freebayes", config)
-            opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
-            if no_target_regions:
-                vcfutils.write_empty_vcf(tx_out_file, config,
-                                         samples=[x for x in [paired.tumor_name, paired.normal_name] if x])
-            else:
-                opts = " ".join(opts)
-                opts += " --min-repeat-entropy 1"
-                opts += " --no-partial-observations"
-                opts = _add_somatic_opts(opts, paired)
-                compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
-                # For multi-sample outputs, ensure consistent order
-                samples = ("-s " + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
-                fix_ambig = vcfutils.fix_ambiguous_cl()
-                bcbio_py = sys.executable
-                py_cl = os.path.join(os.path.dirname(sys.executable), "py")
-                cl = ("{freebayes} -f {ref_file} {opts} "
-                      "{paired.tumor_bam} {paired.normal_bam} "
-                      """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
-                      """| {bcbio_py} -c 'from bcbio.variation import freebayes; """
-                      """freebayes.call_somatic("{paired.tumor_name}", "{paired.normal_name}")' """
-                      "| {fix_ambig} | bcftools view {samples} -a - | "
-                      "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
-                      "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
-                      "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
-                      "{compress_cmd} > {tx_out_file}")
-                do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"), ref_file,
-                                               config)
+                freebayes = config_utils.get_program("freebayes", config)
+                opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
+                if no_target_regions:
+                    vcfutils.write_empty_vcf(tx_out_file, config,
+                                            samples=[x for x in [paired.tumor_name, paired.normal_name] if x])
+                else:
+                    opts = " ".join(opts)
+                    opts += " --min-repeat-entropy 1"
+                    opts += " --no-partial-observations"
+                    opts = _add_somatic_opts(opts, paired)
+                    compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
+                    # For multi-sample outputs, ensure consistent order
+                    samples = ("-s " + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
+                    fix_ambig = vcfutils.fix_ambiguous_cl()
+                    bcbio_py = sys.executable
+                    py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                    cl = ("{freebayes} -f {ref_file} {opts} "
+                          "{paired.tumor_bam} {paired.normal_bam} "
+                          """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
+                          """| {bcbio_py} -c 'from bcbio.variation import freebayes; """
+                          """freebayes.call_somatic("{paired.tumor_name}", "{paired.normal_name}")' """
+                          "| {fix_ambig} | bcftools view {samples} -a - | "
+                          "{py_cl} -x 'bcbio.variation.freebayes.remove_missingalt(x)' | "
+                          "vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort | "
+                          "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
+                          "{compress_cmd} > {tx_out_file}")
+                    do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
+            ann_file = annotation.annotate_nongatk_vcf(raw_file, align_bams,
+                                                       assoc_files.get("dbsnp"),
+                                                       ref_file, items[0], out_file)
+            if ann_file != out_file:
+                utils.symlink_plus(ann_file, out_file)
     return ann_file
 
 # ## Filtering

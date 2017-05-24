@@ -127,23 +127,28 @@ def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
+def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, data,
+                         out_file=None):
     """Annotate a VCF file with dbSNP and standard GATK called annotations.
     """
-    orig_file = vcfutils.bgzip_and_index(orig_file, config)
-    broad_runner = broad.runner_from_config_safe(config)
+    orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
+    broad_runner = broad.runner_from_config_safe(data["config"])
     if not broad_runner or not broad_runner.has_gatk():
-        return orig_file
+        if dbsnp_file:
+            return add_dbsnp(orig_file, dbsnp_file, data, out_file)
+        else:
+            return orig_file
     else:
-        out_file = "%s-gatkann%s" % utils.splitext_plus(orig_file)
+        if out_file is None:
+            out_file = "%s-gatkann%s" % utils.splitext_plus(orig_file)
         if not utils.file_exists(out_file):
-            with file_transaction(config, out_file) as tx_out_file:
+            with file_transaction(data, out_file) as tx_out_file:
                 # Avoid issues with incorrectly created empty GATK index files.
                 # Occurs when GATK cannot lock shared dbSNP database on previous run
                 idx_file = orig_file + ".idx"
                 if os.path.exists(idx_file) and not utils.file_exists(idx_file):
                     os.remove(idx_file)
-                annotations = get_gatk_annotations(config, include_depth=False)
+                annotations = get_gatk_annotations(data["config"], include_depth=False)
                 params = ["-T", "VariantAnnotator",
                           "-R", ref_file,
                           "--variant", orig_file,
@@ -169,9 +174,9 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, config):
                         params.pop(ind_to_rem + 1)
                     params.pop(ind_to_rem)
                 params.extend(["-U", "ALL"])
-                broad_runner = broad.runner_from_config(config)
+                broad_runner = broad.runner_from_config(data["config"])
                 broad_runner.run_gatk(params)
-        vcfutils.bgzip_and_index(out_file, config)
+        vcfutils.bgzip_and_index(out_file, data["config"])
         return out_file
 
 def get_context_files(data):
