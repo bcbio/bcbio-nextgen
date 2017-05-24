@@ -67,7 +67,7 @@ def run(items):
 
     normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
-    items = _split_cnv(items, seq2c_calls_file)
+    _split_cnv(items, seq2c_calls_file)
     return items
 
 def prep_seq2c_bed(data):
@@ -141,7 +141,6 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
     return output_fpath
 
 def _split_cnv(items, calls_fpath):
-    out_items = []
     for item in items:
         if get_paired_phenotype(item) == "normal":
             continue
@@ -158,8 +157,6 @@ def _split_cnv(items, calls_fpath):
                             out.write(l)
         item["sv"][0]["calls"] = out_fname
         item["sv"][0]["vrn_file"] = to_vcf(out_fname, item)
-        out_items.append(item)
-    return out_items
 
 VCF_HEADER = """##fileformat=VCFv4.1
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
