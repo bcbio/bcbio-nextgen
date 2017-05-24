@@ -13,7 +13,7 @@ from tests.conftest import get_post_process_yaml
 # Use 'install_required' mark to skip tests that cannot be run on Travis CI,
 # because they require installation of additional dependencies (e.g. GATK)
 
-@pytest.marks('speed3')
+@pytest.mark.speed3
 @pytest.mark.skip(reason='Multiplexing not supporting in latest versions')
 def test_3_full_pipeline(install_test_files, data_dir):
     """Run full automated analysis pipeline with multiplexing.
@@ -27,7 +27,7 @@ def test_3_full_pipeline(install_test_files, data_dir):
 
 
 @pytest.mark.skip(reason='Multiplexing not supporting in latest versions')
-@pytest.marks('speed3')
+@pytest.mark.speed3
 def test_4_empty_fastq(install_test_files, data_dir):
     """Handle analysis of empty fastq inputs from failed runs.
     """
@@ -39,7 +39,9 @@ def test_4_empty_fastq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'stranded', 'install_required')
+@pytest.mark.rnaseq
+@pytest.mark.stranded
+@pytest.mark.install_required
 def test_2_stranded(install_test_files, data_dir):
     """Run an RNA-seq analysis with TopHat and generate gene-level counts.
     """
@@ -51,7 +53,9 @@ def test_2_stranded(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'tophat', 'install_required')
+@pytest.mark.rnaseq
+@pytest.mark.tophat
+@pytest.mark.install_required
 def test_2_rnaseq(install_test_files, data_dir):
     """Run an RNA-seq analysis with TopHat and generate gene-level counts.
     """
@@ -63,7 +67,7 @@ def test_2_rnaseq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('fusion')
+@pytest.mark.fusion
 def test_2_fusion(install_test_files, data_dir):
     """Run an RNA-seq analysis and test fusion genes
     """
@@ -75,7 +79,9 @@ def test_2_fusion(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('star', 'rnaseq', 'rnaseq_standard')
+@pytest.mark.star
+@pytest.mark.rnaseq
+@pytest.mark.rnaseq_standard
 def test_2_star(install_test_files, data_dir):
     """Run an RNA-seq analysis with STAR and generate gene-level counts.
     """
@@ -87,7 +93,8 @@ def test_2_star(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'fastrnaseq')
+@pytest.mark.fastrnaseq
+@pytest.mark.rnaseq
 def test_2_fastrnaseq(install_test_files, data_dir):
     """Run a fast RNA-seq analysis
     """
@@ -99,7 +106,8 @@ def test_2_fastrnaseq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'scrnaseq')
+@pytest.mark.rnaseq
+@pytest.mark.scrnaseq
 def test_2_scrnaseq(install_test_files, data_dir):
     """Run a single-cell RNA-seq analysis
     """
@@ -111,7 +119,9 @@ def test_2_scrnaseq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'rnaseq_standard', 'hisat2')
+@pytest.mark.rnaseq
+@pytest.mark.rnaseq_standard
+@pytest.mark.hisat2
 def test_2_hisat2(install_test_files, data_dir):
     """Run an RNA-seq analysis with hisat2 and generate gene-level counts.
     """
@@ -123,7 +133,9 @@ def test_2_hisat2(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('rnaseq', 'singleend', 'explant')
+@pytest.mark.rnaseq
+@pytest.mark.singleend
+@pytest.mark.explant
 def test_explant(install_test_files, data_dir):
     """
     Run an explant RNA-seq analysis with TopHat
@@ -137,7 +149,8 @@ def test_explant(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('srnaseq', 'srnaseq_star')
+@pytest.mark.srnaseq
+@pytest.mark.srnaseq_star
 def test_srnaseq_star(install_test_files, data_dir):
     """Run an sRNA-seq analysis.
     """
@@ -149,7 +162,8 @@ def test_srnaseq_star(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('srnaseq', 'srnaseq_bowtie')
+@pytest.mark.srnaseq
+@pytest.mark.srnaseq_bowtie
 def test_srnaseq_bowtie(install_test_files, data_dir):
     """Run an sRNA-seq analysis.
     """
@@ -161,7 +175,7 @@ def test_srnaseq_bowtie(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('chipseq')
+@pytest.mark.chipseq
 def test_chipseq(install_test_files, data_dir):
     """
     Run a chip-seq alignment with Bowtie2
@@ -174,7 +188,9 @@ def test_chipseq(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('speed1', 'ensemble', 'install_required')
+@pytest.mark.speed1
+@pytest.mark.ensemble
+@pytest.mark.install_required
 def test_1_variantcall(install_test_files, data_dir):
     """Test variant calling with GATK pipeline.
     Requires GATK.
@@ -187,7 +203,8 @@ def test_1_variantcall(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('devel', 'speed1')
+@pytest.mark.devel
+@pytest.mark.speed1
 def test_5_bam(install_test_files, data_dir):
     """Allow BAM files as input to pipeline.
     """
@@ -198,7 +215,8 @@ def test_5_bam(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('speed2', 'install_required')
+@pytest.mark.speed2
+@pytest.mark.install_required
 def test_6_bamclean(install_test_files, data_dir):
     with make_workdir() as workdir:
         cl = ["bcbio_nextgen.py",
@@ -208,7 +226,10 @@ def test_6_bamclean(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('speed2', 'cancer', 'cancermulti', 'install_required')
+@pytest.mark.speed2
+@pytest.mark.cancer
+@pytest.mark.cancermulti
+@pytest.mark.install_required
 def test_7_cancer(install_test_files, data_dir):
     """Test paired tumor-normal calling using multiple
     calling approaches: MuTect, VarScan, FreeBayes.
@@ -220,7 +241,9 @@ def test_7_cancer(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('cancer', 'cancerpanel', 'install_required')
+@pytest.mark.cancer
+@pytest.mark.cancerpanel
+@pytest.mark.install_required
 def test_7_cancer_nonormal(install_test_files, data_dir):
     """Test cancer calling without normal samples or with normal VCF panels.
     Requires MuTect and GATK.
@@ -232,7 +255,8 @@ def test_7_cancer_nonormal(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('speed1', 'template')
+@pytest.mark.speed1
+@pytest.mark.template
 def test_8_template(install_test_files, data_dir):
     """Create a project template from input files and metadata configuration.
     """
@@ -247,7 +271,8 @@ def test_8_template(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('joint', 'install_required')
+@pytest.mark.joint
+@pytest.mark.install_required
 def test_9_joint(install_test_files, data_dir):
     """Perform joint calling/backfilling/squaring off following variant calling.
     """
@@ -257,7 +282,8 @@ def test_9_joint(install_test_files, data_dir):
               os.path.join(data_dir, "run_info-joint.yaml")]
         subprocess.check_call(cl)
 
-@pytest.marks("umibarcode", "install_required")
+@pytest.mark.umibarcode
+@pytest.mark.install_required
 def test_10_umi(install_test_files, data_dir):
     """Allow BAM files as input to pipeline.
     """

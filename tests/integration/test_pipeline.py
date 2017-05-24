@@ -16,7 +16,7 @@ import pytest
 
 class TestRunInfo(object):
 
-    @pytest.marks('speed1')
+    @pytest.mark.speed1
     def test_programs(self, data_dir):
         """Identify programs and versions used in analysis.
         """
@@ -52,7 +52,8 @@ class TestVCFUtil(object):
     def ref_file(self):
         return os.path.join(self.data_dir, "genomes", "hg19", "seq", "hg19.fa")
 
-    @pytest.marks('speed1', 'combo')
+    @pytest.mark.speed1
+    @pytest.mark.combo
     def test_1_parallel_vcf_combine(self):
         """Parallel combination of VCF files, split by chromosome.
         """
@@ -80,7 +81,8 @@ class TestVCFUtil(object):
             if os.path.exists(fname + ".gz.tbi"):
                 os.remove(fname + ".gz.tbi")
 
-    @pytest.marks('speed1', 'combo')
+    @pytest.mark.speed1
+    @pytest.mark.combo
     def test_2_vcf_exclusion(self):
         """Exclude samples from VCF files.
         """
@@ -96,7 +98,8 @@ class TestVCFUtil(object):
         vcfutils.exclude_samples(
             self.combo_file, out_file, to_exclude, self.ref_file, config)
 
-    @pytest.marks('speed1', 'combo')
+    @pytest.mark.speed1
+    @pytest.mark.combo
     def test_3_vcf_split_combine(self):
         """Split a VCF file into SNPs and indels, then combine back together.
         """
@@ -119,7 +122,8 @@ class TestVCFUtil(object):
             if os.path.exists(f + ext):
                 os.remove(f + ext)
 
-    @pytest.marks('speed1', 'combo')
+    @pytest.mark.speed1
+    @pytest.mark.combo
     def test_4_vcf_sample_select(self, install_test_files, data_dir):
         """Select a sample from a VCF file.
         """
@@ -129,7 +133,8 @@ class TestVCFUtil(object):
         out_file = vcfutils.select_sample(fname, "S2", out_file, {})
         self._remove_vcf(out_file)
 
-    @pytest.marks('speed1', 'combo')
+    @pytest.mark.speed1
+    @pytest.mark.combo
     def test_5_find_fastq_pairs(self, install_test_files, data_dir):
         """Ensure we can correctly find paired fastq files.
         """

@@ -6,7 +6,8 @@ from tests.conftest import make_workdir
 from tests.conftest import get_post_process_yaml
 
 
-@pytest.marks('S3', 'install_required')
+@pytest.mark.S3
+@pytest.mark.install_required
 def test_fusion(install_test_files, data_dir):
     """Run an RNA-seq analysis and test fusion genes, with human-mouse
     disambiguation.
@@ -20,7 +21,8 @@ def test_fusion(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('S3', 'install_required')
+@pytest.mark.S3
+@pytest.mark.install_required
 def test_variantcall_1(install_test_files, data_dir):
     """Test variant calling with disambiguation.
     Requires minikraken database.
@@ -33,7 +35,8 @@ def test_variantcall_1(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('S3', 'install_required')
+@pytest.mark.S3
+@pytest.mark.install_required
 def test_variantcall_2(install_test_files, data_dir):
     """Test variant calling with disambiguation.
     Requires minikraken database.

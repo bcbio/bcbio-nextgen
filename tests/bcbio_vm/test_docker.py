@@ -6,8 +6,7 @@ import pytest
 from tests.conftest import make_workdir
 from tests.conftest import get_post_process_yaml
 
-
-@pytest.marks('docker')
+@pytest.mark.docker
 def test_docker(install_test_files, data_dir):
     """Run an analysis with code and tools inside a docker container.
 
@@ -25,8 +24,8 @@ def test_docker(install_test_files, data_dir):
         ]
         subprocess.check_call(cl)
 
-
-@pytest.marks('docker_ipython', 'docker')
+@pytest.mark.docker
+@pytest.mark.docker_ipython
 def test_docker_ipython(install_test_files, data_dir):
     """Run an analysis with code and tools inside a docker container,
     driven via IPython.
@@ -52,8 +51,8 @@ class TestCWL():
 
     Requires https://github.com/chapmanb/bcbio-nextgen-vm
     """
-
-    @pytest.marks('cwl_docker', 'cwl')
+    @pytest.mark.cwl_docker
+    @pytest.mark.cwl
     def test_2_cwl_docker(install_test_files, data_dir):
         """Create a common workflow language description and run on a
         Docker installation.
@@ -68,7 +67,10 @@ class TestCWL():
             print "To run with a CWL tool, cd test_automated_output and:"
             print " ".join(cl)
 
-    @pytest.marks('speed2', 'cwl', 'cwl_local', 'install_required')
+    @pytest.mark.speed2
+    @pytest.mark.cwl
+    @pytest.mark.cwl_local
+    @pytest.mark.install_required
     def test_1_cwl_local(self, install_test_files, data_dir):
         """Create a common workflow language description and run on local installation.
         """

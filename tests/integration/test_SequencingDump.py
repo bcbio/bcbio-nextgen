@@ -17,7 +17,7 @@ class TestSampleSheet(object):
             os.path.dirname(os.path.dirname(__file__)),
             "data", "illumina_samplesheet.csv")
 
-    @pytest.marks('speed1')
+    @pytest.mark.speed1
     def test_toyaml(self):
         """Convert CSV Illumina SampleSheet to YAML.
         """
@@ -29,7 +29,7 @@ class TestSampleSheet(object):
         assert info[0]['multiplex'][0]['barcode_id'] == 5
         os.remove(out_file)
 
-    @pytest.marks('speed1')
+    @pytest.mark.speed1
     def test_checkforrun(self):
         """Check for the presence of runs in an Illumina SampleSheet.
         """
