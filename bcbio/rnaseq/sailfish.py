@@ -166,8 +166,10 @@ def _sailfish_strand_string(strandedness):
             'secondstrand': "SF"}.get(strandedness, "U")
 
 def _gtf_to_fasta(gtf_file, ref_file, out_file, data=None):
+    gtf_to_fasta = config_utils.get_program("gtf_to_fasta",
+                                            dd.get_config(data))
     with file_transaction(data, out_file) as tx_gtf_fa:
-        cmd = "gtf_to_fasta {gtf_file} {ref_file} {tx_gtf_fa}"
+        cmd = "{gtf_to_fasta} {gtf_file} {ref_file} {tx_gtf_fa}"
         message = "Extracting genomic sequences of {gtf_file}."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_file
