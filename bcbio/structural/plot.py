@@ -92,7 +92,7 @@ def _prioritize_plot_regions(region_bt, data, out_dir=None):
                     if r.stop - r.start < max_size:
                         if num_plots < max_plots:
                             num_plots += 1
-                            out_handle.write(str(r))
+                            out_handle.write("%s\t%s\t%s\n" % (r.chrom, r.start, r.stop))
     return out_file
 
 def by_regions(items):
