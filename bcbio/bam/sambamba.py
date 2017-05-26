@@ -26,16 +26,6 @@ def make_command(data, cmd, bam_file, bed_file=None,
     return ("{sambamba} {cmd} -t {num_cores} {bam_file} "
             "{target} {thresholds} {maxcov} -F \"{query}\"").format(**locals())
 
-def index(data, bam_fpath):
-    cmdl = "sambamba index -t %s %s" % (dd.get_cores(data), bam_fpath)
-    indexed_bam = bam_fpath + ".bai"
-    if not utils.file_exists(indexed_bam):
-        do.run(cmdl, "Indexing BAM file using sambamba")
-        if not utils.file_exists(indexed_bam):
-            logger.error("Cannot index BAM file " + bam_fpath + " using sambamba.")
-            return None
-    return indexed_bam
-
 def work_dir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data), "sambamba"))
 
@@ -52,7 +42,7 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
     output_file = os.path.join(work_dir(data), cmd_id)
 
     if not utils.file_uptodate(output_file, bam_file):
-        index(data, bam_file)
+        bam.index(bam_file, data["config"])
         with file_transaction(data, output_file) as tx_out_file:
             cmdline = (make_command(data, "view -c", bam_file, bed_file, query=query, multicore=False)
                        + " > " + tx_out_file)
