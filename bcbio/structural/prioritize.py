@@ -140,9 +140,10 @@ def _combine_files(tsv_files, work_dir, data):
     out_file = os.path.join(work_dir, "%s-prioritize.tsv" % (sample))
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
+            tmpdir = os.path.dirname(tx_out_file)
             input_files = " ".join(tsv_files)
             sort_cmd = bedutils.get_sort_cmd()
-            cmd = "{{ echo '{header}'; cat {input_files} | {sort_cmd} -k3,3 -k4,4n; }} > {tx_out_file}"
+            cmd = "{{ echo '{header}'; cat {input_files} | {sort_cmd} -T {tmpdir} -k3,3 -k4,4n; }} > {tx_out_file}"
             do.run(cmd.format(**locals()), "Combine prioritized from multiple callers")
     return out_file
 
