@@ -112,11 +112,11 @@ With this in place, two commands setup your elasticluster and AWS environment to
 run a bcbio cluster. The first creates public/private keys, a bcbio IAM user,
 and sets up an elasticluster config in ``~/.bcbio/elasticluster/config``::
 
-  bcbio_vm.py aws iam
+  bcbio_vm.py aws iam --region=us-east-1
 
 The second configures a VPC to host bcbio::
 
-  bcbio_vm.py aws vpc
+  bcbio_vm.py aws vpc --region=us-east-1
 
 The ``aws vpc`` command is idempotent and can run multiple times if you change or
 remove parts of the infrastructure. You can also rerun the ``aws iam`` command,
