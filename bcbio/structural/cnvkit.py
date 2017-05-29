@@ -484,10 +484,13 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     gender = population.get_gender(data)
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
-            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call",
-                   "--filter", "cn",
-                   "--ploidy", str(ploidy.get_ploidy([data])),
-                   "-o", tx_call_file, out["cns"]]
+            # Avoid merging copy number for now due to edge case issues with empty arrays
+            filters = []
+            # filters = ["--filter", "cn"]
+            cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call"] + \
+                  filters + \
+                   ["--ploidy", str(ploidy.get_ploidy([data])),
+                    "-o", tx_call_file, out["cns"]]
             small_vrn_files = _compatible_small_variants(data)
             if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
                 cmd += ["-v", small_vrn_files[0]]

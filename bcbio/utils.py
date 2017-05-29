@@ -10,7 +10,6 @@ import itertools
 import functools
 import random
 from six.moves import configparser
-import collections
 import fnmatch
 import subprocess
 import sys
