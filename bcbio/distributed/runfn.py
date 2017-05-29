@@ -493,6 +493,9 @@ def _to_cwl(val):
                 if os.path.exists(idx_file):
                     secondary.append({"class": "File", "path": idx_file})
             cur_dir, cur_file = os.path.split(val["path"])
+            # Handle relative paths
+            if not cur_dir:
+                cur_dir = os.getcwd()
             if cur_file.endswith(dir_targets):
                 for fname in os.listdir(cur_dir):
                     if fname != cur_file:
