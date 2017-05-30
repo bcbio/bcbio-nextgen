@@ -5,6 +5,7 @@ Provides estimates of coverage intervals based on callable regions
 import itertools
 import os
 import shutil
+import subprocess
 import yaml
 
 import pybedtools
@@ -324,15 +325,27 @@ def _summary_variants(in_file, out_file, data=None):
         pd.DataFrame(row).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
 def regions_coverage(data, bed_file, bam_file, target_name, depth_thresholds=None):
+    """Generate coverage over regions of interest using sambamba depth.
+
+    sambamba can segfault with multiple threads so provides a single threaded backup
+    implementation in case of failures.
+    """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, target_name + "_regions_depth.bed")
     if utils.file_uptodate(out_file, bam_file) and utils.file_uptodate(out_file, bed_file):
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
-        cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file, depth_thresholds=depth_thresholds)
-        cmdl += " -o " + tx_out_file
-        message = "Calculating regions coverage of {target_name} in {bam_file}"
-        do.run(cmdl, message.format(**locals()))
+        try:
+            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file, depth_thresholds=depth_thresholds)
+            cmdl += " -o " + tx_out_file
+            message = "Calculating regions coverage of {target_name} in {bam_file}"
+            do.run(cmdl, message.format(**locals()))
+        except subprocess.CalledProcessError:
+            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file, depth_thresholds=depth_thresholds,
+                                         multicore=False)
+            cmdl += " -o " + tx_out_file
+            message = "Calculating regions coverage of {target_name} in {bam_file} -- single thread backup"
+            do.run(cmdl, message.format(**locals()))
     return out_file
 
 def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
