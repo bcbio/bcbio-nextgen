@@ -291,9 +291,9 @@ def _pick_best_quality_score(vrn_file):
         for i, rec in enumerate(val_in):
             if i > to_check:
                 break
-            if rec.info.get("VQSLOD") is not None:
+            if "VQSLOD" in rec.info and rec.info.get("VQSLOD") is not None:
                 scores["INFO=VQSLOD"] += 1
-            if rec.info.get("TLOD") is not None:
+            if "TLOD" in rec.info and rec.info.get("TLOD") is not None:
                 scores["INFO=TLOD"] += 1
             for skey in ["AVR", "GQ", "DP"]:
                 if len(rec.samples) > 0 and rec.samples[0].get(skey) is not None:
