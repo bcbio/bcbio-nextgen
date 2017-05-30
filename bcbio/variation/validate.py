@@ -371,8 +371,8 @@ def get_analysis_intervals(data, vrn_file, base_dir):
 
     if data.get("ensemble_bed"):
         return data["ensemble_bed"]
-    elif dd.get_callable_regions(data):
-        return dd.get_callable_regions(data)
+    elif dd.get_sample_callable(data):
+        return dd.get_sample_callable(data)
     elif data.get("align_bam"):
         return callable.sample_callable_bed(data["align_bam"], dd.get_ref_file(data), data)[0]
     elif data.get("work_bam"):
