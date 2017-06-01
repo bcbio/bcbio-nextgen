@@ -467,13 +467,23 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
 @utils.map_wrap
 @zeromq_aware_logging
 def _grabix_index(data):
+    """Create grabix index of bgzip input file.
+
+    grabix does not allow specification of output file, so symlink the original
+    file into a transactional directory.
+    """
     in_file = data["bgzip_file"]
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
     if tz.get_in(["algorithm", "align_split_size"], config) is not False:
         if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
-            do.run([grabix, "index", in_file], "Index input with grabix: %s" % os.path.basename(in_file))
+            utils.remove_safe(gbi_file)
+            with file_transaction(data, gbi_file) as tx_gbi_file:
+                tx_in_file = os.path.splitext(tx_gbi_file)[0]
+                utils.symlink_plus(in_file, tx_in_file)
+                do.run([grabix, "index", tx_in_file], "Index input with grabix: %s" % os.path.basename(in_file))
+        assert utils.file_exists(gbi_file)
     return [gbi_file]
 
 def _is_partial_index(gbi_file):

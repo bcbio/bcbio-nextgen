@@ -11,6 +11,8 @@
   extra chromosomes than the bcbio reference builds. Thanks to Oliver Hofmann.
 - Improved support for pre-aligned BAMs by using contigs in BAM file for
   coverage calculations.
+- Avoid grabix race conditions with multiple identical input files. Thanks to
+  Andrey Tovchigrechko.
 - Remove usage of lxml for qsignature and qualimap to avoid icu library errors.
 - CNVkit: merge adjacent calls with identical copy numbers
 
