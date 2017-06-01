@@ -420,6 +420,11 @@ def _item_to_cwldata(x):
                 secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+            elif x.endswith(".fa.gz"):
+                secondary = [x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"]
+                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
+                if secondary:
+                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
             # aligner and database indices where we list the entire directory as secondary files
             dir_targets = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",

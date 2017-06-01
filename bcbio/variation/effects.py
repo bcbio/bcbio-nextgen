@@ -128,7 +128,13 @@ def run_vep(in_file, data):
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("vep", data["config"])
                 is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
-                config_args = ["--fasta", dd.get_ref_file(data)]
+                # HGVS requires a bgzip compressed, faidx indexed input file or is unusable slow
+                if dd.get_ref_file_compressed(data):
+                    hgvs_compatible = True
+                    config_args = ["--fasta", dd.get_ref_file_compressed(data)]
+                else:
+                    hgvs_compatible = False
+                    config_args = ["--fasta", dd.get_ref_file(data)]
                 if is_human:
                     plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
                     plugins = ["loftee"]
@@ -138,9 +144,8 @@ def run_vep(in_file, data):
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
                     config_args += ["--sift", "b", "--polyphen", "b"]
-                    # XXX HGVS very slow so turned off for now, need to investigate
-                    # Use HGVS by default, requires indexing the reference genome
-                    #config_args += ["--hgvs", "--shift_hgvs", "1"]
+                    if hgvs_compatible:
+                        config_args += ["--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick"]

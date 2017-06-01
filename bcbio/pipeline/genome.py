@@ -224,11 +224,18 @@ def get_refs(genome_build, aligner, galaxy_base, data):
                 indexes = sorted(glob.glob("%s*" % utils.splitext_plus(base)[0]))
             else:
                 indexes = []
-            out[name_remap.get(name, name)] = {}
+            name = name_remap.get(name, name)
+            out[name] = {}
             if os.path.exists(base) and os.path.isfile(base):
-                out[name_remap.get(name, name)]["base"] = base
+                out[name]["base"] = base
             if indexes:
-                out[name_remap.get(name, name)]["indexes"] = indexes
+                out[name]["indexes"] = indexes
+            # For references, add compressed inputs and indexes if they exist
+            if name == "fasta" and os.path.exists(out[name]["base"] + ".gz"):
+                indexes = [out[name]["base"] + ".gz.fai", out[name]["base"] + ".gz.gzi",
+                           utils.splitext_plus(out[name]["base"])[0] + ".dict"]
+                out[name + "gz"] = {"base": out[name]["base"] + ".gz",
+                                    "indexes": [x for x in indexes if os.path.exists(x)]}
         # add additional indices relative to the base
         if tz.get_in(["fasta", "base"], out):
             ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
