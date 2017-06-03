@@ -22,7 +22,7 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
 
     Moves damage estimation to INFO field, instead of leaving in FILTER.
     """
-    if not should_filter(items):
+    if not should_filter(items) or not vcfutils.vcf_has_variants(vrn_file):
         return data
     else:
         raw_file = "%s-damage.vcf" % utils.splitext_plus(vrn_file)[0]
