@@ -24,12 +24,15 @@ def get_gatk_annotations(config, include_depth=True):
     """
     broad_runner = broad.runner_from_config(config)
     anns = ["BaseQualityRankSumTest", "FisherStrand",
-            "GCContent", "HaplotypeScore", "HomopolymerRun",
             "MappingQualityRankSumTest", "MappingQualityZero",
             "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
+    if broad_runner.gatk_type() == "gatk4":
+        anns += ["MappingQuality", "ClippedBases"]
+    else:
+        anns += ["GCContent", "HaplotypeScore", "HomopolymerRun"]
     if include_depth:
         anns += ["DepthPerAlleleBySample"]
-        if broad_runner.gatk_type() == "restricted":
+        if broad_runner.gatk_type() in ["restricted", "gatk4"]:
             anns += ["Coverage"]
         else:
             anns += ["DepthOfCoverage"]
@@ -133,7 +136,7 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, data,
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
     broad_runner = broad.runner_from_config_safe(data["config"])
-    if not broad_runner or not broad_runner.has_gatk():
+    if not broad_runner or not broad_runner.has_gatk() or broad_runner.gatk_type() == "gatk4":
         if dbsnp_file:
             return add_dbsnp(orig_file, dbsnp_file, data, out_file)
         else:

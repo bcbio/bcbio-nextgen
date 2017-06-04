@@ -103,16 +103,22 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             _shared_gatk_call_prep(align_bams, items,
                                    ref_file, assoc_files.get("dbsnp"),
                                    region, out_file)
-        assert broad_runner.gatk_type() == "restricted", \
-            "Require full version of GATK 2.4+ for haplotype calling"
+        gatk_type = broad_runner.gatk_type()
+        assert gatk_type in ["restricted", "gatk4"], \
+            "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
         with file_transaction(items[0], out_file) as tx_out_file:
             params += ["-T", "HaplotypeCaller",
-                       "-o", tx_out_file,
                        "--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
+            if gatk_type == "gatk4":
+                params += ["--output", tx_out_file]
+            else:
+                params += ["-o", tx_out_file]
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
-                params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
+                # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
+                if not gatk_type == "gatk4":
+                    params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
             # Enable non-diploid calling in GATK 3.3+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
                 params += ["-ploidy", str(ploidy.get_ploidy(items, region))]

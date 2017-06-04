@@ -31,7 +31,7 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
         return vfilter.platypus(call_file, data)
     elif caller in ["samtools"]:
         return vfilter.samtools(call_file, data)
-    elif caller in ["gatk", "gatk-haplotype"]:
+    elif caller in ["gatk", "gatk-haplotype", "haplotyper"]:
         return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
     else:

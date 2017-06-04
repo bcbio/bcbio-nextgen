@@ -228,11 +228,11 @@ def gatk_snp_cutoff(in_file, data):
     """
     filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     if "gvcf" not in dd.get_tools_on(data):
-        filters += ["QD < 2.0", "FS > 60.0"]
+        filters += ["QD < 2.0", "FS > 60.0", "SOR > 3.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
-    if variantcaller not in ["gatk-haplotype"]:
+    if variantcaller not in ["gatk-haplotype", "haplotyper"]:
         filters.append("HaplotypeScore > 13.0")
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
                              extra_cmd=r"""| sed 's/\\"//g'""")
@@ -242,6 +242,6 @@ def gatk_indel_cutoff(in_file, data):
     """
     filters = ["ReadPosRankSum < -20.0"]
     if "gvcf" not in dd.get_tools_on(data):
-        filters += ["QD < 2.0", "FS > 200.0"]
+        filters += ["QD < 2.0", "FS > 200.0", "SOR > 10.0"]
     return cutoff_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKCutoffIndel",
                                "INDEL", extra_cmd=r"""| sed 's/\\"//g'""")
