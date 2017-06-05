@@ -1,6 +1,7 @@
 """Next-gen alignments with BWA (http://bio-bwa.sourceforge.net/)
 """
 import os
+import signal
 import subprocess
 
 from bcbio.pipeline import config_utils
@@ -111,8 +112,15 @@ def _can_use_mem(fastq_file, data, read_min_size=None):
     cmd = (gzip_cmd + " | head -n {head_count} | "
            "{seqtk} sample -s42 - {tocheck} | "
            "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
+    def fix_signal():
+        """Avoid spurious 'cat: write error: Broken pipe' message due to head command.
+
+        Work around from:
+        https://bitbucket.org/brodie/cram/issues/16/broken-pipe-when-heading-certain-output
+        """
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     count_out = subprocess.check_output(cmd.format(**locals()), shell=True,
-                                        executable="/bin/bash")
+                                        executable="/bin/bash", preexec_fn=fix_signal)
     if not count_out.strip():
         raise IOError("Failed to check fastq file sizes with: %s" % cmd.format(**locals()))
     shorter = 0
