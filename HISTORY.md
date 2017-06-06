@@ -1,5 +1,7 @@
 ## 1.0.4 (in progress)
 
+- Sort region based analyses like variant calling by interval size. Ensures
+  longest intervals run first avoiding delay at end of sample processing.
 - Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
   to @semal.
 - Use new Ensembl vep (variant effect predictor) with updated annotations.

@@ -60,6 +60,8 @@ def _split_by_regions(dirname, out_ext, in_key):
     return _do_work
 
 def _get_parallel_regions(data):
+    """Retrieve regions to run in parallel, putting longest intervals first.
+    """
     callable_regions = tz.get_in(["config", "algorithm", "callable_regions"], data)
     if not callable_regions:
         raise ValueError("Did not find any callable regions for sample: %s\n"
@@ -69,6 +71,10 @@ def _get_parallel_regions(data):
         regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
                     (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
                                                                     not xs[0].startswith(("track", "browser",)))]
+    def _sort_by_size(region):
+        _, start, end = region
+        return end - start
+    regions.sort(key=_sort_by_size, reverse=True)
     return regions
 
 def get_parallel_regions(batch):
