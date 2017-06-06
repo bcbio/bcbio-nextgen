@@ -484,9 +484,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     gender = population.get_gender(data)
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
-            # Avoid merging copy number for now due to edge case issues with empty arrays
-            filters = []
-            # filters = ["--filter", "cn"]
+            filters = ["--filter", "cn"]
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "call"] + \
                   filters + \
                    ["--ploidy", str(ploidy.get_ploidy([data])),
