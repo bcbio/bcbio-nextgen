@@ -46,6 +46,7 @@ def trim_srna_sample(data):
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
     adapters = adapter if adapter else _dnapi_prediction(in_file)
+    times = "" if len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
@@ -116,7 +117,7 @@ def _cmd_cutadapt():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{cutadapt} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{cutadapt} {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
