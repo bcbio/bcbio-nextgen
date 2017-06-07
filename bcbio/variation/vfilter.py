@@ -225,10 +225,15 @@ def gatk_snp_cutoff(in_file, data):
 
     The extra command removes escaped quotes in the VCF output which
     pyVCF fails on.
+
+    Does not use the GATK best practice recommend SOR filter (SOR > 3.0) as it
+    has a negative impact on sensitivity relative to precision:
+
+    https://github.com/bcbio/bcbio_validations/tree/master/gatk4#na12878-hg38
     """
     filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     if "gvcf" not in dd.get_tools_on(data):
-        filters += ["QD < 2.0", "FS > 60.0", "SOR > 3.0"]
+        filters += ["QD < 2.0", "FS > 60.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))

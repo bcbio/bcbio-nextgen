@@ -505,7 +505,7 @@ def _gatk4_cmd(jvm_opts, params, data):
     """Retrieve unified command for GATK4, using gatk-launch.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
-    return "unset JAVA_HOME && export PATH=%s:$PATH && export GATK_JVM_OPTS='%s' && gatk-launch %s" % \
+    return "unset JAVA_HOME && export PATH=%s:$PATH && gatk-launch --javaOptions '%s' %s" % \
         (os.path.dirname(gatk_cmd), " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
