@@ -1,5 +1,6 @@
 ## 1.0.4 (in progress)
 
+- Accept files from HTTP/FTP as input
 - Sort region based analyses like variant calling by interval size. Ensures
   longest intervals run first avoiding delay at end of sample processing.
 - Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
