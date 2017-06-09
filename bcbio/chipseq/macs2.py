@@ -62,7 +62,7 @@ def _compres_bdg_files(out_dir, config):
 def _macs2_cmd(method="chip"):
     """Main command for macs2 tool."""
     if method.lower() == "chip":
-        cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam}"
+        cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam} {paired} "
                 " {genome_size} -n {name} -B {options}")
     elif method.lower() == "atac":
         cmd = ("{macs2} callpeak -t {chip_bam} --nomodel "
