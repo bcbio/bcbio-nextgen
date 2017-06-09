@@ -1,5 +1,5 @@
 version: 4
 
 aliases:
-  ensembl: danio_rerio_vep_88_GRCz10
+  ensembl: danio_rerio_vep_89_GRCz10
   snpeff: GRCz10.86
