@@ -787,20 +787,21 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
         item["algorithm"] = genome.abs_file_paths(item["algorithm"],
                                                   ignore_keys=ALGORITHM_NOPATH_KEYS,
                                                   fileonly_keys=ALGORITHM_FILEONLY_KEYS,
-                                                  do_download=not integrations)
+                                                  do_download=all(not x for x in integrations.values()))
         item["genome_build"] = str(item.get("genome_build", ""))
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         if item.get("files"):
-            item["files"] = [genome.abs_file_paths(f, do_download=not integrations) for f in item["files"]]
+            item["files"] = [genome.abs_file_paths(f, do_download=all(not x for x in integrations.values()))
+                             for f in item["files"]]
         elif "files" in item:
             del item["files"]
         if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
             inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
                                                          item["description"]))
-            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(item["vrn_file"],
-                                                                              do_download=not integrations),
+            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(
+                item["vrn_file"], do_download=all(not x for x in integrations.values())),
                                                         config, remove_orig=False, out_dir=inputs_dir)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
