@@ -357,7 +357,8 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     """
     item_md = metadata.get(item["description"],
                            metadata.get(os.path.basename(item["files"][0]),
-                                        metadata.get(utils.splitext_plus(os.path.basename(item["files"][0]))[0], {})))
+                                        metadata.get(utils.splitext_plus(os.path.basename(item["files"][0]))[0],
+                                                     metadata.get(item["files"][0], {}))))
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
     TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
@@ -443,7 +444,7 @@ def setup(args):
     base_item = template["details"][0]
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
-    inputs = args.input_files + remotes.get("inputs", [])
+    inputs = args.input_files + remotes.get("inputs", []) + [fr for fr in metadata if objectstore.is_remote(fr)]
     if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
         config, _ = config_utils.load_system_config(args.systemconfig)
         for iname, retriever in args.integrations.items():
