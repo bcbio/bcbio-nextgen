@@ -3,7 +3,7 @@ version: 18
 aliases:
   human: true
   snpeff: GRCh38.86
-  ensembl: homo_sapiens_merged_vep_88_GRCh38
+  ensembl: homo_sapiens_merged_vep_89_GRCh38
 
 variation:
   dbsnp: ../variation/dbsnp-150.vcf.gz
