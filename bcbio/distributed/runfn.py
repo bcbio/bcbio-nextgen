@@ -169,7 +169,6 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
     out = []
     data = {}
     passed_keys = []
-    grouped_keys = collections.defaultdict(list)
     for fnarg in fnargs:
         key, val = fnarg.split("=")
         # extra values pulling in nested indexes
@@ -185,6 +184,7 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
             output_cwl_keys = _parse_output_keys(val)
             continue
         if key == "sentinel_inputs":
+            input_order = collections.OrderedDict([x.split(":") for x in val.split(",")])
             continue
         else:
             assert key not in passed_keys, "Multiple keys should be handled via JSON records"
@@ -196,7 +196,8 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
 
     # Read inputs from standard files instead of command line
     assert os.path.exists(os.path.join(work_dir, "cwl.inputs.json"))
-    out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel)
+    out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel,
+                              input_order, output_cwl_keys)
 
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
@@ -218,13 +219,11 @@ def _parse_output_keys(val):
             out[k] = None
     return out
 
-def _read_from_cwlinput(in_file, work_dir, runtime, parallel):
+def _read_from_cwlinput(in_file, work_dir, runtime, parallel, input_order, output_cwl_keys):
     """Read data records from a JSON dump of inputs. Avoids command line flattening of records.
     """
     with open(in_file) as in_handle:
         inputs = json.load(in_handle)
-    output_cwl_keys = _parse_output_keys(inputs["sentinel_outputs"])
-    input_order = collections.OrderedDict([x.split(":") for x in inputs["sentinel_inputs"].split(",")])
     items_by_key = {}
     passed_keys = set([])
     for key, input_val in ((k, v) for (k, v) in inputs.items() if not k.startswith(("sentinel", "ignore"))):

@@ -95,17 +95,14 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                             {"class": "InitialWorkDirRequirement",
                                 "listing": [{"entryname": "cwl.inputs.json",
                                             "entry": "$(JSON.stringify(inputs))"}]}]
-    out["arguments"].append({"position": 0, "valueFrom":
-                             "sentinel_runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"})
-    std_inputs = [{"id": "sentinel_parallel", "type": "string",
-                   "default": parallel},
-                  {"id": "sentinel_outputs", "type": "string",
-                   "default": ",".join([_get_sentinel_val(v) for v in outputs])},
-                  {"id": "sentinel_inputs", "type": "string",
-                   "default": ",".join(["%s:%s" % (workflow.get_base_id(v["id"]),
-                                                   "record" if workflow.is_cwl_record(v) else "var")
-                                        for v in inputs])}]
-    inputs = std_inputs + inputs
+    out["arguments"] += [{"position": 0, "valueFrom":
+                          "sentinel_runtime=cores,$(runtime['cores']),ram,$(runtime['ram'])"},
+                         "sentinel_parallel=%s" % parallel,
+                         "sentinel_outputs=%s" % ",".join([_get_sentinel_val(v) for v in outputs]),
+                         "sentinel_inputs=%s" % ",".join(["%s:%s" %
+                                                          (workflow.get_base_id(v["id"]),
+                                                           "record" if workflow.is_cwl_record(v) else "var")
+                                                          for v in inputs])]
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
@@ -116,7 +113,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_tool.pop(attr, None)
         if _is_scatter_parallel(parallel) and _do_scatter_var(inp, parallel):
             inp_tool = workflow._flatten_nested_input(inp_tool)
-        if inp["id"].startswith("sentinel") or use_commandline_args:
+        if use_commandline_args:
             inp_binding = {"prefix": "%s=" % base_id,
                            "separate": False, "itemSeparator": ";;", "position": i}
             inp_tool = _place_input_binding(inp_tool, inp_binding, parallel)
