@@ -26,7 +26,7 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     requires_gatkfull = False
     args = ["-T", "PrintReads",
             "-L", region_to_gatk(region),
-            "-R", data["sam_ref"],
+            "-R", dd.get_ref_file(data),
             "-I", data["work_bam"]]
     if prep_params["recal"] == "gatk":
         if "prep_recal" in data and _recal_has_reads(data["prep_recal"]):
@@ -61,10 +61,10 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK re-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
-    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, data["sam_ref"], data["config"],
+    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, dd.get_ref_file(data), data["config"],
                                                 region=region_to_gatk(region),
                                                 known_vrns=dd.get_variation_resources(data))
-    recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, data["sam_ref"],
+    recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, dd.get_ref_file(data),
                                                  recal_file, tmp_dir, region=region_to_gatk(region),
                                                  known_vrns=dd.get_variation_resources(data))
     return pa_bam, recal_cl
