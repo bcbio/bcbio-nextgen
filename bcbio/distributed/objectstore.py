@@ -609,7 +609,7 @@ class RegularServer:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ArvadosKeep, SevenBridges, RegularServer, AzureBlob):
+    for manager in (AmazonS3, ArvadosKeep, SevenBridges, AzureBlob, RegularServer):
         if manager.check_resource(resource):
             return manager()
 
