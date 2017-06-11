@@ -106,11 +106,10 @@ def _can_use_mem(fastq_file, data, read_min_size=None):
     thresh = 0.75
     head_count = 8000000
     tocheck = 5000
-    seqtk = config_utils.get_program("seqtk", data["config"])
     fastq_file = objectstore.cl_input(fastq_file)
     gzip_cmd = "zcat {fastq_file}" if fastq_file.endswith(".gz") else "cat {fastq_file}"
-    cmd = (gzip_cmd + " | head -n {head_count} | "
-           "{seqtk} sample -s42 - {tocheck} | "
+    cmd = (utils.local_path_export() + gzip_cmd + " | head -n {head_count} | "
+           "seqtk sample -s42 - {tocheck} | "
            "awk '{{if(NR%4==2) print length($1)}}' | sort | uniq -c")
     def fix_signal():
         """Avoid spurious 'cat: write error: Broken pipe' message due to head command.
