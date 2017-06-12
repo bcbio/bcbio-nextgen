@@ -120,6 +120,9 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         ww = initialize_watcher(samples)
         with profile.report("alignment preparation", dirs):
             samples = run_parallel("prep_align_inputs", samples)
+            samples = run_parallel("trim_sample", samples)
+            # Need to prep again after trimming to add grabix indexes if needed
+            samples = run_parallel("prep_align_inputs", samples)
             ww.report("prep_align_inputs", samples)
             samples = run_parallel("disambiguate_split", [samples])
         with profile.report("alignment", dirs):

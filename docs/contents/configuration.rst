@@ -426,21 +426,6 @@ Alignment
   disambiguation and continue with reads confidently aligned to hg19. Affects
   fusion detection when ``star`` is chosen as the aligner. Aligner must be
   set to a non false value for this to run.
-- ``trim_reads`` Can be set to trim low quality ends or to also trim off,
-  in conjunction with the ``adapters`` field a set of adapter sequences or
-  poly-A tails that could appear on the ends of reads. Only used in RNA-seq
-  pipelines, not variant calling. [False, read_through]. Default to False,
-  recommended to leave as False unless running Tophat2.
-- ``min_read_length`` Minimum read length to maintain when
-  ``read_through`` trimming set in ``trim_reads``. Defaults to 20.
--  ``adapters`` If trimming adapter read through, trim a set of stock
-   adapter sequences. Allows specification of multiple items in a list,
-   for example [truseq, polya] will trim both TruSeq adapter sequences
-   and polyA tails. Valid items are [truseq, illumina, nextera, polya].
-   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi.
-   If you set up this parameter, then bcbio'll use this value instead.
--  ``custom_trim`` A list of sequences to trim from the end of reads,
-   for example: [AAAATTTT, GGGGCCCC]
 - ``align_split_size``: Increase parallelization of alignment. As of 0.9.8,
   bcbio will try to determine a useful parameter and you don't need to set this.
   If you manually set it, bcbio will respect your specification. Set to false
@@ -462,6 +447,26 @@ Alignment
   merging into final BAMs. Helps reduce space on limited filesystems during a
   run. ``tools_off: [upload_alignment]`` may also be useful in conjunction with
   this. [false, true]
+
+Read trimming
+=============
+
+- ``trim_reads`` Trims low quality or adapter sequences or at the ends of reads
+  using cutadapt. ``adapters`` and ``custom_trim`` specify the sequences to trim.
+  For RNA-seq, it's recommended to leave as False unless running Tophat2.
+  For variant calling, we recommend trimming only in special cases where
+  standard soft-clipping does not resolve false positive problems.
+  [False, read_through]. Default to False,
+-  ``adapters`` If trimming adapter read through, trim a set of stock
+   adapter sequences. Allows specification of multiple items in a list,
+   for example [truseq, polya] will trim both TruSeq adapter sequences
+   and polyA tails. Valid items are [truseq, illumina, nextera, polya].
+   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi.
+   If you set up this parameter, then bcbio'll use this value instead.
+-  ``custom_trim`` A list of sequences to trim from the end of reads,
+   for example: [AAAATTTT, GGGGCCCC]
+- ``min_read_length`` Minimum read length to maintain when
+  ``read_through`` trimming set in ``trim_reads``. Defaults to 25.
 
 Alignment postprocessing
 ========================

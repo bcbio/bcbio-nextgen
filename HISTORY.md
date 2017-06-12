@@ -1,12 +1,13 @@
 ## 1.0.4 (in progress)
 
-- Accept files from HTTP/FTP as input
+- Enable adapter trimming for variant calling pipeline.
 - Sort region based analyses like variant calling by interval size. Ensures
   longest intervals run first avoiding delay at end of sample processing.
 - Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
   to @semal.
 - Use new Ensembl vep (variant effect predictor) with updated annotations.
   Thanks to Matthias De Smet.
+- Accept files from HTTP/FTP as input
 - CWL: use json input files for passing inputs instead of flattened command
   line arguments. Improves compatibility with multiple runners.
 - Allow subsetting a pre-aligned BAM to only standard chromosomes, removing non

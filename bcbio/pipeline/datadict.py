@@ -107,6 +107,8 @@ LOOKUPS = {
                  "default": None},
     "trim_reads": {"keys": ['config', 'algorithm', 'trim_reads'],
                  "default": None},
+    "min_read_length": {"keys": ['config', 'algorithm', 'min_read_length'],
+                        "default": 25},
     "variation_resources": {"keys": ["genome_resources", "variation"], "default": {}},
     "qsig_file": {"keys": ['genome_resources', 'variation', 'qsignature'],
                   "checker": file_exists},
