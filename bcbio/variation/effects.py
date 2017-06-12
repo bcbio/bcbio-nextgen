@@ -101,8 +101,11 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
                 cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
-                       "-c", vep_dir, "-u", tmp_dir, "--CONVERT", "--NO_UPDATE", "--force_overwrite", "--remove"]
-                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s and covert cache to tabix" % ensembl_name)
+                       "-c", vep_dir, "-u", tmp_dir, "--NO_UPDATE"]
+                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
+                cmd = ["%svep_convert_cache" % vep_path, "--species", species, "--version", vepv,
+                       "--dir", vep_dir, "--force_overwrite", "--remove"]
+                do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Convert VEP cache to tabix %s" % ensembl_name)
                 for tmp_fname in os.listdir(tmp_dir):
                     os.remove(os.path.join(tmp_dir, tmp_fname))
                 os.rmdir(tmp_dir)
