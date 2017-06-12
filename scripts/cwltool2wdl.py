@@ -241,7 +241,7 @@ def _arg_to_dict(x, requirements):
                 cores = r["value"]
             elif r["requirement_type"] == "memory":
                 ram = "".join(r["value"].split())
-        return {"prefix": "", "position": None, "value": "sentienl_runtime=cores,%s,ram,%s" % (cores, ram)}
+        return {"prefix": "", "position": None, "value": "sentinel_runtime=cores,%s,ram,%s" % (cores, ram)}
     else:
         raise NotImplementedError(x)
 
