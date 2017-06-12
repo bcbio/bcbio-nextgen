@@ -136,10 +136,10 @@ def run_vep(in_file, data):
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
                 if is_human:
-                    plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer}
+                    plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
                     plugins = ["loftee"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
-                        plugins += ["maxentscan", "genesplicer"]
+                        plugins += ["maxentscan", "genesplicer","spliceregion"]
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
@@ -209,6 +209,18 @@ def _get_genesplicer(data):
         return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_exec,genesplicer_training)]
     else:
         return []
+
+def _get_spliceregion(data):
+    """
+    This is a plugin for the Ensembl Variant Effect Predictor (VEP) that
+    provides more granular predictions of splicing effects.
+    Three additional terms may be added:
+    # splice_donor_5th_base_variant : variant falls in the 5th base after the splice donor junction (5' end of intron)
+    # splice_donor_region_variant : variant falls in region between 3rd and 6th base after splice junction (5' end of intron)
+    # splice_polypyrimidine_tract_variant : variant falls in polypyrimidine tract at 3' end of intron, between 17 and 3 bases from the end
+    https://github.com/Ensembl/VEP_plugins/blob/release/89/SpliceRegion.pm
+    """
+    return ["--plugin", "SpliceRegion"]
 
 # ## snpEff variant effects
 
