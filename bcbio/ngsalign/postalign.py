@@ -19,6 +19,8 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
+pysam = utils.LazyImport("pysam")
+
 @contextlib.contextmanager
 def tobam_cl(data, out_file, is_paired=False):
     """Prepare command line for producing de-duplicated sorted output.
@@ -127,7 +129,7 @@ def _sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file):
     cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=bam "
            "level=0 SO=coordinate | ")
     # UMIs in a separate file
-    if os.path.exists(umi_consensus):
+    if os.path.exists(umi_consensus) and os.path.isfile(umi_consensus):
         cmd += "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_consensus} -o {tx_out_file}"
     # UMIs embedded in read name
     else:
@@ -150,6 +152,7 @@ def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
     """
     align_bam = dd.get_work_bam(data)
+    umi_method = _check_umi_type(align_bam)
     f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
     f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
     if not utils.file_uptodate(f1_out, align_bam):
@@ -158,22 +161,38 @@ def umi_consensus(data):
             # Improve speeds by avoiding compression read/write bottlenecks
             io_opts = ("-Dsamjdk.use_async_io_read_samtools=true -Dsamjdk.use_async_io_write_samtools=true "
                        "-Dsamjdk.compression_level=0")
-            group_opts, cons_opts = _get_fgbio_options(data)
+            group_opts, cons_opts = _get_fgbio_options(data, umi_method)
+            cons_method = "CallDuplexConsensusReads" if umi_method == "paired" else "CallMolecularConsensusReads"
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
             cmd = ("unset JAVA_HOME && "
-                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -s adjacency -i {align_bam} | "
-                   "fgbio {jvm_opts} {io_opts} CallMolecularConsensusReads {cons_opts} "
-                   "--output-per-base-tags=false --sort-order=unsorted "
+                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -s {umi_method} -i {align_bam} | "
+                   "fgbio {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=unsorted "
                    "-i /dev/stdin -o /dev/stdout | "
                    "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out
 
-def _get_fgbio_options(data):
+def _check_umi_type(bam_file):
+    """Determine the type of UMI from BAM tags: standard or paired.
+    """
+    with pysam.Samfile(bam_file, "rb") as in_bam:
+        for read in in_bam:
+            try:
+                cur_umi = read.get_tag("RX")
+            except KeyError:
+                continue
+            if "-" in cur_umi and cur_umi.split("-") == "2":
+                return "paired"
+            else:
+                return "adjacency"
+
+def _get_fgbio_options(data, umi_method):
     """Get adjustable, through resources, or default options for fgbio.
     """
     group_opts = ["--edits", "--min-map-q"]
-    cons_opts = ["--min-reads", "--min-consensus-base-quality", "--min-input-base-quality"]
+    cons_opts = ["--min-input-base-quality"]
+    if umi_method != "paired":
+        cons_opts += ["--min-reads", "--min-consensus-base-quality"]
     defaults = {"--min-reads": "1",
                 "--min-map-q": "1",
                 "--min-consensus-base-quality": "13",
@@ -184,6 +203,8 @@ def _get_fgbio_options(data):
     defaults.update(dict(tz.partition(2, ropts)))
     group_out = " ".join(["%s %s" % (x, defaults[x]) for x in group_opts])
     cons_out = " ".join(["%s %s" % (x, defaults[x]) for x in cons_opts])
+    if umi_method != "paired":
+        cons_out += " --output-per-base-tags=false"
     return group_out, cons_out
 
 def _check_dedup(data):

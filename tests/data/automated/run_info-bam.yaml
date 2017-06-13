@@ -22,25 +22,24 @@ details:
   - algorithm:
       #archive: cram
       align_split_size: 15000
-      save_diskspace: true
+      #save_diskspace: true
       #align_prep_method: grabix
       aligner: bwa
+      #trim_reads: read_through
       #aligner: false
       #bam_clean: picard
       #bam_sort: coordinate
       # mark_duplicates: false
-      recalibrate: false
-      realign: false
       #realign: gatk
       #recalibrate: gatk
       variantcaller: freebayes
-      #variantcaller: [gatk, gatk-haplotype]
+      #variantcaller: gatk-haplotype
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, cnvkit, manta, metasv]
       svcaller: [cnvkit, seq2c, lumpy, delly, gridss]
       #remove_lcr: true
-      tools_on: [qualimap_full]
+      tools_on: [qualimap_full, gatk4]
       tools_off: [gemini]
       vcfanno: [gemini]
       mixup_check: qsignature
@@ -53,6 +52,8 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     resources:
+      cutadapt:
+        options: [-u, 5, -U, 10]
       novoalign:
         options: [-o, FullNW]
       tmp:
