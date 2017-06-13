@@ -1,5 +1,7 @@
 include *.txt
 include *.md
+include bcbio/data/umis/*.txt
+include bcbio/data/umis/*.json
 include config/*.yaml
 include config/*.ini
 include tests/*.py

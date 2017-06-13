@@ -37,4 +37,5 @@ setup(name="bcbio-nextgen",
       packages=find_packages(exclude=["tests"]),
       zip_safe=zip_safe,
       scripts=scripts,
-      install_requires=install_requires)
+      install_requires=install_requires,
+      include_package_data=True)

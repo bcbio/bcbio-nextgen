@@ -73,33 +73,29 @@ class SparseMatrix(object):
             else:
                 self.colnames = self.colnames + newsm.colnames
 
-transforms = {"harvard-indrop":
-              {"read1": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-               "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-              "harvard-indrop-v2":
-              {"read2": r"""(?P<name>^@.*)\n(?P<CB1>\w{8,11})(GAGTGATTGCTTGTGACGCCTT){s<=3}(?P<CB2>\w{8})(?P<MB>\w{6})(.*)\n+(.*)\n(.*)\n""",
-                  "read1": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-              "CEL-seq":
-              {"read1": r"""(?P<name>@.*) .*\n(?P<CB>.{8})(?P<MB>.{4})(.*)\n\+(.*)\n(.*)\n""",
-               "read2": r"""(@.*)\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n"""},
-              "harvard-indrop-v3":
-              {"read1": r"""(?P<name>[^\s]+).*\n(?P<seq>.*)\n\+(.*)\n(?P<qual>.*)\n""",
-               "read2": r"""(.*)\n(?P<CB1>.*)\n(.*)\n(.*)\n""",
-               "read3": r"""(.*)\n(?P<SB>.*)\n(.*)\n(.*)\n""",
-               "read4": r"""(.*)\n(?P<CB2>.{8})(?P<MB>.{6})\n(.*)\n(.*)\n"""}}
+TRANSFORM_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "data",
+                             "umis")
+TRANSFORM_FILES = glob.glob(os.path.join(TRANSFORM_DIR, "*-transform.json"))
+SUPPORTED_TRANSFORMS = set([os.path.basename(x).replace("-transform.json", "")
+                            for x in TRANSFORM_FILES])
 
-def write_transform_file(transform_data, out_file):
-    """
-    write out the regex to pull out the UMI and cellular barcodes from
-    the reads to a JSON file, for use with umis.py
-    """
-    if file_exists(out_file):
-        return out_file
+def is_supported_transform(data):
+    return dd.get_umi_type(data) in SUPPORTED_TRANSFORMS
 
-    with file_transaction(out_file) as tx_out_file:
-        with open(tx_out_file, "w") as out_handle:
-            json.dump(transform_data, out_handle)
-    return out_file
+def get_transform_file(stem):
+    transform_file = os.path.join(TRANSFORM_DIR, stem + "-transform.json")
+    return transform_file
+
+def get_cellular_barcodes(data):
+    if dd.get_cellular_barcodes(data):
+        return dd.get_cellular_barcodes(data)
+    if is_supported_transform(data):
+        stem = dd.get_umi_type(data)
+        bc1 = os.path.join(TRANSFORM_DIR, stem + "-cb1.txt")
+        bc2 = os.path.join(TRANSFORM_DIR, stem + "-cb2.txt")
+        return filter(file_exists, [bc1, bc2])
+    else:
+        return []
 
 def umi_transform(data):
     """
@@ -115,21 +111,20 @@ def umi_transform(data):
     if file_exists(transform):
         transform_file = transform
     else:
-        transform_data = transforms.get(transform, "")
-        if not transform_data:
+        transform_file = get_transform_file(transform)
+        if not transform_file:
             logger.error(
                 "The UMI transform can be specified as either a file or a "
                 "bcbio-supported transform. Either the file %s does not exist "
-                "or the transform is not supported by bcbio.")
+                "or the transform is not supported by bcbio." % transform_file)
             sys.exit(1)
-        transform_file = os.path.join(umi_dir, transform + ".json")
-        transform_file = write_transform_file(transform_data, transform_file)
     out_base = dd.get_sample_name(data) + ".umitransformed.fq.gz"
     out_file = os.path.join(umi_dir, out_base)
     if file_exists(out_file):
         data["files"] = [out_file]
         return [[data]]
-    if len(dd.get_cellular_barcodes(data)) == 2:
+    cellular_barcodes = get_cellular_barcodes(data)
+    if len(cellular_barcodes) == 2:
         split_option = "--separate_cb"
     else:
         split_option = ""
@@ -157,7 +152,7 @@ def filter_barcodes(data):
     fq1 = dd.get_input_sequence_files(data)[0]
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     correction = dd.get_cellular_barcode_correction(data)
-    bc = dd.get_cellular_barcodes(data)
+    bc = get_cellular_barcodes(data)
     if not bc:
         return [[data]]
     bc1 = None
