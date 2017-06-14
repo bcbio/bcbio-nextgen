@@ -173,7 +173,8 @@ def _bed_to_bed6(orig_file, out_dir):
 
 def _parse_metrics(metrics):
     # skipped metrics can sometimes be in unicode, replace unicode with NA if it exists
-    metrics = dtz.valmap(lambda x: 'nan' if isinstance(x, unicode) else x, metrics)
+    # This is removing correct values
+    # metrics = dtz.valmap(lambda x: 'nan' if isinstance(x, unicode) else x, metrics)
 
     # missing = set(["Genes Detected", "Transcripts Detected", "Mean Per Base Cov."])
     correct = set(["rRNA", "rRNA_rate"])
@@ -195,11 +196,11 @@ def _parse_metrics(metrics):
             return int(x)
         except ValueError:
             return 0
+
     total_reads = sum([_safe_int(metrics[name]) for name in total])
     out.update({key: val for key, val in metrics.items() if key in correct})
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
-
     for name in to_change:
         if not to_change[name]:
             continue
