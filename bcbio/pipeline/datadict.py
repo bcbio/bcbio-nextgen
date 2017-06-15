@@ -107,6 +107,8 @@ LOOKUPS = {
                  "default": None},
     "trim_reads": {"keys": ['config', 'algorithm', 'trim_reads'],
                  "default": None},
+    "trim_ends": {"keys": ['config', 'algorithm', 'trim_ends'],
+                 "default": []},
     "min_read_length": {"keys": ['config', 'algorithm', 'min_read_length'],
                         "default": 25},
     "variation_resources": {"keys": ["genome_resources", "variation"], "default": {}},

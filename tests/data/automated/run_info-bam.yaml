@@ -25,6 +25,7 @@ details:
       #save_diskspace: true
       #align_prep_method: grabix
       aligner: bwa
+      #trim_ends: [5, 0, 10, 0]
       #trim_reads: read_through
       #aligner: false
       #bam_clean: picard
@@ -52,8 +53,6 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     resources:
-      cutadapt:
-        options: [-u, 5, -U, 10]
       novoalign:
         options: [-o, FullNW]
       tmp:

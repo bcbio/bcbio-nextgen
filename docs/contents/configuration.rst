@@ -467,6 +467,14 @@ Read trimming
    for example: [AAAATTTT, GGGGCCCC]
 - ``min_read_length`` Minimum read length to maintain when
   ``read_through`` trimming set in ``trim_reads``. Defaults to 25.
+- ``trim_ends`` Specify values for trimming at ends of reads, using a fast
+  approach built into fastq preparation. This does not do quality or adapter
+  trimming but will quickly cut off a defined set of values from either the
+  5' or 3' end of the first and second reads. Expects a list of 4 values:
+  [5' trim read1, 3' trim read1, 5' trim read2, 3' trim read2]. Set values
+  to 0 if you don't need trimming (ie. ``[6, 0, 12, 0]`` will trim 6bp from
+  the start of read 1 and 12bp from the start of read 2. Only implemented for
+  variant calling pipelines.
 
 Alignment postprocessing
 ========================

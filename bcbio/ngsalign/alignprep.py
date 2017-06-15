@@ -25,10 +25,8 @@ def create_inputs(data):
     """Index input reads and prepare groups of reads to process concurrently.
 
     Allows parallelization of alignment beyond processors available on a single
-    machine. Prepares a rtg SDF format file with build in indexes for retrieving
-    sections of files.
-
-    Retains back compatibility with bgzip/grabix approach.
+    machine. Prepares a bgzip and grabix indexed file for retrieving sections
+    of files.
     """
     data = cwlutils.normalize_missing(data)
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
@@ -132,14 +130,39 @@ def split_namedpipe_cls(pair1_file, pair2_file, data):
                 out.append(None)
         return out
 
+def _seqtk_fastq_prep_cl(data, in_file=None, read_num=0):
+    """Provide a commandline for prep of fastq inputs with seqtk.
+
+    Handles fast conversion of fastq quality scores and trimming.
+    """
+    needs_convert = dd.get_quality_format(data).lower() == "illumina"
+    trim_ends = dd.get_trim_ends(data)
+    seqtk = config_utils.get_program("seqtk", data["config"])
+    if in_file:
+        in_file = objectstore.cl_input(in_file)
+    else:
+        in_file = "/dev/stdin"
+    cmd = ""
+    if needs_convert:
+        cmd += "{seqtk} seq -Q64 -V {in_file}".format(**locals())
+    if trim_ends:
+        left_trim, right_trim = trim_ends[0:2] if data.get("read_num", read_num) == 0 else trim_ends[2:4]
+        if left_trim or right_trim:
+            trim_infile = "/dev/stdin" if needs_convert else in_file
+            pipe = " | " if needs_convert else ""
+            cmd += "{pipe}{seqtk} trimfq -b {left_trim} -e {right_trim} {trim_infile}".format(**locals())
+    return cmd
+
 def fastq_convert_pipe_cl(in_file, data):
     """Create an anonymous pipe converting Illumina 1.3-1.7 to Sanger.
 
     Uses seqtk: https://github.com/lh3/seqt
     """
-    seqtk = config_utils.get_program("seqtk", data["config"])
-    in_file = objectstore.cl_input(in_file)
-    return "<({seqtk} seq -Q64 -V {in_file})".format(**locals())
+    cmd = _seqtk_fastq_prep_cl(data, in_file)
+    if not cmd:
+        cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+        cmd = cat_cmd + " " + in_file
+    return "<(%s)" % cmd
 
 # ## configuration
 
@@ -267,21 +290,25 @@ def _ready_gzip_fastq(in_files, data):
     """Check if we have gzipped fastq and don't need format conversion or splitting.
     """
     all_gzipped = all([not x or x.endswith(".gz") for x in in_files])
-    needs_convert = tz.get_in(["config", "algorithm", "quality_format"], data, "").lower() == "illumina"
+    needs_convert = dd.get_quality_format(data).lower() == "illumina"
+    needs_trim = dd.get_trim_ends(data)
     do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data) is not False
-    return all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
+    return (all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
+            and not needs_trim)
 
 def _prep_grabix_indexes(in_files, dirs, data):
     if _is_bam_input(in_files):
-        out = _bgzip_from_bam(in_files[0], dirs, data["config"])
+        out = _bgzip_from_bam(in_files[0], dirs, data)
     elif _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], dirs, data)
     elif _ready_gzip_fastq(in_files, data):
         out = in_files
     else:
-        inputs = [{"in_file": x, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
-                  for x in in_files if x]
-        out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"])
+        parallel = {"type": "local", "num_jobs": len(in_files),
+                    "cores_per_job": max(1, data["config"]["algorithm"]["num_cores"] // len(in_files))}
+        inputs = [{"in_file": x, "read_num": i, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
+                  for i, x in enumerate(in_files) if x]
+        out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"], parallel)
     items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
     run_multicore(_grabix_index, items, data["config"])
     return out
@@ -416,10 +443,11 @@ def _is_gzip_empty(fname):
                                     stderr=open("/dev/null", "w"))
     return int(count) < 1
 
-def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
+def _bgzip_from_bam(bam_file, dirs, data, is_retry=False, output_infix=''):
     """Create bgzipped fastq files from an input BAM file.
     """
     # tools
+    config = data["config"]
     bamtofastq = config_utils.get_program("bamtofastq", config)
     resources = config_utils.get_resources("bamtofastq", config)
     cores = config["algorithm"].get("num_cores", 1)
@@ -438,9 +466,15 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
                 if f and os.path.exists(f):
                     os.remove(f)
             fq1_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, tx_out_file)
+            prep_cmd = _seqtk_fastq_prep_cl(data, read_num=0)
+            if prep_cmd:
+                fq1_bgzip_cmd = prep_cmd + " | " + fq1_bgzip_cmd
             sortprefix = "%s-sort" % os.path.splitext(tx_out_file)[0]
             if bam.is_paired(bam_file):
+                prep_cmd = _seqtk_fastq_prep_cl(data, read_num=1)
                 fq2_bgzip_cmd = "%s -c /dev/stdin > %s" % (bgzip, out_file_2)
+                if prep_cmd:
+                    fq2_bgzip_cmd = prep_cmd + " | " + fq2_bgzip_cmd
                 out_str = ("F=>({fq1_bgzip_cmd}) F2=>({fq2_bgzip_cmd}) S=/dev/null O=/dev/null "
                            "O2=/dev/null collate=1 colsbs={max_mem}")
             else:
@@ -460,7 +494,7 @@ def _bgzip_from_bam(bam_file, dirs, config, is_retry=False, output_infix=''):
                     logger.exception()
                     raise
     if needs_retry:
-        return _bgzip_from_bam(bam_file, dirs, config, is_retry=True)
+        return _bgzip_from_bam(bam_file, dirs, data, is_retry=True)
     else:
         return [x for x in [out_file_1, out_file_2] if x is not None and utils.file_exists(x)]
 
@@ -506,7 +540,7 @@ def _bgzip_from_fastq(data):
     in_file = data["in_file"]
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
     if in_file.endswith(".gz") and not objectstore.is_remote(in_file):
-        if needs_convert:
+        if needs_convert or dd.get_trim_ends(data):
             needs_bgzip, needs_gunzip = True, True
         else:
             needs_bgzip, needs_gunzip = _check_gzipped_input(in_file, data)
@@ -517,15 +551,15 @@ def _bgzip_from_fastq(data):
     else:
         needs_bgzip, needs_gunzip = True, False
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
-    if needs_bgzip or needs_gunzip or needs_convert or objectstore.is_remote(in_file):
+    if needs_bgzip or needs_gunzip or needs_convert or dd.get_trim_ends(data) or objectstore.is_remote(in_file):
         out_file = _bgzip_file(in_file, data["config"], work_dir,
-                               needs_bgzip, needs_gunzip, needs_convert)
+                               needs_bgzip, needs_gunzip, needs_convert, data)
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
         utils.symlink_plus(in_file, out_file)
     return out_file
 
-def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert):
+def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert, data):
     """Handle bgzip of input file, potentially gunzipping an existing file.
     """
     out_file = os.path.join(work_dir, os.path.basename(in_file).replace(".bz2", "") +
@@ -534,10 +568,11 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
         with file_transaction(config, out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
             is_remote = objectstore.is_remote(in_file)
-            in_file = objectstore.cl_input(in_file, unpack=needs_gunzip or needs_convert or needs_bgzip)
-            if needs_convert:
-                in_file = fastq_convert_pipe_cl(in_file, {"config": config})
-            if needs_gunzip and not needs_convert:
+            in_file = objectstore.cl_input(in_file, unpack=needs_gunzip or needs_convert
+                                           or needs_bgzip or dd.get_trim_ends(data))
+            if needs_convert or dd.get_trim_ends(data):
+                in_file = fastq_convert_pipe_cl(in_file, data)
+            if needs_gunzip and not (needs_convert or dd.get_trim_ends(data)):
                 if in_file.endswith(".bz2"):
                     gunzip_cmd = "bunzip2 -c {in_file} |".format(**locals())
                 else:
@@ -550,7 +585,7 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
                 do.run("{gunzip_cmd} {bgzip} -c {bgzip_in} > {tx_out_file}".format(**locals()),
                        "bgzip input file")
             elif is_remote:
-                bgzip = "| bgzip -c" if needs_convert else ""
+                bgzip = "| bgzip -c" if (needs_convert or dd.get_trim_ends(data)) else ""
                 do.run("cat {in_file} {bgzip} > {tx_out_file}".format(**locals()), "Get remote input")
             else:
                 raise ValueError("Unexpected inputs: %s %s %s %s" % (in_file, needs_bgzip,

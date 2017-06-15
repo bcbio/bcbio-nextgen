@@ -1,6 +1,8 @@
 ## 1.0.4 (in progress)
 
 - Enable adapter trimming for variant calling pipeline.
+- Provide `trim_ends` command to quickly do defined end trimming as part of
+  variant calling fastq preparation.
 - Sort region based analyses like variant calling by interval size. Ensures
   longest intervals run first avoiding delay at end of sample processing.
 - Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
