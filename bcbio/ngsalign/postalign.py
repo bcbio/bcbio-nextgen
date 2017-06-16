@@ -152,7 +152,7 @@ def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
     """
     align_bam = dd.get_work_bam(data)
-    umi_method = _check_umi_type(align_bam)
+    umi_method, umi_tag = _check_umi_type(align_bam)
     f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
     f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
     if not utils.file_uptodate(f1_out, align_bam):
@@ -165,7 +165,8 @@ def umi_consensus(data):
             cons_method = "CallDuplexConsensusReads" if umi_method == "paired" else "CallMolecularConsensusReads"
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
             cmd = ("unset JAVA_HOME && "
-                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -s {umi_method} -i {align_bam} | "
+                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -t {umi_tag} -s {umi_method} "
+                   "-i {align_bam} | "
                    "fgbio {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=unsorted "
                    "-i /dev/stdin -o /dev/stdout | "
                    "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
@@ -177,14 +178,18 @@ def _check_umi_type(bam_file):
     """
     with pysam.Samfile(bam_file, "rb") as in_bam:
         for read in in_bam:
-            try:
-                cur_umi = read.get_tag("RX")
-            except KeyError:
-                continue
-            if "-" in cur_umi and cur_umi.split("-") == "2":
-                return "paired"
-            else:
-                return "adjacency"
+            cur_umi = None
+            for tag in ["RX", "XC"]:
+                try:
+                    cur_umi = read.get_tag(tag)
+                    break
+                except KeyError:
+                    pass
+            if cur_umi:
+                if "-" in cur_umi and len(cur_umi.split("-")) == 2:
+                    return "paired", tag
+                else:
+                    return "adjacency", tag
 
 def _get_fgbio_options(data, umi_method):
     """Get adjustable, through resources, or default options for fgbio.

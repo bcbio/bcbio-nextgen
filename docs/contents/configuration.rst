@@ -772,12 +772,23 @@ default) since it uses position based duplicates and UMI tags for collapsing
 duplicate reads into consensus sequences.
 
 To help with preparing fastq files with UMIs bcbio provides a script
-``bcbio_fastq_umi_prep.py`` which converts reads output by an Illumina as 3
-files (read 1, read 2, and UMIs) into paired reads with UMIs in the fastq names.
-This can run on a single set of files or autopair an entire directory of fastq
-files::
+``bcbio_fastq_umi_prep.py``. This handles two kinds of UMI barcodes:
+
+- Separate UMIs: it converts reads output by an Illumina as 3
+  files (read 1, read 2, and UMIs).
+
+- Duplex barcodes with tags incorporated at the 5' end of read 1 and read 2
+
+In both cases, these get converted into paired reads with UMIs in the fastq
+names, allowing specification of ``umi_type: fastq_name`` in your bcbio YAML
+configuration. The script runs on a single set of files or autopairs an entire
+directory of fastq files. To convert a directory with separate UMI files::
 
    bcbio_fastq_umi_prep.py autopair -c <cores_to_use> <list> <of> <fastq> <files>
+
+To convert duplex barcodes present on the ends of read 1 and read 2::
+
+   bcbio_fastq_umi_prep.py autopair -c <cores_to_use> --tag1 5 --tag2 5 <list> <of> <fastq> <files>
 
 Configuration options for UMIs:
 
