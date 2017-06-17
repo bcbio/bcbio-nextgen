@@ -11,7 +11,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, bedutils, gatk, vcfutils, ploidy
 
-def _add_tumor_params(paired, items):
+def _add_tumor_params(paired, items, gatk_type):
     """Add tumor/normal BAM input parameters to command line.
     """
     params = []
@@ -20,9 +20,17 @@ def _add_tumor_params(paired, items):
                          "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
                          "pipelines.html#cancer-variant-calling\n"
                          "for samples: %s" % ", " .join([dd.get_sample_name(x) for x in items]))
-    params += ["-I:tumor", paired.tumor_bam]
+    if gatk_type == "gatk4":
+        params += ["-I", paired.tumor_bam]
+        params += ["--tumorSampleName", paired.tumor_name]
+    else:
+        params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
-        params += ["-I:normal", paired.normal_bam]
+        if gatk_type == "gatk4":
+            params += ["-I", paired.normal_bam]
+            params += ["--normalSampleName", paired.normal_name]
+        else:
+            params += ["-I:normal", paired.normal_bam]
     if paired.normal_panel is not None:
         params += ["--normal_panel", paired.normal_panel]
     return params
@@ -63,16 +71,18 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
+        broad_runner = broad.runner_from_config(items[0]["config"])
+        gatk_type = broad_runner.gatk_type()
         _prep_inputs(align_bams, ref_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
-            params = ["-T", "MuTect2",
+            params = ["-T", "Mutect2" if gatk_type == "gatk4" else "MuTect2",
                       "-R", ref_file,
                       "--annotation", "ClippingRankSumTest",
                       "--annotation", "DepthPerSampleHC"]
             for a in annotation.get_gatk_annotations(items[0]["config"]):
                 params += ["--annotation", a]
             paired = vcfutils.get_paired_bams(align_bams, items)
-            params += _add_tumor_params(paired, items)
+            params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items)
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
@@ -81,12 +91,14 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             resources = config_utils.get_resources("mutect2", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
-            broad_runner = broad.runner_from_config(items[0]["config"])
             assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
                 "Require full version of GATK 3.5+ for mutect2 calling"
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
-            cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
+            if gatk_type == "gatk4":
+                cmd = "{gatk_cmd} -O {tx_out_file}"
+            else:
+                cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "MuTect2")
     out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
     return out_file

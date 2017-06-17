@@ -41,7 +41,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan]
+        somatic: [vardict, freebayes, varscan, mutect2]
         germline: [freebayes, platypus]
       indelcaller: sid
       ensemble:
@@ -49,7 +49,7 @@ details:
       min_allele_fraction: 10
       svcaller: [cnvkit, lumpy]
       #svcaller: [cnvkit]
-      tools_on: [damage_filter]
+      tools_on: [damage_filter, gatk4]
       tools_off: [vardict_somatic_filter, gemini]
       vcfanno: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed

@@ -25,7 +25,10 @@ def standard_cl_params(items):
                 (dd.get_aligner(data) and not dd.get_mark_duplicates(data)))
     if any(_skip_duplicates(d) for d in items):
         broad_runner = broad.runner_from_config(items[0]["config"])
-        if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
+        gatk_type = broad_runner.gatk_type()
+        if gatk_type == "gatk4":
+            out += ["--disableReadFilter", "NotDuplicateReadFilter"]
+        elif LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
             out += ["-drf", "DuplicateRead"]
     return out
 
