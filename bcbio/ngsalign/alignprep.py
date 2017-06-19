@@ -82,7 +82,9 @@ def _set_align_split_size(data):
     if val is None:
         if not umi_consensus:
             total_size = 0  # Gb
-            for fname in data.get("files", []):
+            # Use original files if we might have reduced the size of our prepped files
+            input_files = data.get("files_orig", []) if dd.get_save_diskspace(data) else data.get("files", [])
+            for fname in input_files:
                 if os.path.exists(fname):
                     total_size += os.path.getsize(fname) / (1024.0 * 1024.0 * 1024.0)
             # Only set if we have files and are bigger than the target size
