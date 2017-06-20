@@ -38,8 +38,8 @@ transform_json = r"""{
 """
 
 duplex_transform = r"""{
-    "read1": "(?P<name>[^\\s]+).*\\n(?P<CB1>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n",
-    "read2": "(?P<name>[^\\s]+).*\\n(?P<CB2>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n"
+    "read1": "(?P<name>@.*)\\n(?P<CB1>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n",
+    "read2": "(?P<name>@.*)\\n(?P<CB2>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n"
 }"""
 
 def run_single(args):
