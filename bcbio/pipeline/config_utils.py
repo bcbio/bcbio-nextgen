@@ -125,7 +125,7 @@ def merge_resources(args):
         def _update_resources(config):
             config["resources"] = _merge_system_configs(config, docker_config)["resources"]
             return config
-        return _update_config(args, _update_resources)
+        return _update_config(args, _update_resources, allow_missing=True)
 
 def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
@@ -302,7 +302,7 @@ def add_cores_to_config(args, cores_per_job, parallel=None):
         return config
     return _update_config(args, _update_cores)
 
-def _update_config(args, update_fn):
+def _update_config(args, update_fn, allow_missing=False):
     """Update configuration, nested in argument list, with the provided update function.
     """
     new_i = None
@@ -312,7 +312,10 @@ def _update_config(args, update_fn):
             new_i = i
             break
     if new_i is None:
-        raise ValueError("Could not find configuration in args: %s" % str(args))
+        if allow_missing:
+            return args
+        else:
+            raise ValueError("Could not find configuration in args: %s" % str(args))
 
     new_arg = args[new_i]
     if is_nested_config_arg(new_arg):

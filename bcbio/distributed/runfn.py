@@ -44,6 +44,7 @@ def process(args):
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
         fnargs, parallel, out_keys = _world_from_cwl(args.name, fnargs[1:], work_dir)
+        # Can remove this awkward Docker merge when we do not need custom GATK3 installs
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
