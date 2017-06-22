@@ -9,7 +9,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import annotation, bamprep, bedutils, ploidy
+from bcbio.variation import annotation, bamprep, bedutils, ploidy, vcfutils
 
 def standard_cl_params(items):
     """Shared command line parameters for GATK programs.
@@ -81,7 +81,7 @@ def unified_genotyper(align_bams, items, ref_file, assoc_files,
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.run_gatk(params)
-    return out_file
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _joint_calling(items):
     """Determine if this call feeds downstream into joint calls.
@@ -139,4 +139,4 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("gatk-haplotype")
             broad_runner.run_gatk(params)
-    return out_file
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
