@@ -13,12 +13,6 @@ import sys
 import time
 import zlib
 
-try:
-    import azure
-    from azure import storage as azure_storage
-except ImportError:
-    azure, azure_storage = None, None
-import boto
 import six
 
 from bcbio.distributed.transaction import file_transaction
@@ -190,6 +184,7 @@ class BlobHandle(FileHandle):
     def _download_chunk_with_retries(self, chunk_offset, chunk_size,
                                      retries=3, retry_wait=1):
         """Reads or downloads the received blob from the system."""
+        import azure
         while True:
             try:
                 chunk = self._download_chunk(chunk_offset, chunk_size)
@@ -376,6 +371,7 @@ class AmazonS3(StorageManager):
         Returns a connection object pointing to the endpoint associated
         to the received resource.
         """
+        import boto
         return boto.s3.connect_to_region(cls.get_region(resource))
 
     @classmethod
@@ -443,6 +439,7 @@ class AmazonS3(StorageManager):
     @classmethod
     def open(cls, filename):
         """Return a handle like object for streaming from S3."""
+        import boto
         file_info = cls.parse_remote(filename)
         connection = cls.connect(filename)
         try:
@@ -498,6 +495,7 @@ class AzureBlob(StorageManager):
         """Returns a connection object pointing to the endpoint
         associated to the received resource.
         """
+        from azure import storage as azure_storage
         file_info = cls.parse_remote(resource)
         return azure_storage.BlobService(file_info.storage)
 
@@ -526,6 +524,8 @@ class AzureBlob(StorageManager):
         """Return a list containing the names of the entries in the directory
         given by path. The list is in arbitrary order.
         """
+        import azure
+        from azure import storage as azure_storage
         output = []
         path_info = cls.parse_remote(path)
         blob_service = azure_storage.BlobService(path_info.storage)
