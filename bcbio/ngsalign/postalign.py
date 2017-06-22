@@ -144,9 +144,9 @@ def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
         jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
                                                                      {"direction": "increase",
                                                                       "magnitude": cores // scale_factor}}})
-    jvm_opts += broad.get_default_jvm_opts(tmpdir)
+    jvm_opts += broad.get_default_jvm_opts()
     jvm_opts = " ".join(jvm_opts)
-    return jvm_opts
+    return jvm_opts + " --tmp-dir %s" % tmpdir
 
 def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
@@ -159,8 +159,7 @@ def umi_consensus(data):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
             # Improve speeds by avoiding compression read/write bottlenecks
-            io_opts = ("-Dsamjdk.use_async_io_read_samtools=true -Dsamjdk.use_async_io_write_samtools=true "
-                       "-Dsamjdk.compression_level=0")
+            io_opts = "--async-io=true --compression=0"
             group_opts, cons_opts = _get_fgbio_options(data, umi_method)
             cons_method = "CallDuplexConsensusReads" if umi_method == "paired" else "CallMolecularConsensusReads"
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
