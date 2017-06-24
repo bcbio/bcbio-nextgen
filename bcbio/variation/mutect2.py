@@ -96,9 +96,17 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             if gatk_type == "gatk4":
-                cmd = "{gatk_cmd} -O {tx_out_file}"
+                tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+                filter_cmd = _mutect2_filter(broad_runner, tx_raw_file, tx_out_file)
+                cmd = "{gatk_cmd} -O {tx_raw_file} && {filter_cmd}"
             else:
                 cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
             do.run(cmd.format(**locals()), "MuTect2")
-    out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
-    return out_file
+
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+
+def _mutect2_filter(broad_runner, in_file, out_file):
+    """Filter of MuTect2 calls, a separate step in GATK4.
+    """
+    params = ["-T", "FilterMutectCalls", "--variant", in_file, "--output", out_file]
+    return broad_runner.cl_gatk(params, os.path.dirname(out_file))
