@@ -181,8 +181,12 @@ def get_average_coverage(data, bam_file, bed_file=None, target_name="genome"):
     return avg_cov
 
 def _average_genome_coverage(data, bam_file):
+    """Quickly calculate average coverage for whole genome files using indices.
+
+    Includes all reads, with duplicates.
+    """
     total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
-    read_counts = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+    read_counts = sum(x.aligned for x in bam.idxstats(bam_file, data))
     with pysam.Samfile(bam_file, "rb") as pysam_bam:
         read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), 1e5)))
     avg_cov = float(read_counts * read_size) / total
