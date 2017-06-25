@@ -541,7 +541,10 @@ def _bgzip_from_fastq(data):
     """
     in_file = data["in_file"]
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
-    if in_file.endswith(".gz") and not objectstore.is_remote(in_file):
+    # special case, empty files that have been cleaned
+    if not objectstore.is_remote(in_file) and os.path.getsize(in_file) == 0:
+        needs_bgzip, needs_gunzip = False, False
+    elif in_file.endswith(".gz") and not objectstore.is_remote(in_file):
         if needs_convert or dd.get_trim_ends(data):
             needs_bgzip, needs_gunzip = True, True
         else:

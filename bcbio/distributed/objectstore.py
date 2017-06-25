@@ -634,7 +634,7 @@ def file_exists_or_remote(fname):
     if is_remote(fname):
         return True
     else:
-        return utils.file_exists(fname)
+        return os.path.exists(fname)
 
 
 def default_region(fname):
