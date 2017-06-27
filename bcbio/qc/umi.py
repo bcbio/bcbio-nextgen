@@ -25,7 +25,7 @@ def run(_, data, out_dir):
             cur_key = None
             for rec in bam_iter:
                 total += 1
-                umi = rec.get_tag("RX")
+                umi = _get_umi_tag(rec)
                 if umi and not rec.is_unmapped:
                     mapped += 1
                     if rec.is_duplicate:
@@ -64,3 +64,12 @@ def run(_, data, out_dir):
             yaml.safe_dump({dd.get_sample_name(data): out}, out_handle,
                            default_flow_style=False, allow_unicode=False)
     return stats_file
+
+def _get_umi_tag(rec):
+    """Handle UMI and duplex tag retrieval.
+    """
+    for tag in ["RX", "XC"]:
+        try:
+            return rec.get_tag(tag)
+        except KeyError:
+            pass
