@@ -1,8 +1,11 @@
 ## 1.0.4 (in progress)
 
+- Initial support for GATK4 variant calling with HaplotypeCaller and MuTect2.
+  Requires `tools_on: [gatk4]` https://github.com/bcbio/bcbio_validations/tree/master/gatk4
 - Enable adapter trimming for variant calling pipeline.
 - Provide `trim_ends` command to quickly do defined end trimming as part of
   variant calling fastq preparation.
+- Support duplex UMIs, present as embedded barcodes on read 1 and read 2.
 - Sort region based analyses like variant calling by interval size. Ensures
   longest intervals run first avoiding delay at end of sample processing.
 - Ensure FreeBayes dbSNP and GATK annotations passed into final file. Thanks
