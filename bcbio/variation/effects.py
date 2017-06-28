@@ -139,10 +139,12 @@ def run_vep(in_file, data):
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
                 if is_human:
-                    plugin_fns = { "loftee": _get_loftee, "maxentscan": _get_maxentscan, "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
+                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,
+                                  "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
                     plugins = ["loftee"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
-                        plugins += ["maxentscan", "genesplicer","spliceregion"]
+                        # "genesplicer" too unstable so currently removed
+                        plugins += ["maxentscan", "spliceregion"]
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args

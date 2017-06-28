@@ -919,7 +919,7 @@ lists with multiple options:
   forces gVCF output for callers that support it (GATK HaplotypeCaller,
   FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
   for variant filtration, even for smaller sample sizes.
-  ``vep_splicesite_annotations`` enables the use of the MaxEntScan and GeneSplicer plugin for VEP.
+  ``vep_splicesite_annotations`` enables the use of the MaxEntScan and SpliceRegion plugin for VEP.
   Both optional plugins add extra splice site annotations.
   ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
   that pass filters. ``vcf2db_expand`` decompresses and expands the genotype columns in
