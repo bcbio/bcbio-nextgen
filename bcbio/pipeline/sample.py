@@ -342,7 +342,7 @@ def _merge_hla_fastq_inputs(data):
     """Merge HLA inputs from a split initial alignment.
     """
     hla_key = ["hla", "fastq"]
-    hla_sample_files = [x for x in tz.get_in(hla_key, data, []) if x and x != "None"]
+    hla_sample_files = [x for x in (tz.get_in(hla_key, data) or []) if x and x != "None"]
     merged_hlas = None
     if hla_sample_files:
         out_files = collections.defaultdict(list)

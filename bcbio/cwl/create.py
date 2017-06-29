@@ -36,6 +36,7 @@ def _cwl_workflow_template(inputs, top_level=False):
             cur_inp.pop(attr, None)
         if top_level:
             cur_inp = workflow._flatten_nested_input(cur_inp)
+        cur_inp = _clean_record(cur_inp)
         ready_inputs.append(cur_inp)
     return {"class": "Workflow",
             "cwlVersion": "v1.0",
@@ -120,9 +121,11 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         else:
             inp_binding = None
         inp_tool = _place_secondary_files(inp_tool, inp_binding)
+        inp_tool = _clean_record(inp_tool)
         out["inputs"].append(inp_tool)
     for outp in outputs:
         outp_tool = copy.deepcopy(outp)
+        outp_tool = _clean_record(outp_tool)
         outp_tool["id"] = workflow.get_base_id(outp["id"])
         out["outputs"].append(outp_tool)
     with open(out_file, "w") as out_handle:
@@ -133,6 +136,33 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         yaml.add_representer(str, str_presenter)
         yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return os.path.join("steps", os.path.basename(out_file))
+
+def _clean_record(rec):
+    """Remove secondary files from record fields, which are currently not supported.
+
+    To be removed later when secondaryFiles added to records.
+    """
+    if workflow.is_cwl_record(rec):
+        def _clean_fields(d):
+            if isinstance(d, dict):
+                if "fields" in d:
+                    out = []
+                    for f in d["fields"]:
+                        f = utils.deepish_copy(f)
+                        f.pop("secondaryFiles", None)
+                        out.append(f)
+                    d["fields"] = out
+                    return d
+                else:
+                    out = {}
+                    for k, v in d.items():
+                        out[k] = _clean_fields(v)
+                    return out
+            else:
+                return d
+        return _clean_fields(rec)
+    else:
+        return rec
 
 def _get_sentinel_val(v):
     """Retrieve expected sentinel value for an output, expanding records.
@@ -175,7 +205,8 @@ def _place_secondary_files(inp_tool, inp_binding=None):
     if secondary_files:
         key = []
         while (not _is_file(tz.get_in(key + ["type"], inp_tool))
-               and not _is_file(tz.get_in(key + ["items"], inp_tool))):
+               and not _is_file(tz.get_in(key + ["items"], inp_tool))
+               and not _is_file(tz.get_in(key + ["items", "items"], inp_tool))):
             key.append("type")
         if tz.get_in(key, inp_tool):
             inp_tool["secondaryFiles"] = secondary_files
@@ -247,6 +278,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
                 wf_output = copy.deepcopy(output)
                 if "outputSource" not in wf_output:
                     wf_output["outputSource"] = wf_output.pop("source")
+                wf_output = _clean_record(wf_output)
                 out["outputs"].append(wf_output)
         elif cur[0] == "wf_start":
             parent_wfs.append(out)
@@ -320,9 +352,44 @@ def _indexes_to_secondary_files(gresources, genome_build):
         out[refname] = val
     return out
 
-def _add_avro_type(inp, val):
+def _add_suppl_info(inp, val):
+    """Add supplementary information to inputs from file values.
+    """
     inp["type"] = _get_avro_type(val)
+    secondary = _get_secondary_files(val)
+    if secondary:
+        inp["secondaryFiles"] = secondary
     return inp
+
+def _get_secondary_files(val):
+    """Retrieve associated secondary files.
+
+    Normalizes input values into definitions of available secondary files.
+    """
+    out = []
+    if isinstance(val, (tuple, list)):
+        for x in val:
+            for s in _get_secondary_files(x):
+                if s and s not in out:
+                    out.append(s)
+    elif isinstance(val, dict) and (val.get("class") == "File" or "File" in val.get("class")):
+        if "secondaryFiles" in val:
+            for sf in [x["path"] for x in val["secondaryFiles"]]:
+                rext = _get_relative_ext(val["path"], sf)
+                if rext and rext not in out:
+                    out.append(rext)
+    return out
+
+def _get_relative_ext(of, sf):
+    """Retrieve relative extension given the original and secondary files.
+    """
+    prefix = os.path.commonprefix([sf, of])
+    while prefix.endswith("."):
+        prefix = prefix[:-1]
+    exts_to_remove = of.replace(prefix, "")
+    ext_to_add = sf.replace(prefix, "")
+    if not exts_to_remove or exts_to_remove.startswith("."):
+        return "^" * exts_to_remove.count(".") + ext_to_add
 
 def _get_avro_type(val):
     """Infer avro type for the current input.
@@ -339,9 +406,9 @@ def _get_avro_type(val):
                     types.append(ctype)
             elif ctype not in types:
                 types.append(ctype)
-        # handle empty types
+        # handle empty types, allow null or a string "null" sentinel
         if len(types) == 0:
-            types = ["null"]
+            types = ["null", "string"]
         # collapse arrays for multiple types
         if len(types) > 1 and all(isinstance(t, dict) and t["type"] == "array" for t in types):
             types = [{"type": "array", "items": [t["items"] for t in types]}]
@@ -363,7 +430,7 @@ def _samplejson_to_inputs(svals):
     """
     out = []
     for key, val in svals.items():
-        out.append(_add_avro_type({"id": "%s" % key}, val))
+        out.append(_add_suppl_info({"id": "%s" % key}, val))
     return out
 
 def _to_cwldata(key, val):

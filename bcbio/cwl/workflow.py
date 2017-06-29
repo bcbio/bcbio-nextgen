@@ -307,8 +307,9 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
                 else:
                     inherit.append(fdef["id"])
             else:
-                fields.append({"name": _get_string_vid(fdef["id"]),
-                               "type": fdef["type"]})
+                cur = {"name": _get_string_vid(fdef["id"]),
+                       "type": fdef["type"]}
+                fields.append(_add_secondary_to_rec_field(fdef, cur))
         if inherit_all:
             fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel))
         elif inherit:
@@ -322,6 +323,12 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
     if parallel in ["batch-single", "multi-batch"]:
         out = _nest_variable(out)
     return out
+
+def _add_secondary_to_rec_field(orig, cur):
+    # CWL does not currently support secondaryFiles in fields
+    if orig.get("secondaryFiles"):
+        cur["secondaryFiles"] = orig.get("secondaryFiles")
+    return cur
 
 def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None):
     """Infer the outputs of a record from the original inputs
@@ -348,7 +355,7 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
                     cur_v = _flatten_nested_input(cur_v)
                 if to_include:
                     cur_v = _nest_variable(cur_v)
-                fields.append(cur_v)
+                fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
                 added.add(orig_v["id"])
     return fields
 
