@@ -230,6 +230,15 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
                 # "Unknown" states are broken in current versions of VarScan
                 # so we just bail out here for now
                 return
+            # fix FREQ for any additional samples -- multi-sample VarScan calling
+            if len(line) > 11:
+                for i in range(11, len(line)):
+                    dat = line[i].split(":")
+                    try:
+                        dat[Ifreq] = str(float(dat[Ifreq].rstrip("%")) / 100)
+                    except ValueError:  # illegal binary characters -- set frequency to zero
+                        dat[Ifreq] = "0.0"
+                    line[i] = ":".join(dat)
 
     #FIXME: VarScan also produces invalid REF records (e.g. CAA/A)
     # This is not handled yet.
