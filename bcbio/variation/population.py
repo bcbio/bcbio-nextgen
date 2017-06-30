@@ -231,10 +231,15 @@ def get_multisample_vcf(fnames, name, caller, data):
         return gemini_vcf
 
 def _has_gemini(data):
-    """Use gemini if we installed required data.
+    """Use gemini if we installed required data for hg19.
+
+    Other organisms don't have special data targets.
     """
-    from bcbio import install
-    return "gemini" in install.get_defaults().get("datatarget", [])
+    if support_gemini_orig(data):
+        from bcbio import install
+        return "gemini" in install.get_defaults().get("datatarget", [])
+    else:
+        return True
 
 def do_db_build(samples, need_bam=True):
     """Confirm we should build a gemini database: need gemini and not in tools_off.
