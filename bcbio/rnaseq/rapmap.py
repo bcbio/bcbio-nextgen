@@ -23,9 +23,7 @@ def run_rapmap_align(data):
         fq1, fq2 = files[0], None
     rapmap_dir = os.path.join(work_dir, "rapmap", samplename)
     gtf_file = dd.get_gtf_file(data)
-    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
-    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = rapmap_align(fq1, fq2, rapmap_dir, gtf_file, fasta_file,
                             "quasi", data)
     data = dd.set_transcriptome_bam(data, out_file)
@@ -42,6 +40,7 @@ def rapmap_index(gtf_file, ref_file, algorithm, data, out_dir):
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
     # use user supplied transcriptome FASTA file if it exists
     if dd.get_transcriptome_fasta(data):
+        out_dir = os.path.join(out_dir, index_type, dd.get_genome_build(data))
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data, out_dir)
