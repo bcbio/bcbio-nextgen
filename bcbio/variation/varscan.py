@@ -204,28 +204,32 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
     except ValueError:
         return "\t".join(line)
 
-    if len(line) > 9:
-        Ifreq = line[8].split(":").index("FREQ")
-        ndat = line[9].split(":")
+    def _normalize_freq(line, sample_i):
+        """Ensure FREQ genotype value is float as defined in header.
+        """
+        ft_parts = line[8].split(":")
+        dat = line[sample_i].split(":")
+        # Non-conforming no-call sample, don't try to fix FREQ
+        if len(dat) != len(ft_parts):
+            return line
+        freq_i = ft_parts.index("FREQ")
         try:
-            ndat[Ifreq] = str(float(ndat[Ifreq].rstrip("%")) / 100)
+            dat[freq_i] = str(float(dat[freq_i].rstrip("%")) / 100)
         except ValueError:  # illegal binary characters -- set frequency to zero
-            ndat[Ifreq] = "0.0"
-        line[9] = ":".join(ndat)
+            dat[freq_i] = "0.0"
+        line[sample_i] = ":".join(dat)
+        return line
+
+    if len(line) > 9:
+        line = _normalize_freq(line, 9)
         if len(line) > 10:
-            tdat = line[10].split(":")
+            line = _normalize_freq(line, 10)
             # HACK: The position of the SS= changes, so we just search for it
             ss_vals = [item for item in line[7].split(";") if item.startswith("SS=")]
             if len(ss_vals) > 0:
                 somatic_status = int(ss_vals[0].split("=")[1])  # Get the number
             else:
                 somatic_status = None
-
-            try:
-                tdat[Ifreq] = str(float(tdat[Ifreq].rstrip("%")) / 100)
-            except ValueError:  # illegal binary characters -- set frequency to zero
-                tdat[Ifreq] = "0.0"
-            line[10] = ":".join(tdat)
             if somatic_status == 5:
                 # "Unknown" states are broken in current versions of VarScan
                 # so we just bail out here for now
@@ -233,12 +237,7 @@ def fix_varscan_output(line, normal_name="", tumor_name=""):
             # fix FREQ for any additional samples -- multi-sample VarScan calling
             if len(line) > 11:
                 for i in range(11, len(line)):
-                    dat = line[i].split(":")
-                    try:
-                        dat[Ifreq] = str(float(dat[Ifreq].rstrip("%")) / 100)
-                    except ValueError:  # illegal binary characters -- set frequency to zero
-                        dat[Ifreq] = "0.0"
-                    line[i] = ":".join(dat)
+                    line = _normalize_freq(line, i)
 
     #FIXME: VarScan also produces invalid REF records (e.g. CAA/A)
     # This is not handled yet.
