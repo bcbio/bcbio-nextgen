@@ -139,7 +139,7 @@ def generate_transcript_counts(data):
             logger.info("Aligning to the transcriptome with bowtie2 using the "
                         "disambiguated reads.")
             bam_path = data["work_bam"]
-            fastq_paths = alignprep._bgzip_from_bam(bam_path, data["dirs"], data["config"], is_retry=False, output_infix='-transcriptome')
+            fastq_paths = alignprep._bgzip_from_bam(bam_path, data["dirs"], data, is_retry=False, output_infix='-transcriptome')
             if len(fastq_paths) == 2:
                 file1, file2 = fastq_paths
             else:
