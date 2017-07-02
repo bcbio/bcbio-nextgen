@@ -93,7 +93,8 @@ def get_cellular_barcodes(data):
         stem = dd.get_umi_type(data)
         bc1 = os.path.join(TRANSFORM_DIR, stem + "-cb1.txt")
         bc2 = os.path.join(TRANSFORM_DIR, stem + "-cb2.txt")
-        return filter(file_exists, [bc1, bc2])
+        bc3 = os.path.join(TRANSFORM_DIR, stem + "-cb3.txt")
+        return filter(file_exists, [bc1, bc2, bc3])
     else:
         return []
 
@@ -126,7 +127,7 @@ def umi_transform(data):
         data["files"] = [out_file]
         return [[data]]
     cellular_barcodes = get_cellular_barcodes(data)
-    if len(cellular_barcodes) == 2:
+    if len(cellular_barcodes) > 1:
         split_option = "--separate_cb"
     else:
         split_option = ""
@@ -159,14 +160,17 @@ def filter_barcodes(data):
         return [[data]]
     bc1 = None
     bc2 = None
+    bc3 = None
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     if isinstance(bc, basestring):
         bc1 = bc
     if len(bc) == 1:
         bc1 = bc[0]
-    if len(bc) == 2:
+    if len(bc) > 1:
         bc1 = bc[0]
         bc2 = bc[1]
+    if len(bc) == 3:
+        bc3 = bc[2]
     out_base = dd.get_sample_name(data) + ".filtered.fq.gz"
     out_file = os.path.join(umi_dir, out_base)
     if file_exists(out_file):
@@ -181,6 +185,8 @@ def filter_barcodes(data):
             cmd += "--nedit {correction} "
     if bc2:
         cmd += "--bc2 {bc2} "
+    if bc3:
+        cmd += "--bc3 {bc3} "
 
     fq1_cmd = "{fq1} " if not is_gzipped(fq1) else "<(gzip -cd {fq1}) "
     fq1_cmd = fq1_cmd.format(fq1=fq1)
