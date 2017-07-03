@@ -24,6 +24,8 @@
   Andrey Tovchigrechko.
 - Remove usage of lxml for qsignature and qualimap to avoid icu library errors.
 - CNVkit: merge adjacent calls with identical copy numbers
+- Add support for triple-barcoded cellular barcodes.
+- Add support for Illumina's SureCell single-cell RNA-seq.
 
 ## 1.0.3 (7 May 2017)
 
