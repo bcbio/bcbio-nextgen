@@ -384,8 +384,11 @@ def _get_secondary_files(val):
 def _get_relative_ext(of, sf):
     """Retrieve relative extension given the original and secondary files.
     """
+    def half_finished_trim(orig, prefix):
+        return (os.path.basename(prefix).count(".") > 0 and
+                os.path.basename(orig).count(".") == os.path.basename(prefix).count("."))
     prefix = os.path.commonprefix([sf, of])
-    while prefix.endswith("."):
+    while prefix.endswith(".") or (half_finished_trim(sf, prefix) and half_finished_trim(of, prefix)):
         prefix = prefix[:-1]
     exts_to_remove = of.replace(prefix, "")
     ext_to_add = sf.replace(prefix, "")
