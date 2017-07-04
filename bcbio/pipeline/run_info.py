@@ -176,6 +176,8 @@ def add_reference_resources(data, remote_retriever=None):
         data["reference"]["genome_context"] = annotation.get_context_files(data)
     if "viral" not in data["reference"]:
         data["reference"]["viral"] = viral.get_files(data)
+    if not data["reference"]["viral"]:
+        data["reference"]["viral"] = None
 
     data = _fill_validation_targets(data)
     data = _fill_prioritization_targets(data)

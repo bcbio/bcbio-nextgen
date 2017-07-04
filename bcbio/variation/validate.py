@@ -19,6 +19,7 @@ import yaml
 
 from bcbio import broad, utils
 from bcbio.bam import callable
+from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
@@ -90,7 +91,7 @@ def _normalize_cwl_inputs(items):
     """
     with_validate = {}
     vrn_files = []
-    for data in (utils.to_single_data(d) for d in items):
+    for data in (cwlutils.normalize_missing(utils.to_single_data(d)) for d in items):
         if tz.get_in(["config", "algorithm", "validate"], data):
             with_validate[_checksum(tz.get_in(["config", "algorithm", "validate"], data))] = data
         if data.get("vrn_file"):

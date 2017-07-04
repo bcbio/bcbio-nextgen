@@ -36,7 +36,7 @@ def normalize_missing(xs):
     elif isinstance(xs, (list, tuple)):
         xs = [normalize_missing(x) for x in xs]
     elif isinstance(xs, basestring):
-        if xs.lower() == "none":
+        if xs.lower() in ["none", "null"]:
             xs = None
         elif xs.lower() == "true":
             xs = True
