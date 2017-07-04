@@ -43,6 +43,7 @@ def _cwl_workflow_template(inputs, top_level=False):
             "hints": [],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
+                             {"class": "InlineJavascriptRequirement"},  # for secondary Files
                              {"class": "ScatterFeatureRequirement"},
                              {"class": "SubworkflowFeatureRequirement"}],
             "inputs": ready_inputs,
@@ -388,8 +389,13 @@ def _get_relative_ext(of, sf):
         prefix = prefix[:-1]
     exts_to_remove = of.replace(prefix, "")
     ext_to_add = sf.replace(prefix, "")
+    # Return extensions relative to original
     if not exts_to_remove or exts_to_remove.startswith("."):
         return "^" * exts_to_remove.count(".") + ext_to_add
+    # Return entire file relative to original
+    # no way to cleanly reference dirname without using InlineJavascriptRequirement
+    elif prefix.endswith("/"):
+        return '$(self.location.substr(0, self.location.lastIndexOf("/")))/%s' % ext_to_add
 
 def _get_avro_type(val):
     """Infer avro type for the current input.
@@ -404,6 +410,10 @@ def _get_avro_type(val):
                 nested_types = [x["items"] for x in types if isinstance(x, dict)]
                 if ctype["items"] not in nested_types:
                     types.append(ctype)
+            elif isinstance(ctype, (list, tuple)):
+                for x in ctype:
+                    if x not in types:
+                        types.append(x)
             elif ctype not in types:
                 types.append(ctype)
         # handle empty types, allow null or a string "null" sentinel
@@ -414,7 +424,7 @@ def _get_avro_type(val):
             types = [{"type": "array", "items": [t["items"] for t in types]}]
         return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
-        return "null"
+        return ["null", "string"]
     # encode booleans as string True/False and unencode on other side
     elif isinstance(val, bool):
         return "string"
