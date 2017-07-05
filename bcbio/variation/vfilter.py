@@ -213,6 +213,16 @@ def samtools(in_file, data):
                '((AC[0] / AN) > 0.5 && DP < 4 && %QUAL < 50)')
     return cutoff_w_expression(in_file, filters, data, name="stQualDepth")
 
+def _gatk_general():
+    """General filters useful for both GATK SNPs and indels.
+
+    Remove low quality, low allele fraction variants at the ends of reads.
+    Generally useful metric identified by looking at 10x data.
+    https://community.10xgenomics.com/t5/Genome-Exome-Forum/Best-practices-for-trimming-adapters-when-variant-calling/m-p/473
+    https://github.com/bcbio/bcbio_validations/tree/master/gatk4#10x-adapter-trimming--low-frequency-allele-filter
+    """
+    return ["(QD < 10.0 && AD[1] / (AD[1] + AD[0]) < 0.25 && ReadPosRankSum < 0.0)"]
+
 def gatk_snp_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK SNPs using best-practice recommendations.
 
@@ -234,6 +244,7 @@ def gatk_snp_cutoff(in_file, data):
     filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     if "gvcf" not in dd.get_tools_on(data):
         filters += ["QD < 2.0", "FS > 60.0"]
+        filters += _gatk_general()
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
@@ -248,5 +259,6 @@ def gatk_indel_cutoff(in_file, data):
     filters = ["ReadPosRankSum < -20.0"]
     if "gvcf" not in dd.get_tools_on(data):
         filters += ["QD < 2.0", "FS > 200.0", "SOR > 10.0"]
+        filters += _gatk_general()
     return cutoff_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKCutoffIndel",
                                "INDEL", extra_cmd=r"""| sed 's/\\"//g'""")
