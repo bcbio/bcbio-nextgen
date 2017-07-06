@@ -627,6 +627,14 @@ def _check_indelcaller(data):
         raise ValueError("In sample %s, indelcaller specified as list. Can only be a single item: %s"
                          % (data["description"], str(c)))
 
+def _check_hlacaller(data):
+    supported_genomes = set(["hg38"])
+    c = data["algorithm"].get("hlacaller")
+    if c:
+        if data["genome_build"] not in supported_genomes:
+            raise ValueError("In sample %s, HLA caller specified but genome %s not in supported: %s" %
+                             (data["description"], data["genome_build"], ", ".join(sorted(list(supported_genomes)))))
+
 def _check_sample_config(items, in_file, config):
     """Identify common problems in input sample configuration files.
     """
@@ -648,6 +656,7 @@ def _check_sample_config(items, in_file, config):
     [_check_svcaller(x) for x in items]
     [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
+    [_check_hlacaller(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 
