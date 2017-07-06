@@ -17,7 +17,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if file_exists(out_file):
         data = dd.set_work_bam(data, out_file)
         return data
-    cmd = ("{hisat2} -x {ref_file} -p {num_cores} {quality_flag} {stranded_flag} "
+    cmd = ("{hisat2} --new-summary -x {ref_file} -p {num_cores} {quality_flag} {stranded_flag} "
            "{rg_flags} ")
     if paired:
         cmd += "-1 {fastq_file} -2 {pair_file} "
