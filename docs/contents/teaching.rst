@@ -1,4 +1,5 @@
 .. _teaching:
+
 Teaching
 ========
 This is a teaching orientated example of using bcbio from the Cold Spring Harbor

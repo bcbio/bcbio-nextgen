@@ -1,6 +1,11 @@
 Presentations
 =============
 
+- :ref:`teaching` variant calling, bcbio and GATK4 validation at the `Summer 2017 NGS Data Analysis Course
+  at Harvard Chan School <http://bioinformatics.sph.harvard.edu/training/>`_
+  (6 July 2017): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2017_teaching/ngscourse2017_teaching.pdf>`_
+
 - Training course for the `Cancer Genomics Cloud
   <http://www.cancergenomicscloud.org/>`_, decribing how bcbio uses the Common
   Workflow Language to run in multiple infrastructures (1 May 2017): `slides
