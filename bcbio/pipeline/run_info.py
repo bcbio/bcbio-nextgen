@@ -849,7 +849,7 @@ def _add_algorithm_defaults(algorithm):
     """
     if not algorithm:
         algorithm = {}
-    defaults = {"archive": [],
+    defaults = {"archive": None,
                 "tools_off": [],
                 "tools_on": [],
                 "qc": [],
@@ -863,7 +863,7 @@ def _add_algorithm_defaults(algorithm):
                 "variant_regions": None,
                 "validate": None,
                 "validate_regions": None}
-    convert_to_list = set(["archive", "tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
+    convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
                            "vcfanno", "adapters", "custom_trim"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():

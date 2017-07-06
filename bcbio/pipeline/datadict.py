@@ -80,6 +80,7 @@ LOOKUPS = {
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "genome_context_files": {"keys": ["reference", "genome_context"], "default": [], "always_list": True},
     "viral_files": {"keys": ["reference", "viral"], "default": [], "always_list": True},
+    "archive": {"keys": ["config", "algorithm", "archive"], "default": [], "always_list": True},
     "dexseq_gff": {"keys": ['genome_resources', 'rnaseq', 'dexseq']},
     "combined_fpkm": {"keys": ['combined_fpkm']},
     "combined_fpkm_isoform": {"keys": ['combined_fpkm_isoform']},
