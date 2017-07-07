@@ -482,7 +482,8 @@ def _bgzip_from_bam(bam_file, dirs, data, is_retry=False, output_infix=''):
             else:
                 out_str = "S=>({fq1_bgzip_cmd})"
             bam_file = objectstore.cl_input(bam_file)
-            cmd = "{bamtofastq} filename={bam_file} T={sortprefix} " + out_str
+            extra_opts = " ".join([str(x) for x in resources.get("options", [])])
+            cmd = "{bamtofastq} filename={bam_file} T={sortprefix} {extra_opts} " + out_str
             try:
                 do.run(cmd.format(**locals()), "BAM to bgzipped fastq",
                        checks=[do.file_reasonable_size(tx_out_file, bam_file)],
