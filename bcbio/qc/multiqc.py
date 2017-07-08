@@ -186,6 +186,10 @@ def _create_config_file(out_dir, samples):
             "samtools": {"error_rate": False}},
            "module_order": ["bcbio", "samtools", "goleft_indexcov", "bcftools", "picard", "qualimap",
                             "snpeff", "fastqc"]}
+    # Avoid duplicated bcbio columns with qualimap
+    if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d))
+           for d in samples):
+        out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file
