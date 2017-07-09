@@ -1,4 +1,4 @@
-## 1.0.4 (in progress)
+## 1.0.4 (9 July 2017)
 
 - Initial support for GATK4 variant calling with HaplotypeCaller and MuTect2.
   Requires `tools_on: [gatk4]` https://github.com/bcbio/bcbio_validations/tree/master/gatk4
