@@ -4,6 +4,7 @@ import os
 import toolz as tz
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
@@ -16,12 +17,14 @@ def postprocess_variants(items):
     """Provide post-processing of variant calls: filtering and effects annotation.
     """
     data, items = _get_batch_representative(items, "vrn_file")
+    items = cwlutils.unpack_tarballs(items, data)
+    data = cwlutils.unpack_tarballs(data, data)
     cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
     logger.info("Finalizing variant calls: %s" % cur_name)
     orig_vrn_file = data.get("vrn_file")
     data = _symlink_to_workdir(data, ["vrn_file"])
     data = _symlink_to_workdir(data, ["config", "algorithm", "variant_regions"])
-    if data.get("align_bam") and data.get("vrn_file"):
+    if data.get("vrn_file"):
         logger.info("Calculating variation effects for %s" % cur_name)
         ann_vrn_file, vrn_stats = effects.add_to_vcf(data["vrn_file"], data)
         if ann_vrn_file:
@@ -40,8 +43,9 @@ def postprocess_variants(items):
         logger.info("Germline extraction for %s" % cur_name)
         data = germline.extract(data, orig_items)
 
-        data = damage.run_filter(data["vrn_file"], dd.get_align_bam(data), dd.get_ref_file(data),
-                                 data, orig_items)
+        if dd.get_align_bam(data):
+            data = damage.run_filter(data["vrn_file"], dd.get_align_bam(data), dd.get_ref_file(data),
+                                    data, orig_items)
     if orig_vrn_file and os.path.samefile(data["vrn_file"], orig_vrn_file):
         data["vrn_file"] = orig_vrn_file
     return [[data]]

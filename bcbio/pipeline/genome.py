@@ -10,6 +10,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.distributed import objectstore
 from bcbio.log import logger
 from bcbio.ngsalign import star
@@ -172,6 +173,12 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     # allow multiple references in a file and use the most recently added
     else:
         cur_ref = refs[-1]
+    # Find genome directory and check for packed wf tarballs
+    cur_ref_norm = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
+    base_dir_i = cur_ref_norm.find("/%s/" % genome_build)
+    base_dir = os.path.join(cur_ref_norm[:base_dir_i], genome_build)
+    for tarball in glob.glob(os.path.join(base_dir, "*-wf.tar.gz")):
+        cwlutils.unpack_tarballs(tarball, {"dirs": {"work": base_dir}}, use_subdir=False)
     if need_remap:
         assert remap_fn is not None, "%s requires remapping function from base location file" % name
         cur_ref = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))

@@ -33,7 +33,7 @@ def _get_validate(data):
     """Retrieve items to validate, from single samples or from combined joint calls.
     """
     if data.get("vrn_file") and tz.get_in(["config", "algorithm", "validate"], data):
-        return data
+        return utils.deepish_copy(data)
     elif "group_orig" in data:
         for sub in multi.get_orig_items(data):
             if "validate" in sub["config"]["algorithm"]:
@@ -91,13 +91,15 @@ def _normalize_cwl_inputs(items):
     """
     with_validate = {}
     vrn_files = []
+    ready_items = []
     for data in (cwlutils.normalize_missing(utils.to_single_data(d)) for d in items):
         if tz.get_in(["config", "algorithm", "validate"], data):
             with_validate[_checksum(tz.get_in(["config", "algorithm", "validate"], data))] = data
         if data.get("vrn_file"):
             vrn_files.append(data["vrn_file"])
+        ready_items.append(data)
     if len(with_validate) == 0:
-        return items[0]
+        return ready_items[0]
     else:
         assert len(with_validate) == 1, len(with_validate)
         assert len(set(vrn_files)) == 1
@@ -120,6 +122,7 @@ def compare_to_rm(data):
     if isinstance(data, (list, tuple)):
         data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
+    toval_data = cwlutils.unpack_tarballs(toval_data, toval_data)
     if toval_data:
         caller = _get_caller(toval_data)
         sample = dd.get_sample_name(toval_data)

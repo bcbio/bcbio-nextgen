@@ -5,6 +5,7 @@ import functools
 import json
 import operator
 import os
+import tarfile
 
 import toolz as tz
 import yaml
@@ -43,7 +44,6 @@ def _cwl_workflow_template(inputs, top_level=False):
             "hints": [],
             "requirements": [{"class": "EnvVarRequirement",
                               "envDef": [{"envName": "MPLCONFIGDIR", "envValue": "."}]},
-                             {"class": "InlineJavascriptRequirement"},  # for secondary Files
                              {"class": "ScatterFeatureRequirement"},
                              {"class": "SubworkflowFeatureRequirement"}],
             "inputs": ready_inputs,
@@ -345,9 +345,7 @@ def _indexes_to_secondary_files(gresources, genome_build):
             # directory plus indexes -- snpEff
             elif "base" in val and os.path.isdir(val["base"]) and len(val["indexes"]) > 0:
                 indexes = val["indexes"]
-                val = {"base": indexes[0]}
-                if len(indexes) > 1:
-                    val["indexes"] = indexes[1:]
+                val = {"base": indexes[0], "indexes": indexes[1:]}
         elif isinstance(val, dict) and genome_build in val:
             val = _indexes_to_secondary_files(val, genome_build)
         out[refname] = val
@@ -395,10 +393,8 @@ def _get_relative_ext(of, sf):
     # Return extensions relative to original
     if not exts_to_remove or exts_to_remove.startswith("."):
         return "^" * exts_to_remove.count(".") + ext_to_add
-    # Return entire file relative to original
-    # no way to cleanly reference dirname without using InlineJavascriptRequirement
-    elif prefix.endswith("/"):
-        return '$(self.location.substr(0, self.location.lastIndexOf("/")))/%s' % ext_to_add
+    else:
+        raise ValueError("No cross platform way to reference complex extension: %s %s" % (sf, of))
 
 def _get_avro_type(val):
     """Infer avro type for the current input.
@@ -429,8 +425,8 @@ def _get_avro_type(val):
     elif val is None:
         return ["null", "string"]
     # encode booleans as string True/False and unencode on other side
-    elif isinstance(val, bool):
-        return "string"
+    elif isinstance(val, bool) or isinstance(val, basestring) and val.lower() in ["true", "false", "none"]:
+        return ["string", "null", "boolean"]
     elif isinstance(val, int):
         return "long"
     elif isinstance(val, float):
@@ -474,9 +470,13 @@ def _to_cwldata(key, val):
 
 def _to_cwlfile_with_indexes(val):
     """Convert reads with ready to go indexes into the right CWL object.
+
+    Identifies the top level directory and creates a tarball, avoiding
+    trying to handle complex secondary setups which are not cross platform.
     """
-    return {"class": "File", "path": val["base"],
-            "secondaryFiles": [{"class": "File", "path": x} for x in val["indexes"]]}
+    dirname = os.path.dirname(val["base"])
+    assert all([x.startswith(dirname) for x in val["indexes"]])
+    return {"class": "File", "path": _directory_tarball(dirname)}
 
 def _item_to_cwldata(x):
     """"Markup an item with CWL specific metadata.
@@ -503,30 +503,30 @@ def _item_to_cwldata(x):
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
-            # aligner and database indices where we list the entire directory as secondary files
-            dir_targets = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
-                           "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
-            assert os.path.isdir(x)
-            base_name = None
-            fnames = sorted(os.listdir(x))
-            for fname in fnames:
-                if fname.endswith(dir_targets):
-                    base_name = fname
-                    break
-            if base_name:
-                fnames.pop(fnames.index(base_name))
-                base_name = os.path.join(x, base_name)
-                fnames = [os.path.join(x, y) for y in fnames]
-                out = {"class": "File", "path": base_name,
-                       "secondaryFiles": [{"class": "File", "path": f} for f in fnames]}
-            # skip directories we're not currently using in CWL recipes
-            else:
-                out = None
+            out = {"class": "File", "path": _directory_tarball(x)}
         return out
     elif isinstance(x, bool):
         return str(x)
     else:
         return x
+
+def _directory_tarball(dirname):
+    """Create a tarball of a complex directory, avoiding complex secondaryFiles.
+
+    Complex secondary files do not work on multiple platforms and are not portable
+    to WDL, so for now we create a tarball that workers will unpack.
+    """
+    assert os.path.isdir(dirname)
+    base_dir, tarball_dir = os.path.split(dirname)
+    while base_dir and not os.path.exists(os.path.join(base_dir, "seq")):
+        base_dir, extra_tarball = os.path.split(base_dir)
+        tarball_dir = os.path.join(extra_tarball, tarball_dir)
+    tarball = os.path.join(base_dir, "%s-wf.tar.gz" % (tarball_dir.replace(os.path.sep, "--")))
+    if not utils.file_exists(tarball):
+        with utils.chdir(base_dir):
+            with tarfile.open(tarball, "w:gz") as tar:
+                tar.add(tarball_dir)
+    return tarball
 
 def _clean_final_outputs(keyvals, integrations=None):
     def clean_path(integrations, x):

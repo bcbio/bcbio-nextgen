@@ -1,3 +1,9 @@
+## 1.0.5 (in progress)
+
+- GATK4: fix option usage for gVCF creation with HaplotypeCaller
+- CWL/WDL: use single file tarballs for complex collections of files like
+  aligner, RTG and snpEff indices.
+
 ## 1.0.4 (9 July 2017)
 
 - Initial support for GATK4 variant calling with HaplotypeCaller and MuTect2.

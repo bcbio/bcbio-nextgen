@@ -16,6 +16,7 @@ import yaml
 
 from bcbio import log, utils
 from bcbio.log import logger
+from bcbio.cwl import cwlutils
 from bcbio.distributed import multitasks
 from bcbio.pipeline import config_utils, run_info
 
@@ -364,6 +365,7 @@ def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     data["output_cwl_keys"] = output_cwl_keys
     data = _add_resources(data, runtime)
     data = run_info.normalize_world(data)
+    data = cwlutils.normalize_missing(data)
     return data
 
 def _convert_value(val):
@@ -477,9 +479,6 @@ def _collapse_to_cwl_record(samples, want_attrs):
 def _to_cwl(val):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
-    # aligner and database indices where we list the entire directory as secondary files
-    dir_targets = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
-                   "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
     if isinstance(val, basestring):
         if os.path.exists(val) and os.path.isfile(val):
             val = {"class": "File", "path": val}
@@ -496,7 +495,7 @@ def _to_cwl(val):
             # Handle relative paths
             if not cur_dir:
                 cur_dir = os.getcwd()
-            if cur_file.endswith(dir_targets):
+            if cur_file.endswith(cwlutils.DIR_TARGETS):
                 for fname in os.listdir(cur_dir):
                     if fname != cur_file:
                         secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})

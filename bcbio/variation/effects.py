@@ -275,10 +275,15 @@ def get_db(data):
     snpeff_db = utils.get_in(data, ("genome_resources", "aliases", "snpeff"))
     snpeff_base_dir = None
     if snpeff_db:
-        snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db, "base"))
+        snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
-            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace("_", "."), "base"))
+            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace("_", ".")))
+        if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
+            snpeff_base_dir = snpeff_base_dir["base"]
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
+              and snpeff_base_dir.endswith("%s%s" % (os.path.sep, snpeff_db))):
+            snpeff_base_dir = os.path.dirname(snpeff_base_dir)
         if not snpeff_base_dir:
             ref_file = utils.get_in(data, ("reference", "fasta", "base"))
             snpeff_base_dir = utils.safe_makedir(os.path.normpath(os.path.join(

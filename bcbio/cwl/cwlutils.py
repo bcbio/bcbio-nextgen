@@ -5,11 +5,14 @@ mostly handling CWL records. This needs some generalization to apply across
 non-variant calling workflows.
 """
 import collections
+import os
 import pprint
+import tarfile
 
 import toolz as tz
 
 from bcbio import utils
+from bcbio.pipeline import datadict as dd
 
 def to_rec(samples, default_keys=None):
     """Convert inputs into CWL records, useful for single item parallelization.
@@ -42,6 +45,40 @@ def normalize_missing(xs):
             xs = True
         elif xs.lower() == "false":
             xs = False
+    return xs
+
+# aligner and database indices where we list the entire directory as secondary files
+DIR_TARGETS = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
+               "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
+
+def unpack_tarballs(xs, data, use_subdir=True):
+    """Unpack workflow tarballs into ready to use directories.
+    """
+    if isinstance(xs, dict):
+        for k, v in xs.items():
+            xs[k] = unpack_tarballs(v, data, use_subdir)
+    elif isinstance(xs, (list, tuple)):
+        xs = [unpack_tarballs(x, data, use_subdir) for x in xs]
+    elif isinstance(xs, basestring):
+        if os.path.isfile(xs) and xs.endswith("-wf.tar.gz"):
+            if use_subdir:
+                tarball_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "wf-inputs"))
+            else:
+                tarball_dir = dd.get_work_dir(data)
+            out_dir = os.path.join(tarball_dir,
+                                   os.path.basename(xs).replace("-wf.tar.gz", "").replace("--", os.path.sep))
+            if not os.path.exists(out_dir):
+                with utils.chdir(tarball_dir):
+                    with tarfile.open(xs, "r:gz") as tar:
+                        tar.extractall()
+            assert os.path.exists(out_dir), out_dir
+            # Default to representing output directory
+            xs = out_dir
+            # Look for aligner indices
+            for fname in os.listdir(out_dir):
+                if fname.endswith(DIR_TARGETS):
+                    xs = os.path.join(out_dir, fname)
+                    break
     return xs
 
 def _get_all_cwlkeys(items, default_keys=None):

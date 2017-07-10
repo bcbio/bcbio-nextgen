@@ -106,6 +106,7 @@ def process_alignment(data, alt_input=None):
     """Do an alignment of fastq files, preparing a sorted BAM output file.
     """
     data = cwlutils.normalize_missing(utils.to_single_data(data))
+    data = cwlutils.unpack_tarballs(data, data)
     fastq1, fastq2 = dd.get_input_sequence_files(data)
     if alt_input:
         fastq1, fastq2 = alt_input
