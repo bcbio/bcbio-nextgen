@@ -755,7 +755,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
     global_config = {}
     global_vars = {}
     resources = {}
-    integrations = {}
+    integration_config = {}
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
@@ -765,7 +765,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
         global_vars = global_config.pop("globals", {})
         resources = global_config.pop("resources", {})
         for iname in ["arvados"]:
-            integrations[iname] = global_config.pop(iname, {})
+            integration_config[iname] = global_config.pop(iname, {})
         loaded = loaded["details"]
     if sample_names:
         loaded = [x for x in loaded if x["description"] in sample_names]
@@ -825,7 +825,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
             if pkvs is not None:
                 for key, val in pkvs.items():
                     item["resources"][prog][key] = val
-        for iname, ivals in integrations.items():
+        for iname, ivals in integration_config.items():
             if ivals:
                 if iname not in item:
                     item[iname] = {}
