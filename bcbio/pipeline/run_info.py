@@ -296,9 +296,9 @@ def _clean_metadata(data):
     # Ensure batches are strings and have no duplicates
     if batches:
         if isinstance(batches, (list, tuple)):
-            batches = [str(x) for x in sorted(list(set(batches)))]
+            batches = [_clean_characters(str(x)) for x in sorted(list(set(batches)))]
         else:
-            batches = str(batches)
+            batches = _clean_characters(str(batches))
         data["metadata"]["batch"] = batches
     # If we have jointcalling, add a single batch if not present
     elif tz.get_in(["algorithm", "jointcaller"], data):
