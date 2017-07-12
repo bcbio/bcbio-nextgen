@@ -223,8 +223,7 @@ def _update_conda_packages():
     if os.path.exists(req_file):
         os.remove(req_file)
     subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
-    subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
+    subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]]) subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
                            "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
@@ -358,7 +357,7 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                         genome=snpeff_db)
                     dl_file = os.path.basename(dl_url)
                     with utils.chdir(snpeff_base_dir):
-                        subprocess.check_call(["wget", "-c", "-O", dl_file, dl_url])
+                        subprocess.check_call(["wget", "--no-check-certificate", "-c", "-O", dl_file, dl_url])
                         subprocess.check_call(["unzip", dl_file])
                         os.remove(dl_file)
                     dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
