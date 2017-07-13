@@ -892,42 +892,55 @@ lists with multiple options:
 
 - ``tools_off`` Specify third party tools to skip as part of analysis
   pipeline. Enables turning off specific components of pipelines if not
-  needed. ``gemini`` avoids creation of a `GEMINI database`_ of variants for downstream
-  query during variant calling pipelines. Also skips vcfanno annotation unless
-  turned on explicitly with ``vcfanno`` in :ref:`config-variant-annotation`.
-  ``vardict_somatic_filter`` disables
-  running a post calling filter for VarDict to remove variants found in normal
-  samples. Without ``vardict_somatic_filter`` in paired analyses no soft
-  filtering of germline variants is performed but all high quality variants pass.
-  ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this,
-  we use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality
-  control FastQC usage. ``pbgzip`` turns off use of bgzip with multiple threads.
-  ``seqcluster`` turns off use of
-  seqcluster tool in srnaseq pipeline. ``tumoronly-prioritization`` turns off
-  attempted removal of germline variants from tumor only calls using external
-  population data sources like ExAC and 1000 genomes.
-  ``vqsr`` turns off variant quality score recalibration for all samples.
-  ``upload_alignment`` turns off final upload of large alignment files.
-- ``tools_on`` Specify functionality to enable that is off by default.
-  ``svplots`` adds additional coverage and summary plots for CNVkit and detected
-  ensemble variants. ``qualimap`` runs `Qualimap
-  <http://qualimap.bioinfo.cipf.es/>`_ (qualimap uses downsampled files and
-  numbers here are an estimation of 1e7 reads.). ``qualimap_full`` uses the full
-  bam files but it may be slow. ``bwa-mem`` forces use of bwa mem even for
-  samples with less than 70bp reads.  ``bnd-genotype`` enables genotyping
-  of breakends in Lumpy calls, which improves accuracy but can be slow. ``gvcf``
-  forces gVCF output for callers that support it (GATK HaplotypeCaller,
-  FreeBayes, Platypus). ``vqsr`` makes GATK try quality score recalibration
-  for variant filtration, even for smaller sample sizes.
-  ``vep_splicesite_annotations`` enables the use of the MaxEntScan and SpliceRegion plugin for VEP.
-  Both optional plugins add extra splice site annotations.
-  ``gemini_allvariants`` enables all variants to go into GEMINI, not only those
-  that pass filters. ``vcf2db_expand`` decompresses and expands the genotype columns in
-  the vcfanno prepared GEMINI databases, enabling standard SQL queries on
-  genotypes and depths. ``damage_filter`` annotates low frequency somatic calls
-  in INFO/DKFZBias for DNA damage artifacts using
-  `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
-  ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy calling.
+  needed:
+
+  - ``gemini`` avoids creation of a `GEMINI database`_ of variants for
+    downstream query during variant calling pipelines. Also skips vcfanno
+    annotation unless turned on explicitly with ``vcfanno`` in
+    :ref:`config-variant-annotation`.
+  - ``vqsr`` turns off variant quality score recalibration for all samples.
+  - ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this, we
+    use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality control
+    FastQC usage.
+  - ``lumpy-genotype`` skip genotyping for Lumpy samples, which can be slow in
+    the case of many structural variants.
+  - ``seqcluster`` turns off use of seqcluster tool in srnaseq pipeline.
+  - ``tumoronly-prioritization`` turns off attempted removal of germline
+    variants from tumor only calls using external population data sources like
+    ExAC and 1000 genomes.
+  - ``vardict_somatic_filter`` disables running a post calling filter for
+    VarDict to remove variants found in normal samples. Without
+    ``vardict_somatic_filter`` in paired analyses no soft filtering of germline
+    variants is performed but all high quality variants pass.
+  - ``upload_alignment`` turns off final upload of large alignment files.
+  - ``pbgzip`` turns off use of bgzip with multiple threads.
+
+- ``tools_on`` Specify functionality to enable that is off by default:
+
+  - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
+    uses downsampled files and numbers here are an estimation of 1e7 reads.).
+  - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.
+  - ``damage_filter`` annotates low frequency somatic calls in INFO/DKFZBias for
+    DNA damage artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
+  - ``vqsr`` makes GATK try quality score recalibration for variant filtration,
+    even for smaller sample sizes.
+  - ``svplots`` adds additional coverage and summary plots for CNVkit and detected
+    ensemble variants.
+  - ``bwa-mem`` forces use of bwa mem even for samples with less than 70bp
+    reads.
+  - ``gvcf`` forces gVCF output for callers that support it (GATK
+    HaplotypeCaller, FreeBayes, Platypus).
+  - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
+    SpliceRegion plugin for VEP. Both optional plugins add extra splice site
+    annotations.
+  - ``gemini_allvariants`` enables all variants to go into GEMINI, not only
+    those that pass filters.
+  - ``vcf2db_expand`` decompresses and expands the genotype columns in the
+    vcfanno prepared GEMINI databases, enabling standard SQL queries on
+    genotypes and depths.
+  - ``bnd-genotype`` enables genotyping of breakends in Lumpy calls, which
+    improves accuracy but can be slow.
+  - ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy calling.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 

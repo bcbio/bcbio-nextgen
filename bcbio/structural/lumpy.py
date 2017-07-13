@@ -148,6 +148,8 @@ def run(items):
                                             data["config"])
         if "bnd-genotype" in dd.get_tools_on(data):
             gt_vcf = _run_svtyper(sample_vcf, dd.get_align_bam(data), exclude_file, data)
+        elif "lumpy-genotype" in dd.get_tools_off(data):
+            gt_vcf = sample_vcf
         else:
             std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
             std_gt_vcf = _run_svtyper(std_vcf, dd.get_align_bam(data), exclude_file, data)
@@ -223,7 +225,10 @@ def run_svtyper_prioritize(call):
     """Run svtyper on prioritized outputs, adding in typing for breakends skipped earlier.
     """
     def _run(in_file, work_dir, data):
-        return _run_svtyper(in_file, dd.get_align_bam(data), call.get("exclude_file"), data)
+        if "lumpy-genotype" in dd.get_tools_off(data):
+            return in_file
+        else:
+            return _run_svtyper(in_file, dd.get_align_bam(data), call.get("exclude_file"), data)
     return _run
 
 def _run_svtyper(in_file, full_bam, exclude_file, data):
