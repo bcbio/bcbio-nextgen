@@ -223,7 +223,8 @@ def _update_conda_packages():
     if os.path.exists(req_file):
         os.remove(req_file)
     subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
-    subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]]) subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
+    subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
+    subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
                            "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
