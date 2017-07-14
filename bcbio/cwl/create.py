@@ -473,10 +473,16 @@ def _to_cwlfile_with_indexes(val):
 
     Identifies the top level directory and creates a tarball, avoiding
     trying to handle complex secondary setups which are not cross platform.
+
+    Skips doing this for reference files, which take up too much time and
+    space to unpack multiple times.
     """
-    dirname = os.path.dirname(val["base"])
-    assert all([x.startswith(dirname) for x in val["indexes"]])
-    return {"class": "File", "path": _directory_tarball(dirname)}
+    if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
+        return _item_to_cwldata(val["base"])
+    else:
+        dirname = os.path.dirname(val["base"])
+        assert all([x.startswith(dirname) for x in val["indexes"]])
+        return {"class": "File", "path": _directory_tarball(dirname)}
 
 def _item_to_cwldata(x):
     """"Markup an item with CWL specific metadata.

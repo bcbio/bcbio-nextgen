@@ -49,7 +49,7 @@ def normalize_missing(xs):
 
 # aligner and database indices where we list the entire directory as secondary files
 DIR_TARGETS = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
-               "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable")
+               "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable", ".fa")
 
 def unpack_tarballs(xs, data, use_subdir=True):
     """Unpack workflow tarballs into ready to use directories.
