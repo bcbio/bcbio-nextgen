@@ -33,6 +33,9 @@ script:
   # TODO: switch to use CWL docker runs instead of full bcbio/bcbio images
   #- py.test tests/bcbio_vm -v -m cwl
 
+after_failure:
+  - df -h
+
 notifications:
   email: false
   slack:
