@@ -180,6 +180,7 @@ def prep_samples(*items):
     out = []
     for data in (utils.to_single_data(x) for x in items):
         data = cwlutils.normalize_missing(data)
+        data = cwlutils.unpack_tarballs(data, data)
         data = clean_inputs(data)
         out.append([data])
     return out
@@ -217,6 +218,7 @@ def postprocess_alignment(data):
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
     data = cwlutils.normalize_missing(utils.to_single_data(data))
+    data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         ref_file = dd.get_ref_file(data)

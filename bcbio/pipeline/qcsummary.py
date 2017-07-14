@@ -63,7 +63,8 @@ def pipeline_summary(data):
         work_bam = None
     if dd.get_ref_file(data) is not None and work_bam:
         logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
-        data["summary"] = _run_qc_tools(work_bam, data)
+        work_data = cwlutils.unpack_tarballs(utils.deepish_copy(data), data)
+        data["summary"] = _run_qc_tools(work_bam, work_data)
         if (len(dd.get_algorithm_qc(data)) == 1 and "output_cwl_keys" in data):
             data["summary"]["qc"] = data["summary"]["qc"].get(dd.get_algorithm_qc(data)[0])
     return [[data]]

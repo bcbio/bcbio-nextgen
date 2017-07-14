@@ -275,7 +275,9 @@ def get_db(data):
     snpeff_db = utils.get_in(data, ("genome_resources", "aliases", "snpeff"))
     snpeff_base_dir = None
     if snpeff_db:
-        snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
+        snpeff_base_dir = utils.get_in(data, ("reference", "snpeff"))
+        if not isinstance(snpeff_base_dir, basestring) and os.path.isdir(snpeff_base_dir):
+            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace("_", ".")))

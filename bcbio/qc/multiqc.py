@@ -15,6 +15,7 @@ import toolz as tz
 import yaml
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
 from bcbio.provenance import do
@@ -36,14 +37,15 @@ def summary(*samples):
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     file_list = os.path.join(out_dir, "list_files.txt")
-    samples = _report_summary(samples, os.path.join(out_dir, "report"))
+    work_samples = [cwlutils.unpack_tarballs(utils.deepish_copy(x), x) for x in samples]
+    work_samples = _report_summary(work_samples, os.path.join(out_dir, "report"))
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
-            in_files = _get_input_files(samples, out_dir, tx_out)
-            in_files += _merge_metrics(samples, out_dir)
+            in_files = _get_input_files(work_samples, out_dir, tx_out)
+            in_files += _merge_metrics(work_samples, out_dir)
             if _one_exists(in_files):
                 with utils.chdir(out_dir):
-                    _create_config_file(out_dir, samples)
+                    _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
                         export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])

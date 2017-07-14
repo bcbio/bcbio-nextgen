@@ -138,8 +138,9 @@ def compare_to_rm(data):
                                    toval_data)
         rm_interval_file = bedutils.clean_file(rm_interval_file, toval_data, prefix="validateregions-",
                                                bedprep_dir=utils.safe_makedir(os.path.join(base_dir, "bedprep")))
-        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(data), data.get("genome_build"), base_dir, data)
-        rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(data),
+        rm_file = naming.handle_synonyms(rm_file, dd.get_ref_file(toval_data), data.get("genome_build"),
+                                         base_dir, data)
+        rm_interval_file = (naming.handle_synonyms(rm_interval_file, dd.get_ref_file(toval_data),
                                                    data.get("genome_build"), base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
