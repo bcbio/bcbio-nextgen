@@ -21,7 +21,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
 from bcbio.provenance import system
 from bcbio.qc import multiqc, qsignature
 from bcbio.variation import (bamprep, genotype, ensemble, joint,
-                             multi, population, recalibrate, validate, vcfutils)
+                             multi, population, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
@@ -245,12 +245,6 @@ def recalibrate_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(sample.recalibrate_sample, *args))
-
-@require(recalibrate)
-def prep_recal(*args):
-    args = ipython.unzip_args(args)
-    with _setup_logging(args) as config:
-        return ipython.zip_args(apply(recalibrate.prep_recal, *args))
 
 @require(multi)
 def split_variants_by_sample(*args):

@@ -242,15 +242,8 @@ def postprocess_alignment(data):
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
             data = clean_inputs(data)
-        data = _recal_no_markduplicates(data)
+        data = recalibrate.prep_recal(data)
     return [[data]]
-
-def _recal_no_markduplicates(data):
-    orig_config = copy.deepcopy(data["config"])
-    data["config"]["algorithm"]["mark_duplicates"] = False
-    data = recalibrate.prep_recal(data)[0][0]
-    data["config"] = orig_config
-    return data
 
 def _merge_out_from_infiles(in_files):
     """Generate output merged file name from set of input files.

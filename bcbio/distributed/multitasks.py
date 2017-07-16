@@ -13,7 +13,7 @@ from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
 from bcbio.qc import multiqc, qsignature
 from bcbio.variation import (bamprep, genotype, ensemble,
-                             joint, multi, population, recalibrate, validate,
+                             joint, multi, population, validate,
                              vcfutils)
 
 @utils.map_wrap
@@ -164,10 +164,6 @@ def merge_split_alignments(*args):
 @utils.map_wrap
 def piped_bamprep(*args):
     return bamprep.piped_bamprep(*args)
-
-@utils.map_wrap
-def prep_recal(*args):
-    return recalibrate.prep_recal(*args)
 
 @utils.map_wrap
 def split_variants_by_sample(*args):
