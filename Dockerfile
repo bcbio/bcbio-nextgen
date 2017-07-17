@@ -1,8 +1,6 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# v1.0.0a -- https://github.com/chapmanb/bcbio-nextgen/commit/33a9ed5
-
 # Setup a base system 
 RUN apt-get update && \
     apt-get install -y curl wget git unzip tar gzip bzip2 xz-utils pigz && \
@@ -18,8 +16,10 @@ RUN apt-get update && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
       --isolate --nodata -u development --tooldir=/usr/local && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/conda install -y nomkl && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate --tooldir=/usr/local --tools && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y mysql && \
 
 # setup paths
     echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
