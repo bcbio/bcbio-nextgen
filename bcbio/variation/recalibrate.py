@@ -9,20 +9,17 @@ import os
 
 import toolz as tz
 
-from bcbio import bam, broad
+from bcbio import bam, broad, utils
 from bcbio.log import logger
-from bcbio.utils import file_exists
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.realign import has_aligned_reads
 
-# ## GATK recalibration
-
 def prep_recal(data):
-    """Perform a GATK recalibration of the sorted aligned BAM, producing recalibrated BAM.
+    """Do pre-BQSR recalibration, calculation of recalibration tables.
     """
     if dd.get_recalibrate(data) in [True, "gatk"]:
-        logger.info("Recalibrating %s with GATK" % str(dd.get_sample_name(data)))
+        logger.info("Prepare GATK BQSR tables: %s " % str(dd.get_sample_name(data)))
         dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
         if not dbsnp_file:
             logger.info("Skipping GATK BaseRecalibrator because no VCF file of known variants was found.")
@@ -31,15 +28,43 @@ def prep_recal(data):
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dd.get_align_bam(data),
                                                      dd.get_ref_file(data), dd.get_platform(data),
                                                      dbsnp_file, dd.get_variant_regions(data), data)
+    elif dd.get_recalibrate(data):
+        raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
     return data
 
-# ## Identify recalibration information
+def apply_recal(data):
+    """Apply recalibration tables to the sorted aligned BAM, producing recalibrated BAM.
+    """
+    if dd.get_recalibrate(data) in [True, "gatk"]:
+        logger.info("Applying GATK BQSR recalibration: %s " % str(dd.get_sample_name(data)))
+        data["work_bam"] = _gatk_apply_bqsr(data)
+    elif dd.get_recalibrate(data):
+        raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
+    return data
+
+def _get_ref_twobit(data):
+    """Temporary functionality to retrieve 2bit references.
+
+    GATK4 requires UCSC 2bit reference genomes for parallel processing.
+    These need to be added globally to bcbio for retrieval. This is a
+    short term workaround.
+    """
+    ref_file = dd.get_ref_file(data)
+    twobit_ref = os.path.join(os.path.dirname(ref_file), os.pardir, "ucsc",
+                                "%s.2bit" % utils.splitext_plus(os.path.basename(ref_file))[0])
+    assert os.path.exists(twobit_ref), "GATK4 BQSR requires UCSC 2bit references"
+    return twobit_ref
+
+# ## GATK recalibration
 
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                             dbsnp_file, intervals, data):
     """Step 1 of GATK recalibration process, producing table of covariates.
 
-    Large whole genome BAM files take an excessively long time to recalibrate and
+    For GATK 4 we use local multicore spark runs:
+    https://github.com/broadinstitute/gatk/issues/2345
+
+    For GATK3, Large whole genome BAM files take an excessively long time to recalibrate and
     the extra inputs don't help much beyond a certain point. See the 'Downsampling analysis'
     plots in the GATK documentation:
 
@@ -49,34 +74,52 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     """
     target_counts = 1e8  # 100 million reads per read group, 20x the plotted max
     out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
-    if not file_exists(out_file):
+    if not utils.file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
-            with tx_tmpdir(data) as tmp_dir:
-                with file_transaction(data, out_file) as tx_out_file:
-                    gatk_type = broad_runner.gatk_type()
-                    assert gatk_type in ["restricted", "gatk4"], \
-                        "Require full version of GATK 2.4+, or GATK4 for BQSR"
-                    params = ["-T", "BaseRecalibrator",
-                              "-I", dup_align_bam,
-                              "-R", ref_file,
-                              ]
+            with file_transaction(data, out_file) as tx_out_file:
+                gatk_type = broad_runner.gatk_type()
+                assert gatk_type in ["restricted", "gatk4"], \
+                    "Require full version of GATK 2.4+ or GATK4 for BQSR"
+                params = ["-I", dup_align_bam]
+                if gatk_type == "gatk4":
+                    params += ["-T", "BaseRecalibratorSpark",
+                                "--sparkMaster", "local[%s]" % dd.get_num_cores(data),
+                                "--output", tx_out_file, "--reference", _get_ref_twobit(data)]
+                else:
+                    params += ["-T", "BaseRecalibrator",
+                                "-o", tx_out_file, "-R", ref_file]
                     downsample_pct = bam.get_downsample_pct(dup_align_bam, target_counts, data)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
-                                   "--downsampling_type", "ALL_READS"]
-                    if gatk_type == "gatk4":
-                        params += ["--output", tx_out_file]
-                    else:
-                        params += ["-o", tx_out_file]
-                        if platform.lower() == "solid":
-                            params += ["--solid_nocall_strategy", "PURGE_READ",
-                                    "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
-                    if dbsnp_file:
-                        params += ["--knownSites", dbsnp_file]
-                    if intervals:
-                        params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
-                    broad_runner.run_gatk(params, tmp_dir)
+                                "--downsampling_type", "ALL_READS"]
+                    if platform.lower() == "solid":
+                        params += ["--solid_nocall_strategy", "PURGE_READ",
+                                "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
+                if dbsnp_file:
+                    params += ["--knownSites", dbsnp_file]
+                if intervals:
+                    params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
+                broad_runner.run_gatk(params, os.path.dirname(tx_out_file))
         else:
             with open(out_file, "w") as out_handle:
                 out_handle.write("# No aligned reads")
+    return out_file
+
+def _gatk_apply_bqsr(data):
+    """Parallel BQSR support for GATK4.
+    """
+    in_file = dd.get_work_bam(data)
+    out_file = "%s-recal.bam" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            broad_runner = broad.runner_from_config(data["config"])
+            gatk_type = broad_runner.gatk_type()
+            if gatk_type == "gatk4":
+                params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % dd.get_num_cores(data),
+                          "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"]]
+            else:
+                params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
+                          "-BQSR", data["prep_recal"], "-o", tx_out_file]
+            broad_runner.run_gatk(params, os.path.dirname(tx_out_file))
+    bam.index(out_file, data["config"])
     return out_file

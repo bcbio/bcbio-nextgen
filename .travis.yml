@@ -14,12 +14,15 @@ before_install:
 
 install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
+  - df -h
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
   - conda install --yes -c bioconda -c conda-forge bcbio-nextgen-vm bcbio-nextgen -q
   - conda install --yes -c bioconda -c conda-forge cwltool
   # Get docker container
+  - df -h
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
   # Update to latest bcbio-nextgen code externally and within the container
+  - df -h
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*
   - ~/install/bcbio-vm/anaconda/bin/python setup.py install
