@@ -485,8 +485,10 @@ Alignment postprocessing
    <https://github.com/gt1/biobambam>`_.
    Uses `samblaster <https://github.com/GregoryFaust/samblaster>`_ as an
    alternative if you have paired reads and specifying ``lumpy`` as an ``svcaller``.
--  ``recalibrate`` Perform GATK's base quality score recalibration on the
-   aligned BAM file. Defaults to false, no recalibration. [false, gatk]
+-  ``recalibrate`` Perform base quality score recalibration on the
+   aligned BAM file, adjusting quality scores to reflect alignments and known
+   variants. Supports both GATK and Sentieon recalibration.
+   Defaults to false, no recalibration. [false, gatk, sentieon]
 -  ``realign`` Perform GATK's realignment around indels on the aligned BAM
    file. Defaults to no realignment since realigning callers like FreeBayes and
    GATK HaplotypeCaller handle this as part of the calling process. [false, gatk]
@@ -548,12 +550,14 @@ Variant calling
 ===============
 
 -  ``variantcaller`` Variant calling algorithm. Can be a list of
-   multiple options or false to skip [false, freebayes, gatk-haplotype, platypus,
-   mutect, mutect2, scalpel, vardict, varscan, samtools, gatk]
+   multiple options or false to skip [false, freebayes, gatk-haplotype,
+   haplotyper, platypus, mutect, mutect2, scalpel, tnhaplotyper, tnscope,
+   vardict, varscan, samtools, gatk]
 
     - Paired (typically somatic, tumor-normal) variant calling is currently
       supported by vardict, freebayes, mutect2, mutect (see disclaimer below),
-      scalpel (indels only) and varscan. See the pipeline documentation on
+      scalpel (indels only), tnhaplotyper (Sentieon), tnscope (Sentieon) and
+      varscan. See the pipeline documentation on
       :ref:`cancer-calling` for details on pairing tumor and normal samples.
     - You can generate both somatic and germline calls for paired tumor-normal
       samples using different sets of callers. The pipeline documentation on

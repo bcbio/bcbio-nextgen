@@ -14,12 +14,13 @@ from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.realign import has_aligned_reads
+from bcbio.variation import sentieon
 
 def prep_recal(data):
     """Do pre-BQSR recalibration, calculation of recalibration tables.
     """
     if dd.get_recalibrate(data) in [True, "gatk"]:
-        logger.info("Prepare GATK BQSR tables: %s " % str(dd.get_sample_name(data)))
+        logger.info("Prepare BQSR tables with GATK: %s " % str(dd.get_sample_name(data)))
         dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
         if not dbsnp_file:
             logger.info("Skipping GATK BaseRecalibrator because no VCF file of known variants was found.")
@@ -28,6 +29,9 @@ def prep_recal(data):
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dd.get_align_bam(data),
                                                      dd.get_ref_file(data), dd.get_platform(data),
                                                      dbsnp_file, dd.get_variant_regions(data), data)
+    elif dd.get_recalibrate(data) == "sentieon":
+        logger.info("Prepare BQSR tables with sentieon: %s " % str(dd.get_sample_name(data)))
+        data["prep_recal"] = sentieon.bqsr_table(data)
     elif dd.get_recalibrate(data):
         raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
     return data
@@ -36,8 +40,11 @@ def apply_recal(data):
     """Apply recalibration tables to the sorted aligned BAM, producing recalibrated BAM.
     """
     if dd.get_recalibrate(data) in [True, "gatk"]:
-        logger.info("Applying GATK BQSR recalibration: %s " % str(dd.get_sample_name(data)))
+        logger.info("Applying BQSR recalibration with GATK: %s " % str(dd.get_sample_name(data)))
         data["work_bam"] = _gatk_apply_bqsr(data)
+    elif dd.get_recalibrate(data) == "sentieon":
+        logger.info("Applying BQSR recalibration with sentieon: %s " % str(dd.get_sample_name(data)))
+        data["work_bam"] = sentieon.apply_bqsr(data)
     elif dd.get_recalibrate(data):
         raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
     return data

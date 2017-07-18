@@ -107,3 +107,39 @@ def run_haplotyper(align_bams, items, ref_file, assoc_files,
                    "{bams} {interval} --algo Haplotyper {dbsnp} {tx_out_file}")
             do.run(cmd.format(**locals()), "Sentieon TNhaplotyper")
     return out_file
+
+def bqsr_table(data):
+    """Generate recalibration tables as inputs to BQSR.
+    """
+    in_file = dd.get_align_bam(data)
+    out_file = "%s-recal-table.txt" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            assoc_files = dd.get_variation_resources(data)
+            known = "-k %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
+            license = license_export(data)
+            cores = dd.get_num_cores(data)
+            ref_file = dd.get_ref_file(data)
+            cmd = ("{license}sentieon driver -t {cores} -r {ref_file} "
+                   "-i {in_file} --algo QualCal {known} {tx_out_file}")
+            do.run(cmd.format(**locals()), "Sentieon QualCal generate table")
+    return out_file
+
+def apply_bqsr(data):
+    """Apply recalibration, producing a updated BAM file.
+    """
+    in_file = dd.get_align_bam(data)
+    out_table_file = "%s-recal-table-post.txt" % utils.splitext_plus(in_file)[0]
+    out_file = "%s-recal.bam" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file, out_table_file) as (tx_out_file, tx_table_file):
+            assoc_files = dd.get_variation_resources(data)
+            known = "-k %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
+            license = license_export(data)
+            cores = dd.get_num_cores(data)
+            ref_file = dd.get_ref_file(data)
+            cmd = ("{license}sentieon driver -t {cores} -r {ref_file} "
+                   "-i {in_file} --algo QualCal {known} {tx_table_file} "
+                   "--algo ReadWriter {tx_out_file}")
+            do.run(cmd.format(**locals()), "Sentieon QualCal apply recalibration")
+    return out_file
