@@ -41,6 +41,7 @@ RUN apt-get update && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/qt* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/mysql-5.* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/hap.py.* && \
+    rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/scipy-0.19.1-np113py27_nomkl_0 && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/bioconductor-org.*db* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/bioconductor-go.*db* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/zulu*.tar.gz && \

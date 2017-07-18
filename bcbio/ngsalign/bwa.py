@@ -63,7 +63,7 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
        rm -f $base.hla.HLA*gz
     """
     alt_file = ref_file + ".alt"
-    if utils.file_exists(alt_file):
+    if utils.file_exists(alt_file) and dd.get_hlacaller(data):
         bwakit_dir = os.path.dirname(os.path.realpath(utils.which("run-bwamem")))
         hla_base = os.path.join(utils.safe_makedir(os.path.join(os.path.dirname(out_file), "hla")),
                                 os.path.basename(out_file) + ".hla")
