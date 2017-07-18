@@ -21,7 +21,8 @@ RUN apt-get update && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools && \
     # Remove larger packages not used consistently in bcbio Docker runs
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y mysql && \
-    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y bioconductor-org.hs.eg.db bioconductor-org.mm.eg.db && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y hap.py && \
+    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y bioconductor-org.hs.eg.db bioconductor-org.mm.eg.db bioconductor-go.db && \
 
 # setup paths
     echo 'export PATH=/usr/local/bin:$PATH' >> /etc/profile.d/bcbio.sh && \
@@ -39,7 +40,9 @@ RUN apt-get update && \
     # Remove large conda packages left behind
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/qt* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/mysql-5.* && \
+    rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/hap.py.* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/bioconductor-org.*db* && \
+    rm -rf /usr/local/share/bcbio-nextgen/anaconda/pkgs/bioconductor-go.*db* && \
     rm -rf /usr/local/share/bcbio-nextgen/anaconda/zulu*.tar.gz && \
     rm -rf /usr/local/.git && \
     rm -rf /.cpanm && \
