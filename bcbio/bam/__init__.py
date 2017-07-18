@@ -28,7 +28,7 @@ def is_paired(bam_file):
     bam_file = objectstore.cl_input(bam_file)
     sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "{sambamba} view -h {bam_file} | head -50000 | "
+           "{sambamba} view {bam_file} | head -50000 | "
            "{sambamba} view -S -F paired /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
