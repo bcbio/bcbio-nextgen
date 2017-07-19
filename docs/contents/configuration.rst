@@ -978,9 +978,14 @@ selects variants represented in at least a specified number of callers::
       use_filtered: false
 
 This example selects variants present in 2 out of the 4 callers and does not use
-filtered calls (the default behavior).
-`bcbio.variation.recall`_ implements this approach, which handles speed and file
-sorting limitations in the `bcbio.variation`_ approach.
+filtered calls (the default behavior). Because of the difficulties of producing
+a unified FORMAT/genotype field across callers, the ensemble outputs contains a
+mix of outputs from the different callers. It picks a representative sample in
+the order of specified caller, so in the example above would have a MuTect2 call
+if present, otherwise a VarScan call if present, otherwise a FreeBayes call.
+This may require custom normalization scripts during post-processing when using
+these calls. `bcbio.variation.recall`_ implements this approach, which handles
+speed and file sorting limitations in the `bcbio.variation`_ approach.
 
 This older approach uses the `bcbio.variation`_
 toolkit to perform the consolidation. An example configuration in the
