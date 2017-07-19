@@ -14,6 +14,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio import bam
+from bcbio.log import logger
 
 def run_salmon_bam(data):
     samplename = dd.get_sample_name(data)
@@ -60,7 +61,7 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     salmon = config_utils.get_program("salmon", dd.get_config(data))
     libtype = sailfish._libtype_string(fq1, fq2, strandedness)
     num_cores = dd.get_num_cores(data)
-    index = salmon_index(gtf_file, ref_file, data, salmon_dir)
+    index = salmon_index(gtf_file, ref_file, data, os.path.dirname(salmon_dir))
     resources = config_utils.get_resources("salmon", dd.get_config(data))
     params = ""
     if resources.get("options") is not None:
@@ -135,6 +136,7 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
     tmpdir = dd.get_tmp_dir(data)
     out_file = os.path.join(out_dir, "versionInfo.json")
     if file_exists(out_file):
+        logger.info("Transcriptome index for %s detected, skipping building." % gtf_fa)
         return out_dir
     files = dd.get_input_sequence_files(data)
     readlength = bam.fastq.estimate_read_length(files[0])
