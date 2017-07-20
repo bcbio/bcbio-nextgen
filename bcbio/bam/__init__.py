@@ -19,6 +19,26 @@ from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 
+def is_empty(bam_file):
+    """Determine if a BAM file is empty
+    """
+
+    bam_file = objectstore.cl_input(bam_file)
+    sambamba = config_utils.get_program("sambamba", {})
+    cmd = ("set -o pipefail; "
+           "{sambamba} view {bam_file} | head -1 | wc -l")
+    p = subprocess.Popen(cmd.format(**locals()), shell=True,
+                         executable=do.find_bash(),
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
+    stdout, stderr = p.communicate()
+    stderr = stderr.strip()
+    if ((p.returncode == 0 or p.returncode == 141) and
+         (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
+        return int(stdout) == 0
+    else:
+        raise ValueError("Failed to check empty status of BAM file: %s" % str(stderr))
+
 def is_paired(bam_file):
     """Determine if a BAM file has paired reads.
 
