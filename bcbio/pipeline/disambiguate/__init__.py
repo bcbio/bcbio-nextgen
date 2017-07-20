@@ -1,12 +1,13 @@
 """Handle disambiguation of reads from a chimeric input, splitting by organism.
 
 Given specification of mixed input samples, splits a sample into multiple
-sub-samples for alignment to individual genomes, then runs third-party disambiguation
-scripts to reconcile.
+sub-samples for alignment to individual genomes, then runs third-party
+disambiguation scripts to reconcile.
 
-Uses disambiguation scripts contributed by AstraZeneca, incorporated into bcbio-nextgen:
-https://github.com/mjafin/disambiguate
+Uses disambiguation scripts contributed by AstraZeneca, incorporated into
+bcbio-nextgen: https://github.com/mjafin/disambiguate
 """
+
 from __future__ import print_function
 import collections
 import copy
