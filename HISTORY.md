@@ -1,5 +1,9 @@
 ## 1.0.5 (in progress)
 
+- Separate post alignment recalibration and realignment. Recalibration now
+  occurs multicore to support GATK4 implementation. We generally recommend
+  skipping realignment.
+- Multicore base quality score recalibration with GATK4 and Sentieon.
 - GATK4: fix option usage for gVCF creation with HaplotypeCaller
 - Add `tools_off: [lumpy-genotype]` option to skip Lumpy genotyping.
 - CWL/WDL: use single file tarballs for complex collections of files like

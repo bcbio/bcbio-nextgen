@@ -21,29 +21,19 @@ def region_to_gatk(region):
         return region
 
 def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
-    """Use GATK to extract reads from full BAM file, recalibrating if configured.
+    """Use GATK to extract reads from full BAM file.
     """
     requires_gatkfull = False
     args = ["-T", "PrintReads",
             "-L", region_to_gatk(region),
             "-R", dd.get_ref_file(data),
             "-I", data["work_bam"]]
-    if prep_params["recal"] == "gatk":
-        if "prep_recal" in data and _recal_has_reads(data["prep_recal"]):
-            requires_gatkfull = True
-            args += ["-BQSR", data["prep_recal"]]
-    elif prep_params["recal"]:
-        raise NotImplementedError("Recalibration method %s" % prep_params["recal"])
     if requires_gatkfull:
         runner = broad.runner_from_config(data["config"])
         return runner.cl_gatk(args, tmp_dir)
     else:
         jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
         return broad.gatk_cmd("gatk-framework", jvm_opts, args)
-
-def _recal_has_reads(in_file):
-    with open(in_file) as in_handle:
-        return not in_handle.readline().startswith("# No aligned reads")
 
 def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """Retrieve the commandline for streaming input into preparation step.
@@ -61,13 +51,13 @@ def _piped_realign_gatk(data, region, cl, out_base_file, tmp_dir, prep_params):
             cmd = "{cl} -o {tx_out_file}".format(**locals())
             do.run(cmd, "GATK re-alignment {0}".format(region), data)
     bam.index(pa_bam, data["config"])
-    recal_file = realign.gatk_realigner_targets(broad_runner, pa_bam, dd.get_ref_file(data), data["config"],
+    realn_file = realign.gatk_realigner_targets(broad_runner, pa_bam, dd.get_ref_file(data), data["config"],
                                                 region=region_to_gatk(region),
                                                 known_vrns=dd.get_variation_resources(data))
-    recal_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, dd.get_ref_file(data),
-                                                 recal_file, tmp_dir, region=region_to_gatk(region),
+    realn_cl = realign.gatk_indel_realignment_cl(broad_runner, pa_bam, dd.get_ref_file(data),
+                                                 realn_file, tmp_dir, region=region_to_gatk(region),
                                                  known_vrns=dd.get_variation_resources(data))
-    return pa_bam, recal_cl
+    return pa_bam, realn_cl
 
 def _cleanup_tempfiles(data, tmp_files):
     for tmp_file in tmp_files:
@@ -102,15 +92,13 @@ def _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir):
 def _get_prep_params(data):
     """Retrieve configuration parameters with defaults for preparing BAM files.
     """
-    recal_param = dd.get_recalibrate(data)
-    recal_param = "gatk" if recal_param is True else recal_param
     realign_param = dd.get_realign(data)
     realign_param = "gatk" if realign_param is True else realign_param
-    return {"recal": recal_param, "realign": realign_param}
+    return {"realign": realign_param}
 
 def _need_prep(data):
     prep_params = _get_prep_params(data)
-    return prep_params["recal"] or prep_params["realign"]
+    return prep_params["realign"]
 
 def _piped_bamprep_region(data, region, out_file, tmp_dir):
     """Do work of preparing BAM input file on the selected region.
@@ -119,12 +107,12 @@ def _piped_bamprep_region(data, region, out_file, tmp_dir):
         prep_params = _get_prep_params(data)
         _piped_bamprep_region_gatk(data, region, prep_params, out_file, tmp_dir)
     else:
-        raise ValueError("No recalibration or realignment specified")
+        raise ValueError("No realignment specified")
 
 def piped_bamprep(data, region=None, out_file=None):
     """Perform full BAM preparation using pipes to avoid intermediate disk IO.
 
-    Handles recalibration and realignment of original BAMs.
+    Handles realignment of original BAMs.
     """
     data["region"] = region
     if not _need_prep(data):
