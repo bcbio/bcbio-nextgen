@@ -147,6 +147,7 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                            "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x,"
                             """ "{normal_name}", "{tumor_name}")' | """
                            "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles | "
+                           """{py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' | """
                            """bcftools filter -m + -s REJECT -e "SS != '.' && SS != '2'" 2> /dev/null | """
                            "{py_cl} -x 'bcbio.variation.varscan.spv_freq_filter(x, 1)' | "
                            "bgzip -c > {tx_fix_file}")
@@ -312,6 +313,7 @@ def _varscan_work(align_bams, ref_file, items, target_regions, out_file):
         cmd = ("{export} {mpileup} | {remove_zerocoverage} | "
                "ifne varscan {jvm_opts} mpileup2cns {opts} "
                "--vcf-sample-list {sample_list} --min-var-freq {min_af} --output-vcf --variants | "
+               """{py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' | """
                "{py_cl} -x 'bcbio.variation.varscan.fix_varscan_output(x)' | "
                "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles > {out_file}")
         do.run(cmd.format(**locals()), "Varscan", None,
