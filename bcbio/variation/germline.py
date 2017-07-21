@@ -5,8 +5,6 @@ in addition to somatic variants. Different callers distinguish germline calls
 in different ways. This unifies the output and extracts into a separate VCF
 with germline calls included.
 """
-import contextlib
-
 import cyvcf2
 
 from bcbio import utils

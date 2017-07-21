@@ -1,7 +1,6 @@
 """Deal with sra Id names as input"""
 import os
 import glob
-import shutil
 import subprocess
 import json
 import re

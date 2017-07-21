@@ -1,17 +1,14 @@
 import os
 from collections import namedtuple
 import pandas as pd
-import numpy as np
 
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.utils import (file_exists, safe_makedir, is_gzipped, rbind, partition,
+from bcbio.utils import (file_exists, safe_makedir, is_gzipped,
                          R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
-from bcbio.rnaseq import gtf
 from bcbio.bam import fastq
-from bcbio.log import logger
 
 def run_sailfish(data):
     samplename = dd.get_sample_name(data)

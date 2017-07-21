@@ -8,7 +8,6 @@ import operator
 import subprocess
 from xml.etree.ElementTree import ElementTree
 
-import logbook
 import requests
 import yaml
 

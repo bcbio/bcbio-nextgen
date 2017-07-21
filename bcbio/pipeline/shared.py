@@ -2,7 +2,6 @@
 """
 import os
 from contextlib import contextmanager
-import fileinput
 import functools
 import tempfile
 
