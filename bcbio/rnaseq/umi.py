@@ -6,13 +6,11 @@ https://github.com/vals/umis
 """
 import pandas as pd
 import scipy.io
-import json
 import os
 import copy
 import glob
 import sys
-from itertools import repeat, chain
-from collections import namedtuple
+from itertools import repeat
 
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils

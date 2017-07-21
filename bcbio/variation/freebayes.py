@@ -3,9 +3,7 @@
 https://github.com/ekg/freebayes
 """
 
-from distutils.version import LooseVersion
 import os
-import subprocess
 import sys
 
 import toolz as tz

@@ -1,6 +1,5 @@
 """Function to counts on the fly the spike in sequences given as a parameter in the yaml file"""
 import os
-import sys
 import pandas as pd
 
 # from bcbio.rnaseq import sailfish

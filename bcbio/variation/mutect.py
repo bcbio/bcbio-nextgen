@@ -12,7 +12,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.shared import subset_variant_regions
-from bcbio.variation import bamprep, bedutils, gatk, vcfutils, scalpel
+from bcbio.variation import bamprep, bedutils, vcfutils, scalpel
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio.log import logger

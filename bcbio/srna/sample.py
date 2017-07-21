@@ -4,7 +4,6 @@ import glob
 import os.path as op
 import shutil
 import subprocess
-import json
 from collections import Counter
 from contextlib import closing
 from distutils.version import LooseVersion

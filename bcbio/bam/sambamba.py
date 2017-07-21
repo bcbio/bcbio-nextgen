@@ -4,7 +4,6 @@ from bcbio import bam, utils
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
-from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 
 

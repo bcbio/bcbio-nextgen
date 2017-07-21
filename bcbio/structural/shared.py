@@ -12,11 +12,10 @@ import toolz as tz
 import yaml
 
 from bcbio import bam, utils
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.bam import callable
-from bcbio.ngsalign import postalign
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import shared, config_utils
+from bcbio.pipeline import shared
 from bcbio.provenance import do
 from bcbio.structural import regions
 from bcbio.variation import bedutils, population

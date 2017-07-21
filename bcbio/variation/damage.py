@@ -5,11 +5,8 @@ INFO level annotations of low frequency variants:
 
 https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2017-01-31-damage-filters.md
 """
-import contextlib
 import os
 import shutil
-
-import cyvcf2
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction

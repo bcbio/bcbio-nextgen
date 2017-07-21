@@ -5,7 +5,6 @@ https://github.com/tobiasrausch/delly
 import copy
 import itertools
 import os
-import re
 import subprocess
 
 import toolz as tz

@@ -4,12 +4,10 @@ Uses lumpyexpress for lumpy integration and samblaster for read preparation:
 https://github.com/GregoryFaust/samblaster
 https://github.com/arq5x/lumpy-sv
 """
-from distutils.version import LooseVersion
 import contextlib
 import os
 import sys
 import shutil
-import subprocess
 
 import vcf
 

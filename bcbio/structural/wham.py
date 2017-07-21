@@ -12,7 +12,6 @@ from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import region
 from bcbio.structural import shared
 from bcbio.variation import effects, vcfutils
 from bcbio.provenance import do

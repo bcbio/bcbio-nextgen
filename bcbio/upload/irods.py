@@ -8,10 +8,7 @@
       folder: absolute parent path in iRODS repository
       resource: (optional) iRODS resource name, if other than default
 """
-import datetime
-import email
 import os
-import sys
 
 from bcbio.provenance import do
 from bcbio.upload import filesystem
