@@ -1,9 +1,11 @@
-"""Perform joint genotyping using GATK HaplotypeCaller with gVCF inputs
+"""Perform joint genotyping using GATK HaplotypeCaller with gVCF inputs.
 
-Handles merging of large batch sizes using CombineGVCFs and
-joint variant calling with GenotypeGVCFs.
+For GATK4, merges into a shared database using GenomicsDBImport. For GATK3
+handles merging of large batch sizes using CombineGVCFs.
+For both, follows this with joint variant calling using GenotypeGVCFs.
 """
 import math
+import os
 import toolz as tz
 
 from bcbio import broad, utils
@@ -14,12 +16,57 @@ from bcbio.variation import bamprep, vcfutils
 def run_region(data, region, vrn_files, out_file):
     """Perform variant calling on gVCF inputs in a specific genomic region.
     """
-    vrn_files = _batch_gvcfs(data, region, vrn_files, dd.get_ref_file(data), out_file)
-    return _run_genotype_gvcfs(data, region, vrn_files, dd.get_ref_file(data), out_file)
+    broad_runner = broad.runner_from_config(data["config"])
+    if broad_runner.gatk_type() == "gatk4":
+        genomics_db = _run_genomicsdb_import(vrn_files, region, out_file, data)
+        return _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data)
+    else:
+        vrn_files = _batch_gvcfs(data, region, vrn_files, dd.get_ref_file(data), out_file)
+        return _run_genotype_gvcfs_gatk3(data, region, vrn_files, dd.get_ref_file(data), out_file)
 
-# ## gVCF joint genotype calling
+# ## gVCF joint calling -- GATK4
 
-def _run_genotype_gvcfs(data, region, vrn_files, ref_file, out_file):
+def _run_genomicsdb_import(vrn_files, region, out_file, data):
+    """Create a GenomicsDB reference for all the variation files: GATK4.
+
+    Not yet tested as scale, need to explore --batchSize to reduce memory
+    usage if needed.
+    """
+    out_dir = "%s_genomicsdb" % utils.splitext_plus(out_file)[0]
+    if not os.path.exists(out_dir):
+        with file_transaction(data, out_dir) as tx_out_dir:
+            broad_runner = broad.runner_from_config(data["config"])
+            params = ["-T", "GenomicsDBImport",
+                      "--genomicsDBWorkspace", tx_out_dir,
+                      "-L", bamprep.region_to_gatk(region)]
+            for vrn_file in vrn_files:
+                params += ["--variant", vrn_file]
+            cores = dd.get_cores(data)
+            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
+            broad_runner.run_gatk(params, memscale)
+    return out_dir
+
+def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
+    """GenotypeGVCFs from a merged GenomicsDB input: GATK4.
+
+    No core scaling -- not yet supported in GATK4.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            broad_runner = broad.runner_from_config(data["config"])
+            params = ["-T", "GenotypeGVCFs",
+                      "--variant", "gendb://%s" % genomics_db,
+                      "-R", dd.get_ref_file(data),
+                      "--output", tx_out_file,
+                      "-L", bamprep.region_to_gatk(region)]
+            cores = dd.get_cores(data)
+            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
+            broad_runner.run_gatk(params, memscale)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+# ## gVCF joint genotype calling -- GATK3
+
+def _run_genotype_gvcfs_gatk3(data, region, vrn_files, ref_file, out_file):
     """Performs genotyping of gVCFs into final VCF files.
     """
     if not utils.file_exists(out_file):

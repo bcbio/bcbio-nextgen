@@ -316,7 +316,10 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+        # GATK does not support naive concatentation since headers can be different across
+        # samples for FORMAT attributes; PID is the most common inconsistently available
+        naive = config["algorithm"]["variantcaller"] not in ["gatk", "gatk-haplotype", "haplotyper"]
+        out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=naive)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file

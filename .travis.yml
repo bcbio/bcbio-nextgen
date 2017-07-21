@@ -18,11 +18,13 @@ install:
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen -q
   - conda install --yes -c conda-forge -c bioconda cwltool
-  # Clean up space
-  - conda clean --yes --tarballs
-  - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
-  - rm -rf ~/install/bcbio-vm/anaconda/pkgs/mkl-*
+  # Clean up space with external tools we don't need for tests
+  - conda clean --yes --tarballs --index-cache
+  - conda remove --force qt openjdk nodejs
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
+  - rm -rf ~/install/bcbio-vm/anaconda/pkgs/openjdk-*
+  - rm -rf ~/install/bcbio-vm/anaconda/pkgs/nodejs-*
+  - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
   - df -h
   # Get docker container
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools

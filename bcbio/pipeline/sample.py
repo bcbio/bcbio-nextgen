@@ -243,6 +243,7 @@ def postprocess_alignment(data):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed
             data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
+        data = recalibrate.apply_recal(data)
     return [[data]]
 
 def _merge_out_from_infiles(in_files):
