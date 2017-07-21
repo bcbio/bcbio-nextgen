@@ -16,8 +16,10 @@ install:
   # Install bcbio-nextgen and bcbio-nextgen-vm
   - df -h
   - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
-  - conda install --yes -c bioconda -c conda-forge bcbio-nextgen-vm bcbio-nextgen -q
-  - conda install --yes -c bioconda -c conda-forge cwltool
+  - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen -q
+  - conda install --yes -c conda-forge -c bioconda cwltool
+  - conda clean --yes --tarballs
+  - du -sch ~/install/bcbio-vm/anaconda/pkgs | sort -h
   # Get docker container
   - df -h
   - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools

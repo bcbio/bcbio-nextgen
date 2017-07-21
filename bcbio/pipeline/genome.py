@@ -238,7 +238,7 @@ def get_refs(genome_build, aligner, galaxy_base, data):
             if indexes:
                 out[name]["indexes"] = indexes
             # For references, add compressed inputs and indexes if they exist
-            if name == "fasta" and os.path.exists(out[name]["base"] + ".gz"):
+            if name == "fasta" and "base" in out[name] and os.path.exists(out[name]["base"] + ".gz"):
                 indexes = [out[name]["base"] + ".gz.fai", out[name]["base"] + ".gz.gzi",
                            utils.splitext_plus(out[name]["base"])[0] + ".dict"]
                 out[name + "gz"] = {"base": out[name]["base"] + ".gz",
