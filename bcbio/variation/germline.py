@@ -63,7 +63,7 @@ def extract(data, items):
     For germline calling done separately, fix VCF sample naming to match.
     """
     if vcfutils.get_paired_phenotype(data):
-        if dd.get_batches(data) and len(items) == 1:
+        if len(items) == 1:
             germline_vcf = _remove_prioritization(data["vrn_file"], data)
             germline_vcf = vcfutils.bgzip_and_index(germline_vcf, data["config"])
             data["vrn_file_plus"] = {"germline": germline_vcf}
