@@ -71,6 +71,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " --outSAMstrandField intronMotif "
         if not srna:
             cmd += " --quantMode TranscriptomeSAM "
+        transcriptome_file = os.path.join(ref_file, "transcriptInfo.tab")
+        if not file_exists(transcriptome_file):
+            cmd += " --sjdbGTFfile {gtf_file} "
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
