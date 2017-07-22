@@ -20,7 +20,7 @@ install:
   - conda install --yes -c conda-forge -c bioconda cwltool
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
-  - conda remove --force qt openjdk nodejs
+  - conda remove --yes --force qt openjdk nodejs
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/openjdk-*
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/nodejs-*
