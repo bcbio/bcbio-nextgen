@@ -76,7 +76,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
         do.run(cmd.format(**locals()), run_message, None)
-        print("hello")
 
     data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
     return data
