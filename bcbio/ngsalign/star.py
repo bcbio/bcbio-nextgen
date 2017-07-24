@@ -10,6 +10,7 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
 from bcbio.provenance import do
 from bcbio import utils
+
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.ngsalign import postalign
@@ -71,9 +72,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " --outSAMstrandField intronMotif "
         if not srna:
             cmd += " --quantMode TranscriptomeSAM "
-        transcriptome_file = os.path.join(ref_file, "transcriptInfo.tab")
-        if not file_exists(transcriptome_file):
-            cmd += " --sjdbGTFfile {gtf_file} "
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
@@ -114,7 +112,8 @@ def _add_sj_index_commands(fq1, ref_file, gtf_file):
 
 def _has_sj_index(ref_file):
     """this file won't exist if we can do on the fly splice junction indexing"""
-    return file_exists(os.path.join(ref_file, "sjdbInfo.txt"))
+    return (file_exists(os.path.join(ref_file, "sjdbInfo.txt")) and
+            (file_exists(os.path.join(ref_file, "transcriptInfo.tab"))))
 
 def _update_data(align_file, out_dir, names, data):
     data = dd.set_work_bam(data, align_file)
