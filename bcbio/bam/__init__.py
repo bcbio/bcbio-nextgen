@@ -162,6 +162,22 @@ def downsample(in_bam, data, target_counts, work_dir=None):
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
 
+def downsample_to_max(max_coverage, data):
+    """Downsample a BAM to a maximum coverage.
+
+    Avoids excessive read regions by marking reads above a defined coverage as
+    QCfail so they'll be ignored by variant callers.
+    """
+    in_bam = dd.get_work_bam(data)
+    out_file = "%s-maxcov%s" % os.path.splitext(in_bam)
+    if not utils.file_uptodate(in_bam, out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = "variant {in_bam} -b --mark-as-qc-fail --max-coverage {max_coverage} > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Downsample BAM file to max coverage: %s" % dd.get_sample_name(data))
+    index(out_file, data["config"])
+    data["work_bam"] = out_file
+    return data
+
 def check_header(in_bam, rgnames, ref_file, config):
     """Ensure passed in BAM header matches reference file and read groups names.
     """

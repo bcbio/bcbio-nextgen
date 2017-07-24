@@ -1,5 +1,8 @@
 ## 1.0.5 (in progress)
 
+- Downsample whole genome BAM files to a high maximum coverage (200 times the
+  average coverage) to avoid slow runtimes in collapsed repeats and poly-ATGC
+  regions.
 - Separate post alignment recalibration and realignment. Recalibration now
   occurs multicore to support GATK4 implementation. We generally recommend
   skipping realignment.

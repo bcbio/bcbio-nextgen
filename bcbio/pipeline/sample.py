@@ -217,6 +217,7 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
+    params = {"min_coverage_for_downsampling": 10, "max_downsample_multiplier": 200}
     data = cwlutils.normalize_missing(utils.to_single_data(data))
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
@@ -233,10 +234,8 @@ def postprocess_alignment(data):
             callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
                            "callable": callable_bed,
-                           "highdepth": covinfo.highdepth,
                            "sample_callable": covinfo.callable,
-                           "coverage_depth_bed": covinfo.depth,
-                           "avg_coverage": covinfo.avg_coverage}
+                           "coverage_depth_bed": covinfo.depth}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
@@ -244,6 +243,9 @@ def postprocess_alignment(data):
             data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
+        if (dd.get_coverage_interval(data) == "genome" and
+              covinfo.avg_coverage > params["min_coverage_for_downsampling"]):
+            data = bam.downsample_to_max(int(covinfo.avg_coverage * params["max_downsample_multiplier"]), data)
     return [[data]]
 
 def _merge_out_from_infiles(in_files):
