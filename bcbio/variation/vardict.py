@@ -42,7 +42,6 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     assert _is_bed_file(target)
     if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
             for x in items):
-        target = shared.remove_highdepth_regions(target, items)
         target = shared.remove_lcr_regions(target, items)
     target = _enforce_max_region_size(target, items[0])
     opts += [target]  # this must be the last option

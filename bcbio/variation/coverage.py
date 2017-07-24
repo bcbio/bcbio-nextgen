@@ -75,8 +75,7 @@ def calculate(bam_file, data):
     samtools depth removes duplicates and secondary reads from the counts:
     if ( b->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP) ) continue;
     """
-    params = {"window_size": 5000, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data),
-              "high_multiplier": 20}
+    params = {"window_size": 5000, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data)}
     prefix = os.path.join(
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
         "%s-coverage" % (dd.get_sample_name(data)))
@@ -87,9 +86,6 @@ def calculate(bam_file, data):
     if not utils.file_uptodate(callable_file, bam_file):
         cmd = ["goleft", "depth", "--q", "1", "--mincov", str(params["min"]),
                "--processes", str(dd.get_num_cores(data)), "--ordered"]
-        max_depth = _get_max_depth(variant_regions_avg_cov, params, data)
-        if max_depth:
-            cmd += ["--maxmeandepth", str(int(max_depth))]
         with file_transaction(data, depth_file) as tx_depth_file:
             with utils.chdir(os.path.dirname(tx_depth_file)):
                 tx_callable_file = tx_depth_file.replace(".depth.bed", ".callable.bed")
@@ -103,7 +99,7 @@ def calculate(bam_file, data):
                 do.run(cmd, msg, env=bcbio_env)
                 shutil.move(tx_callable_file, callable_file)
     final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
-    return depth_file, final_callable, _extract_highdepth(final_callable, data), variant_regions_avg_cov
+    return depth_file, final_callable, variant_regions_avg_cov
 
 def _create_genome_regions(callable_file, data):
     """Create whole genome contigs we want to process, only non-alts.
@@ -128,25 +124,6 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
             pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
     return out_file
 
-def _extract_highdepth(callable_file, data):
-    out_file = "%s-highdepth.bed" % utils.splitext_plus(callable_file)[0]
-    if not utils.file_uptodate(out_file, callable_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            with open(callable_file) as in_handle:
-                with open(tx_out_file, "w") as out_handle:
-                    for line in in_handle:
-                        parts = line.strip().split("\t")
-                        if "EXCESSIVE_COVERAGE" in parts:
-                            out_handle.write("\t".join(parts[:3] + ["highdepth"]) + "\n")
-    return out_file
-
-def _get_max_depth(average_coverage, params, data):
-    """Calculate maximum depth based on a rough multiplier of average coverage.
-    """
-    if dd.get_coverage_interval(data) == "genome":
-        avg_cov = min(30.0, average_coverage)
-        return avg_cov * params["high_multiplier"]
-
 def _get_cache_file(data, target_name):
     prefix = os.path.join(
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
@@ -169,16 +146,16 @@ def get_average_coverage(data, bam_file, bed_file=None, target_name="genome"):
     cache_file = _get_cache_file(data, target_name)
     cache = _read_cache(cache_file, [bam_file, bed_file])
     if "avg_coverage" in cache:
-        return cache["avg_coverage"]
+        return int(cache["avg_coverage"])
 
     if bed_file:
         avg_cov = _average_bed_coverage(data, bed_file, bam_file, target_name=target_name)
     else:
         avg_cov = _average_genome_coverage(data, bam_file)
 
-    cache["avg_coverage"] = avg_cov
+    cache["avg_coverage"] = int(avg_cov)
     _write_cache(cache, cache_file)
-    return avg_cov
+    return int(avg_cov)
 
 def _average_genome_coverage(data, bam_file):
     """Quickly calculate average coverage for whole genome files using indices.

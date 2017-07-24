@@ -37,7 +37,6 @@ def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
                     with open(tx_tmp_bed, "w") as out_handle:
                         print("%s\t%s\t%s" % (chrom, start, end), file=out_handle)
         if any(dd.get_coverage_interval(x) == "genome" for x in items):
-            target_bed = shared.remove_highdepth_regions(target_bed, items)
             target_bed = shared.remove_lcr_regions(target_bed, items)
         return ["--bed", target_bed]
     else:
