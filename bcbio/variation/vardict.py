@@ -36,6 +36,8 @@ def _vardict_options_from_config(items, config, out_file, target=None):
 
     # remove low mapping quality reads
     opts += ["-Q", "10"]
+    # Remove QCfail reads, avoiding high depth repetitive regions
+    opts += ["-F", "0x700"]
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
         opts += [str(x) for x in resources["options"]]

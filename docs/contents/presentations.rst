@@ -2,8 +2,8 @@ Presentations
 =============
 
 - bcbio practical interoperability with the Common Workflow Language at
-  `BOSC 2017 <http://www.open-bio.org/wiki/BOSC_2017>`_ (22 July 2017):
-   `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2017_bcbio_interoperate/chapmanb_bcbio_interoperate.pdf>`_
+  `BOSC 2017 <http://www.open-bio.org/wiki/BOSC_2017>`_
+  (22 July 2017): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2017_bcbio_interoperate/chapmanb_bcbio_interoperate.pdf>`_
 
 - :ref:`teaching` variant calling, bcbio and GATK4 validation at the `Summer 2017 NGS Data Analysis Course
   at Harvard Chan School <http://bioinformatics.sph.harvard.edu/training/>`_
