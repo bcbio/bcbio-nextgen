@@ -1,7 +1,5 @@
 upload:
   dir: upload
-fc_date: '110907'
-fc_name: ERP000591
 details:
   - analysis: RNA-seq
     algorithm:
@@ -9,7 +7,7 @@ details:
       variantcaller: [gatk]
       transcriptome_align: True
       aligner: star
-      quality_format: Standard
+      quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
       expression_caller: [stringtie, dexseq]
@@ -17,16 +15,15 @@ details:
     metadata:
       batch: TestBatch1
     description: Test1
-    files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
-    genome_build: mm9
-    lane: 1
+    files: [1_1.fq.gz, 1_2.fq.gz]
+    genome_build: hg19
   - analysis: RNA-seq
     algorithm:
       fusion_mode: True
       variantcaller: [gatk]
       transcriptome_align: True
       aligner: star
-      quality_format: Standard
+      quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
       expression_caller: [stringtie, dexseq]
@@ -34,6 +31,5 @@ details:
     metadata:
       batch: TestBatch1
     description: Test2
-    files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
-    genome_build: mm9
-    lane: 2
+    files: [1_1.fq.gz, 1_2.fq.gz]
+    genome_build: hg19

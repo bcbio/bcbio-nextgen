@@ -12,6 +12,7 @@ details:
       adapters: [truseq, polya]
       transcript_assembler: ["stringtie"]
       expression_caller: ["stringtie"]
+      disambiguate: [hg19]
     description: Test1
     files:
       - 1_110907_ERP000591_1_fastq.txt

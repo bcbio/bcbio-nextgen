@@ -7,7 +7,7 @@ details:
     algorithm:
       variantcaller: gatk
       transcriptome_align: True
-      aligner: star
+      aligner: tophat2
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
