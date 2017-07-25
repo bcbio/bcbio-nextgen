@@ -55,6 +55,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
             "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
             "--outStd BAM_Unsorted {srna_opts} "
+            "--limitOutSJcollapsed 2000000 "
             "--outSAMtype BAM Unsorted "
             "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
