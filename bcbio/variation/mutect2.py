@@ -79,8 +79,11 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                       "-R", ref_file,
                       "--annotation", "ClippingRankSumTest",
                       "--annotation", "DepthPerSampleHC"]
-            for a in annotation.get_gatk_annotations(items[0]["config"]):
+            for a in annotation.get_gatk_annotations(items[0]["config"], include_baseqranksum=False):
                 params += ["--annotation", a]
+            # Avoid issues with BAM CIGAR reads that GATK doesn't like
+            if gatk_type == "gatk4":
+                params += ["--readValidationStringency", "LENIENT"]
             paired = vcfutils.get_paired_bams(align_bams, items)
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items)

@@ -14,17 +14,21 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def get_gatk_annotations(config, include_depth=True):
+def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True):
     """Retrieve annotations to use for GATK VariantAnnotator.
 
     If include_depth is false, we'll skip annotating DP. Since GATK downsamples
     this will undercount on high depth sequencing and the standard outputs
     from the original callers may be preferable.
+
+    BaseQRankSum can cause issues with some MuTect2 and other runs, so we
+    provide option to skip it.
     """
     broad_runner = broad.runner_from_config(config)
-    anns = ["BaseQualityRankSumTest", "FisherStrand",
-            "MappingQualityRankSumTest", "MappingQualityZero",
+    anns = ["FisherStrand", "MappingQualityRankSumTest", "MappingQualityZero",
             "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
+    if include_baseqranksum:
+        anns += ["BaseQualityRankSumTest"]
     if broad_runner.gatk_type() == "gatk4":
         anns += ["MappingQuality", "ClippedBases"]
     else:

@@ -926,6 +926,9 @@ lists with multiple options:
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
+  - ``gatk4`` Use GATK4, shipped with bcbio, for any GATK commands like BQSR,
+    HaplotypeCaller and VQSR. GATK4 is still a beta release but
+    `validations results look comparable to GATK3 <https://github.com/bcbio/bcbio_validations/tree/master/gatk4>`_
   - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
     uses downsampled files and numbers here are an estimation of 1e7 reads.).
   - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.

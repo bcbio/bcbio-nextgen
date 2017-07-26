@@ -64,19 +64,25 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
                 sensitivity_cutoff, filter_type, data):
     """Apply VQSR based on the specified tranche, returning a filtered VCF file.
     """
-    broad_runner = broad.runner_from_config(data["config"])
     base, ext = utils.splitext_plus(in_file)
     out_file = "{base}-{filter}filter{ext}".format(base=base, ext=ext,
                                                    filter=filter_type)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            params = ["-T", "ApplyRecalibration",
-                      "-R", ref_file,
-                      "--input", in_file,
-                      "--out", tx_out_file,
-                      "--tranches_file", tranch_file,
-                      "--recal_file", recal_file,
-                      "--mode", filter_type]
+            broad_runner = broad.runner_from_config(data["config"])
+            gatk_type = broad_runner.gatk_type()
+            if gatk_type == "gatk4":
+                params = ["-T", "ApplyVQSR",
+                          "--variant", in_file,
+                          "--output", tx_out_file]
+            else:
+                params = ["-T", "ApplyRecalibration",
+                          "--input", in_file,
+                          "--out", tx_out_file]
+            params += ["-R", ref_file,
+                       "--recal_file", recal_file,
+                       "--tranches_file", tranch_file,
+                       "--mode", filter_type]
             resources = config_utils.get_resources("gatk_apply_recalibration", data["config"])
             opts = resources.get("options", [])
             if not opts:
@@ -109,12 +115,15 @@ def _get_training_data(vrn_files):
 def _have_training_data(vrn_files):
     return len(_get_training_data(vrn_files)) > 0
 
-def _get_vqsr_training(filter_type, vrn_files):
+def _get_vqsr_training(filter_type, vrn_files, gatk_type):
     """Return parameters for VQSR training, handling SNPs and Indels.
     """
     params = []
     for name, train_info, fname in _get_training_data(vrn_files)[filter_type]:
-        params.extend(["-resource:%s,VCF,%s" % (name, train_info), fname])
+        if gatk_type == "gatk4":
+            params.extend(["--resource", "%s,%s:%s" % (name, train_info, fname)])
+        else:
+            params.extend(["-resource:%s,VCF,%s" % (name, train_info), fname])
     if filter_type == "INDEL":
         params.extend(["--maxGaussians", "4"])
     return params
@@ -143,21 +152,24 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
     if sensitivity_cutoff not in cutoffs:
         cutoffs.append(sensitivity_cutoff)
         cutoffs.sort()
-    broad_runner = broad.runner_from_config(data["config"])
     base = utils.splitext_plus(in_file)[0]
     recal_file = "%s.recal" % base
     tranches_file = "%s.tranches" % base
     plot_file = "%s-plots.R" % base
     if not utils.file_exists(recal_file):
         with file_transaction(data, recal_file, tranches_file, plot_file) as (tx_recal, tx_tranches, tx_plot_file):
+            broad_runner = broad.runner_from_config(data["config"])
+            gatk_type = broad_runner.gatk_type()
             params = ["-T", "VariantRecalibrator",
                       "-R", ref_file,
-                      "--input", in_file,
                       "--mode", filter_type,
-                      "--recal_file", tx_recal,
                       "--tranches_file", tx_tranches,
                       "--rscript_file", tx_plot_file]
-            params += _get_vqsr_training(filter_type, vrn_files)
+            if gatk_type == "gatk4":
+                params += ["--variant", in_file, "--output", tx_recal]
+            else:
+                params += ["--input", in_file, "--recal_file", tx_recal]
+            params += _get_vqsr_training(filter_type, vrn_files, gatk_type)
             resources = config_utils.get_resources("gatk_variant_recalibrator", data["config"])
             opts = resources.get("options", [])
             if not opts:
@@ -172,6 +184,7 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
                 broad_runner.new_resources("gatk-vqsr")
                 broad_runner.run_gatk(params, log_error=False, memscale=memscale)
             except:  # Can fail to run if not enough values are present to train.
+                raise
                 return None, None
     return recal_file, tranches_file
 
