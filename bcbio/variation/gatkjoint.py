@@ -43,7 +43,7 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
                 params += ["--variant", vrn_file]
             cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            broad_runner.run_gatk(params, memscale)
+            broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
 
 def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
@@ -61,7 +61,7 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
                       "-L", bamprep.region_to_gatk(region)]
             cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            broad_runner.run_gatk(params, memscale)
+            broad_runner.run_gatk(params, memscale=memscale)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## gVCF joint genotype calling -- GATK3
