@@ -14,6 +14,9 @@ from bcbio.bam import fastq
 from bcbio.log import logger
 # from bcbio import bam
 
+def run_counts_spikein(data):
+    return [[counts_spikein(data)]]
+
 def counts_spikein(data):
     data = utils.to_single_data(data)
     samplename = dd.get_sample_name(data)

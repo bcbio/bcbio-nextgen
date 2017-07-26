@@ -10,7 +10,7 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
@@ -125,6 +125,12 @@ def run_sailfish(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(sailfish.run_sailfish, *args))
+
+@require(spikein)
+def run_counts_spikein(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(spikein.run_counts_spikein, *args))
 
 @require(sailfish)
 def run_sailfish_index(*args):

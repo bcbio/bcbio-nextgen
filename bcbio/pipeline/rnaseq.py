@@ -13,6 +13,8 @@ from bcbio.log import logger
 def fast_rnaseq(samples, run_parallel):
     samples = run_parallel("run_salmon_index", [samples])
     samples = run_parallel("run_salmon_reads", samples)
+    samples = run_parallel("run_counts_spikein", samples)
+    samples = spikein.combine_spikein(samples)
     return samples
 
 def singlecell_rnaseq(samples, run_parallel):

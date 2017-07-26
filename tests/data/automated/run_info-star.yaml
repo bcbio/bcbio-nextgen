@@ -12,6 +12,7 @@ details:
       adapters: [truseq, polya]
       expression_caller: [stringtie, dexseq]
       transcript_assembler: [stringtie, cufflinks]
+      spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
     description: Test1
@@ -28,6 +29,7 @@ details:
       adapters: [truseq, polya]
       expression_caller: [stringtie, dexseq]
       transcript_assembler: [stringtie, cufflinks]
+      spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
     description: Test2

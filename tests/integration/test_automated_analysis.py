@@ -101,7 +101,7 @@ def test_2_fastrnaseq(install_test_files, data_dir):
     with make_workdir() as workdir:
         cl = ["bcbio_nextgen.py",
               get_post_process_yaml(data_dir, workdir),
-              os.path.join(data_dir, os.pardir, "110907_ERP000591"),
+              os.path.join(data_dir, os.pardir, "test_fusion"),
               os.path.join(data_dir, "run_info-fastrnaseq.yaml")]
         subprocess.check_call(cl)
 

@@ -1,14 +1,19 @@
 upload:
   dir: upload
-fc_date: '110907'
-fc_name: ERP000591
 details:
   - analysis: fastrna-seq
     algorithm:
-      cwl_reporting: True
+      spikein_fasta: ../data/spikeins/spikeins.fa
+    metadata:
+      batch: TestBatch1
     description: Test1
-    files:
-      - 1_110907_ERP000591_1_fastq.txt
-      - 1_110907_ERP000591_2_fastq.txt
-    genome_build: mm9
-    lane: 1
+    files: [1_1.fq.gz, 1_2.fq.gz]
+    genome_build: hg19
+  - analysis: fastrna-seq
+    algorithm:
+      spikein_fasta: ../data/spikeins/spikeins.fa
+    metadata:
+      batch: TestBatch1
+    description: Test2
+    files: [1_1.fq.gz, 1_2.fq.gz]
+    genome_build: hg19
