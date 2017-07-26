@@ -7,6 +7,7 @@ import signal
 import subprocess
 import numpy
 
+import pybedtools
 import pysam
 import toolz as tz
 
@@ -182,21 +183,56 @@ def downsample(in_bam, data, target_counts, work_dir=None):
                 do.run(cmd.format(**locals()), "Downsample BAM file: %s" % os.path.basename(in_bam))
         return out_file
 
-def downsample_to_max(max_coverage, data):
-    """Downsample a BAM to a maximum coverage.
-
-    Avoids excessive read regions by marking reads above a defined coverage as
-    QCfail so they'll be ignored by variant callers.
+def get_maxcov_downsample_cl(data, in_pipe=None):
+    """Retrieve command line for max coverage downsampling, fitting into bamsormadup output.
     """
-    in_bam = dd.get_work_bam(data)
-    out_file = "%s-maxcov%s" % os.path.splitext(in_bam)
-    if not utils.file_uptodate(in_bam, out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = "variant {in_bam} -b --mark-as-qc-fail --max-coverage {max_coverage} > {tx_out_file}"
-            do.run(cmd.format(**locals()), "Downsample BAM file to max coverage: %s" % dd.get_sample_name(data))
-    index(out_file, data["config"])
-    data["work_bam"] = out_file
-    return data
+    max_cov = _get_maxcov_downsample(data)
+    if max_cov:
+        if in_pipe == "bamsormadup":
+            prefix = "level=0"
+        elif in_pipe == "samtools":
+            prefix = "-l 0"
+        else:
+            prefix = ""
+        return "%s | variant - -b --mark-as-qc-fail --max-coverage %s" % (prefix, max_cov)
+    else:
+        if in_pipe == "bamsormadup":
+            prefix = "indexfilename={tx_out_file}.bai"
+        else:
+            prefix = ""
+        return prefix
+
+def _get_maxcov_downsample(data):
+    """Calculate maximum coverage downsampling for whole genome samples.
+
+    Returns None if we're no doing downsampling
+    """
+    from bcbio.bam import ref
+    from bcbio.ngsalign import alignprep, bwa
+    from bcbio.variation import coverage
+    params = {"min_coverage_for_downsampling": 10, "max_downsample_multiplier": 200}
+    fastq_file = data["files"][0]
+    num_reads = alignprep.total_reads_from_grabix(fastq_file)
+    if num_reads:
+        vrs = dd.get_variant_regions_merged(data)
+        total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
+        if vrs:
+            callable_size = pybedtools.BedTool(vrs).total_coverage()
+            genome_cov_pct = callable_size / float(total_size)
+        else:
+            callable_size = total_size
+            genome_cov_pct = 1.0
+        if genome_cov_pct > coverage.GENOME_COV_THRESH:
+            total_counts, total_sizes = 0, 0
+            for count, size in bwa.fastq_size_output(fastq_file, 5000):
+                total_counts += int(count)
+                total_sizes += (int(size) * int(count))
+            read_size = float(total_sizes) / float(total_counts)
+            avg_cov = float(num_reads * read_size) / callable_size
+            if avg_cov >= params["min_coverage_for_downsampling"]:
+                return int(avg_cov * params["max_downsample_multiplier"])
+    return None
+
 
 def check_header(in_bam, rgnames, ref_file, config):
     """Ensure passed in BAM header matches reference file and read groups names.

@@ -82,8 +82,7 @@ def merge_extras(items, config):
             in_files.append(data["disambiguate"][extra_name])
         out_file = "%s-allmerged%s" % os.path.splitext(in_files[0])
         if in_files[0].endswith(".bam"):
-            print(out_file, in_files)
-            merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), config,
+            merged_file = merge.merge_bam_files(in_files, os.path.dirname(out_file), items[0],
                                                 out_file=out_file)
         else:
             assert extra_name == "summary", extra_name

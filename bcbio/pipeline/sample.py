@@ -243,9 +243,6 @@ def postprocess_alignment(data):
             data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
-        if (dd.get_coverage_interval(data) == "genome" and
-              covinfo.avg_coverage > params["min_coverage_for_downsampling"]):
-            data = bam.downsample_to_max(int(covinfo.avg_coverage * params["max_downsample_multiplier"]), data)
     return [[data]]
 
 def _merge_out_from_infiles(in_files):
@@ -294,7 +291,7 @@ def delayed_bam_merge(data):
             if cur_out_file:
                 config = copy.deepcopy(data["config"])
                 if len(cur_in_files) > 0:
-                    merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), config,
+                    merged_file = merge_bam_files(cur_in_files, os.path.dirname(cur_out_file), data,
                                                   out_file=cur_out_file)
                 else:
                     assert os.path.exists(cur_out_file)
@@ -329,7 +326,7 @@ def _merge_align_bams(data):
             out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
                                     "%s-sort%s.bam" % (dd.get_sample_name(data), ext))
             merged_file = merge_bam_files(in_files, utils.safe_makedir(os.path.dirname(out_file)),
-                                          data["config"], out_file=out_file)
+                                          data, out_file=out_file)
             data = tz.update_in(data, key, lambda x: merged_file)
         else:
             data = tz.update_in(data, key, lambda x: None)

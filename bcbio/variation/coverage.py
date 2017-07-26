@@ -24,6 +24,9 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.pipeline import shared
 
+GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
+OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
+
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
 
@@ -32,8 +35,6 @@ def assign_interval(data):
       - regional: Regional coverage, like exome capture, with off-target reads
       - amplicon: Amplication based regional coverage without off-target reads
     """
-    genome_cov_thresh = 0.40  # percent of genome covered for whole genome analysis
-    offtarget_thresh = 0.01  # percent of offtarget reads required to be capture (not amplification) based
     if not dd.get_coverage_interval(data):
         vrs = dd.get_variant_regions_merged(data)
         callable_file = dd.get_sample_callable(data)
@@ -43,7 +44,7 @@ def assign_interval(data):
             callable_size = pybedtools.BedTool(callable_file).total_coverage()
         total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         genome_cov_pct = callable_size / float(total_size)
-        if genome_cov_pct > genome_cov_thresh:
+        if genome_cov_pct > GENOME_COV_THRESH:
             cov_interval = "genome"
             offtarget_pct = 0.0
         elif not vrs:
@@ -52,7 +53,7 @@ def assign_interval(data):
         else:
             offtarget_pct = _count_offtarget(data, dd.get_align_bam(data) or dd.get_work_bam(data),
                                              vrs or callable_file, "variant_regions")
-            if offtarget_pct > offtarget_thresh:
+            if offtarget_pct > OFFTARGET_THRESH:
                 cov_interval = "regional"
             else:
                 cov_interval = "amplicon"
@@ -82,7 +83,6 @@ def calculate(bam_file, data):
     depth_file = prefix + ".depth.bed"
     callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
-    variant_regions_avg_cov = get_average_coverage(data, bam_file, variant_regions, "variant_regions")
     if not utils.file_uptodate(callable_file, bam_file):
         cmd = ["goleft", "depth", "--q", "1", "--mincov", str(params["min"]),
                "--processes", str(dd.get_num_cores(data)), "--ordered"]
@@ -99,7 +99,7 @@ def calculate(bam_file, data):
                 do.run(cmd, msg, env=bcbio_env)
                 shutil.move(tx_callable_file, callable_file)
     final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
-    return depth_file, final_callable, variant_regions_avg_cov
+    return depth_file, final_callable
 
 def _create_genome_regions(callable_file, data):
     """Create whole genome contigs we want to process, only non-alts.

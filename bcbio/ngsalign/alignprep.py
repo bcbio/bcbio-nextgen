@@ -260,17 +260,27 @@ def _save_fastq_space(items):
 
 # ## determine file sections
 
+def total_reads_from_grabix(in_file):
+    """Retrieve total reads in a fastq file from grabix index.
+    """
+    gbi_file = in_file + ".gbi"
+    if utils.file_exists(gbi_file):
+        with open(gbi_file) as in_handle:
+            in_handle.next()  # throw away
+            num_lines = int(in_handle.next().strip())
+        assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
+        return num_lines // 4
+    else:
+        return 0
+
 def _find_read_splits(in_file, split_size):
     """Determine sections of fastq files to process in splits.
 
     Assumes a 4 line order to input files (name, read, name, quality).
     grabix is 1-based inclusive, so return coordinates in that format.
     """
-    gbi_file = in_file + ".gbi"
-    with open(gbi_file) as in_handle:
-        in_handle.next()  # throw away
-        num_lines = int(in_handle.next().strip())
-    assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
+    num_lines = total_reads_from_grabix(in_file) * 4
+    assert num_lines, num_lines
     split_lines = split_size * 4
     chunks = []
     last = 1
@@ -513,14 +523,14 @@ def _grabix_index(data):
     config = data["config"]
     grabix = config_utils.get_program("grabix", config)
     gbi_file = in_file + ".gbi"
-    if tz.get_in(["algorithm", "align_split_size"], config) is not False:
-        if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
-            utils.remove_safe(gbi_file)
-            with file_transaction(data, gbi_file) as tx_gbi_file:
-                tx_in_file = os.path.splitext(tx_gbi_file)[0]
-                utils.symlink_plus(in_file, tx_in_file)
-                do.run([grabix, "index", tx_in_file], "Index input with grabix: %s" % os.path.basename(in_file))
-        assert utils.file_exists(gbi_file)
+    # We always build grabix input so we can use it for counting reads and doing downsampling
+    if not utils.file_exists(gbi_file) or _is_partial_index(gbi_file):
+        utils.remove_safe(gbi_file)
+        with file_transaction(data, gbi_file) as tx_gbi_file:
+            tx_in_file = os.path.splitext(tx_gbi_file)[0]
+            utils.symlink_plus(in_file, tx_in_file)
+            do.run([grabix, "index", tx_in_file], "Index input with grabix: %s" % os.path.basename(in_file))
+    assert utils.file_exists(gbi_file)
     return [gbi_file]
 
 def _is_partial_index(gbi_file):

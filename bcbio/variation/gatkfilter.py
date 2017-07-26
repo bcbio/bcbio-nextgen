@@ -184,7 +184,6 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
                 broad_runner.new_resources("gatk-vqsr")
                 broad_runner.run_gatk(params, log_error=False, memscale=memscale)
             except:  # Can fail to run if not enough values are present to train.
-                raise
                 return None, None
     return recal_file, tranches_file
 

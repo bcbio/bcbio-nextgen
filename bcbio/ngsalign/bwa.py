@@ -93,19 +93,8 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
                "-v 1 {ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
-def _can_use_mem(fastq_file, data, read_min_size=None):
-    """bwa-mem handle longer (> 70bp) reads with improved piping.
-    Randomly samples 5000 reads from the first two million.
-    Default to no piping if more than 75% of the sampled reads are small.
-    If we've previously calculated minimum read sizes (from rtg SDF output)
-    we can skip the formal check.
-    """
-    min_size = 70
-    if read_min_size and read_min_size >= min_size:
-        return True
-    thresh = 0.75
+def fastq_size_output(fastq_file, tocheck):
     head_count = 8000000
-    tocheck = 5000
     fastq_file = objectstore.cl_input(fastq_file)
     gzip_cmd = "zcat {fastq_file}" if fastq_file.endswith(".gz") else "cat {fastq_file}"
     cmd = (utils.local_path_export() + gzip_cmd + " | head -n {head_count} | "
@@ -122,8 +111,23 @@ def _can_use_mem(fastq_file, data, read_min_size=None):
                                         executable="/bin/bash", preexec_fn=fix_signal)
     if not count_out.strip():
         raise IOError("Failed to check fastq file sizes with: %s" % cmd.format(**locals()))
-    shorter = 0
     for count, size in (l.strip().split() for l in count_out.strip().split("\n")):
+        yield count, size
+
+def _can_use_mem(fastq_file, data, read_min_size=None):
+    """bwa-mem handle longer (> 70bp) reads with improved piping.
+    Randomly samples 5000 reads from the first two million.
+    Default to no piping if more than 75% of the sampled reads are small.
+    If we've previously calculated minimum read sizes (from rtg SDF output)
+    we can skip the formal check.
+    """
+    min_size = 70
+    if read_min_size and read_min_size >= min_size:
+        return True
+    thresh = 0.75
+    tocheck = 5000
+    shorter = 0
+    for count, size in fastq_size_output(fastq_file, tocheck):
         if int(size) < min_size:
             shorter += int(count)
     return (float(shorter) / float(tocheck)) <= thresh
