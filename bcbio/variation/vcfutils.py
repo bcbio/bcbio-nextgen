@@ -303,10 +303,10 @@ def _sort_by_region(fnames, regions, ref_file, config):
             else:
                 c = region
                 s, e = 0, 0
-            sitems.append(((contig_order[c], s, e), fname))
+            sitems.append(((contig_order[c], s, e), c, fname))
             added_fnames.add(fname)
     sitems.sort()
-    return [x[1] for x in sitems]
+    return [(x[1], x[2]) for x in sitems]
 
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
@@ -316,27 +316,67 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        # GATK does not support naive concatentation since headers can be different across
-        # samples for FORMAT attributes; PID is the most common inconsistently available
-        naive = config["algorithm"]["variantcaller"] not in ["gatk", "gatk-haplotype", "haplotyper"]
-        out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=naive)
+        if "gatk4" in dd.get_tools_on({"config": config}):
+            _run_concat_variant_files_gatk4(input_file_list, out_file, config)
+        else:
+            out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
+    return out_file
+
+def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
+    """Use GATK4 GatherVcfs for concatenation of scattered VCFs.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(config, out_file) as tx_out_file:
+            params = ["-T", "GatherVcfs", "-I", input_file_list, "-O", tx_out_file]
+            broad_runner = broad.runner_from_config(config)
+            broad_runner.run_gatk(params)
     return out_file
 
 def _get_file_list(orig_files, out_file, regions, ref_file, config):
     """Create file with region sorted list of non-empty VCFs for concatenating.
     """
     sorted_files = _sort_by_region(orig_files, regions, ref_file, config)
-    exist_files = [x for x in sorted_files if os.path.exists(x) and vcf_has_variants(x)]
+    exist_files = [(c, x) for c, x in sorted_files if os.path.exists(x) and vcf_has_variants(x)]
     if len(exist_files) == 0:  # no non-empty inputs, merge the empty ones
-        exist_files = [x for x in sorted_files if os.path.exists(x)]
+        exist_files = [x for c, x in sorted_files if os.path.exists(x)]
+    elif len(exist_files) > 1:
+        exist_files = _fix_gatk_header(exist_files, out_file, config)
     ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
     input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
     with open(input_file_list, "w") as out_handle:
         for fname in ready_files:
             out_handle.write(fname + "\n")
     return input_file_list
+
+def _fix_gatk_header(exist_files, out_file, config):
+    """Ensure consistent headers for VCF concatenation.
+
+    Fixes problems for genomes that start with chrM by reheadering the first file.
+    These files do haploid variant calling which lack the PID phasing key/value
+    pair in FORMAT, so initial chrM samples cause errors during concatenation
+    due to the lack of header merging. This fixes this by updating the first header.
+    """
+    from bcbio.variation import ploidy
+    c, base_file = exist_files[0]
+    items = [{"config": config}]
+    if ploidy.get_ploidy(items, region=(c, 1, 2)) == 1:
+        replace_file = None
+        for c, x in exist_files[1:]:
+            if ploidy.get_ploidy(items, (c, 1, 2)) > 1:
+                replace_file = x
+                break
+        if replace_file:
+            base_fix_file = "%s-fixheader%s" % utils.splitext_plus(base_file)
+            with file_transaction(config, base_fix_file) as tx_out_file:
+                header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
+                do.run("zgrep ^# %s > %s" % (replace_file, header_file), "Prepare header file for merging")
+                do.run("bcftools reheader -h %s %s -o %s" % (header_file, base_file, base_fix_file),
+                       "Reheader initial VCF file in merge")
+            bgzip_and_index(base_fix_file, config)
+            base_file = base_fix_file
+    return [base_file] + [x for (c, x) in exist_files[1:]]
 
 def concat_variant_files_catvariants(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
