@@ -23,7 +23,7 @@ def _get_resource_programs(progs, algs):
         if p == "aligner":
             for alg in algs:
                 aligner = alg.get("aligner")
-                if aligner:
+                if aligner and not isinstance(aligner, bool):
                     out.add(aligner)
         elif p in ["variantcaller", "svcaller", "peakcaller"]:
             if p == "variantcaller":
@@ -32,7 +32,7 @@ def _get_resource_programs(progs, algs):
                         out.add(key)
             for alg in algs:
                 callers = alg.get(p)
-                if callers:
+                if callers and not isinstance(callers, bool):
                     if isinstance(callers, dict):
                         callers = reduce(operator.add, callers.values())
                     if isinstance(callers, (list, tuple)):
