@@ -39,6 +39,7 @@ def prep_recal(data):
 def apply_recal(data):
     """Apply recalibration tables to the sorted aligned BAM, producing recalibrated BAM.
     """
+    orig_bam = dd.get_work_bam(data)
     if dd.get_recalibrate(data) in [True, "gatk"]:
         logger.info("Applying BQSR recalibration with GATK: %s " % str(dd.get_sample_name(data)))
         data["work_bam"] = _gatk_apply_bqsr(data)
@@ -47,6 +48,8 @@ def apply_recal(data):
         data["work_bam"] = sentieon.apply_bqsr(data)
     elif dd.get_recalibrate(data):
         raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
+    if orig_bam != dd.get_work_bam(data) and orig_bam != dd.get_align_bam(data):
+        utils.save_diskspace(orig_bam, "BAM recalibrated to %s" % dd.get_work_bam(data), data["config"])
     return data
 
 def _get_ref_twobit(data):
