@@ -27,6 +27,7 @@ LOOKUPS = {
     "tx2gene": {"keys": ["tx2gene"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
     "ref_file_compressed": {"keys": ["reference", "fastagz", "base"]},
+    "ref_twobit": {"keys": ["reference", "twobit"]},
     "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna_transcripts'],
                       "checker": file_exists},
     "srna_trna_file": {"keys": ['genome_resources', 'srnaseq', 'trna_fasta'],

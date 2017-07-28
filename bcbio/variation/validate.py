@@ -344,7 +344,7 @@ def _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data):
                         do.run(cmd.format(**locals()), "Intersect callable intervals for rtg vcfeval")
             final_intervals = combo_intervals
     else:
-        assert rm_interval_file, "No intervals to subset analysis with"
+        assert rm_interval_file, "No intervals to subset analysis with for %s" % vrn_file
         final_intervals = shared.remove_lcr_regions(rm_interval_file, [data])
     return final_intervals
 

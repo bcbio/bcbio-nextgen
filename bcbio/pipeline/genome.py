@@ -248,6 +248,10 @@ def get_refs(genome_build, aligner, galaxy_base, data):
             ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
             out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
                                                        "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
+            twobit = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "ucsc",
+                                                   "%s.2bit" % (os.path.splitext(ref_filebase)[0])))
+            if os.path.exists(twobit):
+                out["twobit"] = twobit
     return out
 
 def get_builds(galaxy_base):

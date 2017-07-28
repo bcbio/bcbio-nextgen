@@ -52,19 +52,6 @@ def apply_recal(data):
         utils.save_diskspace(orig_bam, "BAM recalibrated to %s" % dd.get_work_bam(data), data["config"])
     return data
 
-def _get_ref_twobit(data):
-    """Temporary functionality to retrieve 2bit references.
-
-    GATK4 requires UCSC 2bit reference genomes for parallel processing.
-    These need to be added globally to bcbio for retrieval. This is a
-    short term workaround.
-    """
-    ref_file = dd.get_ref_file(data)
-    twobit_ref = os.path.join(os.path.dirname(ref_file), os.pardir, "ucsc",
-                                "%s.2bit" % utils.splitext_plus(os.path.basename(ref_file))[0])
-    assert os.path.exists(twobit_ref), "GATK4 BQSR requires UCSC 2bit references"
-    return twobit_ref
-
 # ## GATK recalibration
 
 def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
@@ -83,7 +70,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     This identifies large files and calculates the fraction to downsample to.
     """
     target_counts = 1e8  # 100 million reads per read group, 20x the plotted max
-    out_file = "%s.grp" % os.path.splitext(dup_align_bam)[0]
+    out_file = "%s-recal.grp" % os.path.splitext(dup_align_bam)[0]
     if not utils.file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
             with file_transaction(data, out_file) as tx_out_file:
@@ -94,7 +81,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 if gatk_type == "gatk4":
                     params += ["-T", "BaseRecalibratorSpark",
                                 "--sparkMaster", "local[%s]" % dd.get_num_cores(data),
-                                "--output", tx_out_file, "--reference", _get_ref_twobit(data)]
+                                "--output", tx_out_file, "--reference", dd.get_ref_twobit(data)]
                 else:
                     params += ["-T", "BaseRecalibrator",
                                 "-o", tx_out_file, "-R", ref_file]
