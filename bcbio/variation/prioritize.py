@@ -11,16 +11,20 @@ effects annotations. The general idea is to prioritize deleterious variants
 missing or present at a low frequency in the population, or secondarily identified
 in external databases like COSMIC and ClinVar.
 """
+import collections
 import csv
+import re
 
+import cyvcf2
+import geneimpacts
 import toolz as tz
 
-from bcbio import utils
+from bcbio import install, utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import population, vcfutils
+from bcbio.variation import population, vcfanno, vcfutils
 
 def handle_vcf_calls(vcf_file, data, orig_items):
     """Prioritize VCF calls based on external annotations supplied through GEMINI.
@@ -28,11 +32,11 @@ def handle_vcf_calls(vcf_file, data, orig_items):
     if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        if population.do_db_build(orig_items):
-            gemini_db = population.create_gemini_db_orig(vcf_file, data)
-            if gemini_db:
-                priority_file = _prep_priority_filter(gemini_db, data)
-                return _apply_priority_filter(vcf_file, priority_file, data)
+        if population.has_gemini_data(orig_items):
+            data_basepath = install.get_gemini_dir(data) if population.support_gemini_orig(data) else None
+            ann_vcf = vcfanno.run_vcfanno(vcf_file, ["gemini"], data, data_basepath)
+            priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
+            return _apply_priority_filter(vcf_file, priority_file, data)
         # No GEMINI database for filtering, return original file
         return vcf_file
 
@@ -55,52 +59,87 @@ def _apply_priority_filter(in_file, priority_file, data):
     vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
-def _hg19_to_GRCh37(chrom):
-    """Cheap and ugly conversion from hg19 to GRCh37 contigs.
+def _prep_priority_filter_vcfanno(in_vcf, data):
+    """Prepare tabix file with priority filters based on vcfanno annotations.
     """
-    if chrom == "chrM":
-        return "MT"
-    else:
-        return chrom.replace("chr", "")
-
-def _prep_priority_filter(gemini_db, data):
-    """Prepare tabix indexed file with priority based filters and supporting information
-    """
-    from gemini.GeminiQuery import GeminiQuery
-    out_file = "%s-priority.tsv" % utils.splitext_plus(gemini_db)[0]
+    pops = ["aaf_esp_ea", "aaf_esp_aa", "aaf_esp_all", "aaf_1kg_amr", "aaf_1kg_eas",
+            "aaf_1kg_sas", "aaf_1kg_afr", "aaf_1kg_eur", "aaf_1kg_all", "aaf_adj_exac_all",
+            "aaf_adj_exac_afr", "aaf_adj_exac_amr", "aaf_adj_exac_eas", "aaf_adj_exac_fin",
+            "aaf_adj_exac_nfe", "aaf_adj_exac_oth", "aaf_adj_exac_sas"]
+    known = ["cosmic_ids", "clinvar_sig"]
+    out_file = "%s-priority.tsv" % utils.splitext_plus(in_vcf)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-        ref_chroms = set([x.name for x in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         with file_transaction(data, out_file) as tx_out_file:
-            gq = GeminiQuery(gemini_db)
-            pops = ["aaf_esp_ea", "aaf_esp_aa", "aaf_esp_all", "aaf_1kg_amr", "aaf_1kg_eas",
-                    "aaf_1kg_sas", "aaf_1kg_afr", "aaf_1kg_eur", "aaf_1kg_all", "aaf_adj_exac_all",
-                    "aaf_adj_exac_afr", "aaf_adj_exac_amr", "aaf_adj_exac_eas", "aaf_adj_exac_fin",
-                    "aaf_adj_exac_nfe", "aaf_adj_exac_oth", "aaf_adj_exac_sas"]
-            attrs = ("chrom, start, end, ref, alt, impact_so, impact_severity, in_dbsnp, "
-                     "cosmic_ids, clinvar_sig, clinvar_origin, fitcons, gt_ref_depths, gt_alt_depths").split(", ")
-            gq.run("SELECT %s FROM variants" % ", ".join(attrs + pops))
-            sidx = gq.sample_to_idx[dd.get_sample_name(data)]
-            header = attrs[:5] + ["filter"] + attrs[5:-2] + [x for x in pops if x.endswith("_all")] + ["freq"]
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
-                cheader = header[:]
-                cheader[0] = "#" + cheader[0]
-                writer.writerow(cheader)
-                for row in gq:
-                    ref_depth = tz.get_in(["gt_ref_depths", sidx], row, 0)
-                    alt_depth = tz.get_in(["gt_alt_depths", sidx], row, 0)
-                    out_vals = dict(row.row)
-                    try:
-                        out_vals["freq"] = "%.2f" % (float(alt_depth) / float(ref_depth + alt_depth))
-                    except ZeroDivisionError:
-                        out_vals["freq"] = "0.00"
-                    out_vals["filter"] = _calc_priority_filter(row, pops)
-                    if out_vals["chrom"] not in ref_chroms and _hg19_to_GRCh37(out_vals["chrom"]) in ref_chroms:
-                        out_vals["chrom"] = _hg19_to_GRCh37(out_vals["chrom"])
-                    out = [out_vals[x] for x in header]
-                    writer.writerow(out)
+                header = ["#chrom", "start", "end", "ref", "alt", "filter"]
+                writer.writerow(header)
+                vcf_reader = cyvcf2.VCF(in_vcf)
+                impact_info = _get_impact_info(vcf_reader)
+                for rec in vcf_reader:
+                    row = _prepare_vcf_rec(rec, pops, known, impact_info)
+                    cur_filter = _calc_priority_filter(row, pops)
+                    writer.writerow([rec.CHROM, rec.start, rec.end, rec.REF, ",".join(rec.ALT), cur_filter])
     return vcfutils.bgzip_and_index(out_file, data["config"],
                                     tabix_args="-0 -c '#' -s 1 -b 2 -e 3")
+
+def _get_impact_info(vcf_reader):
+    """Retrieve impact parsing information from INFO header.
+    """
+    ImpactInfo = collections.namedtuple("ImpactInfo", "header, gclass, id")
+    KEY_2_CLASS = {
+        'CSQ': geneimpacts.VEP,
+        'ANN': geneimpacts.SnpEff,
+        'BCSQ': geneimpacts.BCFT}
+    for l in (x.strip() for x in _from_bytes(vcf_reader.raw_header).split("\n")):
+        if l.startswith("##INFO"):
+            patt = re.compile("(\w+)=(\"[^\"]+\"|[^,]+)")
+            stub = l.split("=<")[1].rstrip(">")
+            d = dict(patt.findall(_from_bytes(stub)))
+            if d["ID"] in KEY_2_CLASS:
+                return ImpactInfo(_parse_impact_header(d), KEY_2_CLASS[d["ID"]], d["ID"])
+
+def _from_bytes(s):
+    if isinstance(s, bytes):
+        import locale
+        ENC = locale.getpreferredencoding()
+        try:
+            return s.decode(ENC)
+        except UnicodeDecodeError:
+            return s.decode('utf8')
+    return s
+
+def _parse_impact_header(hdr_dict):
+    """Parse fields for impact, taken from vcf2db
+    """
+    desc = hdr_dict["Description"]
+    if hdr_dict["ID"] == "ANN":
+        parts = [x.strip("\"'") for x in re.split("\s*\|\s*", desc.split(":", 1)[1].strip('" '))]
+    elif hdr_dict["ID"] == "EFF":
+        parts = [x.strip(" [])'(\"") for x in re.split("\||\(", desc.split(":", 1)[1].strip())]
+    elif hdr_dict["ID"] == "CSQ":
+        parts = [x.strip(" [])'(\"") for x in re.split("\||\(", desc.split(":", 1)[1].strip())]
+    elif hdr_dict["ID"] == "BCSQ":
+        parts = desc.split(']', 1)[1].split(']')[0].replace('[','').split("|")
+    else:
+        raise Exception("don't know how to use %s as annotation" % hdr_dict["ID"])
+    return parts
+
+def _prepare_vcf_rec(rec, pops, known, impact_info):
+    """Parse a vcfanno output into a dictionary of useful attributes.
+    """
+    out = {}
+    for k in pops + known:
+        out[k] = rec.INFO.get(k)
+    if impact_info:
+        cur_info = rec.INFO.get(impact_info.id)
+        if cur_info:
+            cur_impacts = [impact_info.gclass(e, impact_info.header) for e in _from_bytes(cur_info).split(",")]
+            top = geneimpacts.Effect.top_severity(cur_impacts)
+            if isinstance(top, list):
+                top = top[0]
+            out["impact_severity"] = top.effect_severity
+    return out
 
 def _calc_priority_filter(row, pops):
     """Calculate the priority filter based on external associated data.

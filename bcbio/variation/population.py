@@ -230,12 +230,12 @@ def get_multisample_vcf(fnames, name, caller, data):
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
-def _has_gemini(data):
-    """Use gemini if we installed required data for hg19.
+def has_gemini_data(data):
+    """Use gemini if we installed required data for hg19, hg38.
 
     Other organisms don't have special data targets.
     """
-    if support_gemini_orig(data):
+    if support_gemini_orig(data, all_human=True):
         from bcbio import install
         return "gemini" in install.get_defaults().get("datatarget", [])
     else:
@@ -251,12 +251,15 @@ def do_db_build(samples, need_bam=True):
         if "gemini" in dd.get_tools_off(data):
             return False
     if len(genomes) == 1:
-        return _has_gemini(samples[0])
+        return has_gemini_data(samples[0])
     else:
         return False
 
-def support_gemini_orig(data):
-    return dd.get_genome_build(data) in set(["hg19", "GRCh37"])
+def support_gemini_orig(data, all_human=False):
+    support_gemini = ["hg19", "GRCh37"]
+    if all_human:
+        support_gemini += ["hg38"]
+    return dd.get_genome_build(data) in set(support_gemini)
 
 def get_gemini_files(data):
     """Enumerate available gemini data files in a standard installation.
