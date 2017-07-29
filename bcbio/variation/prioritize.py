@@ -15,16 +15,14 @@ import collections
 import csv
 import re
 
-import cyvcf2
-import geneimpacts
-import toolz as tz
-
 from bcbio import install, utils
-from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import population, vcfanno, vcfutils
+
+geneimpacts = utils.LazyImport("geneimpacts")
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def handle_vcf_calls(vcf_file, data, orig_items):
     """Prioritize VCF calls based on external annotations supplied through GEMINI.
