@@ -36,12 +36,13 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
     if not os.path.exists(out_dir):
         with file_transaction(data, out_dir) as tx_out_dir:
             broad_runner = broad.runner_from_config(data["config"])
+            cores = dd.get_cores(data)
             params = ["-T", "GenomicsDBImport",
+                      "--readerThreads", str(cores),
                       "--genomicsDBWorkspace", tx_out_dir,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]
-            cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
