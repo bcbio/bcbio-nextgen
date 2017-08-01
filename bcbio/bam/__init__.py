@@ -80,16 +80,10 @@ def index(in_bam, config, check_timestamp=True):
         for fname in [index_file, alt_index_file]:
             utils.remove_safe(fname)
         samtools = config_utils.get_program("samtools", config)
-        sambamba = config_utils.get_program("sambamba", config)
         num_cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, index_file) as tx_index_file:
-            try:
-                cmd = "{sambamba} index -t {num_cores} {in_bam} {tx_index_file}"
-                do.run(cmd.format(**locals()), "Index BAM file with sambamba: %s" % os.path.basename(in_bam))
-            except subprocess.CalledProcessError:
-                cmd = "{samtools} index {in_bam} {tx_index_file}"
-                do.run(cmd.format(**locals()), "Backup single thread index of BAM file with samtools: %s"
-                       % os.path.basename(in_bam))
+            cmd = "{samtools} index -@ {num_cores} {in_bam} {tx_index_file}"
+            do.run(cmd.format(**locals()), "Index BAM file: %s" % os.path.basename(in_bam))
     return index_file if utils.file_exists(index_file) else alt_index_file
 
 def remove(in_bam):
