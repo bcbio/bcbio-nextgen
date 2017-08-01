@@ -6,6 +6,8 @@
 - Separate post alignment recalibration and realignment. Recalibration now
   occurs multicore to support GATK4 implementation. We generally recommend
   skipping realignment.
+- Provide multicore read trimming and streaming bgzip fastq output with atropos,
+  replacing cutadapt as the default trimmer.
 - hg38 runs do not run bwakit's bwa-postproc.js cleanup scripts unless HLA
   calling needed. Avoids slowdowns using this postprocessing script when running
   bwa with multiple cores.

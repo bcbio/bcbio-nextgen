@@ -1,5 +1,5 @@
 """High level entry point for processing a sample.
-
+c
 Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
@@ -45,9 +45,8 @@ def trim_sample(data):
     """Trim from a sample with the provided trimming method.
     Support methods: read_through.
     """
-    config = data["config"]
     # this block is to maintain legacy configuration files
-    trim_reads = config["algorithm"].get("trim_reads", False)
+    trim_reads = dd.get_trim_reads(data)
     sample_name = dd.get_sample_name(data)
     if not trim_reads:
         logger.info("Skipping trimming of %s." % sample_name)

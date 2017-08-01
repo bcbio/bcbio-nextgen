@@ -28,6 +28,7 @@ def create_inputs(data):
     machine. Prepares a bgzip and grabix indexed file for retrieving sections
     of files.
     """
+    from bcbio.pipeline import sample
     data = cwlutils.normalize_missing(data)
     aligner = tz.get_in(("config", "algorithm", "aligner"), data)
     # CRAM files must be converted to bgzipped fastq, unless not aligning.
@@ -37,21 +38,17 @@ def create_inputs(data):
         # skip indexing on samples without input files or not doing alignment
         if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner):
             return [[data]]
-    approach = "grabix" if _has_grabix_indices(data) else dd.get_align_prep_method(data)
     data["files_orig"] = data["files"]
-    if approach == "rtg":
-        data["files"] = [rtg.to_sdf(data["files"], data)]
-    else:
-        data["files"] = _prep_grabix_indexes(data["files"], data["dirs"], data)
+    data["files"] = _prep_fastq_inputs(data["files"], data)
     # preparation converts illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
+    # Handle any necessary trimming
+    data = utils.to_single_data(sample.trim_sample(data)[0])
+    _prep_grabix_indexes(data["files"], data)
     data = _set_align_split_size(data)
     out = []
     if tz.get_in(["config", "algorithm", "align_split_size"], data):
-        if approach == "rtg":
-            splits = rtg.calculate_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
-        else:
-            splits = _find_read_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
+        splits = _find_read_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
         for split in splits:
             cur_data = copy.deepcopy(data)
             cur_data["align_split"] = split
@@ -308,22 +305,30 @@ def _ready_gzip_fastq(in_files, data):
     return (all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
             and not needs_trim)
 
-def _prep_grabix_indexes(in_files, dirs, data):
+def _prep_fastq_inputs(in_files, data):
+    """Prepare bgzipped fastq inputs
+    """
     if _is_bam_input(in_files):
-        out = _bgzip_from_bam(in_files[0], dirs, data)
+        out = _bgzip_from_bam(in_files[0], data["dirs"], data)
     elif _is_cram_input(in_files):
-        out = _bgzip_from_cram(in_files[0], dirs, data)
+        out = _bgzip_from_cram(in_files[0], data["dirs"], data)
     elif _ready_gzip_fastq(in_files, data):
         out = in_files
     else:
         parallel = {"type": "local", "num_jobs": len(in_files),
                     "cores_per_job": max(1, data["config"]["algorithm"]["num_cores"] // len(in_files))}
-        inputs = [{"in_file": x, "read_num": i, "dirs": dirs, "config": data["config"], "rgnames": data["rgnames"]}
+        inputs = [{"in_file": x, "read_num": i, "dirs": data["dirs"], "config": data["config"],
+                   "rgnames": data["rgnames"]}
                   for i, x in enumerate(in_files) if x]
         out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"], parallel)
-    items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in out if x]
-    run_multicore(_grabix_index, items, data["config"])
     return out
+
+def _prep_grabix_indexes(in_files, data):
+    """Parallel preparation of grabix indexes for files.
+    """
+    items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in in_files if x]
+    run_multicore(_grabix_index, items, data["config"])
+    return data
 
 def _bgzip_from_cram(cram_file, dirs, data):
     """Create bgzipped fastq files from an input CRAM file in regions of interest.

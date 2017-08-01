@@ -1,17 +1,17 @@
-"""Provide trimming of input reads from Fastq or BAM files.
+"""atropos cutadapt-like multicore trimming of input reads from Fastq or BAM files.
 """
 import os
 import sys
 
-from bcbio.utils import (file_exists, append_stem, replace_directory,
-                         safe_makedir, splitext_plus)
+from Bio.Seq import Seq
+
+from bcbio import utils
 from bcbio.bam.fastq import is_fastq
 from bcbio.log import logger
-from bcbio.distributed import objectstore
-from bcbio.provenance import do
-from Bio.Seq import Seq
 from bcbio.distributed.transaction import file_transaction
+from bcbio.distributed import objectstore
 from bcbio.pipeline import config_utils
+from bcbio.provenance import do
 import bcbio.pipeline.datadict as dd
 
 SUPPORTED_ADAPTERS = {
@@ -27,11 +27,10 @@ def trim_adapters(data):
 
     logger.info("Trimming low quality ends and read through adapter "
                 "sequence from %s." % (", ".join(to_trim)))
-    out_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed"))
-    name = dd.get_sample_name(data)
-    return _trim_adapters(to_trim, out_dir, name, data)
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trimmed"))
+    return _trim_adapters(to_trim, out_dir, data)
 
-def _trim_adapters(fastq_files, out_dir, name, data):
+def _trim_adapters(fastq_files, out_dir, data):
     """
     for small insert sizes, the read length can be longer than the insert
     resulting in the reverse complement of the 3' adapter being sequenced.
@@ -39,27 +38,104 @@ def _trim_adapters(fastq_files, out_dir, name, data):
     of the adapter
 
     MYSEQUENCEAAAARETPADA -> MYSEQUENCEAAAA (no polyA trim)
-
     """
-    quality_format = _get_quality_format(data["config"])
     to_trim = _get_sequences_to_trim(data["config"], SUPPORTED_ADAPTERS)
-    out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
-    log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
-    out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, log_file, data)
-    if file_exists(log_file):
-        content = open(log_file).read().replace(fastq_files[0], name)
-        if len(fastq_files) > 1:
-            content = content.replace(fastq_files[1], name)
-        open(log_file, 'w').write(content)
+    out_files, report_file = _atropos_trim(fastq_files, to_trim, out_dir, data)
+    # quality_format = _get_quality_format(data["config"])
+    # out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
+    # log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
+    # out_files = _cutadapt_trim(fastq_files, quality_format, to_trim, out_files, log_file, data)
+    # if file_exists(log_file):
+    #     content = open(log_file).read().replace(fastq_files[0], name)
+    #     if len(fastq_files) > 1:
+    #         content = content.replace(fastq_files[1], name)
+    #     open(log_file, 'w').write(content)
     return out_files
 
-def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, data):
-    """Trimming with cutadapt, using version installed with bcbio-nextgen.
-
-    Uses the system executable to find the version next to our Anaconda Python.
-    TODO: Could we use cutadapt as a library to avoid this?
+def _atropos_trim(fastq_files, adapters, out_dir, data):
+    """Perform multicore trimming with atropos.
     """
-    if all([file_exists(x) for x in out_files]):
+    report_file = os.path.join(out_dir, "%s-report.json" % utils.splitext_plus(os.path.basename(fastq_files[0]))[0])
+    out_files = [os.path.join(out_dir, "%s-trimmed.fq.gz" % utils.splitext_plus(os.path.basename(x))[0])
+                 for x in fastq_files]
+    if not utils.file_exists(out_files[0]):
+        with file_transaction(data, *[report_file] + out_files) as tx_out:
+            tx_report_file, tx_out1 = tx_out[:2]
+            if len(tx_out) > 2:
+                tx_out2 = tx_out[2]
+            adapters_args = " ".join(["-a %s" % a for a in adapters])
+            aligner_args = "--aligner adapter"
+            if len(fastq_files) == 1:
+                input_args = "-se %s" % objectstore.cl_input(fastq_files[0])
+                output_args = "-o >(bgzip --threads %s -c > {tx_out1})".format(**locals())
+            else:
+                assert len(fastq_files) == 2, fastq_files
+                if adapters and len(adapters) <= 2:
+                    aligner_args = "--aligner insert"
+                adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
+                input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
+                output_args = "-o >(bgzip -c > {tx_out1}) -p >(bgzip -c > {tx_out2})".format(**locals())
+            quality_base = "64" if dd.get_quality_format(data).lower() == "illumina" else "33"
+            sample_name = dd.get_sample_name(data)
+            report_args = "--report-file %s --report-formats json --sample-id %s" % (tx_report_file,
+                                                                                     dd.get_sample_name(data))
+            ropts = " ".join(str(x) for x in
+                             config_utils.get_resources("atropos", data["config"]).get("options", []))
+            thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
+            cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
+                   "{adapters_args} {aligner_args} {input_args} {output_args} {report_args}")
+            cmd += " --quality-cutoff=5 --minimum-length=%s" % dd.get_min_read_length(data)
+            do.run(cmd.format(**locals()), "Trimming with atropos: %s" % dd.get_sample_name(data))
+    return out_files, report_file
+
+def _get_sequences_to_trim(config, builtin):
+    builtin_adapters = _get_builtin_adapters(config, builtin)
+    polya = builtin_adapters.get("polya", [None])[0]
+    # allow for trimming of custom sequences for advanced users
+    custom_trim = config["algorithm"].get("custom_trim", [])
+    builtin_adapters = {k: v for k, v in builtin_adapters.items() if
+                        k != "polya"}
+    trim_sequences = custom_trim
+    # for unstranded RNA-seq, libraries, both polyA and polyT can appear
+    # at the 3' end as well
+    if polya:
+        trim_sequences += [polya, str(Seq(polya).reverse_complement())]
+
+    # also trim the reverse complement of the adapters
+    for _, v in builtin_adapters.items():
+        trim_sequences += [str(Seq(sequence)) for sequence in v]
+        trim_sequences += [str(Seq(sequence).reverse_complement()) for
+                           sequence in v]
+    out = []
+    for trim in trim_sequences:
+        if utils.file_exists(trim):
+            out.append("file:%s" % trim)
+        else:
+            out.append(trim)
+    return out
+
+def _get_quality_format(config):
+    SUPPORTED_FORMATS = ["illumina", "standard"]
+    quality_format = dd.get_quality_format(data).lower()
+    if quality_format not in SUPPORTED_FORMATS:
+        logger.error("quality_format is set to an unsupported format. "
+                     "Supported formats are %s."
+                     % (", ".join(SUPPORTED_FORMATS)))
+        exit(1)
+    return quality_format
+
+def _get_builtin_adapters(config, builtin):
+    chemistries = config["algorithm"].get("adapters", [])
+    adapters = {chemistry: builtin[chemistry] for
+                chemistry in chemistries if chemistry in builtin}
+    return adapters
+
+# Older cutadapt approach, to remove after review
+
+def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, data):
+    """Trimming with cutadapt.
+    """
+    if all([utils.file_exists(x) for x in out_files]):
         return out_files
     cmd = _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files, data)
     if len(fastq_files) == 1:
@@ -72,8 +148,8 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, d
         of = out_files + [log_file]
         with file_transaction(data, of) as tx_out_files:
             of1_tx, of2_tx, log_tx = tx_out_files
-            tmp_fq1 = append_stem(of1_tx, ".tmp")
-            tmp_fq2 = append_stem(of2_tx, ".tmp")
+            tmp_fq1 = utils.append_stem(of1_tx, ".tmp")
+            tmp_fq2 = utils.append_stem(of2_tx, ".tmp")
             singles_file = of1_tx + ".single"
             message = "Trimming %s and %s in paired end mode with cutadapt." % (fastq_files[0],
                                                                                 fastq_files[1])
@@ -82,11 +158,8 @@ def _cutadapt_trim(fastq_files, quality_format, adapters, out_files, log_file, d
 
 def _cutadapt_trim_cmd(fastq_files, quality_format, adapters, out_files, data):
     """Trimming with cutadapt, using version installed with bcbio-nextgen.
-
-    Uses the system executable to find the version next to our Anaconda Python.
-    TODO: Could we use cutadapt as a library to avoid this?
     """
-    if all([file_exists(x) for x in out_files]):
+    if all([utils.file_exists(x) for x in out_files]):
         return out_files
     if quality_format == "illumina":
         quality_base = "64"
@@ -135,45 +208,3 @@ def _cutadapt_pe_cmd(fastq_files, out_files, quality_format, base_cmd, data):
     base_cmd += " --minimum-length={min_length} ".format(min_length=dd.get_min_read_length(data))
     first_cmd = base_cmd + " -o {of1_tx} -p {of2_tx} " + fq1 + " " + fq2
     return first_cmd + "| tee > {log_tx};"
-
-def _get_sequences_to_trim(config, builtin):
-    builtin_adapters = _get_builtin_adapters(config, builtin)
-    polya = builtin_adapters.get("polya", [None])[0]
-    # allow for trimming of custom sequences for advanced users
-    custom_trim = config["algorithm"].get("custom_trim", [])
-    builtin_adapters = {k: v for k, v in builtin_adapters.items() if
-                        k != "polya"}
-    trim_sequences = custom_trim
-    # for unstranded RNA-seq, libraries, both polyA and polyT can appear
-    # at the 3' end as well
-    if polya:
-        trim_sequences += [polya, str(Seq(polya).reverse_complement())]
-
-    # also trim the reverse complement of the adapters
-    for _, v in builtin_adapters.items():
-        trim_sequences += [str(Seq(sequence)) for sequence in v]
-        trim_sequences += [str(Seq(sequence).reverse_complement()) for
-                           sequence in v]
-    out = []
-    for trim in trim_sequences:
-        if file_exists(trim):
-            out.append("file:%s" % trim)
-        else:
-            out.append(trim)
-    return out
-
-def _get_quality_format(config):
-    SUPPORTED_FORMATS = ["illumina", "standard"]
-    quality_format = config["algorithm"].get("quality_format", "standard").lower()
-    if quality_format not in SUPPORTED_FORMATS:
-        logger.error("quality_format is set to an unsupported format. "
-                     "Supported formats are %s."
-                     % (", ".join(SUPPORTED_FORMATS)))
-        exit(1)
-    return quality_format
-
-def _get_builtin_adapters(config, builtin):
-    chemistries = config["algorithm"].get("adapters", [])
-    adapters = {chemistry: builtin[chemistry] for
-                chemistry in chemistries if chemistry in builtin}
-    return adapters

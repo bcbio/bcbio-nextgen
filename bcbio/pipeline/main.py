@@ -117,30 +117,20 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("organize samples", dirs):
             samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
                                                             [x[0]["description"] for x in samples]]])
-        ww = initialize_watcher(samples)
         with profile.report("alignment preparation", dirs):
             samples = run_parallel("prep_align_inputs", samples)
-            samples = run_parallel("trim_sample", samples)
-            # Need to prep again after trimming to add grabix indexes if needed
-            samples = run_parallel("prep_align_inputs", samples)
-            ww.report("prep_align_inputs", samples)
             samples = run_parallel("disambiguate_split", [samples])
         with profile.report("alignment", dirs):
             samples = run_parallel("process_alignment", samples)
-            ww.report("process_alignment", samples)
             samples = disambiguate.resolve(samples, run_parallel)
             samples = alignprep.merge_split_alignments(samples, run_parallel)
         with profile.report("callable regions", dirs):
             samples = run_parallel("prep_samples", [samples])
-            ww.report("prep_samples", samples)
             samples = run_parallel("postprocess_alignment", samples)
-            ww.report("postprocess_alignment", samples)
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
-            ww.report("combine_sample_regions", samples)
         with profile.report("hla typing", dirs):
             samples = hla.run(samples, run_parallel)
-            ww.report("call_hla", samples)
 
     ## Variant calling on sub-regions of the input file (full cluster)
     with prun.start(_wres(parallel, ["gatk", "picard", "variantcaller"]),
@@ -187,9 +177,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("population database", dirs):
             samples = population.prep_db_parallel(samples, run_parallel)
         with profile.report("quality control", dirs):
-            ww.report("pre_qc", samples)
             samples = qcsummary.generate_parallel(samples, run_parallel)
-            ww.report("qc_summary", samples)
         with profile.report("archive", dirs):
             samples = archive.compress(samples, run_parallel)
         with profile.report("upload", dirs):
