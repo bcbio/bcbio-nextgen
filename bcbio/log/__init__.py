@@ -102,8 +102,11 @@ def create_base_logger(config=None, parallel=None):
     cores = parallel.get("cores", 1)
     if parallel_type == "ipython":
         from bcbio.log import logbook_zmqpush
-        ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-               if not ip.startswith("127.")]
+        fqdn_ip = socket.gethostbyname(socket.getfqdn())
+        ips = [fqdn_ip] if (fqdn_ip and not fqdn_ip.startswith("127.")) else []
+        if not ips:
+            ips = [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+                   if not ip.startswith("127.")]
         if not ips:
             ips += [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close())[1] for s in
                     [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]]
