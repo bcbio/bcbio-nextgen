@@ -3,6 +3,7 @@ from collections import namedtuple
 import pandas as pd
 
 import bcbio.pipeline.datadict as dd
+import bcbio.rnaseq.gtf as gtf
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.utils import (file_exists, safe_makedir, is_gzipped,
@@ -99,8 +100,7 @@ def create_combined_fasta(data, out_dir):
         if file_exists(out_file):
             fasta_files.append(out_file)
         else:
-            out_file = _gtf_to_fasta(gtf_file, ref_file, out_file, data=data)
-            out_file = _clean_gtf_fa(out_file, out_file, data=data)
+            out_file = gtf.gtf_to_fasta(gtf_file, ref_file, out_file=out_file)
             fasta_files.append(out_file)
     out_stem = os.path.join(out_dir, dd.get_genome_build(data))
     if dd.get_disambiguate(data):
@@ -161,28 +161,6 @@ def _sailfish_strand_string(strandedness):
     return {'unstranded': "U",
             'firststrand': "SR",
             'secondstrand': "SF"}.get(strandedness, "U")
-
-def _gtf_to_fasta(gtf_file, ref_file, out_file, data=None):
-    gtf_to_fasta = config_utils.get_program("gtf_to_fasta",
-                                            dd.get_config(data))
-    with file_transaction(data, out_file) as tx_gtf_fa:
-        cmd = "{gtf_to_fasta} {gtf_file} {ref_file} {tx_gtf_fa}"
-        message = "Extracting genomic sequences of {gtf_file}."
-        do.run(cmd.format(**locals()), message.format(**locals()), None)
-    return out_file
-
-def _clean_gtf_fa(gtf_fa, out_file, data=None):
-    """
-    convert the gtf_to_fasta sequence names to just the transcript ID
-    >1 ENST00000389680 chrM+ 648-1601 -> >ENST00000389680
-    """
-    with file_transaction(data, out_file) as tx_out_file:
-        with open(gtf_fa) as in_handle, open(tx_out_file, "w") as out_handle:
-            for line in in_handle:
-                if line.startswith(">"):
-                    line = ">" + line.split()[1] + "\n"
-                out_handle.write(line)
-    return out_file
 
 def _sailfish_expression_parser(sailfish_file, samplename):
     col_names = ["name", "length", "effectiveLength", "tpm", "numreads"]
