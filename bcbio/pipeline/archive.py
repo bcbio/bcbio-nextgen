@@ -19,7 +19,7 @@ def compress(samples, run_parallel):
     to_cram = []
     finished = []
     for data in [x[0] for x in samples]:
-        if "cram" in dd.get_archive(data):
+        if "cram" in dd.get_archive(data) or "cram-lossless" in dd.get_archive(data):
             to_cram.append([data])
         else:
             finished.append([data])

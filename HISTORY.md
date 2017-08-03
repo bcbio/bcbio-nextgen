@@ -19,6 +19,8 @@
 - GATK4: fix option usage for gVCF creation with HaplotypeCaller
 - Additional approach to retrieving cluster IP addresses for IPython and
   logging, using the fully qualified domain name.
+- Add `archive: [cram-lossless]` to do CRAM archiving of outputs without quality
+  score compression. Thanks to Alison Meynert.
 - Add `tools_off: [lumpy-genotype]` option to skip Lumpy genotyping.
 - CWL/WDL: use single file tarballs for complex collections of files like
   aligner, RTG and snpEff indices.
