@@ -287,6 +287,8 @@ def singlecellrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     dirs, "singlecell-rnaseq") as run_parallel:
         with profile.report("singlecell-rnaseq", dirs):
             samples = rnaseq.singlecell_rnaseq(samples, run_parallel)
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for samples in samples:

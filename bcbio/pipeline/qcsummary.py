@@ -83,7 +83,7 @@ def get_qc_tools(data):
     if any([tool in dd.get_tools_on(data)
             for tool in ["qualimap", "qualimap_full"]]):
         to_run.append("qualimap")
-    if analysis.startswith("rna-seq"):
+    if "rna-seq" in analysis:
         if "qualimap" not in dd.get_tools_off(data):
             if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
                 to_run.append("qualimap_rnaseq")
