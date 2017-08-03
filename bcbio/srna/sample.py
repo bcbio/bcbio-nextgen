@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import glob
 import os.path as op
 import shutil
@@ -186,18 +187,17 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
 
 def _get_env():
     conda = os.path.join(os.path.dirname(sys.executable), "conda")
-    anaconda = os.path.join(os.path.dirname(sys.executable), "..")
     cl = ("{conda} list --json -f seqbuster").format(**locals())
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-        try:
-            version = stdout.readlines()[2].strip().split()[1]
-            if LooseVersion(version) >= LooseVersion("3"):
-                logger.info("miraligner version %s" % version)
-                return "JAVA_HOME=%s && " % anaconda
-        except:
-            logger.warning("Cannot detect miraligner version, asumming latest.")
-    return ""
+        version = json.loads(stdout.read())[0]["version"]
+        if LooseVersion(version) >= LooseVersion("3"):
+            logger.info("miraligner version %s" % version)
+            anaconda_bin = os.path.dirname(utils.Rscript_cmd())
+            return "unset JAVA_HOME && export PATH=%s:$PATH && " % (anaconda_bin)
+        else:
+            logger.info("Older miraligner, requires Java 1.7")
+            return ""
 
 def _old_version(fn):
     """Check if miraligner is old version."""
@@ -259,10 +259,3 @@ def _mint_trna_annotation(data):
                 for filename in glob.glob("*MINTmap*"):
                     shutil.move(filename, work_dir)
     return work_dir
-
-def _check_java_version(config, items):
-    msg = java(config, items)
-    if msg:
-        logger.warning("miraligner is only compatible with java 1.7")
-        return False
-    return True
