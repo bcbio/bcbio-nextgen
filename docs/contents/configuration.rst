@@ -452,7 +452,7 @@ Read trimming
 =============
 
 - ``trim_reads`` Trims low quality or adapter sequences or at the ends of reads
-  using cutadapt. ``adapters`` and ``custom_trim`` specify the sequences to trim.
+  using atropos. ``adapters`` and ``custom_trim`` specify the sequences to trim.
   For RNA-seq, it's recommended to leave as False unless running Tophat2.
   For variant calling, we recommend trimming only in special cases where
   standard soft-clipping does not resolve false positive problems.
@@ -845,7 +845,7 @@ smallRNA sequencing
 ===================
 
 - ``adapter`` The 3' end adapter that needs to be remove. For NextFlex protocol you can add
-  resources: ``cutadapt:options:["-u 4", "-u -4"]``.
+  resources: ``atropos:options:["-u 4", "-u -4"]``.
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
 - ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2

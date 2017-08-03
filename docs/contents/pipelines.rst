@@ -371,7 +371,7 @@ detection.
 
 - Adapter trimming:
 
-  - `cutadapt`_
+  - `atropos`_
   - `dnapi <https://github.com/jnktsj/DNApi>`_ for adapter de-novo detection
 
 - Sequence alignment:
@@ -415,7 +415,7 @@ bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning w
 bowtie2. It does alignment and peak calling with MACS2.
 
 - Adapter trimming:
-  - `cutadapt`_
+  - `atropos`_
 
 - Sequence alignment:
   - `bowtie2`_
@@ -567,7 +567,7 @@ templating system.
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 .. _tophat2: http://tophat.cbcb.umd.edu/
 .. _STAR: http://code.google.com/p/rna-star/
-.. _cutadapt: http://cutadapt.readthedocs.org/en/latest/guide.html
+.. _atropos: http://atropos.readthedocs.org/en/latest/guide.html
 .. _qualimap: http://qualimap.bioinfo.cipf.es
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _HTSeq: http://www-huber.embl.de/users/anders/HTSeq/doc/index.html

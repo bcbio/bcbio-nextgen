@@ -23,7 +23,7 @@ Tools
 
 * Andrews, S. (2010). FastQC: A quality control tool for high throughput sequence data. Bioinformatics. doi:citeulike-article-id:11583827
 
-* Martin, M. (2011). Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.journal, 17(1), 10. doi:10.14806/ej.17.1.200
+* Didion, J. P., Martin, M., & Collins, F. S. (2017). Atropos: specific, sensitive, and speedy trimming of sequencing reads. http://doi.org/10.7287/peerj.preprints.2452v4
 
 * Dale, R. K., Pedersen, B. S., & Quinlan, A. R. (2011). Pybedtools: A flexible Python library for manipulating genomic datasets and annotations. Bioinformatics, 27(24), 3423–3424. doi:10.1093/bioinformatics/btr539
 

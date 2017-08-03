@@ -52,9 +52,12 @@ def trim_srna_sample(data):
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         log_out = os.path.join(out_dir, "%s.log" % names)
-        cutadapt = os.path.join(os.path.dirname(sys.executable), "cutadapt")
-        options = " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", ""))
-        cmd = _cmd_cutadapt()
+        atropos = os.path.join(os.path.dirname(sys.executable), "atropos")
+        options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
+        if " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", "")):
+            raise ValueError("Atropos is now used, but cutadapt options found in YAML file."
+                             "See https://atropos.readthedocs.io/en/latest/")
+        cmd = _cmd_atropos()
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 do.run(cmd.format(**locals()), "remove adapter for %s" % names)
@@ -64,7 +67,7 @@ def trim_srna_sample(data):
                 if options:
                     in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
-                    cmd = "{cutadapt} {options} {in_file} -o {tx_out_file} -m 17"
+                    cmd = "{atropos} {options} -se {in_file} -o {tx_out_file} -m 17"
                     do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
     else:
         if not trim_reads:
@@ -113,11 +116,11 @@ def _dnapi_prediction(fn):
     iterative_result = iterative_adapter_prediction(fn, [1.2, 1.3, 1.4], [9, 11], 50000)
     return [a[0] for a in iterative_result]
 
-def _cmd_cutadapt():
+def _cmd_atropos():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{cutadapt} {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{atropos}  {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
@@ -179,33 +182,12 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
-            if _old_version(tx_out_file + ".mirna"):
-                raise ValueError("Please install last version for miraligner."
-                                 "bcbio_nextgen.py upgrade -u deps --tools.")
             shutil.move(tx_out_file + ".mirna", out_file + ".mirna")
     return out_file + ".mirna"
 
 def _get_env():
-    conda = os.path.join(os.path.dirname(sys.executable), "conda")
-    cl = ("{conda} list --json -f seqbuster").format(**locals())
-    with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-        version = json.loads(stdout.read())[0]["version"]
-        if LooseVersion(version) >= LooseVersion("3"):
-            logger.info("miraligner version %s" % version)
-            anaconda_bin = os.path.dirname(utils.Rscript_cmd())
-            return "unset JAVA_HOME && export PATH=%s:$PATH && " % (anaconda_bin)
-        else:
-            logger.info("Older miraligner, requires Java 1.7")
-            return ""
-
-def _old_version(fn):
-    """Check if miraligner is old version."""
-    with open(fn) as in_handle:
-        h = in_handle.next()
-        if h.find("freq") == -1:
-            return True
-    return False
+    anaconda_bin = os.path.dirname(utils.Rscript_cmd())
+    return "unset JAVA_HOME && export PATH=%s:$PATH && " % (anaconda_bin)
 
 def _trna_annotation(data):
     """
