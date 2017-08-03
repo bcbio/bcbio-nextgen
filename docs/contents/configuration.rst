@@ -58,8 +58,8 @@ multiple samples using the template workflow command::
   files, the template functionality will identify pairs using standard
   conventions (``_1`` and ``_2``, including Illumina extensions like ``_R1``),
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
-  Note that paired-end samples sequentially numbered without leading zeros 
-  (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``, 
+  Note that paired-end samples sequentially numbered without leading zeros
+  (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``,
   etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info). As well, ``.`` characters could be problematics,
   it's better to avoid this character and use it only as separation
   for the extension file.
@@ -833,7 +833,6 @@ Single-cell RNA sequencing
 - ``transcriptome_fasta`` An optional FASTA file of transcriptome sequences to
   quantitate rather than the bcbio installed version.
 - ``singlecell_quantifier`` Quantifier to use for single-cell RNA-sequencing.
-  Non-academic users without a kallisto license should choose ``rapmap``.
   Supports ``rapmap`` or ``kallisto``.
 - ``cellular_barcode_correction`` Number of errors to correct in identified
   cellular barcodes. Requires a set of known barcodes to be passed with the
