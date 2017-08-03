@@ -652,4 +652,9 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_tx2gene(sample)})
     if dd.get_spikein_counts(sample):
         out.append({"path": dd.get_spikein_counts(sample)})
+    transcriptome_dir = os.path.join(dd.get_work_dir(sample), "inputs",
+                                     "transcriptome")
+    if os.path.exists(transcriptome_dir):
+        out.append({"path": transcriptome_dir, "type": "directory",
+                    "ext": "transcriptome"})
     return _add_meta(out, config=upload_config)

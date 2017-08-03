@@ -43,7 +43,7 @@ def rapmap_index(gtf_file, ref_file, algorithm, data, out_dir):
         out_dir = os.path.join(out_dir, index_type, dd.get_genome_build(data))
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
-        gtf_fa = sailfish.create_combined_fasta(data, out_dir)
+        gtf_fa = sailfish.create_combined_fasta(data)
     tmpdir = dd.get_tmp_dir(data)
     if file_exists(out_dir + "rapidx.jfhash"):
         return out_dir

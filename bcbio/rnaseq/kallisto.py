@@ -62,7 +62,7 @@ def kallisto_index(gtf_file, ref_file, data, out_dir):
     if dd.get_transcriptome_fasta(data):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
-        gtf_fa = sailfish.create_combined_fasta(data, index_dir)
+        gtf_fa = sailfish.create_combined_fasta(data)
     out_file = os.path.join(index_dir, out_stem + ".idx")
     if file_exists(out_file):
         return out_file
