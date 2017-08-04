@@ -306,8 +306,8 @@ def compare_to_rm(*args):
     return validate.compare_to_rm(*args)
 
 @utils.map_wrap
-def summarize_grading_vc(*args):
-    return validate.summarize_grading(*args)
+def summarize_vc(*args):
+    return variation.summarize_vc(*args)
 
 @utils.map_wrap
 def run_disambiguate(*args):

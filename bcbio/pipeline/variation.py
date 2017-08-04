@@ -8,8 +8,32 @@ from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import annotation, damage, effects, genotype, germline, prioritize
+from bcbio.variation import annotation, damage, effects, genotype, germline, prioritize, validate, vcfutils
 from bcbio.variation import multi as vmulti
+
+# ## CWL summarization
+
+def summarize_vc(items):
+    """CWL target: summarize variant calls and validation for multiple samples.
+    """
+    items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
+    out = {"validate": items[0]["validate"],
+           "variants": {"calls": []}}
+    added = set([])
+    for data in items:
+        if data.get("vrn_file"):
+            names = dd.get_batches(data)
+            if not names:
+                names = [dd.get_sample_name(data)]
+            cur_name = "%s-%s" % (names[0], dd.get_variantcaller(data))
+            if cur_name not in added:
+                out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "variants", "calls")),
+                                        "%s.vcf.gz" % cur_name)
+                added.add(cur_name)
+                utils.symlink_plus(os.path.realpath(data["vrn_file"]), out_file)
+                vcfutils.bgzip_and_index(out_file, data["config"])
+                out["variants"]["calls"].append(out_file)
+    return [out]
 
 # ## Genotyping
 

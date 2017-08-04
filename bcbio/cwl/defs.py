@@ -133,7 +133,7 @@ def _variant_vc(checkpoints):
                             "gatk", "gatk4", "gatk-framework",
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "vardict", "vardict-java", "varscan", "vcfanno",
-                            "vcflib", "vt", "r=3.2.2", "perl"],
+                            "vcflib", "vt", "r=3.3.2", "perl"],
                cores=1),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region"], ["vrn_file_region"]],
@@ -173,13 +173,14 @@ def _variant_vc(checkpoints):
             unlist=[["config", "algorithm", "variantcaller"]]),
           w("variantcall", "multi-parallel", vc_wf,
             [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
-          s("summarize_grading_vc", "multi-combined",
+          s("summarize_vc", "multi-combined",
             [["vc_rec"]],
-            [cwlout(["validate", "grading_summary"], ["File", "null"]),
+            [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
+             cwlout(["validate", "grading_summary"], ["File", "null"]),
              cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
             "bcbio-base",
             cores=1)]
-    return vc, [["validate", "grading_summary"]]
+    return vc, [["validate", "grading_summary"], ["variants", "calls"]]
 
 def _variant_checkpoints(samples):
     """Check sample configuration to identify required steps in analysis.
@@ -238,6 +239,7 @@ def variant(samples):
                 ["config", "algorithm", "coverage_orig"],
                 ["config", "algorithm", "seq2c_bed_ready"],
                 ["config", "algorithm", "recalibrate"],
+                ["reference", "twobit"],
                 ["reference", "fasta", "base"]],
                [cwlout("postprocess_alignment_rec", "record")],
                "bcbio-base",
@@ -254,8 +256,7 @@ def variant(samples):
                 cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"]),
                 cwlout(["regions", "callable"], "File"),
                 cwlout(["regions", "sample_callable"], "File"),
-                cwlout(["regions", "nblock"], "File"),
-                cwlout(["regions", "highdepth"], ["File", "null"])],
+                cwlout(["regions", "nblock"], "File")],
                "bcbio-align", ["sambamba", "goleft", "bedtools", "htslib"]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],

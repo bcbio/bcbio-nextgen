@@ -47,7 +47,7 @@ def merge_bam_files(bam_files, work_dir, data, out_file=None, batch=None):
         if len(bam_files) == 1 and bam.bam_already_sorted(bam_files[0], data["config"], "coordinate"):
             with file_transaction(data, out_file) as tx_out_file:
                 _create_merge_filelist(bam_files, tx_out_file, data["config"])
-                shutil.copy(bam_files[0], tx_out_file)
+            out_file = bam_files[0]
             samtools = config_utils.get_program("samtools", data["config"])
             do.run('{} quickcheck -v {}'.format(samtools, out_file),
                    "Check for valid merged BAM after transfer")

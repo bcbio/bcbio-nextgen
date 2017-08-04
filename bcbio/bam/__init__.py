@@ -180,7 +180,7 @@ def downsample(in_bam, data, target_counts, work_dir=None):
 def get_maxcov_downsample_cl(data, in_pipe=None):
     """Retrieve command line for max coverage downsampling, fitting into bamsormadup output.
     """
-    max_cov = _get_maxcov_downsample(data)
+    max_cov = _get_maxcov_downsample(data) if dd.get_aligner(data) not in ["snap"] else None
     if max_cov:
         if in_pipe == "bamsormadup":
             prefix = "level=0"
