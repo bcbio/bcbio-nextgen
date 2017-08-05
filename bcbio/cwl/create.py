@@ -541,7 +541,26 @@ def _clean_final_outputs(keyvals, integrations=None):
             return retriever.clean_file(x)
         else:
             return x
-    return _adjust_files(keyvals, functools.partial(clean_path, integrations))
+    def null_to_string(x):
+        """Convert None values into the string 'null'
+
+        Required for platforms like SevenBridges without null support from inputs.
+        """
+        return "null" if x is None else x
+    keyvals = _adjust_items(keyvals, null_to_string)
+    keyvals = _adjust_files(keyvals, functools.partial(clean_path, integrations))
+    return keyvals
+
+def _adjust_items(xs, adjust_fn):
+    if isinstance(xs, (list, tuple)):
+        return [_adjust_items(x, adjust_fn) for x in xs]
+    elif isinstance(xs, dict):
+        out = {}
+        for k, v in xs.items():
+            out[k] = _adjust_items(v, adjust_fn)
+        return out
+    else:
+        return adjust_fn(xs)
 
 def _adjust_files(xs, adjust_fn):
     """Walk over key/value, tuples applying adjust_fn to files.

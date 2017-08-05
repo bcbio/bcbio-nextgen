@@ -260,7 +260,7 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
     rec_items = set([item_count(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])
     if var_items:
         num_items = var_items
-        assert len(num_items) == 1, "Non-consistent variant data counts in CWL input:\n%s" % \
+        assert len(num_items) == 1, "Non-consistent variable data counts in CWL input:\n%s" % \
             (pprint.pformat(items_by_key))
         items_by_key, num_items = _nest_vars_in_rec(var_items, rec_items, input_order, items_by_key, parallel)
     else:
