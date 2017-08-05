@@ -41,7 +41,7 @@ def _count_in_bam(data, bam_file, query, keep_dups=True, bed_file=None, target_n
     output_file = os.path.join(work_dir(data), cmd_id)
 
     if not utils.file_uptodate(output_file, bam_file):
-        bam.index(bam_file, data["config"])
+        bam.index(bam_file, data["config"], check_timestamp=False)
         with file_transaction(data, output_file) as tx_out_file:
             cmdline = (make_command(data, "view -c", bam_file, bed_file, query=query, multicore=False)
                        + " > " + tx_out_file)
