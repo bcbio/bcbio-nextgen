@@ -30,7 +30,9 @@ def summarize_vc(items):
                 out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "variants", "calls")),
                                         "%s.vcf.gz" % cur_name)
                 added.add(cur_name)
-                utils.symlink_plus(os.path.realpath(data["vrn_file"]), out_file)
+                # Ideally could symlink here but doesn't appear to work with
+                # Docker container runs on Toil where PATHs don't get remapped
+                utils.copy_plus(os.path.realpath(data["vrn_file"]), out_file)
                 vcfutils.bgzip_and_index(out_file, data["config"])
                 out["variants"]["calls"].append(out_file)
     return [out]

@@ -98,7 +98,7 @@ def remove(in_bam):
 def idxstats(in_bam, data):
     """Return BAM index stats for the given file, using samtools idxstats.
     """
-    index(in_bam, data["config"])
+    index(in_bam, data["config"], check_timestamp=False)
     AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
     samtools = config_utils.get_program("samtools", data["config"])
     idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam])
@@ -151,7 +151,7 @@ def get_downsample_pct(in_bam, target_counts, data):
         return float(rg_target) / float(total)
 
 def get_aligned_reads(in_bam, data):
-    index(in_bam, data["config"])
+    index(in_bam, data["config"], check_timestamp=False)
     bam_stats = idxstats(in_bam, data)
     align = sum(x.aligned for x in bam_stats)
     unaligned = sum(x.unaligned for x in bam_stats)
@@ -161,7 +161,7 @@ def get_aligned_reads(in_bam, data):
 def downsample(in_bam, data, target_counts, work_dir=None):
     """Downsample a BAM file to the specified number of target counts.
     """
-    index(in_bam, data["config"])
+    index(in_bam, data["config"], check_timestamp=False)
     ds_pct = get_downsample_pct(in_bam, target_counts, data)
     if ds_pct:
         out_file = "%s-downsample%s" % os.path.splitext(in_bam)

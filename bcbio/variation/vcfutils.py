@@ -368,7 +368,8 @@ def _fix_gatk_header(exist_files, out_file, config):
                 replace_file = x
                 break
         if replace_file:
-            base_fix_file = "%s-fixheader%s" % utils.splitext_plus(base_file)
+            base_fix_file = os.path.join(os.path.dirname(out_file),
+                                         "%s-fixheader%s" % utils.splitext_plus(os.path.basename(base_file)))
             with file_transaction(config, base_fix_file) as tx_out_file:
                 header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
                 do.run("zgrep ^# %s > %s" % (replace_file, header_file), "Prepare header file for merging")
