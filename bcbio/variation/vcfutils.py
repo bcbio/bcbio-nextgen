@@ -343,6 +343,8 @@ def _get_file_list(orig_files, out_file, regions, ref_file, config):
         exist_files = [x for c, x in sorted_files if os.path.exists(x)]
     elif len(exist_files) > 1:
         exist_files = _fix_gatk_header(exist_files, out_file, config)
+    else:
+        exist_files = [x for c, x in exist_files]
     ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
     input_file_list = "%s-files.list" % utils.splitext_plus(out_file)[0]
     with open(input_file_list, "w") as out_handle:
