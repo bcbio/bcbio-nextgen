@@ -434,7 +434,8 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "align_split_size", "save_diskspace",
                       "transcriptome_align",
                       "quality_format", "write_summary", "merge_bamprep",
-                      "coverage", "coverage_interval", "ploidy", "indelcaller",
+                      "coverage", "coverage_interval", "maxcov_downsample",
+                      "ploidy", "indelcaller",
                       "variantcaller", "jointcaller", "variant_regions",
                       "peakcaller", "chip_method",
                       "effects", "effects_transcripts", "mark_duplicates",
@@ -465,7 +466,7 @@ ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
-                       "variantcaller", "positional_umi"])
+                       "variantcaller", "positional_umi", "maxcov_downsample"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 

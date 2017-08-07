@@ -188,7 +188,11 @@ def get_maxcov_downsample_cl(data, in_pipe=None):
             prefix = "-l 0"
         else:
             prefix = ""
-        return "%s | variant - -b --mark-as-qc-fail --max-coverage %s" % (prefix, max_cov)
+        # Swap over to multiple cores until after testing
+        #core_arg = "-t %s" % dd.get_num_cores(data)
+        core_arg = ""
+        return ("%s | variant - -b %s --mark-as-qc-fail --max-coverage %s"
+                % (prefix, core_arg, max_cov))
     else:
         if in_pipe == "bamsormadup":
             prefix = "indexfilename={tx_out_file}.bai"
@@ -204,10 +208,11 @@ def _get_maxcov_downsample(data):
     from bcbio.bam import ref
     from bcbio.ngsalign import alignprep, bwa
     from bcbio.variation import coverage
-    params = {"min_coverage_for_downsampling": 10, "max_downsample_multiplier": 200}
+    params = {"min_coverage_for_downsampling": 10,
+              "maxcov_downsample_multiplier": dd.get_maxcov_downsample(data)}
     fastq_file = data["files"][0]
     num_reads = alignprep.total_reads_from_grabix(fastq_file)
-    if num_reads:
+    if num_reads and params["maxcov_downsample_multiplier"] and params["maxcov_downsample_multiplier"] > 0:
         vrs = dd.get_variant_regions_merged(data)
         total_size = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
         if vrs:
@@ -216,7 +221,8 @@ def _get_maxcov_downsample(data):
         else:
             callable_size = total_size
             genome_cov_pct = 1.0
-        if genome_cov_pct > coverage.GENOME_COV_THRESH:
+        if (genome_cov_pct > coverage.GENOME_COV_THRESH
+              and dd.get_coverage_interval(data) in ["genome", None, False]):
             total_counts, total_sizes = 0, 0
             for count, size in bwa.fastq_size_output(fastq_file, 5000):
                 total_counts += int(count)
@@ -224,7 +230,7 @@ def _get_maxcov_downsample(data):
             read_size = float(total_sizes) / float(total_counts)
             avg_cov = float(num_reads * read_size) / callable_size
             if avg_cov >= params["min_coverage_for_downsampling"]:
-                return int(avg_cov * params["max_downsample_multiplier"])
+                return int(avg_cov * params["maxcov_downsample_multiplier"])
     return None
 
 

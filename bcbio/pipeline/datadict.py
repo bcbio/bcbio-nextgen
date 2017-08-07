@@ -169,6 +169,8 @@ LOOKUPS = {
     "coverage_interval": {"keys": ["config", "algorithm", "coverage_interval"]},
     "coverage_depth_min": {"keys": ["config", "algorithm", "coverage_depth_min"],
                            "default": 4},
+    "maxcov_downsample": {"keys": ["config", "algorithm", "maxcov_downsample"],
+                          "default": 200},
     "joint_group_size": {"keys": ["config", "algorithm", "joint_group_size"],
                          "default": 200},
     "report": {"keys": ["config", "algorithm", "report"]},
