@@ -306,6 +306,8 @@ def upgrade_bcbio_data(args, remotes):
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
 
+    _install_singlecell_data(_get_data_dir(), args)
+
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
     """
@@ -322,7 +324,7 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
                 remote_config = yaml.load(r.text)
                 needs_update = remote_config["version"] > local_config.get("version", 0)
                 if needs_update:
-                    shutil.move(local_file, local_file + ".old%s" % local_config.get("version", 0))
+                    shutil.move(local_file,kocal_file + ".old%s" % local_config.get("version", 0))
             else:
                 needs_update = True
             if needs_update:
@@ -514,6 +516,44 @@ def _update_system_file(system_file, name, new_kvs):
     config["resources"] = new_rs
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)
+def _install_singlecell_data(datadir, args):
+    """
+    grabs cellular barcode data and transformations from
+    https://github.com/roryk/singlecell-barcodes
+    """
+    print("Upgrading singlecell data.")
+    remote_version_url = "https://raw.githubusercontent.com/roryk/singlecell-barcodes/master/VERSION"
+    singlecell = os.path.join(datadir, "genomes", "singlecell")
+    local_version = LooseVersion("0.0")
+    version_file = os.path.join(singlecell, "singlecell-barcodes", "VERSION")
+    if utils.file_exists(version_file):
+        with open(version_file) as in_handle:
+            local_version = LooseVersion(in_handle.next().strip())
+
+    version_file = "singlecell-barcodes-version.txt"
+    if utils.file_exists(version_file):
+        os.remove(version_file)
+    utils.safe_makedir(singlecell)
+    utils.safe_makedir(os.path.join(singlecell, "singlecell-barcodes"))
+    subprocess.check_call(["wget", "-O", version_file, "--no-check-certificate",
+                           remote_version_url])
+    with open(version_file) as in_handle:
+        remote_version = LooseVersion(in_handle.next().strip())
+
+    remote_master_zip = "https://github.com/roryk/singlecell-barcodes/archive/master.zip"
+    local_master_zip = os.path.join(singlecell, "singlecell-barcodes.zip")
+    if remote_version > local_version:
+        print("Upgrading singlecell data to version %s." % remote_version)
+        shutil.rmtree(os.path.join(singlecell, "singlecell-barcodes"))
+        subprocess.check_call(["wget", "-O", local_master_zip, "--no-check-certificate",
+                               remote_master_zip])
+        with utils.chdir(singlecell):
+            subprocess.check_call(["unzip", local_master_zip])
+            os.rename("singlecell-barcodes-master", "singlecell-barcodes")
+            os.remove(local_master_zip)
+        print("singlecell data upgraded.")
+    else:
+        print("The most recent version of the singlecell data is already installed.")
 
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
