@@ -82,12 +82,22 @@ def run_tnhaplotyper(align_bams, items, ref_file, assoc_files,
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
             cosmic = "--cosmic %s" % (assoc_files.get("cosmic")) if "cosmic" in assoc_files else ""
             license = license_export(items[0])
+            tx_orig_file = "%s-orig%s" % utils.splitext_plus(tx_out_file)
             cmd = ("{license}sentieon driver -t 1 -r {ref_file} "
                    "-i {paired.tumor_bam} -i {paired.normal_bam} {interval} "
                    "--algo TNhaplotyper "
                    "--tumor_sample {paired.tumor_name} --normal_sample {paired.normal_name} "
-                   "{dbsnp} {cosmic} {tx_out_file}")
+                   "{dbsnp} {cosmic} {tx_orig_file}")
             do.run(cmd.format(**locals()), "Sentieon TNhaplotyper")
+            cmd = ("gunzip -c {tx_orig_file} | "
+                   "sed 's/ID=ECNT,Number=1,Type=Integer/ID=ECNT,Number=1,Type=String/' | "
+                   "sed 's/ID=HCNT,Number=1,Type=Integer/ID=HCNT,Number=1,Type=String/' | "
+                   "sed 's/ID=NLOD,Number=1,Type=Float/ID=NLOD,Number=1,Type=String/' | "
+                   "sed 's/ID=TLOD,Number=1,Type=Float/ID=TLOD,Number=1,Type=String/' | "
+                   "sed 's/ID=PON,Number=1,Type=Integer/ID=PON,Number=1,Type=String/' | "
+                   "bgzip -c > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Sentieon TNhaplotyper: make headers GATK compatible")
+            vcfutils.bgzip_and_index(tx_out_file, items[0]["config"])
     return out_file
 
 def run_haplotyper(align_bams, items, ref_file, assoc_files,
