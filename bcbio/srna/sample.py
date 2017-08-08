@@ -113,7 +113,7 @@ def sample_annotation(data):
     return [[data]]
 
 def _dnapi_prediction(fn):
-    iterative_result = iterative_adapter_prediction(fn, [1.2, 1.3, 1.4], [9, 11], 50000)
+    iterative_result = iterative_adapter_prediction(fn, [1.2, 1.3, 1.4, 1.7, 2], [7, 11], 500000)
     return [a[0] for a in iterative_result]
 
 def _cmd_atropos():
