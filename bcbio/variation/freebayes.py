@@ -201,7 +201,7 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                                                        ref_file, items[0], out_file)
             if ann_file != out_file:
                 utils.symlink_plus(ann_file, out_file)
-    return ann_file
+    return out_file
 
 # ## Filtering
 
