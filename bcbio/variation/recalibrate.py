@@ -24,7 +24,7 @@ def prep_recal(data):
         dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), data)
         if not dbsnp_file:
             logger.info("Skipping GATK BaseRecalibrator because no VCF file of known variants was found.")
-            return [[data]]
+            return data
         broad_runner = broad.runner_from_config(data["config"])
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dd.get_align_bam(data),
                                                      dd.get_ref_file(data), dd.get_platform(data),
@@ -39,7 +39,8 @@ def prep_recal(data):
 def apply_recal(data):
     """Apply recalibration tables to the sorted aligned BAM, producing recalibrated BAM.
     """
-    orig_bam = dd.get_work_bam(data)
+    orig_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
+    had_work_bam = "work_bam" in data
     if dd.get_recalibrate(data) in [True, "gatk"]:
         logger.info("Applying BQSR recalibration with GATK: %s " % str(dd.get_sample_name(data)))
         data["work_bam"] = _gatk_apply_bqsr(data)
@@ -48,6 +49,9 @@ def apply_recal(data):
         data["work_bam"] = sentieon.apply_bqsr(data)
     elif dd.get_recalibrate(data):
         raise NotImplementedError("Unsupported recalibration type: %s" % (dd.get_recalibrate(data)))
+    # CWL does not have work/alignment BAM separation
+    if not had_work_bam and dd.get_work_bam(data):
+        data["align_bam"] = dd.get_work_bam(data)
     if orig_bam != dd.get_work_bam(data) and orig_bam != dd.get_align_bam(data):
         utils.save_diskspace(orig_bam, "BAM recalibrated to %s" % dd.get_work_bam(data), data["config"])
     return data
@@ -70,7 +74,8 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     This identifies large files and calculates the fraction to downsample to.
     """
     target_counts = 1e8  # 100 million reads per read group, 20x the plotted max
-    out_file = "%s-recal.grp" % os.path.splitext(dup_align_bam)[0]
+    out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
+                            "%s-recal.grp" % utils.splitext_plus(os.path.basename(dup_align_bam))[0])
     if not utils.file_exists(out_file):
         if has_aligned_reads(dup_align_bam, intervals):
             with file_transaction(data, out_file) as tx_out_file:
@@ -105,8 +110,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
 def _gatk_apply_bqsr(data):
     """Parallel BQSR support for GATK4.
     """
-    in_file = dd.get_work_bam(data)
-    out_file = "%s-recal.bam" % utils.splitext_plus(in_file)[0]
+    in_file = dd.get_align_bam(data) or dd.get_work_bam(data)
+    out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
+                            "%s-recal.bam" % utils.splitext_plus(os.path.basename(in_file))[0])
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(data, out_file) as tx_out_file:
             broad_runner = broad.runner_from_config(data["config"])

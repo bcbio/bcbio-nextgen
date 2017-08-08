@@ -225,6 +225,9 @@ def batch_for_variantcall(samples):
 
     CWL input target that groups samples into batches and variant callers
     for parallel processing.
+
+    If doing joint calling, with `tools_on: [gvcf]`, split the sample into
+    individuals instead of combining into a batch.
     """
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
@@ -236,7 +239,15 @@ def batch_for_variantcall(samples):
             batches = [batches]
         for b in batches:
             batch_groups[(b, vc)].append(utils.deepish_copy(data))
-    return list(batch_groups.values()) + extras
+    batches = []
+    for cur_group in batch_groups.values():
+        joint_calling = any(["gvcf" in dd.get_tools_on(d) for d in cur_group])
+        if joint_calling:
+            for d in cur_group:
+                batches.append([d])
+        else:
+            batches.append(cur_group)
+    return batches + extras
 
 def _handle_precalled(data):
     """Copy in external pre-called variants fed into analysis.

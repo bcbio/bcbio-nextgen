@@ -54,8 +54,8 @@ def _ensure_annotations(resources, data):
     """
     transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
     if transcript_gff and utils.file_exists(transcript_gff):
-        out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
-                                                  "inputs", "data", "annotations"))
+        out_dir = os.path.join(tz.get_in(["dirs", "work"], data),
+                               "inputs", "data", "annotations")
         resources["rnaseq"]["gene_bed"] = gtf.gtf_to_bed(transcript_gff, out_dir)
     return resources
 

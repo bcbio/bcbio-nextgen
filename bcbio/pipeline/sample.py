@@ -216,7 +216,6 @@ def postprocess_alignment(data):
     """Perform post-processing steps required on full BAM files.
     Prepares list of callable genome regions allowing subsequent parallelization.
     """
-    params = {"min_coverage_for_downsampling": 10, "max_downsample_multiplier": 200}
     data = cwlutils.normalize_missing(utils.to_single_data(data))
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")

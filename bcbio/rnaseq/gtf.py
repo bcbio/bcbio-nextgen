@@ -3,6 +3,7 @@ import tempfile
 import os
 import random
 import gzip
+from bcbio import utils
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
@@ -62,7 +63,7 @@ def gtf_to_bed(gtf, alt_out_dir=None):
         if not alt_out_dir:
             raise IOError("Cannot write transcript BED output file %s" % out_file)
         else:
-            out_file = os.path.join(alt_out_dir, os.path.basename(out_file))
+            out_file = os.path.join(utils.safe_makedir(alt_out_dir), os.path.basename(out_file))
     if file_exists(out_file):
         return out_file
     with open(out_file, "w") as out_handle:
