@@ -52,8 +52,9 @@ def trim_srna_sample(data):
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         log_out = os.path.join(out_dir, "%s.log" % names)
-        atropos = os.path.join(os.path.dirname(sys.executable), "atropos")
+        atropos = _get_atropos()
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
+        cores = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
         if " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", "")):
             raise ValueError("Atropos is now used, but cutadapt options found in YAML file."
                              "See https://atropos.readthedocs.io/en/latest/")
@@ -67,7 +68,7 @@ def trim_srna_sample(data):
                 if options:
                     in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
-                    cmd = "{atropos} {options} -se {in_file} -o {tx_out_file} -m 17"
+                    cmd = "{atropos} {cores} {options} -se {in_file} -o {tx_out_file} -m 17"
                     do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
     else:
         if not trim_reads:
@@ -120,7 +121,7 @@ def _cmd_atropos():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{atropos}  {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{atropos} {cores} {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
@@ -187,7 +188,11 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
 
 def _get_env():
     anaconda_bin = os.path.dirname(utils.Rscript_cmd())
-    return "unset JAVA_HOME && export PATH=%s:$PATH && " % (anaconda_bin)
+    return "unset JAVA_HOME  && export PATH=%s:$PATH && " % (anaconda_bin)
+
+def _get_atropos():
+    anaconda = os.path.dirname(os.path.realpath(sys.executable))
+    return os.path.join(anaconda, "..", "envs", "python3", "bin", "atropos")
 
 def _trna_annotation(data):
     """

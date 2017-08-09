@@ -377,7 +377,7 @@ def rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples):
     resources = ["picard"]
     needs_trimming = (_is_smallrnaseq(pipeline) or trim_reads_set)
     if needs_trimming:
-        resources.append("cutadapt")
+        resources.append("atropos")
     with prun.start(_wres(parallel, resources),
                     samples, config, dirs, "trimming", max_multicore=1) as run_parallel:
         with profile.report("organize samples", dirs):
