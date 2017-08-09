@@ -89,8 +89,8 @@ def _variant_shared():
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                "bcbio-vc", ["bwa", "bwakit", "grabix", "novoalign", "snap-aligner=1.0dev.97",
-                               "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
-                               "samblaster"],
+                            "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
+                            "samblaster"],
                {"files": 1.5}),
              s("merge_split_alignments", "single-merge",
                [["alignment_rec"], ["work_bam"], ["align_bam"],
@@ -138,7 +138,7 @@ def _variant_vc(checkpoints):
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
-               "bcbio-vc", ["bcftools", "htslib"],
+               "bcbio-vc", ["bcftools", "htslib", "gatk4"],
                cores=1),
              s("postprocess_variants", "batch-single",
                [["batch_rec"], ["vrn_file"]],
@@ -172,21 +172,55 @@ def _variant_vc(checkpoints):
             cores=1,
             unlist=[["config", "algorithm", "variantcaller"]]),
           w("variantcall", "multi-parallel", vc_wf,
-            [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]]),
-          s("summarize_vc", "multi-combined",
-            [["vc_rec"]],
-            [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
-             cwlout(["validate", "grading_summary"], ["File", "null"]),
-             cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
+            [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
+    if checkpoints.get("jointvc"):
+        vc += _variant_jointvc()
+    vc += [s("summarize_vc", "multi-combined",
+             [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
+             [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
+              cwlout(["validate", "grading_summary"], ["File", "null"]),
+              cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
+             "bcbio-vc",
+             cores=1)]
+    return vc, [["validate", "grading_summary"], ["variants", "calls"]]
+
+def _variant_jointvc():
+    wf = [s("get_parallel_regions_jointvc", "batch-split",
+            [["jointvc_batch_rec"]],
+            [cwlout(["region"], "string")],
+            "bcbio-vc",
+            cores=1),
+          s("run_jointvc", "batch-parallel",
+            [["jointvc_batch_rec"], ["region"]],
+            [cwlout(["vrn_file_region"], "File", [".tbi"]), cwlout(["region"], "string")],
+            "bcbio-vc", ["gatk4", "gatk"]),
+          s("concat_batch_variantcalls_jointvc", "batch-merge",
+            [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
+            [cwlout(["vrn_file"], "File", [".tbi"])],
+            "bcbio-vc", ["bcftools", "htslib", "gatk4"],
+            cores=1),
+          s("finalize_jointvc", "batch-single",
+            [["jointvc_batch_rec"], ["vrn_file"]],
+            [cwlout("jointvc_rec", "record")],
             "bcbio-vc",
             cores=1)]
-    return vc, [["validate", "grading_summary"], ["variants", "calls"]]
+    out = [s("batch_for_jointvc", "multi-batch",
+             ["vc_rec"],
+             [cwlout("jointvc_batch_rec", "record",
+                     fields=[cwlout(["vrn_file_gvcf"], ["File", "null"]),
+                             cwlout("inherit")])],
+             "bcbio-vc",
+             cores=1),
+           w("jointcall", "multi-parallel", wf,
+             [["region"], ["vrn_file_region"], ["vrn_file"]])]
+    return out
 
 def _variant_checkpoints(samples):
     """Check sample configuration to identify required steps in analysis.
     """
     checkpoints = {}
     checkpoints["vc"] = any([dd.get_variantcaller(d) for d in samples])
+    checkpoints["jointvc"] = any([dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d)) for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
     return checkpoints
 
@@ -259,7 +293,7 @@ def variant(samples):
                 cwlout(["regions", "sample_callable"], "File"),
                 cwlout(["regions", "nblock"], "File"),
                 cwlout(["align_bam"], "File")],
-               "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk"]),
+               "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk", "gatk4"]),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
@@ -296,7 +330,7 @@ def variant(samples):
             cores=1)]
     vc, vc_out = _variant_vc(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
-    steps = align + qc + vc + hla
+    steps = align + hla + qc + vc
     final_outputs = [["align_bam"],
                      cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
                     ] + vc_out + hla_out

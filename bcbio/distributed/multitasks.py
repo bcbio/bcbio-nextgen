@@ -334,6 +334,26 @@ def square_batch_region(*args):
     return joint.square_batch_region(*args)
 
 @utils.map_wrap
+def batch_for_jointvc(*args):
+    return joint.batch_for_jointvc(*args)
+
+@utils.map_wrap
+def run_jointvc(*args):
+    return joint.run_jointvc(*args)
+
+@utils.map_wrap
+def finalize_jointvc(*args):
+    return joint.finalize_jointvc(*args)
+
+@utils.map_wrap
+def get_parallel_regions_jointvc(*args):
+    return region.get_parallel_regions(*args)
+
+@utils.map_wrap
+def concat_batch_variantcalls_jointvc(*args):
+    return genotype.concat_batch_variantcalls(*args)
+
+@utils.map_wrap
 def cufflinks_assemble(*args):
     return rnaseq.cufflinks_assemble(*args)
 

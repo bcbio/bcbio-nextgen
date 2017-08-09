@@ -25,6 +25,47 @@ from bcbio.variation import bamprep, gatkjoint, genotype, multi
 SUPPORTED = {"general": ["freebayes", "platypus", "samtools"],
              "gatk": ["gatk-haplotype"]}
 
+# ## CWL joint calling targets
+
+def batch_for_jointvc(items):
+    batch_groups = collections.defaultdict(list)
+    for data in [utils.to_single_data(x) for x in items]:
+        vc = dd.get_variantcaller(data)
+        if genotype.is_joint(data):
+            batches = dd.get_batches(data) or dd.get_sample_name(data)
+            if not isinstance(batches, (list, tuple)):
+                batches = [batches]
+        else:
+            batches = [dd.get_sample_name(data)]
+        for b in batches:
+            data = utils.deepish_copy(data)
+            data["vrn_file_gvcf"] = data["vrn_file"]
+            batch_groups[(b, vc)].append(data)
+    return batch_groups.values()
+
+def run_jointvc(items):
+    items = [utils.to_single_data(x) for x in items]
+    data = items[0]
+    if not dd.get_jointcaller(data):
+        data["config"]["algorithm"]["jointcaller"] = "%s-joint" % dd.get_variantcaller(data)
+    # GenomicsDBImport uses 1-based coordinates. That's unexpected, convert over to these.
+    chrom, coords = data["region"].split(":")
+    start, end = coords.split("-")
+    ready_region = "%s:%s-%s" % (chrom, int(start) + 1, end)
+    str_region = ready_region.replace(":", "_")
+    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "joint",
+                                                            dd.get_variantcaller(data), str_region)),
+                            "%s-%s-%s.vcf.gz" % (dd.get_batches(data)[0], dd.get_variantcaller(data), str_region))
+    joint_out = square_batch_region(data, ready_region, [], [d["vrn_file"] for d in items], out_file)[0]
+    data["vrn_file_region"] = joint_out["vrn_file"]
+    return data
+
+def finalize_jointvc(items):
+    items = [utils.to_single_data(x) for x in items]
+    import pprint
+    pprint.pprint(items)
+    raise NotImplementedError
+
 def _get_callable_regions(data):
     """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
     """
@@ -138,7 +179,7 @@ def _fix_orig_vcf_refs(data):
     variantcaller = tz.get_in(("config", "algorithm", "variantcaller"), data)
     if variantcaller:
         data["vrn_file_orig"] = data["vrn_file"]
-    for i, sub in enumerate(data["group_orig"]):
+    for i, sub in enumerate(data.get("group_orig", [])):
         sub_vrn = sub.pop("vrn_file", None)
         if sub_vrn:
             sub["vrn_file_orig"] = sub_vrn

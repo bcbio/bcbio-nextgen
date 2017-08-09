@@ -220,6 +220,9 @@ def vc_output_record(samples):
         out.append([d])
     return out
 
+def is_joint(data):
+    return "gvcf" in dd.get_tools_on(data) or dd.get_jointcaller(data)
+
 def batch_for_variantcall(samples):
     """Prepare a set of samples for parallel variant calling.
 
@@ -241,7 +244,7 @@ def batch_for_variantcall(samples):
             batch_groups[(b, vc)].append(utils.deepish_copy(data))
     batches = []
     for cur_group in batch_groups.values():
-        joint_calling = any(["gvcf" in dd.get_tools_on(d) for d in cur_group])
+        joint_calling = any([is_joint(d) for d in cur_group])
         if joint_calling:
             for d in cur_group:
                 batches.append([d])
@@ -371,8 +374,12 @@ def _get_batch_name(items):
     """Retrieve the shared batch name for a group of items.
     """
     batch_names = collections.defaultdict(int)
+    has_joint = any([is_joint(d) for d in items])
     for data in items:
-        batches = dd.get_batches(data) or dd.get_sample_name(data)
+        if has_joint:
+            batches = dd.get_sample_name(data)
+        else:
+            batches = dd.get_batches(data) or dd.get_sample_name(data)
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         for b in batches:

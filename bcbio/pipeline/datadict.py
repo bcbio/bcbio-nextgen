@@ -66,6 +66,7 @@ LOOKUPS = {
     "svclass": {"keys": ["metadata", "svclass"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
