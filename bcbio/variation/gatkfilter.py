@@ -152,14 +152,14 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
     if sensitivity_cutoff not in cutoffs:
         cutoffs.append(sensitivity_cutoff)
         cutoffs.sort()
+    broad_runner = broad.runner_from_config(data["config"])
+    gatk_type = broad_runner.gatk_type()
     base = utils.splitext_plus(in_file)[0]
-    recal_file = "%s.recal" % base
+    recal_file = ("%s-vqsrrecal.vcf.gz" % base) if gatk_type == "gatk4" else ("%s.recal" % base)
     tranches_file = "%s.tranches" % base
     plot_file = "%s-plots.R" % base
     if not utils.file_exists(recal_file):
         with file_transaction(data, recal_file, tranches_file, plot_file) as (tx_recal, tx_tranches, tx_plot_file):
-            broad_runner = broad.runner_from_config(data["config"])
-            gatk_type = broad_runner.gatk_type()
             params = ["-T", "VariantRecalibrator",
                       "-R", ref_file,
                       "--mode", filter_type,
@@ -185,6 +185,8 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
                 broad_runner.run_gatk(params, log_error=False, memscale=memscale)
             except:  # Can fail to run if not enough values are present to train.
                 return None, None
+    if gatk_type == "gatk4":
+        vcfutils.bgzip_and_index(recal_file, data["config"])
     return recal_file, tranches_file
 
 # ## SNP and indel specific variant filtration
