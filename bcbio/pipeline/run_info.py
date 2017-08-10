@@ -636,6 +636,15 @@ def _check_hlacaller(data):
             raise ValueError("In sample %s, HLA caller specified but genome %s not in supported: %s" %
                              (data["description"], data["genome_build"], ", ".join(sorted(list(supported_genomes)))))
 
+def _check_realign(data):
+    """Check for realignment, which is not supported in GATK4
+    """
+    if "gatk4" in data["algorithm"].get("tools_on", []) or "gatk4" == data["algorithm"].get("tools_on"):
+        if data["algorithm"].get("realign"):
+            raise ValueError("In sample %s, realign specified but it is not supported for GATK4. "
+                             "Realignment is generally not necessary for most variant callers." %
+                             (dd.get_sample_name(data)))
+
 def _check_sample_config(items, in_file, config):
     """Identify common problems in input sample configuration files.
     """
@@ -658,6 +667,7 @@ def _check_sample_config(items, in_file, config):
     [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
     [_check_hlacaller(x) for x in items]
+    [_check_realign(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 
