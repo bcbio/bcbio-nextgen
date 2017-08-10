@@ -108,7 +108,7 @@ Contributors
 - `Mario Giovacchini`_, Science for Life Laboratory, Stockholm
 - `Karl Gutwin <https://twitter.com/kgutwin>`_, Biogen
 - `Jeff Hammerbacher`_, Icahn School of Medicine at Mount Sinai
-- `Oliver Hofmann <https://github.com/ohofmann>`_, Wolfson Wohl Cancer Research Center
+- `Oliver Hofmann <https://umccr.github.io/>`_, University of Melbourne Centre for Cancer Research
 - `John Kern <https://github.com/kern3020>`_
 - `Rory Kirchner`_, Harvard Chan Bioinformatics Core
 - `Tetiana Khotiainsteva <https://github.com/tetianakh>`_, Ardigen
