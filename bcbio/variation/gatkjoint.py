@@ -31,6 +31,11 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
 
     Not yet tested as scale, need to explore --batchSize to reduce memory
     usage if needed.
+
+    XXX Does not support transactional directories yet, since
+    GenomicsDB databases cannot be moved to new locations. We need to
+    explore options to identify half-finished databases and restart:
+https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
     """
     out_dir = "%s_genomicsdb" % utils.splitext_plus(out_file)[0]
     if not os.path.exists(out_dir):
@@ -39,7 +44,7 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
             cores = dd.get_cores(data)
             params = ["-T", "GenomicsDBImport",
                       "--readerThreads", str(cores),
-                      "--genomicsDBWorkspace", tx_out_dir,
+                      "--genomicsDBWorkspace", out_dir,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 params += ["--variant", vrn_file]

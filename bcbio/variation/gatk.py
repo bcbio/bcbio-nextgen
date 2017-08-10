@@ -122,11 +122,10 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
                 if not gatk_type == "gatk4":
                     params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
-            # Enable non-diploid calling in GATK 3.3+
-            if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
-                params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             # Prepare gVCFs if doing joint calling
+            is_joint = False
             if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
+                is_joint = True
                 params += ["--emitRefConfidence", "GVCF"]
                 if not gatk_type == "gatk4":
                     params += ["--variant_index_type", "LINEAR", "--variant_index_parameter", "128000"]
@@ -135,6 +134,12 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 # http://gatkforums.broadinstitute.org/gatk/discussion/7051/recommendation-best-practices-gvcf-gq-bands
                 for boundary in [10, 20, 30, 40, 60, 80]:
                     params += ["-GQB", str(boundary)]
+            # Enable non-diploid calling in GATK 3.3+
+            if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
+                # GenomicsDB does not support non-diploid samples in GATK4 joint calling
+                # https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
+                if not is_joint and gatk_type == "gatk4":
+                    params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
