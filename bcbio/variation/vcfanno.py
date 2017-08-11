@@ -5,6 +5,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
+from bcbio.variation import vcfutils
 
 def vcfanno(vcf, out_file, conf_fns, data, basepath=None, lua_fns=None):
     """
@@ -78,8 +79,6 @@ def run_vcfanno(vcf, conf_files, data, data_basepath=None):
     if not anno_type:
         anno_type = "gemini"
     out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
-    if utils.file_exists(out_file):
-        return out_file
-
-    out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns)
-    return out_file
+    if not utils.file_exists(out_file):
+        out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns)
+    return vcfutils.bgzip_and_index(out_file, data["config"])

@@ -249,6 +249,13 @@ def _maybe_add_sv(algorithm, sample, out):
                                 "type": ext,
                                 "ext": "%s-%s" % (svcall["variantcaller"], caller),
                                 "variantcaller": svcall["variantcaller"]})
+                    if utils.file_exists(fname + ".tbi"):
+                        out.append({"path": fname + ".tbi",
+                                    "sample": batch,
+                                    "type": "vcf.gz.tbi",
+                                    "index": True,
+                                    "ext": "%s-%s" % (svcall["variantcaller"], caller),
+                                    "variantcaller": svcall["variantcaller"]})
             for extra in ["subclones", "contamination"]:
                 svfile = svcall.get(extra)
                 if svfile and os.path.exists(svfile):
