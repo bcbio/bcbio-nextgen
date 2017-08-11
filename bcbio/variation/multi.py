@@ -4,7 +4,6 @@ Handles grouping of related families or batches to go through variant
 calling simultaneously.
 """
 import collections
-import os
 
 import toolz as tz
 
@@ -257,9 +256,8 @@ def split_variants_by_sample(data):
                 sub_data.pop("vrn_file", None)
             out.append([sub_data])
         return out
-    # joint calling or larger runs, do not split back up and keep in batches
-    elif (tz.get_in(("config", "algorithm", "jointcaller"), data)
-          or len(get_orig_items(data)) > 5):
+    # joint calling or population runs, do not split back up and keep in batches
+    else:
         out = []
         for sub_data in get_orig_items(data):
             cur_batch = tz.get_in(["metadata", "batch"], data)
@@ -267,21 +265,5 @@ def split_variants_by_sample(data):
                 sub_data["metadata"]["batch"] = cur_batch
             sub_data["vrn_file_batch"] = data["vrn_file"]
             sub_data["vrn_file"] = data["vrn_file"]
-            out.append([sub_data])
-        return out
-    # population or single sample
-    else:
-        out = []
-        for sub_data in get_orig_items(data):
-            sub_vrn_file = data["vrn_file"].replace(str(data["group"][0]) + "-", str(sub_data["name"][-1]) + "-")
-            if len(vcfutils.get_samples(data["vrn_file"])) > 1:
-                vcfutils.select_sample(data["vrn_file"], str(sub_data["name"][-1]), sub_vrn_file, data["config"])
-            elif not os.path.exists(sub_vrn_file):
-                utils.symlink_plus(data["vrn_file"], sub_vrn_file)
-            cur_batch = tz.get_in(["metadata", "batch"], data)
-            if cur_batch:
-                sub_data["metadata"]["batch"] = cur_batch
-            sub_data["vrn_file_batch"] = data["vrn_file"]
-            sub_data["vrn_file"] = sub_vrn_file
             out.append([sub_data])
         return out

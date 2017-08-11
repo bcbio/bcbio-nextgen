@@ -18,6 +18,9 @@
 - Multicore base quality score recalibration with GATK4 and Sentieon.
 - GATK4: add support for gVCF based joint calling.
 - GATK4: fix option usage for gVCF creation with HaplotypeCaller
+- Do not split individual sample VCFs during pooled batch calling. This
+  previously happened only for small batches with less than 5 samples, now we
+  avoid it entirely and let users do downstream sample extraction.
 - Additional approach to retrieving cluster IP addresses for IPython and
   logging, using the fully qualified domain name.
 - Add `archive: [cram-lossless]` to do CRAM archiving of outputs without quality
