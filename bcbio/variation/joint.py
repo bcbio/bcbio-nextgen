@@ -60,11 +60,12 @@ def run_jointvc(items):
     data["vrn_file_region"] = joint_out["vrn_file"]
     return data
 
+def concat_batch_variantcalls_jointvc(items):
+    concat_out = genotype.concat_batch_variantcalls(items, skip_jointcheck=True)
+    return {"vrn_file_joint": concat_out["vrn_file"]}
+
 def finalize_jointvc(items):
-    items = [utils.to_single_data(x) for x in items]
-    import pprint
-    pprint.pprint(items)
-    raise NotImplementedError
+    return [utils.to_single_data(x) for x in items]
 
 def _get_callable_regions(data):
     """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes

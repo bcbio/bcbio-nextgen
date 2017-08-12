@@ -349,11 +349,11 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     data["vrn_file"] = out_file
     return [data]
 
-def concat_batch_variantcalls(items):
+def concat_batch_variantcalls(items, skip_jointcheck=False):
     """CWL entry point: combine variant calls from regions into single VCF.
     """
     items = [utils.to_single_data(x) for x in items]
-    batch_name = _get_batch_name(items)
+    batch_name = _get_batch_name(items, skip_jointcheck)
     variantcaller = _get_batch_variantcaller(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
     utils.safe_makedir(os.path.dirname(out_file))
@@ -370,13 +370,13 @@ def _region_to_coords(region):
     start, end = coords.split("-")
     return (chrom, int(start), int(end))
 
-def _get_batch_name(items):
+def _get_batch_name(items, skip_jointcheck=False):
     """Retrieve the shared batch name for a group of items.
     """
     batch_names = collections.defaultdict(int)
     has_joint = any([is_joint(d) for d in items])
     for data in items:
-        if has_joint:
+        if has_joint and not skip_jointcheck:
             batches = dd.get_sample_name(data)
         else:
             batches = dd.get_batches(data) or dd.get_sample_name(data)

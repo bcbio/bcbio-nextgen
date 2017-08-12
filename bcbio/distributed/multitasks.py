@@ -351,7 +351,7 @@ def get_parallel_regions_jointvc(*args):
 
 @utils.map_wrap
 def concat_batch_variantcalls_jointvc(*args):
-    return genotype.concat_batch_variantcalls(*args)
+    return joint.concat_batch_variantcalls_jointvc(*args)
 
 @utils.map_wrap
 def cufflinks_assemble(*args):
