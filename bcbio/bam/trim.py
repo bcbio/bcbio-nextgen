@@ -81,10 +81,14 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                                                                                      dd.get_sample_name(data))
             ropts = " ".join(str(x) for x in
                              config_utils.get_resources("atropos", data["config"]).get("options", []))
+            extra_opts = []
+            for k, v in [("--quality-cutoff", "5", "--minimum-length", str(dd.get_min_read_length(data)))]:
+                if k not in ropts:
+                    extra_opts.append("%s=%s" % (k, v))
+            extra_opts = " ".join(extra_opts)
             thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
             cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
-                   "{adapters_args} {aligner_args} {input_args} {output_args} {report_args}")
-            cmd += " --quality-cutoff=5 --minimum-length=%s" % dd.get_min_read_length(data)
+                   "{adapters_args} {aligner_args} {input_args} {output_args} {report_args} {extra_opts}")
             do.run(cmd.format(**locals()), "Trimming with atropos: %s" % dd.get_sample_name(data))
     return out_files, report_file
 
