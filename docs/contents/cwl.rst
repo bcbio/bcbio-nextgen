@@ -1,7 +1,7 @@
 Common Workflow Language (CWL)
 ------------------------------
 
-bcbio has in-progress support for running with `Common Workflow Language (CWL)
+bcbio supports running with `Common Workflow Language (CWL)
 <https://github.com/common-workflow-language/common-workflow-language>`_
 compatible parallelization software. bcbio generates a CWL workflow from a
 `sample YAML description file
@@ -18,7 +18,7 @@ Current status
 
 bcbio currently supports creation of CWL for alignment, small variant
 calls (SNPs and indels), coverage assessment, HLA typing and quality
-control. It generates a `CWL v1.0 <http://www.commonwl.org/v1.0/>`_ compatible
+control. It generates a `CWL v1.0.2 <http://www.commonwl.org/v1.0/>`_ compatible
 workflow. The actual biological code execution during runs works with
 either the bcbio docker container
 (`bcbio/bcbio <https://hub.docker.com/r/bcbio/bcbio/>`_) or a local
@@ -40,6 +40,11 @@ on coverage calculations.
 
 bcbio supports these CWL-compatible tools:
 
+- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
+
+- `toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
+  distributed cluster runs on schedulers like SLURM and SGE.
+
 - `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
   core analysis engine, primarily used for testing.
 
@@ -48,9 +53,6 @@ bcbio supports these CWL-compatible tools:
   <https://cloud.curoverse.com/>`_ instance running on
   `Microsoft Azure <https://azure.microsoft.com>`_.
 
-- `toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
-  distributed cluster runs. Distribution on cluster schedulers like SLURM and
-  SGE is still under development.
 
 We plan to continue to expand CWL support to include more components of bcbio,
 and also need to evaluate the workflow on larger, real life analyses. This
@@ -76,7 +78,8 @@ If you have `Docker <https://www.docker.com/>`_ present on your system this is
 all you need to get started running examples. If you instead prefer to use a
 local installation, `install bcbio
 <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
-and make it available in your path.
+and make it available in your path. To only run the tests, you don't need a full
+data installation so can install with ``--nodata``.
 
 To make it easy to get started, we have a pre-built CWL description that
 uses test data. This will run in under 5 minutes on a local machine and
@@ -87,44 +90,40 @@ your machine:
 
      wget -O test_bcbio_cwl.tar.gz https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz
      tar -xzvpf test_bcbio_cwl.tar.gz
-     cd test_bcbio_cwl-master
+     cd test_bcbio_cwl-master/somatic
 
-2. Run the analysis using ``cwltool``. If you have Docker available on your
-   machine, cwltool will download the ``bcbio/bcbio`` container and you don't
-   need to install anything else to get started. If you have an old version of
-   the container you want to update to the latest with ``docker pull
-   bcbio/bcbio``. You can use the ``run_cwltool.sh`` script or run directly from the
-   command line::
+2. Run the analysis using either Toil or Rabix bunny. If you have Docker
+   available on your machine, the runner will download the correct `bcbio
+   container <https://github.com/bcbio/bcbio_docker>`_ and you don't need to
+   install anything else to get started. If you have an old version of the
+   container you want to update to the latest with ``docker pull
+   quay.io/bcbio/bcbio-vc``. There are shell scripts that provide the command
+   lines for running::
 
-     bcbio_vm.py cwlrun cwltool run_info-cwl-workflow
+     bash run_toil.sh
+     bash run_bunny.sh
 
-   If you don't have Docker, you can also use a `local installation of
-   bcbio <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_.
-   You don't need to install genome data since the tests use small local
-   data. Then run with::
+   Or you can run directly using the ``bcbio_vm.py`` wrappers
 
-     bcbio_vm.py cwlrun cwltool run_info-cwl-workflow --no-container
+     bcbio_vm.py cwlrun toil somatic-workflow
+
+   If run without Docker and use a `local installation of
+   bcbio
+   <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_
+   add ``--no-container`` to the commands in the shell scripts.
 
 Generating CWL from bcbio
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can generate CWL from any `standard bcbio sample configuration file <https://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_.
-As an example, to generate the test data show above, clone the `bcbio
-GitHub repository locally <https://github.com/chapmanb/bcbio-nextgen>`_
-to get the test suite and run a minimal CWL workflow generated
-automatically by bcbio from the inputs::
+As an example, the test repository above contains shell scripts to generate the
+CWL. You can run those::
 
-    $ git clone https://github.com/chapmanb/bcbio-nextgen.git
-    $ cd bcbio-nextgen
-    $ py.test -m cwl
+    $ bash run_general_cwl.sh
 
-This will create a CWL workflow inside ``tests/test_automated_output`` which
-you can run again manually with either a local bcbio installation or Docker as
-described above.
+or generate directly using bcbio-vm::
 
-To generate CWL directly from a sample input and the test bcbio system file::
-
-    bcbio_vm.py cwl ../data/automated/run_info-cwl.yaml --systemconfig ../data/automated/post_process-sample.yaml
+    $ bcbio_vm.py cwl --systemconfig=../bcbio_system.yaml somatic.yaml
 
 Running bcbio CWL on Arvados
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -254,12 +253,6 @@ ToDo
    disambiguation.
 
 -  Port RNA-seq and small RNA workflows to CWL.
-
--  Determine when we should skip steps based on configuration to avoid
-   writing them to the CWL file. For instance, right now we include HLA
-   typing even if it's not defined and have an extra do-nothing step in
-   the CWL output. We should have a clean way to skip writing this step
-   if not needed based on the configuration.
 
 -  Replace the custom python code in the `bcbio step
    definitions <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/cwl/defs.py>`_
