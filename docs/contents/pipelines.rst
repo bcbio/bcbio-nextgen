@@ -170,11 +170,14 @@ mark them with the phenotype::
 Other :ref:`config-cancer` configuration options allow tweaking of the
 processing parameters.
 
-Cancer calling handles both tumor-normal paired calls and tumor-only calling.
-For tumor-only samples, bcbio will try to remove likely germline variants
-present in the public databases like 1000 genomes and ExAC, and not in COSMIC.
-This runs as long as you have a local GEMINI installation and marks likely
-germline variants with a ``LowPriority`` filter. `This post has more details
+Cancer calling handles both tumor-normal paired calls and tumor-only calling. To
+specify a tumor-only sample, provide a single sample labeled with ``phenotype:
+tumor``. Otherwise the configuration and setup is the same as with paired
+analyses. For tumor-only samples, bcbio will try to remove likely germline
+variants present in the public databases like 1000 genomes and ExAC, and not in
+COSMIC. This runs as long as you have a local GEMINI data installation
+(``--datatarget gemini``) and marks likely germline variants with a
+``LowPriority`` filter. `This post has more details
 <http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
 
 The standard variant outputs (``sample-caller.vcf.gz``) for tumor calling
