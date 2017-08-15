@@ -85,7 +85,7 @@ def _variant_shared():
                [["alignment_rec"], ["process_alignment_rec"]],
                [cwlout(["work_bam"], "File"),
                 cwlout(["align_bam"], "File"),
-                cwlout(["hla", "fastq"], ["File", "null", {"type": "array", "items": "File"}]),
+                cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}]),
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                "bcbio-vc", ["bwa", "bwakit", "grabix", "novoalign", "snap-aligner=1.0dev.97",
@@ -98,7 +98,7 @@ def _variant_shared():
                [cwlout(["align_bam"], "File", [".bai"]),
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
-                cwlout(["hla", "fastq"], ["File", "null", {"type": "array", "items": "File"}])],
+                cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
                "bcbio-vc", ["biobambam", "samtools"],
                {"files": 3})]
     return align
@@ -179,7 +179,7 @@ def _variant_vc(checkpoints):
     vc += [s("summarize_vc", "multi-combined",
              [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
              [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
-              cwlout(["variants", "gvcf"], {"type": "array", "items": ["File", "null"]}),
+              cwlout(["variants", "gvcf"], ["null", {"type": "array", "items": ["File", "null"]}]),
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
