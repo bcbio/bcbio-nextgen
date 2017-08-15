@@ -263,17 +263,19 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
-    sample_json, variables, keyvals = _flatten_samples(samples, out_file, integrations)
+    variables, keyvals = _flatten_samples(samples, out_file, integrations)
     file_estimates = _calc_input_estimates(keyvals, integrations)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
     steps, wfoutputs = workflow_fn(samples)
+    used_inputs = set([])
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                     file_estimates, disk, cores, samples)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
+            used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "upload":
             for output in cur[1]:
                 wf_output = copy.deepcopy(output)
@@ -291,17 +293,23 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
             out = parent_wfs.pop(-1)
             out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel, scatter))
+            used_inputs |= set(x["id"] for x in inputs)
         else:
             raise ValueError("Unexpected workflow value %s" % str(cur))
 
     with open(out_file, "w") as out_handle:
+        out["inputs"] = [x for x in out["inputs"] if x["id"] in used_inputs]
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
+    sample_json = "%s-samples.json" % utils.splitext_plus(out_file)[0]
+    out_clean = _clean_final_outputs(copy.deepcopy({k: v for k, v in keyvals.items() if k in used_inputs}),
+                                     integrations)
+    with open(sample_json, "w") as out_handle:
+        json.dump(out_clean, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
     return out_file, sample_json
 
 def _flatten_samples(samples, base_file, integrations=None):
     """Create a flattened JSON representation of data from the bcbio world map.
     """
-    out_file = "%s-samples.json" % utils.splitext_plus(base_file)[0]
     flat_data = []
     for data in samples:
         data["reference"] = _indexes_to_secondary_files(data["reference"], data["genome_build"])
@@ -322,10 +330,7 @@ def _flatten_samples(samples, base_file, integrations=None):
     if "reference__fasta__base" not in out and "reference__fasta" in out:
         out["reference__fasta__base"] = out["reference__fasta"]
         del out["reference__fasta"]
-    out_clean = _clean_final_outputs(copy.deepcopy(out), integrations)
-    with open(out_file, "w") as out_handle:
-        json.dump(out_clean, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
-    return out_file, _samplejson_to_inputs(out), out
+    return _samplejson_to_inputs(out), out
 
 def _indexes_to_secondary_files(gresources, genome_build):
     """Convert a list of genome indexes into a single file plus secondary files.
