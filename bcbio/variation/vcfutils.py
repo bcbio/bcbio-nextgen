@@ -513,6 +513,10 @@ def sort_by_ref(vcf_file, data):
                 do.run(cmd.format(**locals()), "Sort VCF by reference")
     return bgzip_and_index(out_file, data["config"])
 
+def add_contig_to_header_cl(data):
+    return ("""%s -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "%s")' """ %
+            (os.path.join(utils.get_bcbio_bin(), "py"), dd.get_ref_file(data)))
+
 def add_contig_to_header(line, ref_file):
     """Streaming target to add contigs to a VCF file header.
     """

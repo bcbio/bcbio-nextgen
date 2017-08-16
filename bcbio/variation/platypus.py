@@ -49,9 +49,11 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
             # Avoid filtering duplicates on high depth targeted regions where we don't mark duplicates
             if any(not dd.get_mark_duplicates(data) for data in items):
                 cmd += ["--filterDuplicates=0"]
-            post_process_cmd = (" | %s | %s | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | "
+            post_process_cmd = (" | %s | %s | %s | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | "
                                 "vcfstreamsort | bgzip -c > %s" % (vcfutils.fix_ambiguous_cl(),
-                                                                   vcfutils.fix_ambiguous_cl(5), tx_out_file))
+                                                                   vcfutils.fix_ambiguous_cl(5),
+                                                                   vcfutils.add_contig_to_header_cl(items[0]),
+                                                                   tx_out_file))
             do.run(" ".join(cmd) + post_process_cmd, "platypus variant calling")
         out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
     return out_file
