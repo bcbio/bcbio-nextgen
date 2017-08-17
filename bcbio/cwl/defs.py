@@ -90,7 +90,7 @@ def _variant_shared():
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                "bcbio-vc", ["bwa", "bwakit", "grabix", "novoalign", "snap-aligner=1.0dev.97",
                             "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
-                            "samblaster"],
+                            "samblaster", "variantbam"],
                {"files": 1.5}),
              s("merge_split_alignments", "single-merge",
                [["alignment_rec"], ["work_bam"], ["align_bam"],
@@ -99,7 +99,7 @@ def _variant_shared():
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
                 cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
-               "bcbio-vc", ["biobambam", "samtools"],
+               "bcbio-vc", ["biobambam", "samtools", "variantbam"],
                {"files": 3})]
     return align
 
@@ -199,7 +199,7 @@ def _variant_jointvc():
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
-            "bcbio-vc", ["bcftools", "htslib", "gatk4"],
+            "bcbio-vc", ["bcftools", "htslib", "gatk4", "gatk"],
             cores=1),
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
@@ -278,6 +278,7 @@ def variant(samples):
                 ["config", "algorithm", "coverage_orig"],
                 ["config", "algorithm", "seq2c_bed_ready"],
                 ["config", "algorithm", "recalibrate"],
+                ["config", "algorithm", "tools_on"],
                 ["reference", "twobit"],
                 ["reference", "fasta", "base"]],
                [cwlout("postprocess_alignment_rec", "record")],
@@ -305,7 +306,7 @@ def variant(samples):
                [cwlout(["config", "algorithm", "callable_regions"], "File"),
                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
                 cwlout(["config", "algorithm", "callable_count"], "int")],
-               "bcbio-vc", ["bedtools", "htslib"],
+               "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
                cores=1)]
     qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
