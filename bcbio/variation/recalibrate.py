@@ -83,9 +83,10 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 assert gatk_type in ["restricted", "gatk4"], \
                     "Require full version of GATK 2.4+ or GATK4 for BQSR"
                 params = ["-I", dup_align_bam]
+                cores = dd.get_num_cores(data)
                 if gatk_type == "gatk4":
                     params += ["-T", "BaseRecalibratorSpark",
-                                "--sparkMaster", "local[%s]" % dd.get_num_cores(data),
+                                "--sparkMaster", "local[%s]" % cores,
                                 "--output", tx_out_file, "--reference", dd.get_ref_twobit(data)]
                 else:
                     params += ["-T", "BaseRecalibrator",
@@ -101,7 +102,8 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     params += ["--knownSites", dbsnp_file]
                 if intervals:
                     params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
-                broad_runner.run_gatk(params, os.path.dirname(tx_out_file))
+                memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
+                broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
         else:
             with open(out_file, "w") as out_handle:
                 out_handle.write("# No aligned reads")
@@ -117,12 +119,14 @@ def _gatk_apply_bqsr(data):
         with file_transaction(data, out_file) as tx_out_file:
             broad_runner = broad.runner_from_config(data["config"])
             gatk_type = broad_runner.gatk_type()
+            cores = dd.get_num_cores(data)
             if gatk_type == "gatk4":
-                params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % dd.get_num_cores(data),
+                params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % cores,
                           "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"]]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
-            broad_runner.run_gatk(params, os.path.dirname(tx_out_file))
+            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
+            broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
     bam.index(out_file, data["config"])
     return out_file
