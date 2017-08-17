@@ -70,8 +70,6 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                 output_args = "-o >(bgzip --threads %s -c > {tx_out1})".format(**locals())
             else:
                 assert len(fastq_files) == 2, fastq_files
-                if adapters and len(adapters) <= 2:
-                    aligner_args = "--aligner insert"
                 adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
                 input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
                 output_args = "-o >(bgzip -c > {tx_out1}) -p >(bgzip -c > {tx_out2})".format(**locals())
@@ -88,7 +86,7 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             extra_opts = " ".join(extra_opts)
             thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
             cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
-                   "{adapters_args} {aligner_args} {input_args} {output_args} {report_args} {extra_opts}")
+                   "{adapters_args} {input_args} {output_args} {report_args} {extra_opts}")
             do.run(cmd.format(**locals()), "Trimming with atropos: %s" % dd.get_sample_name(data))
     return out_files, report_file
 
