@@ -67,6 +67,7 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     if resources.get("options") is not None:
         params = " ".join([str(x) for x in resources.get("options", [])])
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
+           "--gcBias "
            "-o {tx_out_dir} {params} ")
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
