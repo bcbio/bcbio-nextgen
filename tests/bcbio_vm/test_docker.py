@@ -1,12 +1,16 @@
+import getpass
 import os
+import shutil
 import subprocess
 
 import pytest
 
-from tests.conftest import make_workdir
-from tests.conftest import get_post_process_yaml
+from bcbio import utils
+
+from tests.conftest import (make_workdir, get_post_process_yaml, install_cwl_test_files)
 
 @pytest.mark.docker
+@pytest.mark.docker_multicore
 def test_docker(install_test_files, data_dir):
     """Run an analysis with code and tools inside a docker container.
 
@@ -51,36 +55,47 @@ class TestCWL():
 
     Requires https://github.com/chapmanb/bcbio-nextgen-vm
     """
-    @pytest.mark.cwl_docker
     @pytest.mark.cwl
-    def test_2_cwl_docker(install_test_files, data_dir):
-        """Create a common workflow language description and run on a
-        Docker installation.
+    @pytest.mark.cwl_docker
+    @pytest.mark.cwl_docker_somatic
+    def test_2_cwl_docker_somatic(self, data_dir):
+        """CWL: run a somatic workflow using Docker.
         """
-        with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
-                  "--systemconfig", get_post_process_yaml(data_dir, workdir)]
-            subprocess.check_call(cl)
-            cl = ["bcbio_vm.py", "cwlrun", "cwltool", "run_info-cwl-workflow"]
-            subprocess.check_call(cl)
-            print
-            print "To run with a CWL tool, cd test_automated_output and:"
-            print " ".join(cl)
+        with install_cwl_test_files(data_dir) as workdir:
+            with utils.chdir(os.path.join(workdir, "somatic")):
+                cl = ["bash", "./run_generate_cwl.sh"]
+                subprocess.check_call(cl)
+                if os.path.exists("cwltoil_work"):
+                    shutil.rmtree("cwltoil_work")
+                cl = ["bash", "./run_toil.sh"]
+                subprocess.check_call(cl)
 
-    @pytest.mark.speed2
+    @pytest.mark.cwl
+    @pytest.mark.cwl_docker
+    @pytest.mark.cwl_docker_joint
+    def test_3_cwl_docker_joint(self, data_dir):
+        """CWL: run a gVCF based joint-calling workflow using Docker.
+        """
+        with install_cwl_test_files(data_dir) as workdir:
+            with utils.chdir(os.path.join(workdir, "gvcf_joint")):
+                cl = ["bash", "./run_generate_cwl.sh"]
+                subprocess.check_call(cl)
+                if os.path.exists("bunny_work"):
+                    shutil.rmtree("bunny_work")
+                cl = ["bash", "./run_bunny.sh"]
+                subprocess.check_call(cl)
+
     @pytest.mark.cwl
     @pytest.mark.cwl_local
     @pytest.mark.install_required
     def test_1_cwl_local(self, install_test_files, data_dir):
-        """Create a common workflow language description and run on local installation.
+        """CWL: prepare somatic workflow and run on local installation.
         """
-        with make_workdir() as workdir:
-            cl = ["bcbio_vm.py", "cwl", "../data/automated/run_info-cwl.yaml",
-                  "--systemconfig", get_post_process_yaml(data_dir, workdir)]
-            subprocess.check_call(cl)
-            cl = ["bcbio_vm.py", "cwlrun", "cwltool", "run_info-cwl-workflow",
-                  "--no-container"]
-            subprocess.check_call(cl)
-            print
-            print "To run with a CWL tool, cd test_automated_output and:"
-            print " ".join(cl)
+        with install_cwl_test_files(data_dir) as workdir:
+            with utils.chdir(os.path.join(workdir, "somatic")):
+                cl = ["bash", "./run_generate_cwl.sh"]
+                subprocess.check_call(cl)
+                if os.path.exists("cwltool_work"):
+                    shutil.rmtree("cwltool_work")
+                cl = ["bash", "./run_cwltool.sh"]
+                subprocess.check_call(cl)

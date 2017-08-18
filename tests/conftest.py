@@ -1,10 +1,14 @@
 import collections
 import contextlib
+from datetime import datetime
+import io
 import os
 import shutil
 import subprocess
+import tarfile
 
 import pytest
+import requests
 import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
@@ -44,7 +48,6 @@ def workdir():
     with make_workdir() as wd:
         yield wd
 
-
 def get_post_process_yaml(data_dir, workdir):
     """Prepare a bcbio_system YAML file pointing to test data.
     """
@@ -72,6 +75,29 @@ def get_post_process_yaml(data_dir, workdir):
             yaml.dump(config, out_handle)
     return test_system
 
+@contextlib.contextmanager
+def install_cwl_test_files(data_dir):
+    orig_dir = os.getcwd()
+    url = "https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz"
+    dirname = os.path.normpath(os.path.join(data_dir, os.pardir, "test_bcbio_cwl-master"))
+    if os.path.exists(dirname):
+        # check for updated commits if the directory exists
+        ctime = os.path.getctime(os.path.join(dirname, "README.md"))
+        dtime = datetime.fromtimestamp(ctime).isoformat()
+        r = requests.get("https://api.github.com/repos/bcbio/test_bcbio_cwl/commits?since=%s" % dtime).json()
+        if len(r) > 0:
+            shutil.rmtree(dirname)
+    try:
+        if not os.path.exists(dirname):
+            print("Downloading CWL test directory: %s" % url)
+            os.chdir(os.path.dirname(dirname))
+            r = requests.get(url)
+            tf = tarfile.open(fileobj=io.BytesIO(r.content), mode='r|gz')
+            tf.extractall()
+        os.chdir(dirname)
+        yield dirname
+    finally:
+        os.chdir(orig_dir)
 
 @pytest.fixture
 def install_test_files(data_dir):
@@ -105,9 +131,7 @@ def install_test_files(data_dir):
         if not os.path.exists(dirname):
             _download_to_dir(url, dirname)
 
-
 def _download_to_dir(url, dirname):
-        print(dirname)
         cl = ["wget", url]
         subprocess.check_call(cl)
         cl = ["tar", "-xzvpf", os.path.basename(url)]
