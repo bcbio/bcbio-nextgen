@@ -42,6 +42,12 @@ def trim_srna_sample(data):
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
+    if utils.file_exists(out_file):
+        data["clean_fastq"] = out_file
+        data["collapse"] = _collapse(data["clean_fastq"])
+        data["size_stats"] = _summary(data['collapse'])
+        return [[data]]
+
     adapter = dd.get_adapters(data)
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
