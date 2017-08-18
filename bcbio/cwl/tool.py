@@ -20,7 +20,7 @@ def _get_main_and_json(directory):
     assert len(main_json) == 1, "Did not find main json in %s" % directory
     return main_cwl[0], main_json[0]
 
-def _run_tool(cmd, use_container=True):
+def _run_tool(cmd, use_container=True, work_dir=None):
     """Run with injection of bcbio path.
 
     Place at end for runs without containers to avoid overriding other
@@ -29,6 +29,19 @@ def _run_tool(cmd, use_container=True):
     if isinstance(cmd, (list, tuple)):
         cmd = " ".join([str(x) for x in cmd])
     cmd = utils.local_path_export(at_start=use_container) + cmd
+    try:
+        subprocess.check_call(cmd, shell=True)
+    finally:
+        if use_container and work_dir:
+            _chown_workdir(work_dir)
+
+def _chown_workdir(work_dir):
+    """Ensure work directory files owned by original user.
+
+    Docker runs can leave root owned files making cleanup difficult.
+    """
+    cmd = ("""docker run --rm -v %s:%s quay.io/bcbio/bcbio-base /bin/bash -c 'chown -R %s %s'""" %
+           (work_dir, work_dir, os.getuid(), work_dir))
     subprocess.check_call(cmd, shell=True)
 
 def _remove_bcbiovm_path():
@@ -52,7 +65,8 @@ def _run_cwltool(args):
         _remove_bcbiovm_path()
         flags += ["--no-container", "--preserve-environment", "PATH", "--preserve-environment", "HOME"]
     cmd = ["cwltool"] + flags + args.toolargs + ["--", main_file, json_file]
-    _run_tool(cmd, not args.no_container)
+    with utils.chdir(work_dir):
+        _run_tool(cmd, not args.no_container, work_dir)
 
 def _run_arvados(args):
     """Run CWL on Aravdos.
@@ -84,7 +98,7 @@ def _run_toil(args):
         flags += ["--no-container", "--preserve-environment", "PATH", "HOME"]
     cmd = ["cwltoil"] + flags + ["--", main_file, json_file]
     with utils.chdir(work_dir):
-        _run_tool(cmd, not args.no_container)
+        _run_tool(cmd, not args.no_container, work_dir)
 
 _TOOLS = {"cwltool": _run_cwltool,
           "arvados": _run_arvados,
