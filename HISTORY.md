@@ -28,6 +28,8 @@
 - Add `tools_off: [lumpy-genotype]` option to skip Lumpy genotyping.
 - CWL/WDL: use single file tarballs for complex collections of files like
   aligner, RTG and snpEff indices.
+- GC bias correction is now the default for Salmon read-based quantification.
+  See https://github.com/salmonteam/SalmonBlogResponse/blob/master/SalmonBlogResponse.md  for the reasoning behind this change.
 
 ## 1.0.4 (9 July 2017)
 
