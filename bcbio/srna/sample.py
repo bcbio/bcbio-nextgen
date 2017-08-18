@@ -170,8 +170,9 @@ def _align(infile, ref, out_file, data):
     if not razers3:
         logger.info("razers3 is not installed, skipping BAM file creation")
         return None
-    with file_transaction(data, out_file) as tx_out:
-        do.run(cmd.format(**locals()), "Running razers3 against hairpins with %s" % infile)
+    if not file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out:
+            do.run(cmd.format(**locals()), "Running razers3 against hairpins with %s" % infile)
     return out_file
 
 def _miraligner(fastq_file, out_file, species, db_folder, config):
