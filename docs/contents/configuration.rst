@@ -1051,12 +1051,9 @@ and memory and compute resources to devote to them::
         memory: 2G
       gatk:
         jvm_opts: ["-Xms2g", "-Xmx4g"]
-        dir: /usr/share/java/gatk
 
 - ``cmd`` Location of an executable. By default, we assume executables
   are on the path.
-- ``dir`` For software not distributed as a single executable, like
-  files of Java jars, the location of the base directory.
 - ``cores`` Cores to use for multi-proccessor enabled software. This is how
   many cores will be allocated per job. For example if you are running
   10 samples and passed -n 40 to bcbio-nextgen and the step you are running
