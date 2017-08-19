@@ -43,7 +43,7 @@ script:
   # Cleanup full bcbio/bcbio image for space
   - docker rm `docker ps -a -q`
   - docker rmi -f bcbio/bcbio
-  - docker image prune -f
+  - docker rmi $(docker images | awk '/\<none\>/ { print $3 }')
   - docker images
   # -- bcbio CWL tests
   - docker pull quay.io/bcbio/bcbio-vc
