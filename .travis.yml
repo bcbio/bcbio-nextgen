@@ -43,6 +43,8 @@ script:
   # Cleanup full bcbio/bcbio image for space
   - docker rm `docker ps -a -q`
   - docker rmi -f bcbio/bcbio
+  - docker image prune -f
+  - docker images
   # -- bcbio CWL tests
   - docker pull quay.io/bcbio/bcbio-vc
   - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
