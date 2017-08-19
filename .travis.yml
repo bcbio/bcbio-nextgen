@@ -40,8 +40,10 @@ script:
   # -- Standard bcbio tests
   - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker_multicore
+  # Cleanup full bcbio/bcbio image for space
+  - docker rm `docker ps -a -q`
+  - docker rmi -f bcbio/bcbio
   # -- bcbio CWL tests
-  - docker rmi bcbio/bcbio
   - docker pull quay.io/bcbio/bcbio-vc
   - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
   - py.test tests/bcbio_vm -v -m cwl_docker
