@@ -64,7 +64,11 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
         data = _align_from_fastq(fastq1, fastq2, aligner, aligner_index, ref_file,
                                  names, align_dir, data)
     if data["work_bam"] and utils.file_exists(data["work_bam"]):
-        if not data.get("align_split"):
+        if data.get("align_split") and dd.get_mark_duplicates(data):
+            # If merging later with with bamsormadup need query sorted inputs
+            # but CWL requires a bai file. Create a fake one to make it happy.
+            bam.fake_index(data["work_bam"], data)
+        else:
             bam.index(data["work_bam"], data["config"])
         for extra in ["-sr", "-disc"]:
             extra_bam = utils.append_stem(data['work_bam'], extra)

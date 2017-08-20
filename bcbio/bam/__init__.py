@@ -63,6 +63,16 @@ def is_paired(bam_file):
     else:
         raise ValueError("Failed to check paired status of BAM file: %s" % str(stderr))
 
+def fake_index(in_bam, data):
+    """Create a fake index file for namesorted BAMs. bais require by CWL for consistency.
+    """
+    index_file = "%s.bai" % in_bam
+    if not utils.file_exists(index_file):
+        with file_transaction(data, index_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write("name sorted -- no index")
+    return index_file
+
 def index(in_bam, config, check_timestamp=True):
     """Index a BAM file, skipping if index present.
 

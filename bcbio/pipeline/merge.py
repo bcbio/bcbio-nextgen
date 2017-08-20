@@ -52,11 +52,6 @@ def merge_bam_files(bam_files, work_dir, data, out_file=None, batch=None):
             do.run('{} quickcheck -v {}'.format(samtools, out_file),
                    "Check for valid merged BAM after transfer")
         else:
-            # sambamba opens 4 handles per file, so try to guess a reasonable batch size
-            batch_size = (system.open_file_limit() // 4) - 100
-            if len(bam_files) > batch_size:
-                bam_files = [merge_bam_files(xs, work_dir, data, out_file, i)
-                             for i, xs in enumerate(utils.partition_all(batch_size, bam_files))]
             with tx_tmpdir(data) as tmpdir:
                 with utils.chdir(tmpdir):
                     with file_transaction(data, out_file) as tx_out_file:
@@ -65,16 +60,15 @@ def merge_bam_files(bam_files, work_dir, data, out_file=None, batch=None):
                         samtools = config_utils.get_program("samtools", data["config"])
                         resources = config_utils.get_resources("samtools", data["config"])
                         num_cores = dd.get_num_cores(data)
+                        # Aim for 3.5Gb/core memory for BAM merging
+                        num_cores = config_utils.adjust_cores_to_mb_target(
+                            3500, resources.get("memory", "2G"), num_cores)
                         max_mem = config_utils.adjust_memory(resources.get("memory", "1G"),
                                                              2, "decrease").upper()
-                        if bam.bam_already_sorted(bam_files[0], data["config"], "coordinate"):
-                            cmd = _sambamba_merge(bam_files)
-                        else:
-                            # Aim for 3.5Gb/core memory for BAM merging
-                            num_cores = config_utils.adjust_cores_to_mb_target(
-                                3500, resources.get("memory", "2G"), num_cores)
-                            assert dd.get_mark_duplicates(data)
+                        if dd.get_mark_duplicates(data):
                             cmd = _biobambam_merge_dedup_maxcov(data)
+                        else:
+                            cmd = _biobambam_merge_maxcov(data)
                         do.run(cmd.format(**locals()), "Merge bam files to %s" % os.path.basename(out_file),
                                 None)
                         do.run('{} quickcheck -v {}'.format(samtools, tx_out_file),
@@ -129,13 +123,10 @@ def _biobambam_merge_dedup_maxcov(data):
             "bamsormadup threads={num_cores} "
             "tmpfile={tx_out_file}-bamsormaduptmp %s > {tx_out_file}" % ds_cmd)
 
-def _sambamba_merge(bam_files):
-    """Merge multiple BAM files with sambamba.
+def _biobambam_merge_maxcov(data):
+    """Combine query sorted BAM files, sort and truncate to maximum coverage.
+
+    No de-duplication.
     """
-    if len(bam_files) > system.open_file_limit():
-        raise IOError("More files to merge (%s) than available open file descriptors (%s)\n"
-                      "See documentation on tips for changing file limits:\n"
-                      "https://bcbio-nextgen.readthedocs.org/en/latest/contents/"
-                      "parallel.html#tuning-systems-for-scale"
-                      % (len(bam_files), system.open_file_limit()))
-    return "{sambamba} merge {tx_out_file} -t {num_cores} `cat {tx_bam_file_list}`"
+    ds_cmd = bam.get_maxcov_downsample_cl(data, "bamsormadup")
+    return ("bammerge IL={tx_bam_file_list} tmpfile={tx_out_file}-merge %s > {tx_out_file}" % ds_cmd)

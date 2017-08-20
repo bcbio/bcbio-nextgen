@@ -94,12 +94,8 @@ def samblaster_dedup_sort(data, tx_out_file, tx_sr_file, tx_disc_file):
     # full BAM -- associate more memory and cores
     cores, mem = _get_cores_memory(data, downscale=2)
     # Potentially downsample to maximum coverage here if not splitting and whole genome sample
-    if data.get("align_split"):
-        sort_opt = "-n"
-        ds_cmd = None
-    else:
-        sort_opt = ""
-        ds_cmd = bam.get_maxcov_downsample_cl(data, "samtools")
+    ds_cmd = None if data.get("align_split") else bam.get_maxcov_downsample_cl(data, "samtools")
+    sort_opt = "-n" if data.get("align_split") and dd.get_mark_duplicates(data) else ""
     if ds_cmd:
         dedup_cmd = "%s %s > %s" % (tobam_cmd.format(out_file="", dext="full", **locals()), ds_cmd, tx_out_file)
     else:
@@ -121,7 +117,8 @@ def _biobambam_dedup_sort(data, tx_out_file):
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
-        cmd = "{samtools} sort -n -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -"
+        sort_opt = "-n" if data.get("align_split") and dd.get_mark_duplicates(data) else ""
+        cmd = "{samtools} sort %s -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -" % sort_opt
     else:
         ds_cmd = bam.get_maxcov_downsample_cl(data, "bamsormadup")
         cmd = ("bamsormadup inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "
