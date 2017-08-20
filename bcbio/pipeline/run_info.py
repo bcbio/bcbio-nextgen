@@ -455,7 +455,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
                       "mixup_check", "expression_caller", "qc", "positional_umi",
                       "cellular_barcode_correction",
-                      "singlecell_quantifier" , "spikein_fasta"] +
+                      "singlecell_quantifier", "spikein_fasta", "preseq",] +
                      # development
                      ["cwl_reporting"] +
                      # back compatibility
@@ -463,7 +463,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
+                          "recalibrate", "realign", "cwl_reporting", "save_diskspace", "preseq"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
                        "variantcaller", "positional_umi", "maxcov_downsample"])

@@ -327,7 +327,7 @@ def variant(samples):
                             cwlout(["summary", "metrics"], "string"),
                             cwlout("inherit")])],
             "bcbio-vc", ["bcftools", "bedtools", "fastqc", "goleft", "picard", "pythonpy",
-                         "qsignature", "qualimap", "sambamba", "samtools"]),
+                         "qsignature", "qualimap", "sambamba", "samtools", "preseq"]),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],

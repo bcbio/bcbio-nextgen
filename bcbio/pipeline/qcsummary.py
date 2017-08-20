@@ -103,6 +103,8 @@ def get_qc_tools(data):
             to_run += ["damage"]
     if dd.get_umi_consensus(data):
         to_run += ["umi"]
+    if tz.get_in(["config", "algorithm", "preseq"], data):
+        to_run.append("preseq")
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -114,7 +116,7 @@ def _run_qc_tools(bam_file, data):
         :returns: dict with output of different tools
     """
     from bcbio.qc import (coverage, damage, fastqc, kraken, qsignature, qualimap,
-                          samtools, picard, srna, umi, variant, viral)
+                          samtools, picard, srna, umi, variant, viral, preseq)
     tools = {"fastqc": fastqc.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
@@ -127,7 +129,9 @@ def _run_qc_tools(bam_file, data):
              "kraken": kraken.run,
              "picard": picard.run,
              "umi": umi.run,
-             "viral": viral.run}
+             "viral": viral.run,
+             "preseq": preseq.run,
+             }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
     qc_out = {}

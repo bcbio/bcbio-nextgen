@@ -145,7 +145,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
                                      "gemini", "samtools", "fastqc", "sambamba",
                                      "bcbio-variation-recall", "qsignature",
-                                     "svcaller"]),
+                                     "svcaller", "preseq"]),
                     samples, config, dirs, "multicore2",
                     multiplier=structural.parallel_multiplier(samples)) as run_parallel:
         with profile.report("joint squaring off/backfilling", dirs):
@@ -213,7 +213,7 @@ def standardpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("combine_sample_regions", [samples])
             samples = region.clean_sample_data(samples)
     ## Quality control
-    with prun.start(_wres(parallel, ["fastqc", "qsignature", "kraken", "gatk", "samtools"]),
+    with prun.start(_wres(parallel, ["fastqc", "qsignature", "kraken", "gatk", "samtools", "preseq"]),
                     samples, config, dirs, "multicore2") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
@@ -252,7 +252,7 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = rnaseq.rnaseq_variant_calling(samples, run_parallel)
 
     with prun.start(_wres(parallel, ["samtools", "fastqc", "qualimap",
-                                        "kraken", "gatk"], ensure_mem={"qualimap": 4}),
+                                     "kraken", "gatk", "preseq"], ensure_mem={"qualimap": 4}),
                     samples, config, dirs, "qc") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)

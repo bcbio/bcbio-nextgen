@@ -885,6 +885,23 @@ Quality control
   kraken will use it. You will find the results in the `qc` directory. You need
   to use `--datatarget kraken` during installation to make the minikraken
   database available.
+- ``preseq`` When set to `true`, runs the `lc_extrap` command of `Preseq <http://smithlabresearch.org/software/preseq>`_.
+  to predict the yield for future experiments. By default, it runs 300 steps of
+  estimation to get predictions for 3x of input, using the segment length of 100000.
+  You can override the parameters `seg_len`, `steps`, `extrap_fraction` using the :ref:`config-resources`: section::
+
+        resources:
+          preseq:
+            extrap_fraction: 5
+            steps: 500
+            seg_len: 5000
+
+And you can also set `extrap` and `step` parameters directly::
+
+        resources:
+          preseq:
+            extrap: 10000000
+            step: 30000
 
 .. _contaminants: https://ccb.jhu.edu/software/kraken/
 .. _custom database: https://github.com/DerrickWood/kraken

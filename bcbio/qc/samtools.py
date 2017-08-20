@@ -28,7 +28,9 @@ def _parse_samtools_stats(stats_file):
             "reads mapped": "Mapped_reads",
             "reads mapped and paired": "Mapped_paired_reads",
             "reads duplicated": "Duplicates",
-            "insert size average": "Average_insert_size"}
+            "insert size average": "Average_insert_size",
+            "average length": "Average_read_length",
+            }
     with open(stats_file) as in_handle:
         for line in in_handle:
             if not line.startswith("SN"):
