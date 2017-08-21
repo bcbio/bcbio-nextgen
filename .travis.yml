@@ -48,7 +48,7 @@ script:
   # -- bcbio CWL tests
   - docker pull quay.io/bcbio/bcbio-vc
   - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
-  - py.test tests/bcbio_vm -v -m -s cwl_docker
+  - py.test tests/bcbio_vm -v -s -m cwl_docker
 
 after_failure:
   - df -h
