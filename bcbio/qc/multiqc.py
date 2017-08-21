@@ -68,6 +68,7 @@ def summary(*samples):
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.yaml"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
+                data_files += glob.glob(os.path.join(out_dir, "multiqc_config.yaml"))
                 data_files.append(file_list)
                 if "summary" not in data:
                     data["summary"] = {}
