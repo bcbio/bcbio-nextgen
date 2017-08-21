@@ -31,6 +31,7 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "novoalign", "stdout_flag": "Novoalign"},
              {"cmd": "samtools", "stdout_flag": "Version:"},
              {"cmd": "qualimap", "args": "-h", "stdout_flag": "QualiMap"},
+             {"cmd": "preseq", "stdout_flag": "preseq"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
 _manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks",

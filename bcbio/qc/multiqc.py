@@ -9,6 +9,7 @@ import mimetypes
 import os
 import pandas as pd
 import shutil
+import numpy as np
 
 import pybedtools
 import toolz as tz
@@ -192,6 +193,11 @@ def _create_config_file(out_dir, samples):
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d))
            for d in samples):
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
+
+    preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
+    if preseq_samples:
+        out["preseq"] = _make_preseq_multiqc_config(preseq_samples)
+
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file
@@ -239,6 +245,13 @@ def _report_summary(samples, out_dir):
         logger.info("summarize target information")
         if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
             samples = _merge_target_information(samples)
+
+        preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
+        if preseq_samples:
+            out_dir = utils.safe_makedir("preseq")
+            logger.info("summarize preseq")
+            with utils.chdir(out_dir):
+                _merge_preseq(preseq_samples)
 
         out_dir = utils.safe_makedir("coverage")
         logger.info("summarize coverage")
@@ -368,6 +381,29 @@ def _merge_fastqc(samples):
         dt = utils.rbind(dt_by_sample)
         dt.to_csv(metric, sep="\t", index=False, mode ='w')
     return samples
+
+def _merge_preseq(samples):
+    metrics = [utils.get_in(s, ("summary", "metrics")) for s in samples]
+    real_counts_file = os.path.abspath(os.path.join("preseq_real_counts.txt"))
+    with file_transaction(samples[0], real_counts_file) as tx_out_file:
+        with open(tx_out_file, "w") as f:
+            for s, m in zip(samples, metrics):
+                line = dd.get_sample_name(s) + "\t" + str(m["Preseq_read_count"])
+                if m.get("Preseq_unique_count") is not None:
+                    line += "\t" + str(m["Preseq_unique_count"])
+                line += "\n"
+                f.write(line)
+    samples[0]["summary"]["qc"]["preseq"]["secondary"] = [real_counts_file]
+
+def _make_preseq_multiqc_config(samples):
+    metrics = [utils.get_in(s, ("summary", "metrics")) for s in samples]
+    out = {"read_length": float(np.median([m["Preseq_read_length"] for m in metrics]))}
+
+    genome_sizes = list(set(m["Preseq_genome_size"] for m in metrics))
+    if len(genome_sizes) == 1:
+        out["genome_size"] = genome_sizes[0]
+
+    return out
 
 def _merge_target_information(samples):
     metrics_dir = utils.safe_makedir("metrics")
