@@ -530,9 +530,12 @@ def bam_already_sorted(in_bam, config, order):
 
 
 def _get_sort_order(in_bam, config):
-    with open_samfile(in_bam) as bam_handle:
-        header = bam_handle.header
-    return utils.get_in(header, ("HD", "SO"), None)
+    for line in pysam.view("-H", in_bam).split("\r\n"):
+        if line.startswith("@HD"):
+            for keyval in line.split()[1:]:
+                key, val = keyval.split(":")
+                if key == "SO":
+                    return val
 
 def _get_sort_stem(in_bam, order):
     SUFFIXES = {"coordinate": ".sorted", "queryname": ".nsorted"}

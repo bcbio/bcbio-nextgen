@@ -40,6 +40,7 @@ def split(*items):
                 dis_data = copy.deepcopy(data)
                 dis_data["disambiguate"] = {"genome_build": dis_org}
                 dis_data["genome_build"] = dis_org
+                dis_data["config"]["algorithm"]["effects"] = False
                 dis_data = run_info.add_reference_resources(dis_data)
                 out.append([dis_data])
         else:
