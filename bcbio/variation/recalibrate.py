@@ -41,10 +41,10 @@ def apply_recal(data):
     """
     orig_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     had_work_bam = "work_bam" in data
-    if dd.get_recalibrate(data) in [True, "gatk"]:
+    if dd.get_recalibrate(data) in [True, "gatk"] and data.get("prep_recal"):
         logger.info("Applying BQSR recalibration with GATK: %s " % str(dd.get_sample_name(data)))
         data["work_bam"] = _gatk_apply_bqsr(data)
-    elif dd.get_recalibrate(data) == "sentieon":
+    elif dd.get_recalibrate(data) == "sentieon" and data.get("prep_recal"):
         logger.info("Applying BQSR recalibration with sentieon: %s " % str(dd.get_sample_name(data)))
         data["work_bam"] = sentieon.apply_bqsr(data)
     elif dd.get_recalibrate(data):

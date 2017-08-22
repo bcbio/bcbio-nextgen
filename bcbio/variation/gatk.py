@@ -120,7 +120,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
                 # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
-                if not gatk_type == "gatk4":
+                if not gatk_type == "gatk4" and _supports_avx():
                     params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
             # Prepare gVCFs if doing joint calling
             is_joint = False
@@ -146,3 +146,11 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("gatk-haplotype")
             broad_runner.run_gatk(params)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+
+def _supports_avx():
+    """Check for support for Intel AVX acceleration."""
+    if os.path.exists("/proc/cpuinfo"):
+        with open("/proc/cpuinfo") as in_handle:
+            for line in in_handle:
+                if line.startswith("flags") and line.find("avx") > 0:
+                    return True
