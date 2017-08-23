@@ -182,13 +182,8 @@ def _create_config_file(out_dir, samples):
     Future entry point for providing top level configuration of output reports.
     """
     out_file = os.path.join(out_dir, "multiqc_config.yaml")
-    out = {"table_columns_visible":
-           {"SnpEff": {"Change_rate": False,
-                       "Ts_Tv_ratio": False,
-                       "Number_of_variants_before_filter": False},
-            "samtools": {"error_rate": False}},
-           "module_order": ["bcbio", "samtools", "goleft_indexcov", "bcftools", "picard", "qualimap",
-                            "snpeff", "fastqc"]}
+    out = {"table_columns_visible": dict()}
+
     # Avoid duplicated bcbio columns with qualimap
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d))
            for d in samples):
