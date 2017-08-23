@@ -1,5 +1,6 @@
 """GATK variant calling -- HaplotypeCaller and UnifiedGenotyper.
 """
+import os
 from distutils.version import LooseVersion
 
 import toolz as tz
