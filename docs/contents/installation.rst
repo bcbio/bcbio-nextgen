@@ -1,6 +1,8 @@
 Installation
 ------------
 
+.. _automated-install:
+
 Automated
 =========
 
@@ -52,7 +54,9 @@ Optional requirements:
 - Java 1.7, needed when running GATK < 3.6 or MuTect. This must be available in
   your path so typing ``java -version`` resolves a 1.7 version. bcbio
   distributes Java 8 as part of the anaconda installation for recent versions of
-  GATK and MuTect2.
+  GATK and MuTect2. You can override the Java 8 installed with bcbio by setting
+  ``BCBIO_JAVA_HOME=/path/to/your/javadir`` if you have the java you want in
+  ``/path/to/your/javadir/bin/java``.
 - An OpenGL library, like `Mesa
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
@@ -259,15 +263,18 @@ use ``https://`` globally instead of ``git://``::
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
 GATK or Java Errors
-~~~~~~~~~~~~~~~~~~~
-GATK and other software tools used by bcbio currently require Java 1.7. If you
-have a different version, you'll see errors like::
+~~~~~~~~~~~~~~~~~~
+Most software tools used by bcbio require Java 1.8. bcbio distributes an OpenJDK
+Java build and uses it so you don't need to install anything. Older versions of
+GATK (< 3.6) and MuTect require a locally installed Java 1.7. If you
+have version incompatibilities, you'll see errors like::
 
     Unsupported major.minor version 51.0
 
-To fix this make sure you have Java 1.7 first in your ``PATH`` and that
-``JAVA_HOME`` is either set to point to the same version, or not set.
-(``unset JAVA_HOME``).
+Fixing this requires either installing Java 1.7 for old GATK and MuTect or
+avoiding pointing to an incorrect java (``unset JAVA_HOME``). You can also tweak
+the java used by bcbio, described in the :ref:`automated-install` installation
+section.
 
 ImportErrors
 ~~~~~~~~~~~~

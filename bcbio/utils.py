@@ -687,6 +687,19 @@ def R_package_path(package):
             return dirname
     return None
 
+def get_java_binpath(cmd=None):
+    """Retrieve path for java to use, handling custom BCBIO_JAVA_HOME
+
+    Defaults to the dirname of cmd, or local anaconda directory
+    """
+    if os.environ.get("BCBIO_JAVA_HOME"):
+        test_cmd = os.path.join(os.environ["BCBIO_JAVA_HOME"], "bin", "java")
+        if os.path.exists(test_cmd):
+            cmd = test_cmd
+    if not cmd:
+        cmd = Rscript_cmd()
+    return os.path.dirname(cmd)
+
 def get_R_exports():
     return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
 
@@ -725,7 +738,6 @@ def append_path(bin, path, at_start=True):
 
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
-
 
 def local_path_export(at_start=True):
     path = get_bcbio_bin()

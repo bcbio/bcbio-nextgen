@@ -485,6 +485,7 @@ def runner_from_config_safe(config):
         else:
             raise
 
+
 def gatk_cmd(name, jvm_opts, params, config=None):
     """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
     """
@@ -502,7 +503,7 @@ def gatk_cmd(name, jvm_opts, params, config=None):
         gatk_cmd = utils.which(name)
     if gatk_cmd:
         return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
-            (os.path.dirname(gatk_cmd), gatk_cmd,
+            (utils.get_java_binpath(gatk_cmd), gatk_cmd,
              " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 def _gatk4_cmd(jvm_opts, params, data):
@@ -510,7 +511,7 @@ def _gatk4_cmd(jvm_opts, params, data):
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
     return "unset JAVA_HOME && export PATH=%s:$PATH && gatk-launch --javaOptions '%s' %s" % \
-        (os.path.dirname(gatk_cmd), " ".join(jvm_opts), " ".join([str(x) for x in params]))
+        (utils.get_java_binpath(gatk_cmd), " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):
@@ -519,8 +520,7 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        Rpath = os.path.dirname(utils.Rscript_cmd())
-        cmd = ["unset", "JAVA_HOME", "&&", "export", "PATH=%s:$PATH" % Rpath, "&&"] + \
+        cmd = ["unset", "JAVA_HOME", "&&", "export", "PATH=%s:$PATH" % utils.get_java_binpath(), "&&"] + \
               [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
         do.run(" ".join(cmd), "Picard: %s" % subcmd)
