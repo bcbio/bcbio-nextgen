@@ -74,11 +74,10 @@ def run_vcfanno(vcf, conf_files, data, data_basepath=None):
         else:
             conf_fns.append(conffn)
             lua_fns.append(luafn)
-    if not conf_fns:
-        return vcf
-    if not anno_type:
-        anno_type = "gemini"
-    out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
-    if not utils.file_exists(out_file):
-        out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns)
-    return vcfutils.bgzip_and_index(out_file, data["config"])
+    if conf_fns:
+        if not anno_type:
+            anno_type = "gemini"
+        out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
+        if not utils.file_exists(out_file):
+            out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns)
+        return vcfutils.bgzip_and_index(out_file, data["config"])

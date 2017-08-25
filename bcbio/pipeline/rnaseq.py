@@ -67,22 +67,25 @@ def run_rnaseq_variant_calling(data):
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
         if dd.get_vrn_file(data):
-            vrn_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
-            data = dd.set_vrn_file(data, vrn_file)
+            ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
+            if ann_file:
+                data = dd.set_vrn_file(data, ann_file)
     return [[data]]
 
 def run_rnaseq_joint_genotyping(*samples):
     data = samples[0][0]
     variantcaller = dd.get_variantcaller(data)
     if not variantcaller:
-       return samples
+        return samples
     if "gatk" not in variantcaller:
         return samples
     ref_file = dd.get_ref_file(data)
     if variantcaller and "gatk" in variantcaller:
         vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
         out_file = variation.gatk_joint_calling(data, vrn_files, ref_file)
-        vrn_file = vcfanno.run_vcfanno(out_file, ["rnaedit"], data)
+        ann_file = vcfanno.run_vcfanno(out_file, ["rnaedit"], data)
+        if ann_file:
+            vrn_file = ann_file
         updated_samples = []
         for data in dd.sample_data_iterator(samples):
             data = dd.set_square_vcf(data, vrn_file)

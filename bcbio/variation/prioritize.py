@@ -33,8 +33,9 @@ def handle_vcf_calls(vcf_file, data, orig_items):
         if population.has_gemini_data(orig_items):
             data_basepath = install.get_gemini_dir(data) if population.support_gemini_orig(data) else None
             ann_vcf = vcfanno.run_vcfanno(vcf_file, ["gemini"], data, data_basepath)
-            priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
-            return _apply_priority_filter(vcf_file, priority_file, data)
+            if ann_vcf:
+                priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
+                return _apply_priority_filter(vcf_file, priority_file, data)
         # No GEMINI database for filtering, return original file
         return vcf_file
 

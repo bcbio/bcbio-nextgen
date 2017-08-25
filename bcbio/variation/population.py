@@ -27,7 +27,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     if use_gemini:
         passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
         gemini_vcf = multiallelic.to_single(gemini_vcf, data, passonly=passonly)
-    gemini_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
+    ann_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     if vcfutils.vcf_has_variants(gemini_vcf):
         if not utils.file_exists(gemini_db) and use_gemini:
@@ -35,10 +35,10 @@ def prep_gemini_db(fnames, call_info, samples, extras):
             # Use original approach for hg19/GRCh37 pending additional testing
             if support_gemini_orig(data) and not any(dd.get_vcfanno(d) for d in samples):
                 gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
-            else:
-                gemini_db = create_gemini_db(gemini_vcf, data, gemini_db, ped_file)
+            elif ann_vcf:
+                gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
-                              "vcf": gemini_vcf,
+                              "vcf": ann_vcf or gemini_vcf,
                               "decomposed": use_gemini}]]
 
 def _run_vcfanno(gemini_vcf, data, use_gemini=False):
