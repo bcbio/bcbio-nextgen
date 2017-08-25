@@ -343,7 +343,9 @@ def _indexes_to_secondary_files(gresources, genome_build):
             # list of indexes -- aligners
             if len(val.keys()) == 1:
                 indexes = val["indexes"]
-                if len(indexes) == 1:
+                if len(indexes) == 0:
+                    raise ValueError("Did not find indexes for %s: %s" % (refname, val))
+                elif len(indexes) == 1:
                     val = {"indexes": indexes[0]}
                 else:
                     val = {"indexes": {"base": indexes[0], "indexes": indexes[1:]}}
@@ -455,7 +457,10 @@ def _to_cwldata(key, val):
     out = []
     if isinstance(val, dict):
         if len(val) == 2 and "base" in val and "indexes" in val:
-            out.append((key, _to_cwlfile_with_indexes(val)))
+            if len(val["indexes"]) > 0 and val["base"] == val["indexes"][0]:
+                out.append(("%s__indexes" % key, _item_to_cwldata(val["base"])))
+            else:
+                out.append((key, _to_cwlfile_with_indexes(val)))
         else:
             remain_val = {}
             for nkey, nval in val.items():
@@ -510,6 +515,11 @@ def _item_to_cwldata(x):
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
             elif x.endswith(".fa.gz"):
                 secondary = [x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"]
+                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
+                if secondary:
+                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+            elif x.endswith(".fq.gz") or x.endswith(".fastq.gz"):
+                secondary = [x + ".gbi"]
                 secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]

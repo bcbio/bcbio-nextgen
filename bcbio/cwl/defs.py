@@ -76,7 +76,7 @@ def _variant_shared():
     align = [s("prep_align_inputs", "single-split",
                [["alignment_rec"]],
                [cwlout("process_alignment_rec", "record",
-                       fields=[cwlout(["files"], {"type": "array", "items": "File"}),
+                       fields=[cwlout(["files"], {"type": "array", "items": "File"}, [".gbi"]),
                                cwlout(["config", "algorithm", "quality_format"], "string"),
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam"],

@@ -242,6 +242,8 @@ def _parse_metadata(in_handle):
     for sinfo in (x for x in reader if x and not x[0].startswith("#")):
         sinfo = [_strip_and_convert_lists(x) for x in sinfo]
         sample = sinfo[0]
+        if isinstance(sample, list):
+            sample = tuple(sample)
         # sanity check to avoid duplicate rows
         if sample in metadata:
             raise ValueError("Sample %s present multiple times in metadata file.\n"
@@ -258,6 +260,8 @@ def _strip_and_convert_lists(field):
     field = field.strip()
     if "," in field:
         field = [x.strip() for x in field.split(",")]
+    elif ";" in field:
+        field = [x.strip() for x in field.split(";")]
     return field
 
 def _pname_and_metadata(in_file):
@@ -355,10 +359,14 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     - Keys matching supported names in the algorithm section map
       to key/value pairs there instead of metadata.
     """
-    item_md = metadata.get(item["description"],
-                           metadata.get(os.path.basename(item["files"][0]),
-                                        metadata.get(utils.splitext_plus(os.path.basename(item["files"][0]))[0],
-                                                     metadata.get(item["files"][0], {}))))
+    for check_key in (item["description"], item["files"][0],
+                      os.path.basename(item["files"][0]),
+                      tuple([os.path.basename(f) for f in item["files"]]),
+                      utils.splitext_plus(os.path.basename(item["files"][0]))[0],
+                      os.path.commonprefix([os.path.basename(f) for f in item["files"]])):
+        item_md = metadata.get(check_key)
+        if item_md:
+            break
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
     TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
@@ -379,7 +387,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     elif len(metadata) > 0:
         warn = "Dropped sample" if only_metadata else "Added minimal sample information"
         print("WARNING: %s: metadata not found for %s, %s" % (warn, item["description"],
-                                                              os.path.basename(item["files"][0])))
+                                                              [os.path.basename(f) for f in item["files"]]))
         keep_sample = not only_metadata
     if tz.get_in(["metadata", "ped"], item):
         item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
@@ -419,7 +427,10 @@ def _check_all_metadata_found(metadata, items):
     for name in metadata:
         seen = False
         for sample in items:
-            if sample['files'][0].find(name) > -1:
+            if isinstance(name, (tuple, list)):
+                if sample["files"][0].find(name[0]) > -1:
+                    seen = True
+            elif sample['files'][0].find(name) > -1:
                 seen = True
         if not seen:
             print("WARNING: sample not found %s" % name)
@@ -438,13 +449,25 @@ def _copy_to_configdir(items, out_dir):
         out.append(item)
     return out
 
+def _find_remote_inputs(metadata):
+    out = []
+    for fr_key in metadata.keys():
+        if isinstance(fr_key, (list, tuple)):
+            frs = fr_key
+        else:
+            frs = [fr_key]
+        for fr in frs:
+            if objectstore.is_remote(fr):
+                out.append(fr)
+    return out
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
     run_info.validate_yaml(template_txt, args.template)
     base_item = template["details"][0]
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
-    inputs = args.input_files + remotes.get("inputs", []) + [fr for fr in metadata if objectstore.is_remote(fr)]
+    inputs = args.input_files + remotes.get("inputs", []) + _find_remote_inputs(metadata)
     if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
         config, _ = config_utils.load_system_config(args.systemconfig)
         for iname, retriever in args.integrations.items():
@@ -454,6 +477,11 @@ def setup(args):
                  for item in _prep_items_from_base(base_item, inputs, args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
+    if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
+        config, _ = config_utils.load_system_config(args.systemconfig)
+        for iname, retriever in args.integrations.items():
+            if iname in config:
+                items = retriever.add_remotes(items, config[iname])
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if hasattr(args, "relpaths") and args.relpaths:

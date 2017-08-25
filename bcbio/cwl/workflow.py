@@ -5,6 +5,8 @@ import pprint
 
 import toolz as tz
 
+from bcbio.pipeline import alignment
+
 ALWAYS_AVAILABLE = ["description"]
 
 def generate(variables, steps, final_outputs):
@@ -265,7 +267,7 @@ def _handle_special_inputs(inputs, variables):
             found_indexes = False
             for v in variables:
                 vid = get_base_id(v["id"]).split("__")
-                if vid[0] == "reference" and vid[-1] == "indexes":
+                if vid[0] == "reference" and vid[1] in alignment.TOOLS:
                     out.append(vid)
                     found_indexes = True
             assert found_indexes, "Found no aligner indexes in %s" % [v["id"] for v in variables]
