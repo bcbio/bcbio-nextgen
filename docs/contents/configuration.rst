@@ -880,16 +880,16 @@ Quality control
   ``qsignature_full`` runs a larger analysis while ``qsignature`` runs a smaller
   subset on chromosome 22.  [False, qsignature, qsignature_full]
 - ``kraken`` Turn on kraken algorithm to detect possible contamination. You can
-  add `kraken: minikraken` and it will use a minimal database to detect possible
+  add ``kraken: minikraken`` and it will use a minimal database to detect possible
   `contaminants`_. As well, you can point to a `custom database`_ directory and
   kraken will use it. You will find the results in the `qc` directory. You need
   to use `--datatarget kraken` during installation to make the minikraken
   database available.
-- ``preseq`` Accepts `lc_extrap` or `c_curve`, and runs Preseq <http://smithlabresearch.org/software/preseq>`_,
+- ``preseq`` Accepts ``lc_extrap`` or ``c_curve``, and runs Preseq <http://smithlabresearch.org/software/preseq>`_,
   a tool that predicts the yield for future experiments. By default, it runs 300
   steps of estimation using the segment length of 100000. The default extrapolation
-  limit for `lc_extrap` is 3x of the reads number. You can override the parameters
-  `seg_len`, `steps`, `extrap_fraction` using the :ref:`config-resources`: section::
+  limit for ``lc_extrap`` is 3x of the reads number. You can override the parameters
+  ``seg_len``, ``steps``, ``extrap_fraction`` using the :ref:`config-resources`: section::
 
         resources:
           preseq:
@@ -897,14 +897,21 @@ Quality control
             steps: 500
             seg_len: 5000
 
-And you can also set `extrap` and `step` parameters directly, as well as provide any
-other command line option via `options`::
+  And you can also set ``extrap`` and ``step`` parameters directly, as well as provide any
+  other command line option via ``options``::
 
         resources:
           preseq:
             extrap: 10000000
             step: 30000
             options: ["-D"]
+- bcbio uses `MultiQC <http://multiqc.info/>`_ to combine QC output for all
+  samples into a single report file. If you need to tweak configuration settings
+  from bcbio defaults, you can use :ref:`config-resources`::
+
+       resources:
+         multiqc:
+           options: ["--cl_config", "'qualimap_config: { general_stats_coverage: [20,40,200] }'"]
 
 .. _contaminants: https://ccb.jhu.edu/software/kraken/
 .. _custom database: https://github.com/DerrickWood/kraken
