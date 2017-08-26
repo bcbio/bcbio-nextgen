@@ -53,7 +53,9 @@ def summary(*samples):
                     else:
                         export_tmp = ""
                     path_export = utils.local_path_export()
-                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} -o {tx_out}"
+                    other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
+                    other_opts = " ".join(other_opts)
+                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}"
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -68,6 +70,7 @@ def summary(*samples):
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.yaml"))
                 data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
+                data_files += glob.glob(os.path.join(out_dir, "multiqc_config.yaml"))
                 data_files.append(file_list)
                 if "summary" not in data:
                     data["summary"] = {}
