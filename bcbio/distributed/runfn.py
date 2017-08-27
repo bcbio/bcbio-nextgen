@@ -151,9 +151,11 @@ def _get_record_attrs(out_keys):
 
 def _add_resources(data, runtime):
     if "config" in data:
+        memory = int(float(runtime["ram"]) / float(runtime["cores"]))
         data["config"]["resources"] = {"default": {"cores": int(runtime["cores"]),
-                                                   "memory": "%sM" % int(float(runtime["ram"]) /
-                                                                         float(runtime["cores"]))}}
+                                                   "memory": "%sM" % memory,
+                                                   "jvm_opts": ["-Xms%sm" % min(1000, memory // 2),
+                                                                "-Xmx%sm" % memory]}}
         data["config"]["algorithm"]["num_cores"] = int(runtime["cores"])
     return data
 
