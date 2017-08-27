@@ -318,6 +318,7 @@ def _prep_fastq_inputs(in_files, data):
         parallel = {"type": "local", "num_jobs": len(in_files),
                     "cores_per_job": max(1, data["config"]["algorithm"]["num_cores"] // len(in_files))}
         inputs = [{"in_file": x, "read_num": i, "dirs": data["dirs"], "config": data["config"],
+                   "is_cwl": "cwl_keys" in data,
                    "rgnames": data["rgnames"]}
                   for i, x in enumerate(in_files) if x]
         out = run_multicore(_bgzip_from_fastq_parallel, [[d] for d in inputs], data["config"], parallel)
@@ -577,7 +578,15 @@ def _bgzip_from_fastq(data):
                                needs_bgzip, needs_gunzip, needs_convert, data)
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
-        utils.symlink_plus(in_file, out_file)
+        # We cannot symlink in CWL, but may be able to use inputs or copy
+        if data.get("is_cwl"):
+            # Has grabix indexes, we're okay to go
+            if utils.file_exists(in_file + ".gbi"):
+                return in_file
+            else:
+                return utils.copy_plus(in_file, out_file)
+        else:
+            utils.symlink_plus(in_file, out_file)
     return out_file
 
 def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert, data):
