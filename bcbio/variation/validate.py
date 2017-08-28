@@ -220,6 +220,8 @@ def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
         base, ext = utils.splitext_plus(os.path.basename(vrn_file))
         sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
         vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
+    if os.path.exists(vrn_file + ".tbi"):
+        os.remove(vrn_file + ".tbi")
     if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
         vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
 

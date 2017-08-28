@@ -47,6 +47,7 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                       "--genomicsDBWorkspace", out_dir,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
+                vcfutils.bgzip_and_index(vrn_file, data["config"])
                 params += ["--variant", vrn_file]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, memscale=memscale)
