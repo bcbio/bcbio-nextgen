@@ -53,6 +53,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
         if isinstance(target, basestring) and os.path.isfile(target):
             if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
                    for x in items):
+                target = shared.remove_highdepth_regions(target, items)
                 if os.path.getsize(target) == 0:
                     no_target_regions = True
             opts += ["--targets", target]

@@ -213,7 +213,7 @@ def get_maxcov_downsample_cl(data, in_pipe=None):
 def _get_maxcov_downsample(data):
     """Calculate maximum coverage downsampling for whole genome samples.
 
-    Returns None if we're no doing downsampling
+    Returns None if we're not doing downsampling.
     """
     from bcbio.bam import ref
     from bcbio.ngsalign import alignprep, bwa

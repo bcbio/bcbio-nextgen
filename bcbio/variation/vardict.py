@@ -33,7 +33,6 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
     # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     #  "-k", "3", "-r", "4", "-m", "8"]
-
     # remove low mapping quality reads
     opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions
@@ -44,6 +43,7 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     assert _is_bed_file(target)
     if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
             for x in items):
+        target = shared.remove_highdepth_regions(target, items)
         target = shared.remove_lcr_regions(target, items)
     target = _enforce_max_region_size(target, items[0])
     opts += [target]  # this must be the last option

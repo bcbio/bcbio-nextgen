@@ -510,9 +510,9 @@ Coverage information
 - ``maxcov_downsample`` bcbio downsamples whole genome runs with >10x average
   coverage to a maximum coverage, avoiding slow runtimes in collapsed repeats
   and poly-A/T/G/C regions. This parameter specified the multiplier of average
-  coverage to downsample at, and defaults to `200` (so downsampling at 6000x
-  coverage for a 30x whole genome). Set to `false` or `0` to disable
-  downsampling.
+  coverage to downsample at. For example, `200` downsamples at 6000x
+  coverage for a 30x whole genome. Set to `false` or `0` to disable
+  downsampling. Current defaults to `false` pending runtime improvements.
 -  ``coverage_depth_min`` Minimum depth of coverage. When calculating regions to
    call in, bcbio may exclude regions with less than this many reads. It is not
    a hard filter for variant calling, but rather a guideline for determining

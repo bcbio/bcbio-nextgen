@@ -1,8 +1,9 @@
 ## 1.0.5 (in progress)
 
-- Downsample whole genome BAM files to a high maximum coverage (200 times the
-  average coverage) to avoid slow runtimes in collapsed repeats and poly-ATGC
-  regions. Downsampling happens in parallel with post alignment sorting.
+- Add optional downsampling whole genome BAM files to a high maximum coverage
+  (200 times the average coverage) to avoid slow runtimes in collapsed repeats
+  and poly-ATGC regions. Downsampling happens in parallel with post alignment
+  sorting. Currently turned off by default pending runtime improvements.
   Configure using `maxcov_downsample`.
 - Separate post alignment recalibration and realignment. Recalibration now
   occurs multicore to support GATK4 implementation. We generally recommend
