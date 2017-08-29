@@ -323,9 +323,11 @@ def _flatten_samples(samples, base_file, integrations=None):
         flat_data.append(cur_flat)
     out = {}
     for key in sorted(list(set(reduce(operator.add, [d.keys() for d in flat_data])))):
-        out[key] = []
+        # Periods in keys cause issues with WDL and some CWL implementations
+        clean_key = key.replace(".", "_")
+        out[clean_key] = []
         for cur_flat in flat_data:
-            out[key].append(cur_flat.get(key))
+            out[clean_key].append(cur_flat.get(key))
     # special case for back-compatibility with fasta specifications -- yuck
     if "reference__fasta__base" not in out and "reference__fasta" in out:
         out["reference__fasta__base"] = out["reference__fasta"]
