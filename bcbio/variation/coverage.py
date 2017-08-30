@@ -68,7 +68,8 @@ def _count_offtarget(data, bam_file, bed_file, target_name):
         data, bam_file, keep_dups=False, bed_file=bed_file, target_name=target_name)
     if mapped_unique:
         return float(mapped_unique - ontarget) / mapped_unique
-    return 0.0
+    else:
+        return 0.0
 
 def calculate(bam_file, data):
     """Calculate coverage in parallel using samtools depth through goleft.
@@ -305,7 +306,7 @@ def _summary_variants(in_file, out_file, data=None):
             row.append([p_point, q_d, q_cg])
         pd.DataFrame(row).to_csv(out_tx, header=["pct_variants", "depth", "cg"], index=False, sep="\t")
 
-def regions_coverage(data, bed_file, bam_file, target_name, depth_thresholds=None):
+def regions_coverage(data, bed_file, bam_file, target_name):
     """Generate coverage over regions of interest using sambamba depth.
 
     sambamba can segfault with multiple threads so provides a single threaded backup
@@ -317,12 +318,12 @@ def regions_coverage(data, bed_file, bam_file, target_name, depth_thresholds=Non
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
         try:
-            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file, depth_thresholds=depth_thresholds)
+            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file)
             cmdl += " -o " + tx_out_file
             message = "Calculating regions coverage of {target_name} in {bam_file}"
             do.run(cmdl, message.format(**locals()))
         except subprocess.CalledProcessError:
-            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file, depth_thresholds=depth_thresholds,
+            cmdl = sambamba.make_command(data, "depth region", bam_file, bed_file,
                                          multicore=False)
             cmdl += " -o " + tx_out_file
             message = "Calculating regions coverage of {target_name} in {bam_file} -- single thread backup"

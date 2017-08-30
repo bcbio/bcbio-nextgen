@@ -16,6 +16,8 @@
 - Tumor-only prioritization uses vcfanno output instead of GEMINI,
   allowing use without needing to build a full GEMINI database.
 - Use samtools multicore indexing, replacing sambamba multicore index.
+- Replace components of pipeline using single core sambamba view -c with
+  parallel samtools equivalents.
 - Multicore base quality score recalibration with GATK4 and Sentieon.
 - GATK4: add support for gVCF based joint calling.
 - GATK4: fix option usage for gVCF creation with HaplotypeCaller
