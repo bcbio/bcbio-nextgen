@@ -359,9 +359,6 @@ def _fix_gatk_header(exist_files, out_file, config):
     These files do haploid variant calling which lack the PID phasing key/value
     pair in FORMAT, so initial chrM samples cause errors during concatenation
     due to the lack of header merging. This fixes this by updating the first header.
-
-    It also fixes problems due to MMQ and MCL allele representations
-    https://github.com/broadinstitute/gatk/issues/3429#issuecomment-324188028
     """
     from bcbio.variation import ploidy
     c, base_file = exist_files[0]
@@ -376,8 +373,7 @@ def _fix_gatk_header(exist_files, out_file, config):
                                  "%s-fixheader%s" % utils.splitext_plus(os.path.basename(base_file)))
     with file_transaction(config, base_fix_file) as tx_out_file:
         header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
-        do.run("zgrep ^# %s | sed 's/ID=MMQ,Number=A/ID=MMQ,Number=R/' | "
-                "sed 's/ID=MCL,Number=A/ID=MCL,Number=R/' > %s"
+        do.run("zgrep ^# %s > %s"
                 % (replace_file, header_file), "Prepare header file for merging")
         do.run("bcftools reheader -h %s %s -o %s" % (header_file, base_file, base_fix_file),
                "Reheader initial VCF file in merge")

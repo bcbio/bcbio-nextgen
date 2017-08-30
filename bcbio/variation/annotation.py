@@ -30,7 +30,7 @@ def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True):
     if include_baseqranksum:
         anns += ["BaseQualityRankSumTest"]
     if broad_runner.gatk_type() == "gatk4":
-        anns += ["MappingQuality", "ClippedBases"]
+        anns += ["MappingQuality"]
     else:
         anns += ["GCContent", "HaplotypeScore", "HomopolymerRun"]
     if include_depth:
