@@ -54,7 +54,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                 file_estimates, disk, step_cores, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
-    cores = step_cores if step_cores else resource_cores
+    cores = min([step_cores, resource_cores]) if step_cores else resource_cores
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
