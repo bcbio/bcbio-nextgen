@@ -280,7 +280,7 @@ def get_db(data):
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
-            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace("_", ".")))
+            snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace(".", "_")))
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
         if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
