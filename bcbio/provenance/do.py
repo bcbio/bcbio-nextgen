@@ -10,13 +10,14 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics
 
 
-def run(cmd, descr, data=None, checks=None, region=None, log_error=True,
+def run(cmd, descr=None, data=None, checks=None, region=None, log_error=True,
         log_stdout=False, env=None):
     """Run the provided command, logging details and checking for errors.
     """
-    descr = _descr_str(descr, data, region)
-    logger.debug(descr)
-    cmd_id = diagnostics.start_cmd(cmd, descr, data)
+    if descr:
+      descr = _descr_str(descr, data, region)
+      logger.debug(descr)
+    cmd_id = diagnostics.start_cmd(cmd, descr or "", data)
     try:
         logger_cl.debug(" ".join(str(x) for x in cmd) if not isinstance(cmd, basestring) else cmd)
         _do_run(cmd, checks, log_stdout, env=env)

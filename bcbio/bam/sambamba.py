@@ -1,8 +1,10 @@
 import os
-import subprocess
+import toolz as tz
 
 from bcbio import bam, utils
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
+from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 
 pybedtools = utils.LazyImport("pybedtools")
@@ -40,11 +42,23 @@ def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target
         num_cores = dd.get_num_cores(data)
         with file_transaction(data, output_file) as tx_out_file:
             count = 0
-            cmd = "samtools view -c -F {flag} -@ {num_cores} {bam_file}{region}"
-            for r in (pybedtools.BedTool(bed_file) if bed_file else [None]):
-                # Covert to samtools region (these are 1-based, BED is 0-based)
-                region = " %s:%s-%s" % (r.chrom, r.start + 1, r.end) if r else ""
-                count += int(subprocess.check_output(cmd.format(**locals()), shell=True))
+            # Covert to samtools regions (they are 1-based, BED is 0-based)
+            regions = (["%s:%s-%s" % (r.chrom, r.start + 1, r.end) for r in pybedtools.BedTool(bed_file)]
+                       if bed_file else [None])
+            logger.debug("Count mapped reads with samtools view: %s" % (dd.get_sample_name(data)))
+            for i, region_group in enumerate(tz.partition_all(10000, regions)):
+                if len(region_group) == 1 and not region_group[0]:
+                    region_str = ""
+                else:
+                    region_in = "%s-regions-%s.bed" % (utils.splitext_plus(tx_out_file)[0], i)
+                    with open(region_in, "w") as out_handle:
+                        out_handle.write(" ".join(region_group))
+                    region_str = " `cat %s`" % region_in
+                count_out = "%s-count-%s.txt" % (utils.splitext_plus(tx_out_file)[0], i)
+                cmd = "samtools view -c -F {flag} -@ {num_cores} {bam_file}{region_str} > {count_out}"
+                do.run(cmd.format(**locals()))
+                with open(count_out) as in_handle:
+                    count += int(in_handle.read().strip())
             with open(tx_out_file, "w") as out_handle:
                 out_handle.write(str(count))
     with open(output_file) as f:
