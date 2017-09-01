@@ -2,8 +2,6 @@ import os
 import subprocess
 
 from bcbio import bam, utils
-from bcbio.provenance import do
-from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
 
@@ -14,18 +12,6 @@ mapped_filter_query = (
     "not mate_is_unmapped and "
     "not secondary_alignment and "
     "not failed_quality_control")
-
-def make_command(data, cmd, bam_file, bed_file=None,
-                 depth_thresholds=None, max_cov=None, query=None, multicore=True):
-    sambamba = config_utils.get_program("sambamba", data["config"], default="sambamba")
-    num_cores = dd.get_cores(data) if multicore else 1
-    target = (" -L " + bed_file) if bed_file else ""
-    thresholds = "".join([" -T" + str(d) for d in (depth_thresholds or [])])
-    maxcov = (" -C " + str(max_cov)) if max_cov else ""
-    if query is None:
-        query = mapped_filter_query + " and not duplicate"
-    return ("{sambamba} {cmd} -t {num_cores} {bam_file} "
-            "{target} {thresholds} {maxcov} -F \"{query}\"").format(**locals())
 
 def work_dir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data), "sambamba"))

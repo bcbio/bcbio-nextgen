@@ -132,7 +132,7 @@ def _prep_real_counts(bam_file, data, samtools_stats):
         out["Preseq_genome_size"] = pybedtools.BedTool(bed).total_coverage()
         out["Preseq_read_count"] = sambamba.number_of_mapped_reads(
             data, bam_file, keep_dups=True, bed_file=bed, target_name=target_name)
-        ontrg_unique_depth = cov.get_average_coverage(data, bam_file, bed, target_name)
+        ontrg_unique_depth = cov.get_average_coverage(target_name, bed, data, bam_file)
         if dedupped:
             out["Preseq_unique_count"] = sambamba.number_of_mapped_reads(
                 data, bam_file, keep_dups=False, bed_file=bed, target_name=target_name)

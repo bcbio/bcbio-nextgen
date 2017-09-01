@@ -27,7 +27,7 @@ def run(bam_file, data, out_dir):
         merged_bed_file = None
         target_name = "genome"
 
-    avg_depth = cov.get_average_coverage(data, bam_file, merged_bed_file, target_name)
+    avg_depth = cov.get_average_coverage(target_name, merged_bed_file, data)
     out['Avg_coverage'] = avg_depth
 
     samtools_stats_dir = os.path.join(out_dir, os.path.pardir, 'samtools')

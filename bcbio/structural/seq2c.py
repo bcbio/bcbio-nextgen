@@ -39,11 +39,10 @@ def precall(items):
     assert "seq2c_bed_ready" in data["config"]["algorithm"], "Error: svregions or variant_regions BED file required for Seq2C"
 
     bed_file = data["config"]["algorithm"]["seq2c_bed_ready"]
-    bam_file = dd.get_align_bam(data)
     sample_name = dd.get_sample_name(data)
 
     work_dir = _sv_workdir(data)
-    cov_file = _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name)
+    cov_file = _calculate_coverage(data, work_dir, bed_file, sample_name)
 
     if "sv" not in data:
         data["sv"] = []
@@ -192,23 +191,22 @@ def to_vcf(in_tsv, data):
                                                         ".", ".", info, "GT", "1/1"]) + "\n")
     return vcfutils.sort_by_ref(out_file, data)
 
-def _calculate_coverage(data, work_dir, bed_file, bam_file, sample_name):
-    sambamba_depth_file = regions_coverage(data, bed_file, bam_file, "sv_regions")
+def _calculate_coverage(data, work_dir, bed_file, sample_name):
+    depth_file = regions_coverage(bed_file, data)
 
     out_file = os.path.join(work_dir, sample_name + '-coverage.tsv')
     if not utils.file_exists(out_file):
-        logger.debug('Converting sambamba depth output to cov2lr.pl input in ' + sample_name)
+        logger.debug('Converting depth output to cov2lr.pl input in ' + sample_name)
         with file_transaction(data, out_file) as tx_out_file:
-            _sambabma_depth_to_seq2cov(sambamba_depth_file, tx_out_file, sample_name)
+            _depth_to_seq2cov(depth_file, tx_out_file, sample_name)
     logger.debug("Saved to " + out_file)
     return out_file
 
-def _sambabma_depth_to_seq2cov(input_fpath, output_fpath, sample_name):
+def _depth_to_seq2cov(input_fpath, output_fpath, sample_name):
     """Args:
-        input_fpath: output of "sambabma depth region":
-            # chrom chromStart  chromEnd  F3       readCount  meanCoverage  sampleName
-            chr20   68345       68413     DEFB125  56         32.5          chr20_tumor_1
-            chr20   76640       77301     DEFB125  279        36.9213       chr20_tumor_1
+        input_fpath: output of "mosdepth":
+            chr22           14250   15500   name3   5.54
+            chrM            100     1000    name1   916.08
 
         output_fpath: path to write results - input for Seq2C's cov2lr.pl, e.g.:
             seq2cov:
@@ -222,13 +220,11 @@ def _sambabma_depth_to_seq2cov(input_fpath, output_fpath, sample_name):
     # First round: collecting gene ends
     gene_end_by_gene = defaultdict(lambda: -1)
     with open(input_fpath) as f:
-        ave_depth_col = next(f).split('\t').index('meanCoverage')
-        for l in f:
-            if l.startswith('#'): continue
-            fs = l.replace('\n', '').split('\t')
-            if any(fs[i] == '.' for i in [0, 1, 2, 3, ave_depth_col]): continue
-            end = int(fs[2])
-            gene_name = fs[3]
+        for xs in (l.rstrip().split() for l in f if not l.startswith("#")):
+            xs = [x for x in xs if x.strip()]
+            if any(x == "." for x in xs): continue
+            end = int(xs[2])
+            gene_name = xs[3]
             gene_end_by_gene[gene_name] = max(gene_end_by_gene[gene_name], end)
 
     # Second round: calculating gene level coverage, and writing file for Seq2C
@@ -237,16 +233,12 @@ def _sambabma_depth_to_seq2cov(input_fpath, output_fpath, sample_name):
     total_size_by_gene = dict()
 
     with open(input_fpath) as f, open(output_fpath, 'w') as out:
-        for l in f:
-            if l.startswith('#'): continue
-            fs = l.replace('\n', '').split('\t')
-            if any(fs[i] == '.' for i in [0, 1, 2, 3, ave_depth_col]): continue
-
-            chrom = fs[0]
-            start = int(fs[1])
-            end = int(fs[2])
-            gene_name = fs[3]
-            ave_depth = float(fs[ave_depth_col])
+        for xs in (l.rstrip().split() for l in f if not l.startswith("#")):
+            xs = [x for x in xs if x.strip()]
+            if any(x == "." for x in xs): continue
+            chrom, start, end, gene_name = xs[:4]
+            start, end = int(start), int(end)
+            ave_depth = float(xs[-1])
 
             if gene_name not in gene_start_by_gene:
                 gene_start_by_gene[gene_name] = start
