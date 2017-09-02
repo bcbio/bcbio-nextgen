@@ -4,6 +4,7 @@ https://ccb.jhu.edu/software/kraken/
 """
 import os
 import shutil
+import toolz as tz
 
 from bcbio import bam, install, utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -12,15 +13,15 @@ from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 
-def run(bam_file, data, out_dir):
+def run(_, data, out_dir):
     """Run kraken, generating report in specified directory and parsing metrics.
        Using only first paired reads.
     """
     # logger.info("Number of aligned reads < than 0.60 in %s: %s" % (dd.get_sample_name(data), ratio))
     logger.info("Running kraken to determine contaminant: %s" % dd.get_sample_name(data))
-    ratio = bam.get_aligned_reads(bam_file, data)
+    # ratio = bam.get_aligned_reads(bam_file, data)
     out = out_stats = None
-    db = data['config']["algorithm"]["kraken"]
+    db = tz.get_in(["config", "algorithm", "kraken"], data)
     kraken_cmd = config_utils.get_program("kraken", data["config"])
     if db == "minikraken":
         db = os.path.join(install._get_data_dir(), "genomes", "kraken", "minikraken")

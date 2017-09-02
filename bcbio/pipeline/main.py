@@ -145,7 +145,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
                                      "gemini", "samtools", "fastqc", "sambamba",
                                      "bcbio-variation-recall", "qsignature",
-                                     "svcaller", "preseq"]),
+                                     "svcaller", "kraken", "preseq"]),
                     samples, config, dirs, "multicore2",
                     multiplier=structural.parallel_multiplier(samples)) as run_parallel:
         with profile.report("joint squaring off/backfilling", dirs):

@@ -156,6 +156,8 @@ def process_alignment(data, alt_input=None):
         data["work_bam"] = None
     elif not fastq1:
         raise ValueError("No 'files' specified for input sample: %s" % dd.get_sample_name(data))
+    elif "kraken" in config["algorithm"]:  # kraken doesn's need bam
+        pass
     else:
         raise ValueError("Could not process input file from sample configuration. \n" +
                          fastq1 +
