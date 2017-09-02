@@ -281,6 +281,8 @@ def get_db(data):
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db.replace(".", "_")))
+            if snpeff_base_dir:
+                snpeff_db = snpeff_db.replace(".", "_")
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
         if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
@@ -293,6 +295,8 @@ def get_db(data):
             # back compatible retrieval of genome from installation directory
             if "config" in data and not os.path.exists(os.path.join(snpeff_base_dir, snpeff_db)):
                 snpeff_base_dir, snpeff_db = _installed_snpeff_genome(snpeff_db, data["config"])
+        if snpeff_base_dir.endswith("/%s" % snpeff_db):
+            snpeff_base_dir = os.path.dirname(snpeff_base_dir)
     return snpeff_db, snpeff_base_dir
 
 def get_snpeff_files(data):
