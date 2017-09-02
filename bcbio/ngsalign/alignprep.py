@@ -234,6 +234,7 @@ def merge_split_alignments(samples, run_parallel):
     hla_merges = {}
     for hla_merge in [x[0] for x in hla_merge_raw]:
         hla_merges[dd.get_sample_name(hla_merge)] = tz.get_in(["hla", "fastq"], hla_merge)
+
     # Add stable 'align_bam' target to use for retrieving raw alignment
     out = []
     for data in [x[0] for x in merged + ready]:
@@ -241,6 +242,11 @@ def merge_split_alignments(samples, run_parallel):
             data["align_bam"] = data["work_bam"]
         if dd.get_sample_name(data) in hla_merges:
             data["hla"]["fastq"] = hla_merges[dd.get_sample_name(data)]
+	else:
+            hla_files = glob.glob(os.path.join(dd.get_work_dir(data), "align",
+                                               dd.get_sample_name(data), "hla", "*.fq"))
+            if hla_files:
+                data["hla"]["fastq"] = hla_files
         out.append([data])
     return out
 

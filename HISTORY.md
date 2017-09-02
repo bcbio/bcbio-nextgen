@@ -27,6 +27,7 @@
 - Do not split individual sample VCFs during pooled batch calling. This
   previously happened only for small batches with less than 5 samples, now we
   avoid it entirely and let users do downstream sample extraction.
+- Update OptiType HLA calling to use multicore CBC solver, also avoiding GLPK issues.
 - Additional approach to retrieving cluster IP addresses for IPython and
   logging, using the fully qualified domain name.
 - Add `archive: [cram-lossless]` to do CRAM archiving of outputs without quality

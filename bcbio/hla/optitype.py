@@ -126,8 +126,8 @@ CONFIG_TMPL = """
 razers3={razers3}
 threads={cores}
 [ilp]
-solver=glpk
-threads=1
+solver=cbc
+threads={cores}
 [behavior]
 deletebam=true
 unpaired_weight=0
