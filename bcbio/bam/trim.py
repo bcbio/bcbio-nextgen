@@ -80,8 +80,9 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             ropts = " ".join(str(x) for x in
                              config_utils.get_resources("atropos", data["config"]).get("options", []))
             extra_opts = []
-            for k, v in [("--quality-cutoff", "5"), ("--minimum-length", str(dd.get_min_read_length(data)))]:
-                if k not in ropts:
+            for k, alt_ks, v in [("--quality-cutoff", ["-q "], "5"),
+                                 ("--minimum-length", ["-m "], str(dd.get_min_read_length(data)))]:
+                if k not in ropts and not any(alt_k in ropts for alt_k in alt_ks):
                     extra_opts.append("%s=%s" % (k, v))
             extra_opts = " ".join(extra_opts)
             thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
