@@ -57,6 +57,9 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     if in_file:
         if not bedprep_dir:
             bedprep_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "bedprep"))
+        # Avoid running multiple times with same prefix
+        if prefix and os.path.basename(in_file).startswith(prefix):
+            return in_file
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
         if out_file.endswith(".gz"):
             out_file = out_file[:-3]

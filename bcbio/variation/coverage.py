@@ -13,7 +13,7 @@ import numpy as np
 import pysam
 
 from bcbio.variation.bedutils import clean_file
-from bcbio.utils import (file_exists, append_stem, copy_plus)
+from bcbio.utils import (append_stem, copy_plus)
 from bcbio import bam, utils
 from bcbio.bam import ref, sambamba
 from bcbio.distributed.transaction import file_transaction
@@ -240,19 +240,22 @@ def _run_mosdepth(bed_file, data):
                 do.run(cmd.format(**locals()), message.format(**locals()))
     return out_file, dist_file
 
-def coverage_region_detailed_stats(data, out_dir, extra_cutoffs=None):
+def coverage_region_detailed_stats(bed_file, data, out_dir, extra_cutoffs=None):
     """
     Calculate coverage at different completeness cutoff
     for region in coverage option.
     """
-    bed_file = dd.get_coverage(data)
     if not bed_file or not utils.file_exists(bed_file):
         return []
     else:
-        bed_file = clean_file(bed_file, data, prefix="cov-", simple=True)
         cov_file, dist_file = _run_mosdepth(bed_file, data)
+        out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
+        out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
+        if not utils.file_uptodate(out_cov_file, cov_file):
+            utils.copy_plus(cov_file, out_cov_file)
+            utils.copy_plus(dist_file, out_dist_file)
         cutoffs = {1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000}
         if extra_cutoffs:
             cutoffs = sorted(list(cutoffs | extra_cutoffs))
-        out_files = _calculate_percentiles(cov_file, dist_file, cutoffs, out_dir, data)
+        out_files = _calculate_percentiles(out_cov_file, out_dist_file, cutoffs, out_dir, data)
         return [os.path.abspath(x) for x in out_files]

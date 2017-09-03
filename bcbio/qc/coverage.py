@@ -17,8 +17,9 @@ def run(bam_file, data, out_dir):
     """
     out = dict()
 
+    out_dir = utils.safe_makedir(out_dir)
     if dd.get_coverage(data) and dd.get_coverage(data) not in ["None"]:
-        merged_bed_file = dd.get_coverage_merged(data)
+        merged_bed_file = bedutils.clean_file(dd.get_coverage_merged(data), data, prefix="cov-", simple=True)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
         merged_bed_file = dd.get_variant_regions_merged(data)
@@ -28,6 +29,14 @@ def run(bam_file, data, out_dir):
         target_name = "genome"
 
     avg_depth = cov.get_average_coverage(target_name, merged_bed_file, data)
+    if target_name == "coverage":
+        out_files = cov.coverage_region_detailed_stats(merged_bed_file, data, out_dir,
+                                                       extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
+    else:
+        out_files = []
+    for ext in ["coverage.bed", "summary.bed"]:
+        out_files += [x for x in glob.glob(os.path.join(out_dir, "*%s" % ext)) if os.path.isfile(x)]
+
     out['Avg_coverage'] = avg_depth
 
     samtools_stats_dir = os.path.join(out_dir, os.path.pardir, 'samtools')
@@ -67,10 +76,6 @@ def run(bam_file, data, out_dir):
         if total_reads:
             out['Usable_pct'] = 100.0 * ontarget / total_reads
 
-    out_files = cov.coverage_region_detailed_stats(data, out_dir,
-                                                   extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
-    for ext in ["coverage.bed", "summary.bed"]:
-        out_files += [x for x in glob.glob(os.path.join(out_dir, "*%s" % ext)) if os.path.isfile(x)]
     indexcov_files = _goleft_indexcov(bam_file, data, out_dir)
     out_files += [x for x in indexcov_files if x and utils.file_exists(x)]
     out = {"metrics": out}
