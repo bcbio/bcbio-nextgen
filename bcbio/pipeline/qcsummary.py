@@ -59,14 +59,15 @@ def pipeline_summary(data):
         work_bam = data["clean_fastq"]
     elif data["analysis"].lower().startswith("chip-seq"):
         work_bam = data["raw_bam"]
-    elif not work_bam.endswith(".bam"):
+    elif not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
-    if dd.get_ref_file(data) is not None and work_bam:
-        logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
-        work_data = cwlutils.unpack_tarballs(utils.deepish_copy(data), data)
-        data["summary"] = _run_qc_tools(work_bam, work_data)
-        if (len(dd.get_algorithm_qc(data)) == 1 and "output_cwl_keys" in data):
-            data["summary"]["qc"] = data["summary"]["qc"].get(dd.get_algorithm_qc(data)[0])
+    if dd.get_ref_file(data):
+        if work_bam or (tz.get_in(["config", "algorithm", "kraken"], data)):  # kraken doesn't need bam
+            logger.info("QC: %s %s" % (dd.get_sample_name(data), ", ".join(dd.get_algorithm_qc(data))))
+            work_data = cwlutils.unpack_tarballs(utils.deepish_copy(data), data)
+            data["summary"] = _run_qc_tools(work_bam, work_data)
+            if (len(dd.get_algorithm_qc(data)) == 1 and "output_cwl_keys" in data):
+                data["summary"]["qc"] = data["summary"]["qc"].get(dd.get_algorithm_qc(data)[0])
     return [[data]]
 
 def get_qc_tools(data):
@@ -136,6 +137,8 @@ def _run_qc_tools(bam_file, data):
     metrics = {}
     qc_out = {}
     for program_name in dd.get_algorithm_qc(data):
+        if not bam_file and program_name != "kraken":  # kraken doesn't need bam
+            continue
         qc_fn = tools[program_name]
         cur_qc_dir = os.path.join(qc_dir, program_name)
         out = qc_fn(bam_file, data, cur_qc_dir)
@@ -202,13 +205,15 @@ def _split_samples_by_qc(samples):
     extras = []
     for data in [utils.to_single_data(x) for x in samples]:
         qcs = dd.get_algorithm_qc(data)
-        if not dd.get_align_bam(data) or not qcs:
-            extras.append([data])
-        else:
+        if qcs and (dd.get_align_bam(data) or
+                    tz.get_in(["config", "algorithm", "kraken"], data)  # kraken doesn't need bam
+                ):
             for qc in qcs:
                 add = copy.deepcopy(data)
                 add["config"]["algorithm"]["qc"] = [qc]
                 to_process.append([add])
+        else:
+            extras.append([data])
     return to_process, extras
 
 def _combine_qc_samples(samples):
