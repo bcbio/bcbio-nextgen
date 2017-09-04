@@ -16,7 +16,8 @@ def run(bam_file, data, out_dir):
         utils.safe_makedir(out_dir)
         samtools = config_utils.get_program("samtools", data["config"])
         with file_transaction(data, stats_file) as tx_out_file:
-            cmd = "{samtools} stats {bam_file}"
+            cores = dd.get_num_cores(data)
+            cmd = "{samtools} stats -@ {cores} {bam_file}"
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "samtools stats", data)
     out = _parse_samtools_stats(stats_file)
