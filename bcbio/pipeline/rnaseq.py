@@ -62,7 +62,7 @@ def run_rnaseq_variant_calling(data):
                      "if this is something you need to do.")
         sys.exit(1)
 
-    if variantcaller and "gatk" in variantcaller:
+    if variantcaller and "gatk" in variantcaller or "gatk-haplotype" in variantcaller:
         data = variation.rnaseq_gatk_variant_calling(data)
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
@@ -84,8 +84,7 @@ def run_rnaseq_joint_genotyping(*samples):
         vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
         out_file = variation.gatk_joint_calling(data, vrn_files, ref_file)
         ann_file = vcfanno.run_vcfanno(out_file, ["rnaedit"], data)
-        if ann_file:
-            vrn_file = ann_file
+        vrn_file = ann_file if ann_file else out_file
         updated_samples = []
         for data in dd.sample_data_iterator(samples):
             data = dd.set_square_vcf(data, vrn_file)

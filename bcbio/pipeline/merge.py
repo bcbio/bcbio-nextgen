@@ -56,7 +56,6 @@ def merge_bam_files(bam_files, work_dir, data, out_file=None, batch=None):
                 with utils.chdir(tmpdir):
                     with file_transaction(data, out_file) as tx_out_file:
                         tx_bam_file_list = _create_merge_filelist(bam_files, tx_out_file, data["config"])
-                        sambamba = config_utils.get_program("sambamba", data["config"])
                         samtools = config_utils.get_program("samtools", data["config"])
                         resources = config_utils.get_resources("samtools", data["config"])
                         num_cores = dd.get_num_cores(data)

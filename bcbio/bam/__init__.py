@@ -23,7 +23,6 @@ from bcbio.provenance import do
 def is_empty(bam_file):
     """Determine if a BAM file is empty
     """
-
     bam_file = objectstore.cl_input(bam_file)
     sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
@@ -332,42 +331,6 @@ def is_sam(in_file):
     else:
         return False
 
-def mapped(in_bam, config):
-    """
-    return a bam file of only the mapped reads
-    """
-    out_file = os.path.splitext(in_bam)[0] + ".mapped.bam"
-    if utils.file_exists(out_file):
-        return out_file
-    sambamba = _get_sambamba(config)
-    with file_transaction(config, out_file) as tx_out_file:
-        if sambamba:
-            cmd = ("{sambamba} view --format=bam -F 'not (unmapped or mate_is_unmapped)' "
-                   "{in_bam} -o {tx_out_file}")
-        else:
-            samtools = config_utils.get_program("samtools", config)
-            cmd = "{samtools} view -b -F 4 {in_bam} -o {tx_out_file}"
-        do.run(cmd.format(**locals()),
-               "Filtering mapped reads to %s." % (tx_out_file))
-    return out_file
-
-
-def count(in_bam, config=None):
-    """
-    return the counts in a BAM file
-    """
-    if not config:
-        config = {}
-    sambamba = _get_sambamba(config)
-    if sambamba:
-        cmd = ("{sambamba} view -c {in_bam}").format(**locals())
-    else:
-        samtools = config_utils.get_program("samtools", config)
-        cmd = ("{samtools} view -c {in_bam}").format(**locals())
-    out = subprocess.check_output(cmd, shell=True)
-    return int(out)
-
-
 def sam_to_bam(in_sam, config):
     if is_bam(in_sam):
         return in_sam
@@ -385,14 +348,6 @@ def sam_to_bam(in_sam, config):
                ("Convert SAM to BAM (%s cores): %s to %s"
                 % (str(num_cores), in_sam, out_file)))
     return out_file
-
-def sam_to_bam_stream_cmd(config, named_pipe=None):
-    sambamba = config_utils.get_program("sambamba", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
-    pipe = named_pipe if named_pipe else "/dev/stdin"
-    cmd = " {sambamba} view --format=bam -S -t {num_cores} {pipe} ".format(**locals())
-    return cmd
-
 
 def bam_to_sam(in_file, config):
     if is_sam(in_file):
@@ -431,23 +386,12 @@ def merge(bamfiles, out_bam, config):
         return bamfiles[0]
     if os.path.exists(out_bam):
         return out_bam
-    sambamba = _get_sambamba(config)
-    sambamba = None
     samtools = config_utils.get_program("samtools", config)
     bamtools = config_utils.get_program("bamtools", config)
     num_cores = config["algorithm"].get("num_cores", 1)
     with file_transaction(config, out_bam) as tx_out_bam:
-        try:
-            if sambamba:
-                cmd = "{sambamba} merge -t {num_cores} {tx_out_bam} " + " ".join(bamfiles)
-            else:
-                cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
-            do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
-        except subprocess.CalledProcessError:
-            files = " -in ".join(bamfiles)
-            cmd = "{bamtools} merge -in {files} -out {tx_out_bam}"
-            do.run(cmd.format(**locals()), "Error with other tools. Merge %s into %s with bamtools" %
-                   (bamfiles, out_bam))
+        cmd = "{samtools} merge -@ {num_cores} {tx_out_bam} " + " ".join(bamfiles)
+        do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
     index(out_bam, config)
     return out_bam
 
@@ -462,7 +406,6 @@ def sort(in_bam, config, order="coordinate"):
     sort_stem = _get_sort_stem(in_bam, order)
     sort_file = sort_stem + ".bam"
     if not utils.file_exists(sort_file):
-        sambamba = _get_sambamba(config)
         samtools = config_utils.get_program("samtools", config)
         cores = config["algorithm"].get("num_cores", 1)
         with file_transaction(config, sort_file) as tx_sort_file:
@@ -471,58 +414,11 @@ def sort(in_bam, config, order="coordinate"):
             order_flag = "-n" if order == "queryname" else ""
             resources = config_utils.get_resources("samtools", config)
             mem = resources.get("memory", "2G")
-            samtools_cmd = ("{samtools} sort -@ {cores} -m {mem} {order_flag} "
-                            "{in_bam} {tx_sort_stem}")
-            if sambamba:
-                if tz.get_in(["resources", "sambamba"], config):
-                    sm_resources = config_utils.get_resources("sambamba", config)
-                    mem = sm_resources.get("memory", "2G")
-                # sambamba uses total memory, not memory per core
-                mem = config_utils.adjust_memory(mem, cores, "increase").upper()
-                # Use samtools compatible natural sorting
-                # https://github.com/lomereiter/sambamba/issues/132
-                order_flag = "--natural-sort" if order == "queryname" else ""
-                cmd = ("{sambamba} sort -t {cores} -m {mem} {order_flag} "
-                       "-o {tx_sort_file} --tmpdir={tx_dir} {in_bam}")
-            else:
-                cmd = samtools_cmd
-            # sambamba has intermittent multicore failures. Allow
-            # retries with single core
-            try:
-                do.run(cmd.format(**locals()),
-                       "Sort BAM file (multi core, %s): %s to %s" %
-                       (order, os.path.basename(in_bam),
-                        os.path.basename(sort_file)))
-            except:
-                logger.exception("Multi-core sorting failed, reverting to single core")
-                resources = config_utils.get_resources("samtools", config)
-                mem = resources.get("memory", "2G")
-                cores = 1
-                order_flag = "-n" if order == "queryname" else ""
-                do.run(samtools_cmd.format(**locals()),
-                       "Sort BAM file (single core, %s): %s to %s" %
-                       (order, os.path.basename(in_bam),
-                        os.path.basename(sort_file)))
+            cmd = ("{samtools} sort -@ {cores} -m {mem} -O BAM {order_flag} "
+                   "-T {tx_sort_stem}-sort -o {tx_sort_file} {in_bam}")
+            do.run(cmd.format(**locals()), "Sort BAM file %s: %s to %s" %
+                   (order, os.path.basename(in_bam), os.path.basename(sort_file)))
     return sort_file
-
-def sort_cmd(config, tmp_dir, named_pipe=None, order="coordinate"):
-    """ Get a sort command, suitable for piping
-    """
-    sambamba = _get_sambamba(config)
-    pipe = named_pipe if named_pipe else "/dev/stdin"
-    order_flag = "-n" if order == "queryname" else ""
-    resources = config_utils.get_resources("samtools", config)
-    num_cores = config["algorithm"].get("num_cores", 1)
-    mem = config_utils.adjust_memory(resources.get("memory", "2G"), 1, "decrease").upper()
-    cmd = ("{sambamba} sort -m {mem} --tmpdir {tmp_dir} -t {num_cores} {order_flag} -o /dev/stdout {pipe}")
-    return cmd.format(**locals())
-
-def _get_sambamba(config):
-    try:
-        sambamba = config_utils.get_program("sambamba", config)
-    except config_utils.CmdNotFound:
-        sambamba = None
-    return sambamba
 
 
 def bam_already_sorted(in_bam, config, order):

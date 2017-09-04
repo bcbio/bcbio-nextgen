@@ -21,7 +21,8 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [mutect, freebayes, vardict]
+      variantcaller: [mutect2, freebayes, vardict]
+      tools_on: [gatk4]
       background: normal_panel1
       ensemble:
         numpass: 2
