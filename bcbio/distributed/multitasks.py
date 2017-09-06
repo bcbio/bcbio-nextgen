@@ -45,6 +45,10 @@ def run_kallisto_singlecell(*args):
     return kallisto.run_kallisto_singlecell(*args)
 
 @utils.map_wrap
+def run_kallisto_rnaseq(*args):
+    return kallisto.run_kallisto_rnaseq(*args)
+
+@utils.map_wrap
 def run_salmon_reads(*args):
     return salmon.run_salmon_reads(*args)
 

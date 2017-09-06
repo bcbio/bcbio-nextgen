@@ -11,7 +11,7 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       transcript_assembler: ["stringtie"]
-      expression_caller: ["stringtie"]
+      expression_caller: ["stringtie", "kallisto"]
       disambiguate: [hg19]
     description: Test1
     files:

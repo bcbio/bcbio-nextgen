@@ -62,8 +62,9 @@ def run_rnaseq_variant_calling(data):
                      "if this is something you need to do.")
         sys.exit(1)
 
-    if variantcaller and "gatk" in variantcaller or "gatk-haplotype" in variantcaller:
-        data = variation.rnaseq_gatk_variant_calling(data)
+    if variantcaller:
+        if "gatk" in variantcaller or "gatk-haplotype" in variantcaller:
+            data = variation.rnaseq_gatk_variant_calling(data)
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
         if dd.get_vrn_file(data):
@@ -109,6 +110,8 @@ def quantitate_expression_parallel(samples, run_parallel):
         samples = run_parallel("run_cufflinks", samples)
     if "stringtie" in dd.get_expression_caller(data):
         samples = run_parallel("run_stringtie_expression", samples)
+    if "kallisto" in dd.get_expression_caller(data):
+        samples = run_parallel("run_kallisto_rnaseq", samples)
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish_index", [samples])
         samples = run_parallel("run_sailfish", samples)

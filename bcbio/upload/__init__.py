@@ -84,6 +84,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     out = _maybe_add_sailfish_files(algorithm, sample, out)
     out = _maybe_add_salmon_files(algorithm, sample, out)
+    out = _maybe_add_kallisto_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -352,6 +353,15 @@ def _maybe_add_salmon_files(algorithm, sample, out):
         out.append({"path": salmon_dir,
                     "type": "directory",
                     "ext": "salmon"})
+    return out
+
+def _maybe_add_kallisto_files(algorithm, sample, out):
+    kallisto_dir = os.path.join(dd.get_work_dir(sample), "kallisto",
+                              dd.get_sample_name(sample), "quant")
+    if os.path.exists(kallisto_dir):
+        out.append({"path": kallisto_dir,
+                    "type": "directory",
+                    "ext": "kallisto"})
     return out
 
 def _flatten_file_with_secondary(input, out_dir):

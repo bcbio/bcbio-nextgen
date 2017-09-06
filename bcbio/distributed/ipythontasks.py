@@ -126,6 +126,12 @@ def run_sailfish(*args):
     with _setup_logging(args):
         return ipython.zip_args(apply(sailfish.run_sailfish, *args))
 
+@require(kallisto)
+def run_kallisto_rnaseq(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(kallisto.run_kallisto_rnaseq, *args))
+
 @require(spikein)
 def run_counts_spikein(*args):
     args = ipython.unzip_args(args)

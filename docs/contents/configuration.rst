@@ -817,7 +817,7 @@ RNA sequencing
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
 - ``expression_caller`` A list of optional expression callers to turn on.
-  Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq']. Salmon
+  Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq', 'kallisto']. Salmon
   and count based expression estimation are run by default.
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
