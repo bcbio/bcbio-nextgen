@@ -38,6 +38,7 @@
 - GC bias correction is now the default for Salmon read-based quantification.
   See https://github.com/salmonteam/SalmonBlogResponse/blob/master/SalmonBlogResponse.md  for the reasoning behind this change.
 - Add kallisto support for non single-cell RNA-seq experiments.
+- Salmon can now be run alongside other RNA-seq quantifiers.
 
 ## 1.0.4 (9 July 2017)
 

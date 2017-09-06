@@ -45,8 +45,8 @@ def run_salmon_reads(data):
     fasta_file = dd.get_ref_file(data)
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, fasta_file, data)
-    data = dd.set_sailfish(data, out_file)
-    data = dd.set_sailfish_dir(data, salmon_dir)
+    data = dd.set_salmon(data, out_file)
+    data = dd.set_salmon_dir(data, salmon_dir)
     return [[data]]
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):

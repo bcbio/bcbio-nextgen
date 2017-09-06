@@ -341,7 +341,7 @@ def _maybe_add_sailfish_files(algorithm, sample, out):
     sailfish_dir = os.path.join(dd.get_work_dir(sample), "sailfish",
                                 dd.get_sample_name(sample), "quant")
     if os.path.exists(sailfish_dir):
-        out.append({"path": dd.get_sailfish_dir(sample),
+        out.append({"path": sailfish_dir,
                     "type": "directory",
                     "ext": "sailfish"})
     return out
