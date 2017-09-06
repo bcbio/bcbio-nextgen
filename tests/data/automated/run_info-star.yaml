@@ -10,7 +10,7 @@ details:
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish]
+      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
       transcript_assembler: [stringtie, cufflinks]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
@@ -27,7 +27,7 @@ details:
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish]
+      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
       transcript_assembler: [stringtie, cufflinks]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:

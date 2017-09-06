@@ -54,7 +54,7 @@ def run_stringtie_expression(data):
     gene_fpkm = os.path.join(out_dir, sample_name + ".fpkm")
     assembly = os.path.abspath(os.path.join(out_dir, "stringtie-assembly.gtf"))
     if file_exists(isoform_fpkm) and file_exists(gene_fpkm):
-        data = dd.set_cufflinks_dir(data, out_dir)
+        data = dd.set_stringtie_dir(data, out_dir)
         data = dd.set_fpkm(data, gene_fpkm)
         data = dd.set_fpkm_isoform(data, isoform_fpkm)
         if "stringtie" in dd.get_transcript_assembler(data):
@@ -64,7 +64,7 @@ def run_stringtie_expression(data):
         transcript_file = _stringtie_expression(bam, data, tx_out_dir)
         df = _parse_ballgown(transcript_file)
         _write_fpkms(df, tx_out_dir, sample_name)
-    data = dd.set_cufflinks_dir(data, out_dir)
+    data = dd.set_stringtie_dir(data, out_dir)
     data = dd.set_fpkm(data, gene_fpkm)
     data = dd.set_fpkm_isoform(data, isoform_fpkm)
     if "stringtie" in dd.get_transcript_assembler(data):

@@ -80,6 +80,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_counts(algorithm, sample, out)
     out = _maybe_add_cufflinks(algorithm, sample, out)
+    out = _maybe_add_stringtie(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     out = _maybe_add_sailfish_files(algorithm, sample, out)
@@ -492,6 +493,13 @@ def _maybe_add_cufflinks(algorithm, sample, out):
         out.append({"path": sample["cufflinks_dir"],
                     "type": "directory",
                     "ext": "cufflinks"})
+    return out
+
+def _maybe_add_stringtie(algorithm, sample, out):
+    if "stringtie_dir" in sample:
+        out.append({"path": sample["stringtie_dir"],
+                    "type": "directory",
+                    "ext": "stringtie"})
     return out
 
 def _maybe_add_trimming(algorithm, sample, out):

@@ -120,6 +120,7 @@ LOOKUPS = {
     "mixup_check": {"keys": ["config", "algorithm", "mixup_check"],
                     "default": False},
     "cufflinks_dir": {"keys": ['cufflinks_dir']},
+    "stringtie_dir": {"keys": ['stringtie_dir']},
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
