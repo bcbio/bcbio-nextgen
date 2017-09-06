@@ -40,33 +40,38 @@ on coverage calculations.
 
 bcbio supports these CWL-compatible tools:
 
-- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
-
 - `toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
-  distributed cluster runs on schedulers like SLURM and SGE.
+  distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
 
-- `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
-  core analysis engine, primarily used for testing.
+- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
 
 - `Arvados <https://arvados.org/>`_ -- fully parallel distributed analyses. We
   include an example below of running on the `public Curoverse
   <https://cloud.curoverse.com/>`_ instance running on
   `Microsoft Azure <https://azure.microsoft.com>`_.
 
+- `Seven Bridges <https://www.sevenbridges.com/>`_ -- parallel distributed
+  analyses on the Seven Bridges platform and `Cancer Genomics Cloud
+  <http://www.cancergenomicscloud.org/>`_.
+
+- `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
+  core analysis engine, primarily used for testing.
 
 We plan to continue to expand CWL support to include more components of bcbio,
 and also need to evaluate the workflow on larger, real life analyses. This
-includes supporting additional CWL runners. We're evaluating `Galaxy/Planemo
+includes supporting additional CWL runners. We're working on supporting
+`DNAnexus <https://www.dnanexus.com/>`_, evaluating `Galaxy/Planemo
 <https://github.com/galaxyproject/planemo>`_ for integration with the Galaxy
-community, and working on support for `Broad's Cromwell WDL runner <http://gatkforums.broadinstitute.org/wdl/discussion/8454/feedback-on-initial-version-of-bcbio-wdl-converted-from-cwl>`_.
+community, and generating inputs for `Broad's Cromwell WDL runner
+<http://gatkforums.broadinstitute.org/wdl/discussion/8454/feedback-on-initial-version-of-bcbio-wdl-converted-from-cwl>`_.
 
 Getting started
 ~~~~~~~~~~~~~~~
 
-`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ organizes all
-dependencies required to run bcbio with supported CWL runners. To install using
-`Miniconda <http://conda.pydata.org/miniconda.html>`_ and
-`bioconda packages <https://bioconda.github.io/>`_::
+`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ installs all
+dependencies required to generate CWL and run bcbio, along with supported CWL
+runners. To install using `Miniconda <http://conda.pydata.org/miniconda.html>`_
+and `bioconda packages <https://bioconda.github.io/>`_::
 
     wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
@@ -103,27 +108,74 @@ your machine:
      bash run_toil.sh
      bash run_bunny.sh
 
-   Or you can run directly using the ``bcbio_vm.py`` wrappers
+   Or you can run directly using the ``bcbio_vm.py`` wrappers::
 
      bcbio_vm.py cwlrun toil somatic-workflow
+     bcbio_vm.py cwlrun bunny somatic-workflow
 
-   If run without Docker and use a `local installation of
+   Thes wrappers automatically handle temporary directories, permissions,
+   logging and re-starts. If running without Docker, use a `local installation of
    bcbio
    <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_
    add ``--no-container`` to the commands in the shell scripts.
 
-Generating CWL from bcbio
+Generating CWL for local or cluster runs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The first step in running your analysis project in bcbio is to generate CWL. The
+inputs to this are:
+
+- A `standard bcbio sample configuration file
+  <https://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_
+  defining the samples. This can either be a full prepared YAML file or a
+  `template file and CSV with sample data <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#automated-sample-configuration>`_.
+
+- A ``bcbio_system.yaml`` file defining the system environment for running the
+  program. This includes the resource specification with `cores and memory per
+  core for your machines
+  <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources>`_.
+  You generally want to set this to match the parameters of a single machine
+  either for a local run or on a cluster. It also includes paths to the
+  reference biodata and optionally input files if you want to avoid specifying
+  full paths in your inputs. Here is an example for a 16 core machine with 3.5Gb
+  of memory per core::
+
+      local:
+        ref: /path/to/bcbio/genomes/Hsapiens
+        inputs:
+          - /path/to/input/files
+      resources:
+        default:
+          cores: 16
+          memory: 3500M
+          jvm_opts: [-Xms1g, -Xmx3500m]
+
+Generate CWL with::
+
+    bcbio_vm.py template --systemconfig bcbio_system.yaml template.yaml samples.csv
+    bcbio_vm.py cwl --systemconfig bcbio_system.yaml samples/config/samples.yaml
+
+producing a ``sample-workflow`` output directory with the CWL. You can run this
+with any CWL compatible runner. The ``bcbio_vm.py cwlrun`` wrappers described
+above make this easier for local runs with Toil or Bunny.
+
+Running bcbio CWL on Toil
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can generate CWL from any `standard bcbio sample configuration file <https://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_.
-As an example, the test repository above contains shell scripts to generate the
-CWL. You can run those::
+The `Toil pipeline management system <https://github.com/BD2KGenomics/toil>`_
+runs CWL workflows in parallel on a local machine, on a cluster or at AWS.
+Toil comes pre-installed with bcbio-vm.
 
-    $ bash run_general_cwl.sh
+To run a bcbio CWL workflow locally with Toil using Docker::
 
-or generate directly using bcbio-vm::
+    bcbio_vm.py cwlrun toil sample-workflow
 
-    $ bcbio_vm.py cwl --systemconfig=../bcbio_system.yaml somatic.yaml
+If you want to run from a locally installed bcbio add ``--no-container`` to the
+commandline.
+
+To run distributed on a Slurm cluster::
+
+    bcbio_vm.py cwlrun toil sample-workflow -- --batchSystem slurm
 
 Running bcbio CWL on Arvados
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -188,26 +240,6 @@ To run an analysis:
 6. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
 
      bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
-
-Running bcbio CWL on Toil
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The `Toil pipeline management system <https://github.com/BD2KGenomics/toil>`_
-runs CWL workflows in parallel on a local machine, on a cluster or at AWS. We're
-at the early stage of testing bcbio runs on this architecture but have
-successfully run bcbio CWL workflows across these environments. Toil comes
-pre-installed with bcbio-vm.
-
-To run a bcbio CWL workflow locally with Toil using Docker::
-
-    bcbio_vm.py cwlrun toil run_info-cwl-workflow
-
-If you want to run from a locally installed bcbio add ``--no-container`` to the
-commandline.
-
-To run distributed on a Slurm cluster::
-
-    bcbio_vm.py cwlrun toil `pwd`/run_info-cwl-workflow -- --batchSystem slurm
 
 Development notes
 ~~~~~~~~~~~~~~~~~
