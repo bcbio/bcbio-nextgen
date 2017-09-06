@@ -165,7 +165,7 @@ def run_vep(in_file, data):
                         "--offline", "--dir", vep_dir,
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
-                       "--protein", "--tsl", "--appris", "--af", "--max_af", "--af_1kg", "--af_esp", "--af_exac",
+                       "--protein", "--tsl", "--appris", "--af", "--max_af", "--af_1kg", "--af_esp", "--af_gnomad",
                        "--pubmed", "--variant_class"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
