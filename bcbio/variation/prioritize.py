@@ -61,10 +61,11 @@ def _apply_priority_filter(in_file, priority_file, data):
 def _prep_priority_filter_vcfanno(in_vcf, data):
     """Prepare tabix file with priority filters based on vcfanno annotations.
     """
-    pops = ["aaf_esp_ea", "aaf_esp_aa", "aaf_esp_all", "aaf_1kg_amr", "aaf_1kg_eas",
-            "aaf_1kg_sas", "aaf_1kg_afr", "aaf_1kg_eur", "aaf_1kg_all", "aaf_adj_exac_all",
-            "aaf_adj_exac_afr", "aaf_adj_exac_amr", "aaf_adj_exac_eas", "aaf_adj_exac_fin",
-            "aaf_adj_exac_nfe", "aaf_adj_exac_oth", "aaf_adj_exac_sas"]
+    pops = ['af_adj_exac_afr', 'af_adj_exac_amr', 'af_adj_exac_eas',
+            'af_adj_exac_fin', 'af_adj_exac_nfe', 'af_adj_exac_oth', 'af_adj_exac_sas',
+            'af_exac_all', 'max_aaf_all',
+            "af_esp_ea", "af_esp_aa", "af_esp_all", "af_1kg_amr", "af_1kg_eas",
+            "af_1kg_sas", "af_1kg_afr", "af_1kg_eur", "af_1kg_all"]
     known = ["cosmic_ids", "clinvar_sig"]
     out_file = "%s-priority.tsv" % utils.splitext_plus(in_vcf)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
@@ -162,8 +163,8 @@ def _known_populations(row, pops):
     """
     cutoff = 0.01
     out = set([])
-    for pop, base in [("esp", "aaf_esp"), ("1000g", "aaf_1kg"),
-                      ("exac", "aaf_adj_exac")]:
+    for pop, base in [("esp", "af_esp_all"), ("1000g", "af_1kg_all"),
+                      ("exac", "af_exac_all"), ("anypop", "max_aaf_all")]:
         for key in [x for x in pops if x.startswith(base)]:
             val = row[key]
             if val and val > cutoff:
