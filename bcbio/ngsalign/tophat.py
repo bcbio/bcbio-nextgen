@@ -11,11 +11,6 @@ import subprocess
 import numpy
 import pysam
 
-try:
-    import sh
-except ImportError:
-    sh = None
-
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
@@ -132,16 +127,16 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             options["output-dir"] = tx_out_dir
             options["no-coverage-search"] = True
             options["no-mixed"] = True
-            tophat_runner = sh.Command(config_utils.get_program("tophat",
-                                                                config))
-            ready_options = {}
+            cmd = [sys.executable, config_utils.get_program("tophat", config)]
             for k, v in options.items():
-                ready_options[k.replace("-", "_")] = v
-            # tophat requires options before arguments,
-            # otherwise it silently ignores them
-            tophat_ready = tophat_runner.bake(**ready_options)
-            cmd = "%s %s" % (sys.executable, str(tophat_ready.bake(*files)))
-            do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file), None)
+                if v is True:
+                    cmd.append("--%s" % k)
+                else:
+                    assert not isinstance(v, bool)
+                    cmd.append("--%s=%s" % (k, v))
+            # tophat requires options before arguments, otherwise it silently ignores them
+            cmd += files
+            do.run(cmd, "Running Tophat on %s and %s." % (fastq_file, pair_file))
     if pair_file and _has_alignments(out_file):
         fixed = _fix_mates(out_file, os.path.join(out_dir, "%s-align.bam" % out_base),
                            ref_file, config)
