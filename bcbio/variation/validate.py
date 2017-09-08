@@ -217,12 +217,11 @@ def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
     if not rm_file.endswith(".vcf.gz") or not os.path.exists(rm_file + ".tbi"):
         rm_file = vcfutils.bgzip_and_index(rm_file, data["config"], out_dir=base_dir)
     if len(vcfutils.get_samples(vrn_file)) > 1:
-        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-        sample_file = os.path.join(base_dir, "%s-%s%s" % (base, dd.get_sample_name(data), ext))
+        base = utils.splitext_plus(os.path.basename(vrn_file))[0]
+        sample_file = os.path.join(base_dir, "%s-%s.vcf.gz" % (base, dd.get_sample_name(data)))
         vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_file, data["config"])
-    if os.path.exists(vrn_file + ".tbi"):
-        os.remove(vrn_file + ".tbi")
-    if not vrn_file.endswith(".vcf.gz") or not os.path.exists(vrn_file + ".tbi"):
+    # rtg fails on bgzipped VCFs produced by GatherVcfs so we re-prep them
+    else:
         vrn_file = vcfutils.bgzip_and_index(vrn_file, data["config"], out_dir=base_dir)
 
     interval_bed = _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data)
