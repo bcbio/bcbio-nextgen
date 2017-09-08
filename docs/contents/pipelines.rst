@@ -267,7 +267,7 @@ calling, `CNVkit <http://cnvkit.readthedocs.org/en/latest/>`_ for read-depth
 based CNV calling, and `WHAM <https://github.com/jewmanchue/wham>`_ for
 association testing. We also support `DELLY
 <https://github.com/tobiasrausch/delly>`_, another excellent paired end and
-split read calling, although it is slow on large whole genome datasets.
+split read caller, although it is slow on large whole genome datasets.
 
 In addition to results from individual callers, bcbio can create a summarized
 ensemble callset using `MetaSV <https://github.com/bioinform/metasv>`_. We're
@@ -278,7 +278,7 @@ variants of interest.
 
 RNA-seq
 ~~~~~~~
-bcbio can also be use to analyze RNA-seq data. It includes steps for quality
+bcbio can also be used to analyze RNA-seq data. It includes steps for quality
 control, adapter trimming, alignment, variant calling, transcriptome
 reconstruction and post-alignment quantitation at the level of the gene
 and isoform.
@@ -305,7 +305,7 @@ quantitate at the transcript level which can help gene-level analyses (see
 We recommend using the Salmon quantitation rather than the counts from
 featureCounts to perform downstream quantification.
 
-Although we do not recommend using the featureCount based counts, the alignments
+Although we do not recommend using the featureCounts based counts, the alignments
 are still useful because they give you many more quality metrics than the
 quasi-alignments from Salmon.
 
@@ -350,10 +350,7 @@ columns as the cellular barcodes for each input FASTQ file.
 
 Optionally the reads can be quantitated with ``kallisto`` to output transcript
 compatibility counts rather than counts per gene
-(`TCC paper <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0970-8>`_)
-``kallisto`` is free for academic use, but if you are a commerical entity,
-you need a `license <https://pachterlab.github.io/kallisto/download>`_ from
-UC Berkeley.
+(`TCC paper <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0970-8>`_).
 
 To extract the UMI and cellular barcodes from the read, bcbio-nextgen
 needs to know where the UMI and the cellular barcode are expected to be
@@ -435,7 +432,7 @@ Standard
 ~~~~~~~~
 
 This pipeline implements ``alignment`` and ``qc`` tools. Furthermore, it will
-run `qsignature`_ to detect possible duplicated samples, or miss-labeling. It
+run `qsignature`_ to detect possible duplicated samples, or mislabeling. It
 uses SNPs signature to create a distance matrix that helps easily to create
 groups. The project yaml file will show the number of total samples analyzed,
 the number of very similar samples, and samples that could be duplicated.
@@ -470,7 +467,7 @@ experiment would look like::
              strandedness: unstranded
 
 ``fc_date`` and ``fc_name`` will be combined to form a prefix to name
-intermediate files, you can set them to whatever you like.  ``upload`` is
+intermediate files, and can be set to whatever you like. ``upload`` is
 explained pretty well in the `configuration documentation`_ and the above will
 direct bcbio-nextgen to put the output files from the pipeine into the ``final``
 directory.  Under ``details`` is a list of sections each describing a sample to
@@ -495,7 +492,7 @@ RNA-seq libraries, so we want to trim off possible adapter sequences on the ends
 of reads, so ``trim_reads`` is set to ``read_through``, which will also trim off
 poor quality ends. Since your library is a RNA-seq library prepared with the
 TruSeq kit, the set of adapters to trim off are the TruSeq adapters and possible
-polyA tails, so ``adapters`` is set to the both of those. ``strandedness``
+polyA tails, so ``adapters`` is set to both of those. ``strandedness``
 can be set if your library was prepared in a strand-specific manner and can
 be set to firststrand, secondstrand or unstranded (the default).
 
@@ -550,7 +547,7 @@ sample configuration file for that analysis::
 
 More samples are added just by adding more entries under the details section.
 This is tedious and error prone to do by hand, so there is an automated
-`template_` system for common experiments. You could set up the previous
+`template`_ system for common experiments. You could set up the previous
 experiment by making a mouse version of the `illumina-rnaseq`_ template
 file and saving it to a local file such as ``illumina-mouse-rnaseq.yaml``. Then
 you can set up the sample file using the templating system::

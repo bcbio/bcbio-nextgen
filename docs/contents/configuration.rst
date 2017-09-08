@@ -60,9 +60,9 @@ multiple samples using the template workflow command::
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
   Note that paired-end samples sequentially numbered without leading zeros
   (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``,
-  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info). As well, ``.`` characters could be problematics,
-  it's better to avoid this character and use it only as separation
-  for the extension file.
+  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info). In addition, ``.`` characters could be problematic,
+  so it's better to avoid this character and use it only as separation
+  for the file extension.
 
     The remaining columns can contain:
 
@@ -117,7 +117,7 @@ To make it easier to define your own project specific template, an
 optional first step is to download and edit a local template. First
 retrieve a standard template::
 
-    bcbio_nextgen -w template freebayes-variant project1
+    bcbio_nextgen.py -w template freebayes-variant project1
 
 This pulls the current GATK best practice variant calling template
 into your project directory in
@@ -126,7 +126,7 @@ define your options, then run the full template creation for your
 samples, pointing to this custom configuration file::
 
 
-    bcbio_nextgen -w template project1/config/project1-template.yaml project1.csv folder/*
+    bcbio_nextgen.py -w template project1/config/project1-template.yaml project1.csv folder/*
 
 If your sample folder contains additional BAM or FASTQ files you do not wish to
 include in the sample YAML configuration, you can restrict the output to only
@@ -134,7 +134,7 @@ include samples in the metadata CSV with ``--only-metadata``. The output will
 print warnings about samples not present in the metadata file, then leave these
 out of the final output YAML::
 
-    bcbio_nextgen -w template --only-metadata project1/config/project1-template.yaml project1.csv folder/*
+    bcbio_nextgen.py -w template --only-metadata project1/config/project1-template.yaml project1.csv folder/*
 
 
 .. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
@@ -148,7 +148,7 @@ In case you have multiple FASTQ or BAM files for each sample you can use ``bcbio
 The main parameters are:
 
 - ``--out``: the folder where the merged files will be
-- ``--csv``: the CSV file that is exactly the same than described previously, but having as many duplicate lines for each samples as files to be merged::
+- ``--csv``: the CSV file that is exactly the same as described previously, but having as many duplicate lines for each sample as files to be merged::
 
 
         samplename,description,batch,phenotype,sex,variant_regions
@@ -165,7 +165,7 @@ The script will create the ``sample1.fastq,sample2.fastq`` in the ``merged`` fol
 in the same folder than the input CSV :``project1-merged.csv``. Later, it can be used for bcbio::
 
 
-    bcbio_nextgen -w template project1/config/project1-template.yaml project1-merged.csv merged/*fastq
+    bcbio_nextgen.py -w template project1/config/project1-template.yaml project1-merged.csv merged/*fastq
 
 The new CSV file will look like::
 
@@ -190,7 +190,7 @@ In case of paired reads, the CSV file should contain all files::
         file1_R2.fastq,sample1,batch1,normal,femela,/path/to/regions.bed
         file2_R2.fastq,sample1,batch1,normal,female,/path/to/regions.bed
 
-The script will try to guess the paired files the same way than ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only
+The script will try to guess the paired files the same way that ``bcbio_nextgen.py -w template`` does. It would detect paired files if the difference among two files is only
 ``_R1/_R2`` or ``-1/-2`` or ``_1/_2`` or ``.1/.2``
 
 The output CSV will look like and is compatible with bcbio::
@@ -420,7 +420,7 @@ Alignment
    requires coordinate sorted inputs. The default is to not do
    additional sorting and assume pre-sorted BAMs.
 - ``disambiguate`` For mixed or explant samples, provide a list of
-  ``genome_build``  identifiers to check and remove from alignment. Currently
+  ``genome_build`` identifiers to check and remove from alignment. Currently
   supports cleaning a single organism. For example, with ``genome_build: hg19``
   and ``disambiguate: [mm10]``, it will align to hg19 and mm10, run
   disambiguation and continue with reads confidently aligned to hg19. Affects
@@ -461,8 +461,8 @@ Read trimming
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
    and polyA tails. Valid items are [truseq, illumina, nextera, polya].
-   In small RNA pipeline, bcbio'll try to detect the adapter using DNApi.
-   If you set up this parameter, then bcbio'll use this value instead.
+   In the small RNA pipeline, bcbio will try to detect the adapter using DNApi.
+   If you set up this parameter, then bcbio will use this value instead.
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``min_read_length`` Minimum read length to maintain when
