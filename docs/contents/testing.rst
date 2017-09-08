@@ -264,7 +264,7 @@ A nice looking standalone `report`_ of the bcbio-nextgen run can be generated us
 Human genome build 38
 ~~~~~~~~~~~~~~~~~~~~~
 Validate variant calling on human genome build 38, using two different builds
-(with and without alternative alleles)  and three different validation datasets
+(with and without alternative alleles) and three different validation datasets
 (Genome in a Bottle prepared with two methods and Illumina platinum genomes).
 To run::
 
@@ -337,10 +337,10 @@ You can use this to run specific test targets::
      $ ./run_tests.sh docker
 
 Optionally, you can run pytest directly from the bcbio install to tweak more
-options. It will be in ``/path/to/bcbiio/anaconda/bin/py.test``. Pass
-``-s`` to ``py.test`` to see the stdout log, and ``-v`` to make py.test optput more
+options. It will be in ``/path/to/bcbio/anaconda/bin/py.test``. Pass
+``-s`` to ``py.test`` to see the stdout log, and ``-v`` to make py.test output more
 verbose. The tests are marked with labels which you can use to run a
-specific subsets of the tests using the ``-m`` argument::
+specific subset of the tests using the ``-m`` argument::
 
      $ py.test -m rnaseq
 

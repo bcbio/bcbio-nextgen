@@ -15,7 +15,7 @@ of high throughput sequencing data with the goal of being:
   heterogeneous compute environments.
 
 - Reproducible: Track configuration, versions, provenance and command
-  lines to enable debugging, extensive and reproducibility of results.
+  lines to enable debugging, extension and reproducibility of results.
 
 - Community developed: The development process is fully open and
   sustained by contributors from multiple institutions. By working
