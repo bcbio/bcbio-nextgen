@@ -9,14 +9,14 @@ details:
     metadata:
       batch: TestBatch1
     algorithm:
-      recalibrate: false
-      realign: false
+      recalibrate: true
       aligner: bwa
       mark_duplicates: true
-      variantcaller: [gatk-haplotype, freebayes]
-      jointcaller: [gatk-haplotype-joint, freebayes-joint]
-      tools_on: [gatk4]
-      joint_group_size: 1
+      #variantcaller: [gatk-haplotype, freebayes]
+      #jointcaller: [gatk-haplotype-joint, freebayes-joint]
+      variantcaller: gatk-haplotype
+      jointcaller: gatk-haplotype-joint
+      tools_on: [gvcf, gatk4, vqsr]
       coverage_interval: genome
       #aligner: false
       #mark_duplicates: false
@@ -30,14 +30,12 @@ details:
       #effects: vep
   - algorithm:
       aligner: bwa
-      recalibrate: false
-      realign: false
-      #variantcaller: freebayes
-      #jointcaller: freebayes-joint
-      variantcaller: [gatk-haplotype, freebayes]
-      jointcaller: [gatk-haplotype-joint, freebayes-joint]
-      tools_on: [gatk4]
-      joint_group_size: 1
+      recalibrate: true
+      #variantcaller: [gatk-haplotype, freebayes]
+      #jointcaller: [gatk-haplotype-joint, freebayes-joint]
+      variantcaller: gatk-haplotype
+      jointcaller: gatk-haplotype-joint
+      tools_on: [gvcf, gatk4, vqsr]
       #effects: vep
       coverage_interval: genome
       quality_format: Standard

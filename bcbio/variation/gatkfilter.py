@@ -17,8 +17,9 @@ def run(call_file, ref_file, vrn_files, data):
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if config_utils.use_vqsr(algs):
-        assert "gvcf" not in dd.get_tools_on(data), \
-            ("Cannot force gVCF output and use VQSR. Try using cutoff-based soft filtering with tools_off: [vqsr]")
+        if "gvcf" in dd.get_tools_on(data) and not dd.get_jointcaller(data):
+            raise ValueError("Cannot force gVCF output with joint calling using tools_on: [gvcf] and use VQSR. "
+                             "Try using cutoff-based soft filtering with tools_off: [vqsr]")
         snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, data["config"])
         snp_filter_file = _variant_filtration(snp_file, ref_file, vrn_files, data, "SNP",
                                               vfilter.gatk_snp_cutoff)
@@ -27,38 +28,11 @@ def run(call_file, ref_file, vrn_files, data):
         orig_files = [snp_filter_file, indel_filter_file]
         out_file = "%scombined.vcf.gz" % os.path.commonprefix(orig_files)
         combined_file = vcfutils.combine_variant_files(orig_files, out_file, ref_file, data["config"])
-        return _filter_nonref(combined_file, data)
+        return combined_file
     else:
         snp_filter = vfilter.gatk_snp_cutoff(call_file, data)
         indel_filter = vfilter.gatk_indel_cutoff(snp_filter, data)
-        if "gvcf" not in dd.get_tools_on(data):
-            return _filter_nonref(indel_filter, data)
-        else:
-            return indel_filter
-
-_MISSING_HEADERS = """##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another">
-##FORMAT=<ID=PID,Number=1,Type=String,Description="Physical phasing ID information, where each unique ID within a given sample (but not across samples) connects records within a phasing group">
-"""
-
-def _filter_nonref(in_file, data):
-    """Fixes potential issues from GATK processing and merging
-
-    - Remove NON_REF gVCF items from GATK VCF output; these occasionally sneak
-      through in joint calling.
-    - Add headers for physical phasing. These are not always present and the
-      header definitions can be lost during merging.
-    """
-    out_file = "%s-gatkclean%s" % utils.splitext_plus(in_file)
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            header_file = "%s-updateheaders.txt" % utils.splitext_plus(tx_out_file)[0]
-            with open(header_file, "w") as out_handle:
-                out_handle.write(_MISSING_HEADERS)
-            cmd = ("bcftools annotate -h {header_file} -o - {in_file} | "
-                   "grep -v NON_REF | bgzip -c > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Remove stray NON_REF gVCF information from VCF output", data)
-        vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file
+        return indel_filter
 
 def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
                 sensitivity_cutoff, filter_type, data):
