@@ -5,6 +5,7 @@ to run bcbio in a standard way in many environments.
 """
 import glob
 import os
+import shutil
 import subprocess
 import sys
 
@@ -87,10 +88,11 @@ def _run_toil(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltoil_work"))
-    os.environ["TMPDIR"] = work_dir
+    tmp_dir = utils.safe_makedir(os.path.join(work_dir, "tmpdir"))
+    os.environ["TMPDIR"] = tmp_dir
     log_file = os.path.join(work_dir, "%s-toil.log" % project_name)
     jobstore = os.path.join(work_dir, "cwltoil_jobstore")
-    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", work_dir]
+    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", tmp_dir]
     if os.path.exists(jobstore):
         flags += ["--restart"]
     # caching causes issues for batch systems and also changes permissions on input files if linked
@@ -103,6 +105,8 @@ def _run_toil(args):
     cmd = ["cwltoil"] + flags + ["--", main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir)
+        for tmpdir in glob.glob(os.path.join(work_dir, "out_tmpdir*")):
+            shutil.rmtree(tmpdir)
 
 def _run_bunny(args):
     """Run CWL with rabix bunny.
