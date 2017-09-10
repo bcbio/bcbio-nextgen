@@ -39,7 +39,9 @@
   See https://github.com/salmonteam/SalmonBlogResponse/blob/master/SalmonBlogResponse.md  for the reasoning behind this change.
 - Add kallisto support for non single-cell RNA-seq experiments.
 - Salmon can now be run alongside other RNA-seq quantifiers.
-- Cufflinks and Stringtie can be run alongside each other as RNA-seq quantifiers.
+- Cufflinks and Stringtie can be run alongside each other as RNA-seq
+  quantifiers.
+- Check BED input files for coordinates off the ends of contigs.
 
 ## 1.0.4 (9 July 2017)
 

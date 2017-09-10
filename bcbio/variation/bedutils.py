@@ -48,6 +48,31 @@ def check_bed_contigs(in_file, data):
                          % (in_file, list(contigs - ref_contigs)) +
                          "This is typically due to chr1 versus 1 differences in BED file and reference.")
 
+def check_bed_coords(in_file, data):
+    """Ensure BED file coordinates match reference genome.
+
+    Catches errors like using a hg38 BED file for an hg19 genome run.
+    """
+    if dd.get_ref_file(data):
+        contig_sizes = {}
+        for contig in ref.file_contigs(dd.get_ref_file(data)):
+            contig_sizes[contig.name] = contig.size
+        with utils.open_gzipsafe(in_file) as in_handle:
+            for line in in_handle:
+                if not line.startswith(("#", "track", "browser")) and line.strip():
+                    parts = line.split()
+                    if len(parts) > 3:
+                        try:
+                            end = int(parts[2])
+                        except ValueError:
+                            continue
+                        contig = parts[0]
+                        check_size = contig_sizes.get(contig)
+                        if check_size and end > check_size:
+                            raise ValueError("Found BED coordinate off the end of the chromosome:\n%s%s\n"
+                                             "Is the input BED from the right genome build?" %
+                                             (line, in_file))
+
 def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
     """Prepare a clean sorted input BED file without headers
     """
@@ -65,6 +90,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
             out_file = out_file[:-3]
         if not utils.file_uptodate(out_file, in_file):
             check_bed_contigs(in_file, data)
+            check_bed_coords(in_file, data)
             with file_transaction(data, out_file) as tx_out_file:
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
