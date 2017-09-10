@@ -41,6 +41,7 @@ install:
 
 script:
   # -- Standard bcbio tests
+  - export PATH=~/install/bcbio-vm/anaconda/bin/:$PATH
   - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker_multicore
   # Cleanup full bcbio/bcbio image for space
