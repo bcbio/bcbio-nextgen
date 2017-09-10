@@ -80,6 +80,19 @@ def get_paired_bams(align_bams, items):
                           normal_name, normal_panel, tumor_config,
                           tumor_data, normal_data)
 
+def get_somatic_variantcallers(items):
+    """Retrieve all variant callers for somatic calling, handling somatic/germline.
+    """
+    out = []
+    for data in items:
+        vcs = dd.get_variantcaller(data)
+        if isinstance(vcs, dict) and "somatic" in vcs:
+            vcs = vcs["somatic"]
+        if not isinstance(vcs, (list, tuple)):
+            vcs = [vcs]
+        out += vcs
+    return set(vcs)
+
 def check_paired_problems(items):
     """Check for incorrectly paired tumor/normal samples in a batch.
     """
@@ -95,6 +108,13 @@ def check_paired_problems(items):
         raise ValueError("Found normal sample without tumor in batch %s: %s" %
                          (tz.get_in(["metadata", "batch"], items[0]),
                           [dd.get_sample_name(data) for data in items]))
+    else:
+        vcs = get_somatic_variantcallers(items)
+        if "mutect" in vcs or "mutect2" in vcs:
+            paired = get_paired(items)
+            if not paired.normal_data or paired.normal_panel:
+                raise ValueError("MuTect and MuTect2 somatic calling requires normal sample or panel: %s" %
+                                 [dd.get_sample_name(data) for data in items])
 
 def get_paired_phenotype(data):
     """Retrieve the phenotype for a paired tumor/normal analysis.

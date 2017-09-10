@@ -406,12 +406,13 @@ def _check_for_problem_somatic_batches(items, config):
         if vcfutils.get_paired(items):
             vcfutils.check_paired_problems(items)
         elif len(items) > 1:
-            vcs = list(set(tz.concat([dd.get_variantcaller(data) or [] for data in items])))
-            if any(x.lower().startswith("vardict") for x in vcs):
+            vcs = vcfutils.get_somatic_variantcallers(items)
+            if "vardict" in vcs:
                 raise ValueError("VarDict does not support pooled non-tumor/normal calling, in batch %s: %s"
                                  % (batch, [dd.get_sample_name(data) for data in items]))
-            elif any(x.lower() == "mutect" for x in vcs):
-                raise ValueError("Mutect requires a 'phenotype: tumor' sample for calling, in batch %s: %s"
+            elif "mutect" in vcs or "mutect2" in vcs:
+                raise ValueError("MuTect and MuTect2 require a 'phenotype: tumor' sample for calling, "
+                                 "in batch %s: %s"
                                  % (batch, [dd.get_sample_name(data) for data in items]))
 
 def _check_for_misplaced(xs, subkey, other_keys):
