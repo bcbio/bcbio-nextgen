@@ -105,8 +105,10 @@ def _run_toil(args):
     cmd = ["cwltoil"] + flags + ["--", main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir)
-        for tmpdir in glob.glob(os.path.join(work_dir, "out_tmpdir*")):
-            shutil.rmtree(tmpdir)
+        for tmpdir in (glob.glob(os.path.join(work_dir, "out_tmpdir*")) +
+                       glob.glob(os.path.join(work_dir, "tmp*"))):
+            if os.path.isdir(tmpdir):
+                shutil.rmtree(tmpdir)
 
 def _run_bunny(args):
     """Run CWL with rabix bunny.
