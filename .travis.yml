@@ -23,6 +23,8 @@ install:
   - export PATH=~/install/bcbio-vm/anaconda/bin:$PATH
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen -q
   - conda install --yes -c conda-forge -c bioconda cwltool
+  # Avoid broken py.test noarch package
+  - conda install --yes -c conda-forge -c bioconda pytest=3.2.1
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
   - conda remove --yes --force qt
@@ -41,9 +43,8 @@ install:
 
 script:
   # -- Standard bcbio tests
-  - ls -lh ~/install/bcbio-vm/anaconda/bin
   - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
-  - ~/install/bcbio-vm/anaconda/bin/py.test tests/bcbio_vm -v -m docker_multicore
+  - py.test tests/bcbio_vm -v -m docker_multicore
   # Cleanup full bcbio/bcbio image for space
   - docker rm `docker ps -a -q`
   - docker rmi -f bcbio/bcbio
@@ -52,7 +53,7 @@ script:
   # -- bcbio CWL tests
   - docker pull quay.io/bcbio/bcbio-vc
   - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
-  - ~/install/bcbio-vm/anaconda/bin/py.test tests/bcbio_vm -v -s -m cwl_docker
+  - py.test tests/bcbio_vm -v -s -m cwl_docker
 
 after_failure:
   - df -h
