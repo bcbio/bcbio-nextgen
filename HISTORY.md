@@ -1,4 +1,4 @@
-## 1.0.5 (in progress)
+## 1.0.5 (11 Sept 2017)
 
 - Add optional downsampling whole genome BAM files to a high maximum coverage
   (200 times the average coverage) to avoid slow runtimes in collapsed repeats
