@@ -3,6 +3,7 @@
 import collections
 import copy
 import operator
+import os
 
 import toolz as tz
 
@@ -177,6 +178,7 @@ def run(samples, run_parallel, stage):
 def detect_sv(items, all_items=None, stage="standard"):
     """Top level parallel target for examining structural variation.
     """
+    items = [utils.to_single_data(x) for x in items]
     svcaller = items[0]["config"]["algorithm"].get("svcaller")
     caller_fn = _get_callers(items, stage).get(svcaller)
     out = []
@@ -193,7 +195,43 @@ def detect_sv(items, all_items=None, stage="standard"):
     else:
         for data in items:
             out.append([data])
+    # Avoid nesting of callers for CWL runs for easier extraction
+    if "cwl_keys" in items[0]:
+        out_cwl = []
+        for data in [utils.to_single_data(x) for x in out]:
+            svs = data.get("sv")
+            if svs:
+                assert len(svs) == 1, svs
+                data["sv"] = svs[0]
+            out_cwl.append([data])
+        return out_cwl
     return out
+
+def summarize_sv(items):
+    """CWL target: summarize structural variants for multiple samples.
+
+    XXX Need to support non-VCF output as tabix indexed output
+    """
+    items = [utils.to_single_data(x) for x in items]
+    out = {"sv": {"calls": []}}
+    added = set([])
+    for data in items:
+        if data.get("sv"):
+            names = dd.get_batches(data)
+            if not names:
+                names = [dd.get_sample_name(data)]
+            batch_name = names[0]
+            cur_name = "%s-%s" % (batch_name, data["sv"]["variantcaller"])
+            ext = utils.splitext_plus(data["sv"]["vrn_file"])[-1]
+            if cur_name not in added and ext.startswith(".vcf"):
+                added.add(cur_name)
+                out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                                        "sv", "calls")),
+                                        "%s%s" % (cur_name, ext))
+                utils.copy_plus(data["sv"]["vrn_file"], out_file)
+                out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+                out["sv"]["calls"].append(out_file)
+    return [out]
 
 # ## configuration
 

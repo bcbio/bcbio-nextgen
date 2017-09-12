@@ -167,6 +167,7 @@ def add_reference_resources(data, remote_retriever=None):
                            utils.get_in(data, ("reference", "fasta", "base")))
     if remote_retriever:
         data = remote_retriever.get_resources(data["genome_build"], ref_loc, data)
+        data["genome_resources"] = genome.ensure_annotations(data["genome_resources"], data)
     else:
         data["genome_resources"] = genome.get_resources(data["genome_build"], ref_loc, data)
     data["genome_resources"] = genome.add_required_resources(data["genome_resources"])

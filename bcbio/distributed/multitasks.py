@@ -282,6 +282,10 @@ def detect_sv(*args):
     return structural.detect_sv(*args)
 
 @utils.map_wrap
+def summarize_sv(*args):
+    return structural.summarize_sv(*args)
+
+@utils.map_wrap
 def validate_sv(*args):
     return structural.validate_sv(*args)
 

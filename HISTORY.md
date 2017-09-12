@@ -1,3 +1,7 @@
+## 1.0.6 (in progress)
+
+- CWL: support structural variant calling as part of variant pipelines.
+
 ## 1.0.5 (11 Sept 2017)
 
 - Add optional downsampling whole genome BAM files to a high maximum coverage

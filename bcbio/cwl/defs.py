@@ -72,7 +72,7 @@ def cwlout(key, valtype=None, extensions=None, fields=None):
         out["secondaryFiles"] = extensions
     return out
 
-def _variant_shared():
+def _alignment():
     align = [s("prep_align_inputs", "single-split",
                [["alignment_rec"]],
                [cwlout("process_alignment_rec", "record",
@@ -225,6 +225,7 @@ def _variant_checkpoints(samples):
     """
     checkpoints = {}
     checkpoints["vc"] = any([dd.get_variantcaller(d) for d in samples])
+    checkpoints["sv"] = any([dd.get_svcaller(d) for d in samples])
     checkpoints["jointvc"] = any([dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d)) for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
     return checkpoints
@@ -233,7 +234,7 @@ def variant(samples):
     """Variant calling workflow definition for CWL generation.
     """
     checkpoints = _variant_checkpoints(samples)
-    align_wf = _variant_shared()
+    align_wf = _alignment()
     align = [s("alignment_to_rec", "multi-combined",
                [["files"],
                 ["config", "algorithm", "align_split_size"],
@@ -336,43 +337,50 @@ def variant(samples):
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
             cores=1)]
     vc, vc_out = _variant_vc(checkpoints)
+    sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
-    steps = align + hla + qc + vc
+    steps = align + hla + qc + vc + sv
     final_outputs = [["align_bam"],
                      cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
-                    ] + vc_out + hla_out
+                    ] + vc_out + hla_out + sv_out
     return steps, final_outputs
 
-def sv():
-    """Structural variant workflow, for development purposes.
-
-    Will eventually merge with variant workflow using selectors to determine
-    required steps, but this is an initial step for testing and to work on
-    understanding necessary steps for each process.
+def _variant_sv(checkpoints):
+    """Structural variant workflow.
     """
-    align = _variant_shared()
+    if not checkpoints.get("sv"):
+        return [], []
     sv = [s("detect_sv", "batch-single",
             [["sv_batch_rec"]],
-            [cwlout(["sv", "0", "variantcaller"], "string"),
-             cwlout(["sv", "0", "vrn_file"], "File", [".tbi"])],
-            "bcbio"),
-         ]
-    steps = [w("alignment", "multi-parallel", align,
-               [["align_split"], ["files"], ["work_bam"], ["config", "algorithm", "quality_format"]]),
-             s("batch_for_sv", "multi-batch",
+            [cwlout("sv_rec", "record",
+                    fields=[cwlout(["sv", "variantcaller"], "string"),
+                            cwlout(["sv", "vrn_file"], "File", [".tbi"]),
+                            cwlout("inherit")])],
+            "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
+                         "lumpy-sv", "manta", "mosdepth", "samtools",
+                         "seq2c", "svtools", "svtyper", "r=3.3.2"])]
+    steps = [s("batch_for_sv", "multi-batch",
                [["analysis"], ["genome_build"], ["align_bam"],
                 ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
+                ["config", "algorithm", "coverage_interval"],
+                ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "variant_regions_merged"],
+                ["config", "algorithm", "sv_regions"],
                 ["config", "algorithm", "svcaller"],
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
+                ["genome_resources", "rnaseq", "gene_bed"],
                 ["reference", "fasta", "base"]],
                [cwlout("sv_batch_rec", "record")],
                "bcbio-vc",
                unlist=[["config", "algorithm", "svcaller"]]),
              w("svcall", "multi-parallel", sv, []),
-            ]
-    final_outputs = [["align_bam"]]
+             s("summarize_sv", "multi-combined",
+               [["sv_rec"]],
+               [cwlout(["sv", "calls"], {"type": "array", "items": ["File", "null"]})],
+               "bcbio-vc", cores=1)]
+    final_outputs = [["sv", "calls"]]
     return steps, final_outputs
 
 def fastrnaseq(samples):
@@ -442,4 +450,4 @@ def rnaseq(samples):
 
 workflows = \
   {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq,
-   "rna-seq": rnaseq, "sv": sv}
+   "rna-seq": rnaseq}

@@ -258,6 +258,7 @@ def _handle_special_inputs(inputs, variables):
     """
     optional = [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "sv_regions"],
                 ["config", "algorithm", "validate"],
                 ["config", "algorithm", "validate_regions"]]
     all_vs = set([get_base_id(v["id"]) for v in variables])

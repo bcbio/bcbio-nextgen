@@ -29,10 +29,10 @@ def get_sv_bed(data, method=None, out_dir=None):
     if method is None:
         method = tz.get_in(["config", "algorithm", "sv_regions"], data)
     gene_file = dd.get_gene_bed(data)
-    if not gene_file or not method:
-        return None
-    elif os.path.isfile(method):
+    if method and os.path.isfile(method):
         return method
+    elif not gene_file or not method:
+        return None
     elif method == "exons":
         return gene_file
     elif method.startswith("transcripts"):

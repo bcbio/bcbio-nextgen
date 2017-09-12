@@ -38,7 +38,7 @@ def get_resources(genome, ref_file, data):
             return os.path.normpath(os.path.join(base_dir, x))
         return x
     cleaned = utils.dictapply(resources, resource_file_path)
-    return _ensure_annotations(cleaned, data)
+    return ensure_annotations(cleaned, data)
 
 def add_required_resources(resources):
     """Add empty values for required resources referenced in CWL
@@ -49,7 +49,7 @@ def add_required_resources(resources):
             resources = tz.update_in(resources, key, lambda x: None)
     return resources
 
-def _ensure_annotations(resources, data):
+def ensure_annotations(resources, data):
     """Prepare any potentially missing annotations for downstream processing in a local directory.
     """
     transcript_gff = tz.get_in(["rnaseq", "transcripts"], resources)
