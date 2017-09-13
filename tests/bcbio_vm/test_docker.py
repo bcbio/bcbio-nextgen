@@ -21,6 +21,7 @@ def test_docker(install_test_files, data_dir):
             "bcbio_vm.py",
             "--datadir=%s" % data_dir,
             "run",
+            "--image=quay.io/bcbio/bcbio-vc",
             "--systemconfig=%s" % get_post_process_yaml(data_dir, workdir),
             "--fcdir=%s" % os.path.join(
                 data_dir, os.pardir, "100326_FC6107FAAXX"),

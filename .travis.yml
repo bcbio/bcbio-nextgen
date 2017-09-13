@@ -29,29 +29,28 @@ install:
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
   - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
   - df -h
-  # Get docker container
-  - bcbio_vm.py --datadir=${TRAVIS_BUILD_DIR}/tests/data install --tools
-  - df -h
-  - docker images
   # Update to latest bcbio-nextgen code externally and within the container
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*
   - ~/install/bcbio-vm/anaconda/bin/python setup.py install
-  - bcbio_vm.py devel setup_install
 
 script:
-  # -- Standard bcbio tests
-  - docker run -v `pwd`:`pwd` bcbio/bcbio bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
+  # -- Prepare variant docker image
+  - docker pull quay.io/bcbio/bcbio-vc
+  - docker images
+  - df -h
+  # Update to latest bcbio-nextgen code within the container
+  - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
+  # -- Standard bcbio variant tests
+  - docker run -v `pwd`:`pwd` quay.io/bcbio/bcbio-vc bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
   - py.test tests/bcbio_vm -v -m docker_multicore
-  # Cleanup full bcbio/bcbio image for space
+  # -- bcbio variant CWL tests
+  - py.test tests/bcbio_vm -v -s -m cwl_docker
+  # -- Cleanup variant docker image
   - docker rm `docker ps -a -q`
-  - docker rmi -f bcbio/bcbio
+  - docker rmi -f quay.io/bcbio/bcbio-vc
   - docker rmi $(docker images | awk '/\<none\>/ { print $3 }')
   - docker images
-  # -- bcbio CWL tests
-  - docker pull quay.io/bcbio/bcbio-vc
-  - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
-  - py.test tests/bcbio_vm -v -s -m cwl_docker
 
 after_failure:
   - df -h

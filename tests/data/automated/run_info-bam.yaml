@@ -20,11 +20,11 @@ details:
       validate_batch: b1
       validate_sample: test-val
   - algorithm:
-      #archive: cram
+      archive: cram-lossless
       align_split_size: 15000
       #save_diskspace: true
-      #align_prep_method: grabix
       aligner: bwa
+      #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
       #trim_reads: read_through
       #aligner: false
@@ -32,15 +32,15 @@ details:
       #bam_sort: coordinate
       # mark_duplicates: false
       #realign: gatk
-      #recalibrate: gatk
-      variantcaller: freebayes
-      #variantcaller: gatk-haplotype
+      recalibrate: gatk
+      variantcaller: [freebayes, gatk-haplotype, samtools, platypus]
       #effects: vep
       #effects_transcripts: canonical
-      #svcaller: [lumpy, cnvkit, manta, metasv]
-      svcaller: [cnvkit, seq2c, lumpy, delly, gridss]
+      #svcaller: [lumpy, manta, metasv, gridss]
+      svcaller: [cnvkit, seq2c, delly]
       #remove_lcr: true
-      tools_on: [qualimap_full, gatk4]
+      coverage_interval: genome
+      tools_on: [qualimap_full, gatk4, vqsr]
       tools_off: [gemini]
       vcfanno: [gemini]
       mixup_check: qsignature
@@ -48,11 +48,14 @@ details:
       nomap_split_size: 50
       nomap_split_targets: 100
       #callable_min_size: 15000
+      svprioritize: ../data/automated/variant_regions-cancer.bed
       variant_regions: ../data/automated/variant_regions-bam.bed
       coverage: ../data/automated/coverage_transcripts-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     resources:
+      #sentieon:
+      #  keyfile: /home/chapmanb/.sentieon/Harvard_Chapman_eval.lic
       novoalign:
         options: [-o, FullNW]
       tmp:
