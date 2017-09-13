@@ -115,13 +115,9 @@ def quantitate_expression_parallel(samples, run_parallel):
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish_index", [samples])
         samples = run_parallel("run_sailfish", samples)
-    if "salmon" in dd.get_expression_caller(data):
-        samples = run_parallel("run_salmon_index", [samples])
-        samples = run_parallel("run_salmon_reads", samples)
-    # default to salmon
-    if not dd.get_expression_caller(data):
-        samples = run_parallel("run_salmon_index", [samples])
-        samples = run_parallel("run_salmon_reads", samples)
+    # always run salmon
+    samples = run_parallel("run_salmon_index", [samples])
+    samples = run_parallel("run_salmon_reads", samples)
     return samples
 
 def quantitate_expression_noparallel(samples, run_parallel):
