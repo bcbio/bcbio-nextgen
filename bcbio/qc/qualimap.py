@@ -253,8 +253,8 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
 def _detect_rRNA(data):
     sample = dd.get_sample_name(data)
     gtf_file = dd.get_gtf_file(data)
-    sailfish_dir = dd.get_sailfish_dir(data)
-    quant = os.path.join(sailfish_dir, "quant", "quant.sf")
+    salmon_dir = dd.get_salmon_dir(data)
+    quant = os.path.join(salmon_dir, "quant", "quant.sf")
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
     if not (transcripts and utils.file_exists(quant)):
