@@ -28,13 +28,16 @@ def compress(in_bam, data):
         with file_transaction(data, out_file) as tx_out_file:
             compress_type = dd.get_archive(data)
             samtools = config_utils.get_program("samtools", data["config"])
-            bam = config_utils.get_program("bam", data["config"])
+            try:
+                bam_cmd = config_utils.get_program("bam", data["config"])
+            except config_utils.CmdNotFound:
+                bam_cmd = None
             to_cram = ("{samtools} view -T {ref_file} -@ {cores} "
                        "-C -x BD -x BI -o {tx_out_file}")
             compressed = False
-            if "cram" in compress_type:
+            if "cram" in compress_type and bam_cmd:
                 try:
-                    cmd = ("{bam} squeeze --in {in_bam} --out -.ubam --keepDups "
+                    cmd = ("{bam_cmd} squeeze --in {in_bam} --out -.ubam --keepDups "
                            "--binQualS=2,10,20,25,30,35,70 --binMid | " + to_cram)
                     do.run(cmd.format(**locals()), "Compress BAM to CRAM: quality score binning")
                     compressed = True
