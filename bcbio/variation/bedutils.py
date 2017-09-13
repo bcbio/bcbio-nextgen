@@ -220,6 +220,6 @@ def get_padded_bed_file(out_dir, bed_file, padding, data):
         return out_file
     fai_file = ref.fasta_idx(dd.get_ref_file(data))
     with file_transaction(data, out_file) as tx_out_file:
-        cmd = "bedtools slop -i {bed_file} -g {fai_file} -b {padding} > {tx_out_file}"
+        cmd = "bedtools slop -i {bed_file} -g {fai_file} -b {padding} | bedtools merge -i - > {tx_out_file}"
         do.run(cmd.format(**locals()), "Pad BED file", data)
     return out_file
