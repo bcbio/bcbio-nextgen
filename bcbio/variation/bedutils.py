@@ -108,6 +108,7 @@ def sort_merge(in_file, data, out_dir=None):
        Output is a 3 or 4 column file (the 4th column values go comma-separated).
     """
     out_file = "%s-sortmerge.bed" % os.path.splitext(in_file)[0]
+    bedtools = config_utils.get_program("bedtools", data, default="bedtools")
     if out_dir:
         out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file):
@@ -122,7 +123,7 @@ def sort_merge(in_file, data, out_dir=None):
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
             sort_cmd = get_sort_cmd()
             cmd = ("{cat_cmd} {in_file} | {sort_cmd} -k1,1 -k2,2n | "
-                   "bedtools merge -i - {column_opt} > {tx_out_file}")
+                   "{bedtools} merge -i - {column_opt} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Sort and merge BED file", data)
     return out_file
 
@@ -198,6 +199,7 @@ def combine(in_files, out_file, config):
 def intersect_two(f1, f2, work_dir, data):
     """Intersect two regions, handling cases where either file is not present.
     """
+    bedtools = config_utils.get_program("bedtools", data, default="bedtools")
     f1_exists = f1 and utils.file_exists(f1)
     f2_exists = f2 and utils.file_exists(f2)
     if not f1_exists and not f2_exists:
@@ -210,16 +212,17 @@ def intersect_two(f1, f2, work_dir, data):
         out_file = os.path.join(work_dir, "%s-merged.bed" % (utils.splitext_plus(os.path.basename(f1))[0]))
         if not utils.file_exists(out_file):
             with file_transaction(data, out_file) as tx_out_file:
-                cmd = "bedtools intersect -a {f1} -b {f2} > {tx_out_file}"
+                cmd = "{bedtools} intersect -a {f1} -b {f2} > {tx_out_file}"
                 do.run(cmd.format(**locals()), "Intersect BED files", data)
         return out_file
 
 def get_padded_bed_file(out_dir, bed_file, padding, data):
+    bedtools = config_utils.get_program("bedtools", data, default="bedtools")
     out_file = os.path.join(out_dir, "%s-padded.bed" % (utils.splitext_plus(os.path.basename(bed_file))[0]))
     if utils.file_uptodate(out_file, bed_file):
         return out_file
     fai_file = ref.fasta_idx(dd.get_ref_file(data))
     with file_transaction(data, out_file) as tx_out_file:
-        cmd = "bedtools slop -i {bed_file} -g {fai_file} -b {padding} | bedtools merge -i - > {tx_out_file}"
+        cmd = "{bedtools} slop -i {bed_file} -g {fai_file} -b {padding} | bedtools merge -i - > {tx_out_file}"
         do.run(cmd.format(**locals()), "Pad BED file", data)
     return out_file

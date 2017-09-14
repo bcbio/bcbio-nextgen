@@ -95,9 +95,10 @@ def _run_toil(args):
     flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", tmp_dir]
     if os.path.exists(jobstore):
         flags += ["--restart"]
-    # caching causes issues for batch systems and also changes permissions on input files if linked
+    # caching causes issues for batch systems
+    # Need to also explore --linkImports but causing permission issues on input files
     if "--batchSystem" in args.toolargs:
-        flags += ["--disableCaching", "--linkImports"]
+        flags += ["--disableCaching"]
     flags += args.toolargs
     if args.no_container:
         _remove_bcbiovm_path()
