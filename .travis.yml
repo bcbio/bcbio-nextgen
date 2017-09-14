@@ -22,7 +22,8 @@ install:
   - df -h
   - export PATH=~/install/bcbio-vm/anaconda/bin:$PATH
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen -q
-  - conda install --yes -c conda-forge -c bioconda cwltool
+  - conda install --yes -c conda-forge -c bioconda cwltool toil
+  - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
   - conda remove --yes --force qt
