@@ -80,7 +80,7 @@ def _alignment():
                                cwlout(["config", "algorithm", "quality_format"], "string"),
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam"],
-               {"files": 1.5}, cores=1),
+               disk={"files": 1.5}, cores=1),
              s("process_alignment", "single-parallel",
                [["alignment_rec"], ["process_alignment_rec"]],
                [cwlout(["work_bam"], "File", [".bai"]),
@@ -91,7 +91,7 @@ def _alignment():
                "bcbio-vc", ["bwa", "bwakit", "grabix", "novoalign", "snap-aligner=1.0dev.97",
                             "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
                             "samblaster", "variantbam"],
-               {"files": 1.5}),
+               disk={"files": 2}),
              s("merge_split_alignments", "single-merge",
                [["alignment_rec"], ["work_bam"], ["align_bam"],
                 ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],["hla", "fastq"]],
@@ -100,7 +100,7 @@ def _alignment():
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
                 cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
                "bcbio-vc", ["biobambam", "samtools", "variantbam"],
-               {"files": 3})]
+               disk={"files": 4})]
     return align
 
 def _variant_hla(checkpoints):
@@ -134,17 +134,17 @@ def _variant_vc(checkpoints):
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "vardict", "vardict-java", "varscan", "vcfanno",
                             "vcflib", "vt", "r=3.3.2", "perl"],
-               cores=1),
+               disk={"files": 0.5}, cores=1),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
                "bcbio-vc", ["bcftools", "htslib", "gatk4"],
-               cores=1)]
+               disk={"files": 0.5}, cores=1)]
     if not checkpoints.get("jointvc"):
         vc_wf += [s("postprocess_variants", "batch-single",
                     [["batch_rec"], ["vrn_file"]],
                     [cwlout(["vrn_file"], "File", [".tbi"])],
-                    "bcbio-vc", ["snpeff=4.3i"])]
+                    "bcbio-vc", ["snpeff=4.3i"], disk={"files": 0.5})]
     vc_wf += [s("compare_to_rm", "batch-single",
                 [["batch_rec"], ["vrn_file"]],
                 [cwlout("vc_rec", "record",
@@ -154,7 +154,8 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
                                 cwlout("inherit")])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
-                             "htslib", "rtg-tools", "vcfanno"])]
+                             "htslib", "rtg-tools", "vcfanno"],
+                disk={"files": 0.5})]
     vc = [s("batch_for_variantcall", "multi-batch",
             [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
              ["metadata", "batch"], ["metadata", "phenotype"],
@@ -196,21 +197,22 @@ def _variant_jointvc():
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], "File", [".tbi"]), cwlout(["region"], "string")],
             "bcbio-vc", ["gatk4", "gatk"],
-            cores=1),
+            disk={"files": 0.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
             "bcbio-vc", ["bcftools", "htslib", "gatk4", "gatk"],
-            cores=1),
+            disk={"files": 0.5}, cores=1),
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
-            "bcbio-vc", ["snpeff=4.3i"]),
+            "bcbio-vc", ["snpeff=4.3i"],
+            disk={"files": 0.5}),
           s("finalize_jointvc", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
             [cwlout("jointvc_rec", "record")],
             "bcbio-vc",
-            cores=1)]
+            disk={"files": 0.5}, cores=1)]
     out = [s("batch_for_jointvc", "multi-batch",
              ["vc_rec"],
              [cwlout("jointvc_batch_rec", "record")],
@@ -300,7 +302,8 @@ def variant(samples):
                 cwlout(["regions", "sample_callable"], "File"),
                 cwlout(["regions", "nblock"], "File"),
                 cwlout(["align_bam"], "File")],
-               "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk", "gatk4", "mosdepth"]),
+               "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk", "gatk4", "mosdepth"],
+               disk={"files": 0.5}),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
@@ -309,7 +312,7 @@ def variant(samples):
                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
                 cwlout(["config", "algorithm", "callable_count"], "int")],
                "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
-               cores=1)]
+               disk={"files": 0.5}, cores=1)]
     qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
              ["genome_build"], ["config", "algorithm", "coverage_interval"],
@@ -330,12 +333,13 @@ def variant(samples):
                             cwlout("inherit")])],
             "bcbio-vc", ["bcftools", "bedtools", "fastqc", "goleft", "mosdepth",
                          "picard", "pythonpy",
-                         "qsignature", "qualimap", "sambamba", "samtools", "preseq"]),
+                         "qsignature", "qualimap", "sambamba", "samtools", "preseq"],
+            disk={"files": 1.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
-            cores=1)]
+            disk={"files": 0.5}, cores=1)]
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
@@ -358,7 +362,9 @@ def _variant_sv(checkpoints):
                             cwlout("inherit")])],
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
                          "lumpy-sv", "manta", "mosdepth", "samtools",
-                         "seq2c", "svtools", "svtyper", "r=3.3.2"])]
+                         "seq2c", "simple_sv_annotation", "svtools", "svtyper",
+                         "r=3.3.2", "vawk"],
+            disk={"files": 2.0})]
     steps = [s("batch_for_sv", "multi-batch",
                [["analysis"], ["genome_build"], ["align_bam"],
                 ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
@@ -379,7 +385,7 @@ def _variant_sv(checkpoints):
              s("summarize_sv", "multi-combined",
                [["sv_rec"]],
                [cwlout(["sv", "calls"], {"type": "array", "items": ["File", "null"]})],
-               "bcbio-vc", cores=1)]
+               "bcbio-vc", disk={"files": 1.0}, cores=1)]
     final_outputs = [["sv", "calls"]]
     return steps, final_outputs
 

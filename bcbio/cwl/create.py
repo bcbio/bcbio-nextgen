@@ -3,6 +3,7 @@
 import copy
 import functools
 import json
+import math
 import operator
 import os
 import tarfile
@@ -50,6 +51,34 @@ def _cwl_workflow_template(inputs, top_level=False):
             "outputs": [],
             "steps": []}
 
+def _add_disk_estimates(cwl_res, inputs, file_estimates, disk):
+    """Add disk usage estimates to CWL ResourceRequirement.
+
+    Based on inputs (which need to be staged) and disk
+    specifications (which estimate outputs).
+    """
+    if not disk:
+        disk = {}
+    if file_estimates:
+        total_estimate = 0
+        for key, multiplier in disk.items():
+            if key in file_estimates:
+                total_estimate += int(multiplier * file_estimates[key])
+        for inp in inputs:
+            scale = 2.0 if inp.get("type") == "array" else 1.0
+            if workflow.is_cwl_record(inp):
+                for f in _get_record_fields(inp):
+                    if f["name"] in file_estimates:
+                        total_estimate += file_estimates[f["name"]] * scale
+            elif inp["id"] in file_estimates:
+                total_estimate += file_estimates[inp["id"]] * scale
+        if total_estimate:
+            # scale total estimate to allow extra room, round to integer
+            total_estimate = int(math.ceil(total_estimate * 1.5))
+            cwl_res["tmpdirMin"] = total_estimate
+            cwl_res["outdirMin"] += total_estimate
+    return cwl_res
+
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                 file_estimates, disk, step_cores, samples):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
@@ -59,16 +88,9 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
                "coresMin": cores, "ramMin": mem_mb_total, "outdirMin": bcbio_docker_disk}
+    cwl_res = _add_disk_estimates(cwl_res, inputs, file_estimates, disk)
     docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
     docker = {"class": "DockerRequirement", "dockerPull": docker_image, "dockerImageId": docker_image}
-    if file_estimates and disk:
-        total_estimate = 0
-        for key, multiplier in disk.items():
-            if key in file_estimates:
-                total_estimate += int(multiplier * file_estimates[key])
-        if total_estimate:
-            cwl_res["tmpdirMin"] = total_estimate
-            cwl_res["outdirMin"] += total_estimate
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
@@ -165,21 +187,24 @@ def _clean_record(rec):
     else:
         return rec
 
+def _get_record_fields(d):
+    """Get field names from a potentially nested record.
+    """
+    if isinstance(d, dict):
+        if "fields" in d:
+            return d["fields"]
+        else:
+            for v in d.values():
+                fields = _get_record_fields(v)
+                if fields:
+                    return fields
+
 def _get_sentinel_val(v):
     """Retrieve expected sentinel value for an output, expanding records.
     """
     out = workflow.get_base_id(v["id"])
     if workflow.is_cwl_record(v):
-        def _get_fields(d):
-            if isinstance(d, dict):
-                if "fields" in d:
-                    return d["fields"]
-                else:
-                    for v in d.values():
-                        fields = _get_fields(v)
-                        if fields:
-                            return fields
-        out += ":%s" % ";".join([x["name"] for x in _get_fields(v)])
+        out += ":%s" % ";".join([x["name"] for x in _get_record_fields(v)])
     return out
 
 def _place_input_binding(inp_tool, inp_binding, parallel):
@@ -605,17 +630,23 @@ def _calc_input_estimates(keyvals, integrations=None):
 
     These are current dominated by fastq/BAM sizes, so estimate based on that.
     """
-    input_sizes = []
-    for sample_files in keyvals["files"]:
-        sample_inputs = 0
-        for cwl_file in sample_files:
-            file_size = _get_file_size(cwl_file["path"], integrations)
-            if file_size:
-                sample_inputs += file_size
-        if sample_inputs > 0:
-            input_sizes.append(sample_inputs)
-    if len(input_sizes) > 0:
-        return {"files": max(input_sizes)}
+    out = {}
+    for key, val in keyvals.items():
+        size = _calc_file_size(val, 0, integrations)
+        if size:
+            out[key] = size
+    return out
+
+def _calc_file_size(val, depth, integrations):
+    if isinstance(val, (list, tuple)):
+        sizes = [_calc_file_size(x, depth + 1, integrations) for x in val]
+        sizes = [x for x in sizes if x]
+        if sizes:
+            # Top level, biggest item, otherwise all files together
+            return max(sizes) if depth == 0 else sum(sizes)
+    elif isinstance(val, dict) and "path" in val:
+        return _get_file_size(val["path"], integrations)
+    return None
 
 def _get_retriever(path, integrations):
     integration_map = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics"}
