@@ -15,6 +15,9 @@ from bcbio import utils
 from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 
+INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
+                   "dx:": "dnanexus"}
+
 def from_world(world, run_info_file, integrations=None):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
@@ -649,9 +652,8 @@ def _calc_file_size(val, depth, integrations):
     return None
 
 def _get_retriever(path, integrations):
-    integration_map = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics"}
-    if path.startswith(tuple(integration_map.keys())):
-        return integrations.get(integration_map[path.split(":")[0] + ":"])
+    if path.startswith(tuple(INTEGRATION_MAP.keys())):
+        return integrations.get(INTEGRATION_MAP[path.split(":")[0] + ":"])
 
 def _get_file_size(path, integrations):
     """Return file size in megabytes, including querying remote integrations

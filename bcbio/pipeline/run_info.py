@@ -783,6 +783,11 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
     if sample_names:
         loaded = [x for x in loaded if x["description"] in sample_names]
 
+    if integrations:
+        for iname, retriever in integrations.items():
+            if iname in config:
+                loaded = retriever.add_remotes(loaded, config[iname])
+
     run_details = []
     for i, item in enumerate(loaded):
         item = _normalize_files(item, dirs.get("flowcell"))

@@ -570,6 +570,16 @@ class SevenBridges:
     def download(self, filename, input_dir, dl_dir=None):
         return None
 
+class DNAnexus:
+    """Files stored in DNAnexus. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("dx:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
+
 class RegularServer:
     """Files stored in FTP/http that can be downloaded by wget
     """
@@ -609,7 +619,7 @@ class RegularServer:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ArvadosKeep, SevenBridges, AzureBlob, RegularServer):
+    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, RegularServer):
         if manager.check_resource(resource):
             return manager()
 
