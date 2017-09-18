@@ -82,6 +82,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_cufflinks(algorithm, sample, out)
     out = _maybe_add_stringtie(algorithm, sample, out)
     out = _maybe_add_oncofuse(algorithm, sample, out)
+    out = _maybe_add_pizzly(algorithm, sample, out)
     out = _maybe_add_rnaseq_variant_file(algorithm, sample, out)
     out = _maybe_add_sailfish_files(algorithm, sample, out)
     out = _maybe_add_salmon_files(algorithm, sample, out)
@@ -486,6 +487,14 @@ def _maybe_add_oncofuse(algorithm, sample, out):
         out.append({"path": sample["oncofuse_file"],
                     "type": "oncofuse_outfile",
                     "ext": "ready"})
+    return out
+
+def _maybe_add_pizzly(algorithm, sample, out):
+    pizzly_dir = dd.get_pizzly_dir(sample)
+    if pizzly_dir:
+        out.append({"path": pizzly_dir,
+                    "type": "directory",
+                    "ext": "pizzly"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):

@@ -301,6 +301,12 @@ def generate_transcript_counts(*args):
         return ipython.zip_args(apply(rnaseq.generate_transcript_counts, *args))
 
 @require(rnaseq)
+def detect_fusions(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(rnaseq.detect_fusions, *args))
+
+@require(rnaseq)
 def run_cufflinks(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

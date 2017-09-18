@@ -1,7 +1,7 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish, spikein)
+                          express, variation, stringtie, sailfish, spikein, pizzly)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import vardict, vcfanno
@@ -118,7 +118,19 @@ def quantitate_expression_parallel(samples, run_parallel):
     # always run salmon
     samples = run_parallel("run_salmon_index", [samples])
     samples = run_parallel("run_salmon_reads", samples)
+
+    samples = run_parallel("detect_fusions", samples)
     return samples
+
+def detect_fusions(data):
+    if dd.get_fusion_mode(data, False):
+        oncofuse_file = oncofuse.run(data)
+        if oncofuse_file:
+            data = dd.set_oncofuse_file(data, oncofuse_file)
+        pizzly_dir = pizzly.run_pizzly(data)
+        if pizzly_dir:
+            data = dd.set_pizzly_dir(data, pizzly_dir)
+    return [[data]]
 
 def quantitate_expression_noparallel(samples, run_parallel):
     """
@@ -134,11 +146,6 @@ def quantitate_expression_noparallel(samples, run_parallel):
 def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
     data["count_file"] = featureCounts.count(data)
-
-    if dd.get_fusion_mode(data, False):
-        oncofuse_file = oncofuse.run(data)
-        if oncofuse_file:
-            data = dd.set_oncofuse_file(data, oncofuse_file)
 
     if dd.get_transcriptome_align(data):
         # to create a disambiguated transcriptome file realign with bowtie2

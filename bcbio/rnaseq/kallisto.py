@@ -162,3 +162,15 @@ def get_cell_names(cellsfile):
     """
     with open(cellsfile) as in_handle:
         return [x.strip() for x in in_handle]
+
+def get_kallisto_h5(data):
+    samplename = dd.get_sample_name(data)
+    work_dir = dd.get_work_dir(data)
+    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+    return os.path.join(kallisto_dir, "abundance.h5")
+
+def get_kallisto_fusions(data):
+    samplename = dd.get_sample_name(data)
+    work_dir = dd.get_work_dir(data)
+    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+    return os.path.join(kallisto_dir, "fusion.txt")

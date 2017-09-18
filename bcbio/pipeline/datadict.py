@@ -137,6 +137,7 @@ LOOKUPS = {
     "transcript_assembler": {"keys": ["config", "algorithm", "transcript_assembler"],
                              "default": []},
     "oncofuse_file": {"keys": ["oncofuse_file"]},
+    "pizzly_dir": {"keys": ["pizzly_dir"]},
     "split_bam": {"keys": ["split_bam"]},
     "vrn_file": {"keys": ["vrn_file"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},

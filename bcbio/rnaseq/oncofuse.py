@@ -20,7 +20,7 @@ from bcbio.log import logger
 def run(data):
     if not aligner_supports_fusion(data):
         aligner = dd.get_aligner(data)
-        logger.warning("Fusion mode is not supported for the %s aligner, "
+        logger.warning("Oncofuse is not supported for the %s aligner, "
                        "skipping. " % aligner)
         return None
     config = data["config"]

@@ -202,6 +202,10 @@ def generate_transcript_counts(*args):
     return rnaseq.generate_transcript_counts(*args)
 
 @utils.map_wrap
+def detect_fusions(*args):
+    return rnaseq.detect_fusions(*args)
+
+@utils.map_wrap
 def rnaseq_quantitate(*args):
     return rnaseq.quantitate(*args)
 
