@@ -6,16 +6,17 @@ http://www.biorxiv.org/content/early/2017/07/20/166322
 from __future__ import print_function
 
 import os
-import h5py
-import numpy as np
 
+from bcbio import utils
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.rnaseq import kallisto, sailfish, gtf
 from bcbio.provenance import do
-from bcbio.log import logger
 from bcbio.utils import file_exists, safe_makedir
+
+h5py = utils.LazyImport("h5py")
+import numpy as np
 
 def get_fragment_length(data):
     """
