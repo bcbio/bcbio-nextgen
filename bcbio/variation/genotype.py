@@ -301,7 +301,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
 
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
-                                 platypus, scalpel, sentieon, vardict, qsnp)
+                                 platypus, scalpel, sentieon, strelka2, vardict, qsnp)
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "mutect2": mutect2.mutect2_caller,
@@ -312,6 +312,7 @@ def get_variantcallers():
             "mutect": mutect.mutect_caller,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
+            "strelka2": strelka2.run,
             "vardict": vardict.run_vardict,
             "vardict-java": vardict.run_vardict,
             "vardict-perl": vardict.run_vardict,
