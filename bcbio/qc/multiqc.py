@@ -188,9 +188,9 @@ def _create_config_file(out_dir, samples):
     out = {"table_columns_visible": dict()}
 
     # Avoid duplicated bcbio columns with qualimap
-    if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d))
-           for d in samples):
+    if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
+        out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
 
     preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
     if preseq_samples:
