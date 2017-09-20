@@ -19,12 +19,13 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan]
+        somatic: [vardict, freebayes, varscan, strelka2]
         germline: [freebayes, platypus]
       indelcaller: sid
       ensemble:
         numpass: 2
       svcaller: [cnvkit, lumpy]
+      tools_on: [gatk4]
       #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -41,7 +42,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan, mutect2]
+        somatic: [vardict, freebayes, varscan, mutect2, strelka2]
         germline: [freebayes, platypus]
       indelcaller: sid
       ensemble:

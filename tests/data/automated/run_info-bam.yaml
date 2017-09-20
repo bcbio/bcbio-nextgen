@@ -33,7 +33,7 @@ details:
       # mark_duplicates: false
       #realign: gatk
       recalibrate: gatk
-      variantcaller: [freebayes, gatk-haplotype, samtools, platypus]
+      variantcaller: [freebayes, gatk-haplotype, samtools, platypus, strelka2]
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
