@@ -86,15 +86,3 @@ def make_pizzly_gtf(gtf_file, out_file):
                     child.attributes.pop("transcript_version", None)
                     print(child, file=out_handle)
     return out_file
-
-# INDEX=metadata/Homo_sapiens.GRCh38.idx
-# FASTA=metadata/Homo_sapiens.GRCh38.cdna.all.fa.gz
-# GTF=metadata/Homo_sapiens.GRCh38.89.gtf.gz
-# for sample in $(cut -d " " -f1 metadata/sampledata/sampledata.csv)
-# do
-#   echo "Processing $sample."
-#   fraglength=$(python scripts/get_fragment_length.py ${sample}/abundance.h5)
-#   echo "Estimated fragment length as $fraglength"
-#   echo "Running pizzly -k 31 --gtf $GTF --cache metadata/pizzly-cache.txt --align-score 2 --insert-size $fraglength --fasta $FASTA --output ${sample}/pizzly ${sample}/fusion.txt"
-#   pizzly -k 31 --gtf $GTF --cache metadata/pizzly-cache.txt --align-score 2 --insert-size $fraglength --fasta $FASTA --output ${sample}/pizzly ${sample}/fusion.txt
-# done
