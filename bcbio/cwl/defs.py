@@ -124,7 +124,7 @@ def _variant_vc(checkpoints):
                [["batch_rec"]],
                [cwlout(["region"], "string")],
                "bcbio-vc",
-               cores=1),
+               disk={"files": 1.5}, cores=1),
              s("variantcall_batch_region", "batch-parallel",
                [["batch_rec"], ["region"]],
                [cwlout(["vrn_file_region"], "File", [".tbi"]),
@@ -134,12 +134,12 @@ def _variant_vc(checkpoints):
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "vardict", "vardict-java", "varscan", "vcfanno",
                             "vcflib", "vt", "r=3.3.2", "perl"],
-               disk={"files": 0.5}, cores=1),
+               disk={"files": 1.5}, cores=1),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
                "bcbio-vc", ["bcftools", "htslib", "gatk4"],
-               disk={"files": 0.5}, cores=1)]
+               disk={"files": 1.5}, cores=1)]
     if not checkpoints.get("jointvc"):
         vc_wf += [s("postprocess_variants", "batch-single",
                     [["batch_rec"], ["vrn_file"]],
@@ -155,7 +155,7 @@ def _variant_vc(checkpoints):
                                 cwlout("inherit")])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
-                disk={"files": 0.5})]
+                disk={"files": 1.5})]
     vc = [s("batch_for_variantcall", "multi-batch",
             [["analysis"], ["genome_build"], ["align_bam"], ["config", "algorithm", "callable_regions"],
              ["metadata", "batch"], ["metadata", "phenotype"],
@@ -184,7 +184,7 @@ def _variant_vc(checkpoints):
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
-             cores=1)]
+             disk={"files": 1.5}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
 
 def _variant_jointvc():
@@ -192,32 +192,32 @@ def _variant_jointvc():
             [["jointvc_batch_rec"]],
             [cwlout(["region"], "string")],
             "bcbio-vc",
-            cores=1),
+            disk={"files": 1.5}, cores=1),
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], "File", [".tbi"]), cwlout(["region"], "string")],
             "bcbio-vc", ["gatk4", "gatk"],
-            disk={"files": 0.5}, cores=1),
+            disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
             "bcbio-vc", ["bcftools", "htslib", "gatk4", "gatk"],
-            disk={"files": 0.5}, cores=1),
+            disk={"files": 1.5}, cores=1),
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
             "bcbio-vc", ["snpeff=4.3i"],
-            disk={"files": 0.5}),
+            disk={"files": 1.5}),
           s("finalize_jointvc", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
             [cwlout("jointvc_rec", "record")],
             "bcbio-vc",
-            disk={"files": 0.5}, cores=1)]
+            disk={"files": 1.5}, cores=1)]
     out = [s("batch_for_jointvc", "multi-batch",
              ["vc_rec"],
              [cwlout("jointvc_batch_rec", "record")],
              "bcbio-vc",
-             cores=1),
+             disk={"files": 1.5}, cores=1),
            w("jointcall", "multi-parallel", wf,
              [["region"], ["vrn_file_region"], ["vrn_file"]])]
     return out
@@ -258,7 +258,7 @@ def variant(samples):
                 ["reference", "fasta", "base"]],
                [cwlout("prep_samples_rec", "record")],
                "bcbio-vc",
-               cores=1),
+               disk={"files": 0.5}, cores=1),
              s("prep_samples", "multi-parallel",
                ["prep_samples_rec"],
                [cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
@@ -269,7 +269,7 @@ def variant(samples):
                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
                 cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])],
                "bcbio-vc", ["htslib", "bedtools", "pythonpy"],
-               cores=1),
+               disk={"files": 0.5}, cores=1),
              s("postprocess_alignment_to_rec", "multi-combined",
                [["align_bam"],
                 ["genome_resources", "variation", "dbsnp"],
@@ -303,7 +303,7 @@ def variant(samples):
                 cwlout(["regions", "nblock"], "File"),
                 cwlout(["align_bam"], "File")],
                "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk", "gatk4", "mosdepth"],
-               disk={"files": 2.0}),
+               disk={"files": 3.0}),
              s("combine_sample_regions", "multi-combined",
                [["regions", "callable"], ["regions", "nblock"],
                 ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
@@ -339,7 +339,7 @@ def variant(samples):
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
-            disk={"files": 0.5}, cores=1)]
+            disk={"files": 1.5}, cores=1)]
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
