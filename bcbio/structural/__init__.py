@@ -33,9 +33,9 @@ def _get_callers(items, stage):
     Handles special cases like CNVkit that can be in initial or standard
     depending on if fed into Lumpy analysis.
     """
-    callers = _CALLERS[stage]
+    callers = utils.deepish_copy(_CALLERS[stage])
     if "cnvkit" in callers:
-        has_lumpy = any("lumpy" in get_svcallers(d) or lumpy in d["config"]["algorithm"].get("svcaller_orig", [])
+        has_lumpy = any("lumpy" in get_svcallers(d) or "lumpy" in d["config"]["algorithm"].get("svcaller_orig", [])
                         for d in items)
         if has_lumpy and any("lumpy_usecnv" in dd.get_tools_on(d) for d in items):
             if stage != "initial":

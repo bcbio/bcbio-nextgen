@@ -1,8 +1,9 @@
 ## 1.0.6 (in progress)
 
+- Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: support structural variant calling as part of variant pipelines.
-- Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) as a fusion caller when fusion mode is 
-  enabled.
+- Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) 
+  as a fusion caller when fusion mode is enabled.
 
 ## 1.0.5 (11 Sept 2017)
 
