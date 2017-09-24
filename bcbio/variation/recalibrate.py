@@ -124,7 +124,8 @@ def _gatk_apply_bqsr(data):
             cores = dd.get_num_cores(data)
             if gatk_type == "gatk4":
                 params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % cores,
-                          "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"]]
+                          "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"],
+                          "--use_jdk_deflater"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
