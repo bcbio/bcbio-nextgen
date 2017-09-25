@@ -47,7 +47,7 @@ def rnaseq_variant_calling(samples, run_parallel):
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
     variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
-    if variantcaller and ("gatk" in variantcaller or "gatk-haplotype" in variantcaller):
+    if variantcaller and ("gatk-haplotype" in variantcaller):
         samples = joint.square_off(samples, run_parallel)
         samples = run_parallel("run_rnaseq_ann_filter", samples)
     return samples
@@ -66,7 +66,7 @@ def run_rnaseq_variant_calling(data):
         sys.exit(1)
 
     if variantcaller:
-        if "gatk" in variantcaller or "gatk-haplotype" in variantcaller:
+        if "gatk-haplotype" in variantcaller:
             data = variation.rnaseq_gatk_variant_calling(data)
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
