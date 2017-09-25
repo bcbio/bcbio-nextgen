@@ -169,7 +169,7 @@ def square_batch_region(data, region, bam_files, vrn_files, out_file):
         elif jointcaller in ["%s-joint" % x for x in SUPPORTED["gatk"]]:
             gatkjoint.run_region(data, region, vrn_files, out_file)
         else:
-            raise ValueError("Unexpected joint calling approach: %s" % jointcaller)
+            raise ValueError("Unexpected joint calling approach: %s." % jointcaller)
     if region:
         data["region"] = region
     data = _fix_orig_vcf_refs(data)
