@@ -4,34 +4,36 @@ details:
   - analysis: RNA-seq
     algorithm:
       fusion_mode: True
-      variantcaller: [gatk]
+      variantcaller: [gatk-haplotype]
       transcriptome_align: True
       aligner: star
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
+      tools_on: [gatk4]
       expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
       transcript_assembler: [stringtie, cufflinks]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
     description: Test1
-    files: [1_1.fq.gz, 1_2.fq.gz]
+    files: [../data/test_fusion/1_1.fq.gz, ../data/test_fusion/1_2.fq.gz]
     genome_build: hg19
   - analysis: RNA-seq
     algorithm:
       fusion_mode: True
-      variantcaller: [gatk]
+      variantcaller: [gatk-haplotype]
       transcriptome_align: True
       aligner: star
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
+      tools_on: [gatk4]
       expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
       transcript_assembler: [stringtie, cufflinks]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
     description: Test2
-    files: [1_1.fq.gz, 1_2.fq.gz]
+    files: [../data/test_fusion/1_1.fq.gz, ../data/test_fusion/1_2.fq.gz]
     genome_build: hg19

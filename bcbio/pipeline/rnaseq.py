@@ -4,7 +4,7 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein, pizzly)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
-from bcbio.variation import vardict, vcfanno
+from bcbio.variation import joint, vardict, vcfanno
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
@@ -46,7 +46,10 @@ def rnaseq_variant_calling(samples, run_parallel):
     run RNA-seq variant calling using GATK
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
-    samples = run_parallel("run_rnaseq_joint_genotyping", [samples])
+    variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
+    if variantcaller and ("gatk" in variantcaller or "gatk-haplotype" in variantcaller):
+        samples = joint.square_off(samples, run_parallel)
+        samples = run_parallel("run_rnaseq_ann_filter", samples)
     return samples
 
 def run_rnaseq_variant_calling(data):
@@ -73,25 +76,15 @@ def run_rnaseq_variant_calling(data):
                 data = dd.set_vrn_file(data, ann_file)
     return [[data]]
 
-def run_rnaseq_joint_genotyping(*samples):
-    data = samples[0][0]
-    variantcaller = dd.get_variantcaller(data)
-    if not variantcaller:
-        return samples
-    if "gatk" not in variantcaller:
-        return samples
-    ref_file = dd.get_ref_file(data)
-    if variantcaller and "gatk" in variantcaller:
-        vrn_files = [dd.get_vrn_file(d) for d in dd.sample_data_iterator(samples)]
-        out_file = variation.gatk_joint_calling(data, vrn_files, ref_file)
-        ann_file = vcfanno.run_vcfanno(out_file, ["rnaedit"], data)
-        vrn_file = ann_file if ann_file else out_file
-        updated_samples = []
-        for data in dd.sample_data_iterator(samples):
-            data = dd.set_square_vcf(data, vrn_file)
-            updated_samples.append([data])
-        return updated_samples
-    return samples
+def run_rnaseq_ann_filter(data):
+    """Run RNA-seq annotation and filtering.
+    """
+    ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
+    if ann_file:
+        dd.set_vrn_file(data, ann_file)
+    filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
+    dd.set_vrn_file(data, filter_file)
+    return [[data]]
 
 def quantitate(data):
     data = to_single_data(data)

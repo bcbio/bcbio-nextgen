@@ -1,4 +1,5 @@
 import os
+from bcbio import utils
 from bcbio.utils import file_exists, get_R_exports, safe_makedir
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -6,9 +7,8 @@ from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.variation import vardict
-from bcbio.variation.vcfutils import bgzip_and_index
 from bcbio import broad, bam
-from bcbio.variation import vcfutils
+from bcbio.variation import gatk, vcfutils
 from bcbio.rnaseq import gtf
 
 def rnaseq_gatk_variant_calling(data):
@@ -27,85 +27,45 @@ def gatk_splitreads(data):
     deduped_bam = dd.get_deduped_bam(data)
     base, ext = os.path.splitext(deduped_bam)
     split_bam = base + ".splitN" + ext
-    if dd.get_quality_format(data) == "illumina":
-        quality_flag = ["--fix_misencoded_quality_scores", "-fixMisencodedQuals"]
-    else:
-        quality_flag = []
     if file_exists(split_bam):
         data = dd.set_split_bam(data, split_bam)
         return data
+    gatk_type = broad_runner.gatk_type()
     with file_transaction(data, split_bam) as tx_split_bam:
         params = ["-T", "SplitNCigarReads",
                   "-R", ref_file,
-                  "-I", deduped_bam,
-                  "-o", tx_split_bam,
-                  "-rf", "ReassignOneMappingQuality",
-                  "-RMQF", "255",
-                  "-RMQT", "60",
-                  "-rf", "UnmappedRead",
-                  "-U", "ALLOW_N_CIGAR_READS"] + quality_flag
+                  "-I", deduped_bam]
+        if gatk_type == "gatk4":
+            params += ["--output", tx_split_bam]
+        else:
+            params += ["-rf", "ReassignOneMappingQuality",
+                       "-RMQF", "255",
+                       "-RMQT", "60",
+                       "-rf", "UnmappedRead",
+                       "-U", "ALLOW_N_CIGAR_READS",
+                       "-o", tx_split_bam]
+            if dd.get_quality_format(data) == "illumina":
+                params += ["--fix_misencoded_quality_scores", "-fixMisencodedQuals"]
         broad_runner.run_gatk(params)
     bam.index(split_bam, dd.get_config(data))
     data = dd.set_split_bam(data, split_bam)
     return data
 
 def gatk_rnaseq_calling(data):
+    """Use GATK to perform gVCF variant calling on RNA-seq data
     """
-    use GATK to perform variant calling on RNA-seq data
-    """
-    broad_runner = broad.runner_from_config(dd.get_config(data))
-    ref_file = dd.get_ref_file(data)
-    split_bam = dd.get_split_bam(data)
-    out_file = os.path.splitext(split_bam)[0] + ".vcf"
-    bgzipped_file = out_file + ".gz"
-    num_cores = dd.get_num_cores(data)
-    if file_exists(bgzipped_file):
-        data = dd.set_vrn_file(data, bgzipped_file)
-        return data
-    with file_transaction(data, out_file) as tx_out_file:
-        params = ["-T", "HaplotypeCaller",
-                  "-R", ref_file,
-                  "-I", split_bam,
-                  "-o", tx_out_file,
-                  "-nct", str(num_cores),
-                  "--emitRefConfidence", "GVCF",
-                  "--variant_index_type", "LINEAR",
-                  "--variant_index_parameter", "128000",
-                  "-dontUseSoftClippedBases"]
-        broad_runner.run_gatk(params)
-    bgzip_and_index(out_file, dd.get_config(data))
-    data = dd.set_vrn_file(data, bgzipped_file)
-    return data
-
-def gatk_joint_calling(data, vrn_files, ref_file):
-    joint_file = os.path.join("variation", "joint.vcf")
-    out_file = os.path.join("variation", "combined.vcf")
-    bgzjoint_file = os.path.join("variation", "joint.vcf.gz")
-    bgzout_file = os.path.join("variation", "combined.vcf.gz")
-    if not file_exists(bgzout_file):
-        joint_file = _run_genotype_gvcfs(data, vrn_files, ref_file, joint_file)
-        bgzip_and_index(joint_file, dd.get_config(data))
-        out_file = gatk_filter_rnaseq(data, bgzjoint_file, out_file)
-        bgzip_and_index(out_file, dd.get_config(data))
-    return bgzout_file
-
-def _run_genotype_gvcfs(data, vrn_files, ref_file, out_file):
-    if not file_exists(out_file):
-        broad_runner = broad.runner_from_config(data["config"])
-        with file_transaction(data, out_file) as tx_out_file:
-            params = ["-T", "GenotypeGVCFs",
-                      "-R", ref_file, "-o", tx_out_file]
-            for vrn_file in vrn_files:
-                params += ["--variant", vrn_file]
-            broad_runner.new_resources("gatk-haplotype")
-            cores = dd.get_cores(data)
-            if cores > 1:
-                params += ["-nt", str(cores)]
-                memscale = {"magnitude": 0.9 * cores, "direction": "increase"}
-            else:
-                memscale = None
-            broad_runner.run_gatk(params, memscale=memscale)
-    return out_file
+    data = utils.deepish_copy(data)
+    tools_on = dd.get_tools_on(data)
+    if not tools_on:
+        tools_on = []
+    tools_on.append("gvcf")
+    data = dd.set_tools_on(data, tools_on)
+    data = dd.set_jointcaller(data, ["%s-joint" % v for v in dd.get_variantcaller(data)])
+    out_file = os.path.join(utils.safe_makedir(os.path.join("variation", "rnaseq", "gatk-haplotype")),
+                            "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
+    out_file = gatk.haplotype_caller([dd.get_split_bam(data)], [data], dd.get_ref_file(data), {},
+                                     out_file=out_file)
+    return dd.set_vrn_file(data, out_file)
 
 def rnaseq_vardict_variant_calling(data):
     sample = dd.get_sample_name(data)
@@ -145,7 +105,7 @@ def rnaseq_vardict_variant_calling(data):
     data = dd.set_vrn_file(data, out_file)
     return data
 
-def gatk_filter_rnaseq(data, vrn_file, out_file):
+def gatk_filter_rnaseq(vrn_file, data):
     """
     this incorporates filters listed here, dropping clusters of variants
     within a 35 nucleotide window, high fischer strand values and low
@@ -155,22 +115,20 @@ def gatk_filter_rnaseq(data, vrn_file, out_file):
     input.vcf -window 35 -cluster 3 -filterName FS -filter "FS > 30.0"
     -filterName QD -filter "QD < 2.0" -o output.vcf
     """
-    broad_runner = broad.runner_from_config(dd.get_config(data))
-    ref_file = dd.get_ref_file(data)
-    if file_exists(out_file):
-        return out_file
-    with file_transaction(data, out_file) as tx_out_file:
-        params = ["-T", "VariantFiltration",
-                  "-R", ref_file,
-                  "-V", vrn_file,
-                  "--clusterWindowSize", "35",
-                  "--clusterSize", "3",
-                  "--filterExpression", "\"'FS > 30.0'\"",
-                  "--filterName", "FS",
-                  "--filterExpression", "\"'QD < 2.0'\"",
-                  "--filterName", "QD",
-                  "-o", tx_out_file]
-        jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data), os.path.dirname(tx_out_file))
-        do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params),
-               "Filter variants.")
+    out_file = "%s-filter%s" % utils.splitext_plus(vrn_file)
+    if not file_exists(out_file):
+        ref_file = dd.get_ref_file(data)
+        with file_transaction(data, out_file) as tx_out_file:
+            params = ["-T", "VariantFiltration",
+                      "-R", ref_file,
+                      "-V", vrn_file,
+                      "--clusterWindowSize", "35",
+                      "--clusterSize", "3",
+                      "--filterExpression", "\"'FS > 30.0'\"",
+                      "--filterName", "FS",
+                      "--filterExpression", "\"'QD < 2.0'\"",
+                      "--filterName", "QD",
+                      "-o", tx_out_file]
+            jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data), os.path.dirname(tx_out_file))
+            do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter RNA-seq variants.")
     return out_file

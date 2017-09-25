@@ -113,6 +113,8 @@ def _is_jointcaller_compatible(data):
     """
     jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
     variantcaller = tz.get_in(("config", "algorithm", "variantcaller"), data)
+    if isinstance(variantcaller, (list, tuple)) and len(variantcaller) == 1:
+        variantcaller = variantcaller[0]
     return jointcaller == "%s-joint" % variantcaller or not variantcaller
 
 def square_off(samples, run_parallel):
@@ -120,7 +122,7 @@ def square_off(samples, run_parallel):
     """
     to_process = []
     extras = []
-    for data in [x[0] for x in samples]:
+    for data in [utils.to_single_data(x) for x in samples]:
         added = False
         if tz.get_in(("metadata", "batch"), data):
             for add in genotype.handle_multiple_callers(data, "jointcaller"):

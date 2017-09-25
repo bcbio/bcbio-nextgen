@@ -230,8 +230,8 @@ def run_rnaseq_variant_calling(*args):
     return rnaseq.run_rnaseq_variant_calling(*args)
 
 @utils.map_wrap
-def run_rnaseq_joint_genotyping(*args):
-    return rnaseq.run_rnaseq_joint_genotyping(*args)
+def run_rnaseq_ann_filter(*args):
+    return rnaseq.run_rnaseq_ann_filter(*args)
 
 @utils.map_wrap
 def combine_bam(*args):

@@ -1,5 +1,6 @@
 ## 1.0.6 (in progress)
 
+- RNA-seq variant calling: support GATK4
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: support structural variant calling as part of variant pipelines.
 - Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) 
