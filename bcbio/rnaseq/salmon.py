@@ -140,12 +140,9 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
         logger.info("Transcriptome index for %s detected, skipping building." % gtf_fa)
         return out_dir
     files = dd.get_input_sequence_files(data)
-    readlength = bam.fastq.estimate_read_length(files[0])
-    if readlength % 2 == 0:
-        readlength -= 1
-    kmersize = min(readlength, 31)
+    kmersize = sailfish.pick_kmersize(files[0])
     with file_transaction(data, out_dir) as tx_out_dir:
         cmd = "{salmon} index -k {kmersize} -p {num_cores} -i {tx_out_dir} -t {gtf_fa}"
-        message = "Creating Salmon index for {gtf_fa}."
+        message = "Creating Salmon index for {gtf_fa} with {kmersize} bp kmers."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir

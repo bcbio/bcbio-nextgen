@@ -47,9 +47,11 @@ def rapmap_index(gtf_file, ref_file, algorithm, data, out_dir):
     tmpdir = dd.get_tmp_dir(data)
     if file_exists(out_dir + "rapidx.jfhash"):
         return out_dir
+    files = dd.get_input_sequence_files(data)
+    kmersize = sailfish.pick_kmersize(files[0])
+    message = "Creating rapmap {index_type} for {gtf_fa} with {kmersize} bp kmers."
     with file_transaction(out_dir) as tx_out_dir:
-        cmd = "{rapmap} {index_type} -k 31 -i {tx_out_dir} -t {gtf_fa}"
-        message = "Creating rapmap {index_type} for {gtf_fa}."
+        cmd = "{rapmap} {index_type} -k {kmersize} -i {tx_out_dir} -t {gtf_fa}"
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
 

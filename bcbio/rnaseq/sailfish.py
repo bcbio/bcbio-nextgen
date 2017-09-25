@@ -62,16 +62,6 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
         sleuthify_sailfish(tx_out_dir)
     return out_file
 
-def estimate_kmer_size(fq):
-    kmer_size = int(fastq.estimate_read_length(fq))
-    if kmer_size < 30:
-        # kmer size must be odd
-        kmer_size = kmer_size - 5
-        kmer_size = kmer_size if kmer_size % 2 else kmer_size - 1
-    else:
-        kmer_size = 25
-    return kmer_size
-
 def sleuthify_sailfish(sailfish_dir):
     """
     if installed, use wasabi to create abundance.h5 output for use with
@@ -124,7 +114,7 @@ def get_build_string(data):
 
 def run_sailfish_index(*samples):
     fq1, _ = dd.get_input_sequence_files(samples[0][0])
-    kmer_size = estimate_kmer_size(fq1)
+    kmersize = pick_kmersize(fq1)
     Build = namedtuple('Build', ['build', 'ref', 'gtf'])
     builds = {Build(get_build_string(x), dd.get_ref_file(x), dd.get_gtf_file(x))
               for x in dd.sample_data_iterator(samples)}
@@ -132,10 +122,10 @@ def run_sailfish_index(*samples):
     indexdirs = {}
     for build in builds:
         indexdirs[build.build] = sailfish_index(build.ref, build.gtf, data,
-                                                build.build, kmer_size)
+                                                build.build, kmersize)
     return samples
 
-def sailfish_index(gtf_file, ref_file, data, build, kmer_size):
+def sailfish_index(gtf_file, ref_file, data, build, kmersize):
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "sailfish", "index", build)
     sailfish = config_utils.get_program("sailfish", data["config"])
@@ -145,8 +135,8 @@ def sailfish_index(gtf_file, ref_file, data, build, kmer_size):
         return out_dir
     with file_transaction(data, out_dir) as tx_out_dir:
         cmd = ("{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} "
-               "-k {kmer_size}")
-        message = "Creating sailfish index for {gtf_fa}."
+               "-k {kmersize}")
+        message = "Creating sailfish index for {gtf_fa} with {kmersize} bp kmers."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
 
@@ -169,3 +159,19 @@ def _sailfish_expression_parser(sailfish_file, samplename):
                      names=col_names, sep="\t")
     df["sample"] = samplename
     return df
+
+def pick_kmersize(fq):
+    """
+    pick an appropriate kmer size based off of https://www.biostars.org/p/201474/
+    tl;dr version: pick 31 unless the reads are very small, if not then guess
+    that readlength / 2 is about right.
+    """
+    readlength = fastq.estimate_read_length(fq)
+    halfread = int(round(readlength / 2))
+    if halfread >= 31:
+        kmersize = 31
+    else:
+        kmersize = halfread
+    if kmersize % 2 == 0:
+        kmersize += 1
+    return kmersize
