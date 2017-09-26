@@ -70,9 +70,9 @@ def _count_offtarget(data, bam_file, bed_file, target_name):
         return 0.0
 
 def calculate(bam_file, data):
-    """Calculate coverage in parallel using samtools depth through goleft.
+    """Calculate coverage in parallel using mosdepth.
 
-    samtools depth removes duplicates and secondary reads from the counts:
+    Removes duplicates and secondary reads from the counts:
     if ( b->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP) ) continue;
     """
     params = {"window_size": 5000, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data)}
@@ -80,25 +80,59 @@ def calculate(bam_file, data):
         utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
         "%s-coverage" % (dd.get_sample_name(data)))
     depth_file = prefix + ".depth.bed"
-    callable_file = prefix + ".callable.bed"
     variant_regions = dd.get_variant_regions_merged(data)
-    if not utils.file_uptodate(callable_file, bam_file):
-        cmd = ["goleft", "depth", "--q", "1", "--mincov", str(params["min"]),
-               "--processes", str(dd.get_num_cores(data)), "--ordered"]
+    if not utils.file_uptodate(depth_file, bam_file):
         with file_transaction(data, depth_file) as tx_depth_file:
-            with utils.chdir(os.path.dirname(tx_depth_file)):
-                tx_callable_file = tx_depth_file.replace(".depth.bed", ".callable.bed")
-                prefix = tx_depth_file.replace(".depth.bed", "")
-                bam_ref_file = "%s-bamref.fa" % utils.splitext_plus(bam_file)[0]
-                bam.fai_from_bam(dd.get_ref_file(data), bam_file, bam_ref_file + ".fai", data)
-                cmd += ["--reference", bam_ref_file]
-                cmd += ["--prefix", prefix, bam_file]
-                bcbio_env = utils.get_bcbio_env()
-                msg = "Calculate coverage: %s" % dd.get_sample_name(data)
-                do.run(cmd, msg, env=bcbio_env)
-                shutil.move(tx_callable_file, callable_file)
+            cmd = ["mosdepth", "-t", str(dd.get_num_cores(data)), "-Q", "1",
+                   "-F", "1804", "-f", dd.get_ref_file(data), bam_file]
+            cmd = "%s > %s" % (" ".join(cmd), tx_depth_file)
+            do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
+    callable_file = _mosdepth_to_callable(depth_file, params, data)
     final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
-    return depth_file, final_callable
+    return final_callable
+
+def _mosdepth_to_callable(depth_file, params, data):
+    """Covert mosdepth output into a standard collapsed depth.
+    """
+    out_file = depth_file.replace(".depth.bed", ".callable.bed")
+    if not utils.file_uptodate(out_file, depth_file):
+        contig_sizes = {contig.name: contig.size for contig in ref.file_contigs(dd.get_ref_file(data))}
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(depth_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    writer = csv.writer(out_handle, dialect="excel-tab", lineterminator=os.linesep)
+                    cur_chrom = None
+                    start_pos = 0
+                    last_pos = 0
+                    cur_callable = None
+                    for chrom, pos, depth in (l.strip().split() for l in in_handle):
+                        callable_str = _depth_to_callable(depth, params)
+                        if cur_chrom != chrom:
+                            if cur_callable:
+                                writer.writerow([cur_chrom, start_pos, contig_sizes[cur_chrom], cur_callable])
+                            start_pos = 0
+                            last_pos = pos
+                            cur_chrom = chrom
+                            cur_callable = callable_str
+                        elif callable_str != cur_callable:
+                            writer.writerow([chrom, start_pos, last_pos, cur_callable])
+                            start_pos = last_pos
+                            last_pos = pos
+                            cur_callable = callable_str
+                        else:
+                            last_pos = pos
+                    if cur_callable:
+                        writer.writerow([cur_chrom, start_pos, contig_sizes[cur_chrom], cur_callable])
+    return out_file
+
+def _depth_to_callable(depth, params):
+    depth = int(depth)
+    if depth == 0:
+        return "NO_COVERAGE"
+    elif depth < params["min"]:
+        return "LOW_COVERAGE"
+    else:
+        return "CALLABLE"
 
 def _create_genome_regions(callable_file, data):
     """Create whole genome contigs we want to process, only non-alts.

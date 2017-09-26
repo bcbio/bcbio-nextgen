@@ -30,11 +30,11 @@ from bcbio.variation import multi as vmulti
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """
-    CovInfo = collections.namedtuple("CovInfo", "callable, depth, raw_callable")
+    CovInfo = collections.namedtuple("CovInfo", "callable, raw_callable")
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        depth_bed, callable_bed = coverage.calculate(bam_file, data)
+        callable_bed = coverage.calculate(bam_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -46,7 +46,7 @@ def sample_callable_bed(bam_file, ref_file, data):
                         filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
-    return CovInfo(out_file, depth_bed, callable_bed)
+    return CovInfo(out_file, callable_bed)
 
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.

@@ -1,5 +1,6 @@
 ## 1.0.6 (in progress)
 
+- Use mosdepth for callability calculations, replacing goleft depth.
 - RNA-seq variant calling: support GATK4
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: support structural variant calling as part of variant pipelines.

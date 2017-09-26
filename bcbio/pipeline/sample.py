@@ -234,8 +234,7 @@ def postprocess_alignment(data):
             callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
                            "callable": callable_bed,
-                           "sample_callable": covinfo.callable,
-                           "coverage_depth_bed": covinfo.depth}
+                           "sample_callable": covinfo.callable}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
