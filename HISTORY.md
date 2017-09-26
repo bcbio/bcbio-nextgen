@@ -1,6 +1,8 @@
 ## 1.0.6 (in progress)
 
 - Use mosdepth for callability calculations, replacing goleft depth.
+- RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
+  Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
 - RNA-seq variant calling: support GATK4
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
