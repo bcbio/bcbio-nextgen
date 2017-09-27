@@ -133,10 +133,9 @@ def _add_meta(xs, sample=None, config=None):
             elif x["sample"] != sample_name:
                 x["run"] = sample_name
         if config:
-            if "fc_name" in config and "fc_date" in config:
-                x["run"] = "%s_%s" % (config["fc_date"], config["fc_name"])
-            else:
-                x["run"] = "project_%s" % datetime.datetime.now().strftime("%Y-%m-%d")
+            fc_name = config.get("fc_name") or "project"
+            fc_date = config.get("fc_date") or datetime.datetime.now().strftime("%Y-%m-%d")
+            x["run"] = "%s_%s" % (fc_name, fc_date)
         out.append(x)
     return out
 

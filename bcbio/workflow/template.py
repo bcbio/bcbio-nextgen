@@ -172,8 +172,7 @@ def _write_config_file(items, global_vars, template, project_name, out_dir,
     """
     config_dir = utils.safe_makedir(os.path.join(out_dir, "config"))
     out_config_file = os.path.join(config_dir, "%s.yaml" % project_name)
-    out = {"fc_date": datetime.datetime.now().strftime("%Y-%m-%d"),
-           "fc_name": project_name,
+    out = {"fc_name": project_name,
            "upload": {"dir": "../final"},
            "details": items}
     if remotes.get("base"):

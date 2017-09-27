@@ -772,8 +772,9 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
     if isinstance(loaded, dict):
         global_config = copy.deepcopy(loaded)
         del global_config["details"]
-        if "fc_name" in loaded and "fc_date" in loaded:
+        if "fc_name" in loaded:
             fc_name = loaded["fc_name"].replace(" ", "_")
+        if "fc_date" in loaded:
             fc_date = str(loaded["fc_date"]).replace(" ", "_")
         global_vars = global_config.pop("globals", {})
         resources = global_config.pop("resources", {})
@@ -805,8 +806,9 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
             # Handle specifying a local directory directly in upload
             if isinstance(upload, basestring):
                 upload = {"dir": upload}
-            if fc_name and fc_date:
+            if fc_name:
                 upload["fc_name"] = fc_name
+            if fc_date:
                 upload["fc_date"] = fc_date
             upload["run_id"] = ""
             if upload.get("dir"):

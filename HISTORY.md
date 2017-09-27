@@ -5,6 +5,8 @@
   Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
 - RNA-seq variant calling: support GATK4
+- Templating: avoid automatically setting flowcell date to maintain consistency
+  between runs.
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: support structural variant calling as part of variant pipelines.
 - Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) 
