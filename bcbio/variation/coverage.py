@@ -5,17 +5,15 @@ Provides estimates of coverage intervals based on callable regions
 import csv
 import itertools
 import os
-import shutil
 import yaml
 
 import pybedtools
 import numpy as np
 import pysam
 
-from bcbio.variation.bedutils import clean_file
 from bcbio.utils import (append_stem, copy_plus)
 from bcbio import bam, utils
-from bcbio.bam import ref, sambamba
+from bcbio.bam import ref, readstats
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
@@ -61,8 +59,8 @@ def assign_interval(data):
     return data
 
 def _count_offtarget(data, bam_file, bed_file, target_name):
-    mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
-    ontarget = sambamba.number_of_mapped_reads(
+    mapped_unique = readstats.number_of_mapped_reads(data, bam_file, keep_dups=False)
+    ontarget = readstats.number_of_mapped_reads(
         data, bam_file, keep_dups=False, bed_file=bed_file, target_name=target_name)
     if mapped_unique:
         return float(mapped_unique - ontarget) / mapped_unique

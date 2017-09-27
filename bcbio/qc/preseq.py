@@ -16,7 +16,7 @@ from bcbio.log import logger
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
-from bcbio.bam import ref, sambamba
+from bcbio.bam import ref, readstats
 from bcbio.variation import coverage as cov
 from bcbio.qc import samtools
 
@@ -130,11 +130,11 @@ def _prep_real_counts(bam_file, data, samtools_stats):
 
     if bed:
         out["Preseq_genome_size"] = pybedtools.BedTool(bed).total_coverage()
-        out["Preseq_read_count"] = sambamba.number_of_mapped_reads(
+        out["Preseq_read_count"] = readstats.number_of_mapped_reads(
             data, bam_file, keep_dups=True, bed_file=bed, target_name=target_name)
         ontrg_unique_depth = cov.get_average_coverage(target_name, bed, data, bam_file)
         if dedupped:
-            out["Preseq_unique_count"] = sambamba.number_of_mapped_reads(
+            out["Preseq_unique_count"] = readstats.number_of_mapped_reads(
                 data, bam_file, keep_dups=False, bed_file=bed, target_name=target_name)
 
         # Counting average on-target alignment length, based on the equation:

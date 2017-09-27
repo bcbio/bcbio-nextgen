@@ -4,7 +4,7 @@ import glob
 import os
 import subprocess
 
-from bcbio.bam import ref, sambamba, utils
+from bcbio.bam import ref, readstats, utils
 from bcbio.distributed import transaction
 from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd
@@ -56,11 +56,11 @@ def run(bam_file, data, out_dir):
     if dd.get_coverage_interval(data) == "genome":
         mapped_unique = mapped - dups
     else:
-        mapped_unique = sambamba.number_of_mapped_reads(data, bam_file, keep_dups=False)
+        mapped_unique = readstats.number_of_mapped_reads(data, bam_file, keep_dups=False)
     out['Mapped_unique_reads'] = mapped_unique
 
     if merged_bed_file:
-        ontarget = sambamba.number_of_mapped_reads(
+        ontarget = readstats.number_of_mapped_reads(
             data, bam_file, keep_dups=False, bed_file=merged_bed_file, target_name=target_name)
         out["Ontarget_unique_reads"] = ontarget
         if mapped_unique:
@@ -70,7 +70,7 @@ def run(bam_file, data, out_dir):
                 # Skip padded calculation for WGS even if the "coverage" file is specified
                 # the padded statistic makes only sense for exomes and panels
                 padded_bed_file = bedutils.get_padded_bed_file(out_dir, merged_bed_file, 200, data)
-                ontarget_padded = sambamba.number_of_mapped_reads(
+                ontarget_padded = readstats.number_of_mapped_reads(
                     data, bam_file, keep_dups=False, bed_file=padded_bed_file, target_name=target_name + "_padded")
                 out["Ontarget_padded_pct"] = 100.0 * ontarget_padded / mapped_unique
         if total_reads:

@@ -61,7 +61,8 @@ def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target
             return int(f.read().strip())
 
     # New cache
-    key = json.dumps({"flags": sorted(query_flags), "region": bed_file,
+    key = json.dumps({"flags": sorted(query_flags),
+                      "region": os.path.basename(bed_file) if bed_file else "",
                       "sample": dd.get_sample_name(data)},
                      separators=(",", ":"), sort_keys=True)
     cache_file = get_cache_file(data)
