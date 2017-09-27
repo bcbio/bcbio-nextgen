@@ -16,7 +16,7 @@ from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.pipeline.merge import merge_bam_files
-from bcbio.bam import callable, trim
+from bcbio.bam import callable, sambamba, trim
 from bcbio.hla import optitype
 from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
@@ -234,7 +234,8 @@ def postprocess_alignment(data):
             callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
                            "callable": callable_bed,
-                           "sample_callable": covinfo.callable}
+                           "sample_callable": covinfo.callable,
+                           "mapped_stats": sambamba.get_cache_file(data)}
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
