@@ -45,24 +45,27 @@ def run_pizzly(data):
     fusions = kallisto.get_kallisto_fusions(data)
     pizzlypath = config_utils.get_program("pizzly", dd.get_config(data))
     outdir = pizzly(pizzlypath, gtf, gtf_fa, fraglength, cachefile, pizzlydir,
-                    fusions, samplename)
+                    fusions, samplename, data)
     return outdir
 
 def pizzly(pizzly_path, gtf, gtf_fa, fraglength, cachefile, pizzlydir, fusions,
-           samplename):
+           samplename, data):
     outdir = os.path.join(pizzlydir, samplename)
-    pizzly_gtf = make_pizzly_gtf(gtf, os.path.join(pizzlydir, "pizzly.gtf"))
-    with file_transaction(outdir) as tx_out_dir:
+    pizzly_gtf = make_pizzly_gtf(gtf, os.path.join(pizzlydir, "pizzly.gtf"), data)
+    with file_transaction(data, outdir) as tx_out_dir:
         safe_makedir(tx_out_dir)
-        out_stem = os.path.join(tx_out_dir, "pizzly")
+        out_stem = os.path.join(tx_out_dir, samplename)
         cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {cachefile} "
             "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
             "--output {out_stem} {fusions}")
         message = ("Running pizzly on %s." % fusions)
         do.run(cmd.format(**locals()), message)
+        pizzlycalls = out_stem + ".json"
+        flatfile = out_stem + "-flat.tsv"
+        flatten_pizzly(pizzlycalls, flatfile, data)
     return outdir
 
-def make_pizzly_gtf(gtf_file, out_file):
+def make_pizzly_gtf(gtf_file, out_file, data):
     """
     pizzly needs the GTF to be in gene -> transcript -> exon order for each
     gene. it also wants the gene biotype set as the source
@@ -70,7 +73,7 @@ def make_pizzly_gtf(gtf_file, out_file):
     if file_exists(out_file):
         return out_file
     db = gtf.get_gtf_db(gtf_file)
-    with file_transaction(out_file) as tx_out_file:
+    with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             for gene in db.features_of_type("gene"):
                 children = [x for x in db.children(id=gene)]
@@ -85,4 +88,14 @@ def make_pizzly_gtf(gtf_file, out_file):
                     # gffread produces a version-less FASTA file
                     child.attributes.pop("transcript_version", None)
                     print(child, file=out_handle)
+    return out_file
+
+def flatten_pizzly(in_file, out_file, data):
+    pizzlyflatten = config_utils.get_program("pizzly_flatten_json.py", data)
+    if file_exists(out_file):
+        return out_file
+    cmd = "{pizzlyflatten} {in_file} > {tx_out_file}"
+    message = "Flattening {in_file} to {out_file}."
+    with file_transaction(data, out_file) as tx_out_file:
+        do.run(cmd.format(**locals()), message.format(**locals()))
     return out_file
