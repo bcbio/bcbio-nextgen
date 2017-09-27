@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import os
 
+from bcbio.log import logger
 from bcbio import utils
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -52,20 +53,23 @@ def run_pizzly(data):
 def pizzly(pizzly_path, gtf, gtf_fa, fraglength, cachefile, pizzlydir, fusions,
            samplename, data):
     outdir = os.path.join(pizzlydir, samplename)
+    out_stem = os.path.join(outdir, samplename)
     pizzly_gtf = make_pizzly_gtf(gtf, os.path.join(pizzlydir, "pizzly.gtf"), data)
-    with file_transaction(data, outdir) as tx_out_dir:
-        safe_makedir(tx_out_dir)
-        out_stem = os.path.join(tx_out_dir, samplename)
-        cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {cachefile} "
-            "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
-            "--output {out_stem} {fusions}")
-        message = ("Running pizzly on %s." % fusions)
-        do.run(cmd.format(**locals()), message)
-        pizzlycalls = out_stem + ".json"
-        flatfile = out_stem + "-flat.tsv"
-        filteredfile = out_stem + "-flat-filtered.tsv"
-        flatten_pizzly(pizzlycalls, flatfile, data)
-        filter_pizzly(flatfile, filteredfile, data)
+    sentinel = os.path.join(out_stem, "-flat-filtered.tsv")
+    pizzlycalls = out_stem + ".json"
+    if not file_exists(pizzlycalls):
+        with file_transaction(data, outdir) as tx_out_dir:
+            safe_makedir(tx_out_dir)
+            tx_out_stem = os.path.join(tx_out_dir, samplename)
+            cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {cachefile} "
+                "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
+                "--output {tx_out_stem} {fusions}")
+            message = ("Running pizzly on %s." % fusions)
+            do.run(cmd.format(**locals()), message)
+    flatfile = out_stem + "-flat.tsv"
+    filteredfile = out_stem + "-flat-filtered.tsv"
+    flatten_pizzly(pizzlycalls, flatfile, data)
+    filter_pizzly(flatfile, filteredfile, data)
     return outdir
 
 def make_pizzly_gtf(gtf_file, out_file, data):
