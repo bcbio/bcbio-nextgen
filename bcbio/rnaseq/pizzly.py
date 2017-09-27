@@ -17,6 +17,7 @@ from bcbio.utils import file_exists, safe_makedir
 
 h5py = utils.LazyImport("h5py")
 import numpy as np
+import pandas as pd
 
 def get_fragment_length(data):
     """
@@ -62,7 +63,9 @@ def pizzly(pizzly_path, gtf, gtf_fa, fraglength, cachefile, pizzlydir, fusions,
         do.run(cmd.format(**locals()), message)
         pizzlycalls = out_stem + ".json"
         flatfile = out_stem + "-flat.tsv"
+        filteredfile = out_stem + "-flat-filtered.tsv"
         flatten_pizzly(pizzlycalls, flatfile, data)
+        filter_pizzly(flatfile, filteredfile, data)
     return outdir
 
 def make_pizzly_gtf(gtf_file, out_file, data):
@@ -98,4 +101,13 @@ def flatten_pizzly(in_file, out_file, data):
     message = "Flattening {in_file} to {out_file}."
     with file_transaction(data, out_file) as tx_out_file:
         do.run(cmd.format(**locals()), message.format(**locals()))
+    return out_file
+
+def filter_pizzly(in_file, out_file, data):
+    df = pd.read_csv(in_file, header=0, sep="\t")
+    df = df.query('paircount > 1 and splitcount > 1')
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        df.to_csv(tx_out_file, sep="\t", index=False)
     return out_file
