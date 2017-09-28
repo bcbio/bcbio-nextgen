@@ -37,13 +37,16 @@ def _header(fn):
     return l
 
 
-def _get_samples_to_process(fn, out_dir, config, force_single):
+def _get_samples_to_process(fn, out_dir, config, force_single, separators):
     """parse csv file with one line per file. It will merge
     all files that have the same description name"""
     out_dir = os.path.abspath(out_dir)
     samples = defaultdict(list)
     with open(fn) as handle:
         for l in handle:
+            if l.find("description") > 0:
+                logger.info("Skipping header.")
+                continue
             cols = l.strip().split(",")
             if len(cols) > 0:
                 if len(cols) < 2:
@@ -69,7 +72,10 @@ def _get_samples_to_process(fn, out_dir, config, force_single):
             fn = "query_gsm"
             ext = ".fastq.gz"
         files = [os.path.abspath(fn_file[0]) if not is_gsm(fn_file[0]) else fn_file[0] for fn_file in items]
-        samples[sample] = [{'files': _check_paired(files, force_single), 'out_file': os.path.join(out_dir, sample + ext), 'fn': fn, 'anno': items[0][2:], 'config': config, 'name': sample, 'out_dir': out_dir}]
+        samples[sample] = [{'files': _check_paired(files, force_single, separators),
+                            'out_file': os.path.join(out_dir, sample + ext),
+                            'fn': fn, 'anno': items[0][2:], 'config': config,
+                            'name': sample, 'out_dir': out_dir}]
     return [samples[sample] for sample in samples]
 
 
@@ -78,7 +84,7 @@ def _check_stems(files):
     used = set()
     for fn in files:
         if os.path.basename(fn) in used:
-            logger.error("%s stem is multiple times in your file list, "
+            logger.warning("%s stem is multiple times in your file list, "
                          "so we don't know "
                          "how to assign it to the sample data in the CSV. "
                          "We are gonna use full path to make a difference, "
@@ -90,14 +96,14 @@ def _check_stems(files):
         used.add(os.path.basename(fn))
     return False
 
-def _check_paired(files, force_single):
+def _check_paired(files, force_single, separators):
     """check if files are fastq(.gz) and paired"""
     full_name = _check_stems(files)
     if files[0].endswith(".bam"):
         return files
     elif is_gsm(files[0]):
         return files
-    return combine_pairs(files, force_single, full_name)
+    return combine_pairs(files, force_single, full_name, separators)
 
 
 def get_cluster_view(p):
@@ -118,6 +124,9 @@ if __name__ == "__main__":
     parser.add_argument("--csv", required=True, help="csv file with metadata")
     parser.add_argument("--out", required=True, help="output dir")
     parser.add_argument("--force-single", action='store_true', default=False, help="Treat all files as single reads")
+    parser.add_argument("--separators", nargs="*",
+                        default=["R", "_", "-", "."],
+                        help="Space separated list of separators that indicates paired files.")
     parser.add_argument("-n", "--numcores", type=int,
                         default=1, help="Number of concurrent jobs to process.")
     parser.add_argument("-c", "--cores-per-job", type=int,
@@ -140,7 +149,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     out_dir = os.path.abspath(args.out)
     utils.safe_makedir(out_dir)
-    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    try:
+        system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
+    except ValueError as err:
+        print(err)
+        print("WARNING: Attempting to read bcbio_system.yaml in the current directory.")
+        system_config = "bcbio_system.yaml"
+
     with open(system_config) as in_handle:
         config = yaml.load(in_handle)
         res = {'cores': args.cores_per_job}
@@ -155,7 +170,7 @@ if __name__ == "__main__":
     dirs = {'work': os.path.abspath(os.getcwd())}
     system.write_info(dirs, parallel, config)
     sysinfo = system.machine_info()[0]
-    samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single)
+    samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single, args.separators)
     parallel = resources.calculate(parallel, [samples], sysinfo, config)
 
     with prun.start(parallel, samples, config, dirs) as run_parallel:

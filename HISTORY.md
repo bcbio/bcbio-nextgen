@@ -1,5 +1,7 @@
 ## 1.0.6 (in progress)
 
+- Allow setup the separators used to define paired fastq files during
+  bcbio_prepare_samples.py
 - Use mosdepth for callability calculations, replacing goleft depth.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
   Salmon/Rapmap/Sailfish index creation.

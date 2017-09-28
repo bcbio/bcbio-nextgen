@@ -105,7 +105,7 @@ def rstrip_extra(fname):
                 break
     return fname
 
-def combine_pairs(input_files, force_single=False, full_name=False):
+def combine_pairs(input_files, force_single=False, full_name=False, separators=None):
     """ calls files pairs if they are completely the same except
     for one has _1 and the other has _2 returns a list of tuples
     of pairs or singles.
@@ -116,6 +116,7 @@ def combine_pairs(input_files, force_single=False, full_name=False):
 
     pairs = []
     used = set([])
+    separators = separators if separators else ("R", "_", "-", ".")
     for in_file in input_files:
         matches = set([])
         if in_file in used:
@@ -159,7 +160,7 @@ def combine_pairs(input_files, force_single=False, full_name=False):
                         if (b[s[0]+1] not in ("_", "-", ".")):
                             continue
                     # if the 1/2 is not a separator or prefaced with R, skip
-                    if b[s[0]- 1] in ("R", "_", "-", "."):
+                    if b[s[0]- 1] in separators:
                         matches.update([in_file, comp_file])
                         used.update([in_file, comp_file])
             if matches:
