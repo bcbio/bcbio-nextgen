@@ -50,7 +50,7 @@ script:
   # -- Cleanup variant docker image
   - docker rm `docker ps -a -q`
   - docker rmi -f quay.io/bcbio/bcbio-vc
-  - docker rmi $(docker images | awk '/\<none\>/ { print $3 }')
+  - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
   - docker images
 
 after_failure:
