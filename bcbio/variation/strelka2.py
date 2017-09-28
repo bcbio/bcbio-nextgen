@@ -86,16 +86,75 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
     return os.path.join(tx_work_dir, "runWorkflow.py")
 
-def _fix_tumor_normal_name(in_file, paired):
-    """Replace generic TUMOR NORMAL names in VCF with sample names.
+def _tumor_normal_genotypes(ref, alt, info):
+    """Retrieve standard 0/0, 0/1, 1/1 style genotypes from INFO field.
+
+    Normal -- NT field (ref, het, hom, conflict)
+    Tumor -- SGT field
     """
-    out_file = in_file.replace(".vcf.gz", "-namefix.vcf.gz")
-    if not utils.file_exists(out_file):
+    def name_to_gt(val):
+        if val.lower() == "het":
+            return "0/1"
+        elif val.lower() == "hom":
+            return "1/1"
+        else:
+            assert val.lower() in ["ref", "conflict"], val
+            return "0/0"
+    nt_val = [x.split("=")[-1] for x in info if x.startswith("NT=")][0]
+    normal_gt = name_to_gt(nt_val)
+    sgt_val = [x.split("=")[-1] for x in info if x.startswith("SGT=")]
+    if not sgt_val:
+        tumor_gt = "0/0"
+    else:
+        gt_indices = {gt: i for i, gt in enumerate([ref] + alt)}
+        sgt_val = sgt_val[0].split("->")[-1]
+        tumor_gts = [gt_indices[x] for x in sgt_val if x in gt_indices]
+        if tumor_gts:
+            if max(tumor_gts) == 0:
+                tumor_gt = "0/0"
+            elif 0 in tumor_gts:
+                tumor_gt = "0/%s" % min([x for x in tumor_gts if x > 0])
+            else:
+                tumor_gt = "%s/%s" % (min(tumor_gts), max(tumor_gts))
+        else:
+            tumor_gt = name_to_gt(sgt_val)
+    return tumor_gt, normal_gt
+
+def _postprocess_somatic(in_file, paired):
+    """Post-process somatic calls to provide standard output.
+
+    - Converts SGT and NT into standard VCF GT fields
+    - Replace generic TUMOR NORMAL names in VCF with sample names.
+    """
+    out_file = in_file.replace(".vcf.gz", "-fixed.vcf")
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(paired.tumor_data, out_file) as tx_out_file:
-            cmd = ("zcat {in_file} | "
-                   r"sed 's/NORMAL\tTUMOR/{paired.normal_name}\t{paired.tumor_name}/' | "
-                   "bgzip -c > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Fix tumor normal names in Strelka2 output")
+            with utils.open_gzipsafe(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    added_gt = False
+                    normal_index, tumor_index = (None, None)
+                    for line in in_handle:
+                        if line.startswith("##FORMAT") and not added_gt:
+                            added_gt = True
+                            out_handle.write('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n')
+                            out_handle.write(line)
+                        elif line.startswith("#CHROM"):
+                            assert added_gt
+                            parts = line.strip().split("\t")
+                            normal_index = parts.index("NORMAL")
+                            tumor_index = parts.index("TUMOR")
+                            line = line.replace("NORMAL", paired.normal_name).replace("TUMOR", paired.tumor_name)
+                            out_handle.write(line)
+                        elif line.startswith("#"):
+                            out_handle.write(line)
+                        else:
+                            parts = line.rstrip().split("\t")
+                            tumor_gt, normal_gt = _tumor_normal_genotypes(parts[3], parts[4].split(","),
+                                                                          parts[7].split(";"))
+                            parts[8] = "GT:%s" % parts[8]
+                            parts[normal_index] = "%s:%s" % (normal_gt, parts[normal_index])
+                            parts[tumor_index] = "%s:%s" % (tumor_gt, parts[tumor_index])
+                            out_handle.write("\t".join(parts) + "\n")
     return vcfutils.bgzip_and_index(out_file, paired.tumor_data["config"])
 
 def _run_somatic(paired, ref_file, assoc_files, region, out_file):
@@ -105,7 +164,7 @@ def _run_somatic(paired, ref_file, assoc_files, region, out_file):
             workflow_file = _configure_somatic(paired, ref_file, region, out_file, tx_work_dir)
             _run_workflow(paired.tumor_data, workflow_file, tx_work_dir)
         var_dir = os.path.join(work_dir, "results", "variants")
-        vcfutils.combine_variant_files([_fix_tumor_normal_name(os.path.join(var_dir, f), paired)
+        vcfutils.combine_variant_files([_postprocess_somatic(os.path.join(var_dir, f), paired)
                                         for f in ["somatic.snvs.vcf.gz", "somatic.indels.vcf.gz"]],
                                        out_file, ref_file, paired.tumor_data["config"], region=region)
     return out_file
