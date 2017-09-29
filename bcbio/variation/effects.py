@@ -166,7 +166,7 @@ def run_vep(in_file, data):
                        "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
                        "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
                        "--protein", "--tsl", "--appris", "--af", "--max_af", "--af_1kg", "--af_esp", "--af_gnomad",
-                       "--pubmed", "--variant_class"] + config_args
+                       "--pubmed", "--variant_class", "--allele_number"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
