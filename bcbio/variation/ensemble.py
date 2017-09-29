@@ -49,7 +49,7 @@ def combine_calls(batch_id, samples, data):
         callinfo["validate"] = validate.compare_to_rm(edata)[0][0].get("validate")
     else:
         out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf".format(batch_id))
-        vcfutils.write_empty_vcf(out_vcf_file)
+        vcfutils.write_empty_vcf(out_vcf_file, samples=[dd.get_sample_name(d) for d in samples])
         callinfo = {"variantcaller": "ensemble",
                     "vrn_file": vcfutils.bgzip_and_index(out_vcf_file, data["config"]),
                     "bed_file": None}
