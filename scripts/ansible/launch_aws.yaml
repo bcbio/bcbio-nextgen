@@ -66,3 +66,13 @@
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
       ignore_errors: true
+    - name: Download docker
+      get_url:
+        url: https://get.docker.com
+        dest: /tmp/docker-install.sh
+    - name: Install docker
+      become: true
+      shell: bash /tmp/docker-install.sh
+    - name: Add to docker group
+      become: true
+      shell: usermod -aG docker ubuntu
