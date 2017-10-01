@@ -122,21 +122,21 @@ def _variant_vc(checkpoints):
         return [], []
     vc_wf = [s("get_parallel_regions", "batch-split",
                [["batch_rec"]],
-               [cwlout(["region"], "string")],
+               [cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc",
                disk={"files": 1.5}, cores=1),
              s("variantcall_batch_region", "batch-parallel",
-               [["batch_rec"], ["region"]],
+               [["batch_rec"], ["region_block"]],
                [cwlout(["vrn_file_region"], "File", [".tbi"]),
-                cwlout(["region"], "string")],
+                cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
                             "gatk", "gatk4", "gatk-framework",
                             "htslib", "picard", "platypus-variant", "pythonpy",
-                            "samtools", "vardict", "vardict-java", "varscan", "vcfanno",
-                            "vcflib", "vt", "r=3.3.2", "perl"],
-               disk={"files": 1.5}, cores=1),
+                            "samtools", "strelka", "vardict", "vardict-java",
+                            "varscan", "vcfanno", "vcflib", "vt", "r=3.3.2", "perl"],
+               disk={"files": 1.5}),
              s("concat_batch_variantcalls", "batch-merge",
-               [["batch_rec"], ["region"], ["vrn_file_region"]],
+               [["batch_rec"], ["region_block"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
                "bcbio-vc", ["bcftools", "htslib", "gatk4"],
                disk={"files": 1.5}, cores=1)]
@@ -174,7 +174,7 @@ def _variant_vc(checkpoints):
             disk={"files": 1.5}, cores=1,
             unlist=[["config", "algorithm", "variantcaller"]]),
           w("variantcall", "multi-parallel", vc_wf,
-            [["region"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
+            [["region"], ["region_block"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
     if checkpoints.get("jointvc"):
         vc += _variant_jointvc()
     vc += [s("summarize_vc", "multi-combined",
@@ -196,7 +196,7 @@ def _variant_jointvc():
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], "File", [".tbi"]), cwlout(["region"], "string")],
-            "bcbio-vc", ["gatk4", "gatk"],
+            "bcbio-vc", ["gatk4", "gatk", "gvcftools"],
             disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],

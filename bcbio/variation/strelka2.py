@@ -3,15 +3,19 @@
 import os
 import sys
 
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bedutils, ploidy, vcfutils
+from bcbio.variation import annotation, bedutils, joint, ploidy, vcfutils
 
-def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
+def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run strelka2 variant calling, either paired tumor/normal or germline calling.
+
+    region can be a single region or list of multiple regions for multicore calling.
     """
     if vcfutils.is_paired_analysis(align_bams, items):
         paired = vcfutils.get_paired_bams(align_bams, items)
@@ -23,6 +27,8 @@ def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
     return call_file
 
 def _get_region_bed(region, items, out_file):
+    """Retrieve BED file of regions to analyze, either single or multi-region.
+    """
     variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if not target:
@@ -35,9 +41,8 @@ def _get_region_bed(region, items, out_file):
                 out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
     return bedutils.merge_overlaps(target, items[0], out_dir=os.path.dirname(out_file)) + ".gz"
 
-def _get_ploidy(region, items, base_file):
+def _get_ploidy(regions, items, base_file):
     samples = [dd.get_sample_name(d) for d in items]
-    ploidies = [ploidy.get_ploidy([d], region) for d in items]
     out_file = "%s-ploidy.vcf" % utils.splitext_plus(base_file)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(items[0], out_file) as tx_outfile:
@@ -46,8 +51,10 @@ def _get_ploidy(region, items, base_file):
                 h.write('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">\n')
                 h.write('##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">\n')
                 h.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + "\t".join(samples) + "\n")
-                h.write("\t".join([region[0], str(region[1]), ".", "N", "<CNV>", ".", ".",
-                                   "END=%s" % region[2], "CN"] + [str(x) for x in ploidies]) + "\n")
+                for region in regions:
+                    ploidies = [ploidy.get_ploidy([d], region) for d in items]
+                    h.write("\t".join([region[0], str(region[1]), ".", "N", "<CNV>", ".", ".",
+                                       "END=%s" % region[2], "CN"] + [str(x) for x in ploidies]) + "\n")
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir):
@@ -55,7 +62,7 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
     cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
     cmd += ["--referenceFasta=%s" % ref_file,
             "--callRegions=%s" % _get_region_bed(region, items, out_file),
-            "--ploidy=%s" % _get_ploidy(region, items, out_file),
+            "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
             "--runDir=%s" % tx_work_dir]
     cmd += ["--bam=%s" % b for b in align_bams]
     if any(dd.get_coverage_interval(d) not in ["genome"] for d in items):
@@ -69,7 +76,8 @@ def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file):
         with file_transaction(items[0], work_dir) as tx_work_dir:
             workflow_file = _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir)
             _run_workflow(items[0], workflow_file, tx_work_dir)
-        raw_file = os.path.join(work_dir, "results", "variants", "variants.vcf.gz")
+        raw_file = os.path.join(work_dir, "results", "variants",
+                                "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
         out_file = annotation.annotate_nongatk_vcf(raw_file, align_bams, assoc_files.get("dbsnp"),
                                                    ref_file, items[0], out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])

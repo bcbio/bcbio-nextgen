@@ -17,13 +17,16 @@ import toolz as tz
 from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, region
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bamprep, gatkjoint, genotype, multi
+from bcbio.variation import bamprep, gatkjoint, genotype, multi, vcfutils
 
 SUPPORTED = {"general": ["freebayes", "platypus", "samtools"],
-             "gatk": ["gatk-haplotype"]}
+             "gatk": ["gatk-haplotype"],
+             "gvcf": ["strelka2"],
+             "sentieon": ["haplotyper"]}
 
 # ## CWL joint calling targets
 
@@ -61,7 +64,7 @@ def run_jointvc(items):
     return data
 
 def concat_batch_variantcalls_jointvc(items):
-    concat_out = genotype.concat_batch_variantcalls(items, skip_jointcheck=True)
+    concat_out = genotype.concat_batch_variantcalls(items, region_block=False, skip_jointcheck=True)
     return {"vrn_file_joint": concat_out["vrn_file"]}
 
 def finalize_jointvc(items):
@@ -152,14 +155,22 @@ def _combine_to_jointcaller(processed):
         out.append([cur])
     return out
 
+def want_gvcf(items):
+    jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), items[0])
+    want_gvcf = any("gvcf" in dd.get_tools_on(d) for d in items)
+    return jointcaller or want_gvcf
+
 def get_callers():
     return ["%s-joint" % x for x in SUPPORTED["general"]] + \
            ["%s-merge" % x for x in SUPPORTED["general"]] + \
-           ["%s-joint" % x for x in SUPPORTED["gatk"]]
+           ["%s-joint" % x for x in SUPPORTED["gatk"]] + \
+           ["%s-joint" % x for x in SUPPORTED["gvcf"]] + \
+           ["%s-joint" % x for x in SUPPORTED["sentieon"]]
 
 def square_batch_region(data, region, bam_files, vrn_files, out_file):
     """Perform squaring of a batch in a supplied region, with input BAMs
     """
+    from bcbio.variation import sentieon
     if not utils.file_exists(out_file):
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         if jointcaller in ["%s-joint" % x for x in SUPPORTED["general"]]:
@@ -168,6 +179,10 @@ def square_batch_region(data, region, bam_files, vrn_files, out_file):
             _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file, "merge")
         elif jointcaller in ["%s-joint" % x for x in SUPPORTED["gatk"]]:
             gatkjoint.run_region(data, region, vrn_files, out_file)
+        elif jointcaller in ["%s-joint" % x for x in SUPPORTED["gvcf"]]:
+            merge_gvcfs(data, region, vrn_files, out_file)
+        elif jointcaller in ["%s-joint" % x for x in SUPPORTED["sentieon"]]:
+            sentieon.run_gvcftyper(vrn_files, out_file, region, data)
         else:
             raise ValueError("Unexpected joint calling approach: %s." % jointcaller)
     if region:
@@ -217,3 +232,31 @@ def _square_batch_bcbio_variation(data, region, bam_files, vrn_files, out_file,
     cmd = " ".join(str(x) for x in cmd)
     do.run(cmd, "%s in region: %s" % (cmd, bamprep.region_to_gatk(region)), env=bcbio_env)
     return out_file
+
+def merge_gvcfs(data, region, vrn_files, out_file):
+    """Simple merging of gVCFs with gvcftools.
+
+    merge_variants does appear to work correctly, so we remove gVCF parts
+    with extract_variants and then combine the merged samples together.
+
+    Longer term we plan to replace this with
+    agg (https://github.com/Illumina/agg) or
+    GLnexus (https://github.com/dnanexus-rnd/GLnexus).
+    """
+    if not utils.file_exists(out_file):
+        region = bamprep.region_to_gatk(region)
+        vcfutils.merge_variant_files([_extract_variants_from_gvcf(f, region, out_file, data) for f in vrn_files],
+                                     out_file, dd.get_ref_file(data), data["config"], region)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+def _extract_variants_from_gvcf(in_file, region, base_out_file, data):
+    """Extract only variants from the original gVCF.
+    """
+    out_file = os.path.join(os.path.dirname(base_out_file),
+                            "%s-%s-varonly.vcf.gz" % (utils.splitext_plus(os.path.basename(in_file))[0],
+                                                      region.replace(":", "_")))
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = "bcftools view -r {region} {in_file} | extract_variants | bgzip -c > {tx_out_file}"
+            do.run(cmd.format(**locals()), "Extract variants from gVCF %s %s" % (dd.get_sample_name(data), region))
+    return vcfutils.bgzip_and_index(out_file, data["config"])

@@ -9,9 +9,10 @@ import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.cwl import cwlutils
-from bcbio.distributed.split import grouped_parallel_split_combine
+from bcbio.distributed.split import (grouped_parallel_split_combine, parallel_split_combine)
+from bcbio.distributed import multi as dmulti
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import region
+from bcbio.pipeline import region as pregion
 from bcbio.variation import (gatk, gatkfilter, germline, multi,
                              phasing, ploidy, vcfutils, vfilter)
 
@@ -133,7 +134,7 @@ def _split_by_ready_regions(ext, file_key, dir_ext_fn):
             for r, work_bams in sorted(_assign_bams_to_regions(data), key=_sort_by_size, reverse=True):
                 out_region_dir = os.path.join(out_dir, r[0])
                 out_region_file = os.path.join(out_region_dir,
-                                               "%s-%s%s" % (name, region.to_safestr(r), ext))
+                                               "%s-%s%s" % (name, pregion.to_safestr(r), ext))
                 out_parts.append((r, work_bams, out_region_file))
             return out_file, out_parts
         else:
@@ -299,6 +300,9 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             out.append(base)
         return out
 
+# TO ADD: gatk-haplotype (gatk4), "haplotyper", "tnhaplotyper", "tnscope"
+SUPPORT_MULTICORE = ["strelka2"]
+
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
                                  platypus, scalpel, sentieon, strelka2, vardict, qsnp)
@@ -350,7 +354,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
     data["vrn_file"] = out_file
     return [data]
 
-def concat_batch_variantcalls(items, skip_jointcheck=False):
+def concat_batch_variantcalls(items, region_block=True, skip_jointcheck=False):
     """CWL entry point: combine variant calls from regions into single VCF.
     """
     items = [utils.to_single_data(x) for x in items]
@@ -358,7 +362,10 @@ def concat_batch_variantcalls(items, skip_jointcheck=False):
     variantcaller = _get_batch_variantcaller(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
     utils.safe_makedir(os.path.dirname(out_file))
-    regions = [_region_to_coords(r) for r in items[0]["region"]]
+    if region_block:
+        regions = [_region_to_coords(rs[0]) for rs in items[0]["region_block"]]
+    else:
+        regions = [_region_to_coords(r) for r in items[0]["region"]]
     vrn_file_regions = items[0]["vrn_file_region"]
     out_file = vcfutils.concat_variant_files(vrn_file_regions, out_file, regions,
                                              dd.get_ref_file(items[0]), items[0]["config"])
@@ -393,22 +400,52 @@ def _get_batch_variantcaller(items):
     return variantcaller[0]
 
 def variantcall_batch_region(items):
-    """CWL entry point: variant call a batch of samples in a region.
+    """CWL entry point: variant call a batch of samples in a block of regions.
     """
     items = [utils.to_single_data(x) for x in items]
     align_bams = [dd.get_align_bam(x) for x in items]
     variantcaller = _get_batch_variantcaller(items)
-    region = list(set([x.get("region") for x in items if "region" in x]))
-    assert len(region) == 1, region
-    region = region[0]
+    region_blocks = list(set([tuple(x.get("region_block")) for x in items if "region_block" in x]))
+    assert len(region_blocks) == 1, region_blocks
+    region_block = region_blocks[0]
     caller_fn = get_variantcallers()[variantcaller]
     assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
-    region = _region_to_coords(region)
+    region = _region_to_coords(region_block[0])
     chrom, start, end = region
     region_str = "_".join(str(x) for x in region)
     batch_name = _get_batch_name(items)
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
-                            "%s-%s.vcf.gz" % (batch_name, region_str))
+                            "%s-%s-block.vcf.gz" % (batch_name, region_str))
     utils.safe_makedir(os.path.dirname(out_file))
-    call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files, region, out_file)
-    return {"vrn_file_region": call_file, "region": "%s:%s-%s" % (chrom, start, end)}
+    if variantcaller in SUPPORT_MULTICORE:
+        call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
+                              [_region_to_coords(r) for r in region_block], out_file)
+    else:
+        call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
+    return {"vrn_file_region": call_file, "region_block": region_block}
+
+def _run_variantcall_batch_multicore(items, regions, final_file):
+    """Run variant calling on a batch of items using multiple cores.
+    """
+    batch_name = _get_batch_name(items)
+    variantcaller = _get_batch_variantcaller(items)
+    work_bams = [dd.get_work_bam(d) or dd.get_align_bam(d) for d in items]
+    def split_fn(data):
+        out = []
+        for region in regions:
+            region = _region_to_coords(region)
+            chrom, start, end = region
+            region_str = "_".join(str(x) for x in region)
+            out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
+                                    "%s-%s.vcf.gz" % (batch_name, region_str))
+            out.append((region, work_bams, out_file))
+        return final_file, out
+    parallel = {"type": "local", "num_jobs": dd.get_num_cores(items[0]), "cores_per_job": 1}
+    run_parallel = dmulti.runner(parallel, items[0]["config"])
+    to_run = copy.deepcopy(items[0])
+    to_run["sam_ref"] = dd.get_ref_file(to_run)
+    to_run["group_orig"] = items
+    parallel_split_combine([[to_run]], split_fn, run_parallel,
+                           "variantcall_sample", "concat_variant_files",
+                           "vrn_file", ["region", "sam_ref", "config"])
+    return final_file

@@ -43,6 +43,10 @@ def _split_by_regions(dirname, out_ext, in_key):
         # XXX Need to move retrieval of regions into preparation to avoid
         # need for files when running in non-shared filesystems
         regions = _get_parallel_regions(data)
+        def _sort_by_size(region):
+            _, start, end = region
+            return end - start
+        regions.sort(key=_sort_by_size, reverse=True)
         bam_file = data[in_key]
         if bam_file is None:
             return None, []
@@ -71,10 +75,6 @@ def _get_parallel_regions(data):
         regions = [(xs[0], int(xs[1]), int(xs[2])) for xs in
                     (l.rstrip().split("\t") for l in in_handle) if (len(xs) >= 3 and
                                                                     not xs[0].startswith(("track", "browser",)))]
-    def _sort_by_size(region):
-        _, start, end = region
-        return end - start
-    regions.sort(key=_sort_by_size, reverse=True)
     return regions
 
 def get_parallel_regions(batch):
@@ -83,8 +83,20 @@ def get_parallel_regions(batch):
     samples = [utils.to_single_data(d) for d in batch]
     regions = _get_parallel_regions(samples[0])
     return [{"region": "%s:%s-%s" % (c, s, e)} for c, s, e in regions]
-    # testing use
-    # return [{"region": "chrM:0-16571"}]
+
+def get_parallel_regions_block(batch):
+    """CWL target to retrieve block group of callable regions for parallelization.
+
+    Uses blocking to handle multicore runs.
+    """
+    samples = [utils.to_single_data(d) for d in batch]
+    regions = _get_parallel_regions(samples[0])
+    out = []
+    # Currently don't have core information here so aim for about 10 items per partition
+    n = 10
+    for region_block in tz.partition_all(n, regions):
+        out.append({"region_block": ["%s:%s-%s" % (c, s, e) for c, s, e in region_block]})
+    return out
 
 def _add_combine_info(output, combine_map, file_key):
     """Do not actually combine, but add details for later combining work.

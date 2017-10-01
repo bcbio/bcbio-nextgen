@@ -10,6 +10,8 @@
 - Templating: avoid automatically setting flowcell date to maintain consistency
   between runs.
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
+- CWL: run variantcalling with multiple cores, reducing total jobs and enabling
+  mulicore supporting callers.
 - CWL: support structural variant calling as part of variant pipelines.
 - Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) 
   as a fusion caller when fusion mode is enabled.

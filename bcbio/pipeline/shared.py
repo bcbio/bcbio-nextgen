@@ -125,9 +125,10 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
                     out_handle.write(line)
 
 
-def _subset_bed_by_region(in_file, out_file, region, do_merge=True):
+def _subset_bed_by_region(in_file, out_file, regions, do_merge=True):
     orig_bed = pybedtools.BedTool(in_file)
-    region_bed = pybedtools.BedTool("\t".join(str(x) for x in region) + "\n", from_string=True)
+    region_bed = pybedtools.BedTool("\n".join(["%s\t%s\t%s" % (c, s, e) for c, s, e in regions]) + "\n",
+                                    from_string=True)
     if do_merge:
         orig_bed.intersect(region_bed, nonamecheck=True).filter(lambda x: len(x) > 1).merge().saveas(out_file)
     else:
@@ -210,6 +211,19 @@ def subtract_low_complexity(f):
         return region_bed
     return wrapper
 
+def to_multiregion(region):
+    """Convert a single region or multiple region specification into multiregion list.
+
+    If a single region (chrom, start, end), returns [(chrom, start, end)]
+    otherwise returns multiregion.
+    """
+    assert isinstance(region, (list, tuple)), region
+    if isinstance(region[0], (list, tuple)):
+        return region
+    else:
+        assert len(region) == 3
+        return [tuple(region)]
+
 @subtract_low_complexity
 def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True, data=None):
     """Return BED file subset by a specified chromosome region.
@@ -231,7 +245,8 @@ def subset_variant_regions(variant_regions, region, out_file, items=None, do_mer
             config = items[0] if items else data
             with file_transaction(config, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
-                    _subset_bed_by_region(variant_regions, tx_subset_file, region, do_merge = do_merge)
+                    _subset_bed_by_region(variant_regions, tx_subset_file, to_multiregion(region),
+                                          do_merge=do_merge)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
