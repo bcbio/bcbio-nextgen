@@ -42,7 +42,7 @@ def kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data):
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     kallisto = config_utils.get_program("kallisto", dd.get_config(data))
-    index = kallisto_index(gtf_file, fasta_file, data, kallisto_dir)
+    index = kallisto_index(gtf_file, fasta_file, data, os.path.dirname(kallisto_dir))
     fusion_flag = "--fusion" if dd.get_fusion_mode(data) else ""
     single_flag = "--single" if not fq2 else ""
     fraglength_flag = "--fragment-length=200" if not fq2 else ""
@@ -107,12 +107,12 @@ def kallisto_index(gtf_file, ref_file, data, out_dir):
     if dd.get_disambiguate(data):
         out_stem = "-".join([out_stem] + dd.get_disambiguate(data))
     index_dir = os.path.join(out_dir, out_stem)
+    out_file = os.path.join(index_dir, out_stem + ".idx")
     kallisto = config_utils.get_program("kallisto", dd.get_config(data))
     if dd.get_transcriptome_fasta(data):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data)
-    out_file = os.path.join(index_dir, out_stem + ".idx")
     if file_exists(out_file):
         return out_file
     with file_transaction(out_file) as tx_out_file:
@@ -174,3 +174,14 @@ def get_kallisto_fusions(data):
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
     return os.path.join(kallisto_dir, "fusion.txt")
+
+def run_kallisto_index(*samples):
+    for data in dd.sample_data_iterator(samples):
+        work_dir = dd.get_work_dir(data)
+        kallisto_dir = os.path.join(work_dir, "kallisto")
+        gtf_file = dd.get_gtf_file(data)
+        assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
+        fasta_file = dd.get_ref_file(data)
+        assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
+        kallisto_index(gtf_file, fasta_file, data, kallisto_dir)
+    return samples

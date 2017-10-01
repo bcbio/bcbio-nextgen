@@ -104,6 +104,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     if "stringtie" in dd.get_expression_caller(data):
         samples = run_parallel("run_stringtie_expression", samples)
     if "kallisto" in dd.get_expression_caller(data):
+        samples = run_parallel("run_kallisto_index", [samples])
         samples = run_parallel("run_kallisto_rnaseq", samples)
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish_index", [samples])
