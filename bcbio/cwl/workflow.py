@@ -7,7 +7,7 @@ import toolz as tz
 
 from bcbio.pipeline import alignment
 
-ALWAYS_AVAILABLE = ["description"]
+ALWAYS_AVAILABLE = ["description", "resources"]
 
 def generate(variables, steps, final_outputs):
     """Generate all of the components of a CWL workflow from input steps.

@@ -491,6 +491,9 @@ def _to_cwldata(key, val):
                 out.append(("%s__indexes" % key, _item_to_cwldata(val["base"])))
             else:
                 out.append((key, _to_cwlfile_with_indexes(val)))
+        # Dump shared nested keys like resources as a JSON string
+        elif key in workflow.ALWAYS_AVAILABLE:
+            out.append((key, _item_to_cwldata(json.dumps(val))))
         else:
             remain_val = {}
             for nkey, nval in val.items():

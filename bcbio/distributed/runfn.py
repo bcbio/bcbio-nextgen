@@ -150,12 +150,21 @@ def _get_record_attrs(out_keys):
     return None, None
 
 def _add_resources(data, runtime):
+    """Merge input resources with current CWL runtime parameters.
+    """
     if "config" in data:
+        # Convert input resources, which may be a JSON string
+        resources = data.get("resources", {}) or {}
+        if isinstance(resources, basestring) and resources.startswith(("{", "[")):
+            resources = json.loads(resources)
+        assert isinstance(resources, dict), resources
+        data["config"]["resources"] = resources
+        # Add in memory and core usage from CWL
         memory = int(float(runtime["ram"]) / float(runtime["cores"]))
-        data["config"]["resources"] = {"default": {"cores": int(runtime["cores"]),
-                                                   "memory": "%sM" % memory,
-                                                   "jvm_opts": ["-Xms%sm" % min(1000, memory // 2),
-                                                                "-Xmx%sm" % memory]}}
+        data["config"]["resources"].update({"default": {"cores": int(runtime["cores"]),
+                                                        "memory": "%sM" % memory,
+                                                        "jvm_opts": ["-Xms%sm" % min(1000, memory // 2),
+                                                                     "-Xmx%sm" % memory]}})
         data["config"]["algorithm"]["num_cores"] = int(runtime["cores"])
     return data
 
