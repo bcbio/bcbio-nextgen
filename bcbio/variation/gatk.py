@@ -33,16 +33,23 @@ def standard_cl_params(items):
             out += ["-drf", "DuplicateRead"]
     return out
 
-def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file):
+def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file, num_cores=1):
     """Shared preparation work for GATK variant calling.
     """
     data = items[0]
     config = data["config"]
-    broad_runner = broad.runner_from_path("picard", config)
-    broad_runner.run_fn("picard_index_ref", ref_file)
+    broad_runner = broad.runner_from_config(config)
     for x in align_bams:
         bam.index(x, config)
-    params = ["-R", ref_file]
+    if num_cores > 1 and broad_runner.gatk_type() == "gatk4":
+        # dbSNP annotation not currently supported with Multiple cores
+        dbsnp = None
+        # GATK4 spark runs use 2bit reference index
+        params = ["--reference", dd.get_ref_twobit(items[0])]
+    else:
+        picard_runner = broad.runner_from_path("picard", config)
+        picard_runner.run_fn("picard_index_ref", ref_file)
+        params = ["-R", ref_file]
     coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
     if coverage_depth_min and coverage_depth_min < 4:
         confidence = "4.0"
@@ -58,7 +65,6 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, dbsnp, region, out_file)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     params += standard_cl_params(items)
-    broad_runner = broad.runner_from_config(config)
     return broad_runner, params
 
 def unified_genotyper(align_bams, items, ref_file, assoc_files,
@@ -103,16 +109,19 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
+        num_cores = dd.get_num_cores(items[0])
         broad_runner, params = \
-            _shared_gatk_call_prep(align_bams, items,
-                                   ref_file, assoc_files.get("dbsnp"),
-                                   region, out_file)
+            _shared_gatk_call_prep(align_bams, items, ref_file, assoc_files.get("dbsnp"),
+                                   region, out_file, num_cores)
         gatk_type = broad_runner.gatk_type()
         assert gatk_type in ["restricted", "gatk4"], \
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
+        if num_cores > 1 and gatk_type == "gatk4":
+            params += ["-T", "HaplotypeCallerSpark", "--sparkMaster", "local[%s]" % num_cores]
+        else:
+            params += ["-T", "HaplotypeCaller"]
         with file_transaction(items[0], out_file) as tx_out_file:
-            params += ["-T", "HaplotypeCaller",
-                       "--annotation", "ClippingRankSumTest",
+            params += ["--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             if gatk_type == "gatk4":
                 params += ["--output", tx_out_file]

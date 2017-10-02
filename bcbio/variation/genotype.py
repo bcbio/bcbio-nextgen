@@ -300,8 +300,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             out.append(base)
         return out
 
-# TO ADD: gatk-haplotype (gatk4), "haplotyper", "tnhaplotyper", "tnscope"
-SUPPORT_MULTICORE = ["strelka2"]
+SUPPORT_MULTICORE = ["strelka2", "gatk-haplotype", "haplotyper", "tnhaplotyper", "tnscope"]
 
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
