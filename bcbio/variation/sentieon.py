@@ -13,7 +13,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bamprep, bedutils, vcfutils
+from bcbio.variation import bamprep, bedutils, joint, vcfutils
 
 def license_export(data):
     """Retrieve export statement for sentieon license server.
@@ -35,6 +35,8 @@ def license_export(data):
 
 def _get_interval(variant_regions, region, out_file, items):
     """Retrieve interval to run analysis in. Handles no targets, BED and regions
+
+    region can be a single region or list of multiple regions for multicore calling.
     """
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
@@ -59,12 +61,13 @@ def run_tnscope(align_bams, items, ref_file, assoc_files,
             assert paired and paired.normal_bam, "Require normal BAM for Sentieon TNscope"
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
             license = license_export(items[0])
-            cmd = ("{license}sentieon driver -t 1 -r {ref_file} "
+            cores = dd.get_num_cores(items[0])
+            cmd = ("{license}sentieon driver -t {cores} -r {ref_file} "
                    "-i {paired.tumor_bam} -i {paired.normal_bam} {interval} "
                    "--algo TNscope "
                    "--tumor_sample {paired.tumor_name} --normal_sample {paired.normal_name} "
                    "{dbsnp} {tx_out_file}")
-            do.run(cmd.format(**locals()), "Sentieon TNhaplotyper")
+            do.run(cmd.format(**locals()), "Sentieon TNscope")
     return out_file
 
 def run_tnhaplotyper(align_bams, items, ref_file, assoc_files,
@@ -83,7 +86,8 @@ def run_tnhaplotyper(align_bams, items, ref_file, assoc_files,
             cosmic = "--cosmic %s" % (assoc_files.get("cosmic")) if "cosmic" in assoc_files else ""
             license = license_export(items[0])
             tx_orig_file = "%s-orig%s" % utils.splitext_plus(tx_out_file)
-            cmd = ("{license}sentieon driver -t 1 -r {ref_file} "
+            cores = dd.get_num_cores(items[0])
+            cmd = ("{license}sentieon driver -t {cores} -r {ref_file} "
                    "-i {paired.tumor_bam} -i {paired.normal_bam} {interval} "
                    "--algo TNhaplotyper "
                    "--tumor_sample {paired.tumor_name} --normal_sample {paired.normal_name} "
@@ -113,9 +117,25 @@ def run_haplotyper(align_bams, items, ref_file, assoc_files,
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""
             bams = " ".join(["-i %s" % x for x in align_bams])
             license = license_export(items[0])
-            cmd = ("{license}sentieon driver -t 1 -r {ref_file} "
-                   "{bams} {interval} --algo Haplotyper {dbsnp} {tx_out_file}")
-            do.run(cmd.format(**locals()), "Sentieon TNhaplotyper")
+            cores = dd.get_num_cores(items[0])
+            out_mode = "--emit_mode gvcf" if joint.want_gvcf(items) else ""
+            cmd = ("{license}sentieon driver -t {cores} -r {ref_file} "
+                   "{bams} {interval} --algo Haplotyper {out_mode} {dbsnp} {tx_out_file}")
+            do.run(cmd.format(**locals()), "Sentieon Haplotyper")
+    return out_file
+
+def run_gvcftyper(vrn_files, out_file, region, data):
+    """Produce joint called variants from input gVCF files.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            license = license_export(data)
+            ref_file = dd.get_ref_file(data)
+            input_files = " ".join(vrn_files)
+            region = bamprep.region_to_gatk(region)
+            cmd = ("{license}sentieon driver -r {ref_file} --interval {region} "
+                   "--algo GVCFtyper {tx_out_file} {input_files}")
+            do.run(cmd.format(**locals()), "Sentieon GVCFtyper")
     return out_file
 
 def bqsr_table(data):
