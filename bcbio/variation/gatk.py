@@ -116,11 +116,12 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         gatk_type = broad_runner.gatk_type()
         assert gatk_type in ["restricted", "gatk4"], \
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
-        if num_cores > 1 and gatk_type == "gatk4":
-            params += ["-T", "HaplotypeCallerSpark", "--sparkMaster", "local[%s]" % num_cores]
-        else:
-            params += ["-T", "HaplotypeCaller"]
         with file_transaction(items[0], out_file) as tx_out_file:
+            if num_cores > 1 and gatk_type == "gatk4":
+                params += ["-T", "HaplotypeCallerSpark", "--sparkMaster", "local[%s]" % num_cores,
+                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+            else:
+                params += ["-T", "HaplotypeCaller"]
             params += ["--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             if gatk_type == "gatk4":
@@ -154,7 +155,9 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("gatk-haplotype")
-            broad_runner.run_gatk(params)
+            memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
+            broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
+                                  parallel_gc=(num_cores > 1 and gatk_type == "gatk4"))
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _supports_avx():

@@ -88,24 +88,26 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 cores = dd.get_num_cores(data)
                 if gatk_type == "gatk4":
                     params += ["-T", "BaseRecalibratorSpark",
-                                "--sparkMaster", "local[%s]" % cores,
-                                "--output", tx_out_file, "--reference", dd.get_ref_twobit(data)]
+                               "--sparkMaster", "local[%s]" % cores,
+                               "--output", tx_out_file, "--reference", dd.get_ref_twobit(data),
+                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
                 else:
                     params += ["-T", "BaseRecalibrator",
                                 "-o", tx_out_file, "-R", ref_file]
                     downsample_pct = bam.get_downsample_pct(dup_align_bam, target_counts, data)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
-                                "--downsampling_type", "ALL_READS"]
+                                   "--downsampling_type", "ALL_READS"]
                     if platform.lower() == "solid":
                         params += ["--solid_nocall_strategy", "PURGE_READ",
-                                "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
+                                   "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
                 if dbsnp_file:
                     params += ["--knownSites", dbsnp_file]
                 if intervals:
                     params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-                broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+                broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
+                                      parallel_gc=(cores > 1 and gatk_type == "gatk4"))
         else:
             with open(out_file, "w") as out_handle:
                 out_handle.write("# No aligned reads")
@@ -125,11 +127,12 @@ def _gatk_apply_bqsr(data):
             if gatk_type == "gatk4":
                 params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % cores,
                           "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"],
-                          "--use_jdk_deflater"]
+                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+            broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
+                                  parallel_gc=(cores > 1 and gatk_type == "gatk4"))
     bam.index(out_file, data["config"])
     return out_file

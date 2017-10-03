@@ -19,7 +19,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
 
-def get_default_jvm_opts(tmp_dir=None):
+def get_default_jvm_opts(tmp_dir=None, parallel_gc=False):
     """Retrieve default JVM tuning options
 
     Avoids issues with multiple spun up Java processes running into out of memory errors.
@@ -28,13 +28,15 @@ def get_default_jvm_opts(tmp_dir=None):
     https://github.com/chapmanb/bcbio-nextgen/issues/532#issuecomment-50989027
     https://wiki.csiro.au/pages/viewpage.action?pageId=545034311
     http://stackoverflow.com/questions/9738911/javas-serial-garbage-collector-performing-far-better-than-other-garbage-collect
+    However, serial GC causes issues with Spark local runs so we use parallel for those cases:
+    https://github.com/broadinstitute/gatk/issues/3605#issuecomment-332370070
     """
-    opts = ["-XX:+UseSerialGC"]
+    opts = ["-XX:+UseSerialGC"] if not parallel_gc else []
     if tmp_dir:
         opts.append("-Djava.io.tmpdir=%s" % tmp_dir)
     return opts
 
-def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True):
+def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
     """Retrieve GATK memory specifications, moving down a list of potential specifications.
     """
     if include_gatk:
@@ -50,15 +52,15 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
             break
     if memscale:
         jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust": memscale}})
-    jvm_opts += get_default_jvm_opts(tmp_dir)
+    jvm_opts += get_default_jvm_opts(tmp_dir, parallel_gc=parallel_gc)
     return jvm_opts + opts
 
 def get_gatk_framework_opts(config, tmp_dir=None, memscale=None, include_gatk=True):
     return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir, memscale, include_gatk=include_gatk)
 
-def get_gatk_opts(config, tmp_dir=None, memscale=None, include_gatk=True):
+def get_gatk_opts(config, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
     return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir, memscale,
-                          include_gatk=include_gatk)
+                          include_gatk=include_gatk, parallel_gc=parallel_gc)
 
 def get_gatk_vqsr_opts(config, tmp_dir=None, memscale=None):
     return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir, memscale)
@@ -245,7 +247,7 @@ class BroadRunner:
             jar = self._get_jar("GenomeAnalysisTK", ["GenomeAnalysisTKLite"], allow_missing=True)
             return jar is not None
 
-    def cl_gatk(self, params, tmp_dir, memscale=None):
+    def cl_gatk(self, params, tmp_dir, memscale=None, parallel_gc=False):
         support_nt = set()
         support_nct = set(["BaseRecalibrator"])
         if self._has_gatk_conda_wrapper():
@@ -281,13 +283,14 @@ class BroadRunner:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
         if memscale:
-            jvm_opts = get_gatk_opts(config, tmp_dir=tmp_dir, memscale=memscale, include_gatk=False)
+            jvm_opts = get_gatk_opts(config, tmp_dir=tmp_dir, memscale=memscale, include_gatk=False,
+                                     parallel_gc=parallel_gc)
         else:
             # Decrease memory slightly from configuration to avoid memory allocation errors
             jvm_opts = config_utils.adjust_opts(self._jvm_opts,
                                                 {"algorithm": {"memory_adjust":
                                                                {"magnitude": 1.1, "direction": "decrease"}}})
-            jvm_opts += get_default_jvm_opts(tmp_dir)
+            jvm_opts += get_default_jvm_opts(tmp_dir, parallel_gc=parallel_gc)
         if "keyfile" in self._gatk_resources:
             params = ["-et", "NO_ET", "-K", self._gatk_resources["keyfile"]] + params
         if gatk_jar:
@@ -313,11 +316,11 @@ class BroadRunner:
                ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
-                 data=None, region=None, memscale=None):
+                 data=None, region=None, memscale=None, parallel_gc=False):
         with tx_tmpdir(self._config) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
-            cl = self.cl_gatk(params, tmp_dir, memscale=memscale)
+            cl = self.cl_gatk(params, tmp_dir, memscale=memscale, parallel_gc=parallel_gc)
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
