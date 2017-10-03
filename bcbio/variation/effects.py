@@ -153,7 +153,7 @@ def run_vep(in_file, data):
                         config_args += ["--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
-                    config_args += ["--pick"]
+                    config_args += ["--pick_allele"]
                 if ensembl_name.endswith("_merged"):
                     config_args += ["--merged"]
                     ensembl_name = ensembl_name.replace("_merged", "")

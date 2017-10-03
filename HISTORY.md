@@ -1,20 +1,20 @@
 ## 1.0.6 (in progress)
 
-- Allow setup the separators used to define paired fastq files during
-  bcbio_prepare_samples.py
 - Use mosdepth for callability calculations, replacing goleft depth.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
   Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
 - RNA-seq variant calling: support GATK4
-- Templating: avoid automatically setting flowcell date to maintain consistency
-  between runs.
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: run variantcalling with multiple cores, reducing total jobs and enabling
   mulicore supporting callers.
 - CWL: support structural variant calling as part of variant pipelines.
-- Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322) 
+- Add pizzly (http://www.biorxiv.org/content/early/2017/07/20/166322)
   as a fusion caller when fusion mode is enabled.
+- VEP: output an effect call per allele for multiallelic positions.
+- Define separators for paired fastq files during bcbio_prepare_samples.py
+- Templating: avoid automatically setting flowcell date to maintain consistency
+  between runs.
 
 ## 1.0.5 (11 Sept 2017)
 
