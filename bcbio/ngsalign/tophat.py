@@ -34,6 +34,7 @@ def _set_transcriptome_option(options, data, ref_file):
     transcriptome_index = get_in(data, ("genome_resources", "rnaseq",
                                         "transcriptome_index", "tophat"))
     fusion_mode = get_in(data, ("config", "algorithm", "fusion_mode"), False)
+    fusion_mode = fusion_mode or dd.get_fusion_caller(data)
     if transcriptome_index and file_exists(transcriptome_index) and not fusion_mode:
         options["transcriptome-index"] = os.path.splitext(transcriptome_index)[0]
         return options

@@ -127,6 +127,7 @@ LOOKUPS = {
                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": []},
+    "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},
     "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},

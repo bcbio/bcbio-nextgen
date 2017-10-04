@@ -43,7 +43,7 @@ def kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data):
     strandedness = dd.get_strandedness(data).lower()
     kallisto = config_utils.get_program("kallisto", dd.get_config(data))
     index = kallisto_index(gtf_file, fasta_file, data, os.path.dirname(kallisto_dir))
-    fusion_flag = "--fusion" if dd.get_fusion_mode(data) else ""
+    fusion_flag = "--fusion" if dd.get_fusion_mode(data) or dd.get_fusion_caller(data) else ""
     single_flag = "--single" if not fq2 else ""
     fraglength_flag = "--fragment-length=200" if not fq2 else ""
     sd_flag = "--sd=25" if not fq2 else ""

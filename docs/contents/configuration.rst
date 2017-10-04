@@ -693,7 +693,10 @@ Structural variant calling
 - ``fusion_mode`` Enable fusion detection in RNA-seq when using STAR (recommended)
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
-  ``disambiguate`` enables disambiguation of ``STAR`` output [false, true].
+  ``disambiguate`` enables disambiguation of ``STAR`` output [false, true]. This
+  option is deprecated in favor of ``fusion_caller``.
+- ``fusion_caller`` Enable fusion detection for RNA-seq runs. Supports ``oncofuse``
+  for STAR/tophat runs and ``pizzly`` for all runs.
 
 HLA typing
 ==========
@@ -819,6 +822,8 @@ RNA sequencing
 - ``expression_caller`` A list of optional expression callers to turn on.
   Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq', 'kallisto']. Salmon
   and count based expression estimation are run by default.
+- ``fusion_caller`` A list of optional fusion callers to turn on. Supports
+  [oncofuse, pizzly].
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 
