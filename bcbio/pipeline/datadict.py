@@ -20,6 +20,8 @@ LOOKUPS = {
                  "checker": file_exists},
     "transcriptome_fasta": {"keys": ["config", "algorithm", "transcriptome_fasta"],
                             "default": None},
+    "transcriptome_gtf": {"keys": ["config", "algorithm", "transcriptome_gtf"],
+                            "default": None},
     "singlecell_quantifier": {"keys": ["config", "algorithm",
                                        "singlecell_quantifier"],
                             "default": "rapmap"},

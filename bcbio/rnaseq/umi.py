@@ -19,6 +19,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.bam.fastq import open_fastq
 from bcbio.log import logger
+from bcbio.rnaseq import gtf
 
 class SparseMatrix(object):
 
@@ -228,8 +229,19 @@ def tagcount(data):
     cutoff = dd.get_minimum_barcode_depth(data)
     cb_histogram = os.path.join(sample_dir, "cb-histogram.txt")
     positional = "--positional" if dd.get_positional_umi(data, False) else ""
+    gtf_file  = dd.get_transcriptome_gtf(data, None)
+
+    if gtf_file:
+        gene_map_file = os.path.join(dd.get_work_dir(data), "annotation", 
+                                     os.path.splitext(gtf_file)[0] + "-tx2gene.tsv")
+        gene_map_file = gtf.tx2genefile(gtf_file, gene_map_file, tsv=True)
+        gene_map_flag = " --genemap {0} ".format(gene_map_file)
+    else:
+        gene_map_flag = ""
+    
     message = "Counting alignments of transcripts in %s." % bam
     cmd = ("{umis} tagcount {positional} --cb_cutoff {cutoff} --sparse "
+           "{gene_map_flag}"
            "--cb_histogram {cb_histogram} {bam} {tx_out_file}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
     with file_transaction(out_files) as tx_out_files:

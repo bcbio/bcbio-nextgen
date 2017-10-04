@@ -843,6 +843,9 @@ Single-cell RNA sequencing
   barcodes passing the ``minimum_barcode_depth`` filter are kept.
 - ``transcriptome_fasta`` An optional FASTA file of transcriptome sequences to
   quantitate rather than the bcbio installed version.
+- ``transcriptome_gtf`` An optional GTF file of the transcriptome to quantitate,
+  rather than the bcbio installed version. This is recommended for single-cell
+  RNA-sequencing experiments.
 - ``singlecell_quantifier`` Quantifier to use for single-cell RNA-sequencing.
   Supports ``rapmap`` or ``kallisto``.
 - ``cellular_barcode_correction`` Number of errors to correct in identified

@@ -4,7 +4,7 @@ import os
 import random
 import gzip
 from bcbio import utils
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
@@ -272,32 +272,50 @@ def _biotype_lookup_fn(gtf):
     else:
         return None
 
-def tx2genefile(gtf, out_file=None, data=None):
+def tx2genedict(gtf):
+    """
+    produce a tx2gene dictionary from a GTF file
+    """
+    d = {}
+    with open_gzipsafe(gtf) as in_handle:
+        for line in in_handle:
+            if "gene_id" not in line or "transcript_id" not in line:
+                continue
+            geneid = line.split("gene_id")[1].split(" ")[1]
+            geneid = _strip_non_alphanumeric(geneid)
+            txid = line.split("transcript_id")[1].split(" ")[1]
+            txid = _strip_non_alphanumeric(txid)
+            if "transcript_version" in line:
+                txversion = line.split("transcript_version")[1].split(" ")[1]
+                txversion = _strip_non_alphanumeric(txversion)
+                txid  += "." + txversion
+            d[txid] = geneid
+    return d
+
+def _strip_non_alphanumeric(string):
+    return string.replace('"', '').replace(';', '')
+
+def tx2genefile(gtf, out_file=None, data=None, tsv=True):
     """
     write out a file of transcript->gene mappings.
     use the installed tx2gene.csv if it exists, else write a new one out
     """
-    installed_tx2gene = os.path.join(os.path.dirname(gtf), "tx2gene.csv")
+    if tsv:
+        extension = ".tsv"
+        sep = "\t"
+    else:
+        extension = ".csv"
+        sep = ","
+    installed_tx2gene = os.path.join(os.path.dirname(gtf), "tx2gene" + extension)
     if file_exists(installed_tx2gene):
         return installed_tx2gene
     if file_exists(out_file):
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
-            for k, v in transcript_to_gene(gtf).items():
-                out_handle.write(",".join([k, v]) + "\n")
+            for k, v in tx2genedict(gtf).items():
+                out_handle.write(sep.join([k, v]) + "\n")
     return out_file
-
-def transcript_to_gene(gtf):
-    """
-    return a dictionary keyed by transcript_id of the associated gene_id
-    """
-    gene_lookup = {}
-    for feature in complete_features(get_gtf_db(gtf)):
-        gene_id = feature.attributes.get('gene_id', [None])[0]
-        transcript_id = feature.attributes.get('transcript_id', [None])[0]
-        gene_lookup[transcript_id] = gene_id
-    return gene_lookup
 
 def is_qualimap_compatible(gtf):
     """

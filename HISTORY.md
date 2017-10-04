@@ -17,6 +17,9 @@
 - Define separators for paired fastq files during bcbio_prepare_samples.py
 - Templating: avoid automatically setting flowcell date to maintain consistency
   between runs.
+- RNA-seq single-cell/DGE: add `transcriptome_gtf` as an option which will
+  collapse single-cell/DGE counts down to the gene level. This is recommended
+  for single-cell and DGE experiments.
 
 ## 1.0.5 (11 Sept 2017)
 
