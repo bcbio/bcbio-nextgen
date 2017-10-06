@@ -103,9 +103,9 @@ def quantitate_expression_parallel(samples, run_parallel):
         samples = run_parallel("run_cufflinks", samples)
     if "stringtie" in dd.get_expression_caller(data):
         samples = run_parallel("run_stringtie_expression", samples)
-    if "kallisto" in (dd.get_expression_caller(data) or
-                      dd.get_fusion_mode(data) or
-                      "pizzly" in dd.get_fusion_caller(data)):
+    if ("kallisto" in dd.get_expression_caller(data) or
+        dd.get_fusion_mode(data) or
+        "pizzly" in dd.get_fusion_caller(data, [])):
         samples = run_parallel("run_kallisto_index", [samples])
         samples = run_parallel("run_kallisto_rnaseq", samples)
     if "sailfish" in dd.get_expression_caller(data):
@@ -126,11 +126,11 @@ def detect_fusions(data):
                        "callers with ``fusion_caller``. It will run pizzly and "
                        "oncofuse for now, but will eventually have support "
                        "dropped.")
-    if "oncofuse" in dd.get_fusion_caller(data):
+    if "oncofuse" in dd.get_fusion_caller(data, []):
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
-    if "pizzly" in dd.get_fusion_caller(data):
+    if "pizzly" in dd.get_fusion_caller(data, []):
         pizzly_dir = pizzly.run_pizzly(data)
         if pizzly_dir:
             data = dd.set_pizzly_dir(data, pizzly_dir)
