@@ -32,14 +32,15 @@ def run(data):
         hla_dir = os.path.dirname(os.path.commonprefix([xs[1] for xs in hlas]))
         out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
         hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
-        out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
-        if len(out_file) > 0:
-            out_file = out_file[0]
-        else:
-            out_file = _call_hla(hla_fq, out_dir, data)
-        out_file = _prepare_calls(out_file, hla_dir, data)
-        data["hla"].update({"call_file": out_file,
-                            "hlacaller": "optitype"})
+        if utils.file_exists(hla_fq):
+            out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
+            if len(out_file) > 0:
+                out_file = out_file[0]
+            else:
+                out_file = _call_hla(hla_fq, out_dir, data)
+            out_file = _prepare_calls(out_file, hla_dir, data)
+            data["hla"].update({"call_file": out_file,
+                                "hlacaller": "optitype"})
     return data
 
 def combine_hla_fqs(hlas, out_file, data):
@@ -49,8 +50,9 @@ def combine_hla_fqs(hlas, out_file, data):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 for hla_type, hla_fq in hlas:
-                    with open(hla_fq) as in_handle:
-                        shutil.copyfileobj(in_handle, out_handle)
+                    if utils.file_exists(hla_fq):
+                        with open(hla_fq) as in_handle:
+                            shutil.copyfileobj(in_handle, out_handle)
     return out_file
 
 def _prepare_calls(result_file, hla_dir, data):
