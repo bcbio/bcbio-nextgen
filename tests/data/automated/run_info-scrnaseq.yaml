@@ -7,7 +7,7 @@ details:
       singlecell_quantifier: rapmap
       minimum_barcode_depth: 0
       sample_barcodes: ../data/Harvard-inDrop/sample-index.txt
-#      cellular_barcodes: [../data/Harvard-inDrop/harvard-indrop-v3-b1.txt, ../data/Harvard-inDrop/harvard-indrop-v3-b2.txt]
+      transcriptome_gtf: ../data/genomes/mm9/rnaseq/ref-transcripts.gtf
     description: Test1
     files:
       - ../data/Harvard-inDrop/klein-v3_R1.fq.gz
@@ -21,7 +21,7 @@ details:
       singlecell_quantifier: rapmap
       minimum_barcode_depth: 0
       sample_barcodes: ../data/Harvard-inDrop/sample-index.txt
-#      cellular_barcodes: [../data/Harvard-inDrop/harvard-indrop-v3-b1.txt, ../data/Harvard-inDrop/harvard-indrop-v3-b2.txt]
+      transcriptome_gtf: ../data/genomes/mm9/rnaseq/ref-transcripts.gtf
     description: Test2
     files:
       - ../data/Harvard-inDrop/klein-v3_R1.fq.gz
