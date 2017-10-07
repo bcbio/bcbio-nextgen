@@ -167,13 +167,16 @@ def umi_consensus(data):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
             # Improve speeds by avoiding compression read/write bottlenecks
             io_opts = "--async-io=true --compression=0"
-            group_opts, cons_opts = _get_fgbio_options(data, umi_method)
+            group_opts, cons_opts, filter_opts = _get_fgbio_options(data, umi_method)
             cons_method = "CallDuplexConsensusReads" if umi_method == "paired" else "CallMolecularConsensusReads"
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
+            ref_file = dd.get_ref_file(data)
             cmd = ("unset JAVA_HOME && "
                    "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -t {umi_tag} -s {umi_method} "
                    "-i {align_bam} | "
-                   "fgbio {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=unsorted "
+                   "fgbio {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=:none: "
+                   "-i /dev/stdin -o /dev/stdout | "
+                   "fgbio {jvm_opts} {io_opts} FilterConsensusReads {filter_opts} -r {ref_file} "
                    "-i /dev/stdin -o /dev/stdout | "
                    "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
@@ -203,20 +206,23 @@ def _get_fgbio_options(data, umi_method):
     group_opts = ["--edits", "--min-map-q"]
     cons_opts = ["--min-input-base-quality"]
     if umi_method != "paired":
-        cons_opts += ["--min-reads", "--min-consensus-base-quality"]
+        cons_opts += ["--min-reads", "--max-reads"]
+    filter_opts = ["--min-reads", "--min-base-quality"]
     defaults = {"--min-reads": "1",
+                "--max-reads": "100000",
                 "--min-map-q": "1",
-                "--min-consensus-base-quality": "13",
+                "--min-base-quality": "13",
                 "--min-input-base-quality": "2",
                 "--edits": "1"}
     ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
     assert len(ropts) % 2 == 0, "Expect even number of options for fgbio" % ropts
     defaults.update(dict(tz.partition(2, ropts)))
-    group_out = " ".join(["%s %s" % (x, defaults[x]) for x in group_opts])
-    cons_out = " ".join(["%s %s" % (x, defaults[x]) for x in cons_opts])
+    group_out = " ".join(["%s=%s" % (x, defaults[x]) for x in group_opts])
+    cons_out = " ".join(["%s=%s" % (x, defaults[x]) for x in cons_opts])
+    filter_out = " ".join(["%s=%s" % (x, defaults[x]) for x in filter_opts])
     if umi_method != "paired":
         cons_out += " --output-per-base-tags=false"
-    return group_out, cons_out
+    return group_out, cons_out, filter_out
 
 def _check_dedup(data):
     """Check configuration for de-duplication, handling back compatibility.

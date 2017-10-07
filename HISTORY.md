@@ -7,6 +7,8 @@
   Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
 - RNA-seq variant calling: support GATK4
+- UMIs: move fgbio consensus calling to use filtering, adds `--max-reads` for
+  high depth regions and swaps `--min-consensus-base-quality` for `--min-base-quality`
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
 - CWL: run variantcalling with multiple cores, reducing total jobs and enabling
   mulicore supporting callers.
