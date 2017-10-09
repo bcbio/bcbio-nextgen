@@ -27,20 +27,22 @@ def run(data):
     for hla_fq in tz.get_in(["hla", "fastq"], data, []):
         hla_type = re.search("[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
         if hla_type in SUPPORTED_HLAS:
-            hlas.append((hla_type, hla_fq))
+            if utils.file_exists(hla_fq):
+                hlas.append((hla_type, hla_fq))
     if len(hlas) > 0:
         hla_dir = os.path.dirname(os.path.commonprefix([xs[1] for xs in hlas]))
         out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
-        hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
-        if utils.file_exists(hla_fq):
-            out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
-            if len(out_file) > 0:
-                out_file = out_file[0]
-            else:
-                out_file = _call_hla(hla_fq, out_dir, data)
-            out_file = _prepare_calls(out_file, hla_dir, data)
-            data["hla"].update({"call_file": out_file,
-                                "hlacaller": "optitype"})
+        if len(hlas) == len(SUPPORTED_HLAS):
+            hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
+            if utils.file_exists(hla_fq):
+                out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
+                if len(out_file) > 0:
+                    out_file = out_file[0]
+                else:
+                    out_file = _call_hla(hla_fq, out_dir, data)
+                out_file = _prepare_calls(out_file, hla_dir, data)
+                data["hla"].update({"call_file": out_file,
+                                    "hlacaller": "optitype"})
     return data
 
 def combine_hla_fqs(hlas, out_file, data):
