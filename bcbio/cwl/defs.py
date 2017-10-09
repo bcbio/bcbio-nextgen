@@ -133,7 +133,7 @@ def _variant_vc(checkpoints):
                             "gatk", "gatk4", "gatk-framework",
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "strelka", "vardict", "vardict-java",
-                            "varscan", "vcfanno", "vcflib", "vt", "r=3.3.2", "perl"],
+                            "varscan", "vcfanno", "vcflib", "vt", "r=3.4.1", "perl"],
                disk={"files": 1.5}),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region_block"], ["vrn_file_region"]],
@@ -364,7 +364,7 @@ def _variant_sv(checkpoints):
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
                          "lumpy-sv", "manta", "mosdepth", "samtools",
                          "seq2c", "simple_sv_annotation", "svtools", "svtyper",
-                         "r=3.3.2", "vawk"],
+                         "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
     steps = [s("batch_for_sv", "multi-batch",
                [["analysis"], ["genome_build"], ["align_bam"],
