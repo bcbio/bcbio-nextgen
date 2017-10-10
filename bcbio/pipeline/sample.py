@@ -236,6 +236,7 @@ def postprocess_alignment(data):
                            "callable": callable_bed,
                            "sample_callable": covinfo.callable,
                            "mapped_stats": readstats.get_cache_file(data)}
+        data["depth"] = covinfo.depth_files
         data = coverage.assign_interval(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):

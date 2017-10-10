@@ -2,14 +2,17 @@
 
 Provides estimates of coverage intervals based on callable regions
 """
+import collections
 import csv
 import itertools
 import os
+import shutil
 import yaml
 
 import pybedtools
 import numpy as np
 import pysam
+import toolz as tz
 
 from bcbio.utils import (append_stem, copy_plus)
 from bcbio import bam, utils
@@ -73,71 +76,43 @@ def calculate(bam_file, data):
     Removes duplicates and secondary reads from the counts:
     if ( b->core.flag & (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP) ) continue;
     """
-    params = {"window_size": 5000, "parallel_window_size": 1e5, "min": dd.get_coverage_depth_min(data)}
-    prefix = os.path.join(
-        utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))),
-        "%s-coverage" % (dd.get_sample_name(data)))
-    depth_file = prefix + ".depth.bed"
+    params = {"min": dd.get_coverage_depth_min(data)}
     variant_regions = dd.get_variant_regions_merged(data)
-    if not utils.file_uptodate(depth_file, bam_file):
-        with file_transaction(data, depth_file) as tx_depth_file:
-            cmd = ["mosdepth", "-t", str(dd.get_num_cores(data)), "-Q", "1",
-                   "-F", "1804", "-f", dd.get_ref_file(data), bam_file]
-            cmd = "%s > %s" % (" ".join(cmd), tx_depth_file)
-            do.run(cmd, "Calculate coverage: %s" % dd.get_sample_name(data))
-    callable_file = _mosdepth_to_callable(depth_file, params, data)
-    final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
-    return final_callable
-
-def _mosdepth_to_callable(depth_file, params, data):
-    """Covert mosdepth output into a standard collapsed depth.
-    """
-    out_file = depth_file.replace(".depth.bed", ".callable.bed")
-    if not utils.file_uptodate(out_file, depth_file):
-        contig_sizes = {contig.name: contig.size for contig in ref.file_contigs(dd.get_ref_file(data))}
-        with file_transaction(data, out_file) as tx_out_file:
-            with open(depth_file) as in_handle:
-                with open(tx_out_file, "w") as out_handle:
-                    writer = csv.writer(out_handle, dialect="excel-tab", lineterminator=os.linesep)
-                    cur_chrom = None
-                    start_pos = 0
-                    last_pos = 0
-                    cur_callable = None
-                    for chrom, pos, depth in (l.strip().split() for l in in_handle):
-                        callable_str = _depth_to_callable(depth, params)
-                        if cur_chrom != chrom:
-                            if cur_callable:
-                                writer.writerow([cur_chrom, start_pos, contig_sizes[cur_chrom], cur_callable])
-                            start_pos = 0
-                            last_pos = pos
-                            cur_chrom = chrom
-                            cur_callable = callable_str
-                        elif callable_str != cur_callable:
-                            writer.writerow([chrom, start_pos, last_pos, cur_callable])
-                            start_pos = last_pos
-                            last_pos = pos
-                            cur_callable = callable_str
-                        else:
-                            last_pos = pos
-                    if cur_callable:
-                        writer.writerow([cur_chrom, start_pos, contig_sizes[cur_chrom], cur_callable])
-    return out_file
-
-def _depth_to_callable(depth, params):
-    depth = int(depth)
-    if depth == 0:
-        return "NO_COVERAGE"
-    elif depth < params["min"]:
-        return "LOW_COVERAGE"
+    if not variant_regions:
+        variant_regions = _create_genome_regions(data)
+    # Back compatible with previous pre-mosdepth callable files
+    callable_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
+                                                                 dd.get_sample_name(data))),
+                                 "%s-coverage.callable.bed" % (dd.get_sample_name(data)))
+    if not utils.file_uptodate(callable_file, bam_file):
+        vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
+        to_calculate = [("variant_regions", variant_regions, vr_quantize),
+                        ("sv_regions", dd.get_sv_regions(data), None),
+                        ("coverage", dd.get_coverage(data), None)]
+        depth_files = {}
+        for target_name, region_bed, quantize in to_calculate:
+            if region_bed:
+                cur_depth = {}
+                depth_info = _run_mosdepth(data, target_name, region_bed, quantize=quantize)
+                for attr in ("dist", "regions"):
+                    val = getattr(depth_info, attr, None)
+                    if val:
+                        cur_depth[attr] = val
+                depth_files[target_name] = cur_depth
+                if target_name == "variant_regions":
+                    callable_file = depth_info.quantize
     else:
-        return "CALLABLE"
+        depth_files = {}
+    final_callable = _subset_to_variant_regions(callable_file, variant_regions, data)
+    return final_callable, depth_files
 
-def _create_genome_regions(callable_file, data):
+def _create_genome_regions(data):
     """Create whole genome contigs we want to process, only non-alts.
 
     Skips problem contigs like HLAs for downstream analysis.
     """
-    variant_regions = "%s-genome.bed" % utils.splitext_plus(callable_file)[0]
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
+    variant_regions = os.path.join(work_dir, "target-genome.bed")
     with file_transaction(data, variant_regions) as tx_variant_regions:
         with open(tx_variant_regions, "w") as out_handle:
             for c in shared.get_noalt_contigs(data):
@@ -149,8 +124,6 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
     """
     out_file = "%s-vrsubset.bed" % utils.splitext_plus(callable_file)[0]
     if not utils.file_uptodate(out_file, callable_file):
-        if not variant_regions:
-            variant_regions = _create_genome_regions(callable_file, data)
         with file_transaction(data, out_file) as tx_out_file:
             pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
     return out_file
@@ -182,7 +155,7 @@ def get_average_coverage(target_name, bed_file, data, bam_file=None):
         return int(cache["avg_coverage"])
 
     if bed_file:
-        avg_cov = _average_bed_coverage(bed_file, data)
+        avg_cov = _average_bed_coverage(bed_file, target_name, data)
     else:
         avg_cov = _average_genome_coverage(data, bam_file)
 
@@ -202,11 +175,11 @@ def _average_genome_coverage(data, bam_file):
     avg_cov = float(read_counts * read_size) / total
     return avg_cov
 
-def _average_bed_coverage(bed_file, data):
-    sambamba_depth_file = regions_coverage(bed_file, data)
+def _average_bed_coverage(bed_file, target_name, data):
+    depth_file = regions_coverage(bed_file, target_name, data)
     avg_covs = []
     total_len = 0
-    with open(sambamba_depth_file) as fh:
+    with utils.open_gzipsafe(depth_file) as fh:
         for line_tokens in (l.rstrip().split() for l in fh if not l.startswith("#")):
             line_tokens = [x for x in line_tokens if x.strip()]
             start, end = map(int, line_tokens[1:3])
@@ -216,14 +189,14 @@ def _average_bed_coverage(bed_file, data):
     avg_cov = sum(avg_covs) / total_len if total_len > 0 else 0
     return avg_cov
 
-def _calculate_percentiles(cov_file, dist_file, cutoffs, out_dir, data):
+def _calculate_percentiles(dist_file, cutoffs, out_dir, data):
     """Calculate percentage over over specified cutoff range.
 
     XXX Does not calculate the per-bin coverage estimations which we had
     earlier with sambamba depth. Instead has a global metric of percent coverage
     which provides a more defined look at coverage changes by depth.
     """
-    if not utils.file_exists(dist_file) or not utils.file_exists(cov_file):
+    if not utils.file_exists(dist_file):
         return []
     sample = dd.get_sample_name(data)
     out_total_file = append_stem(dist_file, "_total_summary")
@@ -234,11 +207,12 @@ def _calculate_percentiles(cov_file, dist_file, cutoffs, out_dir, data):
                 writer.writerow(["cutoff_reads", "bases_pct", "sample"])
                 with open(dist_file) as in_handle:
                     for line in in_handle:
-                        count, pct = line.strip().split()
-                        count = int(count)
-                        pct = "%.1f" % (float(pct) * 100.0)
-                        if count >= min(cutoffs) and count <= max(cutoffs):
-                            writer.writerow(["percentage%s" % count, pct, sample])
+                        contig, count, pct = line.strip().split()
+                        if contig == "total":
+                            count = int(count)
+                            pct = "%.1f" % (float(pct) * 100.0)
+                            if count >= min(cutoffs) and count <= max(cutoffs):
+                                writer.writerow(["percentage%s" % count, pct, sample])
                     if min(cutoffs) < count:
                         writer.writerow(["percentage%s" % min(cutoffs), pct, sample])
     # To move metrics to multiqc, will remove older files
@@ -249,30 +223,51 @@ def _calculate_percentiles(cov_file, dist_file, cutoffs, out_dir, data):
     copy_plus(out_total_file, out_total_fixed)
     return [out_total_fixed]
 
-def regions_coverage(bed_file, data):
+def regions_coverage(bed_file, target_name, data):
     """Generate coverage over regions of interest using mosdepth.
     """
-    cov_file, _ = _run_mosdepth(bed_file, data)
-    return cov_file
+    ready_bed = tz.get_in(["depth", target_name, "regions"], data)
+    if ready_bed:
+        return ready_bed
+    else:
+        return _run_mosdepth(data, target_name, bed_file).regions
 
-def _run_mosdepth(bed_file, data):
-    """Run mosdepth for a specific BED file generating coverage and distribution.
+def _run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
+    """Run mosdepth generating distribution, region depth and per-base depth.
     """
+    MosdepthCov = collections.namedtuple("MosdepthCov", ("dist", "per_base", "regions", "quantize"))
     bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
-    target_name = utils.splitext_plus(os.path.basename(bed_file))[0]
-    out_file = os.path.join(work_dir, "%s-coverage.bed" % target_name)
-    dist_file = os.path.join(work_dir, "%s-distribution.txt" % target_name)
-    if not utils.file_uptodate(out_file, bam_file) or not utils.file_uptodate(out_file, bed_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            with file_transaction(data, dist_file) as tx_dist_file:
-                num_cores = dd.get_cores(data)
-                cmd = ("mosdepth -t {num_cores} -F 1804 -b {bed_file} -d {tx_dist_file} {bam_file} > {tx_out_file}")
-                message = "Calculating regions coverage of {target_name} in {bam_file}"
-                do.run(cmd.format(**locals()), message.format(**locals()))
-    return out_file, dist_file
+    prefix = os.path.join(work_dir, "%s-%s" % (dd.get_sample_name(data), target_name))
+    out = MosdepthCov("%s.mosdepth.dist.txt" % prefix, ("%s.per-base.bed.gz" % prefix) if per_base else None,
+                      ("%s.regions.bed.gz" % prefix) if bed_file else None,
+                      ("%s.quantized.bed.gz" % prefix) if quantize else None)
+    if not utils.file_uptodate(out.dist, bam_file):
+        with file_transaction(data, out.dist) as tx_out_file:
+            tx_prefix = os.path.join(os.path.dirname(tx_out_file), os.path.basename(prefix))
+            num_cores = dd.get_cores(data)
+            bed_arg = ("--by %s" % bed_file) if bed_file else ""
+            perbase_arg = "" if per_base else "--no-per-base"
+            mapq_arg = "-Q 1" if (per_base or quantize) else ""
+            if quantize:
+                quant_arg = "--quantize %s" % quantize[0]
+                quant_export = " && ".join(["export MOSDEPTH_Q%s=%s" % (i, x) for (i, x) in enumerate(quantize[1])])
+                quant_export += " && "
+            else:
+                quant_arg, quant_export = "", ""
+            cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
+                   "{tx_prefix} {bam_file}")
+            message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
+            do.run(cmd.format(**locals()), message.format(**locals()))
+            if out.per_base:
+                shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.per_base)), out.per_base)
+            if out.regions:
+                shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.regions)), out.regions)
+            if out.quantize:
+                shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.quantize)), out.quantize)
+    return out
 
-def coverage_region_detailed_stats(bed_file, data, out_dir, extra_cutoffs=None):
+def coverage_region_detailed_stats(target_name, bed_file, data, out_dir, extra_cutoffs=None):
     """
     Calculate coverage at different completeness cutoff
     for region in coverage option.
@@ -280,7 +275,14 @@ def coverage_region_detailed_stats(bed_file, data, out_dir, extra_cutoffs=None):
     if not bed_file or not utils.file_exists(bed_file):
         return []
     else:
-        cov_file, dist_file = _run_mosdepth(bed_file, data)
+        ready_depth = tz.get_in(["depth", target_name], data)
+        if ready_depth:
+            cov_file = ready_depth["regions"]
+            dist_file = ready_depth["dist"]
+        else:
+            mosdepth_cov = _run_mosdepth(data, target_name, bed_file)
+            cov_file = mosdepth_cov.regions
+            dist_file = mosdepth_cov.dist
         out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
         out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
         if not utils.file_uptodate(out_cov_file, cov_file):
@@ -289,5 +291,5 @@ def coverage_region_detailed_stats(bed_file, data, out_dir, extra_cutoffs=None):
         cutoffs = {1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000}
         if extra_cutoffs:
             cutoffs = sorted(list(cutoffs | extra_cutoffs))
-        out_files = _calculate_percentiles(out_cov_file, out_dist_file, cutoffs, out_dir, data)
+        out_files = _calculate_percentiles(out_dist_file, cutoffs, out_dir, data)
         return [os.path.abspath(x) for x in out_files]

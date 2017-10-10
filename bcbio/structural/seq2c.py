@@ -192,7 +192,7 @@ def to_vcf(in_tsv, data):
     return vcfutils.sort_by_ref(out_file, data)
 
 def _calculate_coverage(data, work_dir, bed_file, sample_name):
-    depth_file = regions_coverage(bed_file, data)
+    depth_file = regions_coverage(bed_file, "seq2c_bed_ready", data)
 
     out_file = os.path.join(work_dir, sample_name + '-coverage.tsv')
     if not utils.file_exists(out_file):

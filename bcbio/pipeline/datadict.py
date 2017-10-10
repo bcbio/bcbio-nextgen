@@ -149,6 +149,7 @@ LOOKUPS = {
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
     "coverage_merged": {"keys": ["config", "algorithm", "coverage_merged"]},
     "coverage_orig": {"keys": ["config", "algorithm", "coverage_orig"]},
+    "sv_regions": {"keys": ["config", "algorithm", "sv_regions"]},
     "callable_regions": {"keys": ["regions", "callable"]},
     "avg_coverage": {"keys": ["regions", "avg_coverage"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],

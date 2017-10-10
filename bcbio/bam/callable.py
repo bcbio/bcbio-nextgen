@@ -30,11 +30,11 @@ from bcbio.variation import multi as vmulti
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """
-    CovInfo = collections.namedtuple("CovInfo", "callable, raw_callable")
+    CovInfo = collections.namedtuple("CovInfo", "callable, raw_callable, depth_files")
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
-        callable_bed = coverage.calculate(bam_file, data)
+        callable_bed, depth_files = coverage.calculate(bam_file, data)
         input_regions_bed = config["algorithm"].get("variant_regions", None)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
@@ -46,7 +46,7 @@ def sample_callable_bed(bam_file, ref_file, data):
                         filter_regions.intersect(input_regions, nonamecheck=True).saveas(tx_out_file)
                 else:
                     filter_regions.saveas(tx_out_file)
-    return CovInfo(out_file, callable_bed)
+    return CovInfo(out_file, callable_bed, depth_files)
 
 def get_ref_bedtool(ref_file, config, chrom=None):
     """Retrieve a pybedtool BedTool object with reference sizes from input reference.
@@ -66,7 +66,7 @@ def _get_nblock_regions(in_file, min_n_size, ref_regions):
     """
     out_lines = []
     called_contigs = set([])
-    with open(in_file) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             contig, start, end, ctype = line.rstrip().split()
             called_contigs.add(contig)
@@ -176,8 +176,8 @@ def block_regions(callable_bed, in_bam, ref_file, data):
     config = data["config"]
     min_n_size = int(config["algorithm"].get("nomap_split_size", 250))
     with shared.bedtools_tmpdir({"config": config}):
-        nblock_bed = "%s-nblocks%s" % os.path.splitext(callable_bed)
-        callblock_bed = "%s-callableblocks%s" % os.path.splitext(callable_bed)
+        nblock_bed = "%s-nblocks.bed" % utils.splitext_plus(callable_bed)[0]
+        callblock_bed = "%s-callableblocks.bed" % utils.splitext_plus(callable_bed)[0]
         if not utils.file_uptodate(nblock_bed, callable_bed):
             ref_regions = get_ref_bedtool(ref_file, config)
             nblock_regions = _get_nblock_regions(callable_bed, min_n_size, ref_regions)
