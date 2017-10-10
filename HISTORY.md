@@ -1,8 +1,9 @@
 ## 1.0.6 (in progress)
 
+- Use mosdepth for callability calculations, replacing goleft depth. Centralize
+  coverage and QC depth calculations around single mosdepth runs.
 - Add `fusion_caller` as an optional algorithm field to turn on/off fusion
   callers. Currently supports oncvofuse and pizzly.
-- Use mosdepth for callability calculations, replacing goleft depth.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
   Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
