@@ -112,7 +112,7 @@ def check_paired_problems(items):
         vcs = get_somatic_variantcallers(items)
         if "mutect" in vcs or "mutect2" in vcs or "strelka2" in vcs:
             paired = get_paired(items)
-            if not paired.normal_data or paired.normal_panel:
+            if not (paired.normal_data or paired.normal_panel):
                 raise ValueError("MuTect, MuTect2 and Strelka2 somatic calling requires normal sample or panel: %s" %
                                  [dd.get_sample_name(data) for data in items])
 
