@@ -139,6 +139,8 @@ def _run_qc_tools(bam_file, data):
     for program_name in dd.get_algorithm_qc(data):
         if not bam_file and program_name != "kraken":  # kraken doesn't need bam
             continue
+        if dd.get_phenotype(data) == "germline" and program_name != "variants":
+            continue
         qc_fn = tools[program_name]
         cur_qc_dir = os.path.join(qc_dir, program_name)
         out = qc_fn(bam_file, data, cur_qc_dir)

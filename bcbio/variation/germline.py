@@ -28,7 +28,6 @@ def split_somatic(items):
             cur = utils.deepish_copy(paired.normal_data)
             vc = dd.get_variantcaller(cur)
             if isinstance(vc, dict) and "germline" in vc:
-                cur["description"] = "%s-germline" % cur["description"]
                 if cur["description"] not in germline_added:
                     germline_added.add(cur["description"])
                     cur["rgnames"]["sample"] = cur["description"]
@@ -59,20 +58,12 @@ def remove_align_qc_tools(data):
 
 def extract(data, items):
     """Extract germline calls for the given sample, if tumor only.
-
-    For germline calling done separately, fix VCF sample naming to match.
     """
     if vcfutils.get_paired_phenotype(data):
         if len(items) == 1:
             germline_vcf = _remove_prioritization(data["vrn_file"], data)
             germline_vcf = vcfutils.bgzip_and_index(germline_vcf, data["config"])
             data["vrn_file_plus"] = {"germline": germline_vcf}
-    elif dd.get_phenotype(data) == "germline":
-        sample_name = dd.get_sample_name(data)
-        vcf_samples = vcfutils.get_samples(data["vrn_file"])
-        if (sample_name.endswith("-germline") and len(vcf_samples) == 1
-              and sample_name.replace("-germline", "") == vcf_samples[0]):
-            data["vrn_file"] = fix_germline_samplename(data["vrn_file"], sample_name, data)
     return data
 
 def fix_germline_samplename(in_file, sample_name, data):
