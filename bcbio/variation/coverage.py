@@ -22,6 +22,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.pipeline import shared
+from bcbio.structural import regions
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
@@ -87,7 +88,7 @@ def calculate(bam_file, data):
     if not utils.file_uptodate(callable_file, bam_file):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
         to_calculate = [("variant_regions", variant_regions, vr_quantize),
-                        ("sv_regions", dd.get_sv_regions(data), None),
+                        ("sv_regions", regions.get_sv_bed(data), None),
                         ("coverage", dd.get_coverage(data), None)]
         depth_files = {}
         for target_name, region_bed, quantize in to_calculate:
