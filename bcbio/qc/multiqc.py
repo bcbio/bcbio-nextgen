@@ -25,6 +25,7 @@ from bcbio.pipeline import config_utils
 from bcbio.bam import ref
 from bcbio.structural import annotate
 from bcbio.variation import bedutils
+from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
 
 def summary(*samples):
@@ -188,9 +189,48 @@ def _create_config_file(out_dir, samples):
     out = {"table_columns_visible": dict()}
 
     # Avoid duplicated bcbio columns with qualimap
-    if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d))
-           for d in samples):
+    if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
+        out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
+
+    # Setting the module order
+    module_order = []
+    module_order.extend([
+        "bcbio",
+        "samtools",
+        "goleft_indexcov"
+    ])
+    out['bcftools'] = {'write_separate_table': True}
+    # if germline calling was performed:
+    if any("germline" in (get_active_vcinfo(s) or {})  # tumor-only somatic with germline extraction
+           or dd.get_phenotype(s) == "germline"        # or paired somatic with germline calling for normal
+           for s in samples):
+        # Split somatic and germline variant stats into separate multiqc submodules,
+        # with somatic going into General Stats, and germline going into a separate table:
+        module_order.extend([{
+            'bcftools': {
+                'name': 'Bcftools (somatic)',
+                'info': 'Bcftools stats for somatic variant calls only.',
+                'path_filters': ['*_bcftools_stats.txt'],
+                'write_general_stats': True,
+            }},
+            {'bcftools': {
+                'name': 'Bcftools (germline)',
+                'info': 'Bcftools stats for germline variant calls only.',
+                'path_filters': ['*_bcftools_stats_germline.txt'],
+                'write_general_stats': False
+            }},
+        ])
+    else:
+        module_order.append("bcftools")
+    module_order.extend([
+        "picard",
+        "qualimap",
+        "snpeff",
+        "fastqc",
+        "preseq",
+    ])
+    out["module_order"] = module_order
 
     preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
     if preseq_samples:

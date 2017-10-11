@@ -78,9 +78,11 @@ def postprocess_variants(items):
                                               tz.get_in(("genome_resources", "variation"), data, {}),
                                               data, orig_items)
         logger.info("Prioritization for %s" % cur_name)
-        data[vrn_key] = prioritize.handle_vcf_calls(data[vrn_key], data, orig_items)
-        logger.info("Germline extraction for %s" % cur_name)
-        data = germline.extract(data, orig_items)
+        prio_vrn_file = prioritize.handle_vcf_calls(data[vrn_key], data, orig_items)
+        if prio_vrn_file != data[vrn_key]:
+            data[vrn_key] = prio_vrn_file
+            logger.info("Germline extraction for %s" % cur_name)
+            data = germline.extract(data, orig_items)
 
         if dd.get_align_bam(data):
             data = damage.run_filter(data[vrn_key], dd.get_align_bam(data), dd.get_ref_file(data),

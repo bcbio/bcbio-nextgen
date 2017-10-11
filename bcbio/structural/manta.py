@@ -61,8 +61,6 @@ def _select_sample(data, variant_file, work_dir):
     """Select current sample from original call file.
     """
     sample_name = dd.get_sample_name(data)
-    if dd.get_phenotype(data) == "germline":
-        variant_file = germline.fix_germline_samplename(variant_file, sample_name, data)
 
     out_file = os.path.join(work_dir, "%s-%s.vcf.gz" % (utils.splitext_plus(os.path.basename(variant_file))[0],
                                                         sample_name))
