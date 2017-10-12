@@ -33,7 +33,11 @@ def add_genes(in_file, data, max_distance=10000, work_dir=None):
 def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000):
     """Re-usable subcomponent that annotates BED file genes from another BED
     """
-    input_rec = iter(pybedtools.BedTool(in_file)).next()
+    try:
+        input_rec = iter(pybedtools.BedTool(in_file)).next()
+    except StopIteration:  # empty file
+        utils.copy_plus(in_file, out_file)
+        return
     # keep everything after standard chrom/start/end, 1-based
     extra_fields = range(4, len(input_rec.fields) + 1)
     # keep the new gene annotation
@@ -54,7 +58,7 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000
             "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
             "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
             "{distance_filter} | cut -f 1-{max_column} | "
-            "bedtools merge -i - -c {columns} -o {ops} -delim ',' > {out_file}")
+            "bedtools merge -i - -c {columns} -o {ops} -delim ',' -d -10 > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")
 
 def gene_one_per_line(in_file, data):

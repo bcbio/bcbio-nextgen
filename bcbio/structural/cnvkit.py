@@ -24,7 +24,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import bedutils, effects, ploidy, population, vcfutils
-from bcbio.structural import annotate, shared, plot
+from bcbio.structural import annotate, plot, regions
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -343,6 +343,23 @@ def _cnvkit_coverage(data, bed_file, input_type):
     return {"itype": input_type, "file": out_file, "bam": bam_file, "cnntype": cnntype,
             "sample": dd.get_sample_name(data)}
 
+def targets_w_bins(cnv_file, access_file, target_bin, anti_bin, work_dir, data):
+    """Calculate target and anti-target files with pre-determined bins.
+    """
+    target_file = os.path.join(work_dir, "%s-target.bed" % dd.get_sample_name(data))
+    anti_file = os.path.join(work_dir, "%s-antitarget.bed" % dd.get_sample_name(data))
+    if not utils.file_exists(target_file):
+        with file_transaction(data, target_file) as tx_out_file:
+            cmd = [_get_cmd(), "target", cnv_file, "--split", "-o", tx_out_file,
+                   "--avg-size", str(target_bin)]
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
+    if not os.path.exists(anti_file):
+        with file_transaction(data, anti_file) as tx_out_file:
+            cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
+                   "--avg-size", str(anti_bin)]
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
+    return target_file, anti_file
+
 def _cnvkit_targets(raw_target_bed, access_bed, cov_interval, work_dir, data):
     """Create target and antitarget regions from target and access files.
     """
@@ -419,7 +436,7 @@ def _get_target_access_files(cov_interval, data, work_dir):
     pick targets, anti-targets and access files based on analysis type
     http://cnvkit.readthedocs.org/en/latest/nonhybrid.html
     """
-    base_regions = shared.get_base_cnv_regions(data, work_dir)
+    base_regions = regions.get_base_cnv_regions(data, work_dir)
     target_bed = bedutils.sort_merge(base_regions, data, out_dir=work_dir)
     if cov_interval == "amplicon":
         return target_bed, target_bed

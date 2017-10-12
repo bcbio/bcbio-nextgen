@@ -94,7 +94,7 @@ def calculate(bam_file, data):
         for target_name, region_bed, quantize in to_calculate:
             if region_bed:
                 cur_depth = {}
-                depth_info = _run_mosdepth(data, target_name, region_bed, quantize=quantize)
+                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize)
                 for attr in ("dist", "regions"):
                     val = getattr(depth_info, attr, None)
                     if val:
@@ -231,9 +231,9 @@ def regions_coverage(bed_file, target_name, data):
     if ready_bed:
         return ready_bed
     else:
-        return _run_mosdepth(data, target_name, bed_file).regions
+        return run_mosdepth(data, target_name, bed_file).regions
 
-def _run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
+def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
     """Run mosdepth generating distribution, region depth and per-base depth.
     """
     MosdepthCov = collections.namedtuple("MosdepthCov", ("dist", "per_base", "regions", "quantize"))
@@ -281,7 +281,7 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir, extra_c
             cov_file = ready_depth["regions"]
             dist_file = ready_depth["dist"]
         else:
-            mosdepth_cov = _run_mosdepth(data, target_name, bed_file)
+            mosdepth_cov = run_mosdepth(data, target_name, bed_file)
             cov_file = mosdepth_cov.regions
             dist_file = mosdepth_cov.dist
         out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))

@@ -17,8 +17,7 @@ from bcbio.bam import callable
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared
 from bcbio.provenance import do
-from bcbio.structural import regions
-from bcbio.variation import bedutils, population
+from bcbio.variation import population
 
 # ## Case/control
 
@@ -61,40 +60,6 @@ def has_variant_regions(items, base_file, chrom=None):
             if test == chrom:
                 return False
     return True
-
-def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=False):
-    """Remove centromere and short end regions from an existing BED file of regions to target.
-    """
-    out_bed = os.path.join("%s-noexclude.bed" % (utils.splitext_plus(base_file)[0]))
-    if not utils.file_uptodate(out_bed, orig_bed):
-        exclude_bed = prepare_exclude_file(items, base_file)
-        with file_transaction(items[0], out_bed) as tx_out_bed:
-            pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(exclude_bed),
-                                                  A=remove_entire_feature, nonamecheck=True).saveas(tx_out_bed)
-    if utils.file_exists(out_bed):
-        return out_bed
-    else:
-        return orig_bed
-
-def get_base_cnv_regions(data, work_dir):
-    """Retrieve set of target regions for CNV analysis.
-
-    Subsets to extended transcript regions for WGS experiments to avoid
-    long runtimes.
-    """
-    cov_interval = dd.get_coverage_interval(data)
-    base_regions = regions.get_sv_bed(data)
-    # if we don't have a configured BED or regions to use for SV caling
-    if not base_regions:
-        # For genome calls, subset to regions within 10kb of genes
-        if cov_interval == "genome":
-            base_regions = regions.get_sv_bed(data, "transcripts1e4", work_dir)
-            if base_regions:
-                base_regions = remove_exclude_regions(base_regions, base_regions, [data])
-        # Finally, default to the defined variant regions
-        if not base_regions:
-            base_regions = dd.get_variant_regions(data)
-    return bedutils.clean_file(base_regions, data)
 
 def prepare_exclude_file(items, base_file, chrom=None):
     """Prepare a BED file for exclusion.

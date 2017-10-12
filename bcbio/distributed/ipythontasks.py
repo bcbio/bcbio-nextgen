@@ -20,6 +20,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
 from bcbio.qc import multiqc, qsignature
+from bcbio.structural import regions as svregions
 from bcbio.variation import (bamprep, genotype, ensemble, joint,
                              multi, population, validate, vcfutils)
 from bcbio.log import logger, setup_local_logging
@@ -396,6 +397,18 @@ def call_hla(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(hla.call_hla, *args))
+
+@require(svregions)
+def calculate_sv_bins(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(svregions.calculate_sv_bins, *args))
+
+@require(svregions)
+def calculate_sv_coverage(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(svregions.calculate_sv_coverage, *args))
 
 @require(structural)
 def detect_sv(*args):

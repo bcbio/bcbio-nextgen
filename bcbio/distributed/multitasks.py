@@ -12,6 +12,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
 from bcbio.qc import multiqc, qsignature
+from bcbio.structural import regions as svregions
 from bcbio.variation import (bamprep, genotype, ensemble,
                              joint, multi, population, validate,
                              vcfutils)
@@ -280,6 +281,14 @@ def merge_variant_files(*args):
 @utils.map_wrap
 def call_hla(*args):
     return hla.call_hla(*args)
+
+@utils.map_wrap
+def calculate_sv_bins(*args):
+    return svregions.calculate_sv_bins(*args)
+
+@utils.map_wrap
+def calculate_sv_coverage(*args):
+    return svregions.calculate_sv_coverage(*args)
 
 @utils.map_wrap
 def batch_for_sv(*args):
