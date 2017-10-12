@@ -118,7 +118,7 @@ def umi_transform(data):
                 "bcbio-supported transform. Either the file %s does not exist "
                 "or the transform is not supported by bcbio. Supported "
                 "transforms are %s."
-                %(transform_file, ", ".join(SUPPORTED_TRANSFORMS)))
+                %(dd.get_umi_type(data), ", ".join(SUPPORTED_TRANSFORMS)))
             sys.exit(1)
     out_base = dd.get_sample_name(data) + ".umitransformed.fq.gz"
     out_file = os.path.join(umi_dir, out_base)
