@@ -240,12 +240,16 @@ def tagcount(data):
         gene_map_flag = ""
     
     message = "Counting alignments of transcripts in %s." % bam
-    cmd = ("{umis} tagcount {positional} --cb_cutoff {cutoff} --sparse "
+    cmd = ("{umis} fasttagcount --cb_cutoff {cutoff} "
            "{gene_map_flag}"
-           "--cb_histogram {cb_histogram} {bam} {tx_out_file}")
+           "--cb_histogram {cb_histogram} {bam} {tx_out_file_full}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
     with file_transaction(out_files) as tx_out_files:
         tx_out_file = tx_out_files[0]
+        tx_out_file_full = tx_out_file + ".full"
+        do.run(cmd.format(**locals()), message)
+        cmd = ("{umis} sparse {tx_out_file_full} {tx_out_file}")
+        message = "Converting %s to sparse format." % tx_out_file_full
         do.run(cmd.format(**locals()), message)
     data = dd.set_count_file(data, out_file)
     return [[data]]
