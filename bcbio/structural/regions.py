@@ -29,9 +29,9 @@ def calculate_sv_bins(*items):
     Uses callable_regions as the access BED file and mosdepth regions in
     variant_regions to estimate depth for bin sizes.
     """
-    if all("general_sv_bins" not in dd.get_tools_on(utils.to_single_data(x)) for x in items):
-        return items
     from bcbio.structural import cnvkit
+    if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
+        return items
     items = [utils.to_single_data(x) for x in items]
     out = []
     for batch, batch_items in multi.group_by_batch(items, False).items():
@@ -97,10 +97,10 @@ def calculate_sv_coverage(data):
 
     Creates corrected cnr files with log2 ratios and depths.
     """
-    if "general_sv_bins" not in dd.get_tools_on(data):
-        return [[data]]
     from bcbio.variation import coverage
-    from bcbio.structural import annotate
+    from bcbio.structural import annotate, cnvkit
+    if not cnvkit.use_general_sv_bins(data):
+        return [[data]]
     work_dir = utils.safe_makedir(os.path.join("structural", dd.get_sample_name(data), "bins"))
     out_target_file = os.path.join(work_dir, "%s-target-coverage.cnn" % dd.get_sample_name(data))
     out_anti_file = os.path.join(work_dir, "%s-antitarget-coverage.cnn" % dd.get_sample_name(data))
@@ -126,6 +126,7 @@ def _add_log2_depth(in_file, out_file, data):
         with file_transaction(data, out_file) as tx_out_file:
             with utils.open_gzipsafe(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
+                    out_handle.write("chromosome\tstart\tend\tgene\tlog2\tdepth\n")
                     for line in in_handle:
                         parts = line.rstrip().split()
                         if len(parts) > 4:
