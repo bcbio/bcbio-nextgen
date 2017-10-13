@@ -181,12 +181,9 @@ COSMIC. This runs as long as you have a local GEMINI data installation
 <http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
 
 The standard variant outputs (``sample-caller.vcf.gz``) for tumor calling
-emphasize somatic differences, those likely variants unique to the cancer. In
-addition to this file, we also produce a ``sample-caller-germline.vcf.gz`` file
-containing likely germline mutations. These are useful for identifying
-pre-existing genomic changes that can contribute to cancer development, or in
-paired cases like pre and post treatment where you may want to identify
-maintained mutations after treatment.
+emphasize somatic differences, those likely variants unique to the cancer.
+If you'd like to also call likely germline mutations see the documentation on
+specifying a germline caller: :ref:`somatic-w-germline-variants`.
 
 We're actively working on improving calling to better account for the
 heterogeneity and structural variability that define cancer genomes.
