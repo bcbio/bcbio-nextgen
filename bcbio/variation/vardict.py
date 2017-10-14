@@ -128,8 +128,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
-                # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if dd.get_avg_coverage(items[0]) > 5000 else ""
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
@@ -261,8 +259,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 # merge bed file regions as amplicon VarDict is only supported in single sample mode
                 opts = " ".join(_vardict_options_from_config(items, config, out_file, target))
                 coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
-                # for deep targeted panels, require 50 worth of coverage
-                var2vcf_opts = " -v 50 " if dd.get_avg_coverage(items[0]) > 5000 else ""
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()

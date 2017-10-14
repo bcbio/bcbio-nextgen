@@ -4,6 +4,8 @@
   coverage and QC depth calculations around single mosdepth runs.
 - Improve representation of germline and somatic calls in MultiQC report. Thanks
   to Vlad Saveliev.
+- VarDict: remove `-v 50` as required option for deep targeted panels (>5000x
+  average coverage). Recommend adding if needed by resource options.
 - Add `fusion_caller` as an optional algorithm field to turn on/off fusion
   callers. Currently supports oncvofuse and pizzly.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
