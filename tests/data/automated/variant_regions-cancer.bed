@@ -1,3 +1,4 @@
 chr22	1	400	gene1
 chr22	2000	12800	gene2
 chr22	14000	20000	gene3
+chrM	2000	4000	gene4

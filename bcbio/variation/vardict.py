@@ -30,6 +30,7 @@ def _is_bed_file(target):
     return target and isinstance(target, basestring) and os.path.isfile(target)
 
 def _vardict_options_from_config(items, config, out_file, target=None):
+    var2vcf_opts = []
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
     # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     #  "-k", "3", "-r", "4", "-m", "8"]
@@ -40,14 +41,17 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     resources = config_utils.get_resources("vardict", config)
     if resources.get("options"):
         opts += [str(x) for x in resources["options"]]
-    assert _is_bed_file(target)
-    if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
-            for x in items):
-        target = shared.remove_highdepth_regions(target, items)
-        target = shared.remove_lcr_regions(target, items)
-    target = _enforce_max_region_size(target, items[0])
-    opts += [target]  # this must be the last option
-    return opts
+    resources = config_utils.get_resources("var2vcf", config)
+    if resources.get("options"):
+        var2vcf_opts += [str(x) for x in resources["options"]]
+    if target and _is_bed_file(target):
+        if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
+                for x in items):
+            target = shared.remove_highdepth_regions(target, items)
+            target = shared.remove_lcr_regions(target, items)
+        target = _enforce_max_region_size(target, items[0])
+        opts += [target]  # this must be the last option
+    return " ".join(opts), " ".join(var2vcf_opts)
 
 def _enforce_max_region_size(in_file, data):
     """Ensure we don't have any chunks in the region greater than 20kb.
@@ -122,12 +126,10 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 vardict = get_vardict_command(items[0])
                 strandbias = "teststrandbias.R"
                 var2vcf = "var2vcf_valid.pl"
-                opts = (" ".join(_vardict_options_from_config(items, config, out_file, target))
-                        if _is_bed_file(target) else "")
+                opts, var2vcf_opts = _vardict_options_from_config(items, config, out_file, target)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
-                coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
@@ -257,8 +259,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 # merge bed file regions as amplicon VarDict is only supported in single sample mode
-                opts = " ".join(_vardict_options_from_config(items, config, out_file, target))
-                coverage_interval = utils.get_in(config, ("algorithm", "coverage_interval"), "exome")
+                opts, var2vcf_opts = _vardict_options_from_config(items, config, out_file, target)
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()

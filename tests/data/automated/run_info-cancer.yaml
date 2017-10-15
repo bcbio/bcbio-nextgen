@@ -13,6 +13,7 @@ details:
     metadata:
       batch: [PairedBatch, PairedBatch2]
       phenotype: normal
+      sex: male
     algorithm:
       aligner: bwa
       mark_duplicates: false
@@ -24,11 +25,11 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [cnvkit, lumpy]
+      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
       tools_on: [gatk4]
-      #svcaller: [cnvkit]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
+      sv_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
     description: c-tumor
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -36,6 +37,7 @@ details:
     metadata:
       batch: PairedBatch
       phenotype: tumor
+      sex: male
     algorithm:
       aligner: bwa
       mark_duplicates: false
@@ -48,12 +50,12 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [cnvkit, lumpy]
-      #svcaller: [cnvkit]
+      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
       tools_on: [damage_filter, gatk4]
       tools_off: [vardict_somatic_filter, gemini]
       vcfanno: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
+      sv_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: cancer/az-cancer-panel
   - analysis: variant2
     description: c-tumor2
@@ -62,6 +64,7 @@ details:
     metadata:
       batch: [TumorOnly, PairedBatch2]
       phenotype: tumor
+      sex: male
     algorithm:
       aligner: bwa
       mark_duplicates: True
@@ -75,8 +78,8 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [cnvkit, lumpy]
+      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
       #tools_on: [svplots]
-      #svcaller: [cnvkit]
       variant_regions: ../data/automated/variant_regions-cancer.bed
+      sv_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: ../data/automated/variant_regions-cancer.bed

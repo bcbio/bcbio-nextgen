@@ -359,6 +359,11 @@ def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, da
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "reference", "-f", dd.get_ref_file(data), "-o", tx_out_file]
+            gender = population.get_gender(data)
+            if gender and gender.lower() != "unknown":
+                cmd += ["--gender", gender]
+                if gender.lower() == "male":
+                    cmd += ["--male-reference"]
             if len(background_cnns) == 0:
                 cmd += ["-t", target_bed, "-a", antitarget_bed]
             else:
@@ -435,7 +440,6 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
     """Call ploidy and convert into VCF and BED representations.
     """
     call_file = "%s-call%s" % os.path.splitext(out["cns"])
-    gender = population.get_gender(data)
     if not utils.file_exists(call_file):
         with file_transaction(data, call_file) as tx_call_file:
             filters = ["--filter", "cn"]
@@ -448,6 +452,7 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
                 cmd += ["-v", small_vrn_files[0]]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
+            gender = population.get_gender(data)
             if gender and gender.lower() != "unknown":
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
