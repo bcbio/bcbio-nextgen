@@ -99,9 +99,11 @@ def calculate_sv_coverage(data):
     """
     from bcbio.variation import coverage
     from bcbio.structural import annotate, cnvkit
+    data = utils.to_single_data(data)
     if not cnvkit.use_general_sv_bins(data):
         return [[data]]
-    work_dir = utils.safe_makedir(os.path.join("structural", dd.get_sample_name(data), "bins"))
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                               dd.get_sample_name(data), "bins"))
     out_target_file = os.path.join(work_dir, "%s-target-coverage.cnn" % dd.get_sample_name(data))
     out_anti_file = os.path.join(work_dir, "%s-antitarget-coverage.cnn" % dd.get_sample_name(data))
     if ((not utils.file_exists(out_target_file) or not utils.file_exists(out_anti_file))
@@ -149,7 +151,7 @@ def get_base_cnv_regions(data, work_dir, genome_default="transcripts1e4", includ
     base_regions = get_sv_bed(data, include_gene_names=include_gene_names)
     # if we don't have a configured BED or regions to use for SV caling
     if not base_regions:
-        # For genome calls, subset to regions within 10kb of genes
+        # For genome calls, subset to regions near genes as targets
         if cov_interval == "genome":
             base_regions = get_sv_bed(data, genome_default, work_dir, include_gene_names=include_gene_names)
             if base_regions:
