@@ -135,7 +135,7 @@ def _add_meta(xs, sample=None, config=None):
         if config:
             fc_name = config.get("fc_name") or "project"
             fc_date = config.get("fc_date") or datetime.datetime.now().strftime("%Y-%m-%d")
-            x["run"] = "%s_%s" % (fc_name, fc_date)
+            x["run"] = "%s_%s" % (fc_date, fc_name)
         out.append(x)
     return out
 
