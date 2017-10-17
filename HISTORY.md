@@ -7,7 +7,7 @@
 - VarDict: remove `-v 50` as required option for deep targeted panels (>5000x
   average coverage). Recommend adding if needed by a `var2vcf` resource options.
 - Add `fusion_caller` as an optional algorithm field to turn on/off fusion
-  callers. Currently supports oncvofuse and pizzly.
+  callers. Currently supports oncofuse and pizzly.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
   Salmon/Rapmap/Sailfish index creation.
 - RNA-seq variant calling: require gatk-haplotype instead of gatk as the caller.
