@@ -1269,9 +1269,22 @@ Reference genome files
 The pipeline requires access to reference genomes, including the raw
 FASTA sequence and pre-built indexes for aligners. The automated installer
 will install reference files and indexes for commonly used genomes (see the
-:ref:`upgrade-install` documentation for command line options). For human,
-GRCh37 and hg19, we use the 1000 genome references provided in the
-`GATK resource bundle`_.
+:ref:`upgrade-install` documentation for command line options).
+
+For human genomes, we recommend using build 38 (hg38). This is `fully supported
+and validated <http://bcb.io/2015/09/17/hg38-validation/>`_ in bcbio, and
+corrects a lot of issues in the previous build 37. We use the `1000 genomes
+distribution
+<ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/>`_
+which includes HLAs and decoy sequences. For human build 37, GRCh37 and hg19, we
+use the 1000 genome references provided in the `GATK resource bundle`_. These
+differ in chromosome naming: hg19 uses chr1, chr2, chr3 style contigs while
+GRCh37 uses 1, 2, 3. They also differ `slightly in content
+<https://gatkforums.broadinstitute.org/gatk/discussion/1810/whats-the-difference-between-b37-and-hg19-resources>`_:
+GRCh37 has masked `Pseudoautosomal regions
+<https://en.wikipedia.org/wiki/Pseudoautosomal_region>`_ on chromosome Y
+allowing alignment to these regions on chromosome X.
+
 
 You can use pre-existing data and reference indexes by pointing bcbio-nextgen at
 these resources. We use the `Galaxy .loc files`_ approach to describing the
