@@ -208,6 +208,8 @@ def calculate(parallel, items, sysinfo, config, multiplier=1,
     if cores_per_job == 1:
         memory_per_job = "%.2f" % memory_per_core
         num_jobs, mem_pct = _scale_jobs_to_memory(num_jobs, memory_per_core, sysinfo)
+        # For single core jobs, avoid overscheduling maximum cores_per_job
+        num_jobs = min(num_jobs, total)
     else:
         cores_per_job, memory_per_job, mem_pct = _scale_cores_to_memory(cores_per_job,
                                                                         memory_per_core, sysinfo,
