@@ -301,14 +301,18 @@ def _is_bam_input(in_files):
 def _is_cram_input(in_files):
     return in_files and in_files[0].endswith(".cram") and (len(in_files) == 1 or in_files[1] is None)
 
-def _ready_gzip_fastq(in_files, data):
-    """Check if we have gzipped fastq and don't need format conversion or splitting.
+def _ready_bgzip_fastq(in_files, data):
+    """Check if we have bgzipped fastq and don't need format conversion or splitting.
     """
     all_gzipped = all([not x or x.endswith(".gz") for x in in_files])
+    if all_gzipped:
+        all_bgzipped = all([not x or not _check_gzipped_input(x, data)[0] for x in in_files])
+    else:
+        all_bgzipped = False
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
     needs_trim = dd.get_trim_ends(data)
     do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data) is not False
-    return (all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
+    return (all_bgzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
             and not needs_trim)
 
 def _prep_fastq_inputs(in_files, data):
@@ -318,7 +322,7 @@ def _prep_fastq_inputs(in_files, data):
         out = _bgzip_from_bam(in_files[0], data["dirs"], data)
     elif _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], data["dirs"], data)
-    elif _ready_gzip_fastq(in_files, data):
+    elif _ready_bgzip_fastq(in_files, data):
         out = in_files
     else:
         parallel = {"type": "local", "num_jobs": len(in_files),
