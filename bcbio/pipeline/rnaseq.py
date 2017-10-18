@@ -302,7 +302,7 @@ def combine_files(samples):
     # add tx2gene file
     tx2gene_file = os.path.join(dd.get_work_dir(data), "annotation", "tx2gene.csv")
     if gtf_file:
-        tx2gene_file = tx2genefile(gtf_file, tx2gene_file)
+        tx2gene_file = tx2genefile(gtf_file, tx2gene_file, tsv=False)
 
     # combine eXpress files
     express_counts_combined = combine_express(samples, combined)
