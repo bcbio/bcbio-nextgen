@@ -127,10 +127,10 @@ def _gatk_apply_bqsr(data):
             if gatk_type == "gatk4":
                 params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % cores,
                           "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"],
-                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file), "--use_jdk_deflater"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
-                          "-BQSR", data["prep_recal"], "-o", tx_out_file]
+                          "-BQSR", data["prep_recal"], "-o", tx_out_file, "--use_jdk_deflater"]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                   parallel_gc=(cores > 1 and gatk_type == "gatk4"))
