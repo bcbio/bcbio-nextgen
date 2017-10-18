@@ -94,7 +94,7 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
     return os.path.join(tx_work_dir, "runWorkflow.py")
 
-def _tumor_normal_genotypes(ref, alt, info):
+def _tumor_normal_genotypes(ref, alt, info, fname, coords):
     """Retrieve standard 0/0, 0/1, 1/1 style genotypes from INFO field.
 
     Normal -- NT field (ref, het, hom, conflict)
@@ -106,7 +106,7 @@ def _tumor_normal_genotypes(ref, alt, info):
         elif val.lower() == "hom":
             return "1/1"
         else:
-            assert val.lower() in ["ref", "conflict"], val
+            assert val.lower() in ["ref", "conflict"], (fname, coords, ref, alt, info, val)
             return "0/0"
     nt_val = [x.split("=")[-1] for x in info if x.startswith("NT=")][0]
     normal_gt = name_to_gt(nt_val)
@@ -158,7 +158,7 @@ def _postprocess_somatic(in_file, paired):
                         else:
                             parts = line.rstrip().split("\t")
                             tumor_gt, normal_gt = _tumor_normal_genotypes(parts[3], parts[4].split(","),
-                                                                          parts[7].split(";"))
+                                                                          parts[7].split(";"), in_file, parts[:2])
                             parts[8] = "GT:%s" % parts[8]
                             parts[normal_index] = "%s:%s" % (normal_gt, parts[normal_index])
                             parts[tumor_index] = "%s:%s" % (tumor_gt, parts[tumor_index])
