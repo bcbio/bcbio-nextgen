@@ -41,10 +41,10 @@ script:
   - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
   # -- Standard bcbio variant tests
   - docker run -v `pwd`:`pwd` quay.io/bcbio/bcbio-vc bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test tests/unit --cov=bcbio"
-  # XXX Skip problematic non-CWL test case
-  ## - py.test tests/bcbio_vm -v -m docker_multicore
+  - py.test tests/bcbio_vm -v -m docker_multicore
   # -- bcbio variant CWL tests
-  - py.test tests/bcbio_vm -v -s -m cwl_docker
+  - py.test tests/bcbio_vm -v -s -m cwl_docker_joint
+  ## - py.test tests/bcbio_vm -v -s -m cwl_docker_somatic
   # -- Cleanup variant docker image
   - docker rm `docker ps -a -q`
   - docker rmi -f quay.io/bcbio/bcbio-vc
