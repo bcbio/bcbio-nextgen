@@ -101,7 +101,7 @@ def finalize_sv(samples, config):
         batch = dd.get_batch(final) or dd.get_sample_name(final)
         batches = batch if isinstance(batch, (list, tuple)) else [batch]
         if len(batches) > 1:
-            lead_batches[(dd.get_sample_name(final), dd.get_phenotype(final))] = batches[0]
+            lead_batches[(dd.get_sample_name(final), dd.get_phenotype(final) == "germline")] = batches[0]
         for batch in batches:
             try:
                 by_batch[batch].append(final)
@@ -112,7 +112,7 @@ def finalize_sv(samples, config):
         if any("svplots" in dd.get_tools_on(d) for d in items):
             items = plot.by_regions(items)
         for data in items:
-            if lead_batches.get((dd.get_sample_name(final), dd.get_phenotype(final))) in [batch, None]:
+            if lead_batches.get((dd.get_sample_name(data), dd.get_phenotype(data) == "germline")) in [batch, None]:
                 out.append([data])
     return out
 
@@ -147,6 +147,8 @@ def _batch_split_by_sv(samples, stage):
                         batch += "_%s" % dd.get_sample_name(x)
                     else:
                         batch = dd.get_sample_name(x)
+                    if dd.get_phenotype(x) == "germline":
+                        batch += "_germline"
                 elif svcaller in _GLOBAL_BATCHING:  # All samples batched together for analyses
                     batch = "all"
                 batches = batch if isinstance(batch, (list, tuple)) else [batch]
