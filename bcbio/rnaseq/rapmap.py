@@ -12,6 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import postalign
+from bcbio import bam
 
 def run_rapmap_align(data):
     samplename = dd.get_sample_name(data)
@@ -63,6 +64,7 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
     samplename = dd.get_sample_name(data)
     out_file = os.path.join(rapmap_dir, samplename + ".bam")
     if file_exists(out_file):
+        bam.index(out_file, dd.get_config(data))
         return out_file
     rapmap_index_loc = rapmap_index(gtf_file, ref_file, algorithm, data,
                                     rapmap_dir)
@@ -83,4 +85,5 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
         run_message = ("%smapping %s and %s to %s with Rapmap. "
                        % (algorithm, fq1, fq2, rapmap_index))
         do.run(cmd.format(**locals()), run_message, None)
+    bam.index(out_file, dd.get_config(data))
     return out_file
