@@ -156,7 +156,7 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             try:
                 broad_runner.new_resources("gatk-vqsr")
-                broad_runner.run_gatk(params, log_error=False, memscale=memscale)
+                broad_runner.run_gatk(params, log_error=False, memscale=memscale, parallel_gc=True)
             except:  # Can fail to run if not enough values are present to train.
                 return None, None
     if gatk_type == "gatk4":

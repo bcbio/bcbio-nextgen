@@ -107,7 +107,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
                 broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
-                                      parallel_gc=(cores > 1 and gatk_type == "gatk4"))
+                                      parallel_gc=True)
         else:
             with open(out_file, "w") as out_handle:
                 out_handle.write("# No aligned reads")
@@ -133,6 +133,6 @@ def _gatk_apply_bqsr(data):
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
-                                  parallel_gc=(cores > 1 and gatk_type == "gatk4"))
+                                  parallel_gc=True)
     bam.index(out_file, data["config"])
     return out_file

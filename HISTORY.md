@@ -6,6 +6,8 @@
   to Vlad Saveliev.
 - VarDict: remove `-v 50` as required option for deep targeted panels (>5000x
   average coverage). Recommend adding if needed by a `var2vcf` resource options.
+- Templating: avoid automatically setting flowcell date to maintain consistency
+  between runs.
 - Add `fusion_caller` as an optional algorithm field to turn on/off fusion
   callers. Currently supports oncofuse and pizzly.
 - RNA-seq: better appropriate kmer size estimation for reads < 60 bp for
@@ -23,8 +25,6 @@
   as a fusion caller when fusion mode is enabled.
 - VEP: output an effect call per allele for multiallelic positions.
 - Define separators for paired fastq files during bcbio_prepare_samples.py
-- Templating: avoid automatically setting flowcell date to maintain consistency
-  between runs.
 - RNA-seq single-cell/DGE: add `transcriptome_gtf` as an option which will
   collapse single-cell/DGE counts down to the gene level. This is recommended
   for single-cell and DGE experiments.
