@@ -25,12 +25,12 @@ def add_genes(in_file, data, max_distance=10000, work_dir=None):
         if not utils.file_uptodate(out_file, in_file):
             fai_file = ref.fasta_idx(dd.get_ref_file(data))
             with file_transaction(data, out_file) as tx_out_file:
-                _add_genes_to_bed(in_file, gene_file, fai_file, tx_out_file, max_distance)
+                _add_genes_to_bed(in_file, gene_file, fai_file, tx_out_file, data, max_distance)
         return out_file
     else:
         return in_file
 
-def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000):
+def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance=10000):
     """Re-usable subcomponent that annotates BED file genes from another BED
     """
     try:
@@ -53,10 +53,14 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, max_distance=10000
                        (max_distance, gene_index))
     sort_cmd = bedutils.get_sort_cmd()
     cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
+    # Ensure gene transcripts match reference genome
+    ready_gene_file = os.path.join(os.path.dirname(out_file), "%s-genomeonly.bed" %
+                                   (utils.splitext_plus(os.path.basename(gene_file))[0]))
+    ready_gene_file = bedutils.subset_to_genome(gene_file, ready_gene_file, data)
     cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
            "{sort_cmd} -k1,1 -k2,2n | "
             "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
-            "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {gene_file}) | "
+            "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {ready_gene_file}) | "
             "{distance_filter} | cut -f 1-{max_column} | "
             "bedtools merge -i - -c {columns} -o {ops} -delim ',' -d -10 > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")

@@ -226,3 +226,17 @@ def get_padded_bed_file(out_dir, bed_file, padding, data):
         cmd = "{bedtools} slop -i {bed_file} -g {fai_file} -b {padding} | bedtools merge -i - > {tx_out_file}"
         do.run(cmd.format(**locals()), "Pad BED file", data)
     return out_file
+
+def subset_to_genome(in_file, out_file, data):
+    """Subset a BED file to only contain contigs present in the reference genome.
+    """
+    if not utils.file_uptodate(out_file, in_file):
+        contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
+        with utils.open_gzipsafe(in_file) as in_handle:
+            with file_transaction(data, out_file) as tx_out_file:
+                with open(tx_out_file, "w") as out_handle:
+                    for line in in_handle:
+                        parts = line.split()
+                        if parts and parts[0] in contigs:
+                            out_handle.write(line)
+    return out_file
