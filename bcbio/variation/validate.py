@@ -256,6 +256,9 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
+        rm_samples = vcfutils.get_samples(rm_file)
+        if len(rm_samples) > 1 and dd.get_sample_name(data) in rm_samples:
+            cmd += ["--sample=%s" % dd.get_sample_name(data)]
         cmd += ["--vcf-score-field='%s'" % (_pick_best_quality_score(vrn_file))]
         mem_export = "%s export RTG_JAVA_OPTS='%s' && export RTG_MEM=%s" % (utils.local_path_export(),
                                                                             jvm_stack, jvm_mem)
