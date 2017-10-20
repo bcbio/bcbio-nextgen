@@ -26,6 +26,8 @@ from bcbio.structural import regions
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
+DEPTH_THRESHOLDS = [1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000]
+
 
 def assign_interval(data):
     """Identify coverage based on percent of genome covered and relation to targets.
@@ -87,15 +89,15 @@ def calculate(bam_file, data):
                                  "%s-coverage.callable.bed" % (dd.get_sample_name(data)))
     if not utils.file_uptodate(callable_file, bam_file):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
-        to_calculate = [("variant_regions", variant_regions, vr_quantize),
-                        ("sv_regions", regions.get_sv_bed(data), None),
-                        ("coverage", dd.get_coverage(data), None)]
+        to_calculate = [("variant_regions", variant_regions, vr_quantize, None),
+                        ("sv_regions", regions.get_sv_bed(data), None, None),
+                        ("coverage", dd.get_coverage(data), None, DEPTH_THRESHOLDS)]
         depth_files = {}
-        for target_name, region_bed, quantize in to_calculate:
+        for target_name, region_bed, quantize, thresholds in to_calculate:
             if region_bed:
                 cur_depth = {}
-                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize)
-                for attr in ("dist", "regions"):
+                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize, thresholds=thresholds)
+                for attr in ("dist", "regions", "thresholds"):
                     val = getattr(depth_info, attr, None)
                     if val:
                         cur_depth[attr] = val
@@ -233,16 +235,18 @@ def regions_coverage(bed_file, target_name, data):
     else:
         return run_mosdepth(data, target_name, bed_file).regions
 
-def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
+def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thresholds=None):
     """Run mosdepth generating distribution, region depth and per-base depth.
     """
-    MosdepthCov = collections.namedtuple("MosdepthCov", ("dist", "per_base", "regions", "quantize"))
+    MosdepthCov = collections.namedtuple("MosdepthCov", ("dist", "per_base", "regions", "quantize", "thresholds"))
     bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     prefix = os.path.join(work_dir, "%s-%s" % (dd.get_sample_name(data), target_name))
-    out = MosdepthCov("%s.mosdepth.dist.txt" % prefix, ("%s.per-base.bed.gz" % prefix) if per_base else None,
+    out = MosdepthCov("%s.mosdepth.dist.txt" % prefix,
+                      ("%s.per-base.bed.gz" % prefix) if per_base else None,
                       ("%s.regions.bed.gz" % prefix) if bed_file else None,
-                      ("%s.quantized.bed.gz" % prefix) if quantize else None)
+                      ("%s.quantized.bed.gz" % prefix) if quantize else None,
+                      ("%s.thresholds.bed.gz" % prefix) if thresholds else None)
     if not utils.file_uptodate(out.dist, bam_file):
         with file_transaction(data, out.dist) as tx_out_file:
             tx_prefix = os.path.join(os.path.dirname(tx_out_file), os.path.basename(prefix))
@@ -256,8 +260,9 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
                 quant_export += " && "
             else:
                 quant_arg, quant_export = "", ""
+            thresholds = "-T " + ",".join(thresholds) if thresholds else ""
             cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
-                   "{tx_prefix} {bam_file}")
+                   "{tx_prefix} {bam_file} {thresholds}")
             message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
             do.run(cmd.format(**locals()), message.format(**locals()))
             if out.per_base:
@@ -266,9 +271,11 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None):
                 shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.regions)), out.regions)
             if out.quantize:
                 shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.quantize)), out.quantize)
+            if out.thresholds:
+                shutil.move(os.path.join(os.path.dirname(tx_out_file), os.path.basename(out.thresholds)), out.thresholds)
     return out
 
-def coverage_region_detailed_stats(target_name, bed_file, data, out_dir, extra_cutoffs=None):
+def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
     """
     Calculate coverage at different completeness cutoff
     for region in coverage option.
@@ -277,20 +284,15 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir, extra_c
         return []
     else:
         ready_depth = tz.get_in(["depth", target_name], data)
-        if ready_depth:
-            cov_file = ready_depth["regions"]
-            dist_file = ready_depth["dist"]
-        else:
-            mosdepth_cov = run_mosdepth(data, target_name, bed_file)
-            cov_file = mosdepth_cov.regions
-            dist_file = mosdepth_cov.dist
+        cov_file = ready_depth["regions"]
+        dist_file = ready_depth["dist"]
+        thresholds_file = ready_depth["thresholds"]
         out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
         out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
+        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file))
         if not utils.file_uptodate(out_cov_file, cov_file):
             utils.copy_plus(cov_file, out_cov_file)
             utils.copy_plus(dist_file, out_dist_file)
-        cutoffs = {1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000}
-        if extra_cutoffs:
-            cutoffs = sorted(list(cutoffs | extra_cutoffs))
-        out_files = _calculate_percentiles(out_dist_file, cutoffs, out_dir, data)
+            utils.copy_plus(dist_file, out_thresholds_file)
+        out_files = _calculate_percentiles(out_dist_file, DEPTH_THRESHOLDS, out_dir, data)
         return [os.path.abspath(x) for x in out_files]
