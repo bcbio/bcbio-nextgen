@@ -44,7 +44,7 @@ script:
   - py.test tests/bcbio_vm -v -m docker_multicore
   # -- bcbio variant CWL tests
   - py.test tests/bcbio_vm -v -s -m cwl_docker_joint
-  ## - py.test tests/bcbio_vm -v -s -m cwl_docker_somatic
+  - py.test tests/bcbio_vm -v -s -m cwl_docker_somatic
   # -- Cleanup variant docker image
   - docker rm `docker ps -a -q`
   - docker rmi -f quay.io/bcbio/bcbio-vc

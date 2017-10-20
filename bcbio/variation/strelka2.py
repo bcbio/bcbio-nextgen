@@ -99,7 +99,11 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
 
     Normal -- NT field (ref, het, hom, conflict)
     Tumor -- SGT field
+      - for SNPs specified as GG->TT for the normal and tumor diploid alleles. These case be
+        reverse complemented as well.
+      - For indels, uses the ref, het, hom convention
     """
+    known_names = set(["het", "hom", "ref", "conflict"])
     def name_to_gt(val):
         if val.lower() == "het":
             return "0/1"
@@ -108,24 +112,37 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
         else:
             assert val.lower() in ["ref", "conflict"], (fname, coords, ref, alt, info, val)
             return "0/0"
-    nt_val = [x.split("=")[-1] for x in info if x.startswith("NT=")][0]
-    normal_gt = name_to_gt(nt_val)
-    sgt_val = [x.split("=")[-1] for x in info if x.startswith("SGT=")]
-    if not sgt_val:
-        tumor_gt = "0/0"
-    else:
-        gt_indices = {gt: i for i, gt in enumerate([ref] + alt)}
-        sgt_val = sgt_val[0].split("->")[-1]
-        tumor_gts = [gt_indices[x] for x in sgt_val if x in gt_indices]
-        if tumor_gts:
+    def _rc(xs):
+        rc_map = {"G": "C", "C": "G", "A": "T", "T": "A", "N": "N"}
+        xs = list(xs)
+        xs.reverse()
+        return "".join([rc_map[x] for x in xs])
+    def alleles_to_gt(val, rc=False):
+        if rc:
+            gt_indices = {_rc(gt.upper()): i for i, gt in enumerate([ref] + alt)}
+        else:
+            gt_indices = {gt.upper(): i for i, gt in enumerate([ref] + alt)}
+        tumor_gts = [gt_indices[x.upper()] for x in val if x in gt_indices]
+        if tumor_gts and val not in known_names:
             if max(tumor_gts) == 0:
                 tumor_gt = "0/0"
             elif 0 in tumor_gts:
                 tumor_gt = "0/%s" % min([x for x in tumor_gts if x > 0])
             else:
                 tumor_gt = "%s/%s" % (min(tumor_gts), max(tumor_gts))
+        elif not rc and val not in known_names:
+            tumor_gt = alleles_to_gt(val, rc=True)
         else:
-            tumor_gt = name_to_gt(sgt_val)
+            tumor_gt = name_to_gt(val)
+        return tumor_gt
+    nt_val = [x.split("=")[-1] for x in info if x.startswith("NT=")][0]
+    normal_gt = name_to_gt(nt_val)
+    sgt_val = [x.split("=")[-1] for x in info if x.startswith("SGT=")]
+    if not sgt_val:
+        tumor_gt = "0/0"
+    else:
+        sgt_val = sgt_val[0].split("->")[-1]
+        tumor_gt = alleles_to_gt(sgt_val)
     return tumor_gt, normal_gt
 
 def _postprocess_somatic(in_file, paired):
