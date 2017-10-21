@@ -4,6 +4,8 @@
   coverage and QC depth calculations around single mosdepth runs.
 - Improve representation of germline and somatic calls in MultiQC report. Thanks
   to Vlad Saveliev.
+- Structural variants: return combined tumor/normal calls instead of single
+  sample tumor for somatic calls in delly, manta, and WHAM.
 - VarDict: remove `-v 50` as required option for deep targeted panels (>5000x
   average coverage). Recommend adding if needed by a `var2vcf` resource options.
 - Templating: avoid automatically setting flowcell date to maintain consistency

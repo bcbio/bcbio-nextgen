@@ -13,7 +13,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import shared
-from bcbio.variation import effects, vcfutils
+from bcbio.variation import vcfutils
 from bcbio.provenance import do
 
 def run(items, background=None):
@@ -36,11 +36,8 @@ def run(items, background=None):
     for data in inputs:
         if "sv" not in data:
             data["sv"] = []
-        sample_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(orig_vcf)[0], dd.get_sample_name(data))
-        sample_vcf = vcfutils.select_sample(orig_vcf, dd.get_sample_name(data), sample_vcf, data["config"])
-        effects_vcf, _ = effects.add_to_vcf(sample_vcf, data, "snpeff")
-        data["sv"].append({"variantcaller": "wham",
-                           "vrn_file": effects_vcf or sample_vcf})
+        final_vcf = shared.finalize_sv(orig_vcf, data, items)
+        data["sv"].append({"variantcaller": "wham", "vrn_file": final_vcf})
         out.append(data)
     return out
 

@@ -7,7 +7,6 @@ import itertools
 import os
 import subprocess
 
-import toolz as tz
 import vcf
 
 from bcbio import bam, utils
@@ -16,7 +15,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import shared as sshared
-from bcbio.variation import effects, vcfutils
+from bcbio.variation import vcfutils
 
 def _get_full_exclude_file(items, work_dir):
     base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
@@ -175,12 +174,9 @@ def run(items):
         if "sv" not in data:
             data["sv"] = []
         base, ext = utils.splitext_plus(combo_vcf)
-        sample = tz.get_in(["rgnames", "sample"], data)
-        delly_sample_vcf = vcfutils.select_sample(combo_vcf, sample,
-                                                  "%s-%s%s" % (base, sample, ext), data["config"])
-        delly_vcf = _delly_count_evidence_filter(delly_sample_vcf, data)
-        effects_vcf, _ = effects.add_to_vcf(delly_vcf, data, "snpeff")
-        data["sv"].append({"variantcaller": "delly", "vrn_file": effects_vcf,
+        final_vcf = sshared.finalize_sv(combo_vcf, data, items)
+        delly_vcf = _delly_count_evidence_filter(final_vcf, data)
+        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
                            "exclude": exclude_file})
         out.append(data)
     return out
