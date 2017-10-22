@@ -752,6 +752,10 @@ for germline validations:
 
 and for cancer validations:
 
+- ``giab-NA12878-NA24385-somatic`` -- `A sequenced NA12878/NA24385 mixture
+   ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/use_cases/mixtures/UMCUTRECHT_NA12878_NA24385_mixture_10052016/`_
+  providing a somatic-like truth set for detecting low frequency events. Build:
+  Truth sets: small_variants, regions. Builds: GRCh37, hg38
 - ``dream-syn3`` -- Synthetic dataset 3 from the `ICGC-TCGA DREAM mutation
   calling challenge <https://www.synapse.org/#!Synapse:syn312572/wiki/62018>`_.
   Truth sets: small_variants, regions, DEL, DUP, INV, INS. Builds: GRCh37.
