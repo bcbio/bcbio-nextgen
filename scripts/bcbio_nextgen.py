@@ -30,7 +30,7 @@ import os
 import argparse
 import sys
 
-from bcbio import install, utils, workflow
+from bcbio import setpath, install, utils, workflow
 from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
 from bcbio.pipeline.main import run_main
