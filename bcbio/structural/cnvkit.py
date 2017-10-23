@@ -23,7 +23,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import effects, ploidy, population, vcfutils
-from bcbio.structural import annotate, plot
+from bcbio.structural import annotate, plot, shared
 
 def use_general_sv_bins(data):
     """Check if we should use a general binning approach for a sample.
