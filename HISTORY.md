@@ -20,6 +20,8 @@
   high depth regions and swaps `--min-consensus-base-quality` for `--min-base-quality`
 - Correctly re-bgzip fastq inputs even if not using `align_split_size`.
 - Fix bug when running with `lumpy_usecnv` that resulted in skipping CNVkit.
+- GATK gVCF joint calling: avoid running through bcftools for header fixes,
+  using Picard instead. Avoids integer/double conversion incompatibilities.
 - CWL: run variantcalling with multiple cores, reducing total jobs and enabling
   mulicore supporting callers.
 - CWL: support structural variant calling as part of variant pipelines.
