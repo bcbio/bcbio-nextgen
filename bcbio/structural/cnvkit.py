@@ -327,7 +327,12 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ckouts, ext=""):
     out_file = ckouts[dindex]["cnr"]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "fix", "-o", tx_out_file, target_cnn, antitarget_cnn, background_cnn]
+            # Temporary workaround to finding sample names in fix command by file names
+	    tx_target_cnn = os.path.join(os.path.dirname(tx_out_file), "%s.targetcoverage.cnn" % dd.get_sample_name(data))
+	    tx_anti_cnn = os.path.join(os.path.dirname(tx_out_file), "%s.antitargetcoverage.cnn" % dd.get_sample_name(data))
+            utils.symlink_plus(target_cnn, tx_target_cnn)
+            utils.symlink_plus(antitarget_cnn, tx_anti_cnn)
+            cmd = [_get_cmd(), "fix", "-o", tx_out_file, tx_target_cnn, tx_anti_cnn, background_cnn]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit fix")
     return out_file, data
 

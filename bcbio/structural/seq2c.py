@@ -219,7 +219,7 @@ def _depth_to_seq2cov(input_fpath, output_fpath, sample_name):
     """
     # First round: collecting gene ends
     gene_end_by_gene = defaultdict(lambda: -1)
-    with open(input_fpath) as f:
+    with utils.open_gzipsafe(input_fpath) as f:
         for xs in (l.rstrip().split() for l in f if not l.startswith("#")):
             xs = [x for x in xs if x.strip()]
             if any(x == "." for x in xs): continue
@@ -232,7 +232,7 @@ def _depth_to_seq2cov(input_fpath, output_fpath, sample_name):
     gene_start_by_gene = dict()
     total_size_by_gene = dict()
 
-    with open(input_fpath) as f, open(output_fpath, 'w') as out:
+    with utils.open_gzipsafe(input_fpath) as f, open(output_fpath, 'w') as out:
         for xs in (l.rstrip().split() for l in f if not l.startswith("#")):
             xs = [x for x in xs if x.strip()]
             if any(x == "." for x in xs): continue

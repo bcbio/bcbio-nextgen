@@ -175,8 +175,9 @@ def run(items):
             data["sv"] = []
         base, ext = utils.splitext_plus(combo_vcf)
         final_vcf = sshared.finalize_sv(combo_vcf, data, items)
-        delly_vcf = _delly_count_evidence_filter(final_vcf, data)
-        data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
-                           "exclude": exclude_file})
+        if final_vcf:
+            delly_vcf = _delly_count_evidence_filter(final_vcf, data)
+            data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
+                               "exclude": exclude_file})
         out.append(data)
     return out
