@@ -128,7 +128,7 @@ def _find_umi(files):
         return exts["R1"], exts["R2"], exts["I1"]
     else:
         assert "R3" in exts, exts
-        return exts["R1"], exts["R3"], exts["R2"]
+        return exts["R1"], exts["R2"], exts["R3"]
 
 def _commonprefix(files):
     """Retrieve a common prefix for files without extra _R1 _I1 extensions.
