@@ -26,9 +26,10 @@ def run(items):
                         "--bam", dd.get_align_bam(data), "--outdir", work_dir]
     methods = []
     for call in data.get("sv", []):
-        if call["variantcaller"] in SUPPORTED and call["variantcaller"] not in methods:
+        vcf_file = call.get("vcf_file", call.get("vrn_file", None))
+        if call["variantcaller"] in SUPPORTED and call["variantcaller"] not in methods and vcf_file is not None:
             methods.append(call["variantcaller"])
-            cmd += ["--%s_vcf" % call["variantcaller"], call.get("vcf_file", call["vrn_file"])]
+            cmd += ["--%s_vcf" % call["variantcaller"], vcf_file]
     if len(methods) >= MIN_CALLERS:
         if not utils.file_exists(out_file):
             tx_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
