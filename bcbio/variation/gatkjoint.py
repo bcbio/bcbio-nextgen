@@ -6,6 +6,7 @@ For both, follows this with joint variant calling using GenotypeGVCFs.
 """
 import math
 import os
+import shutil
 import toolz as tz
 
 from bcbio import broad, utils
@@ -32,13 +33,15 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
     Not yet tested as scale, need to explore --batchSize to reduce memory
     usage if needed.
 
-    XXX Does not support transactional directories yet, since
-    GenomicsDB databases cannot be moved to new locations. We need to
-    explore options to identify half-finished databases and restart:
+    Does not support transactional directories yet, since
+    GenomicsDB databases cannot be moved to new locations. We try to
+    identify half-finished databases and restart:
 https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
     """
     out_dir = "%s_genomicsdb" % utils.splitext_plus(out_file)[0]
-    if not os.path.exists(out_dir):
+    if not os.path.exists(out_dir) or _incomplete_genomicsdb(out_dir):
+        if os.path.exists(out_dir):
+            shutil.rmtree(out_dir)
         with file_transaction(data, out_dir) as tx_out_dir:
             broad_runner = broad.runner_from_config(data["config"])
             cores = dd.get_cores(data)
@@ -52,6 +55,17 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
+
+def _incomplete_genomicsdb(dbdir):
+    """Check if a GenomicsDB output is incomplete and we should regenerate.
+
+    Works around current inability to move GenomicsDB outputs and support
+    transactional directories.
+    """
+    for test_file in ["callset.json", "vidmap.json"]:
+        if not os.path.exists(os.path.join(dbdir, test_file)):
+            return True
+    return False
 
 def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
     """GenotypeGVCFs from a merged GenomicsDB input: GATK4.
