@@ -19,6 +19,15 @@ Handles two cases:
 
 Creates two fastq files with embedded UMIs: <out_basename>_R1.fq.gz <out_basename>_R2.fq.gz
 or a directory of fastq files with UMIs added to the names.
+
+autopair assumes 3 sets of reads based on the way bcl2fastq exports index reads:
+
+- R1 -- The first read pair
+- R2 -- The UMI barcode reads
+- R3 -- The second read pair
+
+If you're using a different approach to generate the UMIs, please
+maintain the same R1/R2/R3 naming scheme.
 """
 from __future__ import print_function
 import argparse
@@ -44,7 +53,7 @@ duplex_transform = r"""{
 
 def run_single(args):
     tags = [args.tag1, args.tag2] if args.tag1 and args.tag2 else None
-    add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, tags, cores=8)
+    add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, tags, cores=args.cores)
 
 @utils.map_wrap
 @zeromq_aware_logging
@@ -146,7 +155,7 @@ if __name__ == "__main__":
     sp = parser.add_subparsers(title="[sub-commands]")
 
     p = sp.add_parser("autopair", help="Automatically pair R1/R2 (and maybe R3) fastq inputs")
-    p.add_argument("-c", "--cores", default=1, type=int, help="Number of cores to run in parallel")
+    p.add_argument("-c", "--cores", default=1, type=int, help="Number of cores, allowing running samples in parallel")
     p.add_argument("--outdir", default="with_umis", help="Output directory to write UMI prepped fastqs")
     p.add_argument("--tag1", help="Duplex read 1 tag -- bases to trim from 5' end")
     p.add_argument("--tag2", help="Duplex read 2 tag -- bases to trim from 5' end")
@@ -154,6 +163,7 @@ if __name__ == "__main__":
     p.set_defaults(func=run_autopair)
 
     p = sp.add_parser("single", help="Run single set of fastq files with UMIs/duplexes")
+    p.add_argument("-c", "--cores", default=1, type=int, help="Number of cores to use for parallel bgzip")
     p.add_argument("--tag1", help="Duplex read 1 tag -- bases to trim from 5' end", type=int)
     p.add_argument("--tag2", help="Duplex read 2 tag -- bases to trim from 5' end", type=int)
     p.add_argument("out_base", help="Base name for output files -- you get <base_name>_R1.fq.gz")
