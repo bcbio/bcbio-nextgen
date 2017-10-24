@@ -181,8 +181,11 @@ COSMIC. This runs as long as you have a local GEMINI data installation
 <http://bcb.io/2015/03/05/cancerval/>`_ on the approach and validation.
 
 The standard variant outputs (``sample-caller.vcf.gz``) for tumor calling
-emphasize somatic differences, those likely variants unique to the cancer.
-If you'd like to also call likely germline mutations see the documentation on
+emphasize somatic differences, those likely variants unique to the cancer. If
+you have a tumor-only sample and GEMINI data installed, it will also output
+``sample-caller-germline.vcf.gz``, which tries to identify germline background
+mutations based on presence in public databases. If you have tumor/normal data
+and would like to also call likely germline mutations see the documentation on
 specifying a germline caller: :ref:`somatic-w-germline-variants`.
 
 We're actively working on improving calling to better account for the
@@ -200,8 +203,13 @@ and germline (pre-existing) variants. The typical outputs of
 :ref:`cancer-calling` are likely somatic variants acquired by the cancer, but
 pre-existing germline risk variants are often also diagnostic.
 
-bcbio enables calling both somatic and germline variants within a single
-pipeline run. Since the algorithms for calling both are different, you specify
+For tumor-only cases we suggest running standard :ref:`cancer-calling`.
+Tumor-only inputs mix somatic and germline variants, making it difficult to
+separate events. For small variants (SNPs and indels) bcbio will attempt to
+distinguish somatic and germline mutations using the presence of variants in
+population databases.
+
+To option somatic and germline calls for your tumor/normal inputs, specify
 which callers to use for each step in the :ref:`variant-config` configuration::
 
     description: your-normal
@@ -211,9 +219,12 @@ which callers to use for each step in the :ref:`variant-config` configuration::
 
 bcbio does a single alignment for the normal sample, then splits at the variant
 calling steps using this normal sample to do germline calling. In this example,
-you'd get FreeBayes germline calls labeled as ``your-normal-germline`` and
-VarDict somatic calls for the tumor sample linked to this normal. This generates
-a single set of somatic and germline calls for the tumor and normal pair.
+the output files are:
+
+- ``your-tumor/your-tumor-vardict.vcf.gz`` -- Somatic calls from the tumor
+  samples using the normal as background to subtract existing calls.
+- ``your-normal/your-normal-freebayes.vcf.gz`` -- Germline calls on the normal
+  sample.
 
 Germline calling supports multiple callers, and other configuration options like
 ensemble and structural variant calling inherit from the remainder configuration. For
@@ -228,10 +239,15 @@ callers::
        numpass: 2
     svcaller: [manta, cnvkit]
 
-Tumor-only inputs mix somatic and germline variants, making it difficult to
-separate events. For tumor-only cases we suggest running standard
-:ref:`cancer-calling`. bcbio will attempt to distinguish somatic and germline
-mutations using the presence of variants in population databases.
+In addition to the somatic and germline outputs attached to the tumor and normal
+sample outputs as described above, you'll get:
+
+- ``your-tumor/your-tumor-manta.vcf.gz`` -- Somatic structural variant calls for
+  each specified ``svcaller``. These will have genotypes for both the tumor and
+  normal samples, with somatic calls labeled as PASS variants.
+- ``your-normal/your-normal-manta.vcf.gz`` -- Germline structural variant calls
+  for each specified ``svcaller``. We expect these to be noisier than the
+  somatic calls due to the lack of a reference sample to help remove technical noise.
 
 .. _svs-pipeline:
 

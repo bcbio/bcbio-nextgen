@@ -2,7 +2,8 @@
 
 - Use mosdepth for callability calculations, replacing goleft depth. Centralize
   coverage and QC depth calculations around single mosdepth runs.
-- Improve representation of germline and somatic calls in MultiQC report. Thanks
+- Improve representation of germline and somatic calls in MultiQC report and
+  output directory, avoiding confusing "-germline" extension. Thanks
   to Vlad Saveliev.
 - Structural variants: return combined tumor/normal calls instead of single
   sample tumor for somatic calls in delly, manta, and WHAM.
