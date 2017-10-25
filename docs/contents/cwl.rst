@@ -241,6 +241,63 @@ To run an analysis:
 
      bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
 
+
+Running bcbio CWL on DNAnexus
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio runs on the `DNAnexus platform <https://www.dnanexus.com/>`_ by converting
+bcbio generated CWL into DNAnexus workflows and apps using
+`dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This is currently in development
+and we welcome feedback and suggestions on the workflow.
+
+1. Create an analysis project::
+
+     dx new project YOUR_PROJECT
+
+2. Upload sample data to the project::
+
+     dx select YOUR_PROJECT
+     dx upload -p --path /data/input *.bam
+
+3. Create bcbio system file with project information, locations of files and
+   desire resources for jobs::
+
+     dnanexus:
+       project: YOUR_PROJECT
+       ref: /bcbio/reference_genomes/GRCh37
+       inputs:
+         - /data/input/
+         - /data/input/regions
+     resources:
+       default: {cores: 8, memory: 4G, jvm_opts: [-Xms1g, -Xmx4g]}
+
+4. Create bcbio sample YAML file referencing samples to run. The files can be
+   relative to the ``inputs`` directory specified above.
+
+5. Generate a CWL description of the workflow::
+
+       bcbio_vm.py cwl --systemconfig=bcbio_system-dnanexus.yaml YOUR_PROJECT.yaml
+
+6. Determine project information and login credentials. You'll want to note the
+   ``Auth token used`` and ``Current workspace`` project ID::
+
+       dx env
+
+7. Compile the CWL workflow into a DNAnexus workflow::
+
+       dx-cwl compile-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT.cwl --project PROJECT_ID --token AUTH_TOKEN
+
+8. Upload sample information from generated CWL and run workflow::
+
+       dx upload -p --path /YOUR_PROJECT-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT-samples.json
+       dx-cwl run-workflow /dx-cwl-run/main-YOUR_PROJECT/main-YOUR_PROJECT \
+              /YOUR_PROJECT-workflow/main-YOUR_PROJECT-samples.json \
+              --project PROJECT_ID --token AUTH_TOKEN
+
+The workflow runs as a standard DNAnexus workflow and you can monitor through
+the command line (with ``dx find executions`` and ``dx watch``) or the web interface
+(``Monitor`` tab).
+
 Development notes
 ~~~~~~~~~~~~~~~~~
 
