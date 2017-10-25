@@ -260,7 +260,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                 quant_export += " && "
             else:
                 quant_arg, quant_export = "", ""
-            thresholds = "-T " + ",".join(thresholds) if thresholds else ""
+            thresholds = "-T " + ",".join([str(t) for t in thresholds]) if thresholds else ""
             cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
                    "{tx_prefix} {bam_file} {thresholds}")
             message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
@@ -295,4 +295,4 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
             utils.copy_plus(dist_file, out_dist_file)
             utils.copy_plus(dist_file, out_thresholds_file)
         out_files = _calculate_percentiles(out_dist_file, DEPTH_THRESHOLDS, out_dir, data)
-        return [os.path.abspath(x) for x in out_files]
+        return [os.path.abspath(x) for x in out_files] + [out_cov_file, out_dist_file, out_thresholds_file]
