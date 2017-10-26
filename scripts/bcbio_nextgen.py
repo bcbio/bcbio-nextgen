@@ -30,6 +30,9 @@ import os
 import argparse
 import sys
 
+from bcbio.setpath import prepend_bcbiopath
+prepend_bcbiopath()
+
 from bcbio import install, utils, workflow
 from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
