@@ -1,4 +1,5 @@
-#!/usr/bin/env python -Es
+#!/n/app/bcbio/dev/anaconda/bin/python -s
+
 """Run an automated analysis pipeline for high throughput sequencing data.
 
 Handles runs in local or distributed mode based on the command line or
@@ -30,7 +31,7 @@ import os
 import argparse
 import sys
 
-from bcbio import install, utils, workflow
+from bcbio import setpath, install, utils, workflow
 from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
 from bcbio.pipeline.main import run_main
