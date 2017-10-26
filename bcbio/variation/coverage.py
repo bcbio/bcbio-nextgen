@@ -192,40 +192,6 @@ def _average_bed_coverage(bed_file, target_name, data):
     avg_cov = sum(avg_covs) / total_len if total_len > 0 else 0
     return avg_cov
 
-def _calculate_percentiles(dist_file, cutoffs, out_dir, data):
-    """Calculate percentage over over specified cutoff range.
-
-    XXX Does not calculate the per-bin coverage estimations which we had
-    earlier with sambamba depth. Instead has a global metric of percent coverage
-    which provides a more defined look at coverage changes by depth.
-    """
-    if not utils.file_exists(dist_file):
-        return []
-    sample = dd.get_sample_name(data)
-    out_total_file = append_stem(dist_file, "_total_summary")
-    if not utils.file_exists(out_total_file):
-        with file_transaction(data, out_total_file) as tx_file:
-            with open(tx_file, 'w') as out_handle:
-                writer = csv.writer(out_handle, dialect="excel-tab")
-                writer.writerow(["cutoff_reads", "bases_pct", "sample"])
-                with open(dist_file) as in_handle:
-                    for line in in_handle:
-                        contig, count, pct = line.strip().split()
-                        if contig == "total":
-                            count = int(count)
-                            pct = "%.1f" % (float(pct) * 100.0)
-                            if count >= min(cutoffs) and count <= max(cutoffs):
-                                writer.writerow(["percentage%s" % count, pct, sample])
-                    if min(cutoffs) < count:
-                        writer.writerow(["percentage%s" % min(cutoffs), pct, sample])
-    # To move metrics to multiqc, will remove older files
-    # when bcbreport accepts these one, to avoid errors
-    # while porting everything to multiqc
-    # These files will be copied to final
-    out_total_fixed = os.path.join(os.path.dirname(out_total_file), "%s_bcbio_coverage_avg.txt" % sample)
-    copy_plus(out_total_file, out_total_fixed)
-    return [out_total_fixed]
-
 def regions_coverage(bed_file, target_name, data):
     """Generate coverage over regions of interest using mosdepth.
     """
@@ -293,6 +259,5 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
         if not utils.file_uptodate(out_cov_file, cov_file):
             utils.copy_plus(cov_file, out_cov_file)
             utils.copy_plus(dist_file, out_dist_file)
-            utils.copy_plus(dist_file, out_thresholds_file)
-        out_files = _calculate_percentiles(out_dist_file, DEPTH_THRESHOLDS, out_dir, data)
-        return [os.path.abspath(x) for x in out_files] + [out_cov_file, out_dist_file, out_thresholds_file]
+            utils.copy_plus(thresholds_file, out_thresholds_file)
+        return [out_cov_file, out_dist_file, out_thresholds_file]
