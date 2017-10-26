@@ -30,12 +30,9 @@ def run(bam_file, data, out_dir):
 
     avg_depth = cov.get_average_coverage(target_name, merged_bed_file, data)
     if target_name == "coverage":
-        out_files = cov.coverage_region_detailed_stats(target_name, merged_bed_file, data, out_dir,
-                                                       extra_cutoffs=set([max(1, int(avg_depth * 0.8))]))
+        out_files = cov.coverage_region_detailed_stats(target_name, merged_bed_file, data, out_dir)
     else:
         out_files = []
-    for ext in ["coverage.bed", "summary.bed"]:
-        out_files += [x for x in glob.glob(os.path.join(out_dir, "*%s" % ext)) if os.path.isfile(x)]
 
     out['Avg_coverage'] = avg_depth
 
