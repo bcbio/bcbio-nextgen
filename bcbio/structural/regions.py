@@ -38,9 +38,9 @@ def calculate_sv_bins(*items):
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "structural", "bins", batch))
         access_file = tz.get_in(["config", "algorithm", "callable_regions"], batch_items[0])
         cnv_file = get_base_cnv_regions(batch_items[0], work_dir, "transcripts100", include_gene_names=False)
-        target_bin, anti_bin = _get_target_antitarget_bin_sizes(cnv_file, items)
+        size_calc_fn = MemoizedSizes(cnv_file, items).get_target_antitarget_bin_sizes
         for data in batch_items:
-            target_bed, anti_bed = cnvkit.targets_w_bins(cnv_file, access_file, target_bin, anti_bin,
+            target_bed, anti_bed = cnvkit.targets_w_bins(cnv_file, access_file, size_calc_fn,
                                                          work_dir, data)
             if not data.get("regions"):
                 data["regions"] = {}
@@ -52,45 +52,62 @@ def calculate_sv_bins(*items):
                               sorted([dd.get_sample_name(x) for x in items])))
     return out
 
-def _get_target_antitarget_bin_sizes(cnv_file, items):
-    """Retrieve target and antitarget bin sizes based on depth.
-
-    Similar to CNVkit's do_autobin but tries to have a standard set of
-    ranges (50bp intervals for target and 10kb intervals for antitarget).
+class MemoizedSizes:
+    """Delay calculating sizes unless needed; cache to calculate a single time.
     """
-    bp_per_bin = 100000  # same target as CNVkit
-    range_map = {"target": (100, 250), "antitarget": (10000, 1000000)}
-    target_bps = []
-    anti_bps = []
-    for data in items:
-        region_bed = tz.get_in(["depth", "variant_regions", "regions"], data)
-        if region_bed:
-            for r in pybedtools.BedTool(region_bed).intersect(cnv_file):
-                if r.stop - r.start > range_map["target"][0]:
-                    target_bps.append(float(r.name))
-            for r in pybedtools.BedTool(region_bed).intersect(cnv_file, v=True):
-                if r.stop - r.start > range_map["target"][1]:
-                    anti_bps.append(float(r.name))
-    def scale_in_boundary(raw, round_interval, (min_val, max_val)):
-        out = int(math.ceil(raw / float(round_interval)) * round_interval)
-        if out > max_val:
-            return max_val
-        elif out < min_val:
-            return min_val
-        else:
-            return out
-    if target_bps:
-        raw_target_bin = bp_per_bin / float(np.median(target_bps))
-        target_bin = scale_in_boundary(raw_target_bin, 50, range_map["target"])
-    else:
-        target_bin = range_map["target"][1]
+    def __init__(self, cnv_file, items):
+        self.result = None
+        self.cnv_file = cnv_file
+        self.items = items
 
-    if anti_bps:
-        raw_anti_bin = bp_per_bin / float(np.median(anti_bps))
-        anti_bin = scale_in_boundary(raw_anti_bin, 10000, range_map["antitarget"])
-    else:
-        anti_bin = range_map["antitarget"][1]
-    return target_bin, anti_bin
+    def get_target_antitarget_bin_sizes(self):
+        if self.result:
+            return self.result
+        else:
+            self.result = self._calc_sizes(self.cnv_file, self.items)
+            return self.result
+
+    def _calc_sizes(self, cnv_file, items):
+        """Retrieve target and antitarget bin sizes based on depth.
+
+        Similar to CNVkit's do_autobin but tries to have a standard set of
+        ranges (50bp intervals for target and 10kb intervals for antitarget).
+        """
+        bp_per_bin = 100000  # same target as CNVkit
+        range_map = {"target": (100, 250), "antitarget": (10000, 1000000)}
+        target_bps = []
+        anti_bps = []
+        checked_beds = set([])
+        for data in items:
+            region_bed = tz.get_in(["depth", "variant_regions", "regions"], data)
+            if region_bed and region_bed not in checked_beds:
+                for r in pybedtools.BedTool(region_bed).intersect(cnv_file):
+                    if r.stop - r.start > range_map["target"][0]:
+                        target_bps.append(float(r.name))
+                for r in pybedtools.BedTool(region_bed).intersect(cnv_file, v=True):
+                    if r.stop - r.start > range_map["target"][1]:
+                        anti_bps.append(float(r.name))
+                checked_beds.add(region_bed)
+        def scale_in_boundary(raw, round_interval, (min_val, max_val)):
+            out = int(math.ceil(raw / float(round_interval)) * round_interval)
+            if out > max_val:
+                return max_val
+            elif out < min_val:
+                return min_val
+            else:
+                return out
+        if target_bps:
+            raw_target_bin = bp_per_bin / float(np.median(target_bps))
+            target_bin = scale_in_boundary(raw_target_bin, 50, range_map["target"])
+        else:
+            target_bin = range_map["target"][1]
+
+        if anti_bps:
+            raw_anti_bin = bp_per_bin / float(np.median(anti_bps))
+            anti_bin = scale_in_boundary(raw_anti_bin, 10000, range_map["antitarget"])
+        else:
+            anti_bin = range_map["antitarget"][1]
+        return target_bin, anti_bin
 
 def calculate_sv_coverage(data):
     """Calculate coverage within bins for downstream CNV calling.

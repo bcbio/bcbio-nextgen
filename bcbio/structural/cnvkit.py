@@ -376,17 +376,19 @@ def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, da
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit background")
     return out_file
 
-def targets_w_bins(cnv_file, access_file, target_bin, anti_bin, work_dir, data):
+def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     """Calculate target and anti-target files with pre-determined bins.
     """
     target_file = os.path.join(work_dir, "%s-target.bed" % dd.get_sample_name(data))
     anti_file = os.path.join(work_dir, "%s-antitarget.bed" % dd.get_sample_name(data))
     if not utils.file_exists(target_file):
+        target_bin, _ = target_anti_fn()
         with file_transaction(data, target_file) as tx_out_file:
             cmd = [_get_cmd(), "target", cnv_file, "--split", "-o", tx_out_file,
                    "--avg-size", str(target_bin)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit target")
     if not os.path.exists(anti_file):
+        _, anti_bin = target_anti_fn()
         with file_transaction(data, anti_file) as tx_out_file:
             cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
                    "--avg-size", str(anti_bin)]
