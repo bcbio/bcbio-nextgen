@@ -598,6 +598,12 @@ def _check_variantcaller(item):
         if len(problem) > 0:
             raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
                              "Supported options: %s\n" % (problem, sorted(list(allowed))))
+    # Ensure germline somatic calling only specified with tumor/normal samples
+    if "germline" in vcs or "somatic" in vcs:
+        paired = vcfutils.get_paired_phenotype(item)
+        if not paired:
+            raise ValueError("%s: somatic/germline calling in 'variantcaller' "
+                             "but tumor/normal metadata phenotype not specified" % dd.get_sample_name(item))
 
 def _check_svcaller(item):
     """Ensure the provide structural variant caller is valid.
