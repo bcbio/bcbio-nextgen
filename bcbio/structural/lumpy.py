@@ -65,39 +65,37 @@ def _filter_by_support(in_file, data):
     return vfilter.cutoff_w_expression(in_file, rc_filter, data, name="ReadCountSupport",
                                        limit_regions=None)
 
-def _filter_by_background(base_samples, back_samples, gt_vcfs, data):
+def _filter_by_background(base_name, back_samples, gt_vcfs, data):
     """Filter base samples, marking any also present in the background.
     """
     filtname = "InBackground"
     filtdoc = "Variant also present in background samples with same genotype"
-    for base_name in base_samples:
-        orig_vcf = gt_vcfs[base_name]
-        out_file = "%s-backfilter.vcf" % (utils.splitext_plus(orig_vcf)[0])
-        if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
-            with file_transaction(data, out_file) as tx_out_file:
-                with utils.open_gzipsafe(orig_vcf) as in_handle:
-                    with _vcf_readers([gt_vcfs[n] for n in back_samples]) as back_readers:
-                        inp = vcf.Reader(in_handle, orig_vcf)
-                        inp.filters[filtname] = vcf.parser._Filter(filtname, filtdoc)
-                        with open(tx_out_file, "w") as out_handle:
-                            outp = vcf.Writer(out_handle, inp)
-                            for rec in inp:
-                                back_recs = [r.next() for r in back_readers]
-                                if _genotype_in_background(rec, back_recs):
-                                    rec.add_filter(filtname)
-                                outp.write_record(rec)
-        if utils.file_exists(out_file + ".gz"):
-            out_file = out_file + ".gz"
-        gt_vcfs[base_name] = vcfutils.bgzip_and_index(out_file, data["config"])
+    orig_vcf = gt_vcfs[base_name]
+    out_file = "%s-backfilter.vcf" % (utils.splitext_plus(orig_vcf)[0])
+    if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
+        with file_transaction(data, out_file) as tx_out_file:
+            with utils.open_gzipsafe(orig_vcf) as in_handle:
+                inp = vcf.Reader(in_handle, orig_vcf)
+                inp.filters[filtname] = vcf.parser._Filter(filtname, filtdoc)
+                with open(tx_out_file, "w") as out_handle:
+                    outp = vcf.Writer(out_handle, inp)
+                    for rec in inp:
+                        if _genotype_in_background(rec, base_name, back_samples):
+                            rec.add_filter(filtname)
+                        outp.write_record(rec)
+    if utils.file_exists(out_file + ".gz"):
+        out_file = out_file + ".gz"
+    gt_vcfs[base_name] = vcfutils.bgzip_and_index(out_file, data["config"])
     return gt_vcfs
 
-def _genotype_in_background(rec, back_recs):
+def _genotype_in_background(rec, base_name, back_samples):
     """Check if the genotype in the record of interest is present in the background records.
     """
     def passes(rec):
         return not rec.FILTER or len(rec.FILTER) == 0
-    return any([passes(brec) and passes(rec) and rec.samples[0].gt_alleles == brec.samples[0].gt_alleles
-                for brec in back_recs])
+    return (passes(rec) and
+            any(rec.genotype(base_name).gt_alleles == rec.genotype(back_name).gt_alleles
+                for back_name in back_samples))
 
 @contextlib.contextmanager
 def _vcf_readers(vcf_files):
@@ -139,37 +137,49 @@ def run(items):
     lumpy_vcf, exclude_file = _run_lumpy(full_bams, sr_bams, disc_bams, previous_evidence,
                                          work_dir, items)
     gt_vcfs = {}
-    for data in items:
-        sample = dd.get_sample_name(data)
-        sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
-                                            utils.append_stem(lumpy_vcf, "-%s" % sample),
-                                            data["config"])
+    # Retain paired samples with tumor/normal genotyped in one file
+    if paired and paired.normal_name:
+        batches = [[paired.tumor_data, paired.normal_data]]
+    else:
+        batches = [[x] for x in items]
+
+    for batch_items in batches:
+        data = batch_items[0]
+        if len(batch_items) == 1:
+            sample = dd.get_sample_name(data)
+            sample_vcf = vcfutils.select_sample(lumpy_vcf, sample,
+                                                utils.append_stem(lumpy_vcf, "-%s" % sample),
+                                                data["config"])
+        else:
+            sample_vcf = lumpy_vcf
+        align_bams = [dd.get_align_bam(x) for x in batch_items]
         if "bnd-genotype" in dd.get_tools_on(data):
-            gt_vcf = _run_svtyper(sample_vcf, dd.get_align_bam(data), exclude_file, data)
+            gt_vcf = _run_svtyper(sample_vcf, align_bams, exclude_file, data)
         elif "lumpy-genotype" in dd.get_tools_off(data):
             gt_vcf = sample_vcf
         else:
             std_vcf, bnd_vcf = _split_breakends(sample_vcf, data)
-            std_gt_vcf = _run_svtyper(std_vcf, dd.get_align_bam(data), exclude_file, data)
+            std_gt_vcf = _run_svtyper(std_vcf, align_bams, exclude_file, data)
             gt_vcf = vcfutils.concat_variant_files_bcftools(
                 orig_files=[std_gt_vcf, bnd_vcf],
                 out_file="%s-combined.vcf.gz" % utils.splitext_plus(std_gt_vcf)[0],
                 config=data["config"])
         gt_vcfs[dd.get_sample_name(data)] = _filter_by_support(gt_vcf, data)
     if paired and paired.normal_name:
-        gt_vcfs = _filter_by_background([paired.tumor_name], [paired.normal_name], gt_vcfs, paired.tumor_data)
+        gt_vcfs = _filter_by_background(paired.tumor_name, [paired.normal_name], gt_vcfs, paired.tumor_data)
     out = []
     for data in items:
         if "sv" not in data:
             data["sv"] = []
-        vcf_file = gt_vcfs[dd.get_sample_name(data)]
-        if dd.get_svprioritize(data):
-            effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
-        else:
-            effects_vcf = None
-        data["sv"].append({"variantcaller": "lumpy",
-                           "vrn_file": effects_vcf or vcf_file,
-                           "exclude_file": exclude_file})
+        vcf_file = gt_vcfs.get(dd.get_sample_name(data))
+        if vcf_file:
+            if dd.get_svprioritize(data):
+                effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
+            else:
+                effects_vcf = None
+            data["sv"].append({"variantcaller": "lumpy",
+                               "vrn_file": effects_vcf or vcf_file,
+                               "exclude_file": exclude_file})
         out.append(data)
     return out
 
@@ -226,10 +236,10 @@ def run_svtyper_prioritize(call):
         if "lumpy-genotype" in dd.get_tools_off(data):
             return in_file
         else:
-            return _run_svtyper(in_file, dd.get_align_bam(data), call.get("exclude_file"), data)
+            return _run_svtyper(in_file, [dd.get_align_bam(data)], call.get("exclude_file"), data)
     return _run
 
-def _run_svtyper(in_file, full_bam, exclude_file, data):
+def _run_svtyper(in_file, full_bams, exclude_file, data):
     """Genotype structural variant calls with SVtyper.
 
     Removes calls in high depth regions to avoid slow runtimes:
@@ -258,8 +268,9 @@ def _run_svtyper(in_file, full_bam, exclude_file, data):
                                 out_handle.write(line)
                     for region in ref.file_contigs(dd.get_ref_file(data), data["config"]):
                         out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
+                full_bams = ",".join(full_bams)
                 cmd = ("bcftools view {in_file} {regions_to_rm} | "
-                       "{python} {svtyper} --max_reads 1000 -B {full_bam} | "
+                       "{python} {svtyper} --max_reads 1000 -B {full_bams} | "
                        "bcftools annotate -h {header_file} | "
                        "bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "SV genotyping with svtyper")

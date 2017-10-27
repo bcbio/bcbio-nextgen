@@ -6,7 +6,7 @@
   output directory, avoiding confusing "-germline" extension. Thanks
   to Vlad Saveliev.
 - Structural variants: return combined tumor/normal calls instead of single
-  sample tumor for somatic calls in delly, manta, and WHAM.
+  sample tumor for somatic calls in delly, lumpy, manta, and WHAM.
 - VarDict: remove `-v 50` as required option for deep targeted panels (>5000x
   average coverage). Recommend adding if needed by a `var2vcf` resource options.
 - Templating: avoid automatically setting flowcell date to maintain consistency
