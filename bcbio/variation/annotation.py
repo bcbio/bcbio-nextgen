@@ -14,7 +14,8 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True):
+def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True,
+                         gatk_input=True):
     """Retrieve annotations to use for GATK VariantAnnotator.
 
     If include_depth is false, we'll skip annotating DP. Since GATK downsamples
@@ -25,10 +26,13 @@ def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True):
     provide option to skip it.
     """
     broad_runner = broad.runner_from_config(config)
-    anns = ["FisherStrand", "MappingQualityRankSumTest", "MappingQualityZero",
+    anns = ["MappingQualityRankSumTest", "MappingQualityZero",
             "QualByDepth", "ReadPosRankSumTest", "RMSMappingQuality"]
     if include_baseqranksum:
         anns += ["BaseQualityRankSumTest"]
+    # Some annotations not working correctly with external datasets and GATK 3
+    if gatk_input or broad_runner.gatk_type() == "gatk4":
+        anns += ["FisherStrand"]
     if broad_runner.gatk_type() == "gatk4":
         anns += ["MappingQuality"]
     else:
@@ -154,7 +158,7 @@ def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, data,
                 idx_file = orig_file + ".idx"
                 if os.path.exists(idx_file) and not utils.file_exists(idx_file):
                     os.remove(idx_file)
-                annotations = get_gatk_annotations(data["config"], include_depth=False)
+                annotations = get_gatk_annotations(data["config"], include_depth=False, gatk_input=False)
                 params = ["-T", "VariantAnnotator",
                           "-R", ref_file,
                           "--variant", orig_file,
