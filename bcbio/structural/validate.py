@@ -35,13 +35,14 @@ def _evaluate_vcf(calls, truth_vcf, work_dir, data):
                 writer = csv.writer(out_handle)
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
                 for call in calls:
+                    detail_dir = utils.safe_makedir(os.path.join(work_dir, call["variantcaller"]))
                     for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_callable_regions(data),
-                                                      call["variantcaller"], data):
+                                                      call["variantcaller"], detail_dir, data):
 
                         writer.writerow(stats)
     return out_file
 
-def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, data):
+def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, detail_dir, data):
     """Validate a caller VCF against truth within callable regions, returning stratified stats
     """
     stats = _calculate_comparison_stats(truth_vcf)
@@ -50,35 +51,42 @@ def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, data):
 
     match_calls = set([])
     truth_stats = {"tp": [], "fn": [], "fp": []}
+    detail_handles = {}
+    for stat in ["tp", "tp-baseline", "fn", "fp"]:
+        detail_handles[stat] = open(os.path.join(detail_dir, "%s.vcf" % stat), "w")
     calls_by_region = {}
     call_vcf = slim_vcf(call_vcf, data)
     for call in _callable_intersect(call_vcf, callable_bed, data):
-        key = tuple(call[:5] + call[7:8])
-        calls_by_region[tuple(call[-3:])] = key
+        calls_by_region[tuple(call[-3:])] = call
 
     truth = None
     regions = []
     for parts in _callable_intersect(truth_vcf, callable_bed, data):
         cur_region = tuple(parts[-3:])
-        cur_truth = tuple(parts[:5] + parts[7:8])
+        cur_truth = parts
         if truth is None:
             truth = cur_truth
-        if cur_truth == truth:
+        if _get_key(cur_truth) == _get_key(truth):
             regions.append(cur_region)
         else:
-            match_calls, truth_stats = _check_call(truth, regions, calls_by_region, match_calls, truth_stats)
+            match_calls, truth_stats = _check_call(truth, regions, calls_by_region, match_calls, truth_stats,
+                                                   detail_handles)
             truth = cur_truth
             regions = [cur_region]
     with utils.open_gzipsafe(call_vcf) as in_handle:
-        for call in (l.split("\t") for l in in_handle if not l.startswith("#")):
-            start, end = _get_start_end(call)
-            if end:
-                key = tuple(call[:5] + call[7:8])
-                if key not in match_calls:
-                    call_info = _summarize_call(key)
-                    if _event_passes(call_info, stats):
-                        truth_stats["fp"].append(call_info)
+            for call in (l.split("\t") for l in in_handle if not l.startswith("#")):
+                start, end = _get_start_end(call)
+                if end:
+                    key = _get_key(call)
+                    if key not in match_calls:
+                        call_info = _summarize_call(key)
+                        if _event_passes(call_info, stats):
+                            detail_handles["fp"].write("\t".join(call))
+                            truth_stats["fp"].append(call_info)
     return _to_csv(truth_stats, stats, dd.get_sample_name(data), svcaller)
+
+def _get_key(call):
+    return tuple(call[:5] + call[7:8])
 
 def _to_csv(truth_stats, stats, sample, svcaller):
     out = []
@@ -103,7 +111,7 @@ def _calculate_comparison_stats(truth_vcf):
     svtypes = set([])
     with utils.open_gzipsafe(truth_vcf) as in_handle:
         for call in (l.rstrip().split("\t") for l in in_handle if not l.startswith("#")):
-            stats = _summarize_call(tuple(call[:5] + call[7:8]))
+            stats = _summarize_call(_get_key(call))
             sizes.append(stats["size"])
             svtypes.add(stats["svtype"])
     pct10 = int(np.percentile(sizes, 10))
@@ -160,24 +168,28 @@ def _is_compatible(call, truth):
 
     Entry point to restrict matches by call type or size.
     """
-    call = _summarize_call(call)
-    truth = _summarize_call(truth)
+    call = _summarize_call(_get_key(call))
+    truth = _summarize_call(_get_key(truth))
     return call["size"] < (truth["size"] * 2)
 
-def _check_call(truth, regions, calls_by_region, match_calls, truth_stats):
+def _check_call(truth, regions, calls_by_region, match_calls, truth_stats, out_handles):
     """Validate if we have a call that matches this given truth set within callable regions.
     """
     cur_matches = []
     for region in regions:
         cur_match_call = calls_by_region.get(region)
         if cur_match_call:
-            if cur_match_call not in match_calls and _is_compatible(cur_match_call, truth):
+            if _get_key(cur_match_call) not in match_calls and _is_compatible(cur_match_call, truth):
                 cur_matches.append(cur_match_call)
-            match_calls.add(cur_match_call)
+            match_calls.add(_get_key(cur_match_call))
     if cur_matches:
-        truth_stats["tp"].append(_summarize_call(truth))
+        for cur_match in cur_matches:
+            out_handles["tp"].write("\t".join(cur_match) + "\n")
+        out_handles["tp-baseline"].write("\t".join(truth) + "\n")
+        truth_stats["tp"].append(_summarize_call(_get_key(truth)))
     else:
-        truth_stats["fn"].append(_summarize_call(truth))
+        out_handles["fn"].write("\t".join(truth) + "\n")
+        truth_stats["fn"].append(_summarize_call(_get_key(truth)))
     return match_calls, truth_stats
 
 def slim_vcf(in_file, data):
