@@ -793,6 +793,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
     if integrations:
         for iname, retriever in integrations.items():
             if iname in config:
+                config[iname] = retriever.set_cache(config[iname])
                 loaded = retriever.add_remotes(loaded, config[iname])
 
     run_details = []

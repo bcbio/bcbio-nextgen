@@ -467,20 +467,21 @@ def setup(args):
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", []) + _find_remote_inputs(metadata)
+    remote_retriever = None
+    remote_config = None
     if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
         config, _ = config_utils.load_system_config(args.systemconfig)
         for iname, retriever in args.integrations.items():
             if iname in config:
-                inputs += retriever.get_files(metadata, config[iname])
+                remote_retriever = retriever
+                remote_config = remote_retriever.set_cache(config[iname])
+                inputs += remote_retriever.get_files(metadata, remote_config)
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
                  for item in _prep_items_from_base(base_item, inputs, args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
-    if hasattr(args, "systemconfig") and args.systemconfig and hasattr(args, "integrations"):
-        config, _ = config_utils.load_system_config(args.systemconfig)
-        for iname, retriever in args.integrations.items():
-            if iname in config:
-                items = retriever.add_remotes(items, config[iname])
+    if remote_retriever and remote_config:
+        items = remote_retriever.add_remotes(items, remote_config)
     out_dir = os.path.join(os.getcwd(), project_name)
     work_dir = utils.safe_makedir(os.path.join(out_dir, "work"))
     if hasattr(args, "relpaths") and args.relpaths:
