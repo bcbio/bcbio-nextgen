@@ -339,7 +339,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
         if "gatk4" in dd.get_tools_on({"config": config}):
             _run_concat_variant_files_gatk4(input_file_list, out_file, config)
         else:
-            out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config)
+            out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
