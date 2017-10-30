@@ -3,18 +3,17 @@
 Provides estimates of coverage intervals based on callable regions
 """
 import collections
-import csv
 import itertools
 import os
 import shutil
+from subprocess import check_output
+from distutils.version import LooseVersion
 import yaml
-
 import pybedtools
 import numpy as np
 import pysam
 import toolz as tz
 
-from bcbio.utils import (append_stem, copy_plus)
 from bcbio import bam, utils
 from bcbio.bam import ref, readstats
 from bcbio.distributed.transaction import file_transaction
@@ -208,6 +207,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
     bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     prefix = os.path.join(work_dir, "%s-%s" % (dd.get_sample_name(data), target_name))
+    thresholds = thresholds and LooseVersion(check_output(["mosdepth", "--version"]).split()[1].strip()) >= LooseVersion("0.2.0")
     out = MosdepthCov("%s.mosdepth.dist.txt" % prefix,
                       ("%s.per-base.bed.gz" % prefix) if per_base else None,
                       ("%s.regions.bed.gz" % prefix) if bed_file else None,
@@ -215,6 +215,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                       ("%s.thresholds.bed.gz" % prefix) if thresholds else None)
     if not utils.file_uptodate(out.dist, bam_file) \
             or (per_base and not utils.file_uptodate(out.per_base, bam_file)) \
+            or (bed_file and not utils.file_uptodate(out.regions, bam_file)) \
             or (quantize and not utils.file_uptodate(out.quantize, bam_file)) \
             or (thresholds and not utils.file_uptodate(out.thresholds, bam_file)):
         with file_transaction(data, out.dist) as tx_out_file:
@@ -229,9 +230,10 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                 quant_export += " && "
             else:
                 quant_arg, quant_export = "", ""
-            thresholds = "-T " + ",".join([str(t) for t in thresholds]) if thresholds else ""
+
+            thresholds_cmdl = "-T " + ",".join([str(t) for t in thresholds]) if out.thresholds else ""
             cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
-                   "{tx_prefix} {bam_file} {thresholds}")
+                   "{tx_prefix} {bam_file} {thresholds_cmdl}")
             message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
             do.run(cmd.format(**locals()), message.format(**locals()))
             if out.per_base:
@@ -255,12 +257,12 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
         ready_depth = tz.get_in(["depth", target_name], data)
         cov_file = ready_depth["regions"]
         dist_file = ready_depth["dist"]
-        thresholds_file = ready_depth["thresholds"]
+        thresholds_file = ready_depth.get("thresholds")
         out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
         out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
-        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file))
+        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file)) if thresholds_file else None
         if not utils.file_uptodate(out_cov_file, cov_file):
             utils.copy_plus(cov_file, out_cov_file)
             utils.copy_plus(dist_file, out_dist_file)
-            utils.copy_plus(thresholds_file, out_thresholds_file)
-        return [out_cov_file, out_dist_file, out_thresholds_file]
+            utils.copy_plus(thresholds_file, out_thresholds_file) if out_thresholds_file else None
+        return [out_cov_file, out_dist_file] + [out_thresholds_file] if out_thresholds_file else []
