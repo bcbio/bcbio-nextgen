@@ -117,7 +117,7 @@ def _run_genotype_gvcfs_gatk3(data, region, vrn_files, ref_file, out_file):
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"}
             else:
                 memscale = None
-            broad_runner.run_gatk(params, memscale=memscale)
+            broad_runner.run_gatk(params, memscale=memscale, parallel_gc=True)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 # ## gVCF batching
@@ -152,5 +152,5 @@ def run_combine_gvcfs(vrn_files, region, ref_file, out_file, data):
             cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.new_resources("gatk-haplotype")
-            broad_runner.run_gatk(params, memscale=memscale)
+            broad_runner.run_gatk(params, memscale=memscale, parallel_gc=True)
     return vcfutils.bgzip_and_index(out_file, data["config"])

@@ -55,8 +55,9 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
     jvm_opts += get_default_jvm_opts(tmp_dir, parallel_gc=parallel_gc)
     return jvm_opts + opts
 
-def get_gatk_framework_opts(config, tmp_dir=None, memscale=None, include_gatk=True):
-    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir, memscale, include_gatk=include_gatk)
+def get_gatk_framework_opts(config, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
+    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir, memscale, include_gatk=include_gatk,
+                          parallel_gc=parallel_gc)
 
 def get_gatk_opts(config, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
     return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir, memscale,

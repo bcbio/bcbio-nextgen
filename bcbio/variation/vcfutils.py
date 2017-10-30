@@ -472,7 +472,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
     need to merge back into a final file.
 
     Will parallelize up to 4 cores based on documented recommendations:
-    https://www.broadinstitute.org/gatk/gatkdocs/
+    https://software.broadinstitute.org/gatk/documentation/tooldocs/current/
     org_broadinstitute_gatk_tools_walkers_variantutils_CombineVariants.php
     """
     in_pipeline = False
@@ -506,7 +506,8 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             if cores > 1:
                 params += ["-nt", min(cores, 4)]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), memscale=memscale)
+            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), memscale=memscale,
+                                                     parallel_gc=True)
             do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
