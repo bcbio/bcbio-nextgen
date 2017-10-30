@@ -2,6 +2,7 @@
 
 http://cnvkit.readthedocs.org
 """
+import collections
 import copy
 import glob
 import math
@@ -67,7 +68,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_seg_to_output(ckout, data)
             ckout = _add_gainloss_to_output(ckout, data)
             ckout = _add_segmetrics_to_output(ckout, data)
-            ckout = _add_variantcalls_to_output(ckout, data, is_somatic)
+            ckout = _add_variantcalls_to_output(ckout, data, items, is_somatic)
             # ckout = _add_coverage_bedgraph_to_output(ckout, data)
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
@@ -247,7 +248,7 @@ def _run_cnvkit_shared(inputs, backgrounds):
                                     tz.groupby("bam", [x for x in coverage_cnns
                                                        if x["itype"] == "evaluate"]).values()],
                                    inputs[0]["config"], parallel)
-        [_cnvkit_segment(cnr, cov_interval, data) for cnr, data in fixed_cnrs]
+        [_cnvkit_segment(cnr, cov_interval, data, inputs + backgrounds) for cnr, data in fixed_cnrs]
     return ckouts
 
 def _cna_has_values(fname):
@@ -257,7 +258,7 @@ def _cna_has_values(fname):
                 return True
     return False
 
-def _cnvkit_segment(cnr_file, cov_interval, data):
+def _cnvkit_segment(cnr_file, cov_interval, data, items):
     """Perform segmentation and copy number calling on normalized inputs
     """
     out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
@@ -269,9 +270,11 @@ def _cnvkit_segment(cnr_file, cov_interval, data):
             else:
                 cmd = [_get_cmd(), "segment", "-p", str(dd.get_cores(data)),
                        "-o", tx_out_file, cnr_file]
-                small_vrn_files = _compatible_small_variants(data)
+                small_vrn_files = _compatible_small_variants(data, items)
                 if len(small_vrn_files) > 0 and _cna_has_values(cnr_file) and cov_interval != "genome":
-                    cmd += ["-v", small_vrn_files[0]]
+                    cmd += ["--vcf", small_vrn_files[0].name, "--sample-id", small_vrn_files[0].sample]
+                    if small_vrn_files[0].normal:
+                        cmd += ["--normal-id", small_vrn_files[0].normal]
                 if cov_interval == "genome":
                     cmd += ["--threshold", "0.00001"]
                 # preferentially use conda installed Rscript
@@ -424,26 +427,24 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
     out["cnr_bed"] = bed_file
     return out
 
-def _compatible_small_variants(data):
+def _compatible_small_variants(data, items):
     """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
     """
+    VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
     supported = set(["vardict", "freebayes", "gatk-haplotype", "mutect2", "vardict"])
     out = []
     for v in data.get("variants", []):
         vrn_file = v.get("vrn_file")
         if vrn_file and v.get("variantcaller") in supported:
             base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            if vcfutils.get_paired_phenotype(data):
-                out.append(vrn_file)
+            paired = vcfutils.get_paired(items)
+            if paired:
+                out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
             else:
-                sample_vrn_file = os.path.join(dd.get_work_dir(data), v["variantcaller"],
-                                               "%s-%s%s" % (base, dd.get_sample_name(data), ext))
-                sample_vrn_file = vcfutils.select_sample(vrn_file, dd.get_sample_name(data), sample_vrn_file,
-                                                         data["config"])
-                out.append(sample_vrn_file)
+                out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
     return out
 
-def _add_variantcalls_to_output(out, data, is_somatic=False):
+def _add_variantcalls_to_output(out, data, items, is_somatic=False):
     """Call ploidy and convert into VCF and BED representations.
     """
     call_file = "%s-call%s" % os.path.splitext(out["cns"])
@@ -454,9 +455,11 @@ def _add_variantcalls_to_output(out, data, is_somatic=False):
                   filters + \
                    ["--ploidy", str(ploidy.get_ploidy([data])),
                     "-o", tx_call_file, out["cns"]]
-            small_vrn_files = _compatible_small_variants(data)
+            small_vrn_files = _compatible_small_variants(data, items)
             if len(small_vrn_files) > 0 and _cna_has_values(out["cns"]):
-                cmd += ["-v", small_vrn_files[0]]
+                cmd += ["--vcf", small_vrn_files[0].name, "--sample-id", small_vrn_files[0].sample]
+                if small_vrn_files[0].normal:
+                    cmd += ["--normal-id", small_vrn_files[0].normal]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
             gender = population.get_gender(data)
