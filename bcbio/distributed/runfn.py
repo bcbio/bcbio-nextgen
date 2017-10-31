@@ -511,7 +511,7 @@ def _to_cwl(val):
                     if fname != cur_file:
                         secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
             if secondary:
-                val["secondaryFiles"] = secondary
+                val["secondaryFiles"] = _remove_duplicate_files(secondary)
     elif isinstance(val, (list, tuple)):
         val = [_to_cwl(x) for x in val]
     elif isinstance(val, dict):
@@ -520,11 +520,22 @@ def _to_cwl(val):
             out = {"class": "File", "path": val["base"]}
             secondary = [{"class": "File", "path": x} for x in val["secondary"]]
             if secondary:
-                out["secondaryFiles"] = secondary
+                out["secondaryFiles"] = _remove_duplicate_files(secondary)
             val = out
         else:
             val = json.dumps(val, sort_keys=True, separators=(',', ':'))
     return val
+
+def _remove_duplicate_files(xs):
+    """Remove files specified multiple times in a list.
+    """
+    seen = set([])
+    out = []
+    for x in xs:
+        if x["path"] not in seen:
+            out.append(x)
+            seen.add(x["path"])
+    return out
 
 def _dissoc_in(d, key_parts):
     if len(key_parts) > 1:
