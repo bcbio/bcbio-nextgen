@@ -214,24 +214,16 @@ To run an analysis:
    collections containing files or associated files in the original sample YAML::
 
      arvados:
-       reference: a84e575534ef1aa756edf1bfb4cad8ae+1927
+       reference: 9127147c168e27e26738524cbd3a59c6+1633
        input: [a1d976bc7bcba2b523713fa67695d715+464]
      resources:
-          default:
-            cores: 4
-            memory: 1G
-          bwa:
-            cores: 4
-            memory: 2G
-          gatk:
-            jvm_opts: [-Xms750m, -Xmx2500m]
+       default: {cores: 4, memory: 2G, jvm_opts: [-Xms750m, -Xmx2500m]}
 
 5. Generate the CWL to run your samples. If you're using multiple input
    files with a `CSV metadata file and template <https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration>`_
-   then start with creation of a configuration file::
+   start with creation of a configuration file::
 
-     bcbio_vm.py template --systemconfig bcbio_system_arvados.yaml
-     testcwl_template.yaml testcwl.csv
+     bcbio_vm.py template --systemconfig bcbio_system_arvados.yaml testcwl_template.yaml testcwl.csv
 
    To generate the CWL from the system and sample configuration files::
 
@@ -240,7 +232,6 @@ To run an analysis:
 6. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
 
      bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
-
 
 Running bcbio CWL on DNAnexus
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -259,35 +250,49 @@ and we welcome feedback and suggestions on the workflow.
      dx select YOUR_PROJECT
      dx upload -p --path /data/input *.bam
 
-3. Create bcbio system file with project information, locations of files and
-   desire resources for jobs::
+3. Create bcbio system file with projects, locations of files and
+   desired core and memory usage for jobs::
 
      dnanexus:
        project: YOUR_PROJECT
-       ref: /bcbio/reference_genomes/GRCh37
+       ref:
+         project: bcbio_resources
+         folder: /reference_genomes
        inputs:
-         - /data/input/
+         - /data/input
          - /data/input/regions
      resources:
        default: {cores: 8, memory: 4G, jvm_opts: [-Xms1g, -Xmx4g]}
 
 4. Create bcbio sample YAML file referencing samples to run. The files can be
-   relative to the ``inputs`` directory specified above.
+   relative to the ``inputs`` directory specified above; bcbio will search
+   recursively for files, so you don't need to specify full paths if your file
+   names are unique. Start with a template and sample specification::
 
-5. Generate a CWL description of the workflow::
+       samplename,description,batch,phenotype
+       file1.bam,sample1,b1,tumor
+       file2.bam,sample2,b1,normal
+       file3.bam,sample3,b2,tumor
+       file4.bam,sample4,b2,normal
 
-       bcbio_vm.py cwl --systemconfig=bcbio_system-dnanexus.yaml YOUR_PROJECT.yaml
+5. Follow the :ref:`automated-sample-config` workflow to generate a full configuration::
 
-6. Determine project information and login credentials. You'll want to note the
+       bcbio_vm.py template --systemconfig bcbio_system-dnanexus.yaml your-template.yaml YOUR_PROJECT.csv
+
+6. Generate a CWL description of the workflow from the full generated configuration::
+
+       bcbio_vm.py cwl --systemconfig bcbio_system-dnanexus.yaml YOUR_PROJECT/config/YOUR_PROJECT.yaml
+
+7. Determine project information and login credentials. You'll want to note the
    ``Auth token used`` and ``Current workspace`` project ID::
 
        dx env
 
-7. Compile the CWL workflow into a DNAnexus workflow::
+8. Compile the CWL workflow into a DNAnexus workflow::
 
        dx-cwl compile-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT.cwl --project PROJECT_ID --token AUTH_TOKEN
 
-8. Upload sample information from generated CWL and run workflow::
+9. Upload sample information from generated CWL and run workflow::
 
        dx upload -p --path /YOUR_PROJECT-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT-samples.json
        dx-cwl run-workflow /dx-cwl-run/main-YOUR_PROJECT/main-YOUR_PROJECT \
@@ -295,7 +300,7 @@ and we welcome feedback and suggestions on the workflow.
               --project PROJECT_ID --token AUTH_TOKEN
 
 The workflow runs as a standard DNAnexus workflow and you can monitor through
-the command line (with ``dx find executions`` and ``dx watch``) or the web interface
+the command line (with ``dx find executions -n 1`` and ``dx watch``) or the web interface
 (``Monitor`` tab).
 
 Development notes
