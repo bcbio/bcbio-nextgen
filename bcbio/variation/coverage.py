@@ -3,18 +3,17 @@
 Provides estimates of coverage intervals based on callable regions
 """
 import collections
-import csv
 import itertools
 import os
 import shutil
+from subprocess import check_output
+from distutils.version import LooseVersion
 import yaml
-
 import pybedtools
 import numpy as np
 import pysam
 import toolz as tz
 
-from bcbio.utils import (append_stem, copy_plus)
 from bcbio import bam, utils
 from bcbio.bam import ref, readstats
 from bcbio.distributed.transaction import file_transaction
@@ -226,9 +225,10 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                 quant_export += " && "
             else:
                 quant_arg, quant_export = "", ""
-            thresholds = "-T " + ",".join([str(t) for t in thresholds]) if thresholds else ""
+
+            thresholds_cmdl = ("-T " + ",".join([str(t) for t in thresholds])) if out.thresholds else ""
             cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
-                   "{tx_prefix} {bam_file} {thresholds}")
+                   "{tx_prefix} {bam_file} {thresholds_cmdl}")
             message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
             do.run(cmd.format(**locals()), message.format(**locals()))
             if out.per_base:
@@ -252,12 +252,13 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
         ready_depth = tz.get_in(["depth", target_name], data)
         cov_file = ready_depth["regions"]
         dist_file = ready_depth["dist"]
-        thresholds_file = ready_depth["thresholds"]
+        thresholds_file = ready_depth.get("thresholds")
         out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
         out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
-        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file))
+        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file)) \
+            if thresholds_file and os.path.isfile(thresholds_file) else None
         if not utils.file_uptodate(out_cov_file, cov_file):
             utils.copy_plus(cov_file, out_cov_file)
             utils.copy_plus(dist_file, out_dist_file)
-            utils.copy_plus(thresholds_file, out_thresholds_file)
-        return [out_cov_file, out_dist_file, out_thresholds_file]
+            utils.copy_plus(thresholds_file, out_thresholds_file) if out_thresholds_file else None
+        return [out_cov_file, out_dist_file] + ([out_thresholds_file] if out_thresholds_file else [])
