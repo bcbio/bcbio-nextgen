@@ -6,8 +6,6 @@ import collections
 import itertools
 import os
 import shutil
-from subprocess import check_output
-from distutils.version import LooseVersion
 import yaml
 import pybedtools
 import numpy as np
