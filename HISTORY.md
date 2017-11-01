@@ -33,6 +33,10 @@
 - RNA-seq single-cell/DGE: add `transcriptome_gtf` as an option which will
   collapse single-cell/DGE counts down to the gene level. This is recommended
   for single-cell and DGE experiments.
+- ChIP-seq: preliminary support for bwa for ChIP-seq alignment. Compared to bowtie2 
+  on a test dataset this results in a superset of the bowtie2 peaks, with 95% of the
+  common peaks within 50 bases of each other. It calls about 50% more peaks
+  though using the bwa alignments, use with care.
 
 ## 1.0.5 (11 Sept 2017)
 

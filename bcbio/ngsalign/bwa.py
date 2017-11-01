@@ -257,3 +257,36 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
         do.run(cmd.format(**locals()), message)
     data = dd.set_transcriptome_bam(data, out_file)
     return data
+
+def filter_multimappers(align_file, data):
+    """
+    Filtering a BWA alignment file for uniquely mapped reads, from here:
+    https://bioinformatics.stackexchange.com/questions/508/obtaining-uniquely-mapped-reads-from-bwa-mem-alignment
+    """
+    config = dd.get_config(data)
+    type_flag = "" if bam.is_bam(align_file) else "S"
+    base, ext = os.path.splitext(align_file)
+    out_file = base + ".unique" + ext
+    bed_file = dd.get_variant_regions(data)
+    bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
+    if utils.file_exists(out_file):
+        return out_file
+    base_filter = '-F "not unmapped {paired_filter} and not duplicate and [XA] == null and [SA] == null and not supplementary " '
+    if bam.is_paired(align_file):
+        paired_filter = "and paired and proper_pair"
+    else:
+        paired_filter = ""
+    filter_string = base_filter.format(paired_filter=paired_filter)
+    sambamba = config_utils.get_program("sambamba", config)
+    num_cores = dd.get_num_cores(data)
+    with file_transaction(out_file) as tx_out_file:
+        cmd = ('{sambamba} view -h{type_flag} '
+               '--nthreads {num_cores} '
+               '-f bam {bed_cmd} '
+               '{filter_string} '
+               '{align_file} '
+               '> {tx_out_file}')
+        message = "Removing multimapped reads from %s." % align_file
+        do.run(cmd.format(**locals()), message)
+    bam.index(out_file, config)
+    return out_file
