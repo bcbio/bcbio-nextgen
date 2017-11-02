@@ -31,7 +31,6 @@ Contents:
    contents/cwl
    contents/outputs
    contents/code
-   contents/sequencer
    contents/internals
    contents/presentations
    contents/teaching
