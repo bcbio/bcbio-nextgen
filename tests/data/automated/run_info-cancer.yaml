@@ -25,7 +25,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
+      svcaller: [lumpy, cnvkit]
       tools_on: [gatk4]
       #hetcaller: bubbletree
       variant_regions: ../data/automated/variant_regions-cancer.bed
@@ -50,7 +50,7 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
+      svcaller: [lumpy, cnvkit]
       tools_on: [damage_filter, gatk4]
       tools_off: [vardict_somatic_filter, gemini]
       vcfanno: [gemini]
@@ -78,7 +78,7 @@ details:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [lumpy] # Re-enable cnvkit after 0.9.1 release
+      svcaller: [lumpy, cnvkit]
       #tools_on: [svplots]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed

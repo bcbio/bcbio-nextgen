@@ -246,13 +246,14 @@ def _collapse_transcripts(in_file, window, data, out_dir, include_gene_names=Tru
                 for name, rs in itertools.groupby(gen(), lambda r: (r.name, r.chrom)):
                     rs = list(rs)
                     r = rs[0]
-                    for gcoords in _group_coords(rs):
-                        min_pos = max(min(gcoords) - window, 0)
-                        max_pos = min(max(gcoords) + window, chrom_sizes[r.chrom])
-                        if include_gene_names:
-                            out_handle.write("%s\t%s\t%s\t%s\n" % (r.chrom, min_pos, max_pos, r.name))
-                        else:
-                            out_handle.write("%s\t%s\t%s\n" % (r.chrom, min_pos, max_pos))
+                    if r.chrom in chrom_sizes:
+                        for gcoords in _group_coords(rs):
+                            min_pos = max(min(gcoords) - window, 0)
+                            max_pos = min(max(gcoords) + window, chrom_sizes[r.chrom])
+                            if include_gene_names:
+                                out_handle.write("%s\t%s\t%s\t%s\n" % (r.chrom, min_pos, max_pos, r.name))
+                            else:
+                                out_handle.write("%s\t%s\t%s\n" % (r.chrom, min_pos, max_pos))
     return bedutils.sort_merge(out_file, data)
 
 def _group_coords(rs):
