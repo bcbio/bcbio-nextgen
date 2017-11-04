@@ -652,3 +652,27 @@ def tabix_index(in_file, config, preset=None, tabix_args=None):
                 cmd = "{tabix} -f -p {preset} {tx_in_file}"
             do.run(cmd.format(**locals()), "tabix index %s" % os.path.basename(in_file))
     return out_file
+
+def is_gvcf_file(in_file):
+    """Check if an input file is raw gVCF
+    """
+    to_check = 100
+    n = 0
+    with utils.open_gzipsafe(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("##"):
+                if n > to_check:
+                    break
+                parts = line.split("\t")
+                # GATK
+                if parts[4] == "<NON_REF>":
+                    return True
+                # strelka2
+                if parts[4] == "." and parts[7].startswith("BLOCKAVG"):
+                    return True
+                # freebayes
+                if parts[4] == "<*>":
+                    return True
+                # platypue
+                if parts[4] == "N" and parts[6] == "REFCALL":
+                    return True

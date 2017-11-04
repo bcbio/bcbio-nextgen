@@ -12,11 +12,9 @@ details:
       recalibrate: true
       aligner: bwa
       mark_duplicates: true
-      #variantcaller: [gatk-haplotype, freebayes]
-      #jointcaller: [gatk-haplotype-joint, freebayes-joint]
-      variantcaller: gatk-haplotype
-      jointcaller: gatk-haplotype-joint
-      tools_on: [gvcf, gatk4, vqsr]
+      variantcaller: [gatk-haplotype, strelka2]
+      jointcaller: [gatk-haplotype-joint, strelka2-joint]
+      tools_on: [gvcf, vqsr, gatk4]
       coverage_interval: genome
       #aligner: false
       #mark_duplicates: false
@@ -31,11 +29,9 @@ details:
   - algorithm:
       aligner: bwa
       recalibrate: true
-      #variantcaller: [gatk-haplotype, freebayes]
-      #jointcaller: [gatk-haplotype-joint, freebayes-joint]
-      variantcaller: gatk-haplotype
-      jointcaller: gatk-haplotype-joint
-      tools_on: [gvcf, gatk4, vqsr]
+      variantcaller: [gatk-haplotype, strelka2]
+      jointcaller: [gatk-haplotype-joint, strelka2-joint]
+      tools_on: [gvcf, vqsr, gatk4]
       #effects: vep
       coverage_interval: genome
       quality_format: Standard

@@ -201,9 +201,9 @@ def platypus(in_file, data):
     filters = ('(FR[0] <= 0.5 && TC < 4 && %QUAL < 20) || '
                '(TC < 13 && %QUAL < 10) || '
                '(FR[0] > 0.5 && TC < 4 && %QUAL < 50)')
-    limit_regions = "variant_regions" if "gvcf" not in dd.get_tools_on(data) else None
+    limit_regions = "variant_regions" if not vcfutils.is_gvcf_file(in_file) else None
     return cutoff_w_expression(in_file, filters, data, name="PlatQualDepth",
-                             extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'", limit_regions=limit_regions)
+                               extra_cmd="| sed 's/\\tQ20\\t/\\tPASS\\t/'", limit_regions=limit_regions)
 
 def samtools(in_file, data):
     """Filter samtools calls based on depth and quality, using similar approaches to FreeBayes.
@@ -242,9 +242,8 @@ def gatk_snp_cutoff(in_file, data):
     https://github.com/bcbio/bcbio_validations/tree/master/gatk4#na12878-hg38
     """
     filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
-    if "gvcf" not in dd.get_tools_on(data):
-        filters += ["QD < 2.0", "FS > 60.0"]
-        filters += _gatk_general()
+    filters += ["QD < 2.0", "FS > 60.0"]
+    filters += _gatk_general()
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
@@ -257,8 +256,7 @@ def gatk_indel_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK indels using best-practice recommendations.
     """
     filters = ["ReadPosRankSum < -20.0"]
-    if "gvcf" not in dd.get_tools_on(data):
-        filters += ["QD < 2.0", "FS > 200.0", "SOR > 10.0"]
-        filters += _gatk_general()
+    filters += ["QD < 2.0", "FS > 200.0", "SOR > 10.0"]
+    filters += _gatk_general()
     return cutoff_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKCutoffIndel",
                                "INDEL", extra_cmd=r"""| sed 's/\\"//g'""")

@@ -17,7 +17,7 @@ def run(call_file, ref_file, vrn_files, data):
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if config_utils.use_vqsr(algs):
-        if "gvcf" in dd.get_tools_on(data) and not dd.get_jointcaller(data):
+        if vcfutils.is_gvcf_file(call_file):
             raise ValueError("Cannot force gVCF output with joint calling using tools_on: [gvcf] and use VQSR. "
                              "Try using cutoff-based soft filtering with tools_off: [vqsr]")
         snp_file, indel_file = vcfutils.split_snps_indels(call_file, ref_file, data["config"])
