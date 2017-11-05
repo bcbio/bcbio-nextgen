@@ -1,4 +1,4 @@
-## 1.0.6 (in progress)
+## 1.0.6 (5 November 2017)
 
 - Use mosdepth for callability calculations, replacing goleft depth. Centralize
   coverage and QC depth calculations around single mosdepth runs.
