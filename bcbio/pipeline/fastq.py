@@ -24,7 +24,7 @@ def get_fastq_files(data):
         if fname.endswith(".bam"):
             if _pipeline_needs_fastq(data["config"], data):
                 ready_files = convert_bam_to_fastq(fname, data["dirs"]["work"],
-                                                    data, data["dirs"], data["config"])
+                                                   data, data["dirs"], data["config"])
             else:
                 ready_files = [fname]
         elif objectstore.is_remote(fname):

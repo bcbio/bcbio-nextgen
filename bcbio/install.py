@@ -11,14 +11,11 @@ import datetime
 import dateutil
 from distutils.version import LooseVersion
 import gzip
-import itertools
 import os
 import shutil
 import subprocess
 import sys
 import glob
-import urllib
-import json
 
 import requests
 from six.moves import urllib
@@ -30,8 +27,6 @@ from bcbio.pipeline import genome
 from bcbio.variation import effects
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.distributed import objectstore
-
 
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
@@ -63,9 +58,8 @@ def upgrade_bcbio(args):
             print("Upgrading bcbio-nextgen to latest development version")
             pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
             git_tag = "@%s" % args.revision if args.revision != "master" else ""
-            git_repo = args.gitrepo if args.gitrepo is not None else REMOTES["gitrepo"]
             _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
-                            "git+%s%s#egg=bcbio-nextgen" % (git_repo, git_tag)]], anaconda_dir)
+                            "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)]], anaconda_dir)
             print("Upgrade of bcbio-nextgen development code complete.")
         else:
             _update_conda_packages()
@@ -445,15 +439,13 @@ def upgrade_thirdparty_tools(args, remotes):
             if not fname.startswith("toolplus"):
                 os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
-def _get_system_config():
-    return os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
 
 def _install_toolplus(args):
     """Install additional tools we cannot distribute, updating local manifest.
     """
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     toolplus_manifest = os.path.join(manifest_dir, "toolplus-packages.yaml")
-    system_config = _get_system_config()
+    system_config = os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
     # Handle toolplus installs inside Docker container
     if not os.path.exists(system_config):
         docker_system_config = os.path.join(_get_data_dir(), "config", "bcbio_system.yaml")
@@ -535,29 +527,30 @@ def _install_kraken_db(datadir, args):
     requests.packages.urllib3.disable_warnings()
     last_mod = urllib.request.urlopen(url).info().getheader('Last-Modified')
     last_mod = dateutil.parser.parse(last_mod).astimezone(dateutil.tz.tzutc())
-    if not os.path.exists(os.path.join(tooldir, "bin", "kraken")):
-        raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
-                                        os.path.join(tooldir, "bin", "kraken"))
-    if not os.path.exists(db):
-        is_new_version = True
-    else:
-        cur_file = glob.glob(os.path.join(kraken, "minikraken_*"))[0]
-        cur_version = datetime.datetime.utcfromtimestamp(os.path.getmtime(cur_file))
-        is_new_version = last_mod.date() > cur_version.date()
+    if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
+        if not os.path.exists(db):
+            is_new_version = True
+        else:
+            cur_file = glob.glob(os.path.join(kraken, "minikraken_*"))[0]
+            cur_version = datetime.datetime.utcfromtimestamp(os.path.getmtime(cur_file))
+            is_new_version = last_mod.date() > cur_version.date()
+            if is_new_version:
+                shutil.move(cur_file, cur_file.replace('minikraken', 'old'))
+        if not os.path.exists(kraken):
+            utils.safe_makedir(kraken)
         if is_new_version:
-            shutil.move(cur_file, cur_file.replace('minikraken', 'old'))
-    if not os.path.exists(kraken):
-        utils.safe_makedir(kraken)
-    if is_new_version:
-        if not os.path.exists(compress):
-            subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
-        cmd = ["tar", "-xzvf", compress, "-C", kraken]
-        subprocess.check_call(cmd)
-        last_version = glob.glob(os.path.join(kraken, "minikraken_*"))
-        utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
-        utils.remove_safe(compress)
+            if not os.path.exists(compress):
+                subprocess.check_call(["wget", "-O", compress, url, "--no-check-certificate"])
+            cmd = ["tar", "-xzvf", compress, "-C", kraken]
+            subprocess.check_call(cmd)
+            last_version = glob.glob(os.path.join(kraken, "minikraken_*"))
+            utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
+            utils.remove_safe(compress)
+        else:
+            print("You have the latest version %s." % last_mod)
     else:
-        print ("You have the latest version %s." % last_mod)
+        raise argparse.ArgumentTypeError("kraken not installed in tooldir %s." %
+                                         os.path.join(tooldir, "bin", "kraken"))
 
 # ## Store a local configuration file with upgrade details
 
@@ -708,13 +701,11 @@ def add_subparser(subparsers):
     parser.add_argument("--toolconf", help="YAML configuration file of tools to install", default=None,
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--revision", help="Specify a git commit hash or tag to install", default="master")
-    parser.add_argument("--gitrepo", help="Specify a git repo to fetch bcbio-nextgen development code from", default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
                         action="append", default=[],
-                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv",
-                                 "battenberg", "kraken", "ericscript"])
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv", "battenberg", "kraken", "ericscript"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",

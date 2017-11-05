@@ -7,12 +7,13 @@ import pandas as pd
 
 from bcbio.rnaseq import ericscript
 from tests.conftest import make_workdir
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, run_info
 from bcbio.log import setup_script_logging
 
 
 def create_sample_config(data_dir, work_dir, disambiguate=False):
-    system_config, _ = config_utils.load_system_config(work_dir=work_dir)
+    system_config, system_file = config_utils.load_system_config(work_dir=work_dir)
+    system_config["dirs"] = run_info.setup_directories(work_dir, work_dir, system_config, system_file)
     c = ConfigCreator(data_dir, work_dir, system_config)
     if disambiguate:
         return c.config_with_disambiguate()
@@ -25,6 +26,7 @@ def setup_logging():
     setup_script_logging()
 
 
+@pytest.mark.ericscript
 @pytest.mark.install_required
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir, setup_logging):
@@ -38,6 +40,7 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
+@pytest.mark.ericscript
 @pytest.mark.install_required
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir, setup_logging):
@@ -69,7 +72,9 @@ class ConfigCreator(object):
 
     def config_without_disambiguate(self):
         config = self._get_base_config()
+        config["genome_build"] = "hg19"
         config.update(self._get_filepaths())
+        config = run_info.add_reference_resources(config)
         return config
 
     def config_with_disambiguate(self):
@@ -82,8 +87,10 @@ class ConfigCreator(object):
     def _get_base_config(self):
         conf = deepcopy(self._system_config)
         return {
+            'analysis': 'rna-seq',
             'rgnames': {'lane': 'TEST_LANE'},
-            'config':  conf
+            'config': conf,
+            'dirs': conf["dirs"],
         }
 
     def _get_filepaths(self):
@@ -92,7 +99,6 @@ class ConfigCreator(object):
         join_fn = functools.partial(os.path.join, data_dir)
         return {
             'work_bam': join_fn(self._INPUT_FILENAMES['work_bam']),
-            'dirs': {'work': self._work_dir},
             'files': map(join_fn, self._INPUT_FILENAMES['fq_files'])
         }
 

@@ -189,8 +189,6 @@ LOOKUPS = {
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": [], "always_list": True},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
-    "ericscript_env": {"keys": ["config", "resources", "ericscript", "env"]},
-    "ericscript_db": {"keys": ["config", "resources", "ericscript", "db"]},
 }
 
 def get_batches(data):

@@ -11,12 +11,12 @@ To run gene fusion detection on disambiguated reads, we convert the .bam file
 which was output by disambiguate to fastq files.
 
 """
+import glob
 import os
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-from bcbio.ngsalign import bwa
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.fastq import convert_bam_to_fastq
 from bcbio.provenance import do
@@ -50,18 +50,11 @@ def run_ericscript(sample_config, input_files):
     es_config = EricScriptConfig(sample_config)
     utils.safe_makedir(es_config.output_dir)
 
-    build_bwa_index_if_absent(es_config, sample_config)
-
-    with file_transaction(sample_config, es_config.sample_out_dir) as tx_out:
-        cmd = es_config.get_run_command(tx_out, input_files)
-        logger.info("Running EricScript:\n%s" % ' '.join(cmd))
-        do.run(cmd, es_config.info_message, env=es_config.env)
-
-
-def build_bwa_index_if_absent(es_config, sample_config):
-    if not os.path.exists(es_config.reference_index):
-        bwa.build_bwa_index(es_config.reference_fasta, sample_config)
-
+    if es_config.has_ericscript_db():
+        with file_transaction(sample_config, es_config.sample_out_dir) as tx_out:
+            cmd = es_config.get_run_command(tx_out, input_files)
+            logger.info("Running EricScript:\n%s" % ' '.join(cmd))
+            do.run(cmd, es_config.info_message)
 
 class EricScriptConfig(object):
     """This class which encapsulates access to the data
@@ -74,24 +67,31 @@ class EricScriptConfig(object):
     Private constants:
         _OUTPUT_DIR_NAME: name of the dir created in working directory for
     ericscript ouput
-        _REF_INDEX: relative path to BWA index (one of the files) used to
-    detect if the index is present.
-        _REF_FASTA: relative path to the fasta reference file.
     """
     info_message = 'Detect gene fusions with EricScript'
     EXECUTABLE = 'ericscript.pl'
     _OUTPUT_DIR_NAME = 'ericscript'
-    _REF_INDEX = 'data/homo_sapiens/allseq.fa.bwt'
-    _REF_FASTA = 'data/homo_sapiens/allseq.fa'
+    _REF_INDEX = 'allseq.fa.bwt'
+    _REF_FASTA = 'allseq.fa'
 
-    def __init__(self, config):
-        self._db_location = dd.get_ericscript_db(config)
-        self._env_prefix = dd.get_ericscript_env(config)
-        self._sample_name = dd.get_lane(config)
-        self._work_dir = dd.get_work_dir(config)
+    def __init__(self, data):
+        self._db_location = self._get_ericscript_db(data)
+        self._sample_name = dd.get_lane(data)
+        self._work_dir = dd.get_work_dir(data)
         self._env = None
         self._output_dir = None
         self._sample_out_dir = None
+
+    def _get_ericscript_db(self, data):
+        transcript_file = dd.get_gtf_file(data)
+        if transcript_file and os.path.exists(transcript_file):
+            transcript_dir = os.path.dirname(transcript_file)
+            ericscript_dirs = glob.glob(os.path.join(transcript_dir, "ericscript", "ericscript_db*"))
+            if ericscript_dirs:
+                return sorted(ericscript_dirs)[-1]
+
+    def has_ericscript_db(self):
+        return self._db_location is not None
 
     def get_run_command(self, tx_output_dir, input_files):
         """Constructs a command to run EricScript via do.run function.
@@ -103,21 +103,19 @@ class EricScriptConfig(object):
         :return: list
         """
         logger.debug("Input data: %s" % ', '.join(input_files))
-        return [
+        cmd = [
             self.EXECUTABLE,
             '-db', self._db_location,
             '-name', self._sample_name,
             '-o', tx_output_dir,
         ] + list(input_files)
+        return "export PATH=%s:$PATH %s" % (self._get_ericscript_path(), " ".join(cmd))
 
-    @property
-    def env(self):
-        """A dictionary with environment variables to pass to do.run command.
-        The path to ericscript conda environment is prepended to the PATH var.
+    def _get_ericscript_path(self):
+        """Retrieve PATH to the isolated eriscript anaconda environment.
         """
-        if self._env is None:
-            self._env = self._get_env()
-        return self._env.copy()
+        es = utils.which(os.path.join(utils.get_bcbio_bin(), self.EXECUTABLE))
+        return os.path.dirname(os.path.realpath(es))
 
     @property
     def output_dir(self):
@@ -143,15 +141,18 @@ class EricScriptConfig(object):
     @property
     def reference_index(self):
         """Absolute path to the BWA index for EricScript reference data."""
-        return os.path.join(self._db_location, self._REF_INDEX)
+        if self._db_location:
+            ref_indices = glob.glob(os.path.join(self._db_location, "*", self._REF_INDEX))
+            if ref_indices:
+                return ref_indices[0]
 
     @property
     def reference_fasta(self):
         """Absolute path to the fasta file with EricScript reference data."""
-        return os.path.join(self._db_location, self._REF_FASTA)
-
-    def _get_env(self):
-        return utils.get_ericscript_env(self._env_prefix)
+        if self._db_location:
+            ref_files = glob.glob(os.path.join(self._db_location, "*", self._REF_FASTA))
+            if ref_files:
+                return ref_files[0]
 
     def _get_output_dir(self):
         return os.path.join(self._work_dir, self._OUTPUT_DIR_NAME)
