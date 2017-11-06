@@ -1,3 +1,8 @@
+## 1.0.7 (in progress)
+
+- Standardize dbSNP annotation to use vcfanno for all variant callers. Remove 
+  GATK custom annotations for non-GATK callers, which are not present in GATK4.
+
 ## 1.0.6 (5 November 2017)
 
 - Use mosdepth for callability calculations, replacing goleft depth. Centralize

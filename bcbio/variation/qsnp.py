@@ -76,10 +76,7 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
                     do.run(cl.format(**locals()), "Genotyping paired variants with Qsnp", {})
         out_file = _filter_vcf(out_file)
         out_file = bgzip_and_index(out_file, config)
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"),
-                                               ref_file, items[0])
-    return ann_file
+    return out_file
 
 def _clean_regions(items, region):
     """Intersect region with target file if it exists"""

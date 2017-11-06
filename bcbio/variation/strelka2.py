@@ -78,8 +78,7 @@ def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file):
             _run_workflow(items[0], workflow_file, tx_work_dir)
         raw_file = os.path.join(work_dir, "results", "variants",
                                 "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
-        out_file = annotation.annotate_nongatk_vcf(raw_file, align_bams, assoc_files.get("dbsnp"),
-                                                   ref_file, items[0], out_file)
+        utils.symlink_plus(raw_file, out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):

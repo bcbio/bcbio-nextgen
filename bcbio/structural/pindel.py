@@ -91,11 +91,7 @@ def _run_tumor_pindel_caller(align_bams, items, ref_file, assoc_files,
             do.run(cmd.format(**locals()), "Genotyping with pindel", {})
             out_file = _create_vcf(root_pindel, out_file, ref_file,
                                    items, paired)
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"),
-                                               ref_file, items[0])
-    return ann_file
-
+    return out_file
 
 def _create_tmp_input(input_bams, names, tmp_path, config):
     """Create input file for pindel. tab file: bam file, insert size, name

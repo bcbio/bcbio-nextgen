@@ -111,9 +111,8 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
-        if not utils.file_exists(raw_file):
-            with file_transaction(items[0], raw_file) as tx_out_file:
+        if not utils.file_exists(out_file):
+            with file_transaction(items[0], out_file) as tx_out_file:
                 freebayes = config_utils.get_program("freebayes", config)
                 input_bams = " ".join("-b %s" % x for x in align_bams)
                 opts, no_target_regions = _freebayes_options_from_config(items, config, out_file, region)
@@ -142,11 +141,6 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                            "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                            "{compress_cmd} > {tx_out_file}")
                     do.run(cmd.format(**locals()), "Genotyping with FreeBayes", {})
-            ann_file = annotation.annotate_nongatk_vcf(raw_file, align_bams,
-                                                       assoc_files.get("dbsnp"),
-                                                       ref_file, items[0], out_file)
-            if ann_file != out_file:
-                utils.symlink_plus(ann_file, out_file)
     return out_file
 
 def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
@@ -164,9 +158,8 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-paired-variants.vcf.gz" % os.path.splitext(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        raw_file = "%s-raw%s" % utils.splitext_plus(out_file)
-        if not utils.file_exists(raw_file):
-            with file_transaction(items[0], raw_file) as tx_out_file:
+        if not utils.file_exists(out_file):
+            with file_transaction(items[0], out_file) as tx_out_file:
                 paired = get_paired_bams(align_bams, items)
                 assert paired.normal_bam, "Require normal BAM for FreeBayes paired calling and filtering"
 
@@ -197,11 +190,6 @@ def _run_freebayes_paired(align_bams, items, ref_file, assoc_files,
                           "vt normalize -n -r {ref_file} -q - | vcfuniqalleles | vt uniq - 2> /dev/null "
                           "{compress_cmd} > {tx_out_file}")
                     do.run(cl.format(**locals()), "Genotyping paired variants with FreeBayes", {})
-            ann_file = annotation.annotate_nongatk_vcf(raw_file, align_bams,
-                                                       assoc_files.get("dbsnp"),
-                                                       ref_file, items[0], out_file)
-            if ann_file != out_file:
-                utils.symlink_plus(ann_file, out_file)
     return out_file
 
 # ## Filtering

@@ -7,6 +7,7 @@ import gzip
 import os
 
 import pybedtools
+import toolz as tz
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -46,19 +47,39 @@ def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True,
     return anns
 
 def finalize_vcf(in_file, variantcaller, items):
-    """Perform cleanup and annotation of the final VCF.
+    """Perform cleanup and dbSNP annotation of the final VCF.
+
+    - Adds contigs to header for bcftools compatibility
+    - adds sample information for tumor/normal
     """
     out_file = "%s-annotated%s" % utils.splitext_plus(in_file)
     if not utils.file_uptodate(out_file, in_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            cl = _add_vcf_header_sample_cl(in_file, items, out_file)
-            if cl:
-                cmd = "{cl} | bgzip -c > {tx_out_file}"
-                do.run(cmd.format(**locals()), "Annotate")
+        header_cl = _add_vcf_header_sample_cl(in_file, items, out_file)
+        contig_cl = _add_contig_cl(in_file, items)
+        cls = [x for x in (contig_cl, header_cl) if x]
+        if cls:
+            post_cl = " | ".join(cls) + " | "
+        else:
+            post_cl = None
+        dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), items[0])
+        if dbsnp_file:
+            out_file = _add_dbsnp(in_file, dbsnp_file, items[0], out_file, post_cl)
     if utils.file_exists(out_file):
         return vcfutils.bgzip_and_index(out_file, items[0]["config"])
     else:
         return in_file
+
+def _add_contig_cl(in_file, items):
+    has_contigs = False
+    with utils.open_gzipsafe(in_file) as in_handle:
+        for line in in_handle:
+            if line.startswith("##contig"):
+                has_contigs = True
+                break
+            elif not line.startswith("##"):
+                break
+    if not has_contigs:
+        return vcfutils.add_contig_to_header_cl(items[0])
 
 def _fix_generic_tn_names(paired):
     """Convert TUMOR/NORMAL names in output into sample IDs.
@@ -89,11 +110,8 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
             toadd.append("##PEDIGREE=<Derived=%s,Original=%s>" % (paired.tumor_name, paired.normal_name))
         new_header = _update_header(in_file, base_file, toadd, _fix_generic_tn_names(paired))
         if vcfutils.vcf_has_variants(in_file):
-            cmd = "bcftools reheader -h {new_header} {in_file} | bcftools view "
-        # bcftools reheader does not work with empty VCF files as of samtools 1.3
-        else:
-            cmd = "cat {new_header}"
-        return cmd.format(**locals())
+            cmd = "bcftools reheader -h {new_header} | bcftools view "
+            return cmd.format(**locals())
 
 def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
     """Fix header with additional lines and remapping of generic sample names.
@@ -116,7 +134,21 @@ def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
         out_handle.write(chrom_line)
     return new_header
 
-def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
+_DBSNP_TEMPLATE = """
+[[annotation]]
+file="%s"
+fields=["ID"]
+names=["rs_ids"]
+ops=["concat"]
+
+[[postannotation]]
+name="ID"
+fields=["rs_ids"]
+op="setid"
+type="String"
+"""
+
+def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
     """Annotate a VCF file with dbSNP.
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
@@ -124,70 +156,15 @@ def add_dbsnp(orig_file, dbsnp_file, data, out_file=None):
         out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
     if not utils.file_uptodate(out_file, orig_file):
         with file_transaction(data, out_file) as tx_out_file:
-            conf_file = os.path.join(os.path.dirname(tx_out_file), "dbsnp.conf")
+            conf_file = os.path.join(os.path.dirname(out_file), "dbsnp.conf")
             with open(conf_file, "w") as out_handle:
-                out_handle.write('[[annotation]]\n')
-                out_handle.write('file="%s"\n' % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
-                out_handle.write('fields=["ID"]\n')
-                out_handle.write('names=["rs_ids"]\n')
-                out_handle.write('ops=["concat"]\n')
-            ref_file = dd.get_ref_file(data)
-            cmd = ("vcfanno {conf_file} {orig_file} | "
-                   "bcftools annotate --set-id +'%INFO/rs_ids' -o {tx_out_file} -O z")
+                out_handle.write(_DBSNP_TEMPLATE % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
+            if not post_cl: post_cl = ""
+            cores = dd.get_num_cores(data)
+            cmd = ("vcfanno -p {cores} {conf_file} {orig_file} | {post_cl} "
+                   "bgzip -c > {tx_out_file}")
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
     return vcfutils.bgzip_and_index(out_file, data["config"])
-
-def annotate_nongatk_vcf(orig_file, bam_files, dbsnp_file, ref_file, data,
-                         out_file=None):
-    """Annotate a VCF file with dbSNP and standard GATK called annotations.
-    """
-    orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
-    broad_runner = broad.runner_from_config_safe(data["config"])
-    if not broad_runner or not broad_runner.has_gatk() or broad_runner.gatk_type() == "gatk4":
-        if dbsnp_file:
-            return add_dbsnp(orig_file, dbsnp_file, data, out_file)
-        else:
-            return orig_file
-    else:
-        if out_file is None:
-            out_file = "%s-gatkann%s" % utils.splitext_plus(orig_file)
-        if not utils.file_exists(out_file):
-            with file_transaction(data, out_file) as tx_out_file:
-                # Avoid issues with incorrectly created empty GATK index files.
-                # Occurs when GATK cannot lock shared dbSNP database on previous run
-                idx_file = orig_file + ".idx"
-                if os.path.exists(idx_file) and not utils.file_exists(idx_file):
-                    os.remove(idx_file)
-                annotations = get_gatk_annotations(data["config"], include_depth=False, gatk_input=False)
-                params = ["-T", "VariantAnnotator",
-                          "-R", ref_file,
-                          "--variant", orig_file,
-                          "--out", tx_out_file,
-                          "-L", orig_file]
-                if dbsnp_file:
-                    params += ["--dbsnp", dbsnp_file]
-                for bam_file in bam_files:
-                    params += ["-I", bam_file]
-                for x in annotations:
-                    params += ["-A", x]
-                if ("--allow_potentially_misencoded_quality_scores" not in params
-                      and "-allowPotentiallyMisencodedQuals" not in params):
-                    params += ["--allow_potentially_misencoded_quality_scores"]
-                # be less stringent about BAM and VCF files (esp. N in CIGAR for RNA-seq)
-                # start by removing existing -U or --unsafe opts
-                # (if another option is added to Gatk that starts with -U... this may create a bug)
-                unsafe_options = [x for x in params if x.startswith(("-U", "--unsafe"))]
-                for my_opt in unsafe_options:
-                    ind_to_rem = params.index(my_opt)
-                    # are the options given as separate strings or in one?
-                    if my_opt.strip() == "-U" or my_opt.strip() == "--unsafe":
-                        params.pop(ind_to_rem + 1)
-                    params.pop(ind_to_rem)
-                params.extend(["-U", "ALL"])
-                broad_runner = broad.runner_from_config(data["config"])
-                broad_runner.run_gatk(params)
-        vcfutils.bgzip_and_index(out_file, data["config"])
-        return out_file
 
 def get_context_files(data):
     """Retrieve pre-installed annotation files for annotating genome context.

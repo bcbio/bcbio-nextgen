@@ -126,10 +126,7 @@ def _run_scalpel_caller(align_bams, items, ref_file, assoc_files,
                    "| {fix_ambig} | vcfallelicprimitives -t DECOMPOSED --keep-geno | vcffixup - | vcfstreamsort "
                    "| {add_contig} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"),
-                                               ref_file, items[0])
-    return ann_file
+    return out_file
 
 def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                           region=None, out_file=None):
@@ -187,11 +184,7 @@ def _run_scalpel_paired(align_bams, items, ref_file, assoc_files,
                    "<({bcftools_cmd_common} {scalpel_tmp_file_common}) | "
                    " {fix_ambig} | {vcfstreamsort} | {add_contig} {compress_cmd} > {tx_out_file}")
             do.run(cl2.format(**locals()), "Finalising Scalpel variants", {})
-
-    ann_file = annotation.annotate_nongatk_vcf(out_file, align_bams,
-                                               assoc_files.get("dbsnp"), ref_file,
-                                               items[0])
-    return ann_file
+    return out_file
 
 def get_scalpel_bcftools_filter_expression(filter_type, config):
     bcftools = config_utils.get_program("bcftools", config)
