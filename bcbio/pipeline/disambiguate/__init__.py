@@ -144,6 +144,7 @@ def run(items, config):
        "%s-ambiguous" % data_b["genome_build"]: bam.sort("%s.ambiguousSpeciesB.bam" % base_name, config),
        "summary": summary_file}
     data_a["work_bam"] = bam.sort("%s.disambiguatedSpeciesA.bam" % base_name, config)
+    bam.index(dd.get_work_bam(data_a), data_a["config"])
     return [[data_a]]
 
 def _run_python(work_bam_a, work_bam_b, out_dir, aligner, prefix, items):

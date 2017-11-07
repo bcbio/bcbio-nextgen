@@ -1,7 +1,8 @@
 ## 1.0.7 (in progress)
 
-- Standardize dbSNP annotation to use vcfanno for all variant callers. Remove 
+- Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
+- disambiguation: ensure BAM index present for non-split alignments
 
 ## 1.0.6 (5 November 2017)
 

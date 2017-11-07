@@ -37,7 +37,12 @@ def calculate_sv_bins(*items):
     for batch, batch_items in multi.group_by_batch(items, False).items():
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "structural", "bins", batch))
         access_file = tz.get_in(["config", "algorithm", "callable_regions"], batch_items[0])
-        cnv_file = get_base_cnv_regions(batch_items[0], work_dir, "transcripts100", include_gene_names=False)
+        for data in batch_items:
+            cnv_file = get_base_cnv_regions(data, work_dir, "transcripts100", include_gene_names=False)
+            if cnv_file:
+                break
+        assert cnv_file, ("Did not find coverage regions for %s" %
+                          (" ".join([dd.get_sample_name(d) for d in batch_items])))
         size_calc_fn = MemoizedSizes(cnv_file, items).get_target_antitarget_bin_sizes
         for data in batch_items:
             target_bed, anti_bed = cnvkit.targets_w_bins(cnv_file, access_file, size_calc_fn,
