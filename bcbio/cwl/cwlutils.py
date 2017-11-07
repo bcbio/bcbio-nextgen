@@ -60,7 +60,7 @@ def unpack_tarballs(xs, data, use_subdir=True):
     elif isinstance(xs, (list, tuple)):
         xs = [unpack_tarballs(x, data, use_subdir) for x in xs]
     elif isinstance(xs, basestring):
-        if os.path.isfile(xs) and xs.endswith("-wf.tar.gz"):
+        if os.path.isfile(xs.encode("utf-8", "ignore")) and xs.endswith("-wf.tar.gz"):
             if use_subdir:
                 tarball_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "wf-inputs"))
             else:
