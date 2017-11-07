@@ -51,7 +51,7 @@ def trim_srna_sample(data):
     adapter = dd.get_adapters(data)
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
-    adapters = adapter if adapter else _dnapi_prediction(in_file)
+    adapters = adapter if adapter else _dnapi_prediction(in_file, out_dir)
     times = "" if len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
@@ -119,9 +119,27 @@ def sample_annotation(data):
     data = spikein.counts_spikein(data)
     return [[data]]
 
-def _dnapi_prediction(fn):
-    iterative_result = iterative_adapter_prediction(fn, [1.2, 1.3, 1.4, 1.7, 2], [7, 11], 500000)
-    return [a[0] for a in iterative_result]
+def _prepare_file(fn, out_dir):
+    """Cut the beginning of the reads to avoid detection of miRNAs"""
+    atropos = _get_atropos()
+    cmd = "{atropos} trim --max-reads 500000 -u 22 -se {fn} -o {tx_file}"
+    out_file = os.path.join(out_dir, append_stem(os.path.basename(fn), "end"))
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_file:
+        do.run(cmd.format(**locals()))
+    return out_file
+
+def _dnapi_prediction(fn, out_dir):
+    end_file = _prepare_file(fn, out_dir)
+    iterative_result = iterative_adapter_prediction(end_file, [1.2, 1.3, 1.4, 1.7, 2], [7, 11], 500000)
+    max_score = iterative_result[1][1]
+    adapters = list()
+    for a in iterative_result:
+        if a[1] > max_score * 0.40:
+            logger.debug("Adding adapter to the list: %s with score %s" % (a[0], a[1]))
+            adapters.append(a[0])
+    return adapters
 
 def _cmd_atropos():
     """
