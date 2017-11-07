@@ -146,6 +146,10 @@ name="ID"
 fields=["rs_ids"]
 op="setid"
 type="String"
+
+[[postannotation]]
+fields=["rs_ids"]
+op="delete"
 """
 
 def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
