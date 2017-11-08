@@ -109,13 +109,18 @@ class EricScriptConfig(object):
             '-name', self._sample_name,
             '-o', tx_output_dir,
         ] + list(input_files)
-        return "export PATH=%s:$PATH %s" % (self._get_ericscript_path(), " ".join(cmd))
+        return "export PATH=%s:%s:$PATH; %s;" % (self._get_samtools0_path(), self._get_ericscript_path(), " ".join(cmd))
 
     def _get_ericscript_path(self):
         """Retrieve PATH to the isolated eriscript anaconda environment.
         """
         es = utils.which(os.path.join(utils.get_bcbio_bin(), self.EXECUTABLE))
         return os.path.dirname(os.path.realpath(es))
+    def _get_samtools0_path(self):
+        """Retrieve PATH to the samtools version specific for eriscript.
+        """
+        samtools_path = os.path.realpath(os.path.join(self._get_ericscript_path(),"..", "..", "bin"))
+        return samtools_path
 
     @property
     def output_dir(self):
