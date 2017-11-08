@@ -98,8 +98,10 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
 
     Normal -- NT field (ref, het, hom, conflict)
     Tumor -- SGT field
-      - for SNPs specified as GG->TT for the normal and tumor diploid alleles. These case be
-        reverse complemented as well.
+      - for SNPs specified as GG->TT for the normal and tumor diploid alleles. These
+        can also represent more complex alleles in which case we set at heterozygotes
+        pending longer term inclusion of genotypes in Strelka2 directly
+        (https://github.com/Illumina/strelka/issues/16)
       - For indels, uses the ref, het, hom convention
     """
     known_names = set(["het", "hom", "ref", "conflict"])
@@ -108,19 +110,14 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
             return "0/1"
         elif val.lower() == "hom":
             return "1/1"
-        else:
-            assert val.lower() in ["ref", "conflict"], (fname, coords, ref, alt, info, val)
+        elif val.lower() in set(["ref", "confict"]):
             return "0/0"
-    def _rc(xs):
-        rc_map = {"G": "C", "C": "G", "A": "T", "T": "A", "N": "N"}
-        xs = list(xs)
-        xs.reverse()
-        return "".join([rc_map[x] for x in xs])
-    def alleles_to_gt(val, rc=False):
-        if rc:
-            gt_indices = {_rc(gt.upper()): i for i, gt in enumerate([ref] + alt)}
         else:
-            gt_indices = {gt.upper(): i for i, gt in enumerate([ref] + alt)}
+            # Non-standard representations, het is our best imperfect representation
+            # print(fname, coords, ref, alt, info, val)
+            return "0/1"
+    def alleles_to_gt(val):
+        gt_indices = {gt.upper(): i for i, gt in enumerate([ref] + alt)}
         tumor_gts = [gt_indices[x.upper()] for x in val if x in gt_indices]
         if tumor_gts and val not in known_names:
             if max(tumor_gts) == 0:
@@ -129,8 +126,6 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
                 tumor_gt = "0/%s" % min([x for x in tumor_gts if x > 0])
             else:
                 tumor_gt = "%s/%s" % (min(tumor_gts), max(tumor_gts))
-        elif not rc and val not in known_names:
-            tumor_gt = alleles_to_gt(val, rc=True)
         else:
             tumor_gt = name_to_gt(val)
         return tumor_gt
