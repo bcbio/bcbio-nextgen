@@ -16,8 +16,11 @@ import shutil
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline.disambiguate.run import main as disambiguate_main
 from bcbio.pipeline.disambiguate.pdxfilter import PDXFilter
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils, merge, run_info
+from bcbio.provenance import do
 from bcbio.pipeline import merge, run_info
 from bcbio import bam
 
@@ -32,7 +35,8 @@ def split(*items):
         dis_orgs = data["config"]["algorithm"].get("disambiguate")
         if dis_orgs:
             if not data.get("disambiguate", None):
-                data["disambiguate"] = {"genome_build": data["genome_build"], "base": True}
+                data["disambiguate"] = {"genome_build": data["genome_build"],
+                                        "base": True}
             out.append([data])
             # handle the instance where a single organism is disambiguated
             if isinstance(dis_orgs, basestring):
