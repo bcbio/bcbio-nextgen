@@ -1,11 +1,12 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish, spikein, pizzly)
+                          express, variation, stringtie, sailfish, spikein, pizzly, ericscript)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import joint, vardict, vcfanno
 import bcbio.pipeline.datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
 
@@ -150,6 +151,11 @@ def quantitate_expression_noparallel(samples, run_parallel):
 def generate_transcript_counts(data):
     """Generate counts per transcript and per exon from an alignment"""
     data["count_file"] = featureCounts.count(data)
+
+    if dd.get_fusion_mode(data, False) and not dd.get_fusion_caller(data):
+        oncofuse_file = oncofuse.run(data)
+        if oncofuse_file:
+            data = dd.set_oncofuse_file(data, oncofuse_file)
 
     if dd.get_transcriptome_align(data):
         # to create a disambiguated transcriptome file realign with bowtie2
@@ -354,3 +360,34 @@ def combine_files(samples):
             data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
     return updated_samples
+
+
+def detect_fusions(samples):
+    """Run fusion with a standalone tool, specified in config
+    as fusion_caller.
+    If fusion_mode is True, and no fusion_caller is specified,
+    or fusion_caller == 'aligner', it is assumed that gene fusion
+    detection was run on the alignment step.
+    """
+    fusion_mode = dd.get_in_samples(samples, dd.get_fusion_mode)
+    if not fusion_mode:
+        return samples
+
+    caller = dd.get_in_samples(samples, dd.get_fusion_caller)
+    if not caller or caller == 'aligner':
+        logger.info("No standalone fusion caller specified in the config.")
+        return samples
+
+    STANDALONE_CALLERS = {
+        'ericscript': ericscript.run,
+    }
+    caller_fn = STANDALONE_CALLERS.get(caller)
+    if not caller_fn:
+        logger.warning(
+            "Gene fusion detection with %s is not supported."
+            "Supported callers:\n%s" % ', '.join(STANDALONE_CALLERS.keys())
+        )
+        return samples
+
+    logger.info("Running gene fusion detection with  %s" % caller)
+    return [[caller_fn(s)] for s in dd.sample_data_iterator(samples)]

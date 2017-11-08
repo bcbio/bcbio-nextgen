@@ -641,10 +641,7 @@ def is_remote(fname):
 
 def file_exists_or_remote(fname):
     """Check if a file exists or is accessible remotely."""
-    if is_remote(fname):
-        return True
-    else:
-        return os.path.exists(fname)
+    return is_remote(fname) or utils.file_exists(fname)
 
 
 def default_region(fname):
@@ -697,7 +694,7 @@ def list(remote_dirname):
     return manager.list(remote_dirname)
 
 
-def open(fname):
+def open_file(fname):
     """Provide a handle-like object for streaming."""
     manager = _get_storage_manager(fname)
     return manager.open(fname)

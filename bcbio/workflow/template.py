@@ -136,9 +136,9 @@ def name_to_config(template):
     files.
     """
     if objectstore.is_remote(template):
-        with objectstore.open(template) as in_handle:
+        with objectstore.open_file(template) as in_handle:
             config = yaml.load(in_handle)
-        with objectstore.open(template) as in_handle:
+        with objectstore.open_file(template) as in_handle:
             txt_config = in_handle.read()
     elif os.path.isfile(template):
         if template.endswith(".csv"):
@@ -275,7 +275,7 @@ def _pname_and_metadata(in_file):
         base = os.path.splitext(os.path.basename(in_file))[0]
         md_file = in_file
     elif objectstore.is_remote(in_file):
-        with objectstore.open(in_file) as in_handle:
+        with objectstore.open_file(in_file) as in_handle:
             md, global_vars = _parse_metadata(in_handle)
         base = os.path.splitext(os.path.basename(in_file))[0]
         md_file = None

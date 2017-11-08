@@ -192,7 +192,7 @@ def _check_toolplus(x):
     """
     import argparse
     Tool = collections.namedtuple("Tool", ["name", "fname"])
-    std_choices = set(["data", "cadd", "dbnsfp"])
+    std_choices = set(["data", "cadd", "dbnsfp", "ericscript"])
     if x in std_choices:
         return Tool(x, None)
     elif "=" in x and len(x.split("=")) == 2:
@@ -225,8 +225,8 @@ if __name__ == "__main__":
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
                         action="append", default=[],
-                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp", "dbscsnv",
-                                 "battenberg", "kraken"])
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "cadd", "vep", "dbnsfp",
+                                 "battenberg", "kraken", "ericscript"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",

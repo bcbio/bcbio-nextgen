@@ -10,6 +10,8 @@ import sys
 import yaml
 
 import toolz as tz
+from bcbio import utils
+import bcbio.pipeline.datadict as dd
 
 class CmdNotFound(Exception):
     pass
@@ -469,3 +471,12 @@ def program_installed(program, data):
     except CmdNotFound:
         return False
     return True
+
+
+def should_run_fusion(with_caller, config):
+    fusion_mode = dd.get_fusion_mode(config) or \
+        utils.get_in(config, ("algorithm", "fusion_mode"), False)
+    fusion_caller = dd.get_fusion_caller(config) or \
+        utils.get_in(config, ("algorithm", "fusion_caller"), None)
+
+    return fusion_mode and fusion_caller in (None, with_caller)

@@ -277,7 +277,7 @@ def open_fastq(in_file):
     """ open a fastq file, using gzip if it is gzipped
     """
     if objectstore.is_remote(in_file):
-        return objectstore.open(in_file)
+        return objectstore.open_file(in_file)
     _, ext = os.path.splitext(in_file)
     if ext == ".gz":
         return gzip.open(in_file, 'rb')

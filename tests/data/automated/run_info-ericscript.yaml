@@ -1,0 +1,16 @@
+upload:
+  dir: upload
+details:
+  - analysis: RNA-seq
+    algorithm:
+      aligner: star
+      quality_format: illumina
+      trim_reads: read_through
+      adapters: [truseq, polya]
+      disambiguate:
+       - mm9
+      fusion_mode: True
+      fusion_caller: ericscript
+    description: Test1
+    genome_build: hg19
+    files: ["1_1.fq.gz", "1_2.fq.gz"]

@@ -215,16 +215,22 @@ def _run_bwa_align(fastq_file, ref_file, out_file, config):
     cmd = "{cl} > {out_file}".format(cl=" ".join(aln_cl), out_file=out_file)
     do.run(cmd, "bwa aln: {f}".format(f=os.path.basename(fastq_file)), None)
 
+
 def index_transcriptome(gtf_file, ref_file, data):
     """
     use a GTF file and a reference FASTA file to index the transcriptome
     """
     gtf_fasta = gtf.gtf_to_fasta(gtf_file, ref_file)
+    return build_bwa_index(gtf_fasta, data)
+
+
+def build_bwa_index(fasta_file, data):
     bwa = config_utils.get_program("bwa", data["config"])
-    cmd = "{bwa} index {gtf_fasta}".format(**locals())
-    message = "Creating transcriptome index of %s with bwa." % (gtf_fasta)
+    cmd = "{bwa} index {fasta_file}".format(**locals())
+    message = "Creating transcriptome index of %s with bwa." % (fasta_file)
     do.run(cmd, message)
-    return gtf_fasta
+    return fasta_file
+
 
 def align_transcriptome(fastq_file, pair_file, ref_file, data):
     """
