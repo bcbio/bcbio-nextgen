@@ -29,7 +29,12 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
     used to process less multicore usage when jobs run faster on more single
     cores.
     """
-    checkpoint_file = _get_checkpoint_file(dirs, name)
+    if name:
+        checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"],
+                                                         "checkpoints_parallel"))
+        checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % name)
+    else:
+        checkpoint_file = None
     sysinfo = system.get_info(dirs, parallel, config.get("resources", {}))
     items = [x for x in items if x is not None] if items else []
     max_multicore = int(max_multicore or sysinfo.get("cores", 1))
@@ -62,19 +67,3 @@ def start(parallel, items, config, dirs=None, name=None, multiplier=1,
         if checkpoint_file:
             with open(checkpoint_file, "w") as out_handle:
                 out_handle.write("done\n")
-
-def _local_checkpointed(checkpoint_file, name, parallel):
-    if checkpoint_file and os.path.exists(checkpoint_file):
-        logger.info("run local -- checkpoint passed: %s" % name)
-        parallel["cores_per_job"] = 1
-        parallel["num_jobs"] = 1
-        parallel["checkpointed"] = True
-
-def _get_checkpoint_file(dirs, name):
-    if name:
-        checkpoint_dir = utils.safe_makedir(os.path.join(dirs["work"],
-                                                         "checkpoints_parallel"))
-        checkpoint_file = os.path.join(checkpoint_dir, "%s.done" % name)
-    else:
-        checkpoint_file = None
-    return checkpoint_file
