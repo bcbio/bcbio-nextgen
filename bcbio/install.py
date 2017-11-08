@@ -19,7 +19,6 @@ import sys
 import glob
 import urllib
 import json
-import tarfile
 
 import requests
 from six.moves import urllib
@@ -311,9 +310,6 @@ def upgrade_bcbio_data(args, remotes):
         subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
-    if 'ericscript' in args.datatarget:
-        _install_ericscript_db(_get_data_dir(), args)
-    upgrade_vcfanno_data(s["fabricrc_overrides"]["galaxy_home"])
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -448,8 +444,6 @@ def upgrade_thirdparty_tools(args, remotes):
             if not fname.startswith("toolplus"):
                 os.remove(os.path.join(manifest_dir, fname))
     cbl_manifest.create(manifest_dir, args.tooldir)
-
-
 def _get_system_config():
     return os.path.join(_get_data_dir(), "galaxy", "bcbio_system.yaml")
 
@@ -469,8 +463,6 @@ def _install_toolplus(args):
         if tool.name in set(["gatk", "mutect"]):
             print("Installing %s" % tool.name)
             _install_gatk_jar(tool.name, tool.fname, toolplus_manifest, system_config, toolplus_dir)
-        elif tool.name == 'ericscript':
-            _install_ericscript(toolplus_manifest, system_config, toolplus_dir)
         else:
             raise ValueError("Unexpected toolplus argument: %s %s" % (tool.name, tool.fname))
 
@@ -492,80 +484,6 @@ def _install_gatk_jar(name, fname, manifest, system_config, toolplus_dir):
     shutil.copyfile(fname, os.path.join(store_dir, os.path.basename(fname)))
     _update_system_file(system_config, name, {"dir": store_dir})
     _update_manifest(manifest, name, version)
-
-
-def _install_ericscript(manifest, system_config, toolplus_dir):
-    """Install EricScript in a separate conda env
-    """
-    PKG_NAME = 'ericscript'
-    CONDA_ENV = 'ericscript'
-    conda_api = CondaAPI()
-
-    env_prefix = conda_api.create_env(CONDA_ENV)
-    version = conda_api.get_latest_version(PKG_NAME)
-    conda_api.install_package(
-        PKG_NAME, version=version, env_name=CONDA_ENV)
-    print "Installed %s=%s into %s" % (PKG_NAME, version, env_prefix)
-
-    _update_system_file(system_config, PKG_NAME, {"env": env_prefix})
-    _update_manifest(manifest, PKG_NAME, version)
-
-
-class CondaAPI(object):
-    _BASE_CMD = ('conda', )
-    _CHANNELS = ('-c', 'bioconda', '-c', 'r', '-c', 'conda-forge')
-    _OUTPUT_ARGS = ('--json', )
-
-    def _get_cmd(self, sub_cmd):
-        return list(
-            itertools.chain(
-                self._BASE_CMD,
-                sub_cmd,
-                self._CHANNELS,
-                self._OUTPUT_ARGS
-            )
-        )
-
-    def create_env(self, env_name):
-        create_env_cmd = self._get_cmd(['create', '--name', env_name])
-        try:
-            output = subprocess.check_output(create_env_cmd)
-        except subprocess.CalledProcessError as e:
-            if 'already exists' not in e.output:
-                raise
-            env_prefix = self._get_path_from_message(
-                self._unserialize(e.output)['message'])
-        else:
-            env_prefix = self._unserialize(output)['actions']['PREFIX']
-
-        return env_prefix
-
-    def _unserialize(self, output):
-        return json.loads(output)
-
-    def _get_path_from_message(self, message):
-        idx = message.find(os.path.sep)
-        return message[idx:]
-
-    def get_latest_version(self, package):
-        version_cmd = self._get_cmd(['search', package])
-        output = subprocess.check_output(version_cmd)
-        return self._unserialize(output)[package][-1]['version']
-
-    def install_package(self, package, version=None, env_name='root'):
-        pkg_full_name = self._get_full_name(package, version)
-        install_cmd = self._get_cmd(
-            ['install', '--name', env_name, pkg_full_name, '--quiet']
-        )
-        output = subprocess.check_output(install_cmd)
-        success = self._unserialize(output).get('success')
-        if not success:
-            raise RuntimeError(
-                "Failed to install %s into %s", pkg_full_name, env_name)
-
-    def _get_full_name(self, package, version):
-        return '%s=%s' % (package, version) if version else package
-
 
 def _update_manifest(manifest_file, name, version):
     """Update the toolplus manifest file with updated name and version
@@ -604,24 +522,6 @@ def _update_system_file(system_file, name, new_kvs):
     with open(system_file, "w") as out_handle:
         yaml.safe_dump(config, out_handle, default_flow_style=False, allow_unicode=False)
 
-
-def _install_ericscript_db(datadir, args):
-    PKG_NAME = 'ericscript'
-    HG_38_URL = 'https://drive.google.com/file/d/0B9s__vuJPvIiUGt1SnFMZFg4TlE/view'  # noqa
-
-    print "Downloading EricScript database for hg38..."
-    archived_db_file = objectstore.download(HG_38_URL, input_dir=os.getcwd())
-    archive = tarfile.open(archived_db_file)
-    archive.extractall(datadir)
-    print "Ericscript database was saved to ", datadir
-
-    ericscript_datadir = os.path.join(datadir, "ericscript_db")
-    assert os.path.isdir(ericscript_datadir)
-
-    system_config = _get_system_config()
-    _update_system_file(system_config, PKG_NAME, {"db": ericscript_datadir})
-
-
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
@@ -656,7 +556,7 @@ def _install_kraken_db(datadir, args):
         utils.symlink_plus(os.path.join(kraken, last_version[0]), os.path.join(kraken, "minikraken"))
         utils.remove_safe(compress)
     else:
-        print "You have the latest version %s." % last_mod
+        print ("You have the latest version %s." % last_mod)
 
 # ## Store a local configuration file with upgrade details
 
@@ -789,8 +689,6 @@ def _check_toolplus(x):
             raise argparse.ArgumentTypeError("Unexpected --toolplus argument for %s. File does not exist: %s"
                                              % (name, fname))
         return Tool(name, fname)
-    elif x == 'ericscript':
-        return Tool('ericscript', None)
     else:
         raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
 
