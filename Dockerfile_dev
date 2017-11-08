@@ -1,4 +1,0 @@
-FROM bcbio/bcbio:latest
-
-RUN /usr/local/share/bcbio-nextgen/anaconda/bin/conda  install -c conda-forge google-api-python-client
-RUN chmod 777 -R /usr/local/share/bcbio-nextgen/anaconda/lib/python2.7/site-packages
