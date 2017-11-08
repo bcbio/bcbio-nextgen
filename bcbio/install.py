@@ -63,8 +63,9 @@ def upgrade_bcbio(args):
             print("Upgrading bcbio-nextgen to latest development version")
             pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
             git_tag = "@%s" % args.revision if args.revision != "master" else ""
+            git_repo = args.gitrepo if args.gitrepo is not None else REMOTES["gitrepo"]
             _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
-                            "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)]], anaconda_dir)
+                            "git+%s%s#egg=bcbio-nextgen" % (git_repo, git_tag)]], anaconda_dir)
             print("Upgrade of bcbio-nextgen development code complete.")
         else:
             _update_conda_packages()
@@ -707,6 +708,7 @@ def add_subparser(subparsers):
     parser.add_argument("--toolconf", help="YAML configuration file of tools to install", default=None,
                         type=lambda x: (os.path.abspath(os.path.expanduser(x))))
     parser.add_argument("--revision", help="Specify a git commit hash or tag to install", default="master")
+    parser.add_argument("--gitrepo", help="Specify a git repo to fetch bcbio-nextgen development code from", default=None)
     parser.add_argument("--toolplus", help="Specify additional tool categories to install",
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
