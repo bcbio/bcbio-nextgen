@@ -79,7 +79,9 @@ def test_2_fusion(install_test_files, data_dir):
         subprocess.check_call(cl)
 
 
-@pytest.marks('star', 'rnaseq', 'rnaseq_standard')
+@pytest.mark.star
+@pytest.mark.rnaseq
+@pytest.mark.rnaseq_standard
 def test_2_star(install_test_files, data_dir):
     """Run an RNA-seq analysis with STAR and generate gene-level counts.
     """

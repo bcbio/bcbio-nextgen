@@ -13,4 +13,4 @@ details:
       fusion_caller: ericscript
     description: Test1
     genome_build: hg19
-    files: ["1_1.fq.gz", "1_2.fq.gz"] 
+    files: ["1_1.fq.gz", "1_2.fq.gz"]

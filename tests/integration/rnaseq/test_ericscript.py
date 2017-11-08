@@ -25,7 +25,7 @@ def setup_logging():
     setup_script_logging()
 
 
-@pytest.marks('install_required')
+@pytest.mark.install_required
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on trimmed pair-end reads with EricScript.
@@ -38,7 +38,7 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
         assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
-@pytest.marks('install_required')
+@pytest.mark.install_required
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on disambiguated reads with EricScript.
