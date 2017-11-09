@@ -66,6 +66,7 @@ LOOKUPS = {
     "mark_duplicates": {"keys": ["config", "algorithm", "mark_duplicates"], "default": True},
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "svclass": {"keys": ["metadata", "svclass"], "default": ""},
+    "prep_method": {"keys": ["metadata", "prep_method"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},

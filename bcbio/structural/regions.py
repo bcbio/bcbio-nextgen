@@ -3,8 +3,10 @@
 Provides a central place to bin the genome into smaller transcript-based regions
 for structural variant calling and prioritization.
 """
+import collections
 import itertools
 import math
+import operator
 import os
 
 import numpy as np
@@ -34,19 +36,11 @@ def calculate_sv_bins(*items):
         return items
     items = [utils.to_single_data(x) for x in items]
     out = []
-    for batch, batch_items in multi.group_by_batch(items, False).items():
-        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "structural", "bins", batch))
-        access_file = tz.get_in(["config", "algorithm", "callable_regions"], batch_items[0])
-        for data in batch_items:
-            cnv_file = get_base_cnv_regions(data, work_dir, "transcripts100", include_gene_names=False)
-            if cnv_file:
-                break
-        assert cnv_file, ("Did not find coverage regions for %s" %
-                          (" ".join([dd.get_sample_name(d) for d in batch_items])))
-        size_calc_fn = MemoizedSizes(cnv_file, items).get_target_antitarget_bin_sizes
-        for data in batch_items:
-            target_bed, anti_bed = cnvkit.targets_w_bins(cnv_file, access_file, size_calc_fn,
-                                                         work_dir, data)
+    for cnv_group in _group_by_cnv_method(multi.group_by_batch(items, False)):
+        size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
+        for data in cnv_group.items:
+            target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file, size_calc_fn,
+                                                         cnv_group.work_dir, data)
             if not data.get("regions"):
                 data["regions"] = {}
             data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed}
@@ -114,6 +108,31 @@ class MemoizedSizes:
             anti_bin = range_map["antitarget"][1]
         return target_bin, anti_bin
 
+def _group_by_cnv_method(batches):
+    """Group into batches samples with identical CNV/SV approaches.
+
+    Allows sharing of background samples across multiple batches,
+    using all normals from tumor/normal pairs with the same prep method
+    for background.
+    """
+    CnvGroup = collections.namedtuple("CnvGroup", "items, work_dir, access_file, region_file")
+    out = []
+    groups = collections.defaultdict(list)
+    for batch, items in batches.items():
+        for data in items:
+            work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural", "bins", batch))
+            cnv_file = get_base_cnv_regions(data, work_dir, "transcripts100", include_gene_names=False)
+            if cnv_file:
+                break
+        assert cnv_file, ("Did not find coverage regions for batch %s: %s" %
+                          (batch, " ".join([dd.get_sample_name(d) for d in items])))
+        groups[(cnv_file, dd.get_prep_method(data))].append((items, data, work_dir))
+    for (cnv_file, _), cur_group in groups.items():
+        group_items = reduce(operator.add, [xs[0] for xs in cur_group])
+        access_file = tz.get_in(["config", "algorithm", "callable_regions"], cur_group[0][1])
+        out.append(CnvGroup(group_items, cur_group[0][2], access_file, cnv_file))
+    return out
+
 def calculate_sv_coverage(data):
     """Calculate coverage within bins for downstream CNV calling.
 
@@ -160,6 +179,19 @@ def _add_log2_depth(in_file, out_file, data):
                             out_handle.write("%s\t%s\t%s\t%s\t%.3f\t%.2f\n" %
                                              (chrom, start, end, gene_name, log2_depth, depth))
     return out_file
+
+def cnv_normalization(data):
+    """Normalize CNV coverage depths by GC, repeat and background.
+
+    Provides normalized output based on CNVkit approaches, provides a
+    point for providing additional methods in the future:
+
+    - reference: calculates reference backgrounds from normals and pools
+      including GC and repeat information
+    - fix: Uses background to normalize coverage estimations
+    http://cnvkit.readthedocs.io/en/stable/pipeline.html#fix
+    """
+    pass
 
 # Region retrieval for SV calling
 

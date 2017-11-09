@@ -258,6 +258,11 @@ The sample configuration file defines ``details`` of each sample to process::
       specifications (1=unaffected, 2=affected). CNVkit uses case/control
       status to determine how to set background samples for CNV calling.
 
+   - ``prep_method`` A free text description of the method used in sample
+     prep. Used to group together samples during CNV calling for background.
+     This is not required and when not present bcbio assumes all samples in
+     an analysis use the same method.
+
    - ``svclass`` defines a classification for a sample for use in SV
      case/control setups. When set as ``control`` will put samples into the
      background samples used for normalization.
