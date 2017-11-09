@@ -7,9 +7,12 @@ from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
 from bcbio.variation import vcfutils
 
-def vcfanno(vcf, out_file, conf_fns, data, basepath=None, lua_fns=None):
-    """
-    annotate a VCF file using vcfanno (https://github.com/brentp/vcfanno)
+def vcfanno(vcf, out_file, conf_fns, data, basepath=None, lua_fns=None, decomposed=False):
+    """Annotate a VCF file using vcfanno (https://github.com/brentp/vcfanno)
+
+    decomposed -- if set to true we'll convert allele based output into single values
+      to match alleles and make compatible with vcf2db
+      (https://github.com/quinlan-lab/vcf2db/issues/14)
     """
     if utils.file_exists(out_file):
         return out_file
@@ -22,7 +25,8 @@ def vcfanno(vcf, out_file, conf_fns, data, basepath=None, lua_fns=None):
         luaflag = "-lua {0}".format(luafn) if luafn and utils.file_exists(luafn) else ""
         basepathflag = "-base-path {0}".format(basepath) if basepath else ""
         cores = dd.get_num_cores(data)
-        cmd = "{vcfanno} -p {cores} {luaflag} {basepathflag} {conffn} {vcf} | sed -e 's/Number=A/Number=1/g' | bgzip -c > {tx_out_file}"
+        post_ann = "sed -e 's/Number=A/Number=1/g' |" if decomposed else ""
+        cmd = "{vcfanno} -p {cores} {luaflag} {basepathflag} {conffn} {vcf} | {post_ann} bgzip -c > {tx_out_file}"
         message = "Annotating {vcf} with vcfanno, using {conffn}".format(**locals())
         do.run(cmd.format(**locals()), message)
     return out_file
@@ -44,7 +48,7 @@ def _combine_files(orig_files, base_out_file):
                 out_handle.write("\n\n")
         return out_file
 
-def run_vcfanno(vcf, conf_files, data, data_basepath=None):
+def run_vcfanno(vcf, conf_files, data, data_basepath=None, decomposed=False):
     """
     annotated a VCF file using vcfanno, looks up the proper config/lua scripts
     under the `vcfanno` key under the algorithm section of the datadict,
@@ -79,5 +83,6 @@ def run_vcfanno(vcf, conf_files, data, data_basepath=None):
             anno_type = "gemini"
         out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
         if not utils.file_exists(out_file):
-            out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns)
+            out_file = vcfanno(vcf, out_file, conf_fns, data, data_basepath or basepath, lua_fns,
+                               decomposed)
         return vcfutils.bgzip_and_index(out_file, data["config"])

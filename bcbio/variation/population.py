@@ -47,7 +47,8 @@ def _run_vcfanno(gemini_vcf, data, use_gemini=False):
     if not conf_files and use_gemini:
         conf_files = ["gemini"]
     if conf_files:
-        return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath)
+        return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath=data_basepath,
+                                   decomposed=use_gemini)
     else:
         return gemini_vcf
 

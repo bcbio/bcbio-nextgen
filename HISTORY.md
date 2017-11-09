@@ -1,9 +1,13 @@
 ## 1.0.7 (in progress)
 
-- Use only end of reads to detect 3' adapters in small RNA-seq pipeline.
+- vcfanno: only correct VCF headers to use Number=1 when decomposition takes
+  place. Avoids incorrect headers for non-decomposed inputs.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
+- Integrate ericscript RNA-seq fusion caller. Thanks to Tetiana Khotiainsteva
+  and Vang Le.
 - disambiguation: ensure BAM index present for non-split alignments
+- Use only end of reads to detect 3' adapters in small RNA-seq pipeline.
 
 ## 1.0.6 (5 November 2017)
 
