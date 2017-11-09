@@ -135,6 +135,6 @@ def _load_result_file(fname):
         'fusiontype'
     ]
     sort_by = ['EnsemblGene1', 'EnsemblGene2']
-    df = pd.read_csv(fname, sep='\t')[columns_to_keep].sort(sort_by)
+    df = pd.read_csv(fname, sep='\t')[columns_to_keep].sort_values(by=sort_by)
     df.index = range(len(df))
     return df
