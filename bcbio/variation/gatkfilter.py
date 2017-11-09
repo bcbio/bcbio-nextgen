@@ -102,7 +102,7 @@ def _get_vqsr_training(filter_type, vrn_files, gatk_type):
         params.extend(["--maxGaussians", "4"])
     return params
 
-def _get_vqsr_annotations(filter_type):
+def _get_vqsr_annotations(filter_type, data):
     """Retrieve appropriate annotations to use for VQSR based on filter type.
 
     Issues reported with MQ and bwa-mem quality distribution, results in intermittent
@@ -112,11 +112,14 @@ def _get_vqsr_annotations(filter_type):
     """
     if filter_type == "SNP":
         # MQ, MQRankSum
-        return ["DP", "QD", "FS", "ReadPosRankSum"]
+        anns = ["QD", "FS", "ReadPosRankSum", "SOR"]
     else:
         assert filter_type == "INDEL"
         # MQRankSum
-        return ["DP", "QD", "FS", "ReadPosRankSum"]
+        anns = ["QD", "FS", "ReadPosRankSum", "SOR"]
+    if dd.get_coverage_interval(data) == "genome":
+        anns += ["DP"]
+    return anns
 
 def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, data):
     """Run variant quality score recalibration.
@@ -149,7 +152,7 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
             if not opts:
                 for cutoff in cutoffs:
                     opts += ["-tranche", str(cutoff)]
-                for a in _get_vqsr_annotations(filter_type):
+                for a in _get_vqsr_annotations(filter_type, data):
                     opts += ["-an", a]
             params += opts
             cores = dd.get_cores(data)
