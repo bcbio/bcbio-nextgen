@@ -14,7 +14,7 @@ HS = {"hg19": "2.7e9",
       "mm10": "1.87e9",
       "dm3": "1.2e8"}
 
-def run(name, chip_bam, input_bam, genome_build, out_dir, method, config):
+def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, config):
     """
     Run macs2 for chip and input samples avoiding
     errors due to samples.
@@ -23,10 +23,10 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, config):
     out_file = os.path.join(out_dir, name + "_peaks_macs2.xls")
     macs2_file = os.path.join(out_dir, name + "_peaks.xls")
     if utils.file_exists(out_file):
-        _compres_bdg_files(out_dir, config)
+        _compres_bdg_files(out_dir)
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
-    options = " ".join(config_utils.get_resources("macs2", config).get("options", ""))
+    options = " ".join(resources.get("macs2", {}).get("options", ""))
     if genome_build not in HS and options.find("-g") == -1:
         raise ValueError("This %s genome doesn't have a pre-set value."
                           "You can add specific values using resources "
@@ -48,13 +48,13 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, config):
                                  "You can add specific options for the sample "
                                  "setting resources as explained in docs: "
                                  "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#sample-specific-resources")
-    _compres_bdg_files(out_dir, config)
+    _compres_bdg_files(out_dir)
     return _get_output_files(out_dir)
 
 def _get_output_files(out_dir):
     return {"macs2": [os.path.abspath(fn) for fn in glob.glob(os.path.join(out_dir, "*"))]}
 
-def _compres_bdg_files(out_dir, config):
+def _compres_bdg_files(out_dir):
     for fn in glob.glob(os.path.join(out_dir, "*bdg")):
         cmd = "gzip  %s" % fn
         do.run(cmd, "compress bdg file: %s" % fn)

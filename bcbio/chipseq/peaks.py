@@ -52,7 +52,7 @@ def calling(data):
     chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
     input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
-                          dd.get_chip_method(data), data["config"])
+                          dd.get_chip_method(data), data["resources"], data["config"])
     data.update({"peaks_files": out_files})
     return [[data]]
 
