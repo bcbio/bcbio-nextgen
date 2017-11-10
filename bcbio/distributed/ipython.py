@@ -23,7 +23,7 @@ except ImportError:
     except ImportError:
         msgpack = None
 
-from bcbio import utils
+from bcbio import utils, setpath
 from bcbio.log import logger, get_log_dir
 from bcbio.pipeline import config_utils
 from bcbio.provenance import diagnostics
@@ -122,6 +122,7 @@ def runner(view, parallel, dirs, config):
     view provides map-style access to an existing Ipython cluster.
     """
     def run(fn_name, items):
+        setpath.prepend_bcbiopath()
         out = []
         fn, fn_name = (fn_name, fn_name.__name__) if callable(fn_name) else (_get_ipython_fn(fn_name, parallel), fn_name)
         items = [x for x in items if x is not None]

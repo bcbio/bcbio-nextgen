@@ -1,5 +1,8 @@
 ## 1.0.7 (in progress)
 
+- Automatically include bcbio anaconda PATH when running tools. Also allow
+  custom BCBIOPATH specification to help with modules integration. Thanks to
+  Gabriel Berriz.
 - vcfanno: only correct VCF headers to use Number=1 when decomposition takes
   place. Avoids incorrect headers for non-decomposed inputs.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove

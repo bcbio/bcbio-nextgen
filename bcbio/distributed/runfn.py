@@ -14,7 +14,7 @@ import pprint
 import toolz as tz
 import yaml
 
-from bcbio import log, utils
+from bcbio import log, utils, setpath
 from bcbio.log import logger
 from bcbio.cwl import cwlutils
 from bcbio.distributed import multitasks
@@ -27,6 +27,7 @@ def process(args):
     os.environ["LC_ALL"] = "C"
     os.environ["LC"] = "C"
     os.environ["LANG"] = "C"
+    setpath.prepend_bcbiopath()
     try:
         fn = getattr(multitasks, args.name)
     except AttributeError:

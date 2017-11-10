@@ -4,6 +4,8 @@
 
 import os
 
+from bcbio import utils
+
 def _prepend(original, to_prepend):
     """Prepend paths in a string representing a list of paths to another.
 
@@ -48,11 +50,15 @@ def _prepend(original, to_prepend):
 def prepend_bcbiopath():
     """Prepend paths in the BCBIOPATH environment variable (if any) to PATH.
 
-    If BCBIOPATH is not set, this function is a no-op.
+    Uses either a pre-sent global environmental variable (BCBIOPATH) or the
+    local anaconda directory.
     """
-
-    os.environ['PATH'] = _prepend(os.environ.get('PATH', ''),
-                                  os.environ.get('BCBIOPATH', None))
+    if os.environ.get('BCBIOPATH'):
+        os.environ['PATH'] = _prepend(os.environ.get('PATH', ''),
+                                      os.environ.get('BCBIOPATH', None))
+    else:
+        os.environ['PATH'] = _prepend(os.environ.get('PATH', ''),
+                                      utils.get_bcbio_bin())
 
 
 if __name__ == '__main__':
