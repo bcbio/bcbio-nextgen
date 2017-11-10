@@ -79,7 +79,7 @@ def _run_arvados(args):
     assert "ARVADOS_API_TOKEN" in os.environ and "ARVADOS_API_HOST" in os.environ, \
         "Need to set ARVADOS_API_TOKEN and ARVADOS_API_HOST in environment to run"
     main_file, json_file, project_name = _get_main_and_json(args.directory)
-    flags = ["--local", "--enable-reuse"]
+    flags = ["--enable-reuse", "--api", "containers", "--submit", "--no-wait"]
     cmd = ["arvados-cwl-runner"] + flags + args.toolargs + [main_file, json_file]
     _run_tool(cmd)
 
