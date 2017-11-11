@@ -206,16 +206,17 @@ def normalize_sv_coverage(*items):
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[00]), "structural",
                                                    dd.get_sample_name(inputs[0]), "bins"))
         back_file = cnvkit.cnvkit_background(cnns, os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
-                                             backgrounds, target_bed, antitarget_bed)
+                                             backgrounds or inputs, target_bed, antitarget_bed)
         for data in inputs:
             work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                        dd.get_sample_name(data), "bins"))
-            fix_file = cnvkit.run_fix(tz.get_in(["depth", "bins", "target"], data),
-                                      tz.get_in(["depth", "bins", "antitarget"], data),
-                                      back_file,
-                                      os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data))),
-                                      data)
-            out_files[dd.get_sample_name(data)] = fix_file
+            if tz.get_in(["depth", "bins", "target"], data):
+                fix_file = cnvkit.run_fix(tz.get_in(["depth", "bins", "target"], data),
+                                          tz.get_in(["depth", "bins", "antitarget"], data),
+                                          back_file,
+                                          os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data))),
+                                          data)
+                out_files[dd.get_sample_name(data)] = fix_file
     out = []
     for data in items:
         if dd.get_sample_name(data) in out_files:
