@@ -180,6 +180,24 @@ def _get_original_coverage(data, itype="target"):
                     "itype": itype, "sample": dd.get_sample_name(data)})
     return out
 
+def _run_cnvkit_shared(inputs, backgrounds):
+    """Shared functionality to run CNVkit, parallelizing over multiple BAM files.
+
+    Handles new style cases where we have pre-normalized inputs and
+    old cases where we run CNVkit individually.
+    """
+    if tz.get_in(["depth", "bins", "normalized"], inputs[0]):
+        ckouts = []
+        for data in inputs:
+            cnr_file = tz.get_in(["depth", "bins", "normalized"], data)
+            cns_file = os.path.join(_sv_workdir(data), "%s.cns" % dd.get_sample_name(data))
+            cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data), data,
+                                       inputs + backgrounds, cns_file)
+            ckouts.append({"cnr": cnr_file, "cns": cns_file})
+        return ckouts
+    else:
+        return _run_cnvkit_shared_orig(inputs, backgrounds)
+
 def _get_original_targets(data):
     """Back compatible: get pre-existing target BEDs.
     """
@@ -197,8 +215,8 @@ def _get_general_coverage(data, itype):
             {"bam": work_bam, "file": tz.get_in(["depth", "bins", "antitarget"], data),
              "cnntype": "antitarget", "itype": itype, "sample": dd.get_sample_name(data)}]
 
-def _run_cnvkit_shared(inputs, backgrounds):
-    """Shared functionality to run CNVkit, parallelizing over multiple BAM files.
+def _run_cnvkit_shared_orig(inputs, backgrounds):
+    """Original CNVkit implementation with full normalization and segmentation.
     """
     work_dir = _sv_workdir(inputs[0])
     raw_work_dir = utils.safe_makedir(os.path.join(work_dir, "raw"))
@@ -211,8 +229,7 @@ def _run_cnvkit_shared(inputs, backgrounds):
         if utils.file_exists(out_base_old + ".cns"):
             out_base = out_base_old
         ckouts.append({"cnr": "%s.cnr" % out_base,
-                       "cns": "%s.cns" % out_base,
-                       "back_cnn": background_cnn})
+                       "cns": "%s.cns" % out_base})
     if not utils.file_exists(ckouts[0]["cns"]):
         cov_interval = dd.get_coverage_interval(inputs[0])
         samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
@@ -222,26 +239,26 @@ def _run_cnvkit_shared(inputs, backgrounds):
             target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
             antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], inputs[0])
             raw_coverage_cnns = reduce(operator.add,
-                                    [_get_general_coverage(cdata, itype) for itype, cdata in samples_to_run])
+                                       [_get_general_coverage(cdata, itype) for itype, cdata in samples_to_run])
         # Back compatible with pre-existing runs
         else:
             target_bed, antitarget_bed = _get_original_targets(inputs[0])
             raw_coverage_cnns = reduce(operator.add,
-                                    [_get_original_coverage(cdata, itype) for itype, cdata in samples_to_run])
+                                       [_get_original_coverage(cdata, itype) for itype, cdata in samples_to_run])
         # Currently metrics not calculated due to speed and needing re-evaluation
         # We could re-enable with larger truth sets to evaluate background noise
         # But want to reimplement in a more general fashion as part of normalization
         if False:
             coverage_cnns = reduce(operator.add,
-                                   [_cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval,
+                                [_cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval,
                                                     inputs + backgrounds)
                                     for cnns in tz.groupby("bam", raw_coverage_cnns).values()])
-            background_cnn = _cnvkit_background(_select_background_cnns(coverage_cnns),
-                                                background_cnn, target_bed, antitarget_bed, inputs[0])
+            background_cnn = cnvkit_background(_select_background_cnns(coverage_cnns),
+                                                background_cnn, inputs, target_bed, antitarget_bed)
         else:
             coverage_cnns = raw_coverage_cnns
-            background_cnn = _cnvkit_background([x["file"] for x in coverage_cnns if x["itype"] == "background"],
-                                                background_cnn, target_bed, antitarget_bed, inputs[0])
+            background_cnn = cnvkit_background([x["file"] for x in coverage_cnns if x["itype"] == "background"],
+                                                background_cnn, inputs, target_bed, antitarget_bed)
         parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
         fixed_cnrs = run_multicore(_cnvkit_fix,
                                    [(cnns, background_cnn, inputs, ckouts) for cnns in
@@ -258,10 +275,11 @@ def _cna_has_values(fname):
                 return True
     return False
 
-def _cnvkit_segment(cnr_file, cov_interval, data, items):
+def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
     """Perform segmentation and copy number calling on normalized inputs
     """
-    out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
+    if not out_file:
+        out_file = "%s.cns" % os.path.splitext(cnr_file)[0]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
             if not _cna_has_values(cnr_file):
@@ -294,7 +312,7 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
         return cnns
     target_cnn = [x["file"] for x in cnns if x["cnntype"] == "target"][0]
     background_file = "%s-flatbackground.cnn" % utils.splitext_plus(target_cnn)[0]
-    background_file = _cnvkit_background([], background_file, target_bed, antitarget_bed, items[0])
+    background_file = cnvkit_background([], background_file, items, target_bed, antitarget_bed)
     cnr_file, data = _cnvkit_fix_base(cnns, background_file, items, "-flatbackground")
     cns_file = _cnvkit_segment(cnr_file, cov_interval, data)
     metrics_file = "%s-metrics.txt" % utils.splitext_plus(target_cnn)[0]
@@ -328,12 +346,15 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ckouts, ext=""):
     antitarget_cnn = [x["file"] for x in cnns if x["cnntype"] == "antitarget"][0]
     dindex, data = [(i, x) for (i, x) in enumerate(items) if dd.get_sample_name(x) == cnns[0]["sample"]][0]
     out_file = ckouts[dindex]["cnr"]
+    return (run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data), data)
+
+def run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "fix", "-o", tx_out_file, target_cnn, antitarget_cnn, background_cnn,
                    "--sample-id", dd.get_sample_name(data)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit fix")
-    return out_file, data
+    return out_file
 
 def _select_background_cnns(cnns):
     """Select cnns to use for background calculations.
@@ -357,18 +378,21 @@ def _select_background_cnns(cnns):
         assert len(b_cnns) % 2 == 0, "Expect even set of target/antitarget cnns for background"
     return [x["file"] for x in b_cnns]
 
-def _cnvkit_background(background_cnns, out_file, target_bed, antitarget_bed, data):
+def cnvkit_background(background_cnns, out_file, items, target_bed=None, antitarget_bed=None):
     """Calculate background reference, handling flat case with no normal sample.
     """
     if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            cmd = [_get_cmd(), "reference", "-f", dd.get_ref_file(data), "-o", tx_out_file]
-            gender = population.get_gender(data)
-            if gender and gender.lower() != "unknown":
+        with file_transaction(items[0], out_file) as tx_out_file:
+            cmd = [_get_cmd(), "reference", "-f", dd.get_ref_file(items[0]), "-o", tx_out_file]
+            genders = set([population.get_gender(x) for x in items])
+            genders.discard("unknown")
+            if len(genders) == 1:
+                gender = genders.pop()
                 cmd += ["--gender", gender]
                 if gender.lower() == "male":
                     cmd += ["--male-reference"]
             if len(background_cnns) == 0:
+                assert target_bed and antitarget_bed, "Missing CNNs and target BEDs for flat background"
                 cmd += ["-t", target_bed, "-a", antitarget_bed]
             else:
                 cmd += background_cnns

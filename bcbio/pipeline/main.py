@@ -130,6 +130,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("combine_sample_regions", [samples])
             samples = run_parallel("calculate_sv_bins", [samples])
             samples = run_parallel("calculate_sv_coverage", samples)
+            samples = run_parallel("normalize_sv_coverage", [samples])
             samples = region.clean_sample_data(samples)
         with profile.report("hla typing", dirs):
             samples = hla.run(samples, run_parallel)

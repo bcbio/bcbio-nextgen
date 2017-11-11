@@ -410,6 +410,12 @@ def calculate_sv_coverage(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(regions.calculate_sv_coverage, *args))
 
+@require(regions)
+def normalize_sv_coverage(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(regions.normalize_sv_coverage, *args))
+
 @require(structural)
 def detect_sv(*args):
     args = ipython.unzip_args(args)

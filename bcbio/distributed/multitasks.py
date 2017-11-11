@@ -291,6 +291,10 @@ def calculate_sv_coverage(*args):
     return svregions.calculate_sv_coverage(*args)
 
 @utils.map_wrap
+def normalize_sv_coverage(*args):
+    return svregions.normalize_sv_coverage(*args)
+
+@utils.map_wrap
 def batch_for_sv(*args):
     return structural.batch_for_sv(*args)
 

@@ -36,14 +36,14 @@ def calculate_sv_bins(*items):
         return items
     items = [utils.to_single_data(x) for x in items]
     out = []
-    for cnv_group in _group_by_cnv_method(multi.group_by_batch(items, False)):
+    for i, cnv_group in enumerate(_group_by_cnv_method(multi.group_by_batch(items, False))):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
         for data in cnv_group.items:
             target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file, size_calc_fn,
                                                          cnv_group.work_dir, data)
             if not data.get("regions"):
                 data["regions"] = {}
-            data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed}
+            data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": i}
             out.append([data])
     if not len(out) == len(items):
         raise AssertionError("Inconsistent samples in and out of SV bin calculation:\nout: %s\nin : %s" %
@@ -156,7 +156,6 @@ def calculate_sv_coverage(data):
         anti_cov_genes = annotate.add_genes(anti_cov.regions, data, max_distance=0)
         out_target_file = _add_log2_depth(target_cov_genes, out_target_file, data)
         out_anti_file = _add_log2_depth(anti_cov_genes, out_anti_file, data)
-        # TODO: Correct for GC bias
     if os.path.exists(out_target_file):
         data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file}
     return [[data]]
@@ -180,8 +179,8 @@ def _add_log2_depth(in_file, out_file, data):
                                              (chrom, start, end, gene_name, log2_depth, depth))
     return out_file
 
-def cnv_normalization(data):
-    """Normalize CNV coverage depths by GC, repeat and background.
+def normalize_sv_coverage(*items):
+    """Normalize CNV coverage depths by GC, repeats and background.
 
     Provides normalized output based on CNVkit approaches, provides a
     point for providing additional methods in the future:
@@ -191,7 +190,38 @@ def cnv_normalization(data):
     - fix: Uses background to normalize coverage estimations
     http://cnvkit.readthedocs.io/en/stable/pipeline.html#fix
     """
-    pass
+    from bcbio.structural import cnvkit
+    from bcbio.structural import shared as sshared
+    if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
+        return items
+    items = [utils.to_single_data(x) for x in items]
+    out_files = {}
+    for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
+        inputs, backgrounds = sshared.find_case_control(gitems)
+        cnns = reduce(operator.add, [[tz.get_in(["depth", "bins", "target"], x),
+                                      tz.get_in(["depth", "bins", "antitarget"], x)] for x in backgrounds], [])
+        assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
+        target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
+        antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], inputs[0])
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[00]), "structural",
+                                                   dd.get_sample_name(inputs[0]), "bins"))
+        back_file = cnvkit.cnvkit_background(cnns, os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
+                                             backgrounds, target_bed, antitarget_bed)
+        for data in inputs:
+            work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                                       dd.get_sample_name(data), "bins"))
+            fix_file = cnvkit.run_fix(tz.get_in(["depth", "bins", "target"], data),
+                                      tz.get_in(["depth", "bins", "antitarget"], data),
+                                      back_file,
+                                      os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data))),
+                                      data)
+            out_files[dd.get_sample_name(data)] = fix_file
+    out = []
+    for data in items:
+        if dd.get_sample_name(data) in out_files:
+            data["depth"]["bins"]["normalized"] = out_files[dd.get_sample_name(data)]
+        out.append([data])
+    return out
 
 # Region retrieval for SV calling
 
