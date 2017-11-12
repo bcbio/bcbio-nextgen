@@ -38,6 +38,7 @@ def peakcall_prepare(data, run_parallel):
     if to_process:
         after_process = run_parallel("peakcalling", to_process)
         data = _sync(data, after_process)
+
     return data
 
 def calling(data):
@@ -53,7 +54,9 @@ def calling(data):
     input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
                           dd.get_chip_method(data), data["resources"], data["config"])
+    greylistdir = greylisting(data)
     data.update({"peaks_files": out_files})
+    data["greylist"] = greylistdir
     return [[data]]
 
 def _prepare_bam(bam_file, bed_file, config):
@@ -111,3 +114,26 @@ def _get_multiplier(samples):
     if mult <= 0:
         mult = 1 / len(samples)
     return max(mult, 1)
+
+def greylisting(data):
+    """
+    Run ChIP-seq greylisting
+    """
+    input_bam = data.get("work_bam_input", None)
+    if not input_bam:
+        logger.info("No input BAM file detected, skipping greylisting.")
+        return None
+    try:
+        greylister = config_utils.get_program("chipseq-greylist", data)
+    except config_utils.CmdNotFound:
+        logger.info("No greylister found, skipping greylisting.")
+        return None
+    greylistdir = os.path.join(os.path.dirname(input_bam), "greylist")
+    if os.path.exists(greylistdir):
+        return greylistdir
+    cmd = "{greylister} --outdir {txgreylistdir} {input_bam}"
+    message = "Running greylisting on %s." % input_bam
+    with file_transaction(greylistdir) as txgreylistdir:
+        utils.safe_makedir(txgreylistdir)
+        do.run(cmd.format(**locals()), message)
+    return greylistdir

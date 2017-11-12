@@ -12,6 +12,8 @@
 - disambiguation: ensure BAM index present for non-split alignments
 - Use only end of reads to detect 3' adapters in small RNA-seq pipeline.
 - Fix BCBIO_JAVA_HOME to correctly pass custom Java to GATK and Picard runs.
+- ChIP-seq: add generation of greylist regions defined as regions of  high
+  depth in the input file on a per sample pair basis.
 
 ## 1.0.6 (5 November 2017)
 
@@ -48,7 +50,7 @@
 - RNA-seq single-cell/DGE: add `transcriptome_gtf` as an option which will
   collapse single-cell/DGE counts down to the gene level. This is recommended
   for single-cell and DGE experiments.
-- ChIP-seq: preliminary support for bwa for ChIP-seq alignment. Compared to bowtie2 
+- ChIP-seq: preliminary support for bwa for ChIP-seq alignment. Compared to bowtie2
   on a test dataset this results in a superset of the bowtie2 peaks, with 95% of the
   common peaks within 50 bases of each other. It calls about 50% more peaks
   though using the bwa alignments, use with care.

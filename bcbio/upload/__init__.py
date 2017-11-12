@@ -116,6 +116,7 @@ def _get_files_chipseq(sample):
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
     out = _maybe_add_peaks(algorithm, sample, out)
+    out = _maybe_add_greylist(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):
@@ -562,6 +563,14 @@ def _maybe_add_peaks(algorithm, sample, out):
                 out.append({"path": fn,
                              "dir": caller,
                              "ext": utils.splitext_plus(fn)[1]})
+    return out
+
+def _maybe_add_greylist(algorithm, sample, out):
+    greylist = sample.get("greylist", None)
+    if greylist:
+        out.append({"path": greylist,
+                    "type": "directory",
+                    "ext": "greylist"})
     return out
 
 def _has_alignment_file(algorithm, sample):

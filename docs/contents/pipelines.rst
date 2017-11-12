@@ -424,22 +424,28 @@ inside ``tdrmapper`` or final project folder.
 
 ChIP-seq
 ~~~~~~~~
-bcbio-nextgen implements the first steps of a ChIP-seq analysis up to aligning with
-bowtie2. It does alignment and peak calling with MACS2.
+The bcbio-nextgen implementation of ChIP-seq aligns, removes multimapping reads,
+calls peaks with a paired input file using MACS2 and outputs a set of greylist
+regions for filtering possible false peaks in regions of high depth in the input
+file.
 
 - Adapter trimming:
   - `atropos`_
 
 - Sequence alignment:
-  - `bowtie2`_
+  - `bowtie2`_, `bwa mem`_
 
 - Peak calling:
   - `macs2`_
+
+- Greylisting:
+  - `chipseq-greylist`_
 
 - Quality control:
   - `FastQC`_
 
 .. _macs2: https://github.com/taoliu/MACS
+.. _chipseq-greylist: https://github.com/roryk/chipseq-greylist
 
 Standard
 ~~~~~~~~
