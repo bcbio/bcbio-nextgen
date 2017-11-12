@@ -506,16 +506,17 @@ def gatk_cmd(name, jvm_opts, params, config=None):
     if not gatk_cmd:
         gatk_cmd = utils.which(name)
     if gatk_cmd:
-        return "unset JAVA_HOME && export PATH=%s:$PATH && %s %s %s" % \
-            (utils.get_java_binpath(gatk_cmd), gatk_cmd,
+        return "%s && export PATH=%s:$PATH && %s %s %s" % \
+            (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd), gatk_cmd,
              " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 def _gatk4_cmd(jvm_opts, params, data):
     """Retrieve unified command for GATK4, using gatk-launch.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
-    return "unset JAVA_HOME && export PATH=%s:$PATH && gatk-launch --javaOptions '%s' %s" % \
-        (utils.get_java_binpath(gatk_cmd), " ".join(jvm_opts), " ".join([str(x) for x in params]))
+    return "%s && export PATH=%s:$PATH && gatk-launch --javaOptions '%s' %s" % \
+        (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd),
+         " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 class PicardCmdRunner:
     def __init__(self, cmd, config):
@@ -524,10 +525,10 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        cmd = ["unset", "JAVA_HOME", "&&", "export", "PATH=%s:$PATH" % utils.get_java_binpath(), "&&"] + \
+        cmd = ["export", "PATH=%s:$PATH" % utils.get_java_binpath(), "&&"] + \
               [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
-        do.run(" ".join(cmd), "Picard: %s" % subcmd)
+        do.run(utils.clear_java_home() + " && " + " ".join(cmd), "Picard: %s" % subcmd)
 
     def run_fn(self, name, *args, **kwds):
         """Run pre-built functionality that used Broad tools by name.

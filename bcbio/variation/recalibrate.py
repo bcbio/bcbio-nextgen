@@ -94,6 +94,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 else:
                     params += ["-T", "BaseRecalibrator",
                                 "-o", tx_out_file, "-R", ref_file]
+                    # Avoid problems with intel deflater
+                    # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
+                    params += ["-jdk_deflater", "-jdk_inflater"]
                     downsample_pct = bam.get_downsample_pct(dup_align_bam, target_counts, data)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),

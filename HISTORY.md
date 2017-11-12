@@ -11,6 +11,7 @@
   and Vang Le.
 - disambiguation: ensure BAM index present for non-split alignments
 - Use only end of reads to detect 3' adapters in small RNA-seq pipeline.
+- Fix BCBIO_JAVA_HOME to correctly pass custom Java to GATK and Picard runs.
 
 ## 1.0.6 (5 November 2017)
 

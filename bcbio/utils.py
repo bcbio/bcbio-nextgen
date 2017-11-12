@@ -705,6 +705,18 @@ def get_java_binpath(cmd=None):
         cmd = Rscript_cmd()
     return os.path.dirname(cmd)
 
+def clear_java_home():
+    """Clear JAVA_HOME environment or reset to BCBIO_JAVA_HOME.
+
+    Avoids accidental java injection but respects custom BCBIO_JAVA_HOME
+    command.
+    """
+    if os.environ.get("BCBIO_JAVA_HOME"):
+        test_cmd = os.path.join(os.environ["BCBIO_JAVA_HOME"], "bin", "java")
+        if os.path.exists(test_cmd):
+            return "export JAVA_HOME=%s" % os.environ["BCBIO_JAVA_HOME"]
+    return "unset JAVA_HOME"
+
 def get_R_exports():
     return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
 
