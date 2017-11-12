@@ -197,12 +197,14 @@ def normalize_sv_coverage(*items):
     items = [utils.to_single_data(x) for x in items]
     out_files = {}
     for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
-        inputs, backgrounds = sshared.find_case_control(gitems)
+        inputs, backgrounds = sshared.find_case_control(list(gitems))
         cnns = reduce(operator.add, [[tz.get_in(["depth", "bins", "target"], x),
                                       tz.get_in(["depth", "bins", "antitarget"], x)] for x in backgrounds], [])
         assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
-        target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
-        antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], inputs[0])
+        for d in inputs:
+            if tz.get_in(["depth", "bins", "target"], d):
+                target_bed = tz.get_in(["depth", "bins", "target"], d)
+                antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[00]), "structural",
                                                    dd.get_sample_name(inputs[0]), "bins"))
         back_file = cnvkit.cnvkit_background(cnns, os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
