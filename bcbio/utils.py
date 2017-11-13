@@ -14,9 +14,9 @@ import fnmatch
 import subprocess
 import sys
 import types
-
 import toolz as tz
 import yaml
+from collections import Mapping, OrderedDict
 
 
 try:
@@ -871,3 +871,13 @@ class LazyImport(types.ModuleType):
     def __repr__(self):
         return "<module '%s' will be lazily loaded>" %\
                 object.__getattribute__(self,'__name__')
+
+def walk_json(d, func):
+    """ Walk over a parsed JSON nested structure `d`, apply `func` to each leaf element and replace it with result
+    """
+    if isinstance(d, Mapping):
+        return OrderedDict((k, walk_json(v, func)) for k, v in d.items())
+    elif isinstance(d, list):
+        return [walk_json(v, func) for v in d]
+    else:
+        return func(d)
