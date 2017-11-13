@@ -127,14 +127,17 @@ def detect_fusions(data):
                        "callers with ``fusion_caller``. It will run pizzly and "
                        "oncofuse for now, but will eventually have support "
                        "dropped.")
-    if "oncofuse" in dd.get_fusion_caller(data, []):
+    fusion_caller = dd.get_fusion_caller(data, [])
+    if "oncofuse" in fusion_caller:
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
-    if "pizzly" in dd.get_fusion_caller(data, []):
+    if "pizzly" in fusion_caller:
         pizzly_dir = pizzly.run_pizzly(data)
         if pizzly_dir:
             data = dd.set_pizzly_dir(data, pizzly_dir)
+    if "ericscript" in fusion_caller:
+        ericscript_dir = ericscript.run(data)
     return [[data]]
 
 def quantitate_expression_noparallel(samples, run_parallel):
@@ -361,33 +364,3 @@ def combine_files(samples):
         updated_samples.append([data])
     return updated_samples
 
-
-def detect_fusions(samples):
-    """Run fusion with a standalone tool, specified in config
-    as fusion_caller.
-    If fusion_mode is True, and no fusion_caller is specified,
-    or fusion_caller == 'aligner', it is assumed that gene fusion
-    detection was run on the alignment step.
-    """
-    fusion_mode = dd.get_in_samples(samples, dd.get_fusion_mode)
-    if not fusion_mode:
-        return samples
-
-    caller = dd.get_in_samples(samples, dd.get_fusion_caller)
-    if not caller or caller == 'aligner':
-        logger.info("No standalone fusion caller specified in the config.")
-        return samples
-
-    STANDALONE_CALLERS = {
-        'ericscript': ericscript.run,
-    }
-    caller_fn = STANDALONE_CALLERS.get(caller)
-    if not caller_fn:
-        logger.warning(
-            "Gene fusion detection with %s is not supported."
-            "Supported callers:\n%s" % ', '.join(STANDALONE_CALLERS.keys())
-        )
-        return samples
-
-    logger.info("Running gene fusion detection with  %s" % caller)
-    return [[caller_fn(s)] for s in dd.sample_data_iterator(samples)]
