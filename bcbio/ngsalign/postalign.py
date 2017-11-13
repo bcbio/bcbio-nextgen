@@ -121,7 +121,8 @@ def _biobambam_dedup_sort(data, tx_out_file):
         cmd = "{samtools} sort %s -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -" % sort_opt
     else:
         ds_cmd = bam.get_maxcov_downsample_cl(data, "bamsormadup")
-        cmd = ("bamsormadup inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "
+        bamsormadup = config_utils.get_program("bamsormadup", data)
+        cmd = ("{bamsormadup} inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "
                "SO=coordinate %s > {tx_out_file}" % ds_cmd)
     return cmd.format(**locals())
 
@@ -133,7 +134,8 @@ def _sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file):
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tmp_file), 1)
     cores, mem = _get_cores_memory(data)
-    cmd = ("bamsormadup tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=bam "
+    bamsormadup = config_utils.get_program("bamsormadup", data)
+    cmd = ("{bamsormadup} tmpfile={tmp_file}-markdup inputformat=sam threads={cores} outputformat=bam "
            "level=0 SO=coordinate | ")
     # UMIs in a separate file
     if os.path.exists(umi_consensus) and os.path.isfile(umi_consensus):
