@@ -61,26 +61,21 @@ def summary(*samples):
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
                         shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
-    out = []
-    for i, data in enumerate(_group_by_samplename(samples)):
-        if i == 0:
-            if utils.file_exists(out_file):
-                data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.bed"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.txt"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.yaml"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
-                data_files += glob.glob(os.path.join(out_dir, "multiqc_config.yaml"))
-                data_files.append(file_list)
-                if "summary" not in data:
-                    data["summary"] = {}
-                data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
-                file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
-                if file_list_final:
-                    data["summary"]["multiqc"]["secondary"].append(file_list_final)
-        out.append([data])
-    return out
+    samples = _group_by_sample_and_batch(samples)
+    if utils.file_exists(out_file) and samples:
+        data_files = set()
+        for i, data in enumerate(samples):
+            data_files.add(os.path.join(out_dir, "report", "metrics", dd.get_sample_name(data) + "_bcbio.txt"))
+        data_files.add(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
+        data_files.add(os.path.join(out_dir, "multiqc_data", "multiqc_data.json"))
+        data_files.add(os.path.join(out_dir, "multiqc_config.yaml"))
+        if "summary" not in samples[0]:
+            samples[0]["summary"] = {}
+        samples[0]["summary"]["multiqc"] = {"base": out_file, "secondary": list(data_files)}
+        file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
+        if file_list_final:
+            samples[0]["summary"]["multiqc"]["secondary"].append(file_list_final)
+    return [[data] for data in samples]
 
 def _save_uploaded_file_list(samples, file_list_work, out_dir):
     if not utils.file_exists(file_list_work):
@@ -162,8 +157,8 @@ def _get_input_files(samples, base_dir, tx_out_dir):
 def _in_temp_directory(f):
     return any(x.startswith("tmp") for x in f.split("/"))
 
-def _group_by_samplename(samples):
-    """Group samples split by QC method back into a single sample.
+def _group_by_sample_and_batch(samples):
+    """Group samples split by QC method back one per sample-batch.
     """
     out = collections.defaultdict(list)
     for data in samples:
