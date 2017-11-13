@@ -115,7 +115,7 @@ def resolve(items, run_parallel):
                 to_delete.add(delete_dir)
 
                 if in_files[0].endswith(".bam"):
-                    to_merge.append([in_files, merged_out, disambiguation_config])
+                    to_merge.append([in_files, merged_out, disambigs[0]])
 
                 elif disambiguation_type == "summary":
                     _merge_summary(in_files, merged_out, type_items[0])
