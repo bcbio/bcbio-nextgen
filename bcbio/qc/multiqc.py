@@ -10,6 +10,7 @@ import os
 import pandas as pd
 import shutil
 import numpy as np
+from collections import OrderedDict
 
 import pybedtools
 import toolz as tz
@@ -24,6 +25,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
 from bcbio.structural import annotate
+from bcbio.utils import walk_json
 from bcbio.variation import bedutils
 from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
@@ -61,51 +63,85 @@ def summary(*samples):
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
                         shutil.move(os.path.join(tx_out, "multiqc_data"), out_data)
-    out = []
-    for i, data in enumerate(_group_by_samplename(samples)):
-        if i == 0:
-            if utils.file_exists(out_file):
-                data_files = glob.glob(os.path.join(out_dir, "multiqc_data", "*.txt"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.bed"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.txt"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.tsv"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*", "*.yaml"))
-                data_files += glob.glob(os.path.join(out_dir, "report", "*.R*"))
-                data_files += glob.glob(os.path.join(out_dir, "multiqc_config.yaml"))
-                data_files.append(file_list)
-                if "summary" not in data:
-                    data["summary"] = {}
-                data["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
-                file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
-                if file_list_final:
-                    data["summary"]["multiqc"]["secondary"].append(file_list_final)
-        out.append([data])
-    return out
+    samples = _group_by_sample_and_batch(samples)
+    if utils.file_exists(out_file) and samples:
+        data_files = set()
+        for i, data in enumerate(samples):
+            data_files.add(os.path.join(out_dir, "report", "metrics", dd.get_sample_name(data) + "_bcbio.txt"))
+        data_files.add(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
+        data_files.add(os.path.join(out_dir, "multiqc_config.yaml"))
+        data_files = [f for f in data_files if f and utils.file_exists(f)]
+        if "summary" not in samples[0]:
+            samples[0]["summary"] = {}
+        samples[0]["summary"]["multiqc"] = {"base": out_file, "secondary": data_files}
+
+        data_json = os.path.join(out_dir, "multiqc_data", "multiqc_data.json")
+        data_json_final = _save_uploaded_data_json(samples, data_json, os.path.join(out_dir, "multiqc_data"))
+        if data_json_final:
+            samples[0]["summary"]["multiqc"]["secondary"].append(data_json_final)
+
+        file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
+        if file_list_final:
+            samples[0]["summary"]["multiqc"]["secondary"].append(file_list_final)
+
+    return [[data] for data in samples]
+
+def _save_uploaded_data_json(samples, data_json_work, out_dir):
+    """ Fixes all absolute work-rooted paths to relative final-rooted paths
+    """
+    if not utils.file_exists(data_json_work):
+        return None
+
+    upload_path_mapping = dict()
+    for sample in samples:
+        upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
+    if not upload_path_mapping:
+        return data_json_work
+
+    with open(data_json_work) as f:
+        data = json.load(f, object_pairs_hook=OrderedDict)
+    upload_base = samples[0]["upload"]["dir"]
+    data = walk_json(data, lambda s: _work_path_to_rel_final_path(s, upload_path_mapping, upload_base))
+
+    data_json_final = os.path.join(out_dir, "multiqc_data_final.json")
+    with open(data_json_final, "w") as f:
+        json.dump(data, f, indent=4)
+    return data_json_final
 
 def _save_uploaded_file_list(samples, file_list_work, out_dir):
+    """ Fixes all absolute work-rooted paths to relative final-rooted paths
+    """
     if not utils.file_exists(file_list_work):
         return None
-    file_list_final = os.path.join(out_dir, "list_files_final.txt")
+
     upload_path_mapping = dict()
     for sample in samples:
         upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
     if not upload_path_mapping:
         return None
+
     with open(file_list_work) as f:
         paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
-    upload_paths = []
-    for path in paths:
-        if path in upload_path_mapping:
-            upload_path = upload_path_mapping[path]
-            upload_base = samples[0]["upload"]["dir"]
-            upload_relpath = os.path.relpath(upload_path, upload_base)
-            upload_paths.append(upload_relpath)
+    upload_paths = [p for p in [
+        _work_path_to_rel_final_path(path, upload_path_mapping, samples[0]["upload"]["dir"])
+        for path in paths
+    ] if p]
     if not upload_paths:
         return None
+
+    file_list_final = os.path.join(out_dir, "list_files_final.txt")
     with open(file_list_final, "w") as f:
         for path in upload_paths:
             f.write(path + '\n')
     return file_list_final
+
+def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
+    """ Check if `path` is a work-rooted path, and convert to a relative final-rooted path
+    """
+    if path in upload_path_mapping:
+        upload_path = upload_path_mapping[path]
+        return os.path.relpath(upload_path, upload_base_dir)
+    return path
 
 def _one_exists(input_files):
     """
@@ -162,8 +198,8 @@ def _get_input_files(samples, base_dir, tx_out_dir):
 def _in_temp_directory(f):
     return any(x.startswith("tmp") for x in f.split("/"))
 
-def _group_by_samplename(samples):
-    """Group samples split by QC method back into a single sample.
+def _group_by_sample_and_batch(samples):
+    """Group samples split by QC method back one per sample-batch.
     """
     out = collections.defaultdict(list)
     for data in samples:
