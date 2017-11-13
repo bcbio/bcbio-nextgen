@@ -48,13 +48,15 @@ def prepare_input_data(config):
 
 def run_ericscript(sample_config, input_files):
     es_config = EricScriptConfig(sample_config)
-    utils.safe_makedir(es_config.output_dir)
-
     if es_config.has_ericscript_db():
+        utils.safe_makedir(es_config.output_dir)
         with file_transaction(sample_config, es_config.sample_out_dir) as tx_out:
             cmd = es_config.get_run_command(tx_out, input_files)
             logger.info("Running EricScript:\n%s" % ' '.join(cmd))
             do.run(cmd, es_config.info_message)
+    else:
+        logger.info("Skipping ericscript because ericscript database not found.")
+
 
 class EricScriptConfig(object):
     """This class which encapsulates access to the data
