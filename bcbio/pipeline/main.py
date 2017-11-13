@@ -375,6 +375,7 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("upload_samples", samples)
             for sample in samples:
                 run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
     return samples
 
 
