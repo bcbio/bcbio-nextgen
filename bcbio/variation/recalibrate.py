@@ -94,9 +94,6 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 else:
                     params += ["-T", "BaseRecalibrator",
                                 "-o", tx_out_file, "-R", ref_file]
-                    # Avoid problems with intel deflater
-                    # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
-                    params += ["-jdk_deflater", "-jdk_inflater"]
                     downsample_pct = bam.get_downsample_pct(dup_align_bam, target_counts, data)
                     if downsample_pct:
                         params += ["--downsample_to_fraction", str(downsample_pct),
@@ -134,6 +131,9 @@ def _gatk_apply_bqsr(data):
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
+                # Avoid problems with intel deflater
+                # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
+                params += ["-jdk_deflater", "-jdk_inflater"]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                   parallel_gc=True)
