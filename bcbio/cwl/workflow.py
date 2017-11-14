@@ -170,10 +170,15 @@ def _get_step_inputs(step, file_vs, std_vs, parallel_ids, wf=None):
             inputs = [_nest_variable(x) if x["id"] in parallel_ids else x for x in inputs]
             nested_inputs = parallel_ids[:]
             parallel_ids = []
-    elif step.parallel in ["multi-combined", "multi-batch"]:
+    elif step.parallel in ["multi-combined"]:
         assert len(parallel_ids) == 0
         nested_inputs = [x["id"] for x in inputs]
         inputs = [_nest_variable(x) for x in inputs]
+    elif step.parallel in ["multi-batch"]:
+        assert len(parallel_ids) == 0
+        nested_inputs = [x["id"] for x in inputs]
+        # If we're batching,with mixed records/inputs avoid double nesting records
+        inputs = [_nest_variable(x, check_records=(len(inputs) > 1)) for x in inputs]
     # avoid inputs/outputs with the same name
     outputs = [_get_string_vid(x["id"]) for x in step.outputs]
     final_inputs = []
@@ -215,12 +220,19 @@ def _flatten_nested_input(v):
     v["type"] = v["type"]["items"]
     return v
 
-def _nest_variable(v):
+def _nest_variable(v, check_records=False):
     """Nest a variable when moving from scattered back to consolidated.
+
+    check_records -- avoid re-nesting a record input if it comes from a previous
+    step and is already nested, don't need to re-array.
     """
-    v = copy.deepcopy(v)
-    v["type"] = {"type": "array", "items": v["type"]}
-    return v
+    if (check_records and is_cwl_record(v) and v["id"].split("/") > 1 and
+         v.get("type", {}).get("type") == "array"):
+        return v
+    else:
+        v = copy.deepcopy(v)
+        v["type"] = {"type": "array", "items": v["type"]}
+        return v
 
 def _clean_output(v):
     """Remove output specific variables to allow variables to be inputs to next steps.

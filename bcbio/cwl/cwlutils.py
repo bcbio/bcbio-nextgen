@@ -30,6 +30,20 @@ def to_rec_single(samples, default_keys=None):
         out.append(recs[0])
     return out
 
+def handle_combined_input(args):
+    """Check for cases where we have a combined input nested list.
+
+    In these cases the CWL will be double nested:
+
+    [[[rec_a], [rec_b]]]
+
+    and we remove the outer nesting.
+    """
+    cur_args = args[:]
+    while len(cur_args) == 1 and isinstance(cur_args[0], (list, tuple)):
+        cur_args = cur_args[0]
+    return cur_args
+
 def normalize_missing(xs):
     """Normalize missing values to avoid string 'None' inputs.
     """

@@ -295,6 +295,9 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
             elif out[i] == {}:
                 out[i] = cur_val
             else:
+                # Handle single non-batched records
+                if isinstance(cur_val, (list, tuple)) and len(cur_val) == 1:
+                    cur_val = cur_val[0]
                 assert isinstance(cur_val, dict), (cwl_key, cur_val)
                 for k, v in cur_val.items():
                     out[i] = _update_nested([k], v, out[i], allow_overwriting=True)

@@ -214,7 +214,7 @@ def summarize_sv(items):
 
     XXX Need to support non-VCF output as tabix indexed output
     """
-    items = [utils.to_single_data(x) for x in items]
+    items = [utils.to_single_data(x) for x in utils.flatten(items)]
     out = {"sv": {"calls": []}}
     added = set([])
     for data in items:
@@ -224,15 +224,16 @@ def summarize_sv(items):
                 names = [dd.get_sample_name(data)]
             batch_name = names[0]
             cur_name = "%s-%s" % (batch_name, data["sv"]["variantcaller"])
-            ext = utils.splitext_plus(data["sv"]["vrn_file"])[-1]
-            if cur_name not in added and ext.startswith(".vcf"):
-                added.add(cur_name)
-                out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
-                                                                        "sv", "calls")),
-                                        "%s%s" % (cur_name, ext))
-                utils.copy_plus(data["sv"]["vrn_file"], out_file)
-                out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-                out["sv"]["calls"].append(out_file)
+            if data["sv"].get("vrn_file"):
+                ext = utils.splitext_plus(data["sv"]["vrn_file"])[-1]
+                if cur_name not in added and ext.startswith(".vcf"):
+                    added.add(cur_name)
+                    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                                            "sv", "calls")),
+                                            "%s%s" % (cur_name, ext))
+                    utils.copy_plus(data["sv"]["vrn_file"], out_file)
+                    out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+                    out["sv"]["calls"].append(out_file)
     return [out]
 
 # ## configuration

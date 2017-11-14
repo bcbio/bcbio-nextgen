@@ -15,6 +15,7 @@ import toolz as tz
 
 from bcbio import utils
 from bcbio.bam import ref
+from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -32,6 +33,8 @@ def calculate_sv_bins(*items):
     variant_regions to estimate depth for bin sizes.
     """
     from bcbio.structural import cnvkit
+    items = cwlutils.handle_combined_input(items)
+    print(len(items))
     if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
         return items
     items = [utils.to_single_data(x) for x in items]
@@ -43,7 +46,7 @@ def calculate_sv_bins(*items):
                                                          cnv_group.work_dir, data)
             if not data.get("regions"):
                 data["regions"] = {}
-            data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": i}
+            data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}
             out.append([data])
     if not len(out) == len(items):
         raise AssertionError("Inconsistent samples in and out of SV bin calculation:\nout: %s\nin : %s" %
@@ -192,6 +195,7 @@ def normalize_sv_coverage(*items):
     """
     from bcbio.structural import cnvkit
     from bcbio.structural import shared as sshared
+    items = cwlutils.handle_combined_input(items)
     if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
         return items
     items = [utils.to_single_data(x) for x in items]
