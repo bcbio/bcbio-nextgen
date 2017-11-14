@@ -198,16 +198,18 @@ def _get_input_files(samples, base_dir, tx_out_dir):
 def _in_temp_directory(f):
     return any(x.startswith("tmp") for x in f.split("/"))
 
+def _get_batches(data):
+    batches = dd.get_batch(data) or dd.get_sample_name(data)
+    if not isinstance(batches, (list, tuple)):
+        batches = [batches]
+    return batches
+
 def _group_by_sample_and_batch(samples):
     """Group samples split by QC method back one per sample-batch.
     """
     out = collections.defaultdict(list)
     for data in samples:
-        batch = dd.get_batch(data) or dd.get_sample_name(data)
-        if not isinstance(batch, (list, tuple)):
-            batch = [batch]
-        batch = tuple(batch)
-        out[(dd.get_sample_name(data), dd.get_align_bam(data), batch)].append(data)
+        out[(dd.get_sample_name(data), dd.get_align_bam(data), tuple(_get_batches(data)))].append(data)
     return [xs[0] for xs in out.values()]
 
 def _create_list_file(paths, out_file):

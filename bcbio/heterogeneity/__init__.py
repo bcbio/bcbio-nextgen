@@ -8,6 +8,7 @@ especially in complex cancer samples.
 from __future__ import print_function
 import collections
 
+from bcbio import utils
 from bcbio.heterogeneity import bubbletree, phylowgs, theta
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
@@ -108,4 +109,13 @@ def run(items, run_parallel):
             for data in cur_items:
                 extras.append([data])
     processed = run_parallel("heterogeneity_estimate", ([xs, b, xs[0]["config"]] for b, xs in to_process))
-    return extras + processed
+    return _group_by_sample_and_batch(extras + processed)
+
+def _group_by_sample_and_batch(samples):
+    """Group samples split by heterogeneity method back one per sample-batch.
+    """
+    out = collections.defaultdict(list)
+    for data in [utils.to_single_data(x) for x in samples]:
+        out[(dd.get_sample_name(data), dd.get_align_bam(data), tuple(_get_batches(data)))].append(data)
+    return [xs for xs in out.values()]
+
