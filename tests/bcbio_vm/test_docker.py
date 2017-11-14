@@ -66,8 +66,8 @@ class TestCWL():
             with utils.chdir(os.path.join(workdir, "somatic")):
                 cl = ["bash", "./run_generate_cwl.sh"]
                 subprocess.check_call(cl)
-                if os.path.exists("cwltoil_work"):
-                    shutil.rmtree("cwltoil_work")
+                if os.path.exists("toil_work"):
+                    shutil.rmtree("toil_work")
                 cl = ["bash", "./run_toil.sh"]
                 subprocess.check_call(cl)
 

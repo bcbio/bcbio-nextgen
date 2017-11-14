@@ -87,16 +87,15 @@ def _run_toil(args):
     """Run CWL with Toil.
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
-    work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltoil_work"))
+    work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "toil_work"))
     tmp_dir = utils.safe_makedir(os.path.join(work_dir, "tmpdir"))
     os.environ["TMPDIR"] = tmp_dir
     log_file = os.path.join(work_dir, "%s-toil.log" % project_name)
     jobstore = os.path.join(work_dir, "cwltoil_jobstore")
-    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", tmp_dir]
+    flags = ["--jobStore", jobstore, "--logFile", log_file, "--workDir", tmp_dir, "--linkImports"]
     if os.path.exists(jobstore):
         flags += ["--restart"]
     # caching causes issues for batch systems
-    # Need to also explore --linkImports but causing permission issues on input files
     if "--batchSystem" in args.toolargs:
         flags += ["--disableCaching"]
     flags += args.toolargs
