@@ -1,0 +1,9 @@
+details:
+  - analysis: scRNA-seq
+    algorithm:
+      #transcriptome_fasta: path-to-transcriptome-fasta
+      umi_type: harvard-indrop-v3
+      minimum_barcode_depth: 10000
+      cellular_barcode_correction: 1
+      #sample_barcodes: path-to-list-of-valid-sample-barcodes
+    genome_build: mm10
