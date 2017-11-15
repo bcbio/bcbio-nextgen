@@ -117,6 +117,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                              "packages": [resolve_package(p) for p in programs]})
         # GATK requires networking for setting up log4j logging, use arvados extension
         if any(p.startswith("gatk") for p in programs):
+            out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
             out["requirements"] += [{"class": "arv:APIRequirement"}]
     # Use JSON for inputs, rather than command line arguments
     # Correctly handles multiple values and batching across CWL runners
