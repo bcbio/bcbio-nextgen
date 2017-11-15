@@ -83,7 +83,7 @@ def _add_disk_estimates(cwl_res, inputs, file_estimates, disk):
     return cwl_res
 
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                file_estimates, disk, step_cores, samples):
+                file_estimates, disk, step_cores, samples, cur_remotes):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     cores = min([step_cores, resource_cores]) if step_cores else resource_cores
@@ -117,8 +117,9 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                              "packages": [resolve_package(p) for p in programs]})
         # GATK requires networking for setting up log4j logging, use arvados extension
         if any(p.startswith("gatk") for p in programs):
-            out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
-            out["requirements"] += [{"class": "arv:APIRequirement"}]
+            if "arvados" in cur_remotes:
+                out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
+                out["requirements"] += [{"class": "arv:APIRequirement"}]
     # Use JSON for inputs, rather than command line arguments
     # Correctly handles multiple values and batching across CWL runners
     use_commandline_args = False
@@ -291,11 +292,27 @@ def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
                     "scatter": scatter_inputs})
     return out
 
+def _get_cur_remotes(path):
+    """Retrieve remote references defined in the CWL.
+    """
+    cur_remotes = set([])
+    if isinstance(path, (list, tuple)):
+        for v in path:
+            cur_remotes |= _get_cur_remotes(v)
+    elif isinstance(path, dict):
+        for v in path.values():
+            cur_remotes |= _get_cur_remotes(v)
+    elif path and isinstance(path, basestring):
+        if path.startswith(tuple(INTEGRATION_MAP.keys())):
+            cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
+    return cur_remotes
+
 def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     variables, keyvals = _flatten_samples(samples, out_file, integrations)
+    cur_remotes = _get_cur_remotes(keyvals)
     file_estimates = _calc_input_estimates(keyvals, integrations)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
@@ -305,7 +322,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
         if cur[0] == "step":
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                                    file_estimates, disk, cores, samples)
+                                    file_estimates, disk, cores, samples, cur_remotes)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
             used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "upload":
