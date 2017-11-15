@@ -98,13 +98,13 @@ class MemoizedSizes:
                 return min_val
             else:
                 return out
-        if target_bps:
+        if target_bps and np.median(target_bps) > 0:
             raw_target_bin = bp_per_bin / float(np.median(target_bps))
             target_bin = scale_in_boundary(raw_target_bin, 50, range_map["target"])
         else:
             target_bin = range_map["target"][1]
 
-        if anti_bps:
+        if anti_bps and np.median(anti_bps) > 0:
             raw_anti_bin = bp_per_bin / float(np.median(anti_bps))
             anti_bin = scale_in_boundary(raw_anti_bin, 10000, range_map["antitarget"])
         else:
