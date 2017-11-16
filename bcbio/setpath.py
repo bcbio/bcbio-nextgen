@@ -1,7 +1,7 @@
 """Update the PATH environment variable to reflect the value of BCBIOPATH.
 
 """
-
+import contextlib
 import os
 
 from bcbio import utils
@@ -60,6 +60,23 @@ def prepend_bcbiopath():
         os.environ['PATH'] = _prepend(os.environ.get('PATH', ''),
                                       utils.get_bcbio_bin())
 
+def remove_bcbiopath():
+    """Remove bcbio internal path from first element in PATH.
+
+    Useful when we need to access remote programs, like Java 7 for older
+    installations.
+    """
+    to_remove = os.environ.get("BCBIOPATH", utils.get_bcbio_bin()) + ":"
+    if os.environ["PATH"].startswith(to_remove):
+        os.environ["PATH"] = os.environ["PATH"][len(to_remove):]
+
+@contextlib.contextmanager
+def orig_paths():
+    """Run using original paths in a `with` block.
+    """
+    remove_bcbiopath()
+    yield None
+    prepend_bcbiopath()
 
 if __name__ == '__main__':
 

@@ -12,7 +12,7 @@ import subprocess
 
 import toolz as tz
 
-from bcbio import utils
+from bcbio import setpath, utils
 from bcbio.broad import picardrun
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.pipeline import config_utils
@@ -318,6 +318,10 @@ class BroadRunner:
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
                  data=None, region=None, memscale=None, parallel_gc=False):
+        needs_java7 = LooseVersion(self.get_gatk_version()) < LooseVersion("3.6")
+        # For old Java requirements use global java 7
+        if needs_java7:
+            setpath.remove_bcbiopath()
         with tx_tmpdir(self._config) as local_tmp_dir:
             if tmp_dir is None:
                 tmp_dir = local_tmp_dir
@@ -327,14 +331,17 @@ class BroadRunner:
             prog = params[atype_index + 1]
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
+        if needs_java7:
+            setpath.prepend_bcbiopath()
 
     def run_mutect(self, params, tmp_dir=None):
-        with tx_tmpdir(self._config) as local_tmp_dir:
-            if tmp_dir is None:
-                tmp_dir = local_tmp_dir
-            cl = self.cl_mutect(params, tmp_dir)
-            prog = "MuTect"
-            do.run(cl, "MuTect: {0}".format(prog), None)
+        with setpath.orig_paths():
+            with tx_tmpdir(self._config) as local_tmp_dir:
+                if tmp_dir is None:
+                    tmp_dir = local_tmp_dir
+                cl = self.cl_mutect(params, tmp_dir)
+                prog = "MuTect"
+                do.run(cl, "MuTect: {0}".format(prog), None)
 
     def get_gatk_version(self):
         """Retrieve GATK version, handling locally and config cached versions.
