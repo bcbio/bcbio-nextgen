@@ -6,6 +6,7 @@ error rates based on alignments to the reference genome.
 http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibration
 """
 import os
+from distutils.version import LooseVersion
 
 import toolz as tz
 
@@ -131,9 +132,10 @@ def _gatk_apply_bqsr(data):
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
-            # Avoid problems with intel deflater
+            # Avoid problems with intel deflater for GATK 3.8 and GATK4
             # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
-            params += ["-jdk_deflater", "-jdk_inflater"]
+            if gatk_type == "gatk4" or LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):
+                params += ["-jdk_deflater", "-jdk_inflater"]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                   parallel_gc=True)
