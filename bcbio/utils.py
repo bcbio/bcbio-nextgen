@@ -325,7 +325,7 @@ def remove_plus(orig):
     """
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
         if os.path.exists(orig + ext):
-             remove_safe(orig + ext)
+            remove_safe(orig + ext)
 
 def copy_plus(orig, new):
     """Copy a fils, including biological index files.
