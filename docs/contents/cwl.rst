@@ -202,12 +202,12 @@ To run an analysis:
 2. Upload reference data to Aravdos Keep. Note the genome collection
    portable data hash::
 
-     arv-put --portable-data-hash --name hg19-testdata --project-uuid qr1hi-j7d0g-7t73h4hrau3l063 testdata/genomes
+     arv-put --portable-data-hash --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
 
 3. Upload input data to Arvados Keep. Note the collection portable data
    hash::
 
-     arv-put --portable-data-hash --name input-testdata --project-uuid qr1hi-j7d0g-7t73h4hrau3l063 testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
+     arv-put --portable-data-hash --name input-testdata --project-uuid $PROJECT_ID testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
 
 4. Create an Arvados section in a ``bcbio_system.yaml`` file specifying
    locations to look for reference and input data. ``input`` can be one or more
@@ -229,7 +229,12 @@ To run an analysis:
 
      bcbio_vm.py cwl --systemconfig bcbio_system_arvados.yaml testcwl/config/testcwl.yaml
 
-6. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
+6. Import bcbio Docker image to your Arvados project::
+
+     docker pull quay.io/bcbio/bcbio-vc
+     arv-keepdocker --project-$PROJECT_ID -- quay.io/bcbio/bcbio-vc latest
+
+7. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
 
      bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
 
