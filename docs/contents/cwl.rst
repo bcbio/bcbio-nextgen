@@ -199,7 +199,7 @@ To run an analysis:
    project). Note the project ID from the URL of the project (an
    identifier like ``qr1hi-j7d0g-7t73h4hrau3l063``).
 
-2. Upload reference data to Aravdos Keep. Note the genome collection
+2. Upload reference data to Arvados Keep. Note the genome collection
    portable data hash::
 
      arv-put --portable-data-hash --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
