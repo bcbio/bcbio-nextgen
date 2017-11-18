@@ -695,6 +695,11 @@ Structural variant calling
        <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
      - ``actionable/ACMG56`` -- Medically actionable genes from the `The American College
        of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_
+     - ``coding/ccds`` (hg38) -- `Consensus CDS (CCDS)
+       <https://www.ncbi.nlm.nih.gov/projects/CCDS/CcdsBrowse.cgi>`_
+       regions with 2bps added to internal introns to capture canonical splice
+       acceptor/donor sites, and multiple transcripts from a single gene merged
+       into a single all inclusive gene entry.
 - ``fusion_mode`` Enable fusion detection in RNA-seq when using STAR (recommended)
   or Tophat (not recommended) as the aligner. OncoFuse is used to summarise the fusions
   but currently only supports ``hg19`` and ``GRCh37``. For explant samples
