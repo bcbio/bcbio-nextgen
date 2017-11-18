@@ -73,7 +73,7 @@ def _run_cwltool(args):
         _run_tool(cmd, not args.no_container, work_dir)
 
 def _run_arvados(args):
-    """Run CWL on Aravdos.
+    """Run CWL on Arvados.
     """
     assert not args.no_container, "Arvados runs require containers"
     assert "ARVADOS_API_TOKEN" in os.environ and "ARVADOS_API_HOST" in os.environ, \
