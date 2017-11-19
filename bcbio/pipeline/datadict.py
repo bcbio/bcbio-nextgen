@@ -157,6 +157,8 @@ LOOKUPS = {
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
     "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
+    "normalized_depth": {"keys": ["depth", "bins", "normalized"]},
+
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},

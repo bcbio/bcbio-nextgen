@@ -35,8 +35,15 @@ def run(vrn_info, calls_by_name, somatic_info, do_plots=True, handle_failures=Tr
     else:
         raise ValueError("BubbleTree only currently support CNVkit and Seq2c: %s" % ", ".join(calls_by_name.keys()))
     work_dir = _cur_workdir(somatic_info.tumor_data)
-    vcf_csv = _prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"], cnv_info["cns"],
-                             work_dir, somatic_info)
+    class OutWriter:
+        def __init__(self, out_handle):
+            self.writer = csv.writer(out_handle)
+        def write_header(self):
+            self.writer.writerow(["chrom", "start", "end", "freq"])
+        def write_row(self, rec, stats):
+            self.writer.writerow([_to_ucsc_style(rec.chrom), rec.start, rec.stop, stats["tumor"]["freq"]])
+    vcf_csv = prep_vrn_file(vrn_info["vrn_file"], vrn_info["variantcaller"],
+                            work_dir, somatic_info, OutWriter, cnv_info["cns"])
     cnv_csv = _prep_cnv_file(cnv_info["cns"], cnv_info["variantcaller"], work_dir,
                              somatic_info.tumor_data)
     wide_lrr = cnv_info["variantcaller"] == "cnvkit" and somatic_info.normal_bam is None
@@ -107,8 +114,11 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                             writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
     return out_file
 
-def _prep_vrn_file(in_file, vcaller, seg_file, work_dir, somatic_info):
+def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None):
     """Select heterozygous variants in the normal sample with sufficient depth.
+
+    writer_class implements write_header and write_row to write VCF outputs
+    from a record and extracted tumor/normal statistics.
     """
     data = somatic_info.tumor_data
     params = {"min_freq": 0.4,
@@ -128,13 +138,13 @@ def _prep_vrn_file(in_file, vcaller, seg_file, work_dir, somatic_info):
             sub_file = in_file
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                writer = csv.writer(out_handle)
-                writer.writerow(["chrom", "start", "end", "freq"])
+                writer = writer_class(out_handle)
+                writer.write_header()
                 bcf_in = pysam.VariantFile(sub_file)
                 for rec in bcf_in:
-                    tumor_freq = _is_possible_loh(rec, bcf_in, params, somatic_info)
-                    if chromhacks.is_autosomal(rec.chrom) and tumor_freq is not None:
-                        writer.writerow([_to_ucsc_style(rec.chrom), rec.start, rec.stop, tumor_freq])
+                    stats = _is_possible_loh(rec, bcf_in, params, somatic_info)
+                    if chromhacks.is_autosomal(rec.chrom) and stats is not None:
+                        writer.write_row(rec, stats)
     return out_file
 
 def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info):
@@ -269,8 +279,8 @@ def _is_snp(rec):
 def _tumor_normal_stats(rec, somatic_info):
     """Retrieve depth and frequency of tumor and normal samples.
     """
-    out = {"normal": {"depth": None, "freq": None},
-           "tumor": {"depth": 0, "freq": None}}
+    out = {"normal": {"alt": None, "depth": None, "freq": None},
+           "tumor": {"alt": 0, "depth": 0, "freq": None}}
     # Handle INFO only inputs
     if len(rec.samples) == 0:
         samples = [(somatic_info.tumor_name, None)]
@@ -285,6 +295,7 @@ def _tumor_normal_stats(rec, somatic_info):
                 key = "tumor"
             out[key]["freq"] = freq
             out[key]["depth"] = depth
+            out[key]["alt"] = alt
     return out
 
 def _is_possible_loh(rec, vcf_rec, params, somatic_info):
@@ -301,11 +312,11 @@ def _is_possible_loh(rec, vcf_rec, params, somatic_info):
         if all([d > params["min_depth"] for d in depths]):
             if normal_freq is not None:
                 if normal_freq >= params["min_freq"] and normal_freq <= params["max_freq"]:
-                    return stats["tumor"]["freq"]
+                    return stats
             elif (tumor_freq >= params["tumor_only"]["min_freq"] and
                     tumor_freq <= params["tumor_only"]["max_freq"]):
                 if not _has_population_germline(vcf_rec) or is_population_germline(rec):
-                    return stats["tumor"]["freq"]
+                    return stats
 
 def _has_population_germline(rec):
     """Check if header defines population annotated germline samples for tumor only.

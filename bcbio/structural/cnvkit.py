@@ -498,6 +498,7 @@ def _add_variantcalls_to_output(out, data, items, is_somatic=False):
                        outformat, "--sample-id", dd.get_sample_name(data),
                        "--ploidy", str(ploidy.get_ploidy([data])),
                        "-o", tx_out_file, call_file]
+                gender = population.get_gender(data)
                 if gender and gender.lower() == "male":
                     cmd += ["--male-reference"]
                 do.run(cmd, "CNVkit export %s" % outformat)
