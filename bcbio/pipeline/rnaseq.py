@@ -4,9 +4,8 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein, pizzly, ericscript)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
-from bcbio.variation import joint, vardict, vcfanno
+from bcbio.variation import joint, multi, vardict, vcfanno
 import bcbio.pipeline.datadict as dd
-from bcbio.pipeline import config_utils
 from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
 
@@ -49,7 +48,10 @@ def rnaseq_variant_calling(samples, run_parallel):
     samples = run_parallel("run_rnaseq_variant_calling", samples)
     variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
     if variantcaller and ("gatk-haplotype" in variantcaller):
-        samples = joint.square_off(samples, run_parallel)
+        out = []
+        for d in joint.square_off(samples, run_parallel):
+            out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
+        samples = out
         samples = run_parallel("run_rnaseq_ann_filter", samples)
     return samples
 

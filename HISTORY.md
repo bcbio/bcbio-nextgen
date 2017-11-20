@@ -7,6 +7,8 @@
   place. Avoids incorrect headers for non-decomposed inputs.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
+- Fix problem collapsing samples for QC when using RNA-seq variant calling with
+  gatk-haplotype. Thanks to Neill Gibson.
 - Integrate ericscript RNA-seq fusion caller. Thanks to Tetiana Khotiainsteva
   and Vang Le.
 - disambiguation: ensure BAM index present for non-split alignments
