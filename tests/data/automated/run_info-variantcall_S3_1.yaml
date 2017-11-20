@@ -36,8 +36,6 @@ details:
       ploidy: 2
       # In percent
       min_allele_fraction: 10
-      # Only possible when using GATK
-      phasing: false
       # --- Functional annotation
       # VEP already includes dbNSFP
       effects: vep

@@ -623,8 +623,6 @@ Variant calling
           female: 2
           male: 1
 
--  ``phasing`` Do post-call haplotype phasing of variants. Defaults to
-   no phasing [false, gatk]
 - ``background`` Provide a VCF file with variants to use as a background
   reference during variant calling. For tumor/normal paired calling use this to
   supply a panel of normal individuals.

@@ -11,6 +11,8 @@
   gatk-haplotype. Thanks to Neill Gibson.
 - Integrate ericscript RNA-seq fusion caller. Thanks to Tetiana Khotiainsteva
   and Vang Le.
+- Remove read backed phasing (`phasing: gatk`) for GATK runs in favor of
+  HaplotypeCaller internal phasing.
 - disambiguation: ensure BAM index present for non-split alignments
 - Use only end of reads to detect 3' adapters in small RNA-seq pipeline.
 - Fix BCBIO_JAVA_HOME to correctly pass custom Java to GATK and Picard runs.

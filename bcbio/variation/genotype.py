@@ -14,7 +14,7 @@ from bcbio.distributed import multi as dmulti
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region as pregion
 from bcbio.variation import (gatk, gatkfilter, germline, multi,
-                             phasing, ploidy, vcfutils, vfilter)
+                             ploidy, vcfutils, vfilter)
 
 # ## Variant filtration -- shared functionality
 
@@ -343,12 +343,7 @@ def variantcall_sample(data, region=None, align_bams=None, out_file=None):
         if not assoc_files: assoc_files = {}
         for bam_file in align_bams:
             bam.index(bam_file, data["config"], check_timestamp=False)
-        do_phasing = data["config"]["algorithm"].get("phasing", False)
-        call_file = "%s-unphased%s" % utils.splitext_plus(out_file) if do_phasing else out_file
-        call_file = caller_fn(align_bams, items, ref_file, assoc_files, region, call_file)
-        if do_phasing == "gatk":
-            call_file = phasing.read_backed_phasing(call_file, align_bams, ref_file, region, config)
-            utils.symlink_plus(call_file, out_file)
+        out_file = caller_fn(align_bams, items, ref_file, assoc_files, region, out_file)
     if region:
         data["region"] = region
     data["vrn_file"] = out_file
