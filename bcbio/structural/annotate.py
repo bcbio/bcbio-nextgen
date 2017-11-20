@@ -60,7 +60,7 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
     cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
            "{sort_cmd} -k1,1 -k2,2n | "
             "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
-            "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {ready_gene_file}) | "
+            "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {ready_gene_file}) -t first | "
             "{distance_filter} | cut -f 1-{max_column} | "
             "bedtools merge -i - -c {columns} -o {ops} -delim ',' -d -10 > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")
