@@ -35,7 +35,7 @@ def calculate_sv_bins(*items):
     from bcbio.structural import cnvkit
     orig_items = items
     items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
-    if all(not cnvkit.use_general_sv_bins(items) for x in items):
+    if all(not cnvkit.use_general_sv_bins(x) for x in items):
         return orig_items
     out = []
     for i, cnv_group in enumerate(_group_by_cnv_method(multi.group_by_batch(items, False))):
@@ -151,7 +151,6 @@ def calculate_sv_coverage(data):
     out_anti_file = os.path.join(work_dir, "%s-antitarget-coverage.cnn" % dd.get_sample_name(data))
     if ((not utils.file_exists(out_target_file) or not utils.file_exists(out_anti_file))
           and (dd.get_align_bam(data) or dd.get_work_bam(data))):
-        # mosdepth
         target_cov = coverage.run_mosdepth(data, "target", tz.get_in(["regions", "bins", "target"], data))
         anti_cov = coverage.run_mosdepth(data, "antitarget", tz.get_in(["regions", "bins", "antitarget"], data))
         target_cov_genes = annotate.add_genes(target_cov.regions, data, max_distance=0)
@@ -196,7 +195,7 @@ def normalize_sv_coverage(*items):
     from bcbio.structural import shared as sshared
     orig_items = items
     items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
-    if all(not cnvkit.use_general_sv_bins(items) for x in items):
+    if all(not cnvkit.use_general_sv_bins(x) for x in items):
         return orig_items
     out_files = {}
     for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
