@@ -50,6 +50,7 @@ def run_ericscript(data, input_files):
     db_location = dd.get_ericscript_db(data, None)
     if not db_location:
         logger.info("Skipping ericscript because ericscript database not found.")
+        return None
     work_dir = dd.get_work_dir(data)
     sample_name = dd.get_sample_name(data)
     out_dir = os.path.join(work_dir, "ericscript", sample_name)
