@@ -33,11 +33,10 @@ def calculate_sv_bins(*items):
     variant_regions to estimate depth for bin sizes.
     """
     from bcbio.structural import cnvkit
-    items = cwlutils.handle_combined_input(items)
-    print(len(items))
-    if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
-        return items
-    items = [utils.to_single_data(x) for x in items]
+    orig_items = items
+    items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
+    if all(not cnvkit.use_general_sv_bins(items) for x in items):
+        return orig_items
     out = []
     for i, cnv_group in enumerate(_group_by_cnv_method(multi.group_by_batch(items, False))):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
@@ -195,10 +194,10 @@ def normalize_sv_coverage(*items):
     """
     from bcbio.structural import cnvkit
     from bcbio.structural import shared as sshared
-    items = cwlutils.handle_combined_input(items)
-    if all(not cnvkit.use_general_sv_bins(utils.to_single_data(x)) for x in items):
-        return items
-    items = [utils.to_single_data(x) for x in items]
+    orig_items = items
+    items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
+    if all(not cnvkit.use_general_sv_bins(items) for x in items):
+        return orig_items
     out_files = {}
     for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
         inputs, backgrounds = sshared.find_case_control(list(gitems))
