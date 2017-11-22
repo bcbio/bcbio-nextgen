@@ -256,10 +256,10 @@ def align_transcriptome(fastq_file, pair_file, ref_file, data):
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     samtools = config_utils.get_program("samtools", data["config"])
     cmd = ("{bwa} mem {args} -a -t {num_cores} {gtf_fasta} {fastq_file} "
-           "{pair_file} | {samtools} view -bhS - > {tx_out_file}")
-
+           "{pair_file} ")
     with file_transaction(data, out_file) as tx_out_file:
         message = "Aligning %s and %s to the transcriptome." % (fastq_file, pair_file)
+        cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file, name_sort=True)
         do.run(cmd.format(**locals()), message)
     data = dd.set_transcriptome_bam(data, out_file)
     return data
