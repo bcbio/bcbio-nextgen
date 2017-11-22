@@ -58,7 +58,9 @@ def run_stringtie_expression(data):
         data = dd.set_fpkm(data, gene_fpkm)
         data = dd.set_fpkm_isoform(data, isoform_fpkm)
         if "stringtie" in dd.get_transcript_assembler(data):
-            dd.get_assembled_gtf(data).append(assembly)
+            assembled_gtfs = dd.get_assembled_gtf(data)
+            assembled_gtfs.append(assembly)
+            data = dd.set_assembled_gtf(data, assembled_gtfs)
         return data
     with file_transaction(data, out_dir) as tx_out_dir:
         transcript_file = _stringtie_expression(bam, data, tx_out_dir)
@@ -68,7 +70,9 @@ def run_stringtie_expression(data):
     data = dd.set_fpkm(data, gene_fpkm)
     data = dd.set_fpkm_isoform(data, isoform_fpkm)
     if "stringtie" in dd.get_transcript_assembler(data):
-        dd.get_assembled_gtf(data).append(assembly)
+        assembled_gtfs = dd.get_assembled_gtf(data)
+        assembled_gtfs.append(assembly)
+        data = dd.set_assembled_gtf(data, assembled_gtfs)
     return data
 
 def _write_fpkms(df, out_dir, sample_name):
