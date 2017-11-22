@@ -495,3 +495,55 @@ def filter_primary(bam_file, data):
         do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %
                                         os.path.basename(bam_file)))
     return out_file
+
+def estimate_max_mapq(in_bam, nreads=1e6):
+    """Guess maximum MAPQ in a BAM file of reads with alignments
+    """
+    with pysam.Samfile(in_bam, "rb") as work_bam:
+        reads = tz.take(nreads, work_bam)
+        return max([x.mapq for x in reads if not x.is_unmapped])
+
+def convert_cufflinks_mapq(in_bam, out_bam=None):
+    """Cufflinks expects the not-valid 255 MAPQ for uniquely mapped reads.
+    This detects the maximum mapping quality in a BAM file and sets
+    reads with that quality to be 255
+    """
+    CUFFLINKSMAPQ = 255
+    if not out_bam:
+        out_bam = os.path.splitext(in_bam)[0] + "-cufflinks.bam"
+    if utils.file_exists(out_bam):
+        return out_bam
+    maxmapq = estimate_max_mapq(in_bam)
+    if maxmapq == CUFFLINKSMAPQ:
+        return in_bam
+    logger.info("Converting MAPQ scores in %s to be Cufflinks compatible." % in_bam)
+    with pysam.Samfile(in_bam, "rb") as in_bam_fh:
+        with pysam.Samfile(out_bam, "wb", template=in_bam_fh) as out_bam_fh:
+            for read in in_bam_fh:
+                if read.mapq == maxmapq and not read.is_unmapped:
+                    read.mapq = CUFFLINKSMAPQ
+                out_bam_fh.write(read)
+    return out_bam
+
+def convert_invalid_mapq(in_bam, out_bam=None):
+    """Some aligners output 255 to denote a uniquely mapped read which is
+    an invalid MAPQ value according to the SAM spec. This detects
+    that and changes it to be 60.
+    """
+    INVALIDMAPQ = 255
+    VALIDMAPQ = 60
+    if not out_bam:
+        out_bam = os.path.splitext(in_bam)[0] + "-MAPQfixed.bam"
+    if utils.file_exists(out_bam):
+        return out_bam
+    maxmapq = estimate_max_mapq(in_bam)
+    if maxmapq != INVALIDMAPQ:
+        return in_bam
+    logger.info("Converting 255 MAPQ scores in %s to 60." % in_bam)
+    with pysam.Samfile(in_bam, "rb") as in_bam_fh:
+        with pysam.Samfile(out_bam, "wb", template=in_bam_fh) as out_bam_fh:
+            for read in in_bam_fh:
+                if read.mapq == INVALIDMAPQ and not read.is_unmapped:
+                    read.mapq = VALIDMAPQ
+                out_bam_fh.write(read)
+    return out_bam

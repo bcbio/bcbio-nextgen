@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 import pandas as pd
+from bcbio import bam
 from bcbio.utils import get_in, file_exists, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -15,6 +16,7 @@ from bcbio.rnaseq import gtf, annotate_gtf
 
 
 def run(align_file, ref_file, data):
+    align_file = bam.convert_cufflinks_mapq(align_file)
     config = data["config"]
     cmd = _get_general_options(align_file, config)
     cmd.extend(_get_no_assembly_options(ref_file, data))
@@ -104,6 +106,7 @@ def assemble(bam_file, ref_file, num_cores, out_dir, data):
     library_type = " ".join(_get_stranded_flag(data["config"]))
     if file_exists(out_file):
         return out_file
+    bam_file = bam.convert_cufflinks_mapq(bam_file)
     with file_transaction(data, out_dir) as tmp_out_dir:
         cmd = ("cufflinks --output-dir {tmp_out_dir} --num-threads {num_cores} "
                "--frag-bias-correct {ref_file} "

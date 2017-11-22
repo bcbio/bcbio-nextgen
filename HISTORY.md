@@ -18,6 +18,10 @@
 - Fix BCBIO_JAVA_HOME to correctly pass custom Java to GATK and Picard runs.
 - ChIP-seq: add generation of greylist regions defined as regions of  high
   depth in the input file on a per sample pair basis.
+- RNA-seq: STAR now outputs a MAPQ of 60 for uniquely mapped reads instead of
+  255.
+- RNA-seq: Ensure BAM files fed into Cufflinks have 255 as the uniquely mapped
+  MAPQ instead of 60 as output by hisat2/STAR/etc.
 
 ## 1.0.6 (5 November 2017)
 
