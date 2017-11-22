@@ -19,6 +19,8 @@ def classify_with_cpat(assembled_gtf, ref_gtf, ref_fasta, data):
     cpat_cmd = config_utils.get_program("cpat.py", data)
     if not cpat_cmd:
         return {}
+    if not gtf.is_cpat_compatible(ref_gtf):
+        return {}
     cutoff, hexamer, logit = get_coding_potential_cutoff(ref_gtf, ref_fasta, data)
     assembled_fasta = gtf.gtf_to_fasta(assembled_gtf, ref_fasta)
     cpat_fn = cpat(assembled_fasta, hexamer, logit, data)

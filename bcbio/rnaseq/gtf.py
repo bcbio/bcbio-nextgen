@@ -370,3 +370,22 @@ def canonical_transcripts(gtf, out_file):
                 for exon in db.children(best[2], level=1):
                     out_handle.write(str(exon) + "\n")
     return out_file
+
+def is_cpat_compatible(gtf):
+    """
+    CPAT needs some transcripts annotated with protein coding status to work
+    properly
+    """
+    if not gtf:
+        return False
+    db = get_gtf_db(gtf)
+    pred = lambda biotype: biotype and biotype == "protein_coding"
+    biotype_lookup = _biotype_lookup_fn(gtf)
+    if not biotype_lookup:
+        return False
+    db = get_gtf_db(gtf)
+    for feature in db.all_features():
+        biotype = biotype_lookup(feature)
+        if pred(biotype):
+            return True
+    return False
