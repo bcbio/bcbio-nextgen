@@ -5,6 +5,9 @@
   Gabriel Berriz.
 - vcfanno: only correct VCF headers to use Number=1 when decomposition takes
   place. Avoids incorrect headers for non-decomposed inputs.
+- ensemble: normalize and decompose variants prior to incorporating into
+  ensemble calls, handling MNPs called differently across callers. Thanks to
+  Vlad Saveliev.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
 - Fix problem collapsing samples for QC when using RNA-seq variant calling with
