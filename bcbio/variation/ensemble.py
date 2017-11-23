@@ -20,7 +20,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import population, validate, vcfutils, multi
+from bcbio.variation import population, validate, vcfutils, multi, normalize, effects
 
 def combine_calls(batch_id, samples, data):
     """Combine multiple callsets into a final set of merged calls.
@@ -36,13 +36,20 @@ def combine_calls(batch_id, samples, data):
             exist_variants = True
             break
     if exist_variants:
+        # Decompose multiallelic variants and normalize
+        vrn_files = [normalize.normalize(f, data, passonly=True, rerun_effects=False) for f in vrn_files]
         if "classifiers" not in edata["config"]["algorithm"]["ensemble"]:
             callinfo = _run_ensemble_intersection(batch_id, vrn_files, caller_names, base_dir, edata)
         else:
             config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
             callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
-                                    edata["sam_ref"], edata)
+                                     edata["sam_ref"], edata)
             callinfo["vrn_file"] = vcfutils.bgzip_and_index(callinfo["vrn_file"], data["config"])
+        # After decomposing multiallelic variants and normalizing, re-evaluate effects
+        ann_ma_file, _ = effects.add_to_vcf(callinfo["vrn_file"], data)
+        if ann_ma_file:
+            callinfo["vrn_file"] = ann_ma_file
+
         edata["config"]["algorithm"]["variantcaller"] = "ensemble"
         edata["vrn_file"] = callinfo["vrn_file"]
         edata["ensemble_bed"] = callinfo["bed_file"]
