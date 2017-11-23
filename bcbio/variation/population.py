@@ -14,7 +14,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import multiallelic, vcfanno, vcfutils
+from bcbio.variation import normalize, vcfanno, vcfutils
 
 def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
@@ -26,7 +26,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     if use_gemini:
         passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
-        gemini_vcf = multiallelic.to_single(gemini_vcf, data, passonly=passonly)
+        gemini_vcf = normalize.normalize(gemini_vcf, data, passonly=passonly)
     ann_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     if vcfutils.vcf_has_variants(gemini_vcf):
