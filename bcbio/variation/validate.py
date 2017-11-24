@@ -102,7 +102,7 @@ def _normalize_cwl_inputs(items):
         return ready_items[0]
     else:
         assert len(with_validate) == 1, len(with_validate)
-        assert len(set(vrn_files)) == 1
+        assert len(set(vrn_files)) == 1, set(vrn_files)
         data = with_validate.values()[0]
         data["vrn_file"] = vrn_files[0]
         return data

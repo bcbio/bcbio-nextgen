@@ -151,7 +151,7 @@ def process_alignment(data, alt_input=None):
         data["work_bam"] = dedup_bam
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".cram"):
         data["work_bam"] = fastq1
-    elif fastq1 is None and "vrn_file" in data:
+    elif fastq1 is None and not dd.get_aligner(data):
         data["config"]["algorithm"]["variantcaller"] = False
         data["work_bam"] = None
     elif not fastq1:

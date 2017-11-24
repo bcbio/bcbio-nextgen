@@ -233,7 +233,8 @@ def _place_secondary_files(inp_tool, inp_binding=None):
     """Put secondaryFiles at the level of the File item to ensure indexes get passed.
     """
     def _is_file(val):
-        return (val == "File" or (isinstance(val, (list, tuple)) and "File" in val))
+        return (val == "File" or (isinstance(val, (list, tuple)) and
+                                  ("File" in val or any(isinstance(x, dict) and x["items"] == "File") for x in val)))
     secondary_files = inp_tool.pop("secondaryFiles", None)
     if secondary_files:
         key = []

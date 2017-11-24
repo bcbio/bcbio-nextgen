@@ -216,8 +216,16 @@ def _flatten_nested_input(v):
     """Flatten a parallel scatter input -- we only get one of them to tools.
     """
     v = copy.deepcopy(v)
-    assert v["type"]["type"] == "array"
-    v["type"] = v["type"]["items"]
+    if isinstance(v["type"], dict) and v["type"]["type"] == "array":
+        v["type"] = v["type"]["items"]
+    else:
+        assert isinstance(v["type"], (list, tuple)), v
+        new_type = None
+        for x in v["type"]:
+            if isinstance(x, dict) and x["type"] == "array":
+                new_type = x["items"]
+        assert new_type, v
+        v["type"] = new_type
     return v
 
 def _nest_variable(v, check_records=False):

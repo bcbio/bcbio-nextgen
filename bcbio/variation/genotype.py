@@ -355,6 +355,9 @@ def concat_batch_variantcalls(items, region_block=True, skip_jointcheck=False):
     items = [utils.to_single_data(x) for x in items]
     batch_name = _get_batch_name(items, skip_jointcheck)
     variantcaller = _get_batch_variantcaller(items)
+    # Pre-called input variant files
+    if not variantcaller and all(d.get("vrn_file") for d in items):
+        return {"vrn_file": items[0]["vrn_file"]}
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, "%s.vcf.gz" % (batch_name))
     utils.safe_makedir(os.path.dirname(out_file))
     if region_block:
@@ -391,6 +394,8 @@ def _get_batch_name(items, skip_jointcheck=False):
 
 def _get_batch_variantcaller(items):
     variantcaller = [vc for vc in list(set([get_variantcaller(x) for x in items])) if vc]
+    if not variantcaller:
+        return None
     assert len(variantcaller) == 1, "%s\n%s" % (variantcaller, pprint.pformat(items))
     return variantcaller[0]
 
@@ -403,6 +408,9 @@ def variantcall_batch_region(items):
     region_blocks = list(set([tuple(x.get("region_block")) for x in items if "region_block" in x]))
     assert len(region_blocks) == 1, region_blocks
     region_block = region_blocks[0]
+    # Pre-called input variant files
+    if not variantcaller and all(d.get("vrn_file") for d in items):
+        return {"vrn_file_region": None, "region_block": region_block}
     caller_fn = get_variantcallers()[variantcaller]
     assoc_files = tz.get_in(("genome_resources", "variation"), items[0], {})
     region = _region_to_coords(region_block[0])

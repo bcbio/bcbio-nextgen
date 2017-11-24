@@ -50,11 +50,11 @@ def summarize_vc(items):
 def postprocess_variants(items):
     """Provide post-processing of variant calls: filtering and effects annotation.
     """
+    vrn_key = "vrn_file"
     if not isinstance(items, dict):
         items = [utils.to_single_data(x) for x in items]
-        vrn_key = "vrn_file_joint" if "vrn_file_joint" in items[0] else "vrn_file"
-    else:
-        vrn_key = "vrn_file"
+        if "vrn_file_joint" in items[0]:
+            vrn_key = "vrn_file_joint"
     data, items = _get_batch_representative(items, vrn_key)
     items = cwlutils.unpack_tarballs(items, data)
     data = cwlutils.unpack_tarballs(data, data)
@@ -108,6 +108,8 @@ def _symlink_to_workdir(data, key):
     orig_file = tz.get_in(key, data)
     if orig_file and not orig_file.startswith(dd.get_work_dir(data)):
         variantcaller = genotype.get_variantcaller(data)
+        if not variantcaller:
+            variantcaller = "precalled"
         out_file = os.path.join(dd.get_work_dir(data), variantcaller, os.path.basename(orig_file))
         utils.safe_makedir(os.path.dirname(out_file))
         utils.symlink_plus(orig_file, out_file)

@@ -301,7 +301,7 @@ def _combine_sample_regions_batch(batch, items):
         # without callable bases. HT @brentp for intersection approach
         # https://groups.google.com/forum/?fromgroups#!topic/bedtools-discuss/qA9wK4zN8do
         bed_regions = [pybedtools.BedTool(x["regions"]["nblock"])
-                       for x in items if "regions" in x]
+                       for x in items if "regions" in x and x["regions"]["nblock"]]
         if len(bed_regions) == 0:
             analysis_file, no_analysis_file = None, None
         else:

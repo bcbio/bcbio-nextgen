@@ -17,7 +17,7 @@ from bcbio.pipeline import datadict as dd
 def to_rec(samples, default_keys=None):
     """Convert inputs into CWL records, useful for single item parallelization.
     """
-    recs = samples_to_records([utils.to_single_data(x) for x in samples], default_keys)
+    recs = samples_to_records([normalize_missing(utils.to_single_data(x)) for x in samples], default_keys)
     return [[x] for x in recs]
 
 def to_rec_single(samples, default_keys=None):
@@ -25,7 +25,7 @@ def to_rec_single(samples, default_keys=None):
     """
     out = []
     for data in samples:
-        recs = samples_to_records([utils.to_single_data(data)], default_keys)
+        recs = samples_to_records([normalize_missing(utils.to_single_data(data))], default_keys)
         assert len(recs) == 1
         out.append(recs[0])
     return out

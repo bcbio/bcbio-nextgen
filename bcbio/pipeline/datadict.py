@@ -207,7 +207,7 @@ def get_input_sequence_files(data, default=None):
     returns the input sequencing files, these can be single or paired FASTQ
     files or BAM files
     """
-    if "files" not in data:
+    if "files" not in data or data.get("files") is None:
         file1, file2 = None, None
     elif len(data["files"]) == 2:
         file1, file2 = data["files"]

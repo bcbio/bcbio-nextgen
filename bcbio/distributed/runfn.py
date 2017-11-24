@@ -379,8 +379,8 @@ def _finalize_cwl_in(data, work_dir, passed_keys, output_cwl_keys, runtime):
     data["cwl_keys"] = passed_keys
     data["output_cwl_keys"] = output_cwl_keys
     data = _add_resources(data, runtime)
-    data = run_info.normalize_world(data)
     data = cwlutils.normalize_missing(data)
+    data = run_info.normalize_world(data)
     return data
 
 def _convert_value(val):
