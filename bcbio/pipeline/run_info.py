@@ -839,9 +839,11 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
         if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
             inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
                                                          item["description"]))
-            item["vrn_file"] = vcfutils.bgzip_and_index(genome.abs_file_paths(
-                item["vrn_file"], do_download=all(not x for x in integrations.values())),
-                                                        config, remove_orig=False, out_dir=inputs_dir)
+            item["vrn_file"] = genome.abs_file_paths(item["vrn_file"],
+                                                     do_download=all(not x for x in integrations.values()))
+            if os.path.isfile(item["vrn_file"]):
+                item["vrn_file"] = vcfutils.bgzip_and_index(item["vrn_file"], config,
+                                                            remove_orig=False, out_dir=inputs_dir)
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
         # Add any global resource specifications

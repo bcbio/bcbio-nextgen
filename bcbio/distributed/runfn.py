@@ -289,9 +289,9 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
                 # nested batches with records
                 if parallel.startswith("batch") and isinstance(out[i], (list, tuple)):
                     for j in range(len(out[i])):
-                        out[i][j] = _update_nested(list(cwl_key), cur_val, out[i][j])
+                        out[i][j] = _update_nested(list(cwl_key), cur_val, out[i][j], allow_overwriting=True)
                 else:
-                    out[i] = _update_nested(list(cwl_key), cur_val, out[i])
+                    out[i] = _update_nested(list(cwl_key), cur_val, out[i], allow_overwriting=True)
             elif out[i] == {}:
                 out[i] = cur_val
             else:
@@ -553,7 +553,7 @@ def _update_nested(key, val, data, allow_overwriting=False):
     """
     if isinstance(val, dict):
         for sub_key, sub_val in val.items():
-            data = _update_nested(key + [sub_key], sub_val, data)
+            data = _update_nested(key + [sub_key], sub_val, data, allow_overwriting=allow_overwriting)
     else:
         already_there = tz.get_in(key, data) is not None
         if already_there and val:
