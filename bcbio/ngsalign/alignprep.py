@@ -592,9 +592,9 @@ def _bgzip_from_fastq(data):
         if data.get("is_cwl"):
             # Has grabix indexes, we're okay to go
             if utils.file_exists(in_file + ".gbi"):
-                return in_file
+                out_file = in_file
             else:
-                return utils.copy_plus(in_file, out_file)
+                utils.copy_plus(in_file, out_file)
         else:
             utils.symlink_plus(in_file, out_file)
     return out_file
