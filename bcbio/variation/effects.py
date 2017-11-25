@@ -182,7 +182,9 @@ def _get_loftee(data):
     ancestral_file = tz.get_in(("genome_resources", "variation", "ancestral"), data)
     if not ancestral_file or not os.path.exists(ancestral_file):
         ancestral_file = "false"
-    args = ["--plugin", "LoF,human_ancestor_fa:%s" % ancestral_file]
+    vep = config_utils.get_program("vep", data["config"])
+    args = ["--plugin", "LoF,human_ancestor_fa:%s,loftee_path:%s" %
+            (ancestral_file, os.path.dirname(os.path.realpath(vep)))]
     return args
 
 def _get_maxentscan(data):
