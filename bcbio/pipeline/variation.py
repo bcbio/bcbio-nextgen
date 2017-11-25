@@ -56,7 +56,7 @@ def _combine_validations(items):
         if v and v.get("grading_plots"):
             pngs |= set(v.get("grading_plots"))
     if len(csvs) == 1:
-        grading_summary = csvs.pop(0)
+        grading_summary = csvs.pop()
     else:
         grading_summary = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "validation")),
                                        "grading-summary-combined.csv")
