@@ -20,9 +20,6 @@ RUN apt-get update && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate --tooldir=/usr/local --tools && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate -u development --tools && \
     # Remove larger packages not used consistently in bcbio Docker runs
-    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y mysql && \
-    /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y mysql-connector-c && \
-    /usr/local/share/bcbio-nextgen/anaconda/bin/conda install -y -c conda-forge -c bioconda mysql-connector-c && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y hap.py && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda remove --force -y bioconductor-org.hs.eg.db bioconductor-org.mm.eg.db bioconductor-go.db && \
 
