@@ -8,6 +8,8 @@
 - ensemble: normalize and decompose variants prior to incorporating into
   ensemble calls, handling MNPs called differently across callers. Thanks to
   Vlad Saveliev.
+- Initial support for minimap2 aligner in variant calling workflows. Still needs
+  validation and benchmarking in comparison to bwa.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
 - Fix problem collapsing samples for QC when using RNA-seq variant calling with

@@ -400,7 +400,7 @@ Alignment
 
 - ``platform`` Sequencing platform used. Corresponds to the ``PL``
   parameter in BAM read groups. Default 'Illumina'.
--  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, hisat2, novoalign, snap,
+-  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, hisat2, minimap2, novoalign, snap,
    star, tophat2, false] To use pre-aligned BAM files as inputs to the pipeline,
    set to ``false``. Using pre-aligned inputs requires proper assignment of BAM read
    groups and sorting. The ``bam_clean`` argument can often resolve issues with

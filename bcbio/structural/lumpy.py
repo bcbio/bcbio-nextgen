@@ -117,7 +117,7 @@ def run(items):
     """Perform detection of structural variations with lumpy, using bwa-mem alignment.
     """
     if not all(utils.get_in(data, ("config", "algorithm", "aligner"))
-               in ["bwa", "sentieon-bwa", False, None] for data in items):
+               in ["bwa", "sentieon-bwa", "minimap2", False, None] for data in items):
         raise ValueError("Require bwa-mem alignment input for lumpy structural variation detection")
     paired = vcfutils.get_paired_bams([x["align_bam"] for x in items], items)
     work_dir = _sv_workdir(paired.tumor_data if paired and paired.tumor_data else items[0])
