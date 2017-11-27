@@ -221,9 +221,18 @@ def _flatten_nested_input(v):
     else:
         assert isinstance(v["type"], (list, tuple)), v
         new_type = None
+        want_null = False
         for x in v["type"]:
             if isinstance(x, dict) and x["type"] == "array":
                 new_type = x["items"]
+            elif isinstance(x, basestring) and x == "null":
+                want_null = True
+        if want_null:
+            if not isinstance(new_type, (list, tuple)):
+                new_type = [new_type]
+            for toadd in ["null", "string"]:
+                if toadd not in new_type:
+                    new_type.append(toadd)
         assert new_type, v
         v["type"] = new_type
     return v
@@ -373,12 +382,13 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
         # unpack record inside this record and un-nested inputs to avoid double nested
         cur_record = is_cwl_record(raw_v)
         if cur_record:
-            #unlist = unlist | set([field["name"] for field in cur_record["fields"]])
+            # unlist = unlist | set([field["name"] for field in cur_record["fields"]])
             nested_vs = [{"id": field["name"], "type": field["type"]} for field in cur_record["fields"]]
         else:
             nested_vs = [raw_v]
         for orig_v in nested_vs:
-            if orig_v["id"] not in added and (not to_include or get_base_id(orig_v["id"]) in to_include):
+            if (get_base_id(orig_v["id"]) not in added
+                 and (not to_include or get_base_id(orig_v["id"]) in to_include)):
                 cur_v = {}
                 cur_v["name"] = get_base_id(orig_v["id"])
                 cur_v["type"] = orig_v["type"]
@@ -387,7 +397,7 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
                 if to_include:
                     cur_v = _nest_variable(cur_v)
                 fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
-                added.add(orig_v["id"])
+                added.add(get_base_id(orig_v["id"]))
     return fields
 
 def _create_variable(orig_v, step, variables):
