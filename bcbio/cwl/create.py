@@ -1,5 +1,6 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
+import collections
 import copy
 import functools
 import json
@@ -311,9 +312,10 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     """Output a CWL description with sub-workflows and steps.
     """
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
-    variables, keyvals = _flatten_samples(samples, out_file, integrations)
+    get_retriever = GetRetriever(integrations, samples)
+    variables, keyvals = _flatten_samples(samples, out_file, get_retriever)
     cur_remotes = _get_cur_remotes(keyvals)
-    file_estimates = _calc_input_estimates(keyvals, integrations)
+    file_estimates = _calc_input_estimates(keyvals, get_retriever)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
     steps, wfoutputs = workflow_fn(samples)
@@ -351,12 +353,12 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     sample_json = "%s-samples.json" % utils.splitext_plus(out_file)[0]
     out_clean = _clean_final_outputs(copy.deepcopy({k: v for k, v in keyvals.items() if k in used_inputs}),
-                                     integrations)
+                                     get_retriever)
     with open(sample_json, "w") as out_handle:
         json.dump(out_clean, out_handle, sort_keys=True, indent=4, separators=(',', ': '))
     return out_file, sample_json
 
-def _flatten_samples(samples, base_file, integrations=None):
+def _flatten_samples(samples, base_file, get_retriever):
     """Create a flattened JSON representation of data from the bcbio world map.
     """
     flat_data = []
@@ -367,7 +369,7 @@ def _flatten_samples(samples, base_file, integrations=None):
                          ["metadata"], ["genome_build"], ["resources"],
                          ["files"], ["reference"], ["genome_resources"], ["vrn_file"]]:
             cur_key = "__".join(key_path)
-            for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data)):
+            for flat_key, flat_val in _to_cwldata(cur_key, tz.get_in(key_path, data), get_retriever):
                 cur_flat[flat_key] = flat_val
         flat_data.append(cur_flat)
     out = {}
@@ -466,7 +468,13 @@ def _get_avro_type(val):
             if isinstance(ctype, dict):
                 nested_types = [x["items"] for x in types if isinstance(x, dict)]
                 if ctype["items"] not in nested_types:
-                    types.append(ctype)
+                    if isinstance(ctype["items"], (list, tuple)):
+                        for t in ctype["items"]:
+                            if t not in types:
+                                types.append(t)
+                    else:
+                        if ctype not in types:
+                            types.append(ctype)
             elif isinstance(ctype, (list, tuple)):
                 for x in ctype:
                     if x not in types:
@@ -500,7 +508,7 @@ def _samplejson_to_inputs(svals):
         out.append(_add_suppl_info({"id": "%s" % key}, val))
     return out
 
-def _to_cwldata(key, val):
+def _to_cwldata(key, val, get_retriever):
     """Convert nested dictionary into CWL data, flatening and marking up files.
 
     Moves file objects to the top level, enabling insertion in CWL inputs/outputs.
@@ -509,19 +517,19 @@ def _to_cwldata(key, val):
     if isinstance(val, dict):
         if len(val) == 2 and "base" in val and "indexes" in val:
             if len(val["indexes"]) > 0 and val["base"] == val["indexes"][0]:
-                out.append(("%s__indexes" % key, _item_to_cwldata(val["base"])))
+                out.append(("%s__indexes" % key, _item_to_cwldata(val["base"], get_retriever)))
             else:
-                out.append((key, _to_cwlfile_with_indexes(val)))
+                out.append((key, _to_cwlfile_with_indexes(val, get_retriever)))
         # Dump shared nested keys like resources as a JSON string
         elif key in workflow.ALWAYS_AVAILABLE:
-            out.append((key, _item_to_cwldata(json.dumps(val))))
+            out.append((key, _item_to_cwldata(json.dumps(val), get_retriever)))
         else:
             remain_val = {}
             for nkey, nval in val.items():
                 cur_nkey = "%s__%s" % (key, nkey)
-                cwl_nval = _item_to_cwldata(nval)
+                cwl_nval = _item_to_cwldata(nval, get_retriever)
                 if isinstance(cwl_nval, dict):
-                    out.extend(_to_cwldata(cur_nkey, nval))
+                    out.extend(_to_cwldata(cur_nkey, nval, get_retriever))
                 elif key in workflow.ALWAYS_AVAILABLE:
                     remain_val[nkey] = nval
                 else:
@@ -529,10 +537,10 @@ def _to_cwldata(key, val):
             if remain_val:
                 out.append((key, json.dumps(remain_val, sort_keys=True, separators=(',', ':'))))
     else:
-        out.append((key, _item_to_cwldata(val)))
+        out.append((key, _item_to_cwldata(val, get_retriever)))
     return out
 
-def _to_cwlfile_with_indexes(val):
+def _to_cwlfile_with_indexes(val, get_retriever):
     """Convert reads with ready to go indexes into the right CWL object.
 
     Identifies the top level directory and creates a tarball, avoiding
@@ -542,21 +550,21 @@ def _to_cwlfile_with_indexes(val):
     space to unpack multiple times.
     """
     if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
-        return _item_to_cwldata(val["base"])
+        return _item_to_cwldata(val["base"], get_retriever)
     else:
         dirname = os.path.dirname(val["base"])
         assert all([x.startswith(dirname) for x in val["indexes"]])
         return {"class": "File", "path": _directory_tarball(dirname)}
 
-def _item_to_cwldata(x):
+def _item_to_cwldata(x, get_retriever):
     """"Markup an item with CWL specific metadata.
     """
     if isinstance(x, (list, tuple)):
-        return [_item_to_cwldata(subx) for subx in x]
+        return [_item_to_cwldata(subx, get_retriever) for subx in x]
     elif (x and isinstance(x, basestring) and
           (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
            objectstore.is_remote(x))):
-        if os.path.isfile(x) or objectstore.is_remote(x):
+        if _file_local_or_remote(x, get_retriever):
             out = {"class": "File", "path": x}
             if x.endswith(".bam"):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
@@ -564,17 +572,20 @@ def _item_to_cwldata(x):
                 out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
             elif x.endswith(".fa"):
                 secondary = [x + ".fai", os.path.splitext(x)[0] + ".dict"]
-                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
+                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
+                secondary = [z for z in secondary if z]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
             elif x.endswith(".fa.gz"):
                 secondary = [x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"]
-                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
+                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
+                secondary = [z for z in secondary if z]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
             elif x.endswith(".fq.gz") or x.endswith(".fastq.gz"):
                 secondary = [x + ".gbi"]
-                secondary = [y for y in secondary if os.path.exists(y) or objectstore.is_remote(x)]
+                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
+                secondary = [z for z in secondary if z]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
@@ -584,6 +595,15 @@ def _item_to_cwldata(x):
         return str(x)
     else:
         return x
+
+def _file_local_or_remote(f, get_retriever):
+    """Check for presence of a local or remote file.
+    """
+    if os.path.exists(f):
+        return f
+    integration, config = get_retriever.integration_and_config(f)
+    if integration:
+        return integration.file_exists(f, config)
 
 def _directory_tarball(dirname):
     """Create a tarball of a complex directory, avoiding complex secondaryFiles.
@@ -603,11 +623,11 @@ def _directory_tarball(dirname):
                 tar.add(tarball_dir)
     return tarball
 
-def _clean_final_outputs(keyvals, integrations=None):
-    def clean_path(integrations, x):
-        retriever = _get_retriever(x, integrations)
-        if retriever:
-            return retriever.clean_file(x)
+def _clean_final_outputs(keyvals, get_retriever):
+    def clean_path(get_retriever, x):
+        integration, config = get_retriever.integration_and_config(x)
+        if integration:
+            return integration.clean_file(x)
         else:
             return x
     def null_to_string(x):
@@ -617,7 +637,7 @@ def _clean_final_outputs(keyvals, integrations=None):
         """
         return "null" if x is None else x
     keyvals = _adjust_items(keyvals, null_to_string)
-    keyvals = _adjust_files(keyvals, functools.partial(clean_path, integrations))
+    keyvals = _adjust_files(keyvals, functools.partial(clean_path, get_retriever))
     return keyvals
 
 def _adjust_items(xs, adjust_fn):
@@ -652,38 +672,54 @@ def _adjust_files(xs, adjust_fn):
     else:
         return xs
 
-def _calc_input_estimates(keyvals, integrations=None):
+def _calc_input_estimates(keyvals, get_retriever):
     """Calculate estimations of input file sizes for disk usage approximation.
 
     These are current dominated by fastq/BAM sizes, so estimate based on that.
     """
     out = {}
     for key, val in keyvals.items():
-        size = _calc_file_size(val, 0, integrations)
+        size = _calc_file_size(val, 0, get_retriever)
         if size:
             out[key] = size
     return out
 
-def _calc_file_size(val, depth, integrations):
+def _calc_file_size(val, depth, get_retriever):
     if isinstance(val, (list, tuple)):
-        sizes = [_calc_file_size(x, depth + 1, integrations) for x in val]
+        sizes = [_calc_file_size(x, depth + 1, get_retriever) for x in val]
         sizes = [x for x in sizes if x]
         if sizes:
             # Top level, biggest item, otherwise all files together
             return max(sizes) if depth == 0 else sum(sizes)
     elif isinstance(val, dict) and "path" in val:
-        return _get_file_size(val["path"], integrations)
+        return _get_file_size(val["path"], get_retriever)
     return None
 
-def _get_retriever(path, integrations):
-    if path.startswith(tuple(INTEGRATION_MAP.keys())):
-        return integrations.get(INTEGRATION_MAP[path.split(":")[0] + ":"])
+class GetRetriever:
+    def __init__(self, integrations, samples):
+        self._integrations = integrations
+        self._samples = samples
 
-def _get_file_size(path, integrations):
+    def integration_and_config(self, path):
+        """Get a retriever and configuration for the given file path.
+        """
+        if path.startswith(tuple(INTEGRATION_MAP.keys())):
+            key = INTEGRATION_MAP[path.split(":")[0] + ":"]
+            integration = self._integrations.get(key)
+            config = {}
+            for sample in self._samples:
+                config = tz.get_in(["config", key], sample)
+                if config:
+                    break
+            return integration, config
+
+        return None, None
+
+def _get_file_size(path, get_retriever):
     """Return file size in megabytes, including querying remote integrations
     """
-    retriever = _get_retriever(path, integrations)
-    if retriever:
-        return retriever.file_size(path)
+    integration, config = get_retriever.integration_and_config(path)
+    if integration:
+        return integration.file_size(path, config)
     elif os.path.exists(path):
         return os.path.getsize(path) / (1024.0 * 1024.0)
