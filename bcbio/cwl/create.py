@@ -76,10 +76,10 @@ def _add_disk_estimates(cwl_res, inputs, file_estimates, disk):
             elif inp["id"] in file_estimates:
                 total_estimate += file_estimates[inp["id"]] * scale
         if total_estimate:
-            # scale total estimate to allow extra room, round to integer
-            total_estimate = int(math.ceil(total_estimate * 1.5))
-            cwl_res["tmpdirMin"] = total_estimate
-            cwl_res["outdirMin"] += total_estimate
+            # Round total estimates to integer, assign extra half to temp space
+            # It's not entirely clear how different runners interpret this
+            cwl_res["tmpdirMin"] = int(math.ceil(total_estimate * 0.5))
+            cwl_res["outdirMin"] += int(math.ceil(total_estimate))
     return cwl_res
 
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
