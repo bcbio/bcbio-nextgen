@@ -17,18 +17,22 @@ def is_gsm(fn):
         return True
 
 def _query_info(db, ids):
-    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db={0}\&id={1}\&retmode=json".format(db, ids)
+    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db={0}\&id={1}".format(db, ids)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out = process.stdout.read()
-    data = json.loads(out)
+    data= []
+    for line in out.split("RUN_SET")[1].split("RUN"):
+        if line.find("accession=") > -1:
+            srr = line.split("accession=")[1].split(" ")[0].replace("\"", "")
+            data.append(srr)
     return data
 
 def query_gsm(gsm, out_file, config = {}):
     gsm = gsm[0]
     out_dir = os.path.dirname(os.path.abspath(out_file))
     name = utils.splitext_plus(os.path.basename(out_file))[0]
-    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds\&term={0}\&retmode=json".format(gsm)
+    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra\&term={0}\&retmode=json".format(gsm)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out = process.stdout.read()
@@ -36,15 +40,14 @@ def query_gsm(gsm, out_file, config = {}):
     ids = data.get("esearchresult", {}).get("idlist", [])
     logger.debug("Get id sample for %s" % gsm)
     if ids:
-        gsm_info = _query_info("gds", ids[-1])
-        srxlist = gsm_info.get("result", {}).get(ids[-1], {}).get("extrelations", {})
-        srxall = []
-        for srxe in srxlist:
-            if srxe.get("targetftplink", None):
-                srxall.append(srxe["targetftplink"])
-        logger.debug("Get FTP link for %s : %s" % (ids[-1], srxall))
+        gsm_info = _query_info("sra", ids[-1])
+        print gsm_info
+        srrall = []
+        for srr in gsm_info:
+            srrall.append(_create_link(srr))
+        logger.debug("Get FTP link for %s : %s" % (ids[-1], srrall))
         outs = []
-        for srx in srxall:
+        for srx in srrall:
             sra_dir = utils.safe_makedir(os.path.join(out_dir, name))
             srafiles = _download_srx(gsm, srx, sra_dir)
             logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
@@ -58,7 +61,7 @@ def query_gsm(gsm, out_file, config = {}):
             return out_file
 
 def _create_link(sraid):
-    sraprex = sraid[0:5]
+    sraprex = sraid[0:6]
     url = "ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/{sraprex}/{sraid}"
     return url.format(**locals())
 
