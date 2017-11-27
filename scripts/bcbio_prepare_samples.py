@@ -96,6 +96,7 @@ def _check_stems(files):
         used.add(os.path.basename(fn))
     return False
 
+
 def _check_paired(files, force_single, separators):
     """check if files are fastq(.gz) and paired"""
     full_name = _check_stems(files)

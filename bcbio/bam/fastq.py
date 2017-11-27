@@ -116,6 +116,7 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
 
     pairs = []
     used = set([])
+    used_separators = set([])
     separators = separators if separators else ("R", "_", "-", ".")
     for in_file in input_files:
         matches = set([])
@@ -150,7 +151,7 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
                     # continue
                     sys.exit(1)
                 if len(s) > 1:
-                    continue #there is only 1 difference
+                    continue #there is more than 1 difference
                 if (a[s[0]] in PAIR_FILE_IDENTIFIERS and
                       b[s[0]] in PAIR_FILE_IDENTIFIERS):
                     # if the 1/2 isn't the last digit before a separator, skip
@@ -160,9 +161,16 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
                         if (b[s[0]+1] not in ("_", "-", ".")):
                             continue
                     # if the 1/2 is not a separator or prefaced with R, skip
-                    if b[s[0]- 1] in separators:
+                    if b[s[0] - 1] in separators:
+                        used_separators.add(b[s[0] - 1])
+                        if len(used_separators) > 1:
+                            logger.warning("To split into paired reads multiple separators were used: %s" % used_separators)
+                            logger.warning("This can lead to wrong assignation.")
+                            logger.warning("Use --separator option in bcbio_prepare_samples.py to specify only one.")
+                            logger.warning("For instance, --separator R.")
                         matches.update([in_file, comp_file])
                         used.update([in_file, comp_file])
+
             if matches:
                 pairs.append(sort_filenames(list(matches)))
         if in_file not in used:
