@@ -3,6 +3,7 @@
 https://github.com/gavinha/TitanCNA
 """
 import csv
+import glob
 import os
 import shutil
 
@@ -30,13 +31,39 @@ def run(items):
         for ploidy in [2, 3, 4]:
             for num_clusters in [1, 2, 3]:
                 out_dir = _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, paired.tumor_data)
-                ploidy_outdirs.append((ploidy, out_dir))
-        solution_file = _run_select_solution(ploidy_outdirs, work_dir, paired.data)
-        print(solution_file)
+            ploidy_outdirs.append((ploidy, out_dir))
+        solution_file = _run_select_solution(ploidy_outdirs, work_dir, paired.tumor_data)
     else:
         logger.info("Skipping TitanCNA; not enough input data: %s" %
                     " ".join([dd.get_sample_name(d) for d in items]))
-    return items
+        return items
+    out = []
+    if paired.normal_data:
+        out.append(paired.normal_data)
+    if "sv" not in paired.tumor_data:
+        paired.tumor_data["sv"] = []
+    paired.tumor_data["sv"].append(_finalize_sv(solution_file, paired.tumor_data))
+    out.append(paired.tumor_data)
+    return out
+
+def _finalize_sv(solution_file, data):
+    """Add output files from TitanCNA calling optional solution.
+
+    TODO: provide conversion of CNV calls to VCF.
+    """
+    out = {"variantcaller": "titancna"}
+    with open(solution_file) as in_handle:
+        solution = dict(zip(in_handle.readline().strip("\r\n").split("\t"),
+                            in_handle.readline().strip("\r\n").split("\t")))
+    out["purity"] = solution["purity"]
+    out["ploidy"] = solution["ploidy"]
+    out["cellular_prevalence"] = [x.strip() for x in solution["cellPrev"].split(",")]
+    base = os.path.basename(solution["path"])
+    out["plot"] = [solution["path"] + ext for ext in [".Rplots.pdf", "/%s_CF.pdf" % base, 
+                                                      "/%s_CNA.pdf" % base, "/%s_LOH.pdf" % base]
+                   if os.path.exists(solution["path"] + ext)]
+    out["subclones"] = "%s.segs.txt" % solution["path"]
+    return out
 
 def _should_run(het_file):
     """Check for enough input data to proceed with analysis.
@@ -44,7 +71,7 @@ def _should_run(het_file):
     has_hets = False
     with open(het_file) as in_handle:
         for i, line in enumerate(in_handle):
-            if i > 1:
+            if i > 0:
                 has_hets = True
                 break
     return has_hets
@@ -69,13 +96,16 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
     ploidy_dir = utils.safe_makedir(os.path.join(work_dir, "run_ploidy%s" % ploidy))
     cluster_dir = "%s_cluster%02d" % (sample, num_clusters)
     out_dir = os.path.join(ploidy_dir, cluster_dir)
-    if not utils.file_exists(out_dir):
+    if not utils.file_uptodate(out_dir + ".titan.txt", cn_file):
         with tx_tmpdir(data) as tmp_dir:
-            cmd = ("{export_cmd} && titanCNA.R --id {sample} --hetFile {het_file} --cnFile {cn_file} "
-                   "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir}")
-            do.run(cmd.format(**locals()), "TitanCNA CNV detection: ploidy %s, cluster %s" % (ploidy, num_clusters))
-            shutil.move(os.path.join(tmp_dir, cluster_dir), out_dir)
-    return out_dir
+            with utils.chdir(tmp_dir):
+                cmd = ("{export_cmd} && titanCNA.R --id {sample} --hetFile {het_file} --cnFile {cn_file} "
+                       "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir}")
+                do.run(cmd.format(**locals()), "TitanCNA CNV detection: ploidy %s, cluster %s" % (ploidy, num_clusters))
+            for fname in glob.glob(os.path.join(tmp_dir, cluster_dir + "*")):
+                shutil.move(fname, ploidy_dir)
+            shutil.move(os.path.join(tmp_dir, "Rplots.pdf"), os.path.join(ploidy_dir, "%s.Rplots.pdf" % cluster_dir))
+    return ploidy_dir
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
