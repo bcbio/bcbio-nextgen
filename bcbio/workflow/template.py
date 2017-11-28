@@ -432,7 +432,7 @@ def _check_all_metadata_found(metadata, items):
             elif sample['files'][0].find(name) > -1:
                 seen = True
         if not seen:
-            print("WARNING: sample not found %s" % name)
+            print("WARNING: sample not found %s" % str(name))
 
 def _copy_to_configdir(items, out_dir):
     """Copy configuration files like PED inputs to working config directory.
