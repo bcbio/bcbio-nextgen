@@ -307,7 +307,7 @@ def _combine_sample_regions_batch(batch, items):
         else:
             with file_transaction(items[0], analysis_file, no_analysis_file) as (tx_afile, tx_noafile):
                 def intersect_two(a, b):
-                    return a.intersect(b, nonamecheck=True)
+                    return a.intersect(b, nonamecheck=True).saveas()
                 nblock_regions = reduce(intersect_two, bed_regions).saveas(
                     "%s-nblock%s" % utils.splitext_plus(tx_afile))
                 ref_file = tz.get_in(["reference", "fasta", "base"], items[0])
@@ -317,7 +317,8 @@ def _combine_sample_regions_batch(batch, items):
                 final_nblock_regions = nblock_regions.filter(
                     block_filter.include_block).saveas().each(block_filter.expand_block).saveas(
                         "%s-nblockfinal%s" % utils.splitext_plus(tx_afile))
-                final_regions = ref_regions.subtract(final_nblock_regions, nonamecheck=True).merge(d=min_n_size)
+                final_regions = ref_regions.subtract(final_nblock_regions, nonamecheck=True).\
+                                saveas().merge(d=min_n_size)
                 _write_bed_regions(items[0], final_regions, tx_afile, tx_noafile)
     if analysis_file and utils.file_exists(analysis_file):
         return analysis_file, no_analysis_file

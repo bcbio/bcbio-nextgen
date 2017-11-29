@@ -130,9 +130,9 @@ def _subset_bed_by_region(in_file, out_file, regions, do_merge=True):
     region_bed = pybedtools.BedTool("\n".join(["%s\t%s\t%s" % (c, s, e) for c, s, e in regions]) + "\n",
                                     from_string=True)
     if do_merge:
-        orig_bed.intersect(region_bed, nonamecheck=True).filter(lambda x: len(x) > 1).merge().saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).saveas().filter(lambda x: len(x) > 1).saveas().merge().saveas(out_file)
     else:
-        orig_bed.intersect(region_bed, nonamecheck=True).filter(lambda x: len(x) > 1).saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).saveas().filter(lambda x: len(x) > 1).saveas(out_file)
 
 def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
