@@ -4,7 +4,7 @@
 upload:
   dir: ../final
 details:
-  - files: [../input/HCC2218_sv/HCC2218BL_S1.bam]
+  - files: [../input/HCC2218BL_S1.bam]
     description: HCC2218BL
     metadata:
       batch: HCC2218
@@ -20,8 +20,8 @@ details:
       svcaller: [cnvkit, seq2c, manta, delly, lumpy, wham, gridss, titancna]
       vcfanno: [gemini]
       tools_off: [vqsr]
-      variant_regions: ../input/HCC2218_sv/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.bed.gz
-  - files: [../input/HCC2218_sv/HCC2218C_S1.bam]
+      variant_regions: ../input/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.bed.gz
+  - files: [../input/HCC2218C_S1.bam]
     description: HCC2218C
     metadata:
       batch: HCC2218
@@ -37,5 +37,5 @@ details:
       svcaller: [cnvkit, seq2c, manta, delly, lumpy, wham, gridss, titancna]
       vcfanno: [gemini]
       tools_off: [vqsr]
-      svvalidate: ../input/HCC2218_sv/HCC2218Truth-clean-prep.vcf.gz
-      variant_regions: ../input/HCC2218_sv/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.bed.gz
+      svvalidate: ../input/HCC2218Truth-clean-prep.vcf.gz
+      variant_regions: ../input/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.bed.gz
