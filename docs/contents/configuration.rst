@@ -748,8 +748,15 @@ different structural variant types. bcbio has the following validation materials
 for germline validations:
 
 - ``giab-NA12878`` --  `Genome in a Bottle
-  <https://github.com/genome-in-a-bottle>`_ for NA12878. Truth sets: small_variants,
-  regions, DEL; Builds: GRCh37, hg19, hg38
+  <https://github.com/genome-in-a-bottle>`_ for NA12878, a Caucasian sample.
+  Truth sets: small_variants, regions, DEL; Builds: GRCh37, hg19, hg38
+- ``giab-NA24385`` --  `Genome in a Bottle
+  <https://github.com/genome-in-a-bottle>`_ for NA24385, an Ashkenazic Jewish
+  sample.
+  Truth sets: small_variants, regions; Builds: GRCh37, hg19, hg38
+- ``giab-NA24631`` --  `Genome in a Bottle
+  <https://github.com/genome-in-a-bottle>`_ for NA24631, a Chinese sample.
+  Truth sets: small_variants, regions; Builds: GRCh37, hg19, hg38
 - ``giab-NA12878-crossmap`` --  `Genome in a Bottle
   <https://github.com/genome-in-a-bottle>`_ for NA12878 converted to hg38 with CrossMap. Truth sets: small_variants,
   regions, DEL; Builds: hg38
