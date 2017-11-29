@@ -1,0 +1,33 @@
+# Germline small and structural variant analysis of NA24385 against Genome in a Bottle references
+# Uses 50x HiSeq x10 dataset from 10x genomics:
+# https://support.10xgenomics.com/de-novo-assembly/datasets
+# http://biorxiv.org/content/early/2016/08/19/070425
+---
+upload:
+  dir: ../final
+#resources:
+#  sentieon:
+#    keyfile: /mnt/work/bcbio/license/Harvard_Chapman_eval.lic
+details:
+  - files: [../input/NA24385_1.fastq.gz, ../input/NA24385_2.fastq.gz]
+    description: NA24385
+    metadata:
+      sex: male
+    analysis: variant2
+    genome_build: GRCh37
+    algorithm:
+      aligner: bwa
+      trim_ends: [23, 0, 1, 0]
+      save_diskspace: true
+      remove_lcr: true
+      variantcaller: [freebayes, gatk-haplotype, strelka2]
+      svcaller: [cnvkit, seq2c, manta, delly] # lumpy, gridss, wham
+      vcfanno: [gemini]
+      tools_on: [gatk4]
+      tools_off: [vqsr, gemini]
+      validate: giab-NA24385/truth_small_variants.vcf.gz
+      validate_regions: giab-NA24385/truth_regions.bed
+      validate: giab-NA24385/truth_sv.vcf.gz
+      #sv_regions: capture_regions/Exome-AZ_V2
+      #svvalidate:
+      #  DEL: giab-NA24385/truth_DEL_crowd.bed.gz
