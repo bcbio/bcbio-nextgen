@@ -125,14 +125,17 @@ def _rewrite_bed_with_chrom(in_file, out_file, chrom):
                     out_handle.write(line)
 
 
-def _subset_bed_by_region(in_file, out_file, regions, do_merge=True):
+def _subset_bed_by_region(in_file, out_file, regions, ref_file, do_merge=True):
     orig_bed = pybedtools.BedTool(in_file)
     region_bed = pybedtools.BedTool("\n".join(["%s\t%s\t%s" % (c, s, e) for c, s, e in regions]) + "\n",
                                     from_string=True)
+    sort_kwargs = {"faidx": ref.fasta_idx(ref_file)} if ref_file else {}
     if do_merge:
-        orig_bed.intersect(region_bed, nonamecheck=True).saveas().filter(lambda x: len(x) > 1).saveas().merge().saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).saveas().sort(**sort_kwargs).saveas().\
+            filter(lambda x: len(x) > 1).saveas().merge().saveas(out_file)
     else:
-        orig_bed.intersect(region_bed, nonamecheck=True).saveas().filter(lambda x: len(x) > 1).saveas(out_file)
+        orig_bed.intersect(region_bed, nonamecheck=True).saveas().sort(**sort_kwargs).saveas().\
+            filter(lambda x: len(x) > 1).saveas(out_file)
 
 def get_lcr_bed(items):
     lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
@@ -242,11 +245,11 @@ def subset_variant_regions(variant_regions, region, out_file, items=None, do_mer
         subset_file = "{0}".format(utils.splitext_plus(out_file)[0])
         subset_file += "%s-regions.bed" % (merge_text)
         if not os.path.exists(subset_file):
-            config = items[0] if items else data
-            with file_transaction(config, subset_file) as tx_subset_file:
+            data = items[0] if items else data
+            with file_transaction(data, subset_file) as tx_subset_file:
                 if isinstance(region, (list, tuple)):
                     _subset_bed_by_region(variant_regions, tx_subset_file, to_multiregion(region),
-                                          do_merge=do_merge)
+                                          dd.get_ref_file(data), do_merge=do_merge)
                 else:
                     _rewrite_bed_with_chrom(variant_regions, tx_subset_file, region)
         if os.path.getsize(subset_file) == 0:
