@@ -118,8 +118,12 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                              "packages": [resolve_package(p) for p in programs]})
         # GATK requires networking for setting up log4j logging, use arvados extension
         if any(p.startswith("gatk") for p in programs):
-            out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
             out["hints"] += [{"class": "arv:APIRequirement"}]
+    # Multi-process methods that read heavily from BAM files need extra keep cache for Arvados
+    if name in ["pipeline_summary", "variantcall_batch_region"]:
+        out["hints"] += [{"class": "arv:RuntimeConstraints", "keep_cache": 4096}]
+    if any(h.get("class", "").startswith("arv:") for h in out["hints"]):
+        out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
     # Use JSON for inputs, rather than command line arguments
     # Correctly handles multiple values and batching across CWL runners
     use_commandline_args = False
