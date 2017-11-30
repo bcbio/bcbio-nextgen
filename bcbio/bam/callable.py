@@ -283,7 +283,12 @@ def combine_sample_regions(*samples):
                         if x.get("work_bam"):
                             data["work_bam_callable"] = x["work_bam"]
                 out.append([data])
+        # Ensure output order matches input order, consistency for CWL-based runs
         assert len(out) == len(samples)
+        sample_indexes = {dd.get_sample_name(d): i for i, d in enumerate(samples)}
+        def by_input_index(xs):
+            return sample_indexes[dd.get_sample_name(xs[0])]
+        out.sort(key=by_input_index)
         if len(analysis_files) > 0:
             final_regions = pybedtools.BedTool(analysis_files[0])
             _analysis_block_stats(final_regions, batches[0])

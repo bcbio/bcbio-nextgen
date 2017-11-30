@@ -3,14 +3,12 @@
 import os
 import sys
 
-import toolz as tz
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import annotation, bedutils, joint, ploidy, vcfutils
+from bcbio.variation import bedutils, joint, ploidy, vcfutils
 
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run strelka2 variant calling, either paired tumor/normal or germline calling.
