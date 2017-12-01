@@ -12,6 +12,8 @@
   validation and benchmarking in comparison to bwa.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
+- CNVkit: drop low coverage contaminating regions in tumor calls. Thanks to
+  Eric Talevich.
 - Fix problem collapsing samples for QC when using RNA-seq variant calling with
   gatk-haplotype. Thanks to Neill Gibson.
 - Integrate ericscript RNA-seq fusion caller. Thanks to Tetiana Khotiainsteva

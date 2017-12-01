@@ -200,22 +200,21 @@ To run an analysis:
    identifier like ``qr1hi-j7d0g-7t73h4hrau3l063``).
 
 2. Upload reference data to Arvados Keep. Note the genome collection
-   portable data hash::
+   UUID::
 
-     arv-put --portable-data-hash --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
+     arv-put --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
 
-3. Upload input data to Arvados Keep. Note the collection portable data
-   hash::
+3. Upload input data to Arvados Keep. Note the collection UUID::
 
-     arv-put --portable-data-hash --name input-testdata --project-uuid $PROJECT_ID testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
+     arv-put --name input-testdata --project-uuid $PROJECT_ID testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
 
 4. Create an Arvados section in a ``bcbio_system.yaml`` file specifying
    locations to look for reference and input data. ``input`` can be one or more
    collections containing files or associated files in the original sample YAML::
 
      arvados:
-       reference: 9127147c168e27e26738524cbd3a59c6+1633
-       input: [a1d976bc7bcba2b523713fa67695d715+464]
+       reference: qr1hi-4zz18-kuz1izsj3wkfisq
+       input: [qr1hi-j7d0g-h691y6104tlg8b4]
      resources:
        default: {cores: 4, memory: 2G, jvm_opts: [-Xms750m, -Xmx2500m]}
 
