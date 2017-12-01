@@ -295,6 +295,11 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
                         cmd += ["--normal-id", small_vrn_files[0].normal]
                 if cov_interval == "genome":
                     cmd += ["--threshold", "0.00001"]
+                # For tumors, remove very low normalized regions, avoiding upcaptured noise
+                # https://github.com/chapmanb/bcbio-nextgen/issues/2171#issuecomment-348333650
+                paired = vcfutils.get_paired(items)
+                if paired:
+                    cmd += ["--drop-low-coverage"]
                 # preferentially use conda installed Rscript
                 export_cmd = ("%s && export TMPDIR=%s && "
                               % (utils.get_R_exports(), os.path.dirname(tx_out_file)))
