@@ -445,6 +445,11 @@ def get_base_id(vid):
     """
     return vid.split("/")[-1]
 
+def get_step_prefix(vid):
+    parts = vid.split("/")
+    if len(parts) > 1:
+        return parts[0]
+
 def _split_variables(variables):
     """Split variables into always passed (std) and specified (file).
 

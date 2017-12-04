@@ -37,6 +37,7 @@ def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
     FASTQ and/or downsampling the number of reads for a test run
     """
+    data = utils.to_single_data(data)
     logger.debug("Preparing %s" % data["rgnames"]["sample"])
     data["files"] = get_fastq_files(data)
     return [[data]]
@@ -45,14 +46,12 @@ def trim_sample(data):
     """Trim from a sample with the provided trimming method.
     Support methods: read_through.
     """
-    # this block is to maintain legacy configuration files
+    data = utils.to_single_data(data)
     trim_reads = dd.get_trim_reads(data)
-    sample_name = dd.get_sample_name(data)
+    # this block is to maintain legacy configuration files
     if not trim_reads:
-        logger.info("Skipping trimming of %s." % sample_name)
-        return [[data]]
-
-    if trim_reads == "read_through":
+        logger.info("Skipping trimming of %s." % dd.get_sample_name(data))
+    elif trim_reads == "read_through":
         if "skewer" in dd.get_tools_on(data):
             trim_adapters = skewer.trim_adapters
         else:

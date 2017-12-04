@@ -259,6 +259,22 @@ def _read_from_cwlinput(in_file, work_dir, runtime, parallel, input_order, outpu
             out.append(_finalize_cwl_in(data, work_dir, list(passed_keys), output_cwl_keys, runtime))
     return out
 
+def _is_nested_item(x):
+    return isinstance(x, (list, tuple))
+
+def _maybe_nest_bare_single(items_by_key, parallel):
+    """Nest single inputs to avoid confusing single items and lists like files.
+    """
+    if (parallel == "multi-parallel" and
+          (sum([1 for x in items_by_key.values() if not _is_nested_item(x)]) >=
+           sum([1 for x in items_by_key.values() if _is_nested_item(x)]))):
+        out = {}
+        for k, v in items_by_key.items():
+            out[k] = [v]
+        return out
+    else:
+        return items_by_key
+
 def _merge_cwlinputs(items_by_key, input_order, parallel):
     """Merge multiple cwl records and inputs, handling multiple data items.
 
@@ -267,7 +283,8 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
       of variables to the record.
     """
     def item_count(x):
-        return len(x) if isinstance(x, (list, tuple)) else 1
+        return len(x) if _is_nested_item(x) else 1
+    items_by_key = _maybe_nest_bare_single(items_by_key, parallel)
     var_items = set([item_count(items_by_key[tuple(k.split("__"))]) for (k, t) in input_order.items() if t == "var"])
     rec_items = set([item_count(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])
     if var_items:
@@ -287,7 +304,8 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
         for i, cur_val in enumerate(cur_vals):
             if isinstance(cwl_key, (list, tuple)):
                 # nested batches with records
-                if parallel.startswith("batch") and isinstance(out[i], (list, tuple)):
+                if (parallel.startswith(("batch", "multi-parallel")) and
+                      isinstance(out[i], (list, tuple))):
                     for j in range(len(out[i])):
                         out[i][j] = _update_nested(list(cwl_key), cur_val, out[i][j], allow_overwriting=True)
                 else:

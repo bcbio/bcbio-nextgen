@@ -90,7 +90,7 @@ def run_rnaseq_ann_filter(data):
     return [[data]]
 
 def quantitate(data):
-    data = to_single_data(data)
+    data = to_single_data(to_single_data(data))
     data = generate_transcript_counts(data)[0][0]
     data = sailfish.run_sailfish(data)[0][0]
     return [[data]]

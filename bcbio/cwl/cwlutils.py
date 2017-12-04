@@ -5,6 +5,7 @@ mostly handling CWL records. This needs some generalization to apply across
 non-variant calling workflows.
 """
 import collections
+import glob
 import os
 import pprint
 import tarfile
@@ -64,6 +65,8 @@ def normalize_missing(xs):
 # aligner and database indices where we list the entire directory as secondary files
 DIR_TARGETS = ("mainIndex", ".alt", ".amb", ".ann", ".bwt", ".pac", ".sa", ".ebwt", ".bt2",
                "Genome", "GenomeIndex", "GenomeIndexHash", "OverflowTable", ".fa")
+# indices where we take the basename if the file is found
+BASENAME_TARGETS = (".exons")
 
 def unpack_tarballs(xs, data, use_subdir=True):
     """Unpack workflow tarballs into ready to use directories.
@@ -92,6 +95,10 @@ def unpack_tarballs(xs, data, use_subdir=True):
             for fname in os.listdir(out_dir):
                 if fname.endswith(DIR_TARGETS):
                     xs = os.path.join(out_dir, fname)
+                    break
+                elif fname.endswith(BASENAME_TARGETS):
+                    base = os.path.join(out_dir, utils.splitext_plus(os.path.basename(fname))[0])
+                    xs = glob.glob("%s*" % base)
                     break
     return xs
 

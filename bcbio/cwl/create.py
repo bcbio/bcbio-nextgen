@@ -270,7 +270,7 @@ def _do_scatter_var(v, parallel):
     else:
         return (tz.get_in(["type", "type"], v) == "array")
 
-def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
+def _step_template(name, run_file, inputs, outputs, parallel, step_parallelism, scatter=None):
     """Templating function for writing a step to avoid repeating namespaces.
     """
     scatter_inputs = []
@@ -283,9 +283,14 @@ def _step_template(name, run_file, inputs, outputs, parallel, scatter=None):
             if attr in inp:
                 step_inp[attr] = inp[attr]
         sinputs.append(step_inp)
+        # An initial parallel scatter and multiple chained parallel sample scatters
+        if (parallel == "multi-parallel" and
+              (not step_parallelism or
+               step_parallelism.get(workflow.get_step_prefix(inp["id"])) == "multi-parallel")):
+            scatter_inputs.append(step_inp["id"])
         # scatter on inputs from previous processes that have been arrayed
-        if (_is_scatter_parallel(parallel) and (_do_scatter_var(inp, parallel)
-                                                or (scatter and inp["id"] in scatter))):
+        elif (_is_scatter_parallel(parallel) and (_do_scatter_var(inp, parallel)
+                                                  or (scatter and inp["id"] in scatter))):
             scatter_inputs.append(step_inp["id"])
     out = {"run": run_file,
            "id": name,
@@ -322,6 +327,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
     file_estimates = _calc_input_estimates(keyvals, get_retriever)
     out = _cwl_workflow_template(variables)
     parent_wfs = []
+    step_parallelism = {}
     steps, wfoutputs = workflow_fn(samples)
     used_inputs = set([])
     for cur in workflow.generate(variables, steps, wfoutputs):
@@ -329,7 +335,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                     file_estimates, disk, cores, samples, cur_remotes)
-            out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel))
+            out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel, step_parallelism))
             used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "upload":
             for output in cur[1]:
@@ -347,10 +353,12 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
             with open(os.path.join(out_dir, wf_out_file), "w") as out_handle:
                 yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
             out = parent_wfs.pop(-1)
-            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel, scatter))
+            out["steps"].append(_step_template(name, wf_out_file, inputs, outputs, parallel,
+                                               step_parallelism, scatter))
             used_inputs |= set(x["id"] for x in inputs)
         else:
             raise ValueError("Unexpected workflow value %s" % str(cur))
+        step_parallelism[name] = parallel
 
     with open(out_file, "w") as out_handle:
         out["inputs"] = [x for x in out["inputs"] if x["id"] in used_inputs]
