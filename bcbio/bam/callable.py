@@ -182,12 +182,13 @@ def block_regions(callable_bed, in_bam, ref_file, data):
             ref_regions = get_ref_bedtool(ref_file, config)
             nblock_regions = _get_nblock_regions(callable_bed, min_n_size, ref_regions)
             nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
-            nblock_regions.filter(lambda r: len(r) > min_n_size).saveas(nblock_bed)
-            if len(ref_regions.subtract(nblock_regions, nonamecheck=True)) > 0:
-                ref_regions.subtract(nblock_bed, nonamecheck=True).merge(d=min_n_size).saveas(callblock_bed)
-            else:
-                raise ValueError("No callable regions found from BAM file. Alignment regions might "
-                                 "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
+            with file_transaction(data, nblock_bed, callblock_bed) as (tx_nblock_bed, tx_callblock_bed):
+                nblock_regions.filter(lambda r: len(r) > min_n_size).saveas(tx_nblock_bed)
+                if len(ref_regions.subtract(nblock_regions, nonamecheck=True)) > 0:
+                    ref_regions.subtract(tx_nblock_bed, nonamecheck=True).merge(d=min_n_size).saveas(tx_callblock_bed)
+                else:
+                    raise ValueError("No callable regions found from BAM file. Alignment regions might "
+                                     "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
     return callblock_bed, nblock_bed, callable_bed
 
 def _write_bed_regions(data, final_regions, out_file, out_file_ref):
