@@ -49,6 +49,8 @@ def setup_args(parser):
                         action="store_true", default=False)
     parser.add_argument("--force-single", help="Treat all files as single reads",
                         action="store_true", default=False)
+    parser.add_argument("--separators", help="semicolon separated list of separators that indicates paired files.",
+                        default="R,_,-,.")
     setup_script_logging()
     return parser
 
@@ -84,7 +86,7 @@ KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
               ".txt.bz2": "fastq", ".bz2": "fastq"}
 
-def _prep_items_from_base(base, in_files, force_single=False):
+def _prep_items_from_base(base, in_files, separators, force_single=False):
     """Prepare a set of configuration items for input files.
     """
     details = []
@@ -98,7 +100,7 @@ def _prep_items_from_base(base, in_files, force_single=False):
                 details.append(_prep_bam_input(f, i, base))
         elif ext in ["fastq", "fq", "fasta"]:
             files = list(files)
-            for fs in fastq.combine_pairs(files, force_single):
+            for fs in fastq.combine_pairs(files, force_single, separators = separators):
                 details.append(_prep_fastq_input(fs, base))
         else:
             print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
@@ -477,7 +479,7 @@ def setup(args):
                 remote_config = remote_retriever.set_cache(config[iname])
                 inputs += remote_retriever.get_files(metadata, remote_config)
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
-                 for item in _prep_items_from_base(base_item, inputs, args.force_single)]
+                 for item in _prep_items_from_base(base_item, inputs, args.separators.split(","), args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
     if remote_retriever and remote_config:
