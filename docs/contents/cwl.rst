@@ -245,20 +245,31 @@ bcbio generated CWL into DNAnexus workflows and apps using
 `dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This is currently in development
 and we welcome feedback and suggestions on the workflow.
 
+0. Set some useful environmental variables:
+
+   - ``$PNAME`` -- The name of the project you're analyzing. For convenience
+     here we keep this the same for your local files and remote DNAnexus
+     project, although that does not have to be true.
+   - ``$DX_AUTH_TOKEN`` -- The DNAnexus authorization token for access, used for
+     the ``dx`` command line tool and bcbio scripts.
+   - ``$DX_PROJECT_ID`` -- The DNAnexus GUID identifier for your project
+      (similar to ``project-F8Q7fJj0XFJJ3XbBPQYXP4B9``). You can get this from
+      ``dx env`` after creating/selecting a project in steps 1 and 2.
+
 1. Create an analysis project::
 
-     dx new project YOUR_PROJECT
+     dx new project $PNAME
 
 2. Upload sample data to the project::
 
-     dx select YOUR_PROJECT
+     dx select $PNAME
      dx upload -p --path /data/input *.bam
 
 3. Create bcbio system file with projects, locations of files and
    desired core and memory usage for jobs::
 
      dnanexus:
-       project: YOUR_PROJECT
+       project: PNAME
        ref:
          project: bcbio_resources
          folder: /reference_genomes
@@ -281,11 +292,11 @@ and we welcome feedback and suggestions on the workflow.
 
 5. Follow the :ref:`automated-sample-config` workflow to generate a full configuration::
 
-       bcbio_vm.py template --systemconfig bcbio_system-dnanexus.yaml your-template.yaml YOUR_PROJECT.csv
+       bcbio_vm.py template --systemconfig bcbio_system-dnanexus.yaml your-template.yaml $PNAME.csv
 
 6. Generate a CWL description of the workflow from the full generated configuration::
 
-       bcbio_vm.py cwl --systemconfig bcbio_system-dnanexus.yaml YOUR_PROJECT/config/YOUR_PROJECT.yaml
+       bcbio_vm.py cwl --systemconfig bcbio_system-dnanexus.yaml $PNAME/config/$PNAME.yaml
 
 7. Determine project information and login credentials. You'll want to note the
    ``Auth token used`` and ``Current workspace`` project ID::
@@ -294,14 +305,15 @@ and we welcome feedback and suggestions on the workflow.
 
 8. Compile the CWL workflow into a DNAnexus workflow::
 
-       dx-cwl compile-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT.cwl --project PROJECT_ID --token AUTH_TOKEN
+       dx-cwl compile-workflow $PNAME-workflow/main-$PNAME.cwl --project PROJECT_ID --token $DX_AUTH_TOKEN
 
 9. Upload sample information from generated CWL and run workflow::
 
-       dx upload -p --path /YOUR_PROJECT-workflow YOUR_PROJECT-workflow/main-YOUR_PROJECT-samples.json
-       dx-cwl run-workflow /dx-cwl-run/main-YOUR_PROJECT/main-YOUR_PROJECT \
-              /YOUR_PROJECT-workflow/main-YOUR_PROJECT-samples.json \
-              --project PROJECT_ID --token AUTH_TOKEN
+       dx mkdir -p $DX_PROJECT_ID:/$PNAME-workflow
+       dx upload -p --path $DX_PROJECT_ID:/$PNAME-workflow $PNAME-workflow/main-$PNAME-samples.json
+       dx-cwl run-workflow /dx-cwl-run/main-$PNAME/main-$PNAME \
+              /$PNAME-workflow/main-$PNAME-samples.json \
+              --project PROJECT_ID --token $DX_AUTH_TOKEN
 
 The workflow runs as a standard DNAnexus workflow and you can monitor through
 the command line (with ``dx find executions -n 1`` and ``dx watch``) or the web interface
