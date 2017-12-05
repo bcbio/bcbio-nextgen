@@ -457,6 +457,11 @@ def _get_relative_ext(of, sf):
     def half_finished_trim(orig, prefix):
         return (os.path.basename(prefix).count(".") > 0 and
                 os.path.basename(orig).count(".") == os.path.basename(prefix).count("."))
+    # Handle remote files
+    if of.find(":") > 0:
+        of = of.split(":")[-1]
+    if sf.find(":") > 0:
+        sf = sf.split(":")[-1]
     prefix = os.path.commonprefix([sf, of])
     while prefix.endswith(".") or (half_finished_trim(sf, prefix) and half_finished_trim(of, prefix)):
         prefix = prefix[:-1]
