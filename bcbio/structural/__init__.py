@@ -28,14 +28,14 @@ _CALLERS = {
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _GLOBAL_BATCHING = set(["seq2c"])
 
-def _get_callers(items, stage):
+def _get_callers(items, stage, special_cases=False):
     """Retrieve available callers for the provided stage.
 
     Handles special cases like CNVkit that can be in initial or standard
     depending on if fed into Lumpy analysis.
     """
     callers = utils.deepish_copy(_CALLERS[stage])
-    if "cnvkit" in callers:
+    if special_cases and "cnvkit" in callers:
         has_lumpy = any("lumpy" in get_svcallers(d) or "lumpy" in d["config"]["algorithm"].get("svcaller_orig", [])
                         for d in items)
         if has_lumpy and any("lumpy_usecnv" in dd.get_tools_on(d) for d in items):
@@ -183,7 +183,7 @@ def detect_sv(items, all_items=None, stage="standard"):
     """
     items = [utils.to_single_data(x) for x in items]
     svcaller = items[0]["config"]["algorithm"].get("svcaller")
-    caller_fn = _get_callers(items, stage).get(svcaller)
+    caller_fn = _get_callers(items, stage, special_cases=True).get(svcaller)
     out = []
     if svcaller and caller_fn:
         if (all_items and svcaller in _NEEDS_BACKGROUND and
