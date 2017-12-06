@@ -247,8 +247,8 @@ def cufflinks_assemble(data):
     return [[data]]
 
 def cufflinks_merge(*samples):
-    to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
-                                       dd.sample_data_iterator(samples)]))
+    to_merge = set(filter_missing(flatten([dd.get_assembled_gtf(data) for data in
+                                           dd.sample_data_iterator(samples)])))
     data = samples[0][0]
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)
@@ -262,8 +262,8 @@ def cufflinks_merge(*samples):
     return updated_samples
 
 def stringtie_merge(*samples):
-    to_merge = filter_missing(flatten([dd.get_assembled_gtf(data) for data in
-                                       dd.sample_data_iterator(samples)]))
+    to_merge = set(filter_missing(flatten([dd.get_assembled_gtf(data) for data in
+                                       dd.sample_data_iterator(samples)])))
     data = samples[0][0]
     ref_file = dd.get_sam_ref(data)
     gtf_file = dd.get_gtf_file(data)

@@ -29,6 +29,8 @@
   255.
 - RNA-seq: Ensure BAM files fed into Cufflinks have 255 as the uniquely mapped
   MAPQ instead of 60 as output by hisat2/STAR/etc.
+- RNA-seq: omit duplicate files from stringtie assembly merging. Thanks to 
+  @mmoisse for the bug report.
 
 ## 1.0.6 (5 November 2017)
 
