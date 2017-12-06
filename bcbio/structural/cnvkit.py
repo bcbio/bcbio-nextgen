@@ -588,18 +588,21 @@ def _get_larger_chroms(ref_file):
     for c in ref.file_contigs(ref_file):
         all_sizes.append(float(c.size))
     all_sizes.sort()
-    # separate out smaller chromosomes and haplotypes with kmeans
-    centroids, _ = kmeans(np.array(all_sizes), 2)
-    idx, _ = vq(np.array(all_sizes), centroids)
-    little_sizes = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx, all_sizes)))
-    little_sizes = [x[1] for x in little_sizes]
-    # create one more cluster with the smaller, removing the haplotypes
-    centroids2, _ = kmeans(np.array(little_sizes), 2)
-    idx2, _ = vq(np.array(little_sizes), centroids2)
-    little_sizes2 = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx2, little_sizes)))
-    little_sizes2 = [x[1] for x in little_sizes2]
-    # get any chromosomes not in haplotype/random bin
-    thresh = max(little_sizes2)
+    if len(all_sizes) > 5:
+        # separate out smaller chromosomes and haplotypes with kmeans
+        centroids, _ = kmeans(np.array(all_sizes), 2)
+        idx, _ = vq(np.array(all_sizes), centroids)
+        little_sizes = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx, all_sizes)))
+        little_sizes = [x[1] for x in little_sizes]
+        # create one more cluster with the smaller, removing the haplotypes
+        centroids2, _ = kmeans(np.array(little_sizes), 2)
+        idx2, _ = vq(np.array(little_sizes), centroids2)
+        little_sizes2 = tz.first(tz.partitionby(lambda xs: xs[0], zip(idx2, little_sizes)))
+        little_sizes2 = [x[1] for x in little_sizes2]
+        # get any chromosomes not in haplotype/random bin
+        thresh = max(little_sizes2)
+    else:
+        thresh = 0
     larger_chroms = []
     for c in ref.file_contigs(ref_file):
         if c.size > thresh:
@@ -616,7 +619,8 @@ def _remove_haplotype_chroms(in_file, data):
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        if line.startswith("chromosome") or line.split()[0] in larger_chroms:
+                        if ((line.find("chromosome") >= 0 and line.find("start") >= 0)
+                              or line.split()[0] in larger_chroms):
                             out_handle.write(line)
     return out_file
 
