@@ -147,7 +147,9 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_tool["id"] += "_toolinput"
         for attr in ["source", "valueFrom", "wf_duplicate"]:
             inp_tool.pop(attr, None)
-        if _is_scatter_parallel(parallel) and _do_scatter_var(inp, parallel):
+        # Ensure records and workflow inputs get scattered
+        if (_is_scatter_parallel(parallel) and _do_scatter_var(inp, parallel) and
+              (workflow.is_cwl_record(inp) or inp["wf_duplicate"])):
             inp_tool = workflow._flatten_nested_input(inp_tool)
         if use_commandline_args:
             inp_binding = {"prefix": "%s=" % base_id,
@@ -501,9 +503,10 @@ def _get_avro_type(val):
         # handle empty types, allow null or a string "null" sentinel
         if len(types) == 0:
             types = ["null", "string"]
-        # collapse arrays for multiple types
-        if len(types) > 1 and all(isinstance(t, dict) and t["type"] == "array" for t in types):
-            types = [{"type": "array", "items": [t["items"] for t in types]}]
+            # empty lists
+            if isinstance(val, (list, tuple)) and len(val) == 0:
+                types.append({"type": "array", "items": ["null", "string"]})
+        types = _avoid_duplicate_arrays(types)
         return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
         return ["null", "string"]
@@ -516,6 +519,21 @@ def _get_avro_type(val):
         return "double"
     else:
         return "string"
+
+def _avoid_duplicate_arrays(types):
+    """Collapse arrays when we have multiple types.
+    """
+    arrays = [t for t in types if isinstance(t, dict) and t["type"] == "array"]
+    others = [t for t in types if not (isinstance(t, dict) and t["type"] == "array")]
+    if arrays:
+        items = set([])
+        for t in arrays:
+            if isinstance(t["items"], (list, tuple)):
+                items |= set(t["items"])
+            else:
+                items.add(t["items"])
+        arrays = [{"type": "array", "items": sorted(list(items))}]
+    return others + arrays
 
 def _samplejson_to_inputs(svals):
     """Convert sample output into inputs for CWL configuration files, with types.
