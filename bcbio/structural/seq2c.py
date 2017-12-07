@@ -66,7 +66,7 @@ def run(items):
 
     normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
-    _split_cnv(items, seq2c_calls_file)
+    items = _split_cnv(items, seq2c_calls_file)
     return items
 
 def prep_seq2c_bed(data):
@@ -140,22 +140,26 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
     return output_fpath
 
 def _split_cnv(items, calls_fpath):
+    out_items = []
     for item in items:
-        if get_paired_phenotype(item) == "normal":
-            continue
-
-        sample_name = dd.get_sample_name(item)
-        work_dir = _sv_workdir(item)
-        out_fname = os.path.join(work_dir, sample_name + '-calls.tsv')
-        if not utils.file_exists(out_fname):
-            with file_transaction(item, out_fname) as tx:
-                with open(tx, "w") as out, open(calls_fpath) as inp:
-                    out.write(next(inp))
-                    for l in inp:
-                        if l.split("\t")[0] == sample_name:
-                            out.write(l)
-        item["sv"][0]["calls"] = out_fname
-        item["sv"][0]["vrn_file"] = to_vcf(out_fname, item)
+        if not get_paired_phenotype(item) == "normal":
+            sample_name = dd.get_sample_name(item)
+            work_dir = _sv_workdir(item)
+            out_fname = os.path.join(work_dir, sample_name + '-calls.tsv')
+            if not utils.file_exists(out_fname):
+                with file_transaction(item, out_fname) as tx:
+                    with open(tx, "w") as out, open(calls_fpath) as inp:
+                        out.write(next(inp))
+                        for l in inp:
+                            if l.split("\t")[0] == sample_name:
+                                out.write(l)
+            for i, sv in enumerate(item["sv"]):
+                if sv["variantcaller"] == "seq2c":
+                    item["sv"][i]["calls"] = out_fname
+                    item["sv"][i]["vrn_file"] = to_vcf(out_fname, item)
+                    break
+        out_items.append(item)
+    return out_items
 
 VCF_HEADER = """##fileformat=VCFv4.1
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
