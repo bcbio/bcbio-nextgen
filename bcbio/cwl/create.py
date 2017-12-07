@@ -532,7 +532,11 @@ def _avoid_duplicate_arrays(types):
                 items |= set(t["items"])
             else:
                 items.add(t["items"])
-        arrays = [{"type": "array", "items": sorted(list(items))}]
+        if len(items) == 1:
+            items = items.pop()
+        else:
+            items = sorted(list(items))
+        arrays = [{"type": "array", "items": items}]
     return others + arrays
 
 def _samplejson_to_inputs(svals):
