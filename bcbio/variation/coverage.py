@@ -244,19 +244,19 @@ def coverage_region_detailed_stats(target_name, bed_file, data, out_dir):
     Calculate coverage at different completeness cutoff
     for region in coverage option.
     """
-    if not bed_file or not utils.file_exists(bed_file):
-        return []
-    else:
+    if bed_file and utils.file_exists(bed_file):
         ready_depth = tz.get_in(["depth", target_name], data)
-        cov_file = ready_depth["regions"]
-        dist_file = ready_depth["dist"]
-        thresholds_file = ready_depth.get("thresholds")
-        out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
-        out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
-        out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file)) \
-            if thresholds_file and os.path.isfile(thresholds_file) else None
-        if not utils.file_uptodate(out_cov_file, cov_file):
-            utils.copy_plus(cov_file, out_cov_file)
-            utils.copy_plus(dist_file, out_dist_file)
-            utils.copy_plus(thresholds_file, out_thresholds_file) if out_thresholds_file else None
-        return [out_cov_file, out_dist_file] + ([out_thresholds_file] if out_thresholds_file else [])
+        if ready_depth:
+            cov_file = ready_depth["regions"]
+            dist_file = ready_depth["dist"]
+            thresholds_file = ready_depth.get("thresholds")
+            out_cov_file = os.path.join(out_dir, os.path.basename(cov_file))
+            out_dist_file = os.path.join(out_dir, os.path.basename(dist_file))
+            out_thresholds_file = os.path.join(out_dir, os.path.basename(thresholds_file)) \
+                if thresholds_file and os.path.isfile(thresholds_file) else None
+            if not utils.file_uptodate(out_cov_file, cov_file):
+                utils.copy_plus(cov_file, out_cov_file)
+                utils.copy_plus(dist_file, out_dist_file)
+                utils.copy_plus(thresholds_file, out_thresholds_file) if out_thresholds_file else None
+            return [out_cov_file, out_dist_file] + ([out_thresholds_file] if out_thresholds_file else [])
+    return []
