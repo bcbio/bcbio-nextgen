@@ -4,7 +4,7 @@ functions to access the data dictionary in a clearer way
 
 import os
 import toolz as tz
-from bcbio.utils import file_exists
+from bcbio.utils import file_exists, to_single_data
 from bcbio.log import logger
 import sys
 
@@ -303,15 +303,16 @@ def sample_data_iterator(samples):
     for a list of samples, return the data dictionary of each sample
     """
     for sample in samples:
-        yield sample[0]
+        yield to_single_data(sample)
 
 def get_in_samples(samples, fn):
     """
     for a list of samples, return the value of a global option
     """
     for sample in samples:
-        if fn(sample[0], None):
-            return fn(sample[0])
+        sample = to_single_data(sample)
+        if fn(sample, None):
+            return fn(sample)
     return None
 
 def get_keys(lookup):

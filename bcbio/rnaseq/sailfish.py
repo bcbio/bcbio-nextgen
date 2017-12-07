@@ -2,6 +2,7 @@ import os
 from collections import namedtuple
 import pandas as pd
 
+from bcbio import utils
 import bcbio.pipeline.datadict as dd
 import bcbio.rnaseq.gtf as gtf
 from bcbio.distributed.transaction import file_transaction
@@ -40,8 +41,7 @@ def sailfish(fq1, fq2, sailfish_dir, gtf_file, ref_file, strandedness, data):
     if file_exists(out_file):
         return out_file
     build_string = get_build_string(data)
-    sailfish_idx = os.path.join(dd.get_work_dir(data), "sailfish", "index",
-                                build_string)
+    sailfish_idx = sailfish_index(ref_file, gtf_file, data, build_string)
     num_cores = dd.get_num_cores(data)
     sailfish = config_utils.get_program("sailfish", data["config"])
     cmd = "{sailfish} quant -i {sailfish_idx} -p {num_cores} "
@@ -113,19 +113,18 @@ def get_build_string(data):
     return build_string
 
 def run_sailfish_index(*samples):
-    fq1, _ = dd.get_input_sequence_files(samples[0][0])
-    kmersize = pick_kmersize(fq1)
+    samples = [utils.to_single_data(x) for x in samples]
     Build = namedtuple('Build', ['build', 'ref', 'gtf'])
     builds = {Build(get_build_string(x), dd.get_ref_file(x), dd.get_gtf_file(x))
-              for x in dd.sample_data_iterator(samples)}
-    data = samples[0][0]
+              for x in samples}
+    data = samples[0]
     indexdirs = {}
     for build in builds:
         indexdirs[build.build] = sailfish_index(build.ref, build.gtf, data,
-                                                build.build, kmersize)
+                                                build.build)
     return samples
 
-def sailfish_index(gtf_file, ref_file, data, build, kmersize):
+def sailfish_index(gtf_file, ref_file, data, build):
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "sailfish", "index", build)
     sailfish = config_utils.get_program("sailfish", data["config"])
@@ -134,6 +133,8 @@ def sailfish_index(gtf_file, ref_file, data, build, kmersize):
     if file_exists(os.path.join(out_dir, "versionInfo.json")):
         return out_dir
     with file_transaction(data, out_dir) as tx_out_dir:
+        fq1, _ = dd.get_input_sequence_files(data)
+        kmersize = pick_kmersize(fq1)
         cmd = ("{sailfish} index -p {num_cores} -t {gtf_fa} -o {tx_out_dir} "
                "-k {kmersize}")
         message = "Creating sailfish index for {gtf_fa} with {kmersize} bp kmers."

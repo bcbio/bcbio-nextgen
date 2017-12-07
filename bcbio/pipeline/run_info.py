@@ -896,6 +896,7 @@ def _add_algorithm_defaults(algorithm):
                 "tools_off": [],
                 "tools_on": [],
                 "qc": [],
+                "quality_format": "standard",
                 "align_split_size": None,
                 "nomap_split_size": 250,
                 "nomap_split_targets": 200,

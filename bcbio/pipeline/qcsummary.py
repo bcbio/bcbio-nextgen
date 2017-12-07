@@ -207,7 +207,7 @@ def _split_samples_by_qc(samples):
     extras = []
     for data in [utils.to_single_data(x) for x in samples]:
         qcs = dd.get_algorithm_qc(data)
-        if qcs and (dd.get_align_bam(data) or
+        if qcs and (dd.get_align_bam(data) or dd.get_work_bam(data) or
                     tz.get_in(["config", "algorithm", "kraken"], data)  # kraken doesn't need bam
                 ):
             for qc in qcs:
@@ -227,7 +227,7 @@ def _combine_qc_samples(samples):
         if not isinstance(batch, (list, tuple)):
             batch = [batch]
         batch = tuple(batch)
-        by_bam[(dd.get_align_bam(data), batch)].append(data)
+        by_bam[(dd.get_align_bam(data) or dd.get_work_bam(data), batch)].append(data)
     out = []
     for data_group in by_bam.values():
         data = data_group[0]
