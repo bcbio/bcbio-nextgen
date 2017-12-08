@@ -205,7 +205,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
             with file_transaction(data, disc_file) as tx_disc_file:
                 cores = dd.get_num_cores(data)
                 ref_file = dd.get_ref_file(data)
-                cmd = ("extract-sv-reads -e --input-threads {cores} -T {ref_file} "
+                cmd = ("extract-sv-reads -e --threads {cores} -T {ref_file} "
                        "-i {in_bam} -s {tx_sr_file} -d {tx_disc_file}")
                 do.run(cmd.format(**locals()), "extract split and discordant reads", data)
     for fname in [sr_file, disc_file]:
