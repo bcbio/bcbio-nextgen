@@ -438,13 +438,19 @@ def _get_secondary_files(val):
     """Retrieve associated secondary files.
 
     Normalizes input values into definitions of available secondary files.
+    Requires indices to be present in all files, since declared CWL secondary
+    files are not optional. So if we have a mix of BAM (bai) and fastq (gbi) we
+    ignore the existing indices and will have to regenerate during processing.
     """
     out = []
     if isinstance(val, (tuple, list)):
+        s_counts = collections.defaultdict(int)
         for x in val:
             for s in _get_secondary_files(x):
-                if s and s not in out:
-                    out.append(s)
+                s_counts[s] += 1
+        for s, count in s_counts.items():
+            if s and s not in out and count == len(val):
+                out.append(s)
     elif isinstance(val, dict) and (val.get("class") == "File" or "File" in val.get("class")):
         if "secondaryFiles" in val:
             for sf in [x["path"] for x in val["secondaryFiles"]]:

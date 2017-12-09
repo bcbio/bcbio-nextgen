@@ -247,6 +247,7 @@ def variant(samples):
                 ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
                 ["reference", "aligner", "indexes"],
                 ["config", "algorithm", "aligner"],
+                ["config", "algorithm", "bam_clean"],
                 ["config", "algorithm", "mark_duplicates"]],
                [cwlout("alignment_rec", "record")],
                "bcbio-vc",

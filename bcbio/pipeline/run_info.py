@@ -898,6 +898,7 @@ def _add_algorithm_defaults(algorithm):
                 "qc": [],
                 "quality_format": "standard",
                 "align_split_size": None,
+                "bam_clean": False,
                 "nomap_split_size": 250,
                 "nomap_split_targets": 200,
                 "mark_duplicates": True,

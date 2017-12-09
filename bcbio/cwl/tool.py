@@ -34,6 +34,7 @@ def _run_tool(cmd, use_container=True, work_dir=None, log_file=None):
     if log_file:
         cmd += " 2>&1 | tee -a %s" % log_file
     try:
+        print("Running: %s" % cmd)
         subprocess.check_call(cmd, shell=True)
     finally:
         if use_container and work_dir:
