@@ -36,10 +36,10 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
-      svcaller: [cnvkit, delly, lumpy]
+      svcaller: [seq2c, cnvkit, delly, lumpy]
       #remove_lcr: true
       coverage_interval: genome
-      tools_on: [qualimap_full, gatk4, vqsr]
+      tools_on: [qualimap_full, gatk4, vqsr, svplots]
       tools_off: [gemini]
       vcfanno: [gemini]
       mixup_check: qsignature

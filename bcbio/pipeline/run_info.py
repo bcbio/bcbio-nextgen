@@ -157,7 +157,9 @@ def add_reference_resources(data, remote_retriever=None):
     """
     aligner = data["config"]["algorithm"].get("aligner", None)
     if remote_retriever:
-        data["reference"] = remote_retriever.get_refs(data["genome_build"], aligner, data["config"])
+        aligner_aliases = {"sentieon-bwa": "bwa"}
+        data["reference"] = remote_retriever.get_refs(data["genome_build"],
+                                                      aligner_aliases.get(aligner, aligner), data["config"])
     else:
         data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
         _check_ref_files(data["reference"], data)
