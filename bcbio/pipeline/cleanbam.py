@@ -50,13 +50,14 @@ def remove_extracontigs(in_bam, data):
     out_file = os.path.join(work_dir, "%s-noextras.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
-            target_chroms, header_sqs = _target_chroms_and_header(in_bam, data)
+            target_chroms = _target_chroms_and_header(in_bam, data)
             str_chroms = " ".join(target_chroms)
             rg_info = novoalign.get_rg_info(data["rgnames"])
             bcbio_py = sys.executable
+            ref_file = dd.get_ref_file(data)
             cmd = ("samtools view -h {in_bam} {str_chroms} | "
                    """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
-                   """cleanbam.fix_header("{header_sqs}")' | """
+                   """cleanbam.fix_header("{ref_file}")' | """
                    "samtools view -u - | "
                    "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
             do.run(cmd.format(**locals()), "bamprep, remove extra contigs: %s" % dd.get_sample_name(data))
@@ -93,20 +94,19 @@ def _target_chroms_and_header(bam_file, data):
                 out_chroms.append(target_chrom)
     assert out_chroms, ("remove_extracontigs: Did not find any chromosomes in reference file: %s %s" %
                         (bam_file, target_chroms))
-    header = ",".join(["@SQ;;SN:%s;;LN:%s" % (x.name, x.size) for x in ref.file_contigs(dd.get_ref_file(data))])
-    return out_chroms, header
+    return out_chroms
 
-def fix_header(header_sqs):
+def fix_header(ref_file):
+    added_ref = False
     for line in sys.stdin:
-        if line.startswith("@HD"):
-            sys.stdout.write(line)
-            for line in header_sqs.split(","):
-                parts = line.split(";;")
-                sys.stdout.write("\t".join(parts) + "\n")
-        if line.startswith("@RG"):
-            pass  # skip current read groups, since adding new
-        elif line.startswith("@SQ"):
-            pass  # skip current contigs since adding new sequence dictionary
+        # skip current read groups, since adding new
+        # skip current contigs since adding new sequence dictionary
+        if line.startswith(("@RG", "@SQ")):
+            pass
+        elif not added_ref and not line.startswith("@"):
+            for x in ref.file_contigs(ref_file):
+                sys.stdout.write("@SQ\tSN:%s\tLN:%s\n" % (x.name, x.size))
+            added_ref = True
         else:
             sys.stdout.write(line)
 
