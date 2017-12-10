@@ -8,6 +8,8 @@
 - ensemble: normalize and decompose variants prior to incorporating into
   ensemble calls, handling MNPs called differently across callers. Thanks to
   Vlad Saveliev.
+- Avoid bgzipping and grabix indexing fastq inputs when not doing alignment
+  splitting to save processing.
 - Initial support for minimap2 aligner in variant calling workflows. Still needs
   validation and benchmarking in comparison to bwa.
 - Standardize dbSNP annotation to use vcfanno for all variant callers. Remove
