@@ -24,10 +24,10 @@ details:
       #save_diskspace: true
       aligner: bwa
       #aligner: false
+      #bam_clean: remove_extracontigs
       #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
       #trim_reads: read_through
-      #bam_clean: picard
       #bam_sort: coordinate
       # mark_duplicates: false
       #realign: gatk

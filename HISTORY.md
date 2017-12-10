@@ -16,6 +16,8 @@
   GATK custom annotations for non-GATK callers, which are not present in GATK4.
 - CNVkit: drop low coverage contaminating regions in tumor calls. Thanks to
   Eric Talevich.
+- Expand `remove_extracontigs` for `bam_clean` to more consistently handle
+  compatible pre-aligned BAMs with different extra contigs in reference genome.
 - Fix problem collapsing samples for QC when using RNA-seq variant calling with
   gatk-haplotype. Thanks to Neill Gibson.
 - Integrate ericscript RNA-seq fusion caller. Thanks to Tetiana Khotiainsteva

@@ -7,6 +7,8 @@ This provides a pipeline to prepare and resort an input.
 import os
 import sys
 
+import pysam
+
 from bcbio import bam, broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
@@ -40,34 +42,71 @@ def remove_extracontigs(in_bam, data):
     These extra contigs can often be arranged in different ways, causing
     incompatibility issues with GATK and other tools. This also fixes the
     read group header as in fixrg.
+
+    This does not yet handle mapping over 1 -> chr1 issues since this requires
+    a ton of search/replace which slows down conversion.
     """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-noextras.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
-            target_chroms = [x.name for x in ref.file_contigs(dd.get_ref_file(data))
-                             if chromhacks.is_autosomal_or_sex(x.name)]
+            target_chroms, header_sqs = _target_chroms_and_header(in_bam, data)
             str_chroms = " ".join(target_chroms)
-            comma_chroms = ",".join(target_chroms)
             rg_info = novoalign.get_rg_info(data["rgnames"])
             bcbio_py = sys.executable
             cmd = ("samtools view -h {in_bam} {str_chroms} | "
                    """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
-                   """cleanbam.fix_header("{comma_chroms}")' | """
+                   """cleanbam.fix_header("{header_sqs}")' | """
                    "samtools view -u - | "
                    "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
             do.run(cmd.format(**locals()), "bamprep, remove extra contigs: %s" % dd.get_sample_name(data))
     return out_file
 
-def fix_header(chroms):
-    target_chroms = chroms.split(",")
+def _target_chroms_and_header(bam_file, data):
+    """Get a list of chromosomes to target and new updated ref_file header.
+
+    Could potentially handle remapping from chr1 -> 1 but currently disabled due
+    to speed issues.
+    """
+    special_remaps = {"chrM": "MT", "MT": "chrM"}
+    target_chroms = dict([(x.name, i) for i, x in enumerate(ref.file_contigs(dd.get_ref_file(data)))
+                          if chromhacks.is_autosomal_or_sex(x.name)])
+    out_chroms = []
+    with pysam.Samfile(bam_file, "rb") as bamfile:
+        for bami, bam_contig in enumerate([c["SN"] for c in bamfile.header["SQ"]]):
+            if bam_contig in target_chroms:
+                target_chrom = bam_contig
+            elif bam_contig in special_remaps and special_remaps[bam_contig] in target_chroms:
+                target_chrom = special_remaps[bam_contig]
+            elif bam_contig.startswith("chr") and bam_contig.replace("chr", "") in target_chroms:
+                target_chrom = bam_contig.replace("chr", "")
+            elif "chr%s" % bam_contig in target_chroms:
+                target_chrom = "chr%s" % bam_contig
+            else:
+                target_chrom = None
+            # target_chrom == bam_contig ensures we don't try chr1 -> 1 style remapping
+            if target_chrom and target_chrom == bam_contig:
+                # Order not required if dealing with SAM file header fixing
+                #assert bami == target_chroms[target_chrom], \
+                #    ("remove_extracontigs: Non-matching order of standard contig: %s %s (%s vs %s)" %
+                #     (bam_file, target_chrom, bami, target_chroms[target_chrom]))
+                out_chroms.append(target_chrom)
+    assert out_chroms, ("remove_extracontigs: Did not find any chromosomes in reference file: %s %s" %
+                        (bam_file, target_chroms))
+    header = ",".join(["@SQ;;SN:%s;;LN:%s" % (x.name, x.size) for x in ref.file_contigs(dd.get_ref_file(data))])
+    return out_chroms, header
+
+def fix_header(header_sqs):
     for line in sys.stdin:
+        if line.startswith("@HD"):
+            sys.stdout.write(line)
+            for line in header_sqs.split(","):
+                parts = line.split(";;")
+                sys.stdout.write("\t".join(parts) + "\n")
         if line.startswith("@RG"):
             pass  # skip current read groups, since adding new
         elif line.startswith("@SQ"):
-            contig = [x for x in line.split("\t") if x.startswith("SN:")][0].split(":")[-1]
-            if contig in target_chroms:
-                sys.stdout.write(line)
+            pass  # skip current contigs since adding new sequence dictionary
         else:
             sys.stdout.write(line)
 

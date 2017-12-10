@@ -409,12 +409,14 @@ Alignment
    handles adding read groups, sorting to a reference genome and
    filtering problem records that cause problems with GATK. Options:
 
+     - ``remove_extracontigs`` -- Remove non-standard chromosomes (for human,
+       anything that is not chr1-22,X,Y) from the BAM file. This allows
+       compatibility when the BAM reference genome has different contigs from
+       the reference file but consistent ordering for standard chromosomes.
+       Also fixes the read groups in the BAM file as in ``fixrg``. This is
+       faster than the full ``picard`` cleaning option.
      - ``fixrg`` -- only adjust read groups, assuming everything else in BAM
        file is compatible.
-     - ``remove_extracontigs`` -- Remove non-standard chromosomes (for human,
-       anything that is not chr1-22,X,Y) from the BAM file. This can help
-       compatibility when the BAM reference genome has different contigs from
-       the reference file. Also fixes the read groups in the BAM file.
      - ``picard`` -- Picard/GATK based cleaning. Includes read group changes,
        fixing of problematic reads and re-ordering chromosome order to match the
        reference genome. To fix misencoded input BAMs with non-standard scores,

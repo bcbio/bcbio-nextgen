@@ -134,7 +134,6 @@ def process_alignment(data, alt_input=None):
             out_bam = cleanbam.fixrg(fastq1, data["rgnames"], dd.get_ref_file(data), data["dirs"], data)
         elif bamclean == "remove_extracontigs":
             out_bam = cleanbam.remove_extracontigs(fastq1, data)
-            data["reference"]["fasta"] = bam.ref_file_from_bam(out_bam, data)
         elif sort_method:
             runner = broad.runner_from_path("picard", config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
