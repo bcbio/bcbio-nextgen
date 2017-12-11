@@ -8,6 +8,10 @@ http://sentieon.com/about/
 https://peerj.com/preprints/1672/
 """
 import os
+import pprint
+
+import toolz as tz
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, shared
@@ -21,9 +25,12 @@ def license_export(data):
     resources = config_utils.get_resources("sentieon", data["config"])
     server = resources.get("keyfile")
     if not server:
+        server = tz.get_in(["resources", "sentieon", "keyfile"], data)
+    if not server:
         raise ValueError("Need to set resources keyfile with URL:port of license server, local license file or "
                          "environmental variables to export \n"
-                         "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources")
+                         "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources\n"
+                         "Configuration: %s" % pprint.pformat(data))
     if isinstance(server, basestring):
         return "export SENTIEON_LICENSE=%s && " % server
     else:
