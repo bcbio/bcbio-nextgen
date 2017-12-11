@@ -77,13 +77,19 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
                 bam.index(extra_bam, data["config"])
     return data
 
+def get_aligner_with_aliases(aligner):
+    """Retrieve aligner index retriever, including aliases for shared.
+    """
+    aligner_aliases = {"sentieon-bwa": "bwa"}
+    return aligner_aliases.get(aligner) or aligner
+
 def _get_aligner_index(aligner, data):
     """Handle multiple specifications of aligner indexes, returning value to pass to aligner.
 
     Original bcbio case -- a list of indices.
     CWL case: a single file with secondaryFiles staged in the same directory.
     """
-    aligner_indexes = tz.get_in(("reference", aligner, "indexes"), data)
+    aligner_indexes = tz.get_in(("reference", get_aligner_with_aliases(aligner), "indexes"), data)
     # standard bcbio case
     if aligner_indexes and isinstance(aligner_indexes, (list, tuple)):
         aligner_index = os.path.commonprefix(aligner_indexes)
