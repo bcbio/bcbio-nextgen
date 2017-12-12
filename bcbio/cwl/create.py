@@ -117,7 +117,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         out["hints"].append({"class": "SoftwareRequirement",
                              "packages": [resolve_package(p) for p in programs]})
         # GATK requires networking for setting up log4j logging, use arvados extension
-        if any(p.startswith("gatk") for p in programs):
+        if any(p.startswith(("gatk", "sentieon")) for p in programs):
             out["hints"] += [{"class": "arv:APIRequirement"}]
     # Multi-process methods that read heavily from BAM files need extra keep cache for Arvados
     if name in ["pipeline_summary", "variantcall_batch_region"]:
