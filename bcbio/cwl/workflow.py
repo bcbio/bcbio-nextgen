@@ -294,13 +294,10 @@ def _handle_special_inputs(inputs, variables):
     out = []
     for input in inputs:
         if input == ["reference", "aligner", "indexes"]:
-            found_indexes = False
             for v in variables:
                 vid = get_base_id(v["id"]).split("__")
                 if vid[0] == "reference" and vid[1] in alignment.TOOLS:
                     out.append(vid)
-                    found_indexes = True
-            assert found_indexes, "Found no aligner indexes in %s" % [v["id"] for v in variables]
         elif input == ["reference", "snpeff", "genome_build"]:
             found_indexes = False
             for v in variables:
