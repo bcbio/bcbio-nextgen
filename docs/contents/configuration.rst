@@ -839,7 +839,7 @@ RNA sequencing
 
 - ``transcript_assembler`` If set, will assemble novel genes and transcripts and
   merge the results into the known annotation. Can have multiple values set in a
-  list. Supports ['cufflinks', 'sailfish'].
+  list. Supports ['cufflinks', 'stringtie'].
 - ``transcriptome_align`` If set to True, will also align reads to just the
   transcriptome, for use with EBSeq and others.
 - ``expression_caller`` A list of optional expression callers to turn on.
