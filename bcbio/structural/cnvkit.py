@@ -389,13 +389,9 @@ def cnvkit_background(background_cnns, out_file, items, target_bed=None, antitar
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             cmd = [_get_cmd(), "reference", "-f", dd.get_ref_file(items[0]), "-o", tx_out_file]
-            genders = set([population.get_gender(x) for x in items])
-            genders.discard("unknown")
-            if len(genders) == 1:
-                gender = genders.pop()
-                cmd += ["--gender", gender]
-                if gender.lower() == "male":
-                    cmd += ["--male-reference"]
+            gender = _get_batch_gender(items)
+            if gender:
+                cmd += ["--sample-sex", gender]
             if len(background_cnns) == 0:
                 assert target_bed and antitarget_bed, "Missing CNNs and target BEDs for flat background"
                 cmd += ["-t", target_bed, "-a", antitarget_bed]
@@ -403,6 +399,18 @@ def cnvkit_background(background_cnns, out_file, items, target_bed=None, antitar
                 cmd += background_cnns
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit background")
     return out_file
+
+
+def _get_batch_gender(items):
+    """Retrieve gender for a batch of items if consistent.
+
+    Better not to specify for mixed populations, CNVkit will work
+    it out
+    https://github.com/chapmanb/bcbio-nextgen/commit/1a0e217c8a4d3cee10fa890fb3cfd4db5034281d#r26279752
+    """
+    genders = set([population.get_gender(x) for x in items])
+    if len(genders) == 1:
+        return genders.pop()
 
 def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     """Calculate target and anti-target files with pre-determined bins.
@@ -456,7 +464,7 @@ def _compatible_small_variants(data, items):
     """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
     """
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
-    supported = set(["vardict", "freebayes", "gatk-haplotype", "mutect2", "vardict"])
+    supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
     for v in data.get("variants", []):
         vrn_file = v.get("vrn_file")
@@ -487,11 +495,9 @@ def _add_variantcalls_to_output(out, data, items, is_somatic=False):
                     cmd += ["--normal-id", small_vrn_files[0].normal]
                 if not is_somatic:
                     cmd += ["-m", "clonal"]
-            gender = population.get_gender(data)
-            if gender and gender.lower() != "unknown":
-                cmd += ["--gender", gender]
-                if gender.lower() == "male":
-                    cmd += ["--male-reference"]
+            gender = _get_batch_gender(items)
+            if gender:
+                cmd += ["--sample-sex", gender]
             do.run(cmd, "CNVkit call ploidy")
     calls = {}
     for outformat in ["bed", "vcf"]:
@@ -503,9 +509,6 @@ def _add_variantcalls_to_output(out, data, items, is_somatic=False):
                        outformat, "--sample-id", dd.get_sample_name(data),
                        "--ploidy", str(ploidy.get_ploidy([data])),
                        "-o", tx_out_file, call_file]
-                gender = population.get_gender(data)
-                if gender and gender.lower() == "male":
-                    cmd += ["--male-reference"]
                 do.run(cmd, "CNVkit export %s" % outformat)
     out["call_file"] = call_file
     out["vrn_bed"] = annotate.add_genes(calls["bed"], data)
