@@ -81,8 +81,8 @@ def orig_paths():
 if __name__ == '__main__':
 
     # check examples (poor-man's doctest)
-    print _prepend('/b:/d:/a:/d', '/a:/b:/c:/a')
-    print _prepend('/a:/b:/a', '/a:/c:/c')
-    print _prepend('/c', '/a::/b:/a')
-    print _prepend('/a:/b:/a', None)
-    print _prepend('/a:/b:/a', '')
+    print(_prepend('/b:/d:/a:/d', '/a:/b:/c:/a'))
+    print(_prepend('/a:/b:/a', '/a:/c:/c'))
+    print(_prepend('/c', '/a::/b:/a'))
+    print(_prepend('/a:/b:/a', None))
+    print(_prepend('/a:/b:/a', ''))
