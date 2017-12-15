@@ -410,7 +410,9 @@ def _get_batch_gender(items):
     """
     genders = set([population.get_gender(x) for x in items])
     if len(genders) == 1:
-        return genders.pop()
+        gender = genders.pop()
+        if gender != "unknown":
+            return gender
 
 def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     """Calculate target and anti-target files with pre-determined bins.
