@@ -361,7 +361,7 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     """Adjust memory based on number of cores utilized.
     """
     modifier = val[-1:]
-    amount = int(val[:-1])
+    amount = float(val[:-1])
     if direction == "decrease":
         new_amount = amount / float(magnitude)
         # dealing with a specifier like 1G, need to scale to Mb
