@@ -15,6 +15,7 @@ import yaml
 from bcbio import utils
 from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
+from bcbio.pipeline import alignment
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
                    "dx:": "dnanexus"}
@@ -411,7 +412,8 @@ def _indexes_to_secondary_files(gresources, genome_build):
             if len(val.keys()) == 1:
                 indexes = val["indexes"]
                 if len(indexes) == 0:
-                    raise ValueError("Did not find indexes for %s: %s" % (refname, val))
+                    if refname not in alignment.allow_noindices():
+                        raise ValueError("Did not find indexes for %s: %s" % (refname, val))
                 elif len(indexes) == 1:
                     val = {"indexes": indexes[0]}
                 else:

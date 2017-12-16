@@ -83,6 +83,9 @@ def get_aligner_with_aliases(aligner):
     aligner_aliases = {"sentieon-bwa": "bwa"}
     return aligner_aliases.get(aligner) or aligner
 
+def allow_noindices():
+    return set(["minimap2"])
+
 def _get_aligner_index(aligner, data):
     """Handle multiple specifications of aligner indexes, returning value to pass to aligner.
 
@@ -104,8 +107,10 @@ def _get_aligner_index(aligner, data):
             return aligner_prefix
         else:
             return aligner_dir
-    raise ValueError("Did not find reference indices for aligner %s in genome: %s" %
-                     (aligner, data["reference"]))
+
+    if aligner not in allow_noindices():
+        raise ValueError("Did not find reference indices for aligner %s in genome: %s" %
+                         (aligner, data["reference"]))
 
 def _align_from_bam(fastq1, aligner, align_ref, sam_ref, names, align_dir, data):
     assert not data.get("align_split"), "Do not handle split alignments with BAM yet"

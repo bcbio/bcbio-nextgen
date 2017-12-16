@@ -26,10 +26,11 @@ def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     if not utils.file_exists(out_file) and (final_file is None or not utils.file_exists(final_file)):
         with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
             # If a single index present, index_dir points to that
-            if os.path.isfile(index_dir):
+            index_file = None
+            if index_dir and os.path.isfile(index_dir):
                 index_dir = os.path.dirname(index_dir)
-            index_file = os.path.join(index_dir, "%s-%s.mmi" % (dd.get_genome_build(data), preset))
-            if not os.path.exists(index_file):
+                index_file = os.path.join(index_dir, "%s-%s.mmi" % (dd.get_genome_build(data), preset))
+            if not index_file or not os.path.exists(index_file):
                 index_file = dd.get_ref_file(data)
             cmd = ("minimap2 -a -x {preset} -R '{rg_info}' -t {num_cores} {index_file} "
                    "{fastq_file} {pair_file} | ")
