@@ -28,12 +28,25 @@ def run(items):
     assert utils.file_exists(variant_file), "Manta finished without output file %s" % variant_file
     out = []
     for data in items:
+        if paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):
+            variant_file = _run_break_point_inspector(data, variant_file, paired)
         if "sv" not in data:
             data["sv"] = []
         final_vcf = shared.finalize_sv(variant_file, data, items)
         data["sv"].append({"variantcaller": "manta", "vrn_file": final_vcf})
         out.append(data)
     return out
+
+def _run_break_point_inspector(data, variant_file, paired):
+    output_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(variant_file)[0], "bpi")
+    if not utils.file_exists(output_vcf):
+        with file_transaction(data, output_vcf) as tx_output_vcf:
+            cmd = ["break-point-inspector", "-vcf", variant_file]
+            if paired:
+                cmd += ["-ref", paired.normal_bam, "-tumor", paired.tumor_bam]
+            cmd += ["-output_vcf", tx_output_vcf]
+            do.run(cmd, "Running Break Point Inspector for Manta SV calls")
+    return output_vcf
 
 def _get_out_file(work_dir, paired):
     """Retrieve manta output variant file, depending on analysis.

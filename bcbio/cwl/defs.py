@@ -375,7 +375,7 @@ def _variant_sv(checkpoints):
                             cwlout(["sv", "vrn_file"], ["File", "null"], [".tbi"]),
                             cwlout("inherit")])],
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
-                         "lumpy-sv", "manta", "mosdepth", "samtools",
+                         "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
                          "seq2c", "simple_sv_annotation", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
