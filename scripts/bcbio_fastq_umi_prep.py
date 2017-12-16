@@ -51,6 +51,16 @@ duplex_transform = r"""{
     "read2": "(?P<name>@.*)\\n(?P<CB2>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n"
 }"""
 
+r1_transform = r"""{
+    "read1": "(?P<name>@.*)\\n(?P<MB>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n",
+    "read2": "(?P<name>@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n",
+}"""
+
+r2_transform = r"""{
+    "read1": "(?P<name>@.*)\\n(?P<seq>.*)\\n\\+(.*)\\n(?P<qual>.*)\\n",
+    "read2": "(?P<name>@.*)\\n(?P<MB>.{%s})(?P<seq>.*)\\n\\+(.*)\\n(.{%s})(?P<qual>.*)\\n"
+}"""
+
 def run_single(args):
     tags = [args.tag1, args.tag2] if args.tag1 and args.tag2 else None
     add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, tags, cores=args.cores)
@@ -68,7 +78,12 @@ def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags=None, cores=1):
     with open(transform_json_file, "w") as out_handle:
         if tags:
             tag1, tag2 = tags
-            out_handle.write(duplex_transform % (tag1, tag1, tag2, tag2))
+            if tag1 and tag2:
+                out_handle.write(duplex_transform % (tag1, tag1, tag2, tag2))
+            elif tag1:
+                out_handle.write(r1_transform % (tag1, tag1))
+            else:
+                out_handle.write(r2_transform % (tag2, tag2))
         else:
             out_handle.write(transform_json)
     with utils.open_gzipsafe(read1_fq) as in_handle:
