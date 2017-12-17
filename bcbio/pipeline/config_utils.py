@@ -384,7 +384,7 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     if out_modifier.upper().startswith("M") and modifier.upper().startswith("G"):
         modifier = out_modifier
         modifier = int(amount * 1024)
-    return "{amount}{modifier}".format(amount=amount, modifier=modifier)
+    return "{amount}{modifier}".format(amount=int(math.floor(amount)), modifier=modifier)
 
 def adjust_opts(in_opts, config):
     """Establish JVM opts, adjusting memory for the context if needed.
