@@ -276,7 +276,7 @@ def get_sv_bed(data, method=None, out_dir=None, include_gene_names=True):
       - A custom BED file of regions
     """
     if method is None:
-        method = tz.get_in(["config", "algorithm", "sv_regions"], data)
+        method = tz.get_in(["config", "algorithm", "sv_regions"], data) or dd.get_variant_regions(data)
     gene_file = dd.get_gene_bed(data)
     if method and os.path.isfile(method):
         return method
