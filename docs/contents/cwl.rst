@@ -242,8 +242,9 @@ Running bcbio CWL on DNAnexus
 
 bcbio runs on the `DNAnexus platform <https://www.dnanexus.com/>`_ by converting
 bcbio generated CWL into DNAnexus workflows and apps using
-`dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This is currently in development
-and we welcome feedback and suggestions on the workflow.
+`dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This describes first the process
+of running an analysis through the built in 'Create and Run bcbio workflow App`
+and then the details to install and run everything locally if desired.
 
 0. Set some useful environmental variables:
 
@@ -266,7 +267,8 @@ and we welcome feedback and suggestions on the workflow.
      dx upload -p --path /data/input *.bam
 
 3. Create bcbio system file with projects, locations of files and
-   desired core and memory usage for jobs::
+   desired core and memory usage for jobs. bcbio uses the core and memory
+   specifications to ::
 
      dnanexus:
        project: PNAME
@@ -277,7 +279,7 @@ and we welcome feedback and suggestions on the workflow.
          - /data/input
          - /data/input/regions
      resources:
-       default: {cores: 8, memory: 4G, jvm_opts: [-Xms1g, -Xmx4g]}
+       default: {cores: 8, memory: 3500M, jvm_opts: [-Xms1g, -Xmx3500m]}
 
 4. Create bcbio sample YAML file referencing samples to run. The files can be
    relative to the ``inputs`` directory specified above; bcbio will search
@@ -290,34 +292,59 @@ and we welcome feedback and suggestions on the workflow.
        file3.bam,sample3,b2,tumor
        file4.bam,sample4,b2,normal
 
-5. Follow the :ref:`automated-sample-config` workflow to generate a full configuration::
+5. Pick a template file that describes the `bcbio configuration
+   <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_
+   variables. You can define parameters either globally (in the template) file
+   or by sample (in the csv) using the `standard bcbio templating
+   <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#automated-sample-configuration>`_.
+   An example template for germline variant calling is::
+
+      details:
+       - algorithm:
+           aligner: bwa
+           variantcaller: gatk-haplotype
+           tools_on: [gatk4]
+         analysis: variant2
+         genome_build: hg38
+
+6. Supply the three inputs (``bcbio_system.yaml``, ``project.csv`` and
+   ``template.yaml``) to the 'Create and run bcbio workflow` app. This will
+   lookup all files, prepare a bcbio CWL workflow, convert into a DNAnexus
+   workflow, and submit to the platform.
+
+The workflow runs as a standard DNAnexus workflow and you can monitor through
+the command line (with ``dx find executions -n 1`` and ``dx watch``) or the web interface
+(``Monitor`` tab).
+
+If you prefer not to use the DNAnexus app you can by installing
+`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_ on your
+local machine. The DNAnexus app internally does the following steps:
+
+
+1. Follow the :ref:`automated-sample-config` workflow to generate a full configuration::
 
        bcbio_vm.py template --systemconfig bcbio_system-dnanexus.yaml your-template.yaml $PNAME.csv
 
-6. Generate a CWL description of the workflow from the full generated configuration::
+2. Generate a CWL description of the workflow from the full generated configuration::
 
        bcbio_vm.py cwl --systemconfig bcbio_system-dnanexus.yaml $PNAME/config/$PNAME.yaml
 
-7. Determine project information and login credentials. You'll want to note the
+3. Determine project information and login credentials. You'll want to note the
    ``Auth token used`` and ``Current workspace`` project ID::
 
        dx env
 
-8. Compile the CWL workflow into a DNAnexus workflow::
+4. Compile the CWL workflow into a DNAnexus workflow::
 
        dx-cwl compile-workflow $PNAME-workflow/main-$PNAME.cwl --project PROJECT_ID --token $DX_AUTH_TOKEN
 
-9. Upload sample information from generated CWL and run workflow::
+5. Upload sample information from generated CWL and run workflow::
 
        dx mkdir -p $DX_PROJECT_ID:/$PNAME-workflow
        dx upload -p --path $DX_PROJECT_ID:/$PNAME-workflow $PNAME-workflow/main-$PNAME-samples.json
        dx-cwl run-workflow /dx-cwl-run/main-$PNAME/main-$PNAME \
               /$PNAME-workflow/main-$PNAME-samples.json \
               --project PROJECT_ID --token $DX_AUTH_TOKEN
-
-The workflow runs as a standard DNAnexus workflow and you can monitor through
-the command line (with ``dx find executions -n 1`` and ``dx watch``) or the web interface
-(``Monitor`` tab).
 
 Development notes
 ~~~~~~~~~~~~~~~~~
