@@ -80,7 +80,7 @@ def _alignment():
                                cwlout(["config", "algorithm", "quality_format"], ["string", "null"]),
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam"],
-               disk={"files": 1.5}, cores=1),
+               disk={"files": 1.5}),
              s("process_alignment", "single-parallel",
                [["alignment_rec"], ["process_alignment_rec"]],
                [cwlout(["work_bam"], ["File", "null"], [".bai"]),
@@ -230,7 +230,8 @@ def _variant_checkpoints(samples):
     checkpoints = {}
     checkpoints["vc"] = any([dd.get_variantcaller(d) for d in samples])
     checkpoints["sv"] = any([dd.get_svcaller(d) for d in samples])
-    checkpoints["jointvc"] = any([dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d)) for d in samples])
+    checkpoints["jointvc"] = any([(dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d))) and dd.get_batch(d)
+                                  for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
     return checkpoints
 
@@ -251,7 +252,7 @@ def variant(samples):
                 ["config", "algorithm", "mark_duplicates"]],
                [cwlout("alignment_rec", "record")],
                "bcbio-vc",
-               cores=1),
+               disk={"files": 2.0}, cores=1),
              w("alignment", "multi-parallel", align_wf,
                [["align_split"], ["process_alignment_rec"],
                 ["work_bam"], ["config", "algorithm", "quality_format"]]),
@@ -291,7 +292,7 @@ def variant(samples):
                 ["reference", "fasta", "base"]],
                [cwlout("postprocess_alignment_rec", "record")],
                "bcbio-vc",
-               disk={"files": 1.5}, cores=1),
+               disk={"files": 2.0}, cores=1),
              s("postprocess_alignment", "multi-parallel",
                [["postprocess_alignment_rec"]],
                [cwlout(["config", "algorithm", "coverage_interval"], ["string", "null"]),
