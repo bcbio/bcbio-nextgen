@@ -1,7 +1,7 @@
 version: 12
 
 aliases:
-  ensembl: saccharomyces_cerevisiae_vep_90_R64-1-1
+  ensembl: saccharomyces_cerevisiae_vep_91_R64-1-1
   snpeff: R64-1-1.86
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

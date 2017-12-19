@@ -1,5 +1,5 @@
 version: 9
 
 aliases:
-  ensembl: caenorhabditis_elegans_vep_90_WBcel235
+  ensembl: caenorhabditis_elegans_vep_91_WBcel235
   snpeff: WBcel235.86
