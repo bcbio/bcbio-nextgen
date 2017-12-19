@@ -24,7 +24,7 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
                                   assoc_files, region, out_file)
     return call_file
 
-def get_region_bed(region, items, out_file):
+def get_region_bed(region, items, out_file, want_gzip=True):
     """Retrieve BED file of regions to analyze, either single or multi-region.
     """
     variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
@@ -37,7 +37,10 @@ def get_region_bed(region, items, out_file):
         with file_transaction(items[0], target) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
-    return bedutils.merge_overlaps(target, items[0], out_dir=os.path.dirname(out_file)) + ".gz"
+    out_file = bedutils.merge_overlaps(target, items[0], out_dir=os.path.dirname(out_file))
+    if want_gzip:
+        out_file += ".gz"
+    return out_file
 
 def _get_ploidy(regions, items, base_file):
     samples = [dd.get_sample_name(d) for d in items]

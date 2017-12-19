@@ -362,6 +362,12 @@ def symlink_plus(orig, new):
 def open_gzipsafe(f):
     return gzip.open(f) if f.endswith(".gz") else open(f)
 
+def is_empty_gzipsafe(f):
+    h = open_gzipsafe(f)
+    is_empty = len(h.read(1)) > 0
+    h.close()
+    return is_empty
+
 def append_stem(to_transform, word):
     """
     renames a filename or list of filenames with 'word' appended to the stem

@@ -28,13 +28,19 @@ def _run_germline(bam_file, data, ref_file, region, out_file):
     """
     work_dir = utils.safe_makedir("%s-work" % utils.splitext_plus(out_file)[0])
     example_dir = _make_examples(bam_file, data, ref_file, region, out_file, work_dir)
-    tfrecord_file = _call_variants(example_dir, data, out_file)
-    return _postprocess_variants(tfrecord_file, data, ref_file, out_file)
+    if _has_candidate_variants(example_dir):
+        tfrecord_file = _call_variants(example_dir, data, out_file)
+        return _postprocess_variants(tfrecord_file, data, ref_file, out_file)
+    else:
+        return vcfutils.write_empty_vcf(out_file, data["config"], [dd.get_sample_name(data)])
+
+def _has_candidate_variants(example_dir):
+    return all(utils.is_empty_gzipsafe(f) for f in glob.glob(os.path.join(example_dir, "*tfrecord*gz")))
 
 def _make_examples(bam_file, data, ref_file, region, out_file, work_dir):
     """Create example pileup images to feed into variant calling.
     """
-    region_bed = strelka2.get_region_bed(region, [data], out_file)
+    region_bed = strelka2.get_region_bed(region, [data], out_file, want_gzip=False)
     log_dir = utils.safe_makedir(os.path.join(work_dir, "log"))
     example_dir = utils.safe_makedir(os.path.join(work_dir, "examples"))
     if len(glob.glob(os.path.join(example_dir, "%s.tfrecord*.gz" % dd.get_sample_name(data)))) == 0:
