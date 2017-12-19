@@ -24,7 +24,7 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
                                   assoc_files, region, out_file)
     return call_file
 
-def _get_region_bed(region, items, out_file):
+def get_region_bed(region, items, out_file):
     """Retrieve BED file of regions to analyze, either single or multi-region.
     """
     variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
@@ -59,7 +59,7 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
     utils.safe_makedir(tx_work_dir)
     cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
     cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % _get_region_bed(region, items, out_file),
+            "--callRegions=%s" % get_region_bed(region, items, out_file),
             "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
             "--runDir=%s" % tx_work_dir]
     cmd += ["--bam=%s" % b for b in align_bams]
@@ -85,7 +85,7 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     utils.safe_makedir(tx_work_dir)
     cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaSomaticWorkflow.py"))]
     cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % _get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file),
+            "--callRegions=%s" % get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file),
             "--runDir=%s" % tx_work_dir,
             "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
     if dd.get_coverage_interval(paired.tumor_data) not in ["genome"]:
