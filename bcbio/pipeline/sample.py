@@ -226,6 +226,7 @@ def postprocess_alignment(data):
         bam_file_ready = os.path.join(out_dir, os.path.basename(bam_file))
         if not utils.file_exists(bam_file_ready):
             utils.symlink_plus(bam_file, bam_file_ready)
+        bam_file_ready = postalign.dedup_bam(bam_file_ready, data)
         bam.index(bam_file_ready, data["config"])
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
         callable_region_bed, nblock_bed, callable_bed = \
