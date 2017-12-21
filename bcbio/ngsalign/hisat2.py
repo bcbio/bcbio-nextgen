@@ -1,9 +1,10 @@
 import os
 from bcbio.utils import file_exists, safe_makedir
+from bcbio import bam
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
-from bcbio.ngsalign import postalign
+from bcbio.ngsalign import alignprep, postalign
 from bcbio.provenance import do
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
@@ -13,39 +14,42 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     quality_flag = _get_quality_flag(data)
     stranded_flag = _get_stranded_flag(data, paired)
     rg_flags = _get_rg_flags(names)
-    out_file = os.path.join(align_dir, dd.get_lane(data)) + ".bam"
-    if file_exists(out_file):
-        data = dd.set_work_bam(data, out_file)
-        return data
-    cmd = ("{hisat2} --new-summary -x {ref_file} -p {num_cores} {quality_flag} {stranded_flag} "
-           "{rg_flags} ")
-    if paired:
-        cmd += "-1 {fastq_file} -2 {pair_file} "
+    out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
+    if data.get("align_split"):
+        final_file = out_file
+        out_file, data = alignprep.setup_combine(final_file, data)
+        fastq_file, pair_file = alignprep.split_namedpipe_cls(fastq_file, pair_file, data)
     else:
-        cmd += "-U {fastq_file} "
-    if dd.get_analysis(data).lower() == "smallrna-seq":
-        cmd += "-k 1000 "
-    # if assembling transcripts, set flags that cufflinks/stringtie can use
-    if dd.get_transcript_assembler(data):
-        cmd += "--dta-cufflinks "
-    if dd.get_analysis(data).lower() == "rna-seq":
-        gtf_file = dd.get_gtf_file(data)
-        splicesites = os.path.join(os.path.dirname(gtf_file),
-                                   "ref-transcripts-splicesites.txt")
-        if not file_exists(splicesites):
-            splicesites = create_splicesites_file(gtf_file, align_dir, data)
-        # empty splicesite files means there is no splicing, so skip this option    
-        # if there is no splicing for this organism
-        if file_exists(splicesites):
-            cmd += "--known-splicesite-infile {splicesites} "
+        final_file = None
+    if not file_exists(out_file) and (final_file is None or not file_exists(final_file)):
+        cmd = ("{hisat2} --new-summary -x {ref_file} -p {num_cores} {quality_flag} {stranded_flag} "
+               "{rg_flags} ")
+        if paired:
+            cmd += "-1 {fastq_file} -2 {pair_file} "
+        else:
+            cmd += "-U {fastq_file} "
+        if dd.get_analysis(data).lower() == "smallrna-seq":
+            cmd += "-k 1000 "
+        # if assembling transcripts, set flags that cufflinks/stringtie can use
+        if dd.get_transcript_assembler(data):
+            cmd += "--dta-cufflinks "
+        if dd.get_analysis(data).lower() == "rna-seq":
+            gtf_file = dd.get_gtf_file(data)
+            splicesites = os.path.join(os.path.dirname(gtf_file),
+                                       "ref-transcripts-splicesites.txt")
+            if not file_exists(splicesites):
+                splicesites = create_splicesites_file(gtf_file, align_dir, data)
+            # empty splicesite files means there is no splicing, so skip this option    
+            # if there is no splicing for this organism
+            if file_exists(splicesites):
+                cmd += "--known-splicesite-infile {splicesites} "
+        # apply additional hisat2 options
+        cmd += " ".join(_get_options_from_config(data))
 
-    # apply additional hisat2 options
-    cmd += " ".join(_get_options_from_config(data))
-
-    message = "Aligning %s and %s with hisat2." %(fastq_file, pair_file)
-    with file_transaction(data, out_file) as tx_out_file:
-        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_out_file)
-        do.run(cmd.format(**locals()), message)
+        message = "Aligning %s and %s with hisat2." % (fastq_file, pair_file)
+        with postalign.tobam_cl(data, out_file, pair_file is not None) as (tobam_cl, tx_out_file):
+            cmd += " | " + tobam_cl
+            do.run(cmd.format(**locals()), message)
     data = dd.set_work_bam(data, out_file)
     return data
 
