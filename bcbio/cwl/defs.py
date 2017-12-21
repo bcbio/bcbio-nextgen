@@ -100,7 +100,7 @@ def _alignment():
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
                 cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
                "bcbio-vc", ["biobambam", "samtools", "variantbam"],
-               disk={"files": 4})]
+               disk={"files": 3.5})]
     return align
 
 def _variant_hla(checkpoints):
@@ -124,7 +124,7 @@ def _variant_vc(checkpoints):
                [["batch_rec"]],
                [cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc",
-               disk={"files": 1.5}, cores=1),
+               disk={"files": 2.0}, cores=1),
              s("variantcall_batch_region", "batch-parallel",
                [["batch_rec"], ["region_block"]],
                [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]),
@@ -134,7 +134,7 @@ def _variant_vc(checkpoints):
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "strelka", "vardict", "vardict-java",
                             "varscan", "vcfanno", "vcflib", "vt", "r=3.4.1", "perl"],
-               disk={"files": 1.5}),
+               disk={"files": 2.0}),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region_block"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
@@ -173,7 +173,7 @@ def _variant_vc(checkpoints):
              ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]],
             [cwlout("batch_rec", "record")],
             "bcbio-vc",
-            disk={"files": 1.5}, cores=1,
+            disk={"files": 2.0}, cores=1,
             unlist=[["config", "algorithm", "variantcaller"]]),
           w("variantcall", "multi-parallel", vc_wf,
             [["region"], ["region_block"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
@@ -186,7 +186,7 @@ def _variant_vc(checkpoints):
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
-             disk={"files": 1.5}, cores=1)]
+             disk={"files": 0.5}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
 
 def _variant_jointvc():
@@ -241,7 +241,7 @@ def variant(samples):
     checkpoints = _variant_checkpoints(samples)
     align_wf = _alignment()
     align = [s("alignment_to_rec", "multi-combined",
-               [["files"],
+               [["files"], ["analysis"],
                 ["config", "algorithm", "align_split_size"],
                 ["reference", "fasta", "base"],
                 ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
@@ -252,7 +252,7 @@ def variant(samples):
                 ["config", "algorithm", "mark_duplicates"]],
                [cwlout("alignment_rec", "record")],
                "bcbio-vc",
-               disk={"files": 2.0}, cores=1),
+               disk={"files": 1.5}, cores=1),
              w("alignment", "multi-parallel", align_wf,
                [["align_split"], ["process_alignment_rec"],
                 ["work_bam"], ["config", "algorithm", "quality_format"]]),
@@ -292,7 +292,7 @@ def variant(samples):
                 ["reference", "fasta", "base"]],
                [cwlout("postprocess_alignment_rec", "record")],
                "bcbio-vc",
-               disk={"files": 2.0}, cores=1),
+               disk={"files": 1.5}, cores=1),
              s("postprocess_alignment", "multi-parallel",
                [["postprocess_alignment_rec"]],
                [cwlout(["config", "algorithm", "coverage_interval"], ["string", "null"]),
@@ -349,12 +349,12 @@ def variant(samples):
             "bcbio-vc", ["bcftools", "bedtools", "fastqc", "goleft", "mosdepth",
                          "picard", "pythonpy", "qsignature", "qualimap", "sambamba",
                          "samtools", "preseq"],
-            disk={"files": 1.5}),
+            disk={"files": 2.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
-            disk={"files": 1.5}, cores=1)]
+            disk={"files": 2.0}, cores=1)]
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)

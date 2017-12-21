@@ -56,7 +56,8 @@ def _cwl_workflow_template(inputs, top_level=False):
             "outputs": [],
             "steps": []}
 
-def _add_disk_estimates(cwl_res, inputs, file_estimates, disk):
+def _add_disk_estimates(name, parallel, cwl_res, inputs, file_estimates, samples, disk,
+                        cur_remotes):
     """Add disk usage estimates to CWL ResourceRequirement.
 
     Based on inputs (which need to be staged) and disk
@@ -71,6 +72,10 @@ def _add_disk_estimates(cwl_res, inputs, file_estimates, disk):
                 total_estimate += int(multiplier * file_estimates[key])
         for inp in inputs:
             scale = 2.0 if inp.get("type") == "array" else 1.0
+            # Allocating all samples, could remove for `to_rec` when we ensure we
+            # don't have to stage. Currently dnanexus stages everything so need to consider
+            if parallel == "multi-combined" and "dnanexus" in cur_remotes:
+                scale *= (len(samples))
             if workflow.is_cwl_record(inp):
                 for f in _get_record_fields(inp):
                     if f["name"] in file_estimates:
@@ -93,7 +98,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     cwl_res = {"class": "ResourceRequirement",
                "coresMin": cores, "ramMin": mem_mb_total, "outdirMin": bcbio_docker_disk}
-    cwl_res = _add_disk_estimates(cwl_res, inputs, file_estimates, disk)
+    cwl_res = _add_disk_estimates(name, parallel, cwl_res, inputs, file_estimates, samples, disk,
+                                  cur_remotes)
     docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
     docker = {"class": "DockerRequirement", "dockerPull": docker_image, "dockerImageId": docker_image}
     out = {"class": "CommandLineTool",
