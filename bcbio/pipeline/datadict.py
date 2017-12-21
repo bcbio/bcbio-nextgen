@@ -190,6 +190,7 @@ LOOKUPS = {
     "align_bam": {"keys": ["align_bam"]},
     "disc_bam": {"keys": ["work_bam_plus", "disc"]},
     "sr_bam": {"keys": ["work_bam_plus", "sr"]},
+    "peddy_report": {"keys": ["peddy_report"]},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": [], "always_list": True},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
@@ -315,8 +316,15 @@ def get_in_samples(samples, fn):
             return fn(sample)
     return None
 
+def set_in_samples(samples, fn, value):
+    """
+    update a list of samples with a given value
+    """
+    return [fn(x, value) for x in samples]
+
 def get_keys(lookup):
     """
     return the keys used to look up a function in the datadict
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
+

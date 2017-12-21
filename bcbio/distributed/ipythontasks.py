@@ -22,7 +22,7 @@ from bcbio.provenance import system
 from bcbio.qc import multiqc, qsignature
 from bcbio.structural import regions
 from bcbio.variation import (bamprep, genotype, ensemble, joint,
-                             multi, population, validate, vcfutils)
+                             multi, population, validate, vcfutils, peddy)
 from bcbio.log import logger, setup_local_logging
 
 @contextlib.contextmanager
@@ -168,6 +168,12 @@ def run_filter_barcodes(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(umi.filter_barcodes, *args))
+
+@require(peddy)
+def run_peddy(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(peddy.run_peddy, *args))
 
 @require(umi)
 def run_tagcount(*args):

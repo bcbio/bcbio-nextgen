@@ -20,7 +20,8 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import (archive, config_utils, disambiguate, region,
                             run_info, qcsummary, rnaseq)
 from bcbio.provenance import profile, system
-from bcbio.variation import ensemble, genotype, population, validate, joint
+from bcbio.variation import (ensemble, genotype, population, validate, joint,
+                             peddy)
 from bcbio.chipseq import peaks
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
@@ -179,6 +180,8 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = heterogeneity.run(samples, run_parallel)
         with profile.report("population database", dirs):
             samples = population.prep_db_parallel(samples, run_parallel)
+        with profile.report("peddy check", dirs):
+            samples = peddy.run_peddy_parallel(samples, run_parallel)
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
         with profile.report("archive", dirs):

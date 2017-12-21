@@ -15,7 +15,11 @@ from bcbio.qc import multiqc, qsignature
 from bcbio.structural import regions as svregions
 from bcbio.variation import (bamprep, genotype, ensemble,
                              joint, multi, population, validate,
-                             vcfutils)
+                             vcfutils, peddy)
+
+@utils.map_wrap
+def run_peddy(*args):
+    return peddy.run_peddy(*args)
 
 @utils.map_wrap
 def run_tagcount(*args):

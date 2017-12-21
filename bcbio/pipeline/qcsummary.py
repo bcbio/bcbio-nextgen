@@ -135,7 +135,7 @@ def _run_qc_tools(bam_file, data):
              }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
-    qc_out = {}
+    qc_out = dd.get_summary_qc(data)
     for program_name in dd.get_algorithm_qc(data):
         if not bam_file and program_name != "kraken":  # kraken doesn't need bam
             continue

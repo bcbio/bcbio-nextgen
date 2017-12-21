@@ -237,6 +237,7 @@ def _create_config_file(out_dir, samples):
         "bcbio",
         "samtools",
         "goleft_indexcov"
+        "peddy"
     ])
     out['bcftools'] = {'write_separate_table': True}
     # if germline calling was performed:

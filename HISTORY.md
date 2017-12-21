@@ -35,6 +35,8 @@
   MAPQ instead of 60 as output by hisat2/STAR/etc.
 - RNA-seq: omit duplicate files from stringtie assembly merging. Thanks to 
   @mmoisse for the bug report.
+- Add support for peddy (https://github.com/brentp/peddy) for PED file 
+  correspondence/ancestry checking.
 
 ## 1.0.6 (5 November 2017)
 
