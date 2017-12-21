@@ -62,13 +62,20 @@ def trim_sample(data):
 
 # ## Alignment
 
-def link_bam_file(orig_file, new_dir):
-    """Provide symlinks of BAM file and existing indexes.
+def _link_bam_file(in_file, new_dir, data):
+    """Provide symlinks of BAM file and existing indexes if needed.
     """
     new_dir = utils.safe_makedir(new_dir)
-    sym_file = os.path.join(new_dir, os.path.basename(orig_file))
-    utils.symlink_plus(orig_file, sym_file)
-    return sym_file
+    out_file = os.path.join(new_dir, os.path.basename(in_file))
+    if data.get("cwl_keys"):
+        # Has indexes, we're okay to go with the original file
+        if utils.file_exists(in_file + ".bai"):
+            out_file = in_file
+        else:
+            utils.copy_plus(in_file, out_file)
+    else:
+        utils.symlink_plus(in_file, out_file)
+    return out_file
 
 def _add_supplemental_bams(data):
     """Add supplemental files produced by alignment, useful for structural
@@ -140,8 +147,8 @@ def process_alignment(data, alt_input=None):
                 os.path.splitext(os.path.basename(fastq1))[0]))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
         else:
-            out_bam = link_bam_file(fastq1, os.path.join(data["dirs"]["work"], "prealign",
-                                                         data["rgnames"]["sample"]))
+            out_bam = _link_bam_file(fastq1, os.path.join(dd.get_work_dir(data), "prealign",
+                                                          dd.get_sample_name(data)), data)
         bam.index(out_bam, data["config"])
         bam.check_header(out_bam, data["rgnames"], dd.get_ref_file(data), data["config"])
         dedup_bam = postalign.dedup_bam(out_bam, data)
