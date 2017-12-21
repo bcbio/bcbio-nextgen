@@ -58,7 +58,7 @@ LOOKUPS = {
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
     "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno'], "default": []},
-    "analysis": {"keys": ["analysis"]},
+    "analysis": {"keys": ["analysis"], "default": ""},
     "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
