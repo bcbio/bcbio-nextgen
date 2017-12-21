@@ -347,3 +347,5 @@ if __name__ == "__main__":
     galaxy_base = os.path.join(_get_data_dir(), "galaxy")
     for index, index_file in indexed.items():
         loc.update_loc_file(galaxy_base, index, args.build, index_file)
+
+    print "Genome installation complete."
