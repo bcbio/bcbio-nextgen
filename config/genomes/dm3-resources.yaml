@@ -1,5 +1,5 @@
-version: 10
+version: 11
 
 aliases:
-  ensembl: drosophila_melanogaster_vep_90_BDGP6
+  ensembl: drosophila_melanogaster_vep_91_BDGP6
   snpeff: BDGP5.75
