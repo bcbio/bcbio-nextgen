@@ -66,7 +66,7 @@ def run(items):
 
     normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
-    items = _split_cnv(items, seq2c_calls_file)
+    items = _split_cnv(items, seq2c_calls_file, read_mapping_file)
     return items
 
 def prep_seq2c_bed(data):
@@ -139,7 +139,7 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
             do.run(cmd.format(**locals()), "Seq2C CNV calling")
     return output_fpath
 
-def _split_cnv(items, calls_fpath):
+def _split_cnv(items, calls_fpath, read_mapping_file):
     out_items = []
     for item in items:
         if not get_paired_phenotype(item) == "normal":
@@ -157,6 +157,7 @@ def _split_cnv(items, calls_fpath):
                 if sv["variantcaller"] == "seq2c":
                     item["sv"][i]["calls"] = out_fname
                     item["sv"][i]["vrn_file"] = to_vcf(out_fname, item)
+                    item["sv"][i]["read_mapping"] = read_mapping_file
                     break
         out_items.append(item)
     return out_items

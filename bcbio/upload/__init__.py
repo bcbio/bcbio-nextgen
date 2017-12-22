@@ -232,6 +232,7 @@ def _maybe_add_sv(algorithm, sample, out):
         for svcall in sample["sv"]:
             if svcall.get("variantcaller") == "seq2c":
                 out.extend(_get_variant_file(svcall, ("coverage",), suffix="-coverage"))
+                out.extend(_get_variant_file(svcall, ("read_mapping",), suffix="-read_mapping", sample=batch))
                 out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
@@ -326,7 +327,9 @@ def _get_variant_file(x, key, suffix="", sample=None):
         elif fname.endswith((".vcf", ".bed", ".bedpe", ".bedgraph", ".cnr", ".cns", ".cnn", ".txt", ".tsv")):
             ftype = utils.splitext_plus(fname)[-1][1:]
             if ftype == "txt":
-                ftype = fname.split("-")[-1]
+                extended_ftype = fname.split("-")[-1]
+                if "/" not in extended_ftype:
+                    ftype = extended_ftype
             out.append({"path": fname,
                         "type": ftype,
                         "ext": "%s%s" % (x["variantcaller"], suffix),
