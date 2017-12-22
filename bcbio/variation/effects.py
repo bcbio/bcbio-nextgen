@@ -172,8 +172,7 @@ def run_vep(in_file, data):
                 cmd = "%s && %s | sed '/^#/! s/;;/;/g' | bgzip -c > %s" % (perl_exports, " ".join(cmd), tx_out_file)
                 do.run(cmd, "Ensembl variant effect predictor", data)
     if utils.file_exists(out_file):
-        vcfutils.bgzip_and_index(out_file, data["config"])
-        return out_file
+        return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _get_loftee(data):
     """Retrieve loss of function plugin parameters for LOFTEE.

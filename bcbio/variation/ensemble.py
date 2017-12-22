@@ -37,7 +37,8 @@ def combine_calls(batch_id, samples, data):
             break
     if exist_variants:
         # Decompose multiallelic variants and normalize
-        vrn_files = [normalize.normalize(f, data, passonly=True, rerun_effects=False) for f in vrn_files]
+        passonly = not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata, False)
+        vrn_files = [normalize.normalize(f, data, passonly=passonly, rerun_effects=False) for f in vrn_files]
         if "classifiers" not in edata["config"]["algorithm"]["ensemble"]:
             callinfo = _run_ensemble_intersection(batch_id, vrn_files, caller_names, base_dir, edata)
         else:
