@@ -1,16 +1,22 @@
 """
 correspondence checking with peddy (https://github.com/brentp/peddy)
 """
-
+import collections
 import os
+import shutil
+
+import toolz as tz
+
 from collections import defaultdict
+from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
+from bcbio.variation import vcfutils
 from bcbio.variation.population import create_ped_file
 from bcbio.provenance import do
-from bcbio.distributed.transaction import tx_tmpdir
+
 
 PEDDY_OUT_EXTENSIONS = [".background_pca.json", ".het_check.csv", ".pca_check.png",
                         ".ped_check.png", ".ped_check.rel-difference.csv",
@@ -23,26 +29,54 @@ def run_peddy_parallel(samples, parallel_fn):
     return samples
 
 def run_peddy(samples):
+    vcf_file = None
+    for d in samples:
+        if dd.get_sample_name(d) in vcfutils.get_samples(dd.get_vrn_file(d)):
+            vcf_file = dd.get_vrn_file(d)
+            break
     data = samples[0]
-    vcf_file = dd.get_vrn_file(data)
+    peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
+    is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
+    if not peddy or not vcf_file or not is_human:
+        logger.info("peddy is not installed, not human or sample VCFs don't match, skipping correspondence checking "
+                    "for %s." % vcf_file)
+        return samples
     ped_file = create_ped_file(samples, vcf_file)
-    peddy = config_utils.get_program("peddy", data)
-    peddy_dir = os.path.join(dd.get_work_dir(data), "peddy", dd.get_batch(data))
-    safe_makedir(peddy_dir)
+    peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", dd.get_batch(data), "peddy"))
     peddy_prefix = os.path.join(peddy_dir, dd.get_batch(data))
     peddy_report = peddy_prefix + ".html"
     batch = dd.get_batch(data)
     peddyfiles = expected_peddy_files(peddy_report, batch)
-    if not peddy:
-        logger.info("peddy is not installed, skipping correspondence checking "
-                    "for %s." % vcf_file)
-        return samples
     if file_exists(peddy_report):
         return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
+    if file_exists(peddy_prefix + "-failed.log"):
+        return samples
+    num_cores = dd.get_num_cores(data)
 
-    cmd = "{peddy} --plot --prefix {peddy_prefix} {vcf_file} {ped_file}"
-    message = "Running peddy on {vcf_file} against {ped_file}."
-    do.run(cmd.format(**locals()), message.format(**locals()))
+    with tx_tmpdir(data) as tx_dir:
+        peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
+        # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
+        stderr_log = os.path.join(tx_dir, "run-stderr.log")
+        cmd = "{peddy} -p {num_cores} --plot --prefix {peddy_prefix_tx} {vcf_file} {ped_file} 2> {stderr_log}"
+        message = "Running peddy on {vcf_file} against {ped_file}."
+        try:
+            do.run(cmd.format(**locals()), message.format(**locals()))
+        except:
+            to_show = collections.deque(maxlen=100)
+            with open(stderr_log) as in_handle:
+                for line in in_handle:
+                    to_show.append(line)
+            if to_show[-1].find("IndexError: index 0 is out of bounds for axis 0 with size 0") >= 0:
+                logger.info("Skipping peddy because no variants overlap with checks: %s" % dd.get_batch(data))
+                with open(peddy_prefix + "-failed.log", "w") as out_handle:
+                    out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
+                return samples
+            else:
+                logger.warning("".join(to_show))
+                raise
+        for ext in PEDDY_OUT_EXTENSIONS:
+            if os.path.exists(peddy_prefix_tx + ext):
+                shutil.move(peddy_prefix_tx + ext, peddy_prefix + ext)
     return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
 
 def get_samples_by_batch(samples):

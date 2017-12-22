@@ -348,7 +348,7 @@ def variant(samples):
                             cwlout("inherit")])],
             "bcbio-vc", ["bcftools", "bedtools", "fastqc", "goleft", "mosdepth",
                          "picard", "pythonpy", "qsignature", "qualimap", "sambamba",
-                         "samtools", "preseq"],
+                         "samtools", "preseq", "peddy"],
             disk={"files": 2.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],

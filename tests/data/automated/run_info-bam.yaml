@@ -33,6 +33,8 @@ details:
       #realign: gatk
       recalibrate: gatk
       variantcaller: [freebayes, gatk-haplotype, strelka2]
+      ensemble:
+        numpass: 2
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
@@ -41,7 +43,7 @@ details:
       coverage_interval: genome
       tools_on: [qualimap_full, gatk4, vqsr, svplots]
       tools_off: [gemini]
-      vcfanno: [gemini]
+      #vcfanno: [gemini]
       mixup_check: qsignature
       quality_format: standard
       nomap_split_size: 50
