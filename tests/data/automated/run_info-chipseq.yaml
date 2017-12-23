@@ -2,12 +2,32 @@ upload:
   dir: upload
 details:
   - analysis: chip-seq
-    files: ['Hsapiens_Mmusculus_1.fq']
+    files: ['../data/test_chipseq/Hsapiens_Mmusculus_1.fq']
     algorithm:
       aligner: bwa
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq]
+      peakcaller: macs2
     description: Test1
     genome_build: hg19
-    lane: test
+    metadata:
+      batch: b1
+      phenotype: input
+  - analysis: chip-seq
+    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt]
+    algorithm:
+      aligner: bowtie2
+      quality_format: Standard
+      trim_reads: read_through
+      adapters: [truseq]
+      peakcaller: macs2
+    description: Test2
+    genome_build: hg19
+    metadata:
+      batch: b1
+      phenotype: chip
+
+resources:
+  macs2:
+    options: [--nomodel]

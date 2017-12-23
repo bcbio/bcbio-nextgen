@@ -4,6 +4,8 @@ import os
 import copy
 import toolz as tz
 
+import subprocess
+
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.pipeline import config_utils
@@ -38,7 +40,6 @@ def peakcall_prepare(data, run_parallel):
     if to_process:
         after_process = run_parallel("peakcalling", to_process)
         data = _sync(data, after_process)
-
     return data
 
 def calling(data):
@@ -50,14 +51,19 @@ def calling(data):
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
-    chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
-    input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
+    if encode_bed:
+        chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
+        data["work_bam_filter"] = chip_bam
+        input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
+        data["input_bam_filter"] = input_bam
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
                           dd.get_chip_method(data), data["resources"], data["config"])
     greylistdir = greylisting(data)
     data.update({"peaks_files": out_files})
-    data["greylist"] = greylistdir
+    if greylistdir:
+        data["greylist"] = greylistdir
     return [[data]]
+    data["input_bam_filter"] = input_bam
 
 def _prepare_bam(bam_file, bed_file, config):
     """Remove regions from bed files"""
@@ -79,10 +85,11 @@ def _sync(original, processed):
     """
     for original_sample in original:
         original_sample[0]["peaks_files"] = {}
-        for processs_sample in processed:
-            if dd.get_sample_name(original_sample[0]) == dd.get_sample_name(processs_sample[0]):
-                if processs_sample[0]["peaks_files"]:
-                    original_sample[0]["peaks_files"].update(processs_sample[0]["peaks_files"])
+        for process_sample in processed:
+            if dd.get_sample_name(original_sample[0]) == dd.get_sample_name(process_sample[0]):
+                for key in ["peaks_file", "work_bam_filter", "input_bam_filter"]:
+                    if process_sample[0].get(key):
+                        original_sample[0][key] = process_sample[0][key]
     return original
 
 def _check(sample, data):
@@ -92,7 +99,7 @@ def _check(sample, data):
     if dd.get_phenotype(sample) == "input":
         return None
     for origin in data:
-        if dd.get_batch(sample) in dd.get_batch(origin[0]) and dd.get_phenotype(origin[0]) == "input":
+        if dd.get_batch(sample) in (dd.get_batches(origin[0]) or []) and dd.get_phenotype(origin[0]) == "input":
             sample["work_bam_input"] = dd.get_work_bam(origin[0])
             return [sample]
     return [sample]
@@ -135,5 +142,11 @@ def greylisting(data):
     message = "Running greylisting on %s." % input_bam
     with file_transaction(greylistdir) as txgreylistdir:
         utils.safe_makedir(txgreylistdir)
-        do.run(cmd.format(**locals()), message)
+        try:
+            do.run(cmd.format(**locals()), message)
+        except subprocess.CalledProcessError as msg:
+            if str(msg).find("Cannot take a larger sample than population when 'replace=False'") >= 0:
+                logger.info("Skipping chipseq greylisting because of small sample size: %s"
+                            % dd.get_sample_name(data))
+                return None
     return greylistdir

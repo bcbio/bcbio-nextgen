@@ -37,7 +37,8 @@
   @mmoisse for the bug report.
 - Add support for peddy (https://github.com/brentp/peddy) for PED file 
   correspondence/ancestry checking.
-- seq2c: pass through mapping_reads.txt file to upload directory.
+- ChIP-seq: pass through encode filtered BAMs to upload directory.
+- seq2c: pass through mapping_reads.txt file to directory.
 
 ## 1.0.6 (5 November 2017)
 
