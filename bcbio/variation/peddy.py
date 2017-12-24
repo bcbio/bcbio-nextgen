@@ -42,10 +42,10 @@ def run_peddy(samples):
                     "for %s." % vcf_file)
         return samples
     ped_file = create_ped_file(samples, vcf_file)
-    peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", dd.get_batch(data), "peddy"))
-    peddy_prefix = os.path.join(peddy_dir, dd.get_batch(data))
+    batch = dd.get_batch(data) or dd.get_sample_name(data)
+    peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", batch, "peddy"))
+    peddy_prefix = os.path.join(peddy_dir, batch)
     peddy_report = peddy_prefix + ".html"
-    batch = dd.get_batch(data)
     peddyfiles = expected_peddy_files(peddy_report, batch)
     if file_exists(peddy_report):
         return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
@@ -67,7 +67,7 @@ def run_peddy(samples):
                 for line in in_handle:
                     to_show.append(line)
             if to_show[-1].find("IndexError: index 0 is out of bounds for axis 0 with size 0") >= 0:
-                logger.info("Skipping peddy because no variants overlap with checks: %s" % dd.get_batch(data))
+                logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
                 with open(peddy_prefix + "-failed.log", "w") as out_handle:
                     out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
                 return samples
@@ -82,7 +82,7 @@ def run_peddy(samples):
 def get_samples_by_batch(samples):
     batch_samples = defaultdict(list)
     for data in dd.sample_data_iterator(samples):
-        batch = dd.get_batch(data)
+        batch = dd.get_batch(data) or dd.get_sample_name(data)
         batch_samples[batch].append(data)
     return batch_samples
 
