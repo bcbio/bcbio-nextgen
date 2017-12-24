@@ -227,12 +227,16 @@ def _get_fgbio_options(data, umi_method):
     return group_out, cons_out, filter_out
 
 def _check_dedup(data):
-    """Check configuration for de-duplication, handling back compatibility.
+    """Check configuration for de-duplication.
+
+    Defaults to no de-duplication for RNA-seq and small RNA, the
+    back compatible default. Allow overwriting with explicit
+    `mark_duplicates: true` setting.
     """
-    # Do not de-dup for RNA-seq and small RNA
     if dd.get_analysis(data).lower() in ["rna-seq", "smallrna-seq"]:
-        return False
-    dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), True)
+        dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), False)
+    else:
+        dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), True)
     if dup_param and isinstance(dup_param, basestring):
         logger.info("Warning: bcbio no longer support explicit setting of mark_duplicate algorithm. "
                     "Using best-practice choice based on input data.")

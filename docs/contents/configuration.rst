@@ -491,7 +491,9 @@ Alignment postprocessing
    `biobambam's bammarkduplicates or bamsormadup
    <https://github.com/gt1/biobambam>`_.
    Uses `samblaster <https://github.com/GregoryFaust/samblaster>`_ as an
-   alternative if you have paired reads and specifying ``lumpy`` as an ``svcaller``.
+   alternative if you have paired reads and specifying ``lumpy`` as an
+   ``svcaller``. Defaults to true for variant calling and false for RNA-seq and
+   small RNA analyses.
 -  ``recalibrate`` Perform base quality score recalibration on the
    aligned BAM file, adjusting quality scores to reflect alignments and known
    variants. Supports both GATK and Sentieon recalibration.
