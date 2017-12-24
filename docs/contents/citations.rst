@@ -46,7 +46,16 @@ For the alignment, add what you have used:
 
 * Dobin, A., Davis, C. A., Schlesinger, F., Drenkow, J., Zaleski, C., Jha, S., … Gingeras, T. R. (2013). STAR: Ultrafast universal RNA-seq aligner. Bioinformatics, 29(1), 15–21. doi:10.1093/bioinformatics/bts635
 
-* Langmead, B., Trapnell, C., Pop, M., & Salzberg, S. L. (2009). Ultrafast and memory-efficient alignment of short DNA sequences to the human genome. Genome Biol, 10, R25. doi:10.1186/gb-2009-10-3-r25
+* Langmead, B., Trapnell, C., Pop, M., & Salzberg, S. L. (2009). Ultrafast and memory-efficient alignment of short DNA sequences to the human genome. Genome Biology, 10, R25. doi:10.1186/gb-2009-10-3-r25
+
+* Kim, D., Langmead, B. & Salzberg, SL. (2016). HISAT: a fast spliced aligner with low memory requirements. Nature Methods, 12(4): 357–360. doi: 10.1038/nmeth.3317
+
+
+If you used TopHat2 for alignment:
+
+* Kim, D., Pertea, G., Trapnell, C., Pimentel, H., Kelley, R. & Salzberg SL. (2013). TopHat2: accurate alignment of transcriptomes in the presence of insertions, deletions and gene fusions. Genome Biology, 14(4): R36. doi: 10.1186/gb-2013-14-4-r36
+
+* Brueffer, C. & Saal, LH. (2016). TopHat-Recondition: A post-processor for TopHat unmapped reads. BMC Bioinformatics, 17(1):199. doi: 10.1186/s12859-016-1058-x
 
 
 If you have in the output novel miRNA discovering, add: 
