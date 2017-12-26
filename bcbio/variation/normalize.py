@@ -54,7 +54,7 @@ from bcbio.provenance import do
 from bcbio.variation import effects, vcfutils
 
 def normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
-              rerun_effects=True):
+              rerun_effects=True, remove_oldeffects=False):
     """Normalizes variants and reruns SnpEFF for resulting VCF
     """
     out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
@@ -62,7 +62,8 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
         if vcfutils.vcf_has_variants(in_file):
             ready_ma_file = _normalize(in_file, data, passonly=passonly,
                                        normalize_indels=normalize_indels,
-                                       split_biallelic=split_biallelic)
+                                       split_biallelic=split_biallelic,
+                                       remove_oldeffects=remove_oldeffects)
             if rerun_effects:
                 ann_ma_file, _ = effects.add_to_vcf(ready_ma_file, data)
                 if ann_ma_file:
@@ -72,7 +73,8 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
             utils.symlink_plus(in_file, out_file)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True):
+def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
+remove_oldeffects=False):
     """Convert multi-allelic variants into single allelic.
 
     `vt normalize` has the -n flag passed (skipping reference checks) because
@@ -87,6 +89,7 @@ def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biall
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("gunzip -c " + in_file +
                   (" | bcftools view -f 'PASS,.'" if passonly else "") +
+                  (" | bcftools annotate -x INFO/CSQ,INFO/ANN " if remove_oldeffects else "") +
                   (" | vcfallelicprimitives -t DECOMPOSED --keep-geno" if split_biallelic else "") +
                    " | sed 's/ID=AD,Number=./ID=AD,Number=R/'" +
                    " | vt decompose -s - " +
