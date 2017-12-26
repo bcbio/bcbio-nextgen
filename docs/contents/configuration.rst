@@ -940,11 +940,18 @@ Quality control
             options: ["-D"]
 - bcbio uses `MultiQC <http://multiqc.info/>`_ to combine QC output for all
   samples into a single report file. If you need to tweak configuration settings
-  from bcbio defaults, you can use :ref:`config-resources`::
+  from bcbio defaults, you can use :ref:`config-resources`. For instance to
+  display read counts with full numbers instead of the default millions::
 
        resources:
          multiqc:
-           options: ["--cl_config", "'qualimap_config: { general_stats_coverage: [20,40,200] }'"]
+           options: ["--cl_config", "'read_count_multiplier: 1'"]
+
+  or as thousands::
+
+       resources:
+         multiqc:
+           options: ["--cl_config", "'{read_count_multiplier: 0.001, read_count_prefix: K}'"]
 
 .. _contaminants: https://ccb.jhu.edu/software/kraken/
 .. _custom database: https://github.com/DerrickWood/kraken

@@ -1,11 +1,6 @@
 fc_name: 'develtest'
 upload:
   dir: upload
-  # method: galaxy
-  # researcher: Test Jones
-  # galaxy_url: http://localhost:8080
-  # galaxy_api_key: 3de311fb973eeabaafc9aebc667b5643
-  # galaxy_library: test
 details:
   - description: VarOnly
     analysis: variant2
@@ -61,6 +56,9 @@ details:
         options: [-o, FullNW]
       tmp:
         dir: tmptest
+      multiqc:
+        options: ["--cl_config", "'read_count_multiplier: 1'"]
+        #options: ["--cl_config", "'{read_count_multiplier: 0.001, read_count_prefix: K}'"]
       #gatk:
       #  dir: /usr/share/java/gatk-1.6-13-g91f02df
     metadata:
