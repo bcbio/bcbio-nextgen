@@ -72,8 +72,8 @@ def _set_stranded_flag(options, config):
     options["library-type"] = flag
     return options
 
-def _set_fusion_mode(options, config):
-    if _should_run_fusion(config):
+def _set_fusion_mode(options, data):
+    if _should_run_fusion(data):
         options["fusion-search"] = True
     return options
 
@@ -84,14 +84,14 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
     """
     config = data["config"]
     options = get_in(config, ("resources", "tophat", "options"), {})
-    options = _set_fusion_mode(options, config)
+    options = _set_fusion_mode(options, data)
     options = _set_quality_flag(options, data)
     options = _set_transcriptome_option(options, data, ref_file)
     options = _set_cores(options, config)
     options = _set_rg_options(options, names)
     options = _set_stranded_flag(options, config)
 
-    ref_file, runner = _determine_aligner_and_reference(ref_file, config)
+    ref_file, runner = _determine_aligner_and_reference(ref_file, data)
 
     # fusion search does not work properly with Bowtie2
     if options.get("fusion-search", False):
@@ -249,7 +249,7 @@ def _bowtie_for_innerdist(start, fastq_file, pair_file, ref_file, out_base,
         shutil.rmtree(work_dir)
     safe_makedir(work_dir)
     extra_args = ["-s", str(start), "-u", "250000"]
-    ref_file, bowtie_runner = _determine_aligner_and_reference(ref_file, data["config"])
+    ref_file, bowtie_runner = _determine_aligner_and_reference(ref_file, data)
     out_sam = bowtie_runner.align(fastq_file, pair_file, ref_file, {"lane": out_base},
                                   work_dir, data, extra_args)
     dists = []
@@ -297,20 +297,18 @@ def _bowtie_major_version(stdout):
     return major_version
 
 
-def _should_run_fusion(config):
-    CALLER = 'tophat'
-    return config_utils.should_run_fusion(CALLER, config)
+def _should_run_fusion(data):
+    return dd.get_fusion_caller(data)
 
-
-def _determine_aligner_and_reference(ref_file, config):
-    fusion_mode = _should_run_fusion(config)
+def _determine_aligner_and_reference(ref_file, data):
+    fusion_mode = _should_run_fusion(data)
     # fusion_mode only works with bowtie1
     if fusion_mode:
-        return _get_bowtie_with_reference(config, ref_file, 1)
+        return _get_bowtie_with_reference(ref_file, 1)
     else:
-        return _get_bowtie_with_reference(config, ref_file, 2)
+        return _get_bowtie_with_reference(ref_file, 2)
 
-def _get_bowtie_with_reference(config, ref_file, version):
+def _get_bowtie_with_reference(ref_file, version):
     if version == 1:
         ref_file = ref_file.replace("/bowtie2/", "/bowtie/")
         return ref_file, bowtie

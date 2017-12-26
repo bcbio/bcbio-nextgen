@@ -11,8 +11,8 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       tools_on: [gatk4]
-      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
-      transcript_assembler: [stringtie, cufflinks]
+      expression_caller: [stringtie, dexseq, kallisto, salmon]
+      transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
@@ -29,8 +29,8 @@ details:
       trim_reads: read_through
       adapters: [truseq, polya]
       tools_on: [gatk4]
-      expression_caller: [stringtie, dexseq, kallisto, salmon, sailfish, cufflinks]
-      transcript_assembler: [stringtie, cufflinks]
+      expression_caller: [stringtie, dexseq, kallisto, salmon]
+      transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
