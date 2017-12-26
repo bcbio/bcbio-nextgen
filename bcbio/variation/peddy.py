@@ -25,7 +25,7 @@ PEDDY_OUT_EXTENSIONS = [".background_pca.json", ".het_check.csv", ".pca_check.pn
 def run_peddy_parallel(samples, parallel_fn):
     batch_samples = get_samples_by_batch(samples)
     to_run = batch_samples.values()
-    samples = parallel_fn("run_peddy", [to_run])
+    samples = parallel_fn("run_peddy", [[x] for x in to_run])
     return samples
 
 def run_peddy(samples):
