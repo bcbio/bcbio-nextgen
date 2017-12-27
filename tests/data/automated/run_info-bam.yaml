@@ -38,7 +38,7 @@ details:
       coverage_interval: genome
       tools_on: [qualimap_full, gatk4, vqsr, svplots]
       tools_off: [gemini]
-      #vcfanno: [gemini]
+      vcfanno: [gemini]
       mixup_check: qsignature
       quality_format: standard
       nomap_split_size: 50

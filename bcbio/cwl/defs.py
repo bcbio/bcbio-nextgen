@@ -39,6 +39,7 @@ def s(name, parallel, inputs, outputs, image, programs=None, disk=None, cores=No
         - single-split -- Split a sample into sub-components (by read sections).
         - single-parallel -- Run sub-components of a sample in parallel.
         - single-merge -- Merge multiple sub-components into a single sample.
+        - single-single -- Single sample, single item, nothing fancy.
       3. batch -- Several related samples (tumor/normal, or populations). Used in sub-workflows.
         - batch-split -- Split a batch of samples into sub-components (by genomic region).
         - batch-parallel -- Run sub-components of a batch in parallel.
@@ -72,8 +73,8 @@ def cwlout(key, valtype=None, extensions=None, fields=None):
         out["secondaryFiles"] = extensions
     return out
 
-def _alignment():
-    align = [s("prep_align_inputs", "single-split",
+def _alignment(checkpoints):
+    align = [s("prep_align_inputs", "single-split" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"]],
                [cwlout("process_alignment_rec", "record",
                        fields=[cwlout(["files"], ["null", {"type": "array", "items": "File"}], [".gbi"]),
@@ -81,7 +82,7 @@ def _alignment():
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam"],
                disk={"files": 1.5}),
-             s("process_alignment", "single-parallel",
+             s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"], ["process_alignment_rec"]],
                [cwlout(["work_bam"], ["File", "null"], [".bai"]),
                 cwlout(["align_bam"], ["File", "null"], [".bai"]),
@@ -91,16 +92,17 @@ def _alignment():
                "bcbio-vc", ["bwa", "bwakit", "grabix", "minimap2", "novoalign", "snap-aligner=1.0dev.97",
                             "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
                             "samblaster", "variantbam"],
-               disk={"files": 2}),
-             s("merge_split_alignments", "single-merge",
-               [["alignment_rec"], ["work_bam"], ["align_bam"],
-                ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],["hla", "fastq"]],
-               [cwlout(["align_bam"], ["File", "null"], [".bai"]),
-                cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
-                cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
-                cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
-               "bcbio-vc", ["biobambam", "samtools", "variantbam"],
-               disk={"files": 3.5})]
+               disk={"files": 2})]
+    if checkpoints["align_split"]:
+        align += [s("merge_split_alignments", "single-merge",
+                  [["alignment_rec"], ["work_bam"], ["align_bam"],
+                   ["work_bam_plus", "disc"], ["work_bam_plus", "sr"], ["hla", "fastq"]],
+                  [cwlout(["align_bam"], ["File", "null"], [".bai"]),
+                   cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
+                   cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
+                   cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
+                  "bcbio-vc", ["biobambam", "samtools", "variantbam"],
+                  disk={"files": 3.5})]
     return align
 
 def _variant_hla(checkpoints):
@@ -233,13 +235,14 @@ def _variant_checkpoints(samples):
     checkpoints["jointvc"] = any([(dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d))) and dd.get_batch(d)
                                   for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
+    checkpoints["align_split"] = not all([dd.get_align_split_size(d) is False for d in samples])
     return checkpoints
 
 def variant(samples):
     """Variant calling workflow definition for CWL generation.
     """
     checkpoints = _variant_checkpoints(samples)
-    align_wf = _alignment()
+    align_wf = _alignment(checkpoints)
     align = [s("alignment_to_rec", "multi-combined",
                [["files"], ["analysis"],
                 ["config", "algorithm", "align_split_size"],

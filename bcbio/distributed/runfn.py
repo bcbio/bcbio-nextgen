@@ -125,7 +125,8 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
             if record_name:
                 if parallel in ["multi-batch"]:
                     recs = _nested_cwl_record(out, record_attrs)
-                elif parallel in ["single-split", "multi-combined", "multi-parallel", "batch-single"]:
+                elif parallel in ["single-split", "multi-combined", "multi-parallel", "batch-single",
+                                  "single-single"]:
                     recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs), record_attrs) for xs in out]
                 else:
                     samples = [utils.to_single_data(xs) for xs in out]
