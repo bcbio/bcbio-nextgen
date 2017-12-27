@@ -31,7 +31,7 @@ def run_peddy_parallel(samples, parallel_fn):
 def run_peddy(samples):
     vcf_file = None
     for d in samples:
-        if dd.get_sample_name(d) in vcfutils.get_samples(dd.get_vrn_file(d)):
+        if dd.get_vrn_file(d) and dd.get_sample_name(d) in vcfutils.get_samples(dd.get_vrn_file(d)):
             vcf_file = dd.get_vrn_file(d)
             break
     data = samples[0]
@@ -83,6 +83,8 @@ def get_samples_by_batch(samples):
     batch_samples = defaultdict(list)
     for data in dd.sample_data_iterator(samples):
         batch = dd.get_batch(data) or dd.get_sample_name(data)
+        if isinstance(batch, list):
+            batch = tuple(batch)
         batch_samples[batch].append(data)
     return batch_samples
 
