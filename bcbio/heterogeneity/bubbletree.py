@@ -108,10 +108,12 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                     reader = csv.reader(in_handle, dialect="excel-tab")
                     writer = csv.writer(out_handle)
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
-                    reader.next()  # header
-                    for chrom, start, end, _, log2, probes in (xs[:6] for xs in reader):
-                        if chromhacks.is_autosomal(chrom):
-                            writer.writerow([_to_ucsc_style(chrom), start, end, probes, log2])
+                    header = reader.next()
+                    for line in reader:
+                        cur = dict(zip(header, line))
+                        if chromhacks.is_autosomal(cur["chromosome"]):
+                            writer.writerow([_to_ucsc_style(cur["chromosome"]), cur["start"],
+                                             cur["end"], cur["probes"], cur["log2"]])
     return out_file
 
 def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None):
