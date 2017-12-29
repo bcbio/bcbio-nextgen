@@ -150,7 +150,11 @@ other analyses. The available targets are:
 - ``gemini`` -- The `GEMINI <http://gemini.readthedocs.org/>`_ framework
   associates publicly available metadata with called variants, and provides
   utilities for query and analysis. This target installs the required GEMINI
-  data files.
+  data files, including `ExAC <http://exac.broadinstitute.org/>`_.
+- ``gnomad`` -- `gnomAD <http://gnomad.broadinstitute.org/>`_ is a large scale
+  collection of genome variants, expanding on ExAC to include whole genome and
+  more exome inputs. This is a large 25Gb download, available for human genome
+  builds GRCh37, hg19 and hg38.
 - ``cadd`` -- `CADD <http://cadd.gs.washington.edu/home>`_ evaluates the
   potential impact of variations. It is freely available for non-commercial
   research, but requires licensing for commercial usage. The download is 30Gb and
