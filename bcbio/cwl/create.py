@@ -56,20 +56,22 @@ def _cwl_workflow_template(inputs, top_level=False):
             "outputs": [],
             "steps": []}
 
-def _add_disk_estimates(name, parallel, cwl_res, inputs, file_estimates, samples, disk,
+def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
                         cur_remotes):
-    """Add disk usage estimates to CWL ResourceRequirement.
+    """Retrieve disk usage estimates as CWL ResourceRequirement and hint.
 
-    Based on inputs (which need to be staged) and disk
-    specifications (which estimate outputs).
+    Disk specification for temporary files and outputs.
+
+    Also optionally includes disk input estimates as a custom hint for
+    platforms which need to stage these and don't pre-estimate these when
+    allocating machine sizes.
     """
-    if not disk:
-        disk = {}
+    tmp_disk, out_disk, in_disk = 0, 0, 0
     if file_estimates:
-        total_estimate = 0
-        for key, multiplier in disk.items():
-            if key in file_estimates:
-                total_estimate += int(multiplier * file_estimates[key])
+        if disk:
+            for key, multiplier in disk.items():
+                if key in file_estimates:
+                    out_disk += int(multiplier * file_estimates[key])
         for inp in inputs:
             scale = 2.0 if inp.get("type") == "array" else 1.0
             # Allocating all samples, could remove for `to_rec` when we ensure we
@@ -79,15 +81,20 @@ def _add_disk_estimates(name, parallel, cwl_res, inputs, file_estimates, samples
             if workflow.is_cwl_record(inp):
                 for f in _get_record_fields(inp):
                     if f["name"] in file_estimates:
-                        total_estimate += file_estimates[f["name"]] * scale
+                        in_disk += file_estimates[f["name"]] * scale
             elif inp["id"] in file_estimates:
-                total_estimate += file_estimates[inp["id"]] * scale
-        if total_estimate:
-            # Round total estimates to integer, assign extra half to temp space
-            # It's not entirely clear how different runners interpret this
-            cwl_res["tmpdirMin"] = int(math.ceil(total_estimate * 0.5))
-            cwl_res["outdirMin"] += int(math.ceil(total_estimate))
-    return cwl_res
+                in_disk += file_estimates[inp["id"]] * scale
+        # Round total estimates to integer, assign extra half to temp space
+        # It's not entirely clear how different runners interpret this
+        tmp_disk = int(math.ceil(out_disk * 0.5))
+        out_disk = int(math.ceil(out_disk))
+
+    bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
+    disk_hint = {"outdirMin": bcbio_docker_disk + out_disk, "tmpdirMin": tmp_disk}
+    # We could skip input disk for steps which require only transformation (and thus no staging) with:
+    # int(math.ceil(in_disk)) if not name.endswith("_to_rec") else 0
+    input_hint = {"class": "dx:InputResourceRequirement", "indirMin": int(math.ceil(in_disk))}
+    return disk_hint, input_hint
 
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                 file_estimates, disk, step_cores, samples, cur_remotes):
@@ -95,18 +102,17 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     cores = min([step_cores, resource_cores]) if step_cores else resource_cores
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
-    bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
-    cwl_res = {"class": "ResourceRequirement",
-               "coresMin": cores, "ramMin": mem_mb_total, "outdirMin": bcbio_docker_disk}
-    cwl_res = _add_disk_estimates(name, parallel, cwl_res, inputs, file_estimates, samples, disk,
-                                  cur_remotes)
+    cwl_res = {"class": "ResourceRequirement", "coresMin": cores, "ramMin": mem_mb_total}
+    disk_hint, input_hint = _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
+                                                cur_remotes)
+    cwl_res.update(disk_hint)
     docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
     docker = {"class": "DockerRequirement", "dockerPull": docker_image, "dockerImageId": docker_image}
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
            "baseCommand": ["bcbio_nextgen.py", "runfn", name, "cwl"],
            "requirements": [],
-           "hints": [docker, cwl_res],
+           "hints": [docker, cwl_res, input_hint],
            "arguments": [],
            "inputs": [],
            "outputs": []}
@@ -129,8 +135,15 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     # Multi-process methods that read heavily from BAM files need extra keep cache for Arvados
     if name in ["pipeline_summary", "variantcall_batch_region"]:
         out["hints"] += [{"class": "arv:RuntimeConstraints", "keep_cache": 4096}]
+    def add_to_namespaces(k, v, out):
+        if "$namespaces" not in out:
+            out["$namespaces"] = {}
+        out["$namespaces"][k] = v
+        return out
     if any(h.get("class", "").startswith("arv:") for h in out["hints"]):
-        out["$namespaces"] = {"arv": "http://arvados.org/cwl#"}
+        out = add_to_namespaces("arv", "http://arvados.org/cwl#", out)
+    if any(h.get("class", "").startswith("dx") for h in out["hints"]):
+        out = add_to_namespaces("dx", "https://www.dnanexus.com/cwl#", out)
     # Use JSON for inputs, rather than command line arguments
     # Correctly handles multiple values and batching across CWL runners
     use_commandline_args = False
