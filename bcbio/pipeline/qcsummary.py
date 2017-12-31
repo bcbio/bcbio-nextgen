@@ -54,7 +54,7 @@ def pipeline_summary(data):
     Handles standard and CWL (single QC output) cases.
     """
     data = utils.to_single_data(data)
-    work_bam = data.get("align_bam")
+    work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
     elif data["analysis"].lower().startswith("chip-seq"):

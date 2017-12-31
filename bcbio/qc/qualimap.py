@@ -251,13 +251,15 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
                     out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
 
 def _detect_rRNA(data):
-    sample = dd.get_sample_name(data)
     gtf_file = dd.get_gtf_file(data)
-    salmon_dir = dd.get_salmon_dir(data)
-    quant = os.path.join(salmon_dir, "quant", "quant.sf")
+    quant = tz.get_in(["quant", "tsv"], data)
+    if not quant:
+        salmon_dir = dd.get_salmon_dir(data)
+        if salmon_dir:
+            quant = os.path.join(salmon_dir, "quant", "quant.sf")
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[1] for x in rrna_features if x])
-    if not (transcripts and utils.file_exists(quant)):
+    if not (transcripts and quant and utils.file_exists(quant)):
         return {'rRNA': "NA", "rRNA_rate": "NA"}
     sample_table = pd.read_csv(quant, sep="\t")
     rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
@@ -360,9 +362,14 @@ def _find_qualimap_secondary_files(results_dir, base_file):
         is_dup = (os.path.basename(x) == os.path.basename(base_file) and
                   os.path.getsize(x) == os.path.getsize(base_file))
         return not is_dup
-    return filter(not_dup,
-                  glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
-                  glob.glob(os.path.join(results_dir, '*.txt')) +
-                  glob.glob(os.path.join(results_dir, "css", "*")) +
-                  glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
-                  glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))
+    def is_problem_file(x):
+        """Problematic files with characters that make some CWL runners unhappy.
+        """
+        return x.find("(") >= 0 or x.find(")") >= 0 or x.find(" ") >= 0
+    return filter(lambda x: not is_problem_file(x),
+                  filter(not_dup,
+                         glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
+                         glob.glob(os.path.join(results_dir, '*.txt')) +
+                         glob.glob(os.path.join(results_dir, "css", "*")) +
+                         glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
+                         glob.glob(os.path.join(results_dir, "images_qualimapReport", "*"))))
