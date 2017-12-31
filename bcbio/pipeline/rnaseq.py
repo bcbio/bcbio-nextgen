@@ -1,7 +1,8 @@
 import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
-                          express, variation, stringtie, sailfish, spikein, pizzly, ericscript)
+                          express, variation, stringtie, sailfish, spikein, pizzly, ericscript,
+                          kallisto, salmon)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import joint, multi, vardict, vcfanno
@@ -90,9 +91,26 @@ def run_rnaseq_ann_filter(data):
     return [[data]]
 
 def quantitate(data):
+    """CWL target for quantitation.
+
+    XXX Needs to be split and parallelized by expression caller, with merging
+    of multiple calls.
+    """
     data = to_single_data(to_single_data(data))
     data = generate_transcript_counts(data)[0][0]
-    data = sailfish.run_sailfish(data)[0][0]
+    data["quant"] = {}
+    if "sailfish" in dd.get_expression_caller(data):
+        data = to_single_data(sailfish.run_sailfish(data)[0])
+        data["quant"]["tsv"] = data["sailfish"]
+        data["quant"]["hdf5"] = os.path.join(os.path.dirname(data["sailfish"]), "abundance.h5")
+    if ("kallisto" in dd.get_expression_caller(data) or "pizzly" in dd.get_fusion_caller(data, [])):
+        data = to_single_data(kallisto.run_kallisto_rnaseq(data)[0])
+        data["quant"]["tsv"] = os.path.join(data["kallisto_quant"], "abundance.tsv")
+        data["quant"]["hdf5"] = os.path.join(data["kallisto_quant"], "abundance.h5")
+    if "salmon" in dd.get_expression_caller(data):
+        data = to_single_data(salmon.run_salmon_reads(data)[0])
+        data["quant"]["tsv"] = data["salmon"]
+        data["quant"]["hdf5"] = os.path.join(os.path.dirname(data["salmon"]), "abundance.h5")
     return [[data]]
 
 def quantitate_expression_parallel(samples, run_parallel):

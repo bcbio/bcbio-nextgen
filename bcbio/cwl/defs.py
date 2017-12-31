@@ -433,71 +433,59 @@ def _variant_sv(checkpoints):
     final_outputs = [["sv", "calls"]]
     return steps, final_outputs
 
-def fastrnaseq(samples):
-    prep = [s("prep_samples", "multi-parallel",
-              [["files"],
-               dd.get_keys("sample_name")],
-              [cwlout(["files"], "File")],
-              "bcbio", programs=["picard"])]
-    quant = [s("run_salmon_reads", "multi-parallel",
-               [["files"],
-                dd.get_keys("sample_name"),
-                dd.get_keys("gtf_file"),
-                dd.get_keys("ref_file"),
-                dd.get_keys("genome_build")],
-               [cwlout(dd.get_keys("sailfish_dir"), "File")],
-               "bcbio", programs=["salmon"],
-               disk={"files": 1.5})]
-    steps = quant
-    final_outputs = [dd.get_keys('sailfish_dir')]
-    return steps, final_outputs
-
 def rnaseq(samples):
-    prep = [s("prep_samples", "multi-parallel",
-              [["files"],
-               dd.get_keys("sample_name")],
-              [cwlout(["files"], "File")],
-              "bcbio", programs=["picard"])]
+    prep = [s("prepare_sample", "multi-parallel",
+              [["files"], dd.get_keys("sample_name"),
+               dd.get_keys("ref_file"), dd.get_keys("genome_build"), dd.get_keys("gtf_file"),
+               ["analysis"],
+               ["rgnames", "pl"], ["rgnames", "pu"], ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
+               ["reference", "aligner", "indexes"],
+               ["config", "algorithm", "aligner"],
+               ["config", "algorithm", "expression_caller"],
+               ["config", "algorithm", "quality_format"]],
+              [cwlout("prep_rec", "record")],
+              "bcbio-rnaseq", programs=["picard", "samtools"]),
+            s("trim_sample", "multi-parallel",
+              [["prep_rec"]],
+              [cwlout("trim_rec", "record")],
+              "bcbio-rnaseq", programs=["atropos;env=python3"])]
     align = [s("process_alignment", "multi-parallel",
-               [["files"], ["reference", "fasta", "base"],
-                ["analysis"],
-                ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
-                ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
-                ["reference", "aligner", "indexes"],
-                ["config", "algorithm", "aligner"],
-                ["genome_resources", "rnaseq", "transcripts"],
-                ["config", "algorithm", "quality_format"]],
-               [cwlout(["work_bam"], "File", [".bai"]),
-                cwlout(["align_bam"], "File", [".bai"])],
-               "bcbio-vc", ["aligner", "samtools", "sambamba", "seqtk"],
+               [["trim_rec"]],
+               [cwlout(["work_bam"], "File", [".bai"])],
+               "bcbio-rnaseq", ["star", "hisat2", "tophat", "samtools",
+                                "sambamba", "seqtk"],
                {"files": 1.5})]
     quantitate = [s("rnaseq_quantitate", "multi-parallel",
-                  [["files"],
-                   dd.get_keys("work_bam"),
-                   dd.get_keys("gtf_file"),
-                   dd.get_keys("ref_file"),
-                   dd.get_keys("genome_build")],
+                  [["trim_rec"], ["work_bam"]],
                   [cwlout(dd.get_keys("count_file"), "File"),
-                   cwlout(dd.get_keys("sailfish_dir"), "File")],
-                  "bcbio", programs=["sailfish"],
-                  disk={"files": 1.5})]
-    qc = [s("pipeline_summary", "multi-parallel",
-            [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+                   cwlout(["quant", "tsv"], "File"),
+                   cwlout(["quant", "hdf5"], "File")],
+                  "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto"],
+                  disk={"files": 0.5})]
+    qc = [s("qc_to_rec", "multi-combined",
+            [["work_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),
+             ["genome_build"], ["config", "algorithm", "coverage_interval"],
+             ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
              ["config", "algorithm", "qc"]],
-            [cwlout(["summary", "qc", "samtools"], "File"),
-             cwlout(["summary", "qc", "fastqc"], "File")],
-            "bcbio", ["samtools", "fastqc"]),
+            [cwlout("qc_rec", "record")],
+            "bcbio-rnaseq", disk={"files": 1.5}, cores=1),
+          s("pipeline_summary", "multi-parallel",
+            [["qc_rec"]],
+            [cwlout("qcout_rec", "record",
+                    fields=[cwlout(["summary", "qc"], ["File", "null"]),
+                            cwlout(["summary", "metrics"], ["string", "null"]),
+                            cwlout("inherit")])],
+            "bcbio-rnaseq", ["bedtools", "fastqc", "goleft", "mosdepth",
+                             "picard", "pythonpy", "qsignature", "qualimap",
+                             "samtools"]),
           s("multiqc_summary", "multi-combined",
-            [["genome_build"], ["summary", "qc", "samtools"], ["summary", "qc", "fastqc"],
-             ["reference", "fasta", "base"], ["config", "algorithm", "coverage_interval"]],
+            [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
-            "bcbio")]
+            "bcbio-rnaseq")]
 
     steps = prep + align + quantitate + qc
-    final_outputs = [dd.get_keys("work_bam"), dd.get_keys("sailfish_dir"),
-                     ["summary", "multiqc"]]
+    final_outputs = [dd.get_keys("work_bam"), ["quant", "tsv"], ["summary", "multiqc"]]
     return steps, final_outputs
 
 workflows = \
-  {"variant": variant, "variant2": variant, "fastrna-seq": fastrnaseq,
-   "rna-seq": rnaseq}
+  {"variant": variant, "variant2": variant, "rna-seq": rnaseq}
