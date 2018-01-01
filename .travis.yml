@@ -56,6 +56,16 @@ script:
   - docker rmi -f quay.io/bcbio/bcbio-vc
   - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
   - docker images
+  # -- bcbio RNA-seq CWL tests
+  - docker pull quay.io/bcbio/bcbio-rnaseq
+  - docker images
+  - df -h
+  - py.test tests/bcbio_vm -v -s -m cwl_docker_rnaseq
+  # -- Cleanup RNA-seq docker image
+  - docker rm `docker ps -a -q`
+  - docker rmi -f quay.io/bcbio/bcbio-rnaseq
+  - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
+  - docker images
 
 after_failure:
   - df -h

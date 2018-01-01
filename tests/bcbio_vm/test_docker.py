@@ -86,6 +86,19 @@ class TestCWL():
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl
+    @pytest.mark.cwl_docker_rnaseq
+    def test_4_cwl_rnaseq(self, install_test_files, data_dir):
+        """CWL: run a RNA-seq workflow using Docker.
+        """
+        with install_cwl_test_files(data_dir) as workdir:
+            with utils.chdir(os.path.join(workdir, "rnaseq")):
+                cl = ["bash", "./run_generate_cwl.sh"]
+                if os.path.exists("bunny_work"):
+                    shutil.rmtree("bunny_work")
+                cl = ["bash", "./run_bunny.sh"]
+                subprocess.check_call(cl)
+
+    @pytest.mark.cwl
     @pytest.mark.cwl_local
     @pytest.mark.install_required
     def test_1_cwl_local(self, install_test_files, data_dir):
@@ -102,7 +115,7 @@ class TestCWL():
 
     @pytest.mark.cwl
     @pytest.mark.cwl_arvados
-    def test_1_cwl_arvados(self, install_test_files, data_dir):
+    def test_5_cwl_arvados(self, install_test_files, data_dir):
         """CWL: prepare workflow for running on Arvados.
 
         Requires ARVADOS_API_HOST and ARVADOS_API_TOKEN set
