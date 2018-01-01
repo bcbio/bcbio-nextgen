@@ -1,4 +1,3 @@
-import getpass
 import os
 import shutil
 import subprocess
@@ -100,3 +99,16 @@ class TestCWL():
                     shutil.rmtree("cwltool_work")
                 cl = ["bash", "./run_cwltool.sh"]
                 subprocess.check_call(cl)
+
+    @pytest.mark.cwl
+    @pytest.mark.cwl_arvados
+    def test_1_cwl_arvados(self, install_test_files, data_dir):
+        """CWL: prepare workflow for running on Arvados.
+
+        Requires ARVADOS_API_HOST and ARVADOS_API_TOKEN set
+        """
+        if os.environ.get("ARVADOS_API_HOST") and os.environ.get("ARVADOS_API_TOKEN"):
+            with install_cwl_test_files(data_dir) as workdir:
+                with utils.chdir(os.path.join(workdir, "arvados")):
+                    cl = ["bash", "./run_generate_cwl.sh"]
+                    subprocess.check_call(cl)
