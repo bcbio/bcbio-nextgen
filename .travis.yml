@@ -3,9 +3,10 @@ dist: trusty
 language: generic
 
 env:
-  - BCBIO_DOCKER_PRIVILEGED=True
-  - ARVADOS_API_HOST=qr1hi.arvadosapi.com
-  - secure: "VJSdyR3BUpDGf7ot0I+GvSVR77TaMgxgscW1pFgxeitr3XvZ9la+PMuSqKH1B1TR/8Gq+l507FnQb1I/zjzUOvomX2gnsL6CcbTml8DKUz12kmQ0ixGT5IxZjDuBDvJwOJlRg1JLgJkcxMHa9EEmDZTh7Feyu7jJC9qeGKSyjFw="
+  global:
+    - secure: "VJSdyR3BUpDGf7ot0I+GvSVR77TaMgxgscW1pFgxeitr3XvZ9la+PMuSqKH1B1TR/8Gq+l507FnQb1I/zjzUOvomX2gnsL6CcbTml8DKUz12kmQ0ixGT5IxZjDuBDvJwOJlRg1JLgJkcxMHa9EEmDZTh7Feyu7jJC9qeGKSyjFw="
+  matrix:
+    - BCBIO_DOCKER_PRIVILEGED=True ARVADOS_API_HOST=qr1hi.arvadosapi.com
 
 before_install:
   # Fix issue with boto2 and gce https://github.com/travis-ci/travis-ci/issues/7940#issuecomment-311046316
