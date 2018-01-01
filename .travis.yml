@@ -49,6 +49,7 @@ script:
   - py.test tests/bcbio_vm -v -s -m cwl_docker_joint
   - py.test tests/bcbio_vm -v -s -m cwl_docker_somatic
   # -- platform integration
+  - sudo mkdir -p /etc/pki/tls/certs && sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
   - py.test tests/bcbio_vm -v -s -m cwl_arvados
   # -- Cleanup variant docker image
   - docker rm `docker ps -a -q`
