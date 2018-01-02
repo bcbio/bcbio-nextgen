@@ -396,14 +396,14 @@ def merge(bamfiles, out_bam, config):
     return out_bam
 
 
-def sort(in_bam, config, order="coordinate"):
+def sort(in_bam, config, order="coordinate", out_dir=None):
     """Sort a BAM file, skipping if already present.
     """
     assert is_bam(in_bam), "%s in not a BAM file" % in_bam
     if bam_already_sorted(in_bam, config, order):
         return in_bam
 
-    sort_stem = _get_sort_stem(in_bam, order)
+    sort_stem = _get_sort_stem(in_bam, order, out_dir)
     sort_file = sort_stem + ".bam"
     if not utils.file_exists(sort_file):
         samtools = config_utils.get_program("samtools", config)
@@ -413,7 +413,10 @@ def sort(in_bam, config, order="coordinate"):
             tx_dir = utils.safe_makedir(os.path.dirname(tx_sort_file))
             order_flag = "-n" if order == "queryname" else ""
             resources = config_utils.get_resources("samtools", config)
-            mem = resources.get("memory", "2G")
+            # Slightly decrease memory and allow more accurate representation
+            # in Mb to ensure fits within systems like SLURM
+            mem = config_utils.adjust_memory(resources.get("memory", "2G"),
+                                             1.25, "decrease", out_modifier="M").upper()
             cmd = ("{samtools} sort -@ {cores} -m {mem} -O BAM {order_flag} "
                    "-T {tx_sort_stem}-sort -o {tx_sort_file} {in_bam}")
             do.run(cmd.format(**locals()), "Sort BAM file %s: %s to %s" %
@@ -433,9 +436,11 @@ def _get_sort_order(in_bam, config):
                 if key == "SO":
                     return val
 
-def _get_sort_stem(in_bam, order):
+def _get_sort_stem(in_bam, order, out_dir):
     SUFFIXES = {"coordinate": ".sorted", "queryname": ".nsorted"}
     sort_base = os.path.splitext(in_bam)[0]
+    if out_dir:
+        sort_base = os.path.join(out_dir, os.path.basename(sort_base))
     for suffix in SUFFIXES:
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]

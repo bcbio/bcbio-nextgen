@@ -365,7 +365,7 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     if direction == "decrease":
         new_amount = amount / float(magnitude)
         # dealing with a specifier like 1G, need to scale to Mb
-        if new_amount < 1:
+        if new_amount < 1 or (out_modifier.upper().startswith("M") and modifier.upper().startswith("G")):
             if modifier.upper().startswith("G"):
                 new_amount = (amount * 1024) / magnitude
                 modifier = "M" + modifier[1:]

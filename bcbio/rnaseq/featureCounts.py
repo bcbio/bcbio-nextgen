@@ -19,7 +19,10 @@ def count(data):
     http://subread.sourceforge.net
     """
     in_bam = dd.get_work_bam(data)
-    sorted_bam = bam.sort(in_bam, dd.get_config(data), order="queryname")
+    out_dir = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))
+    if dd.get_aligner(data) == "star":
+        out_dir = os.path.join(out_dir, "%s_%s" % (dd.get_sample_name(data), dd.get_aligner(data)))
+    sorted_bam = bam.sort(in_bam, dd.get_config(data), order="queryname", out_dir=safe_makedir(out_dir))
     gtf_file = dd.get_gtf_file(data)
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "htseq-count")
