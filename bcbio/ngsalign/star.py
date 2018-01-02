@@ -41,7 +41,18 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         return data
 
     star_path = config_utils.get_program("STAR", config)
-    fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
+    def _unpack_fastq(f):
+        """Use process substitution instead of readFilesCommand for gzipped inputs.
+
+        Prevents issues on shared filesystems that don't support FIFO:
+        https://github.com/alexdobin/STAR/issues/143
+        """
+        if f and is_gzipped(f):
+            return "<(gunzip -c %s)" % f
+        else:
+            return f
+    fastq_files = (" ".join([_unpack_fastq(fastq_file), _unpack_fastq(pair_file)])
+                   if pair_file else _unpack_fastq(fastq_file))
     num_cores = dd.get_num_cores(data)
     gtf_file = dd.get_gtf_file(data)
     if ref_file.endswith("chrLength"):
@@ -53,15 +64,14 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         safe_makedir(tx_align_dir)
         safe_makedir(tx_out_dir)
         cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
-            "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
-            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
-            "--outStd BAM_Unsorted {srna_opts} "
-            "--limitOutSJcollapsed 2000000 "
-            "--outSAMtype BAM Unsorted "
-            "--outSAMmapqUnique 60 "
-            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
+               "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
+               "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
+               "--outStd BAM_Unsorted {srna_opts} "
+               "--limitOutSJcollapsed 2000000 "
+               "--outSAMtype BAM Unsorted "
+               "--outSAMmapqUnique 60 "
+               "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
-        cmd += " --readFilesCommand zcat " if is_gzipped(fastq_file) else ""
         cmd += _read_group_option(names)
         if dd.get_fusion_caller(data):
             cmd += (
