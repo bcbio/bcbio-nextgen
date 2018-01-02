@@ -654,6 +654,12 @@ def _item_to_cwldata(x, get_retriever):
                 secondary = [z for z in secondary if z]
                 if secondary:
                     out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+            elif x.endswith(".gtf"):
+                secondary = [x + ".db"]
+                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
+                secondary = [z for z in secondary if z]
+                if secondary:
+                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
         else:
             out = {"class": "File", "path": _directory_tarball(x)}
         return out

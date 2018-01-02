@@ -36,11 +36,13 @@ def guess_infer_extent(gtf_file):
 
 def get_gtf_db(gtf, in_memory=False):
     """
-    create a gffutils DB
+    create a gffutils DB, in memory if we don't have write permissions
     """
     db_file = gtf + ".db"
     if file_exists(db_file):
         return gffutils.FeatureDB(db_file)
+    if not os.access(os.path.dirname(db_file), os.W_OK | os.X_OK):
+        in_memory = True
     db_file = ":memory:" if in_memory else db_file
     if in_memory or not file_exists(db_file):
         infer_extent = guess_infer_extent(gtf)

@@ -519,7 +519,7 @@ def _to_cwl(val):
         if os.path.exists(val) and os.path.isfile(val):
             val = {"class": "File", "path": val}
             secondary = []
-            for idx in [".bai", ".tbi", ".gbi", ".fai"]:
+            for idx in [".bai", ".tbi", ".gbi", ".fai", ".db"]:
                 idx_file = val["path"] + idx
                 if os.path.exists(idx_file):
                     secondary.append({"class": "File", "path": idx_file})

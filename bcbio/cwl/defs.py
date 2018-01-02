@@ -460,7 +460,8 @@ def rnaseq(samples):
                   [cwlout(dd.get_keys("count_file"), "File"),
                    cwlout(["quant", "tsv"], "File"),
                    cwlout(["quant", "hdf5"], "File")],
-                  "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto"],
+                  "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto", "subread", "gffread",
+                                            "r=3.4.1", "r-wasabi"],
                   disk={"files": 0.5})]
     qc = [s("qc_to_rec", "multi-combined",
             [["work_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),
@@ -477,11 +478,11 @@ def rnaseq(samples):
                             cwlout("inherit")])],
             "bcbio-rnaseq", ["bedtools", "fastqc", "goleft", "mosdepth",
                              "picard", "pythonpy", "qsignature", "qualimap",
-                             "samtools"]),
+                             "sambamba", "samtools"]),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
-            "bcbio-rnaseq")]
+            "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
 
     steps = prep + align + quantitate + qc
     final_outputs = [dd.get_keys("work_bam"), ["quant", "tsv"], ["summary", "multiqc"]]
