@@ -52,7 +52,7 @@ script:
   - sudo mkdir -p /etc/pki/tls/certs && sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
   - py.test tests/bcbio_vm -v -s -m cwl_arvados
   # -- Cleanup variant docker image
-  - docker rm `docker ps -a -q`
+  - docker ps -a -q | xargs --no-run-if-empty docker rm
   - docker rmi -f quay.io/bcbio/bcbio-vc
   - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
   - docker images
@@ -62,7 +62,7 @@ script:
   - df -h
   - py.test tests/bcbio_vm -v -s -m cwl_docker_rnaseq
   # -- Cleanup RNA-seq docker image
-  - docker rm `docker ps -a -q`
+  - docker ps -a -q | xargs --no-run-if-empty docker rm
   - docker rmi -f quay.io/bcbio/bcbio-rnaseq
   - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
   - docker images
