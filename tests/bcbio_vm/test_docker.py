@@ -93,9 +93,9 @@ class TestCWL():
         with install_cwl_test_files(data_dir) as workdir:
             with utils.chdir(os.path.join(workdir, "rnaseq")):
                 cl = ["bash", "./run_generate_cwl.sh"]
-                if os.path.exists("bunny_work"):
-                    shutil.rmtree("bunny_work")
-                cl = ["bash", "./run_bunny.sh"]
+                if os.path.exists("toil_work"):
+                    shutil.rmtree("toil_work")
+                cl = ["bash", "./run_toil.sh"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl
