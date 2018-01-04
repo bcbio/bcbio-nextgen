@@ -56,9 +56,12 @@ def run_jointvc(items):
     start, end = coords.split("-")
     ready_region = "%s:%s-%s" % (chrom, int(start) + 1, end)
     str_region = ready_region.replace(":", "_")
+    batches = dd.get_batches(data) or dd.get_sample_name(data)
+    if not isinstance(batches, (list, tuple)):
+        batches = [batches]
     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "joint",
                                                             dd.get_variantcaller(data), str_region)),
-                            "%s-%s-%s.vcf.gz" % (dd.get_batches(data)[0], dd.get_variantcaller(data), str_region))
+                            "%s-%s-%s.vcf.gz" % (batches[0], dd.get_variantcaller(data), str_region))
     joint_out = square_batch_region(data, ready_region, [], [d["vrn_file"] for d in items], out_file)[0]
     data["vrn_file_region"] = joint_out["vrn_file"]
     return data
