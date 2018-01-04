@@ -18,7 +18,6 @@ import toolz as tz
 import yaml
 
 from bcbio import broad, utils
-from bcbio.bam import callable
 from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import bubbletree
@@ -373,6 +372,7 @@ def _callable_from_gvcf(data, vrn_file, out_dir):
 def get_analysis_intervals(data, vrn_file, base_dir):
     """Retrieve analysis regions for the current variant calling pipeline.
     """
+    from bcbio.bam import callable
     if vrn_file and vcfutils.is_gvcf_file(vrn_file):
         callable_bed = _callable_from_gvcf(data, vrn_file, base_dir)
         if callable_bed:
