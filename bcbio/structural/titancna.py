@@ -71,7 +71,7 @@ def _should_run(het_file):
     has_hets = False
     with open(het_file) as in_handle:
         for i, line in enumerate(in_handle):
-            if i > 0:
+            if i > 1:
                 has_hets = True
                 break
     return has_hets
