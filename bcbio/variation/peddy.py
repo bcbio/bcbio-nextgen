@@ -21,7 +21,8 @@ from bcbio.provenance import do
 
 PEDDY_OUT_EXTENSIONS = [".background_pca.json", ".het_check.csv", ".pca_check.png",
                         ".ped_check.png", ".ped_check.rel-difference.csv",
-                        ".peddy.ped", ".sex_check.csv", ".ped_check.png", ".html"]
+                        ".ped_check.csv", ".peddy.ped", ".sex_check.csv", ".ped_check.png", 
+                        ".html"]
 
 def run_peddy_parallel(samples, parallel_fn):
     batch_samples = get_samples_by_batch(samples)
