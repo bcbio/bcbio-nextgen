@@ -9,6 +9,7 @@ import toolz as tz
 
 from collections import defaultdict
 from bcbio.distributed.transaction import tx_tmpdir
+from bcbio import utils
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
@@ -26,7 +27,7 @@ def run_peddy_parallel(samples, parallel_fn):
     batch_samples = get_samples_by_batch(samples)
     to_run = batch_samples.values()
     samples = parallel_fn("run_peddy", [[x] for x in to_run])
-    return samples
+    return [[utils.to_single_data(x)] for x in samples]
 
 def run_peddy(samples):
     vcf_file = None
