@@ -31,6 +31,7 @@ maintain the same R1/R2/R3 naming scheme.
 """
 from __future__ import print_function
 import argparse
+import math
 import os
 import sys
 
@@ -63,17 +64,29 @@ r2_transform = r"""{
 
 def run_single(args):
     tags = [args.tag1, args.tag2] if args.tag1 and args.tag2 else None
-    add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, tags, cores=args.cores)
+    if args.umi_fq and not tags:
+        add_umis_to_fastq(args.out_base, args.read1_fq, None, args.umi_fq, tags, cores=args.cores)
+        add_umis_to_fastq(args.out_base, None, args.read2_fq, args.umi_fq, tags, cores=args.cores)
+    else:
+        add_umis_to_fastq(args.out_base, args.read1_fq, args.read2_fq, args.umi_fq, tags, cores=args.cores)
 
 @utils.map_wrap
 @zeromq_aware_logging
-def add_umis_to_fastq_parallel(out_base, read1_fq, read2_fq, umi_fq, tags, config):
-    add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags, cores=1)
+def add_umis_to_fastq_parallel(out_base, read1_fq, read2_fq, umi_fq, tags, cores, config):
+    add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags, cores)
 
 def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags=None, cores=1):
-    print("Processing", read1_fq, read2_fq, umi_fq)
+    print("Adding UMIs from", umi_fq, "to read headers in", " ".join([x for x in read1_fq, read2_fq if x]))
     out1_fq = out_base + "_R1.fq.gz"
     out2_fq = out_base + "_R2.fq.gz"
+    if umi_fq and not tags:
+        if read1_fq:
+            assert not read2_fq
+            return _add_umis_with_fastp(read1_fq, umi_fq, out1_fq, cores)
+        else:
+            assert read2_fq
+            return _add_umis_with_fastp(read2_fq, umi_fq, out2_fq, cores)
+
     transform_json_file = out_base + "-transform.json"
     with open(transform_json_file, "w") as out_handle:
         if tags:
@@ -101,6 +114,18 @@ def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags=None, cores=1):
 
     os.remove(transform_json_file)
 
+def _add_umis_with_fastp(read_fq, umi_fq, out_fq, cores):
+    """Add UMIs to reads from separate UMI file using fastp.
+    """
+    with utils.open_gzipsafe(umi_fq) as in_handle:
+        in_handle.readline()  # name
+        umi_size = len(in_handle.readline().strip())
+    cmd = ("fastp -Q -A -L -G -w {cores} --in1 {read_fq} --in2 {umi_fq} "
+           "--umi --umi_prefix UMI --umi_loc read2 --umi_len {umi_size} "
+           "--out1 >(bgzip --threads {cores} -c > {out_fq}) --out2 /dev/null "
+           "-j /dev/null -h /dev/null")
+    do.run(cmd.format(**locals()), "Add UMIs to fastq file with fastp")
+
 def run_autopair(args):
     outdir = utils.safe_makedir(args.outdir)
     to_run = []
@@ -117,6 +142,14 @@ def run_autopair(args):
             extras.append(fnames[0])
     ready_to_run = []
     tags = [args.tag1, args.tag2] if args.tag1 and args.tag2 else None
+    if not tags:
+        # Aim for 2 or 3 simultaneous processes, each with multiple cores
+        target_processes = 2
+        process_cores = max(1, (args.cores // target_processes) + (args.cores % target_processes))
+        overall_processes = max(1, int(math.ceil(args.cores / float(process_cores))))
+    else:
+        process_cores = 1
+        overall_processes = args.cores
     for r1, r2 in to_run:
         target = _commonprefix([r1, r2])
         if tags:
@@ -132,8 +165,13 @@ def run_autopair(args):
             assert r3, (r1, r2, extras)
             base_name = os.path.join(outdir, os.path.basename(_commonprefix([r1, r2, r3])))
             r1, r2, umi = _find_umi([r1, r2, r3])
-        ready_to_run.append([base_name, r1, r2, umi, tags, {"algorithm": {}, "resources": {}}])
-    parallel = {"type": "local", "cores": args.cores, "progs": []}
+        # fastp handles a single pair of reads so we split processing to run on each
+        if umi and not tags:
+            ready_to_run.append([base_name, r1, None, umi, None, process_cores, {"algorithm": {}, "resources": {}}])
+            ready_to_run.append([base_name, None, r2, umi, None, process_cores, {"algorithm": {}, "resources": {}}])
+        else:
+            ready_to_run.append([base_name, r1, r2, umi, tags, process_cores, {"algorithm": {}, "resources": {}}])
+    parallel = {"type": "local", "cores": overall_processes, "progs": []}
     run_multicore(add_umis_to_fastq_parallel, ready_to_run, {"algorithm": {}}, parallel)
 
 def _find_umi(files):
