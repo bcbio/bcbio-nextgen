@@ -1,4 +1,4 @@
-## 1.0.7 (in progress)
+## 1.0.7 (6 January 2018)
 
 - Automatically include bcbio anaconda PATH when running tools. Also allow
   custom BCBIOPATH specification to help with modules integration. Thanks to
