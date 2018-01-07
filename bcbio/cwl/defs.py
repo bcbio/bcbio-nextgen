@@ -328,21 +328,33 @@ def variant(samples):
                 cwlout(["config", "algorithm", "callable_count"], "int")],
                "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
                disk={"files": 0.5}, cores=1)]
+    vc, vc_out = _variant_vc(checkpoints)
+    sv, sv_out = _variant_sv(checkpoints)
+    hla, hla_out = _variant_hla(checkpoints)
+    qc, qc_out = _qc_workflow(checkpoints)
+    steps = align + hla + vc + sv + qc
+    final_outputs = [["align_bam"], ["regions", "sample_callable"]] + \
+                    vc_out + hla_out + sv_out + qc_out
+    return steps, final_outputs
+
+def _qc_workflow(checkpoints):
+    qc_inputs = \
+      [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+       ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
+       ["genome_build"], ["config", "algorithm", "qc"],
+       ["config", "algorithm", "coverage_interval"],
+       ["depth", "variant_regions", "regions"], ["depth", "variant_regions", "dist"],
+       ["depth", "sv_regions", "regions"], ["depth", "sv_regions", "dist"],
+       ["depth", "coverage", "regions"], ["depth", "coverage", "dist"], ["depth", "coverage", "thresholds"],
+       ["config", "algorithm", "variant_regions"],
+       ["config", "algorithm", "variant_regions_merged"],
+       ["config", "algorithm", "coverage"],
+       ["config", "algorithm", "coverage_merged"]]
+    if checkpoints.get("vc"):
+        qc_inputs += [["variants", "calls"]]
     qc = [s("qc_to_rec", "multi-combined",
-            [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
-             ["genome_build"], ["config", "algorithm", "coverage_interval"],
-             ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
-             ["config", "algorithm", "qc"],
-             ["depth", "variant_regions", "regions"], ["depth", "variant_regions", "dist"],
-             ["depth", "sv_regions", "regions"], ["depth", "sv_regions", "dist"],
-             ["depth", "coverage", "regions"], ["depth", "coverage", "dist"], ["depth", "coverage", "thresholds"],
-             ["config", "algorithm", "variant_regions"],
-             ["config", "algorithm", "variant_regions_merged"],
-             ["config", "algorithm", "coverage"],
-             ["config", "algorithm", "coverage_merged"]],
-            [cwlout("qc_rec", "record")],
-            "bcbio-vc",
-            disk={"files": 1.5}, cores=1),
+            qc_inputs, [cwlout("qc_rec", "record")],
+            "bcbio-vc", disk={"files": 1.5}, cores=1),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
             [cwlout("qcout_rec", "record",
@@ -358,14 +370,8 @@ def variant(samples):
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
             disk={"files": 2.0}, cores=1)]
-    vc, vc_out = _variant_vc(checkpoints)
-    sv, sv_out = _variant_sv(checkpoints)
-    hla, hla_out = _variant_hla(checkpoints)
-    steps = align + hla + qc + vc + sv
-    final_outputs = [["align_bam"], ["regions", "sample_callable"],
-                     cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
-                    ] + vc_out + hla_out + sv_out
-    return steps, final_outputs
+    qc_out = [cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]})]
+    return qc, qc_out
 
 def _variant_sv(checkpoints):
     """Structural variant workflow.
