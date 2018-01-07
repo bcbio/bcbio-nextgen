@@ -151,13 +151,15 @@ def get_gender(data):
     else:
         return "unknown"
 
-def create_ped_file(samples, base_vcf):
+def create_ped_file(samples, base_vcf, out_dir=None):
     """Create a GEMINI-compatible PED file, including gender, family and phenotype information.
 
     Checks for a specified `ped` file in metadata, and will use sample information from this file
     before reconstituting from metadata information.
     """
     out_file = "%s.ped" % utils.splitext_plus(base_vcf)[0]
+    if out_dir:
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
     sample_ped_lines = {}
     header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
     for md_ped in list(set([x for x in [tz.get_in(["metadata", "ped"], data)

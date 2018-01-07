@@ -31,6 +31,9 @@ def to_rec_single(samples, default_keys=None):
         out.append(recs[0])
     return out
 
+def is_cwl_run(data):
+    return data.get("is_cwl") or data.get("cwl_keys")
+
 def handle_combined_input(args):
     """Check for cases where we have a combined input nested list.
 

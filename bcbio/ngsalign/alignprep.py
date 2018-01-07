@@ -356,7 +356,7 @@ def _symlink_in_files(in_files, data):
 def _symlink_or_copy_grabix(in_file, out_file, data):
     """We cannot symlink in CWL, but may be able to use inputs or copy
     """
-    if data.get("is_cwl") or data.get("cwl_keys"):
+    if cwlutils.is_cwl_run(data):
         # Has grabix indexes, we're okay to go
         if utils.file_exists(in_file + ".gbi"):
             out_file = in_file

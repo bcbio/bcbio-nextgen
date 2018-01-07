@@ -10,18 +10,20 @@ import toolz as tz
 from collections import defaultdict
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 from bcbio.variation import vcfutils
 from bcbio.variation.population import create_ped_file
+from bcbio.qc import variant
 from bcbio.provenance import do
 
 
 PEDDY_OUT_EXTENSIONS = [".background_pca.json", ".het_check.csv", ".pca_check.png",
                         ".ped_check.png", ".ped_check.rel-difference.csv",
-                        ".ped_check.csv", ".peddy.ped", ".sex_check.csv", ".ped_check.png", 
+                        ".ped_check.csv", ".peddy.ped", ".sex_check.csv", ".ped_check.png",
                         ".html"]
 
 def run_peddy_parallel(samples, parallel_fn):
@@ -30,22 +32,40 @@ def run_peddy_parallel(samples, parallel_fn):
     samples = parallel_fn("run_peddy", [[x] for x in to_run])
     return [[utils.to_single_data(x)] for x in samples]
 
-def run_peddy(samples):
+def run_qc(_, data, out_dir):
+    """Run quality control in QC environment on a single sample.
+
+    Enables peddy integration with CWL runs.
+    """
+    if cwlutils.is_cwl_run(data):
+        qc_data = run_peddy([data], out_dir)
+        if tz.get_in(["summary", "qc", "peddy"], qc_data):
+            return tz.get_in(["summary", "qc", "peddy"], qc_data)
+
+def is_human(data):
+    return (tz.get_in(["genome_resources", "aliases", "human"], data, False) or
+            dd.get_genome_build(data) in ["hg19", "GRCh37", "hg38"])
+
+def run_peddy(samples, out_dir=None):
     vcf_file = None
     for d in samples:
-        if dd.get_vrn_file(d) and dd.get_sample_name(d) in vcfutils.get_samples(dd.get_vrn_file(d)):
-            vcf_file = dd.get_vrn_file(d)
-            break
+        vcinfo = variant.get_active_vcinfo(d)
+        if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
+            if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
+                vcf_file = vcinfo["vrn_file"]
+                break
     data = samples[0]
     peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
-    is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
-    if not peddy or not vcf_file or not is_human:
+    if not peddy or not vcf_file or not is_human(data):
         logger.info("peddy is not installed, not human or sample VCFs don't match, skipping correspondence checking "
                     "for %s." % vcf_file)
         return samples
-    ped_file = create_ped_file(samples, vcf_file)
     batch = dd.get_batch(data) or dd.get_sample_name(data)
-    peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", batch, "peddy"))
+    if out_dir:
+        peddy_dir = safe_makedir(out_dir)
+    else:
+        peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", batch, "peddy"))
+    ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
     peddy_prefix = os.path.join(peddy_dir, batch)
     peddy_report = peddy_prefix + ".html"
     peddyfiles = expected_peddy_files(peddy_report, batch)
