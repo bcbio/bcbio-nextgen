@@ -1,5 +1,6 @@
 """Next-gen variant detection and evaluation with GATK and SnpEff.
 """
+import collections
 import os
 import toolz as tz
 
@@ -18,9 +19,15 @@ def summarize_vc(items):
     """
     items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
     out = {"validate": _combine_validations(items),
-           "variants": {"calls": [], "gvcf": []}}
+           "variants": {"calls": [], "gvcf": [], "samples": []}}
     added = set([])
+    variants_by_sample = collections.defaultdict(list)
+    sample_order = []
     for data in items:
+        batch_samples = data.get("batch_samples", [dd.get_sample_name(data)])
+        for s in batch_samples:
+            if s not in sample_order:
+                sample_order.append(s)
         if data.get("vrn_file"):
             names = dd.get_batches(data)
             if not names:
@@ -33,16 +40,20 @@ def summarize_vc(items):
                 to_add = [("vrn_file", "calls", batch_name)]
             for vrn_key, out_key, name in to_add:
                 cur_name = "%s-%s" % (name, dd.get_variantcaller(data))
+                out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                                        "variants", out_key)),
+                                        "%s.vcf.gz" % cur_name)
+                for s in batch_samples:
+                    variants_by_sample[s].append(out_file)
                 if cur_name not in added:
-                    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
-                                                                            "variants", out_key)),
-                                            "%s.vcf.gz" % cur_name)
                     added.add(cur_name)
                     # Ideally could symlink here but doesn't appear to work with
                     # Docker container runs on Toil where PATHs don't get remapped
                     utils.copy_plus(os.path.realpath(data[vrn_key]), out_file)
                     vcfutils.bgzip_and_index(out_file, data["config"])
                     out["variants"][out_key].append(out_file)
+    for sample in sample_order:
+        out["variants"]["samples"].append(variants_by_sample[sample])
     return [out]
 
 def _combine_validations(items):

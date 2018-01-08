@@ -91,18 +91,22 @@ def _normalize_cwl_inputs(items):
     with_validate = {}
     vrn_files = []
     ready_items = []
+    batch_samples = []
     for data in (cwlutils.normalize_missing(utils.to_single_data(d)) for d in items):
+        batch_samples.append(dd.get_sample_name(data))
         if tz.get_in(["config", "algorithm", "validate"], data):
             with_validate[_checksum(tz.get_in(["config", "algorithm", "validate"], data))] = data
         if data.get("vrn_file"):
             vrn_files.append(data["vrn_file"])
         ready_items.append(data)
     if len(with_validate) == 0:
+        ready_items[0]["batch_samples"] = batch_samples
         return ready_items[0]
     else:
         assert len(with_validate) == 1, len(with_validate)
         assert len(set(vrn_files)) == 1, set(vrn_files)
         data = with_validate.values()[0]
+        data["batch_samples"] = batch_samples
         data["vrn_file"] = vrn_files[0]
         return data
 

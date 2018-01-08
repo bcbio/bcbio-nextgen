@@ -82,15 +82,18 @@ def get_active_vcinfo(data):
     if "variants" in data:
         variants = data["variants"]
         # CWL based list of variants
-        if isinstance(variants, dict) and "calls" in variants:
-            variants = variants["calls"]
+        if isinstance(variants, dict) and "samples" in variants:
+            variants = variants["samples"]
         for v in variants:
             # CWL -- a single variant file
             if isinstance(v, basestring) and os.path.exists(v):
                 active_vs.append({"vrn_file": v})
-            elif v.get("variantcaller") == "ensemble":
+            elif (isinstance(v, (list, tuple)) and len(v) > 0 and
+                  isinstance(v[0], basestring) and os.path.exists(v[0])):
+                active_vs.append({"vrn_file": v[0]})
+            elif isinstance(v, dict) and v.get("variantcaller") == "ensemble":
                 return v
-            elif v.get("vrn_file"):
+            elif isinstance(v, dict) and v.get("vrn_file"):
                 active_vs.append(v)
         if len(active_vs) > 0:
             return active_vs[0]

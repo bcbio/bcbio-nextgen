@@ -233,6 +233,7 @@ def batch_for_variantcall(samples):
     If doing joint calling, with `tools_on: [gvcf]`, split the sample into
     individuals instead of combining into a batch.
     """
+    sample_order = [dd.get_sample_name(utils.to_single_data(x)) for x in samples]
     to_process, extras = _dup_samples_by_variantcaller(samples, require_bam=False)
     batch_groups = collections.defaultdict(list)
     to_process = [utils.to_single_data(x) for x in to_process]
@@ -251,7 +252,9 @@ def batch_for_variantcall(samples):
                 batches.append([d])
         else:
             batches.append(cur_group)
-    return batches + extras
+    def by_original_order(xs):
+        return min([sample_order.index(dd.get_sample_name(x)) for x in xs])
+    return sorted(batches + extras, key=by_original_order)
 
 def _handle_precalled(data):
     """Copy in external pre-called variants fed into analysis.

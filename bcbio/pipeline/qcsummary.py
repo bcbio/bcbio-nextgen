@@ -210,9 +210,9 @@ def _split_samples_by_qc(samples):
     extras = []
     for data in [utils.to_single_data(x) for x in samples]:
         qcs = dd.get_algorithm_qc(data)
+        # kraken doesn't need bam
         if qcs and (dd.get_align_bam(data) or dd.get_work_bam(data) or
-                    tz.get_in(["config", "algorithm", "kraken"], data)  # kraken doesn't need bam
-                ):
+                    tz.get_in(["config", "algorithm", "kraken"], data)):
             for qc in qcs:
                 add = copy.deepcopy(data)
                 add["config"]["algorithm"]["qc"] = [qc]

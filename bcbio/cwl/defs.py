@@ -150,7 +150,8 @@ def _variant_vc(checkpoints):
     vc_wf += [s("compare_to_rm", "batch-single",
                 [["batch_rec"], ["vrn_file"]],
                 [cwlout("vc_rec", "record",
-                        fields=[cwlout(["validate", "summary"], ["File", "null"]),
+                        fields=[cwlout(["batch_samples"], {"type": "array", "items": "string"}),
+                                cwlout(["validate", "summary"], ["File", "null"]),
                                 cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
@@ -185,6 +186,8 @@ def _variant_vc(checkpoints):
              [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
              [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
               cwlout(["variants", "gvcf"], ["null", {"type": "array", "items": ["File", "null"]}]),
+              cwlout(["variants", "samples"], {"type": "array", "items": {"type": "array",
+                                                                          "items": ["File", "null"]}}),
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
@@ -351,7 +354,7 @@ def _qc_workflow(checkpoints):
        ["config", "algorithm", "coverage"],
        ["config", "algorithm", "coverage_merged"]]
     if checkpoints.get("vc"):
-        qc_inputs += [["variants", "calls"]]
+        qc_inputs += [["variants", "samples"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
             "bcbio-vc", disk={"files": 1.5}, cores=1),

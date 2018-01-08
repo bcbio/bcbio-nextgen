@@ -278,6 +278,25 @@ def _maybe_nest_bare_single(items_by_key, parallel):
     else:
         return items_by_key
 
+def _item_count(x):
+    return len(x) if _is_nested_item(x) else 1
+
+def _is_nested_single(v, target):
+    return target > 1 and _is_nested_item(v) and _item_count(v) == 1 and _item_count(v[0]) == target
+
+def _check_for_single_nested(target, items_by_key, input_order):
+    """Check for single nested inputs that match our target count and unnest.
+
+    Handles complex var inputs where some have an extra layer of nesting.
+    """
+    out = utils.deepish_copy(items_by_key)
+    for (k, t) in input_order.items():
+        if t == "var":
+            v = items_by_key[tuple(k.split("__"))]
+            if _is_nested_single(v, target):
+                out[tuple(k.split("__"))] = v[0]
+    return out
+
 def _merge_cwlinputs(items_by_key, input_order, parallel):
     """Merge multiple cwl records and inputs, handling multiple data items.
 
@@ -285,13 +304,18 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
     - Single record but multiple variables (merging arrayed jobs). Assign lists
       of variables to the record.
     """
-    def item_count(x):
-        return len(x) if _is_nested_item(x) else 1
     items_by_key = _maybe_nest_bare_single(items_by_key, parallel)
-    var_items = set([item_count(items_by_key[tuple(k.split("__"))]) for (k, t) in input_order.items() if t == "var"])
-    rec_items = set([item_count(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])
+    var_items = set([_item_count(items_by_key[tuple(k.split("__"))])
+                     for (k, t) in input_order.items() if t == "var"])
+    rec_items = set([_item_count(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])
     if var_items:
         num_items = var_items
+        if len(num_items) == 2 and 1 in num_items:
+            num_items.remove(1)
+            items_by_key_test = _check_for_single_nested(num_items.pop(), items_by_key, input_order)
+            var_items = set([_item_count(items_by_key_test[tuple(k.split("__"))])
+                             for (k, t) in input_order.items() if t == "var"])
+            num_items = var_items
         assert len(num_items) == 1, "Non-consistent variable data counts in CWL input:\n%s" % \
             (pprint.pformat(items_by_key))
         items_by_key, num_items = _nest_vars_in_rec(var_items, rec_items, input_order, items_by_key, parallel)
@@ -299,11 +323,14 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
         num_items = rec_items
         assert len(num_items) == 1, "Non-consistent record data counts in CWL input:\n%s" % \
             (pprint.pformat(items_by_key))
-    out = [{} for _ in range(num_items.pop())]
+    target_items = num_items.pop()
+    out = [{} for _ in range(target_items)]
     for (cwl_key, cwl_type) in input_order.items():
         if cwl_type == "var":
             cwl_key = tuple(cwl_key.split("__"))
         cur_vals = items_by_key[cwl_key]
+        if _is_nested_single(cur_vals, target_items):
+            cur_vals = [[x] for x in cur_vals[0]]
         for i, cur_val in enumerate(cur_vals):
             if isinstance(cwl_key, (list, tuple)):
                 # nested batches with records
