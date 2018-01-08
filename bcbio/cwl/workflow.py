@@ -52,6 +52,11 @@ def generate(variables, steps, final_outputs):
             yield "wf_finish", step.name, step.parallel, wf_inputs, wf_outputs, wf_scatter
             file_vs = _extract_from_subworkflow(file_vs, step)
             std_vs = _extract_from_subworkflow(std_vs, step)
+        elif hasattr(step, "expression"):
+            inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
+            outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)
+            parallel_ids = _find_split_vs(outputs, step.parallel)
+            yield ("expressiontool", step.name, inputs, outputs, step.expression, step.parallel)
         else:
             inputs, parallel_ids, nested_inputs = _get_step_inputs(step, file_vs, std_vs, parallel_ids)
             outputs, file_vs, std_vs = _get_step_outputs(step, step.outputs, file_vs, std_vs)

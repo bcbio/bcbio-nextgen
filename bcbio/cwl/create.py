@@ -159,6 +159,35 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                                           (workflow.get_base_id(v["id"]),
                                                            "record" if workflow.is_cwl_record(v) else "var")
                                                           for v in inputs])]
+    out = _add_inputs_to_tool(inputs, out, parallel, use_commandline_args)
+    out = _add_outputs_to_tool(outputs, out)
+    _tool_to_file(out, out_file)
+    return os.path.join("steps", os.path.basename(out_file))
+
+def _write_expressiontool(step_dir, name, inputs, outputs, expression, parallel):
+    """Create an ExpressionTool output for the given inputs
+    """
+    out_file = os.path.join(step_dir, "%s.cwl" % name)
+    out = {"class": "ExpressionTool",
+           "cwlVersion": "v1.0",
+           "requirements": [{"class": "InlineJavascriptRequirement"}],
+           "inputs": [],
+           "outputs": [],
+           "expression": expression}
+    out = _add_inputs_to_tool(inputs, out, parallel)
+    out = _add_outputs_to_tool(outputs, out)
+    _tool_to_file(out, out_file)
+    return os.path.join("steps", os.path.basename(out_file))
+
+def _add_outputs_to_tool(outputs, tool):
+    for outp in outputs:
+        outp_tool = copy.deepcopy(outp)
+        outp_tool = _clean_record(outp_tool)
+        outp_tool["id"] = workflow.get_base_id(outp["id"])
+        tool["outputs"].append(outp_tool)
+    return tool
+
+def _add_inputs_to_tool(inputs, tool, parallel, use_commandline_args=False):
     for i, inp in enumerate(inputs):
         base_id = workflow.get_base_id(inp["id"])
         inp_tool = copy.deepcopy(inp)
@@ -179,20 +208,18 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
             inp_binding = None
         inp_tool = _place_secondary_files(inp_tool, inp_binding)
         inp_tool = _clean_record(inp_tool)
-        out["inputs"].append(inp_tool)
-    for outp in outputs:
-        outp_tool = copy.deepcopy(outp)
-        outp_tool = _clean_record(outp_tool)
-        outp_tool["id"] = workflow.get_base_id(outp["id"])
-        out["outputs"].append(outp_tool)
+        tool["inputs"].append(inp_tool)
+    return tool
+
+def _tool_to_file(tool, out_file):
     with open(out_file, "w") as out_handle:
         def str_presenter(dumper, data):
             if len(data.splitlines()) > 1:  # check for multiline string
                 return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
             return dumper.represent_scalar('tag:yaml.org,2002:str', data)
         yaml.add_representer(str, str_presenter)
-        yaml.dump(out, out_handle, default_flow_style=False, allow_unicode=False)
-    return os.path.join("steps", os.path.basename(out_file))
+        yaml.dump(tool, out_handle, default_flow_style=False, allow_unicode=False)
+    return out_file
 
 def _clean_record(rec):
     """Remove secondary files from record fields, which are currently not supported.
@@ -357,6 +384,11 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                     file_estimates, disk, cores, samples, cur_remotes)
+            out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel, step_parallelism))
+            used_inputs |= set(x["id"] for x in inputs)
+        elif cur[0] == "expressiontool":
+            _, name, inputs, outputs, expression, parallel = cur
+            step_file = _write_expressiontool(step_dir, name, inputs, outputs, expression, parallel)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel, step_parallelism))
             used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "upload":
