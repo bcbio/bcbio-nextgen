@@ -350,7 +350,7 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
         if inherit_all:
             fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel))
         elif inherit:
-            fields.extend(_infer_record_outputs(inputs, unlist + inherit, file_vs, std_vs, parallel, inherit))
+            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, inherit))
     else:
         fields = _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel)
     out = {"id": "%s/%s" % (step_name, name),
@@ -391,8 +391,6 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
                 cur_v["type"] = orig_v["type"]
                 if cur_v["name"] in unlist:
                     cur_v = _flatten_nested_input(cur_v)
-                if to_include:
-                    cur_v = _nest_variable(cur_v)
                 fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
                 added.add(get_base_id(orig_v["id"]))
     return fields
