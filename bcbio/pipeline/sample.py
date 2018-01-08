@@ -32,6 +32,7 @@ from bcbio.bam import skewer
 from bcbio.structural.seq2c import prep_seq2c_bed
 from bcbio.variation.bedutils import clean_file, merge_overlaps
 from bcbio.structural import get_svcallers
+from bcbio.qc import samtools
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -243,6 +244,7 @@ def postprocess_alignment(data):
                            "mapped_stats": readstats.get_cache_file(data)}
         data["depth"] = covinfo.depth_files
         data = coverage.assign_interval(data)
+        data = samtools.run_and_save(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
             data["config"]["algorithm"]["variant_regions"] = callable_region_bed

@@ -2,21 +2,25 @@
 """
 import os
 
+import toolz as tz
+
 from bcbio.distributed.transaction import file_transaction
 from bcbio import utils
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
-def run(bam_file, data, out_dir):
+def run(_, data, out_dir=None):
     """Run samtools stats with reports on mapped reads, duplicates and insert sizes.
     """
-    stats_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
-    idxstats_file = os.path.join(out_dir, "%s-idxstats.txt" % dd.get_sample_name(data))
+    stats_file, idxstats_file = _get_stats_files(data, out_dir)
     samtools = config_utils.get_program("samtools", data["config"])
+    bam_file = dd.get_work_bam(data) or dd.get_align_bam(data)
     if not utils.file_exists(stats_file):
         utils.safe_makedir(out_dir)
         with file_transaction(data, stats_file) as tx_out_file:
+            if out_dir:
+                raise NotImplementedError
             cores = dd.get_num_cores(data)
             cmd = "{samtools} stats -@ {cores} {bam_file}"
             cmd += " > {tx_out_file}"
@@ -29,6 +33,29 @@ def run(bam_file, data, out_dir):
             do.run(cmd.format(**locals()), "samtools index stats", data)
     out = _parse_samtools_stats(stats_file)
     return out
+
+def run_and_save(data):
+    """Run QC, saving file outputs in data dictionary.
+    """
+    run(None, data)
+    stats_file, idxstats_file = _get_stats_files(data)
+    data = tz.update_in(data, ["depth", "samtools", "stats"], lambda x: stats_file)
+    data = tz.update_in(data, ["depth", "samtools", "idxstats"], lambda x: idxstats_file)
+    return data
+
+def _get_stats_files(data, out_dir=None):
+    """Retrieve stats files from pre-existing dictionary or filesystem.
+    """
+    if not out_dir:
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                  "qc", dd.get_sample_name(data), "samtools"))
+    stats_file = tz.get_in(["depth", "samtools", "stats"], data)
+    idxstats_file = tz.get_in(["depth", "samtools", "idxstats"], data)
+    if not stats_file:
+        stats_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
+    if not idxstats_file:
+        idxstats_file = os.path.join(out_dir, "%s-idxstats.txt" % dd.get_sample_name(data))
+    return stats_file, idxstats_file
 
 def _parse_samtools_stats(stats_file):
     out = {}

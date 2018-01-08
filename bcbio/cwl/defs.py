@@ -347,6 +347,7 @@ def _qc_workflow(checkpoints):
        ["genome_build"], ["config", "algorithm", "qc"],
        ["config", "algorithm", "coverage_interval"],
        ["depth", "variant_regions", "regions"], ["depth", "variant_regions", "dist"],
+       ["depth", "samtools", "stats"], ["depth", "samtools", "idxstats"],
        ["depth", "sv_regions", "regions"], ["depth", "sv_regions", "dist"],
        ["depth", "coverage", "regions"], ["depth", "coverage", "dist"], ["depth", "coverage", "thresholds"],
        ["config", "algorithm", "variant_regions"],
