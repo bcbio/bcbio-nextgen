@@ -19,8 +19,6 @@ def run(_, data, out_dir=None):
     if not utils.file_exists(stats_file):
         utils.safe_makedir(out_dir)
         with file_transaction(data, stats_file) as tx_out_file:
-            if out_dir:
-                raise NotImplementedError
             cores = dd.get_num_cores(data)
             cmd = "{samtools} stats -@ {cores} {bam_file}"
             cmd += " > {tx_out_file}"
