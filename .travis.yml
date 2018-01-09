@@ -60,6 +60,7 @@ script:
   - docker pull quay.io/bcbio/bcbio-rnaseq
   - docker images
   - df -h
+  - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-rnaseq
   - py.test tests/bcbio_vm -v -s -m cwl_docker_rnaseq
   # -- Cleanup RNA-seq docker image
   - docker ps -a -q | xargs --no-run-if-empty docker rm
