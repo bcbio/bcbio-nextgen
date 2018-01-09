@@ -5,10 +5,10 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.log import logger
+from bcbio.bam import ref
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.distributed.transaction import tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 
 pybedtools = utils.LazyImport("pybedtools")
 
@@ -73,27 +73,27 @@ def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target
                     return int(cur_val)
 
     # Calculate stats
-    bam.index(bam_file, data["config"], check_timestamp=False)
-    num_cores = dd.get_num_cores(data)
+    count_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage",
+                                                dd.get_sample_name(data), "counts"))
+    if not bed_file:
+        bed_file = os.path.join(count_dir, "fullgenome.bed")
+        if not utils.file_exists(bed_file):
+            with file_transaction(data, bed_file) as tx_out_file:
+                with open(tx_out_file, "w") as out_handle:
+                    for c in ref.file_contigs(dd.get_ref_file(data), data["config"]):
+                        out_handle.write("%s\t%s\t%s\n" % (c.name, 0, c.size))
+    count_file = os.path.join(count_dir,
+                              "%s-%s-counts.txt" % (os.path.splitext(os.path.basename(bed_file))[0], flag))
+    if not utils.file_exists(count_file):
+        bam.index(bam_file, data["config"], check_timestamp=False)
+        num_cores = dd.get_num_cores(data)
+        with file_transaction(data, count_file) as tx_out_file:
+            cmd = ("hts_nim_tools count-reads -t {num_cores} -F {flag} {bed_file} {bam_file} > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Count mapped reads: %s" % (dd.get_sample_name(data)))
     count = 0
-    with tx_tmpdir(data) as cur_tmpdir:
-        # Covert to samtools regions (they are 1-based, BED is 0-based)
-        regions = (["%s:%s-%s" % (r.chrom, r.start + 1, r.end) for r in pybedtools.BedTool(bed_file)]
-                    if bed_file else [None])
-        logger.debug("Count mapped reads with samtools view: %s" % (dd.get_sample_name(data)))
-        for i, region_group in enumerate(tz.partition_all(10000, regions)):
-            if len(region_group) == 1 and not region_group[0]:
-                region_str = ""
-            else:
-                region_in = os.path.join(cur_tmpdir, "%s-regions-%s.bed" % (dd.get_sample_name(data), i))
-                with open(region_in, "w") as out_handle:
-                    out_handle.write(" ".join(region_group))
-                region_str = " `cat %s`" % region_in
-            count_out = os.path.join(cur_tmpdir, "%s-count-%s.txt" % (dd.get_sample_name(data), i))
-            cmd = "samtools view -c -F {flag} -@ {num_cores} {bam_file}{region_str} > {count_out}"
-            do.run(cmd.format(**locals()))
-            with open(count_out) as in_handle:
-                count += int(in_handle.read().strip())
+    with open(count_file) as in_handle:
+        for line in in_handle:
+            count += int(line.rstrip().split()[-1])
 
     # Update cache
     with open(cache_file, "a") as out_handle:

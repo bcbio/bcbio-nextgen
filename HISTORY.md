@@ -1,5 +1,7 @@
 ## 1.0.8 (in progress)
 
+- QC: improve read counting speed by moving to hts-nim-tools, replacing custom
+  samtools view counting
 
 ## 1.0.7 (6 January 2018)
 
