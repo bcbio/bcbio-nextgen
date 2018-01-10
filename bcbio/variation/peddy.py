@@ -88,7 +88,7 @@ def run_peddy(samples, out_dir=None):
             with open(stderr_log) as in_handle:
                 for line in in_handle:
                     to_show.append(line)
-            if to_show[-1].find("IndexError: index 0 is out of bounds for axis 0 with size 0") >= 0:
+            if to_show[-1].find("IndexError") >=0 and to_show[-1].find("is out of bounds for axis") >= 0:
                 logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
                 with open(peddy_prefix + "-failed.log", "w") as out_handle:
                     out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
