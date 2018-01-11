@@ -247,13 +247,13 @@ def gatk_snp_cutoff(in_file, data):
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
     if variantcaller not in ["gatk-haplotype", "haplotyper"]:
         filters.append("HaplotypeScore > 13.0")
-    # metrics not available in GATK HaplotypeCaller gVCFs
-    if not vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype"]:
+    # Additional filter metrics, unless using raw GATK HaplotypeCaller or Sentieon gVCFs
+    if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype", "haplotyper"]):
         filters += ["QD < 2.0"]
         filters += ["FS > 60.0"]
         filters += _gatk_general()
-    # metrics not available in sentieon gVCFs
-    elif not vcfutils.is_gvcf_file(in_file) and variantcaller in ["haplotyper"]:
+    # Additional filter metrics, unless using raw Sentieon gVCFs
+    if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["haplotyper"]):
         filters += ["MQ < 30.0"]
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
                                extra_cmd=r"""| sed 's/\\"//g'""")
@@ -263,8 +263,8 @@ def gatk_indel_cutoff(in_file, data):
     """
     filters = ["ReadPosRankSum < -20.0"]
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
-    # metrics not available in GATK HaplotypeCaller gVCFs
-    if not vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype"]:
+    # Additional filter metrics, unless using raw GATK HaplotypeCaller or Sentieon gVCFs
+    if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype", "haplotyper"]):
         filters += ["QD < 2.0"]
         filters += ["FS > 200.0"]
         filters += ["SOR > 10.0"]
