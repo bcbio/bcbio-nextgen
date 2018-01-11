@@ -120,7 +120,7 @@ def _add_umis_with_fastp(read_fq, umi_fq, out_fq, cores):
     with utils.open_gzipsafe(umi_fq) as in_handle:
         in_handle.readline()  # name
         umi_size = len(in_handle.readline().strip())
-    cmd = ("fastp -Q -A -L -G -w {cores} --in1 {read_fq} --in2 {umi_fq} "
+    cmd = ("fastp -Q -A -L -G -w 1 --in1 {read_fq} --in2 {umi_fq} "
            "--umi --umi_prefix UMI --umi_loc read2 --umi_len {umi_size} "
            "--out1 >(bgzip --threads {cores} -c > {out_fq}) --out2 /dev/null "
            "-j /dev/null -h /dev/null")
