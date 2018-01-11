@@ -227,7 +227,7 @@ def gatk_snp_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK SNPs using best-practice recommendations.
 
     We have a more lenient mapping quality (MQ) filter compared to GATK defaults.
-    The recommended filter (MQ < 40) is too stringent, so we adjust to 30: 
+    The recommended filter (MQ < 40) is too stringent, so we adjust to 30:
     http://imgur.com/a/oHRVB
 
     QD and FS are not calculated when generating gVCF output:
@@ -241,22 +241,33 @@ def gatk_snp_cutoff(in_file, data):
 
     https://github.com/bcbio/bcbio_validations/tree/master/gatk4#na12878-hg38
     """
-    filters = ["MQ < 30.0", "MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
-    filters += ["QD < 2.0", "FS > 60.0"]
-    filters += _gatk_general()
+    filters = ["MQRankSum < -12.5", "ReadPosRankSum < -8.0"]
     # GATK Haplotype caller (v2.2) appears to have much larger HaplotypeScores
     # resulting in excessive filtering, so avoid this metric
     variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
     if variantcaller not in ["gatk-haplotype", "haplotyper"]:
         filters.append("HaplotypeScore > 13.0")
+    # metrics not available in GATK HaplotypeCaller gVCFs
+    if not vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype"]:
+        filters += ["QD < 2.0"]
+        filters += ["FS > 60.0"]
+        filters += _gatk_general()
+    # metrics not available in sentieon gVCFs
+    elif not vcfutils.is_gvcf_file(in_file) and variantcaller in ["haplotyper"]:
+        filters += ["MQ < 30.0"]
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
-                             extra_cmd=r"""| sed 's/\\"//g'""")
+                               extra_cmd=r"""| sed 's/\\"//g'""")
 
 def gatk_indel_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK indels using best-practice recommendations.
     """
     filters = ["ReadPosRankSum < -20.0"]
-    filters += ["QD < 2.0", "FS > 200.0", "SOR > 10.0"]
-    filters += _gatk_general()
+    variantcaller = utils.get_in(data, ("config", "algorithm", "variantcaller"))
+    # metrics not available in GATK HaplotypeCaller gVCFs
+    if not vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype"]:
+        filters += ["QD < 2.0"]
+        filters += ["FS > 200.0"]
+        filters += ["SOR > 10.0"]
+        filters += _gatk_general()
     return cutoff_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKCutoffIndel",
                                "INDEL", extra_cmd=r"""| sed 's/\\"//g'""")

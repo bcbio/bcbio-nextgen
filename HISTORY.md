@@ -2,6 +2,8 @@
 
 - QC: improve read counting speed by moving to hts-nim-tools, replacing custom
   samtools view counting
+- gVCF: fix basic filtering for GATK and sentieon when running without joint
+  calling. Thanks to Tom Morris.
 
 ## 1.0.7 (6 January 2018)
 
