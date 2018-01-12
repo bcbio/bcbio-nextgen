@@ -1,5 +1,7 @@
 ## 1.0.8 (in progress)
 
+- GATK4: Support 4.0 release with changed command line parameters. Re-enable
+  multicore calling for CWL runs.
 - QC: improve read counting speed by moving to hts-nim-tools, replacing custom
   samtools view counting
 - gVCF: fix basic filtering for GATK and sentieon when running without joint
