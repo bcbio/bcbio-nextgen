@@ -521,7 +521,7 @@ def _gatk4_cmd(jvm_opts, params, data):
     """Retrieve unified command for GATK4, using gatk-launch.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
-    return "%s && export PATH=%s:$PATH && gatk-launch --javaOptions '%s' %s" % \
+    return "%s && export PATH=%s:$PATH && gatk-launch --java-options '%s' %s" % \
         (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd),
          " ".join(jvm_opts), " ".join([str(x) for x in params]))
 

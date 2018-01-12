@@ -89,9 +89,13 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 cores = dd.get_num_cores(data)
                 if gatk_type == "gatk4":
                     params += ["-T", "BaseRecalibratorSpark",
-                               "--sparkMaster", "local[%s]" % cores,
+                               "--spark-master", "local[%s]" % cores,
                                "--output", tx_out_file, "--reference", dd.get_ref_twobit(data),
                                "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                    if dbsnp_file:
+                        params += ["--known-sites", dbsnp_file]
+                    if intervals:
+                        params += ["-L", intervals, "--interval-set-rule", "INTERSECTION"]
                 else:
                     params += ["-T", "BaseRecalibrator",
                                 "-o", tx_out_file, "-R", ref_file]
@@ -102,10 +106,10 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     if platform.lower() == "solid":
                         params += ["--solid_nocall_strategy", "PURGE_READ",
                                    "--solid_recal_mode", "SET_Q_ZERO_BASE_N"]
-                if dbsnp_file:
-                    params += ["--knownSites", dbsnp_file]
-                if intervals:
-                    params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
+                    if dbsnp_file:
+                        params += ["--knownSites", dbsnp_file]
+                    if intervals:
+                        params += ["-L", intervals, "--interval_set_rule", "INTERSECTION"]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
                 broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                       parallel_gc=True)
@@ -126,15 +130,17 @@ def _gatk_apply_bqsr(data):
             gatk_type = broad_runner.gatk_type()
             cores = dd.get_num_cores(data)
             if gatk_type == "gatk4":
-                params = ["-T", "ApplyBQSRSpark", "--sparkMaster", "local[%s]" % cores,
-                          "--input", in_file, "--output", tx_out_file, "--bqsr_recal_file", data["prep_recal"],
+                params = ["-T", "ApplyBQSRSpark", "--spark-master", "local[%s]" % cores,
+                          "--input", in_file, "--output", tx_out_file, "--bqsr-recal-file", data["prep_recal"],
                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
             # Avoid problems with intel deflater for GATK 3.8 and GATK4
             # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
-            if gatk_type == "gatk4" or LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):
+            if gatk_type == "gatk4":
+                params += ["--jdk-deflater", "--jdk-inflater"]
+            elif LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):
                 params += ["-jdk_deflater", "-jdk_inflater"]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,

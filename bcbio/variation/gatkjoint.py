@@ -46,8 +46,8 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
             broad_runner = broad.runner_from_config(data["config"])
             cores = dd.get_cores(data)
             params = ["-T", "GenomicsDBImport",
-                      "--readerThreads", str(cores),
-                      "--genomicsDBWorkspace", out_dir,
+                      "--reader-threads", str(cores),
+                      "--genomicsdb-workspace-path", out_dir,
                       "-L", bamprep.region_to_gatk(region)]
             for vrn_file in vrn_files:
                 vcfutils.bgzip_and_index(vrn_file, data["config"])

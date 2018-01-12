@@ -22,27 +22,33 @@ def _add_tumor_params(paired, items, gatk_type):
                          "for samples: %s" % ", " .join([dd.get_sample_name(x) for x in items]))
     if gatk_type == "gatk4":
         params += ["-I", paired.tumor_bam]
-        params += ["--tumorSampleName", paired.tumor_name]
+        params += ["--tumor-sample", paired.tumor_name]
     else:
         params += ["-I:tumor", paired.tumor_bam]
     if paired.normal_bam is not None:
         if gatk_type == "gatk4":
             params += ["-I", paired.normal_bam]
-            params += ["--normalSampleName", paired.normal_name]
+            params += ["--normal-sample", paired.normal_name]
         else:
             params += ["-I:normal", paired.normal_bam]
     if paired.normal_panel is not None:
-        params += ["--normal_panel", paired.normal_panel]
+        if gatk_type == "gatk4":
+            params += ["--panel-of-normals", paired.normal_panel]
+        else:
+            params += ["--normal_panel", paired.normal_panel]
     return params
 
-def _add_region_params(region, out_file, items):
+def _add_region_params(region, out_file, items, gatk_type):
     """Add parameters for selecting by region to command line.
     """
     params = []
     variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
-        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+        if gatk_type == "gatk4":
+            params += ["-L", bamprep.region_to_gatk(region), "--interval-set-rule", "INTERSECTION"]
+        else:
+            params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     params += gatk.standard_cl_params(items)
     return params
 
@@ -83,10 +89,10 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                 params += ["--annotation", a]
             # Avoid issues with BAM CIGAR reads that GATK doesn't like
             if gatk_type == "gatk4":
-                params += ["--readValidationStringency", "LENIENT"]
+                params += ["--read-validation-stringency", "LENIENT"]
             paired = vcfutils.get_paired_bams(align_bams, items)
             params += _add_tumor_params(paired, items, gatk_type)
-            params += _add_region_params(region, out_file, items)
+            params += _add_region_params(region, out_file, items, gatk_type)
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
             #params += _add_assoc_params(assoc_files)

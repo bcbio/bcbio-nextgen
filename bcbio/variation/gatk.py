@@ -28,7 +28,7 @@ def standard_cl_params(items):
         broad_runner = broad.runner_from_config(items[0]["config"])
         gatk_type = broad_runner.gatk_type()
         if gatk_type == "gatk4":
-            out += ["--disableReadFilter", "NotDuplicateReadFilter"]
+            out += ["--disable-read-filter", "NotDuplicateReadFilter"]
         elif LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
             out += ["-drf", "DuplicateRead"]
     return out
@@ -39,6 +39,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     data = items[0]
     config = data["config"]
     broad_runner = broad.runner_from_config(config)
+    gatk_type = broad_runner.gatk_type()
     for x in align_bams:
         bam.index(x, config)
     if num_cores > 1 and broad_runner.gatk_type() == "gatk4":
@@ -59,7 +60,10 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
-        params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+        if gatk_type == "gatk4":
+            params += ["-L", bamprep.region_to_gatk(region), "--interval-set-rule", "INTERSECTION"]
+        else:
+            params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
     params += standard_cl_params(items)
     return broad_runner, params
 
@@ -111,7 +115,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
         with file_transaction(items[0], out_file) as tx_out_file:
             if num_cores > 1 and gatk_type == "gatk4":
-                params += ["-T", "HaplotypeCallerSpark", "--sparkMaster", "local[%s]" % num_cores,
+                params += ["-T", "HaplotypeCallerSpark", "--spark-master", "local[%s]" % num_cores,
                            "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
             else:
                 params += ["-T", "HaplotypeCaller"]
@@ -130,8 +134,10 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             is_joint = False
             if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
                 is_joint = True
-                params += ["--emitRefConfidence", "GVCF"]
-                if not gatk_type == "gatk4":
+                if gatk_type == "gatk4":
+                    params += ["--emit-ref-confidence", "GVCF"]
+                else:
+                    params += ["--emitRefConfidence", "GVCF"]
                     params += ["--variant_index_type", "LINEAR", "--variant_index_parameter", "128000"]
                 # Set GQ banding to not be single GQ resolution
                 # No recommended default but try to balance resolution and size
