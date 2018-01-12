@@ -181,6 +181,11 @@ other analyses. The available targets are:
 - ``ericscript`` Database for `EricScript <https://sites.google.com/site/bioericscript/>`_,
   based gene fusion detection. Supports hg38, hg19 and GRCh37.
 
+By default, bcbio includes ``v68`` for hg19 and GRCh37. Due to license restrictions, updated versions
+of this dataset cannot be shipped with the installer. More recent versions, or versions for hg38 can be
+downloaded from the `COSMIC homepage <http://cancer.sanger.ac.uk/cosmic/download>`.
+These files should then be copied to ``bcbio_install_dir/genomes/Hsapiens/'genome_build'/variation/cosmic.vcf.gz``
+with the correct permissions, so bcbio can read the file.
 
 .. _toolplus-install:
 
