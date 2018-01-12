@@ -320,7 +320,10 @@ def combine_files(samples):
     all samples
     """
     data = samples[0][0]
-    gtf_file = dd.get_gtf_file(data, None)
+    # prefer the supplied transcriptome gtf file
+    gtf_file = dd.get_transcriptome_gtf(data, None)
+    if not gtf_file:
+        gtf_file = dd.get_gtf_file(data, None)
     dexseq_gff = dd.get_dexseq_gff(data)
 
     # combine featureCount files
