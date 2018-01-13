@@ -232,7 +232,7 @@ class BroadRunner:
     def _has_gatk_conda_wrapper(self):
         cmd = gatk_cmd("gatk", [], ["--version"], config=self._config)
         if cmd:
-            if "gatk4" in dd.get_tools_on({"config": self._config}):
+            if "gatk4" not in dd.get_tools_off({"config": self._config}):
                 return True
             else:
                 try:
@@ -259,7 +259,7 @@ class BroadRunner:
                 raise ValueError("GATK processing requested but gatk or older jar install not found: "
                                  "http://bcbio-nextgen.readthedocs.io/en/latest/contents/"
                                  "installation.html#gatk-and-mutect-mutect2")
-        is_gatk4 = "gatk4" in dd.get_tools_on({"config": self._config})
+        is_gatk4 = "gatk4" not in dd.get_tools_off({"config": self._config})
         cores = self._config["algorithm"].get("num_cores", 1)
         config = self._config
         atype_index = params.index("-T") if params.count("-T") > 0 \
@@ -351,7 +351,7 @@ class BroadRunner:
         if self._gatk_version is None:
             self._set_default_versions(self._config)
 
-        if "gatk4" in dd.get_tools_on({"config": self._config}):
+        if "gatk4" not in dd.get_tools_off({"config": self._config}):
             # In cases whwere we don't have manifest versions. Not possible to get
             # version from commandline with GATK4 alpha version
             if self._gatk4_version is None:
@@ -506,7 +506,7 @@ def gatk_cmd(name, jvm_opts, params, config=None):
             data = {"config": config}
         else:
             data = config
-        if "gatk4" in dd.get_tools_on(data):
+        if "gatk4" not in dd.get_tools_off(data):
             return _gatk4_cmd(jvm_opts, params, data)
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
     # if we can't find via the local executable, fallback to being in the path

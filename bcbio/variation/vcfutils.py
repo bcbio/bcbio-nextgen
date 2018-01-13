@@ -336,7 +336,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """
     if not utils.file_exists(out_file):
         input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        if "gatk4" in dd.get_tools_on({"config": config}):
+        if "gatk4" not in dd.get_tools_off({"config": config}):
             _run_concat_variant_files_gatk4(input_file_list, out_file, config)
         else:
             out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)

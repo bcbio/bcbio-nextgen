@@ -650,7 +650,7 @@ def _check_hlacaller(data):
 def _check_realign(data):
     """Check for realignment, which is not supported in GATK4
     """
-    if "gatk4" in data["algorithm"].get("tools_on", []) or "gatk4" == data["algorithm"].get("tools_on"):
+    if "gatk4" not in data["algorithm"].get("tools_off", []) and not "gatk4" == data["algorithm"].get("tools_off"):
         if data["algorithm"].get("realign"):
             raise ValueError("In sample %s, realign specified but it is not supported for GATK4. "
                              "Realignment is generally not necessary for most variant callers." %

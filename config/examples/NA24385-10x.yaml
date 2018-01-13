@@ -23,7 +23,6 @@ details:
       variantcaller: [freebayes, gatk-haplotype, strelka2]
       svcaller: [cnvkit, seq2c, manta, delly] # lumpy, gridss, wham
       vcfanno: [gemini]
-      tools_on: [gatk4]
       tools_off: [vqsr, gemini]
       validate: giab-NA24385/truth_small_variants.vcf.gz
       validate_regions: giab-NA24385/truth_regions.bed

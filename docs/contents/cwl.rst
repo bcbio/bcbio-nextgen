@@ -297,13 +297,12 @@ and then the details to install and run everything locally if desired.
    variables. You can define parameters either globally (in the template) file
    or by sample (in the csv) using the `standard bcbio templating
    <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#automated-sample-configuration>`_.
-   An example template for germline variant calling is::
+   An example template for GATK4 germline variant calling is::
 
       details:
        - algorithm:
            aligner: bwa
            variantcaller: gatk-haplotype
-           tools_on: [gatk4]
          analysis: variant2
          genome_build: hg38
 

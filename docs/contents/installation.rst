@@ -194,17 +194,16 @@ bcbio-nextgen during an upgrade with the ``--toolplus`` command line.
 GATK and MuTect/MuTect2
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Calling variants with GATK's HaplotypeCaller, MuTect2 or UnifiedGenotyper requires manual
-installation of the latest GATK release. This is freely available for academic
-users, but requires a `license for commerical use
+bcbio includes an installation of GATK4, which is freely available for all uses.
+This is the default runner for HaplotypeCaller or MuTect2. If you want to use an
+older version of GATK, it requires manual installation. This is freely available
+for academic users, but requires a `license for commerical use
 <https://www.broadinstitute.org/gatk/about/#licensing>`_. It is not freely
-redistributable so requires a manual download from the `GATK download`_ site. If
-you don't want to use the restricted GATK version, freely available callers like
-FreeBayes and VarDict provide a better alternative than using older GATK versions. See the
-`FreeBayes and GATK comparison`_ for a full evaluation.
+redistributable so requires a manual download from the `GATK download`_ site.
+You also need to include ``tools_off: [gatk4]`` in your configuration for runs:
+see :ref:`config-changing-defaults`.
 
-To install the most recent version of GATK, register with the pre-installed gatk
-bioconda wrapper::
+To install GATK3, register with the pre-installed gatk bioconda wrapper::
 
    gatk-register /path/to/GenomeAnalysisTK.tar.bz2
 
@@ -214,7 +213,7 @@ to the GATK version.
 
 `MuTect2 <https://www.broadinstitute.org/gatk/guide/tooldocs/org_broadinstitute_gatk_tools_walkers_cancer_m2_MuTect2.php>`_ is distributed with GATK in versions 3.5 and later.
 
-To install older versions of GATK (< 3.6), download and unzip the latest version from
+To install versions of GATK < 3.6, download and unzip the latest version from
 the GATK distribution. Then make this jar available to bcbio-nextgen with::
 
     bcbio_nextgen.py upgrade --tools --toolplus gatk=/path/to/gatk/GenomeAnalysisTK.jar

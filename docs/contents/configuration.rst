@@ -966,8 +966,10 @@ Post-processing
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 
-Tweaking defaults
-=================
+.. _config-changing-defaults:
+
+Changing bcbio defaults
+=======================
 
 bcbio provides some hints to change default behavior be either turning specific
 defaults on or off, with ``tools_on`` and ``tools_off``. Both can be
@@ -981,6 +983,8 @@ lists with multiple options:
     downstream query during variant calling pipelines. Also skips vcfanno
     annotation unless turned on explicitly with ``vcfanno`` in
     :ref:`config-variant-annotation`.
+  - ``gatk4`` Use older GATK versions (3.x) for GATK commands like BQSR,
+    HaplotypeCaller and VQSR. By default bcbio includes GATK4 and uses it.
   - ``vqsr`` turns off variant quality score recalibration for all samples.
   - ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this, we
     use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality control
@@ -1000,9 +1004,6 @@ lists with multiple options:
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
-  - ``gatk4`` Use GATK4, shipped with bcbio, for any GATK commands like BQSR,
-    HaplotypeCaller and VQSR. GATK4 is still a beta release but
-    `validations results look comparable to GATK3 <https://github.com/bcbio/bcbio_validations/tree/master/gatk4>`_
   - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
     uses downsampled files and numbers here are an estimation of 1e7 reads.).
   - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.

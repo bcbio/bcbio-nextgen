@@ -1,5 +1,8 @@
 ## 1.0.8 (in progress)
 
+- GATK4: the default GATK release used in bcbio when running HaplotypeCaller or
+  Base Quality Score Recalibration. Use `tools_off: [gatk4]` to use older GATK
+  3.x versions.
 - GATK4: Support 4.0 release with changed command line parameters. Re-enable
   multicore calling for CWL runs.
 - QC: improve read counting speed by moving to hts-nim-tools, replacing custom
