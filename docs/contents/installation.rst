@@ -181,11 +181,16 @@ other analyses. The available targets are:
 - ``ericscript`` Database for `EricScript <https://sites.google.com/site/bioericscript/>`_,
   based gene fusion detection. Supports hg38, hg19 and GRCh37.
 
-By default, bcbio includes ``v68`` for hg19 and GRCh37. Due to license restrictions, updated versions
-of this dataset cannot be shipped with the installer. More recent versions, or versions for hg38 can be
-downloaded from the `COSMIC homepage <http://cancer.sanger.ac.uk/cosmic/download>`.
-These files should then be copied to ``bcbio_install_dir/genomes/Hsapiens/'genome_build'/variation/cosmic.vcf.gz``
-with the correct permissions, so bcbio can read the file.
+For somatic analyses, bcbio includes `COSMIC <http://cancer.sanger.ac.uk/cosmic>`_
+v68 for hg19 and GRCh37 only. Due to license restrictions, we cannot include
+updated versions of this dataset and hg38 support with the installer. To prepare
+these datasets yourself you can use `a utility script shipped with cloudbiolinux
+<https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_cosmic.py>`_
+that downloads, sorts and merges the VCFs, then copies into your bcbio installation::
+
+    export COSMIC_USER="your@registered.email.edu"
+    export COSMIC_PASS="cosmic_password"
+    bcbio_python prepare_cosmic.py 83 /path/to/bcbio
 
 .. _toolplus-install:
 
