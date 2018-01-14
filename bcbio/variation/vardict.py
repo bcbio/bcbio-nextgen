@@ -135,12 +135,12 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
+                contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -A -N {sample} -E -f {freq} {var2vcf_opts} "
-                       """| {py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' """
-                       "| bcftools filter -i 'QUAL >= 0' "
+                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
@@ -275,13 +275,13 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
+                contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| {strandbias} "
                        "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
-                       """| {py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' """
-                       "{freq_filter} "
+                       "| {contig_cl} {freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
                        "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
                        "{compress_cmd} > {tx_out_file}")

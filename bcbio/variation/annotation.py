@@ -55,7 +55,7 @@ def finalize_vcf(in_file, variantcaller, items):
     out_file = "%s-annotated%s" % utils.splitext_plus(in_file)
     if not utils.file_uptodate(out_file, in_file):
         header_cl = _add_vcf_header_sample_cl(in_file, items, out_file)
-        contig_cl = _add_contig_cl(in_file, items)
+        contig_cl = _add_contig_cl(in_file, items, out_file)
         cls = [x for x in (contig_cl, header_cl) if x]
         if cls:
             post_cl = " | ".join(cls) + " | "
@@ -69,7 +69,7 @@ def finalize_vcf(in_file, variantcaller, items):
     else:
         return in_file
 
-def _add_contig_cl(in_file, items):
+def _add_contig_cl(in_file, items, out_file):
     has_contigs = False
     with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
@@ -79,7 +79,7 @@ def _add_contig_cl(in_file, items):
             elif not line.startswith("##"):
                 break
     if not has_contigs:
-        return vcfutils.add_contig_to_header_cl(items[0])
+        return vcfutils.add_contig_to_header_cl(dd.get_ref_file(items[0]), out_file)
 
 def _fix_generic_tn_names(paired):
     """Convert TUMOR/NORMAL names in output into sample IDs.
