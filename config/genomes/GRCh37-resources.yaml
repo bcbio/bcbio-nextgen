@@ -1,4 +1,4 @@
-version: 37
+version: 38
 
 aliases:
   human: true
@@ -11,7 +11,7 @@ variation:
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
-  cosmic: ../variation/cosmic-v68-GRCh37.vcf.gz
+  cosmic: ../variation/cosmic.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
