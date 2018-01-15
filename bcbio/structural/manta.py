@@ -28,7 +28,7 @@ def run(items):
     assert utils.file_exists(variant_file), "Manta finished without output file %s" % variant_file
     out = []
     for data in items:
-        if paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):
+        if paired and paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):
             variant_file = _run_break_point_inspector(data, variant_file, paired)
         if "sv" not in data:
             data["sv"] = []
