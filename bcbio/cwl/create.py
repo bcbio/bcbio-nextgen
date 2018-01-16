@@ -2,6 +2,7 @@
 """
 import collections
 import copy
+import dateutil
 import functools
 import json
 import math
@@ -9,6 +10,7 @@ import operator
 import os
 import tarfile
 
+import requests
 import toolz as tz
 import yaml
 
@@ -20,7 +22,7 @@ from bcbio.pipeline import alignment
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
                    "dx:": "dnanexus"}
 
-def from_world(world, run_info_file, integrations=None):
+def from_world(world, run_info_file, integrations=None, add_container_tag=None):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
     out_dir = utils.safe_makedir("%s-workflow" % (base))
     out_file = os.path.join(out_dir, "main-%s.cwl" % (base))
@@ -31,7 +33,7 @@ def from_world(world, run_info_file, integrations=None):
         workflow_fn = defs.workflows[analyses[0].lower()]
     except KeyError:
         raise NotImplementedError("Unsupported CWL analysis type: %s" % analyses[0])
-    prep_cwl(samples, workflow_fn, out_dir, out_file, integrations)
+    prep_cwl(samples, workflow_fn, out_dir, out_file, integrations, add_container_tag=add_container_tag)
 
 def _cwl_workflow_template(inputs, top_level=False):
     """Retrieve CWL inputs shared amongst different workflows.
@@ -96,8 +98,36 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
     input_hint = {"class": "dx:InputResourceRequirement", "indirMin": int(math.ceil(in_disk))}
     return disk_hint, input_hint
 
+def _add_current_quay_tag(repo, container_tags):
+    """Lookup the current quay tag for the repository, adding to repo string.
+
+    Enables generation of CWL explicitly tied to revisions.
+    """
+    if ':' in repo:
+        return repo, container_tags
+    try:
+        latest_tag = container_tags[repo]
+    except KeyError:
+        repo_id = repo[repo.find('/') + 1:]
+        tags = requests.request("GET", "https://quay.io/api/v1/repository/" + repo_id).json()["tags"]
+        latest_tag = None
+        latest_modified = None
+        for tag, info in tags.items():
+            if latest_tag:
+                if (dateutil.parser.parse(info['last_modified']) > dateutil.parser.parse(latest_modified)
+                      and tag != 'latest'):
+                    latest_modified = info['last_modified']
+                    latest_tag = tag
+            else:
+                latest_modified = info['last_modified']
+                latest_tag = tag
+        container_tags[repo] = str(latest_tag)
+    latest_pull = repo + ':' + str(latest_tag)
+    return latest_pull, container_tags
+
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                file_estimates, disk, step_cores, samples, cur_remotes):
+                file_estimates, disk, step_cores, samples, cur_remotes,
+                container_tags=None):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
     cores = min([step_cores, resource_cores]) if step_cores else resource_cores
@@ -107,6 +137,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                                                 cur_remotes)
     cwl_res.update(disk_hint)
     docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
+    if container_tags is not None:
+        docker_image, container_tags = _add_current_quay_tag(docker_image, container_tags)
     docker = {"class": "DockerRequirement", "dockerPull": docker_image, "dockerImageId": docker_image}
     out = {"class": "CommandLineTool",
            "cwlVersion": "v1.0",
@@ -366,9 +398,16 @@ def _get_cur_remotes(path):
             cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
     return cur_remotes
 
-def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
+def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None,
+             add_container_tag=None):
     """Output a CWL description with sub-workflows and steps.
     """
+    if add_container_tag is None:
+        container_tags = None
+    elif add_container_tag.lower() == "quay_lookup":
+        container_tags = {}
+    else:
+        container_tags = collections.defaultdict(lambda: add_container_tag)
     step_dir = utils.safe_makedir(os.path.join(out_dir, "steps"))
     get_retriever = GetRetriever(integrations, samples)
     variables, keyvals = _flatten_samples(samples, out_file, get_retriever)
@@ -383,7 +422,7 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None):
         if cur[0] == "step":
             _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                                    file_estimates, disk, cores, samples, cur_remotes)
+                                    file_estimates, disk, cores, samples, cur_remotes, container_tags)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel, step_parallelism))
             used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "expressiontool":
