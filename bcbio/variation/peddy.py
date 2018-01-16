@@ -114,4 +114,5 @@ def expected_peddy_files(peddy_report, batch):
     peddydir = os.path.dirname(peddy_report)
     secondary = [batch + x for x in PEDDY_OUT_EXTENSIONS]
     secondary = [os.path.join(peddydir, x) for x in secondary]
+    secondary = [x for x in secondary if os.path.exists(x)]
     return {"peddy": {"base": peddy_report, "secondary": secondary}}
