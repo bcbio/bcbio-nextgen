@@ -34,7 +34,7 @@ Presentations
   and `video <https://youtu.be/375QSYmaidk>`_
 
 - `Broad Institute <http://www.broadinstitute.org/>`_ software engineering
-  seminar about bcbio validation and intergration with Common Workflow Language
+  seminar about bcbio validation and integration with Common Workflow Language
   and Workflow Definition Language (28 September 2016): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/broad_engineering2016_bcbio/broad2016_bcbio.pdf>`_
 
 - Materials from :ref:`teaching` at the `Summer 2016 NGS Data Analysis Course
