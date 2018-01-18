@@ -2,6 +2,7 @@
 """
 import os
 from distutils.version import LooseVersion
+import shutil
 
 import toolz as tz
 
@@ -157,6 +158,12 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                   parallel_gc=(num_cores > 1 and gatk_type == "gatk4"))
+    # avoid bug in GATK where files can get output as non-compressed
+    if out_file.endswith(".gz") and not os.path.exists(out_file + ".tbi"):
+        with open(out_file, "r") as in_handle:
+            is_plain_text = in_handle.readline().startswith("##fileformat")
+        if is_plain_text:
+            shutil.move(out_file, out_file.replace(".vcf.gz", ".vcf"))
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _supports_avx():

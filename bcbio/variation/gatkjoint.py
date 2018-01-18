@@ -37,23 +37,27 @@ def _run_genomicsdb_import(vrn_files, region, out_file, data):
     GenomicsDB databases cannot be moved to new locations. We try to
     identify half-finished databases and restart:
 https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
+
+    Known issue -- Genomics DB workspace path core dumps on longer paths:
+    (std::string::compare(char const*))
     """
     out_dir = "%s_genomicsdb" % utils.splitext_plus(out_file)[0]
     if not os.path.exists(out_dir) or _incomplete_genomicsdb(out_dir):
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
-        with file_transaction(data, out_dir) as tx_out_dir:
-            broad_runner = broad.runner_from_config(data["config"])
-            cores = dd.get_cores(data)
-            params = ["-T", "GenomicsDBImport",
-                      "--reader-threads", str(cores),
-                      "--genomicsdb-workspace-path", out_dir,
-                      "-L", bamprep.region_to_gatk(region)]
-            for vrn_file in vrn_files:
-                vcfutils.bgzip_and_index(vrn_file, data["config"])
-                params += ["--variant", vrn_file]
-            memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            broad_runner.run_gatk(params, memscale=memscale)
+        with utils.chdir(os.path.dirname(out_file)):
+            with file_transaction(data, out_dir) as tx_out_dir:
+                broad_runner = broad.runner_from_config(data["config"])
+                cores = dd.get_cores(data)
+                params = ["-T", "GenomicsDBImport",
+                          "--reader-threads", str(cores),
+                          "--genomicsdb-workspace-path", os.path.relpath(out_dir, os.getcwd()),
+                          "-L", bamprep.region_to_gatk(region)]
+                for vrn_file in vrn_files:
+                    vcfutils.bgzip_and_index(vrn_file, data["config"])
+                    params += ["--variant", vrn_file]
+                memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
+                broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
 
 def _incomplete_genomicsdb(dbdir):
