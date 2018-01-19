@@ -59,7 +59,7 @@ def _cwl_workflow_template(inputs, top_level=False):
             "steps": []}
 
 def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
-                        cur_remotes):
+                        cur_remotes, no_files):
     """Retrieve disk usage estimates as CWL ResourceRequirement and hint.
 
     Disk specification for temporary files and outputs.
@@ -78,7 +78,7 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
             scale = 2.0 if inp.get("type") == "array" else 1.0
             # Allocating all samples, could remove for `to_rec` when we ensure we
             # don't have to stage. Currently dnanexus stages everything so need to consider
-            if parallel == "multi-combined" and "dnanexus" in cur_remotes:
+            if parallel in ["multi-combined", "multi-batch"] and "dnanexus" in cur_remotes:
                 scale *= (len(samples))
             if workflow.is_cwl_record(inp):
                 for f in _get_record_fields(inp):
@@ -93,8 +93,9 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
 
     bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
     disk_hint = {"outdirMin": bcbio_docker_disk + out_disk, "tmpdirMin": tmp_disk}
-    # We could skip input disk for steps which require only transformation (and thus no staging) with:
-    # int(math.ceil(in_disk)) if not name.endswith("_to_rec") else 0
+    # Skip input disk for steps which require only transformation (and thus no staging)
+    if no_files:
+        in_disk = 0
     input_hint = {"class": "dx:InputResourceRequirement", "indirMin": int(math.ceil(in_disk))}
     return disk_hint, input_hint
 
@@ -126,7 +127,7 @@ def _add_current_quay_tag(repo, container_tags):
     return latest_pull, container_tags
 
 def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                file_estimates, disk, step_cores, samples, cur_remotes,
+                file_estimates, disk, step_cores, samples, cur_remotes, no_files,
                 container_tags=None):
     out_file = os.path.join(step_dir, "%s.cwl" % name)
     resource_cores, mem_gb_per_core = resources.cpu_and_memory((programs or []) + ["default"], samples)
@@ -134,7 +135,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
     mem_mb_total = int(mem_gb_per_core * cores * 1024)
     cwl_res = {"class": "ResourceRequirement", "coresMin": cores, "ramMin": mem_mb_total}
     disk_hint, input_hint = _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
-                                                cur_remotes)
+                                                cur_remotes, no_files)
     cwl_res.update(disk_hint)
     docker_image = "bcbio/bcbio" if image == "bcbio" else "quay.io/bcbio/%s" % image
     if container_tags is not None:
@@ -420,9 +421,9 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None,
     used_inputs = set([])
     for cur in workflow.generate(variables, steps, wfoutputs):
         if cur[0] == "step":
-            _, name, parallel, inputs, outputs, image, programs, disk, cores = cur
+            _, name, parallel, inputs, outputs, image, programs, disk, cores, no_files = cur
             step_file = _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
-                                    file_estimates, disk, cores, samples, cur_remotes, container_tags)
+                                    file_estimates, disk, cores, samples, cur_remotes, no_files, container_tags)
             out["steps"].append(_step_template(name, step_file, inputs, outputs, parallel, step_parallelism))
             used_inputs |= set(x["id"] for x in inputs)
         elif cur[0] == "expressiontool":

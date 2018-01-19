@@ -14,7 +14,8 @@ for each of the defined workflows.
 import collections
 from bcbio.pipeline import datadict as dd
 
-def s(name, parallel, inputs, outputs, image, programs=None, disk=None, cores=None, unlist=None):
+def s(name, parallel, inputs, outputs, image, programs=None, disk=None, cores=None, unlist=None,
+      no_files=False):
     """Represent a step in a workflow.
 
     name -- The run function name, which must match a definition in distributed/multitasks
@@ -28,6 +29,7 @@ def s(name, parallel, inputs, outputs, image, programs=None, disk=None, cores=No
     cores -- Maximum cores necessary for this step, for non-multicore processes.
     unlist -- Variables being unlisted by this process. Useful for parallelization splitting and
       batching from multiple variables, like variant calling.
+    no_files -- This step does not require file access.
     parallel -- Parallelization approach. There are three different levels of parallelization,
       each with subcomponents:
 
@@ -46,10 +48,10 @@ def s(name, parallel, inputs, outputs, image, programs=None, disk=None, cores=No
         - batch-merge -- Merge sub-components back into a single batch.
         - batch-single -- Run on a single batch.
     """
-    Step = collections.namedtuple("Step", "name parallel inputs outputs image programs disk cores unlist")
+    Step = collections.namedtuple("Step", "name parallel inputs outputs image programs disk cores unlist no_files")
     if programs is None: programs = []
     if unlist is None: unlist = []
-    return Step(name, parallel, inputs, outputs, image, programs, disk, cores, unlist)
+    return Step(name, parallel, inputs, outputs, image, programs, disk, cores, unlist, no_files)
 
 def w(name, parallel, workflow, internal):
     """A workflow, allowing specification of sub-workflows for nested parallelization.
@@ -156,7 +158,7 @@ def _variant_vc(checkpoints):
     vc_wf += [s("compare_to_rm", "batch-single",
                 [["batch_rec"], ["vrn_file"]],
                 [cwlout("vc_rec", "record",
-                        fields=[cwlout(["batch_samples"], {"type": "array", "items": "string"}),
+                        fields=[cwlout(["batch_samples"], ["null", {"type": "array", "items": "string"}]),
                                 cwlout(["validate", "summary"], ["File", "null"]),
                                 cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
@@ -183,7 +185,7 @@ def _variant_vc(checkpoints):
             [cwlout("batch_rec", "record")],
             "bcbio-vc",
             disk={"files": 2.0}, cores=1,
-            unlist=[["config", "algorithm", "variantcaller"]]),
+            unlist=[["config", "algorithm", "variantcaller"]], no_files=True),
           w("variantcall", "multi-parallel", vc_wf,
             [["region"], ["region_block"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
     if checkpoints.get("jointvc"):
@@ -230,7 +232,7 @@ def _variant_jointvc():
              ["vc_rec"],
              [cwlout("jointvc_batch_rec", "record")],
              "bcbio-vc",
-             disk={"files": 1.5}, cores=1),
+             disk={"files": 1.5}, cores=1, no_files=True),
            w("jointcall", "multi-parallel", wf,
              [["region"], ["vrn_file_region"], ["vrn_file"]])]
     return out
@@ -270,7 +272,7 @@ def variant(samples):
                     ["config", "algorithm", "mark_duplicates"]],
                    [cwlout("alignment_rec", "record")],
                    "bcbio-vc",
-                   disk={"files": 1.5}, cores=1),
+                   disk={"files": 1.5}, cores=1, no_files=True),
                  w("alignment", "multi-parallel", align_wf,
                    [["align_split"], ["process_alignment_rec"],
                     ["work_bam"], ["config", "algorithm", "quality_format"]])]
@@ -288,7 +290,7 @@ def variant(samples):
                  ["reference", "fasta", "base"]],
                 [cwlout("prep_samples_rec", "record")],
                 "bcbio-vc",
-                disk={"files": 0.5}, cores=1),
+                disk={"files": 0.5}, cores=1, no_files=True),
               s("prep_samples", "multi-parallel",
                 ["prep_samples_rec"],
                 [cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
@@ -318,7 +320,7 @@ def variant(samples):
                  ["reference", "fasta", "base"]],
                 [cwlout("postprocess_alignment_rec", "record")],
                 "bcbio-vc",
-                disk={"files": 1.5}, cores=1),
+                disk={"files": 1.5}, cores=1, no_files=True),
               s("postprocess_alignment", "multi-parallel",
                 [["postprocess_alignment_rec"]],
                 [cwlout(["config", "algorithm", "coverage_interval"], ["string", "null"]),
@@ -380,7 +382,7 @@ def _qc_workflow(checkpoints):
         qc_inputs += [["variants", "samples"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
-            "bcbio-vc", disk={"files": 1.5}, cores=1),
+            "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
             [cwlout("qcout_rec", "record",
@@ -504,7 +506,7 @@ def rnaseq(samples):
              ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
              ["config", "algorithm", "qc"]],
             [cwlout("qc_rec", "record")],
-            "bcbio-rnaseq", disk={"files": 1.5}, cores=1),
+            "bcbio-rnaseq", disk={"files": 1.5}, cores=1, no_files=True),
           s("pipeline_summary", "multi-parallel",
             [["qc_rec"]],
             [cwlout("qcout_rec", "record",
