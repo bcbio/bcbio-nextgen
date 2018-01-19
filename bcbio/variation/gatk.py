@@ -163,7 +163,9 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         with open(out_file, "r") as in_handle:
             is_plain_text = in_handle.readline().startswith("##fileformat")
         if is_plain_text:
-            shutil.move(out_file, out_file.replace(".vcf.gz", ".vcf"))
+            text_out_file = out_file
+            out_file = out_file.replace(".vcf.gz", ".vcf")
+            shutil.move(text_out_file, out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _supports_avx():
