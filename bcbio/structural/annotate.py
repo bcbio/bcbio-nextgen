@@ -51,7 +51,7 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
     # with bedtools merge: 'ERROR: illegal character '.' found in integer conversion of string'
     distance_filter = (r"""awk -F$'\t' -v OFS='\t' '{if ($NF > %s) $%s = "."} {print}'""" %
                        (max_distance, gene_index))
-    sort_cmd = bedutils.get_sort_cmd()
+    sort_cmd = bedutils.get_sort_cmd(os.path.dirname(out_file))
     cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
     # Ensure gene transcripts match reference genome
     ready_gene_file = os.path.join(os.path.dirname(out_file), "%s-genomeonly.bed" %

@@ -15,7 +15,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
-def get_sort_cmd():
+def get_sort_cmd(tmp_dir=None):
     """Retrieve GNU coreutils sort command, using version-sort if available.
 
     Recent versions of sort have alpha-numeric sorting, which provides
@@ -28,9 +28,12 @@ def get_sort_cmd():
     """
     has_versionsort = subprocess.check_output("sort --help | grep version-sort; exit 0", shell=True).strip()
     if has_versionsort:
-        return "sort -V"
+        cmd = "sort -V"
     else:
-        return "sort"
+        cmd = "sort"
+    if tmp_dir and os.path.exists(tmp_dir) and os.path.isdir(tmp_dir):
+        cmd += " -T %s" % tmp_dir
+    return cmd
 
 def check_bed_contigs(in_file, data):
     """Ensure BED file contigs match the reference genome.
@@ -94,7 +97,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
             with file_transaction(data, out_file) as tx_out_file:
                 py_cl = os.path.join(os.path.dirname(sys.executable), "py")
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
-                sort_cmd = get_sort_cmd()
+                sort_cmd = get_sort_cmd(os.path.dirname(tx_out_file))
                 cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
                        "grep -v ^# | {simple} "
                        "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
@@ -121,7 +124,7 @@ def sort_merge(in_file, data, out_dir=None):
                         column_opt = "-c 4 -o distinct"
         with file_transaction(data, out_file) as tx_out_file:
             cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
-            sort_cmd = get_sort_cmd()
+            sort_cmd = get_sort_cmd(os.path.dirname(tx_out_file))
             cmd = ("{cat_cmd} {in_file} | {sort_cmd} -k1,1 -k2,2n | "
                    "{bedtools} merge -i - {column_opt} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Sort and merge BED file", data)
