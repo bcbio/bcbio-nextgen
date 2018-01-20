@@ -117,7 +117,7 @@ def _run_bunny(args):
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "bunny_work"))
     flags = ["-b", work_dir]
-    log_file = os.path.join(work_dir, "%s-toil.log" % project_name)
+    log_file = os.path.join(work_dir, "%s-bunny.log" % project_name)
     if os.path.exists(work_dir):
         caches = [os.path.join(work_dir, d) for d in os.listdir(work_dir)
                   if os.path.isdir(os.path.join(work_dir, d))]
