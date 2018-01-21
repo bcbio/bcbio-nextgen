@@ -23,7 +23,7 @@ import toolz as tz
 import yaml
 
 from bcbio import broad, utils
-from bcbio.pipeline import genome
+from bcbio.pipeline import genome, version
 from bcbio.variation import effects
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
@@ -55,14 +55,16 @@ def upgrade_bcbio(args):
     if args.upgrade in ["stable", "system", "deps", "development"]:
         if args.upgrade == "development":
             anaconda_dir = _update_conda_devel()
+            _check_for_conda_problems()
             print("Upgrading bcbio-nextgen to latest development version")
-            pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
+            pip_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "pip")
             git_tag = "@%s" % args.revision if args.revision != "master" else ""
             _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
                             "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)]], anaconda_dir)
             print("Upgrade of bcbio-nextgen development code complete.")
         else:
             _update_conda_packages()
+            _check_for_conda_problems()
             print("Upgrade of bcbio-nextgen code complete.")
 
     try:
@@ -153,7 +155,7 @@ def _matplotlib_installed():
 def _symlink_bcbio(args, script="bcbio_nextgen.py"):
     """Ensure a bcbio-nextgen script symlink in final tool directory.
     """
-    bcbio_anaconda = os.path.join(os.path.dirname(sys.executable), script)
+    bcbio_anaconda = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), script)
     bindir = os.path.join(args.tooldir, "bin")
     if not os.path.exists(bindir):
         os.makedirs(bindir)
@@ -213,6 +215,17 @@ def _default_deploy_args(args):
                                    "distribution": args.distribution or "__auto__",
                                    "dist_name": "__auto__"}}
 
+def _check_for_conda_problems():
+    """Identify post-install conda problems and fix.
+
+    - libgcc upgrades can remove libquadmath, which moved to libgcc-ng
+    """
+    conda_bin = _get_conda_bin()
+    lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "iib")
+    if not os.path.exists(os.path.join(lib_dir, "libquadmath.so")):
+        subprocess.check_call([conda_bin, "install", "-f",
+                               "--yes", "-c", "bioconda", "-c", "conda-forge", "libgcc-ng"])
+
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
@@ -224,7 +237,7 @@ def _update_conda_packages():
         os.remove(req_file)
     subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
     subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([conda_bin, "install", "--update-deps", "--quiet", "--yes",
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes",
                            "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
@@ -236,8 +249,9 @@ def _update_conda_devel():
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
     subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
-    subprocess.check_call([conda_bin, "install", "--update-deps",
-                           "--quiet", "--yes", "-c", "bioconda", "-c", "conda-forge", "bcbio-nextgen"])
+    subprocess.check_call([conda_bin, "install",
+                           "--quiet", "--yes", "-c", "bioconda", "-c", "conda-forge",
+                           "bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")]) 
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def get_genome_dir(gid, galaxy_dir, data):
@@ -297,7 +311,7 @@ def upgrade_bcbio_data(args, remotes):
     if "vep" in args.datatarget:
         _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
     if 'gemini' in args.datatarget and ("hg19" in args.genomes or "GRCh37" in args.genomes):
-        gemini = os.path.join(os.path.dirname(sys.executable), "gemini")
+        gemini = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gemini")
         extras = []
         if "cadd" in args.datatarget:
             extras.extend(["--extra", "cadd_score"])
