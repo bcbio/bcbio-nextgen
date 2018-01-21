@@ -130,10 +130,48 @@ def _run_bunny(args):
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
 
+def _run_funnel(args):
+    """Run funnel TES server with rabix bunny for CWL.
+    """
+    host = "localhost"
+    port = "8088"
+    main_file, json_file, project_name = _get_main_and_json(args.directory)
+    work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "funnel_work"))
+    log_file = os.path.join(work_dir, "%s-funnel.log" % project_name)
+    # Create bunny configuration directory with TES backend
+    orig_config_dir = os.path.join(os.path.dirname(os.path.realpath(utils.which("rabix"))), "config")
+    work_config_dir = utils.safe_makedir(os.path.join(work_dir, "rabix_config"))
+    for fname in os.listdir(orig_config_dir):
+        if fname == "core.properties":
+            with open(os.path.join(orig_config_dir, fname)) as in_handle:
+                with open(os.path.join(work_config_dir, fname), "w") as out_handle:
+                    for line in in_handle:
+                        if line.startswith("backend.embedded.types"):
+                            line = "backend.embedded.types=TES\n"
+                        out_handle.write(line)
+        else:
+            shutil.copy(os.path.join(orig_config_dir, fname), os.path.join(work_config_dir, fname))
+    flags = ["-c", work_config_dir,
+             "-tes-url=http://%s:%s" % (host, port), "-tes-storage=%s" % work_dir]
+    if args.no_container:
+        _remove_bcbiovm_path()
+        flags += ["--no-container"]
+    cmd = ["rabix"] + flags + [main_file, json_file]
+    funnelp = subprocess.Popen(["funnel", "server", "run",
+                                "--Server.HostName", host, "--Server.HTTPPort", port,
+                                "--LocalStorage.AllowedDirs", work_dir,
+                                "--Worker.WorkDir", os.path.join(work_dir, "funnel-work")])
+    try:
+        with utils.chdir(work_dir):
+            _run_tool(cmd, not args.no_container, work_dir, log_file)
+    finally:
+        funnelp.kill()
+
 _TOOLS = {"cwltool": _run_cwltool,
           "arvados": _run_arvados,
           "toil": _run_toil,
-          "bunny": _run_bunny}
+          "bunny": _run_bunny,
+          "funnel": _run_funnel}
 
 def run(args):
     _TOOLS[args.tool](args)
