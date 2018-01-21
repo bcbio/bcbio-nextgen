@@ -723,6 +723,11 @@ def clear_java_home():
             return "export JAVA_HOME=%s" % os.environ["BCBIO_JAVA_HOME"]
     return "unset JAVA_HOME"
 
+def get_java_clprep(cmd=None):
+    """Correctly prep command line for java commands, setting PATH and unsetting JAVA_HOME.
+    """
+    return "%s && export PATH=%s:$PATH" % (clear_java_home(), get_java_binpath(cmd))
+
 def get_R_exports():
     return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
 

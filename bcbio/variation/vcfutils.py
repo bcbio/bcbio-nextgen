@@ -395,7 +395,8 @@ def _fix_gatk_header(exist_files, out_file, config):
         header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
         do.run("zgrep ^# %s > %s"
                 % (replace_file, header_file), "Prepare header file for merging")
-        do.run("picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s" % (header_file, base_file, base_fix_file),
+        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s" %
+               (utils.get_java_clprep(), header_file, base_file, base_fix_file),
                "Reheader initial VCF file in merge")
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]
