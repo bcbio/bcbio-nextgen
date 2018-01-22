@@ -48,14 +48,16 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
             if gatk_type == "gatk4":
                 params = ["-T", "ApplyVQSR",
                           "--variant", in_file,
-                          "--output", tx_out_file]
+                          "--output", tx_out_file,
+                          "--recal-file", recal_file,
+                          "--tranches-file", tranch_file]
             else:
                 params = ["-T", "ApplyRecalibration",
                           "--input", in_file,
-                          "--out", tx_out_file]
+                          "--out", tx_out_file,
+                          "--recal_file", recal_file,
+                          "--tranches_file", tranch_file]
             params += ["-R", ref_file,
-                       "--recal_file", recal_file,
-                       "--tranches_file", tranch_file,
                        "--mode", filter_type]
             resources = config_utils.get_resources("gatk_apply_recalibration", data["config"])
             opts = resources.get("options", [])
@@ -96,10 +98,12 @@ def _get_vqsr_training(filter_type, vrn_files, gatk_type):
     for name, train_info, fname in _get_training_data(vrn_files)[filter_type]:
         if gatk_type == "gatk4":
             params.extend(["--resource", "%s,%s:%s" % (name, train_info, fname)])
+            if filter_type == "INDEL":
+                params.extend(["--max-gaussians", "4"])
         else:
             params.extend(["-resource:%s,VCF,%s" % (name, train_info), fname])
-    if filter_type == "INDEL":
-        params.extend(["--maxGaussians", "4"])
+            if filter_type == "INDEL":
+                params.extend(["--maxGaussians", "4"])
     return params
 
 def _get_vqsr_annotations(filter_type, data):
@@ -139,13 +143,13 @@ def _run_vqsr(in_file, ref_file, vrn_files, sensitivity_cutoff, filter_type, dat
         with file_transaction(data, recal_file, tranches_file, plot_file) as (tx_recal, tx_tranches, tx_plot_file):
             params = ["-T", "VariantRecalibrator",
                       "-R", ref_file,
-                      "--mode", filter_type,
-                      "--tranches_file", tx_tranches,
-                      "--rscript_file", tx_plot_file]
+                      "--mode", filter_type]
             if gatk_type == "gatk4":
-                params += ["--variant", in_file, "--output", tx_recal]
+                params += ["--variant", in_file, "--output", tx_recal,
+                           "--tranches-file", tx_tranches, "--rscript-file", tx_plot_file]
             else:
-                params += ["--input", in_file, "--recal_file", tx_recal]
+                params += ["--input", in_file, "--recal_file", tx_recal,
+                           "--tranches_file", tx_tranches, "--rscript_file", tx_plot_file]
             params += _get_vqsr_training(filter_type, vrn_files, gatk_type)
             resources = config_utils.get_resources("gatk_variant_recalibrator", data["config"])
             opts = resources.get("options", [])
