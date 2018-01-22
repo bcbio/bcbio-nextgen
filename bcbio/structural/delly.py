@@ -3,7 +3,6 @@
 https://github.com/tobiasrausch/delly
 """
 import copy
-import itertools
 import os
 import subprocess
 
@@ -40,13 +39,13 @@ def _delly_exclude_file(items, base_file, chrom):
 
 @utils.map_wrap
 @zeromq_aware_logging
-def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
+def _run_delly(bam_files, chrom, ref_file, work_dir, items):
     """Run delly, calling structural variations for the specified type.
     """
     batch = sshared.get_cur_batch(items)
     ext = "-%s-svs" % batch if batch else "-svs"
-    out_file = os.path.join(work_dir, "%s%s-%s-%s.bcf"
-                            % (os.path.splitext(os.path.basename(bam_files[0]))[0], ext, chrom, sv_type))
+    out_file = os.path.join(work_dir, "%s%s-%s.bcf"
+                            % (os.path.splitext(os.path.basename(bam_files[0]))[0], ext, chrom))
     final_file = "%s.vcf.gz" % (utils.splitext_plus(out_file)[0])
     cores = min(utils.get_in(items[0], ("config", "algorithm", "num_cores"), 1),
                 len(bam_files))
@@ -56,7 +55,7 @@ def _run_delly(bam_files, chrom, sv_type, ref_file, work_dir, items):
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
                 # uses -n to skip small indel detection for speed, not yet optimized:
                 # https://github.com/dellytools/delly/issues/36
-                cmd = ["delly", "call", "-n", "-t", sv_type, "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
+                cmd = ["delly", "call", "--noindels", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
@@ -160,12 +159,10 @@ def run(items):
                 "progs": ["delly"]}
     work_bams = [dd.get_align_bam(d) for d in items]
     ref_file = dd.get_ref_file(items[0])
-    sv_types = ["DEL", "DUP"]  # "TRA" has invalid VCF END specifications that GATK doesn't like, "INV" very slow
     exclude_file = _get_full_exclude_file(items, work_dir)
     bytype_vcfs = run_multicore(_run_delly,
-                                [(work_bams, chrom, sv_type, ref_file, work_dir, items)
-                                 for (chrom, sv_type)
-                                 in itertools.product(sshared.get_sv_chroms(items, exclude_file), sv_types)],
+                                [(work_bams, chrom, ref_file, work_dir, items)
+                                 for chrom in sshared.get_sv_chroms(items, exclude_file)],
                                 config, parallel)
     out_file = "%s.vcf.gz" % sshared.outname_from_inputs(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, config)
