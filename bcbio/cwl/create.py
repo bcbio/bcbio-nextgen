@@ -694,6 +694,15 @@ def _to_cwlfile_with_indexes(val, get_retriever):
         assert all([x.startswith(dirname) for x in val["indexes"]])
         return {"class": "File", "path": _directory_tarball(dirname)}
 
+def _add_secondary_if_exists(secondary, out, get_retriever):
+    """Add secondary files only if present locally or remotely.
+    """
+    secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
+    secondary = [z for z in secondary if z]
+    if secondary:
+        out["secondaryFiles"] = [{"class": "File", "path": f} for f in secondary]
+    return out
+
 def _item_to_cwldata(x, get_retriever):
     """"Markup an item with CWL specific metadata.
     """
@@ -705,33 +714,18 @@ def _item_to_cwldata(x, get_retriever):
         if _file_local_or_remote(x, get_retriever):
             out = {"class": "File", "path": x}
             if x.endswith(".bam"):
-                out["secondaryFiles"] = [{"class": "File", "path": x + ".bai"}]
+                out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
-                out["secondaryFiles"] = [{"class": "File", "path": x + ".tbi"}]
+                out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):
-                secondary = [x + ".fai", os.path.splitext(x)[0] + ".dict"]
-                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
-                secondary = [z for z in secondary if z]
-                if secondary:
-                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+                out = _add_secondary_if_exists([x + ".fai", os.path.splitext(x)[0] + ".dict"], out, get_retriever)
             elif x.endswith(".fa.gz"):
-                secondary = [x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"]
-                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
-                secondary = [z for z in secondary if z]
-                if secondary:
-                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+                out = _add_secondary_if_exists([x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"],
+                                               out, get_retriever)
             elif x.endswith(".fq.gz") or x.endswith(".fastq.gz"):
-                secondary = [x + ".gbi"]
-                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
-                secondary = [z for z in secondary if z]
-                if secondary:
-                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+                out = _add_secondary_if_exists([x + ".gbi"], out, get_retriever)
             elif x.endswith(".gtf"):
-                secondary = [x + ".db"]
-                secondary = [_file_local_or_remote(y, get_retriever) for y in secondary]
-                secondary = [z for z in secondary if z]
-                if secondary:
-                    out["secondaryFiles"] = [{"class": "File", "path": y} for y in secondary]
+                out = _add_secondary_if_exists([x + ".db"], out, get_retriever)
         else:
             out = {"class": "File", "path": _directory_tarball(x)}
         return out
