@@ -8,6 +8,7 @@ import csv
 import json
 import math
 import operator
+import os
 import pprint
 import sys
 
@@ -32,8 +33,9 @@ def main(run_uuid):
             name = job["name"]
         sample, vc = get_sample_variantcaller(job)
         name = "%s-%s" % (sample, name)
-        if vc and job["name"].startswith("variantcall_batch"):
+        if job["name"].startswith("variantcall_batch") and vc:
             name += "-%s" % vc
+        print(name, job["uuid"], job["log_uuid"])
         log = client.collections().get(uuid=job["log_uuid"]).execute()
         logc = Collection(log["portable_data_hash"])
         machine_info = get_machine_info(logc)
@@ -87,13 +89,21 @@ def get_in_inputs(key, data):
 
 def get_sample_variantcaller(job):
     from arvados.collection import Collection
-    for k, v in job["mounts"].items():
-        if k.endswith("cwl.inputs.json"):
-            c = Collection(v["portable_data_hash"])
-            with c.open("cwl.inputs.json", "r") as in_handle:
-                inputs = json.load(in_handle)
-            return [get_in_inputs("description", inputs),
-                    get_in_inputs("config__algorithm__variantcaller", inputs)]
+    needs_json = job["name"].startswith("variantcall_batch")
+    sample = None
+    for f in job["mounts"]:
+        if f.endswith("-sort.bam"):
+            sample = os.path.basename(f).replace("-sort.bam", "")
+    if not sample or needs_json:
+        for k, v in job["mounts"].items():
+            if k.endswith("cwl.inputs.json"):
+                c = Collection(v["portable_data_hash"])
+                with c.open("cwl.inputs.json", "r") as in_handle:
+                    inputs = json.load(in_handle)
+                return [get_in_inputs("description", inputs),
+                        get_in_inputs("config__algorithm__variantcaller", inputs)]
+    else:
+        return sample, None
     return None, None
 
 def _get_api_client():
