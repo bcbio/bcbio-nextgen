@@ -30,7 +30,13 @@ from bcbio.variation import multi as vmulti
 def sample_callable_bed(bam_file, ref_file, data):
     """Retrieve callable regions for a sample subset by defined analysis regions.
     """
+    from bcbio.heterogeneity import chromhacks
     CovInfo = collections.namedtuple("CovInfo", "callable, raw_callable, depth_files")
+    noalt_calling = "noalt_calling" in dd.get_tools_on(data)
+    def callable_chrom_filter(r):
+        """Filter to callable region, potentially limiting by chromosomes.
+        """
+        return r.name == "CALLABLE" and (not noalt_calling or chromhacks.is_nonalt(r.chrom))
     config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir({"config": config}):
@@ -39,7 +45,7 @@ def sample_callable_bed(bam_file, ref_file, data):
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(config, out_file) as tx_out_file:
                 callable_regions = pybedtools.BedTool(callable_bed)
-                filter_regions = callable_regions.filter(lambda x: x.name == "CALLABLE")
+                filter_regions = callable_regions.filter(callable_chrom_filter)
                 if input_regions_bed:
                     if not utils.file_uptodate(out_file, input_regions_bed):
                         input_regions = pybedtools.BedTool(input_regions_bed)

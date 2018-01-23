@@ -1004,6 +1004,8 @@ lists with multiple options:
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
+  - ``noalt_calling`` Do not use alternative chromosomes for variant calling. Calls
+    on chr1-22,X,Y,MT to avoid slowdowns on alt chromosomes.
   - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
     uses downsampled files and numbers here are an estimation of 1e7 reads.).
   - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.

@@ -9,6 +9,8 @@
   missing libquadmath.so with numpy due to libgcc update)
 - QC: improve read counting speed by moving to hts-nim-tools, replacing custom
   samtools view counting
+- Add `noalt_calling` to avoid variant calling on non standard chromosomes.
+  Thanks to Vlad Saveliev and Oliver Hofmann.
 - delly: Support 0.7.8 release which calls all variant types together.
 - gVCF: fix basic filtering for GATK and sentieon when running without joint
   calling. Thanks to Tom Morris.
