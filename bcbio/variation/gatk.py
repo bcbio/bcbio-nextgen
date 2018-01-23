@@ -3,6 +3,7 @@
 import os
 from distutils.version import LooseVersion
 import shutil
+import subprocess
 
 import toolz as tz
 
@@ -43,7 +44,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     gatk_type = broad_runner.gatk_type()
     for x in align_bams:
         bam.index(x, config)
-    if num_cores > 1 and broad_runner.gatk_type() == "gatk4":
+    if _use_spark(num_cores, gatk_type):
         # GATK4 spark runs use 2bit reference index
         params = ["--reference", dd.get_ref_twobit(items[0])]
     else:
@@ -99,6 +100,9 @@ def _joint_calling(items):
             "Joint calling requires batched samples, %s has no metadata batch." % dd.get_sample_name(items[0])
     return jointcaller
 
+def _use_spark(num_cores, gatk_type):
+    return num_cores > 1 and gatk_type == "gatk4"
+
 def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """Call variation with GATK's HaplotypeCaller.
@@ -115,7 +119,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         assert gatk_type in ["restricted", "gatk4"], \
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
         with file_transaction(items[0], out_file) as tx_out_file:
-            if num_cores > 1 and gatk_type == "gatk4":
+            if _use_spark(num_cores, gatk_type):
                 params += ["-T", "HaplotypeCallerSpark", "--spark-master", "local[%s]" % num_cores,
                            "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
             else:
@@ -156,8 +160,19 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 params += [str(x) for x in resources.get("options", [])]
             broad_runner.new_resources("gatk-haplotype")
             memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
-            broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
-                                  parallel_gc=(num_cores > 1 and gatk_type == "gatk4"))
+            try:
+                broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
+                                      parallel_gc=_use_spark(num_cores, gatk_type))
+            except subprocess.CalledProcessError, msg:
+                # Spark failing on regions without any reads, write an empty VCF instead
+                # https://github.com/broadinstitute/gatk/issues/4234
+                if (_use_spark(num_cores, gatk_type) and
+                      str(msg).find("java.lang.UnsupportedOperationException: empty collection") and
+                      str(msg).find("at org.apache.spark.rdd.RDD")):
+                    vcfutils.write_empty_vcf(tx_out_file, samples=[dd.get_sample_name(d) for d in items])
+                else:
+                    raise
+
     # avoid bug in GATK where files can get output as non-compressed
     if out_file.endswith(".gz") and not os.path.exists(out_file + ".tbi"):
         with open(out_file, "r") as in_handle:
