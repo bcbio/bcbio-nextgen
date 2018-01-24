@@ -66,7 +66,7 @@ def _incomplete_genomicsdb(dbdir):
     Works around current inability to move GenomicsDB outputs and support
     transactional directories.
     """
-    for test_file in ["callset.json", "vidmap.json"]:
+    for test_file in ["callset.json", "vidmap.json", "genomicsdb_array/genomicsdb_meta.json"]:
         if not os.path.exists(os.path.join(dbdir, test_file)):
             return True
     return False
