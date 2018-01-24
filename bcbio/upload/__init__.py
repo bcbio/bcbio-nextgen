@@ -545,7 +545,13 @@ def _maybe_add_seqbuster(algorithm, sample, out):
                     "type": "counts",
                     "ext": "mirbase-ready"})
     fn = sample.get("seqbuster_novel")
-    if fn and utils.file_exists(fn):
+    fn = sample["mirtop"]
+    if utils.file_exists(fn):
+        out.append({"path": fn,
+                    "type": "gff",
+                    "ext": "mirbase-ready"})
+    if "seqbuster_novel" in sample and utils.file_exists(sample["seqbuster_novel"]):
+        fn = sample["seqbuster_novel"]
         out.append({"path": fn,
                     "type": "counts",
                     "ext": "novel-ready"})

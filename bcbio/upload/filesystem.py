@@ -56,7 +56,7 @@ def _get_file_upload_path(finfo, storage_dir):
     else:
         out_file = os.path.join(storage_dir, os.path.basename(finfo["path"]))
     return os.path.abspath(out_file)
-    
+
 def _get_dir_upload_path(finfo, storage_dir):
     return os.path.abspath(os.path.join(storage_dir, finfo["ext"]))
 

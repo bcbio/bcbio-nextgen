@@ -101,8 +101,19 @@ def sample_annotation(data):
     if dd.get_mirbase_hairpin(data):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
         if utils.file_exists(data["collapse"]):
-            data['transcriptome_bam'] = _align(data["collapse"], dd.get_mirbase_hairpin(data), out_file, data)
-            data['seqbuster'] = _miraligner(data["collapse"], out_file, dd.get_species(data), mirbase, data['config'])
+            data['transcriptome_bam'] = _align(data["collapse"],
+                                               dd.get_mirbase_hairpin(data),
+                                               out_file,
+                                               data)
+            data['seqbuster'] = _miraligner(data["collapse"], out_file,
+                                            dd.get_species(data),
+                                            mirbase,
+                                            data['config'])
+            data["mirtop"] = _mirtop(data['seqbuster'],
+                                     dd.get_species(data),
+                                     mirbase,
+                                     out_dir,
+                                     data['config'])
         else:
             logger.debug("Trimmed collapsed file is empty for %s." % names)
     else:
@@ -111,7 +122,10 @@ def sample_annotation(data):
     sps = dd.get_species(data) if dd.get_species(data) else "None"
     logger.debug("Looking for mirdeep2 database for %s" % names)
     if file_exists(op.join(dd.get_work_dir(data), "mirdeep2", "novel", "hairpin.fa")):
-        data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, sps,  op.join(dd.get_work_dir(data), "mirdeep2", "novel"), data['config'])
+        data['seqbuster_novel'] = _miraligner(data["collapse"], "%s_novel" % out_file, sps,
+                                              op.join(dd.get_work_dir(data),
+                                                      "mirdeep2", "novel"),
+                                              data['config'])
 
     if "trna" in tools:
         data['trna'] = _mint_trna_annotation(data)
@@ -218,6 +232,27 @@ def _get_env():
 def _get_atropos():
     anaconda = os.path.dirname(os.path.realpath(sys.executable))
     return os.path.join(anaconda, "..", "envs", "python3", "bin", "atropos")
+
+def _mirtop(input_fn, sps, db, out_dir, config):
+    """
+    Convert to GFF3 standard format
+    """
+    hairpin = os.path.join(db, "hairpin.fa")
+    gtf = os.path.join(db, "mirbase.gff3")
+    if not file_exists(hairpin) or not file_exists(gtf):
+        logger.warning("%s or %s are not installed. Skipping." % (hairpin, gtf))
+        return None
+    out_fn = "%s.gff" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    export = _get_env()
+    cmd = ("{export} mirtop gff  --sps {sps} --hairpin {hairpin} "
+           "--gtf {gtf} --format seqbuster -o {out_tx} {input_fn}")
+    if not file_exists(os.path.join(out_dir, out_fn)):
+        with tx_tmpdir() as out_tx:
+            do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % input_fn)
+            shutil.move(os.path.join(out_tx, out_fn),
+                        os.path.join(out_dir, out_fn))
+    return os.path.join(out_dir, out_fn)
+
 
 def _trna_annotation(data):
     """
