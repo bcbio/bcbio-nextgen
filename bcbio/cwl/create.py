@@ -96,6 +96,9 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
     # Skip input disk for steps which require only transformation (and thus no staging)
     if no_files:
         in_disk = 0
+    # Avoid accidentally flagging as no staging if we don't know sizes of expected inputs
+    elif in_disk == 0:
+        in_disk = 1
     input_hint = {"class": "dx:InputResourceRequirement", "indirMin": int(math.ceil(in_disk))}
     return disk_hint, input_hint
 
