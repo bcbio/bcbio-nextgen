@@ -61,7 +61,8 @@ def gatk_rnaseq_calling(data):
     tools_on.append("gvcf")
     data = dd.set_tools_on(data, tools_on)
     data = dd.set_jointcaller(data, ["%s-joint" % v for v in dd.get_variantcaller(data)])
-    out_file = os.path.join(utils.safe_makedir(os.path.join("variation", "rnaseq", "gatk-haplotype")),
+    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                            "variation", "rnaseq", "gatk-haplotype")),
                             "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
     out_file = gatk.haplotype_caller([dd.get_split_bam(data)], [data], dd.get_ref_file(data), {},
                                      out_file=out_file)
@@ -119,16 +120,16 @@ def gatk_filter_rnaseq(vrn_file, data):
     if not file_exists(out_file):
         ref_file = dd.get_ref_file(data)
         with file_transaction(data, out_file) as tx_out_file:
-            params = ["-T", "VariantFiltration",
+            params = ["VariantFiltration",
                       "-R", ref_file,
                       "-V", vrn_file,
-                      "--clusterWindowSize", "35",
-                      "--clusterSize", "3",
-                      "--filterExpression", "\"'FS > 30.0'\"",
-                      "--filterName", "FS",
-                      "--filterExpression", "\"'QD < 2.0'\"",
-                      "--filterName", "QD",
-                      "-o", tx_out_file]
-            jvm_opts = broad.get_gatk_framework_opts(dd.get_config(data), os.path.dirname(tx_out_file))
-            do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter RNA-seq variants.")
+                      "--cluster-window-size", "35",
+                      "--cluster-size", "3",
+                      "--filter-expression", "'FS > 30.0'",
+                      "--filter-name", "FS",
+                      "--filter-expression", "'QD < 2.0'",
+                      "--filter-name", "QD",
+                      "--output", tx_out_file]
+            jvm_opts = broad.get_gatk_opts(dd.get_config(data), os.path.dirname(tx_out_file))
+            do.run(broad.gatk_cmd("gatk", jvm_opts, params), "Filter RNA-seq variants.")
     return out_file

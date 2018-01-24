@@ -135,16 +135,16 @@ def _filter_bad_reads(in_bam, ref_file, data):
     if not utils.file_exists(out_file):
         with tx_tmpdir(data) as tmp_dir:
             with file_transaction(data, out_file) as tx_out_file:
-                params = ["-T", "PrintReads",
+                params = [("FixMisencodedBaseQualityReads"
+                           if dd.get_quality_format(data, "").lower() == "illumina"
+                           else "PrintReads"),
                           "-R", ref_file,
                           "-I", in_bam,
-                          "--out", tx_out_file,
-                          "--filter_mismatching_base_and_quals",
-                          "--filter_bases_not_stored",
-                          "--filter_reads_with_N_cigar"]
-                if dd.get_quality_format(data, "").lower() == "illumina":
-                    params.append("--fix_misencoded_quality_scores")
-                jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
-                do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter problem reads")
+                          "-O", tx_out_file,
+                          "-RF", "MatchingBasesAndQualsReadFilter",
+                          "-RF", "SeqIsStoredReadFilter",
+                          "-RF", "CigarContainsNoNOperator"]
+                jvm_opts = broad.get_gatk_opts(data["config"], tmp_dir)
+                do.run(broad.gatk_cmd("gatk", jvm_opts, params), "Filter problem reads")
     bam.index(out_file, data["config"])
     return out_file

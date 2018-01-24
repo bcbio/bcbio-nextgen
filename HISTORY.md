@@ -7,6 +7,8 @@
   multicore calling for CWL runs.
 - install: fix resolution issues due to conda 4.4.x (old ipython-cluster-helper,
   missing libquadmath.so with numpy due to libgcc update)
+- RNA-seq variant calling: improve joint calling and parallelization with move
+  to use GATK4 HaplotypeCaller.
 - QC: improve read counting speed by moving to hts-nim-tools, replacing custom
   samtools view counting
 - Add `noalt_calling` to avoid variant calling on non standard chromosomes.

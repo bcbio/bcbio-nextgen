@@ -39,7 +39,7 @@ def get_default_jvm_opts(tmp_dir=None, parallel_gc=False):
 def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
     """Retrieve GATK memory specifications, moving down a list of potential specifications.
     """
-    if include_gatk:
+    if include_gatk and "gatk4" in dd.get_tools_off({"config": config}):
         opts = ["-U", "LENIENT_VCF_PROCESSING", "--read_filter",
                 "BadCigar", "--read_filter", "NotPrimaryAlignment"]
     else:
@@ -498,15 +498,14 @@ def runner_from_config_safe(config):
 
 
 def gatk_cmd(name, jvm_opts, params, config=None):
-    """Retrieve PATH to gatk or gatk-framework executable using locally installed java.
+    """Retrieve PATH to gatk using locally installed java.
     """
     if name == "gatk":
-        assert config, "Need configuration input for gatk to distinguish gatk4"
         if isinstance(config, dict) and "config" not in config:
             data = {"config": config}
         else:
             data = config
-        if "gatk4" not in dd.get_tools_off(data):
+        if not data or "gatk4" not in dd.get_tools_off(data):
             return _gatk4_cmd(jvm_opts, params, data)
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
     # if we can't find via the local executable, fallback to being in the path
