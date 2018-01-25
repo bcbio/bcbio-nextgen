@@ -272,6 +272,7 @@ To run::
     cd NA12878-hg38-val
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-hg38-validate-getdata.sh
     bash NA12878-hg38-validate-getdata.sh
+    mkdir -p work
     cd work
     bcbio_nextgen.py ../config/NA12878-hg38-validate.yaml -n 16
 
