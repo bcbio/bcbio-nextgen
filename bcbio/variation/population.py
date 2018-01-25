@@ -16,9 +16,13 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import normalize, vcfanno, vcfutils
 
+# Current callers we can't create databases for
+# mutect2 -- fails on multi-allelic inputs represented as non-diploid
+NO_DB_CALLERS = ["mutect2"]
+
 def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
-    """
+    """#
     data = samples[0]
     use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     name, caller, is_batch = call_info
@@ -29,7 +33,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
         gemini_vcf = normalize.normalize(gemini_vcf, data, passonly=passonly)
     ann_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
-    if vcfutils.vcf_has_variants(gemini_vcf):
+    if vcfutils.vcf_has_variants(gemini_vcf) and caller not in NO_DB_CALLERS:
         if not utils.file_exists(gemini_db) and use_gemini:
             ped_file = create_ped_file(samples + extras, gemini_vcf)
             # Use original approach for hg19/GRCh37 pending additional testing
