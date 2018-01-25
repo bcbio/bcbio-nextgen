@@ -12,20 +12,22 @@ from bcbio.pipeline import datadict as dd
 
 def run(bam_file, data, out_dir):
     """Create several log files"""
-    _mirbase_stats(data, out_dir)
-    _seqcluster_stats(data, out_dir)
+    m = {"base": None, "secondary": []}
+    m.update(_mirbase_stats(data, out_dir))
+    m["secondary"].append(_seqcluster_stats(data, out_dir))
 
 def _mirbase_stats(data, out_dir):
     """Create stats from miraligner"""
     utils.safe_makedir(out_dir)
+    out_file = os.path.join(out_dir, "%s_bcbio_mirbase.txt" % dd.get_sample_name(data))
+    out_file_novel = os.path.join(out_dir, "%s_bcbio_mirdeeep2.txt" % dd.get_sample_name(data))
     mirbase_fn = data.get("seqbuster", None)
     if mirbase_fn:
-        out_file = os.path.join(out_dir, "%s_bcbio_mirbase.txt" % dd.get_sample_name(data))
         _get_stats_from_miraligner(mirbase_fn, out_file, "seqbuster")
     mirdeep_fn = data.get("seqbuster_novel", None)
     if mirdeep_fn:
-        out_file = os.path.join(out_dir, "%s_bcbio_mirdeeep2.txt" % dd.get_sample_name(data))
-        _get_stats_from_miraligner(mirdeep_fn, out_file, "mirdeep2")
+        _get_stats_from_miraligner(mirdeep_fn, out_file_novel, "mirdeep2")
+    return {"base": out_file, "secondary": [out_file_novel]}
 
 def _get_stats_from_miraligner(fn, out_file, name):
     df = pd.read_csv(fn, sep="\t", dtype={"mism": "string",
@@ -65,4 +67,5 @@ def _seqcluster_stats(data, out_dir):
     df = pd.read_csv(fn, sep="\t", names = ["reads", "sample", "type"])
     df_sample = df[df["sample"] == name]
     df_sample.to_csv(out_file, sep="\t")
+    return out_file
 

@@ -1,5 +1,7 @@
 ## 1.0.8 (in progress)
 
+- Add Total number of reads and adapter found to metrics in small RNA-seq pipeline.
+- Add mirtop to the tools used in small RNA-seq pipeline for miRNA annotation.
 - GATK4: the default GATK release used in bcbio when running HaplotypeCaller or
   Base Quality Score Recalibration. Use `tools_off: [gatk4]` to use older GATK
   3.x versions.

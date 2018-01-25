@@ -92,6 +92,7 @@ def get_qc_tools(data):
                 logger.debug("GTF not compatible with Qualimap, skipping.")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
+        to_run.append("atropos")
     if not analysis.startswith("smallrna-seq"):
         to_run.append("samtools")
         if tz.get_in(["config", "algorithm", "kraken"], data):
@@ -118,9 +119,10 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import (coverage, damage, fastqc, kraken, qsignature, qualimap,
+    from bcbio.qc import (atropos, coverage, damage, fastqc, kraken, qsignature, qualimap,
                           samtools, picard, srna, umi, variant, viral, preseq)
     tools = {"fastqc": fastqc.run,
+             "atropos": atropos.run,
              "small-rna": srna.run,
              "samtools": samtools.run,
              "qualimap": qualimap.run,

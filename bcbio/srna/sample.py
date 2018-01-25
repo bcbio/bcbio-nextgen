@@ -39,6 +39,7 @@ def trim_srna_sample(data):
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
     out_dir = os.path.join(work_dir, names)
+    log_out = os.path.join(out_dir, "%s.log" % names)
     utils.safe_makedir(out_dir)
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
@@ -46,6 +47,7 @@ def trim_srna_sample(data):
         data["clean_fastq"] = out_file
         data["collapse"] = _collapse(data["clean_fastq"])
         data["size_stats"] = _summary(data['collapse'])
+        data["log_trimming"] = log_out
         return [[data]]
 
     adapter = dd.get_adapters(data)
@@ -57,7 +59,6 @@ def trim_srna_sample(data):
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
-        log_out = os.path.join(out_dir, "%s.log" % names)
         atropos = _get_atropos()
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
         cores = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
@@ -76,6 +77,7 @@ def trim_srna_sample(data):
                     utils.move_safe(tx_out_file, in_file)
                     cmd = "{atropos} {cores} {options} -se {in_file} -o {tx_out_file} -m 17"
                     do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
+        data["log_trimming"] = log_out
     else:
         if not trim_reads:
             logger.debug("Skip trimming for: %s" % names)
@@ -252,7 +254,6 @@ def _mirtop(input_fn, sps, db, out_dir, config):
             shutil.move(os.path.join(out_tx, out_fn),
                         os.path.join(out_dir, out_fn))
     return os.path.join(out_dir, out_fn)
-
 
 def _trna_annotation(data):
     """
