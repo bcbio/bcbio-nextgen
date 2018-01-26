@@ -74,7 +74,7 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
-remove_oldeffects=False):
+               remove_oldeffects=False):
     """Convert multi-allelic variants into single allelic.
 
     `vt normalize` has the -n flag passed (skipping reference checks) because
@@ -82,18 +82,21 @@ remove_oldeffects=False):
     are not supported in VCF, so you'll have a mismatch of N in VCF versus R
     (or other ambiguous bases) in the genome.
     """
-    out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
+    if remove_oldeffects:
+        out_file = "%s-noeff-decompose%s" % utils.splitext_plus(in_file)
+    else:
+        out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         ref_file = dd.get_ref_file(data)
         assert out_file.endswith(".vcf.gz")
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("gunzip -c " + in_file +
-                  (" | bcftools view -f 'PASS,.'" if passonly else "") +
-                  (" | bcftools annotate -x INFO/CSQ,INFO/ANN " if remove_oldeffects else "") +
-                  (" | vcfallelicprimitives -t DECOMPOSED --keep-geno" if split_biallelic else "") +
+                   (" | bcftools view -f 'PASS,.'" if passonly else "") +
+                   (" | bcftools annotate -x INFO/CSQ,INFO/ANN " if remove_oldeffects else "") +
+                   (" | vcfallelicprimitives -t DECOMPOSED --keep-geno" if split_biallelic else "") +
                    " | sed 's/ID=AD,Number=./ID=AD,Number=R/'" +
                    " | vt decompose -s - " +
-                 ((" | vt normalize -n -r " + ref_file + " - ") if normalize_indels else "") +
+                   ((" | vt normalize -n -r " + ref_file + " - ") if normalize_indels else "") +
                    " | awk '{ gsub(\"./-65\", \"./.\"); print $0 }'" +
                    " | sed -e 's/Number=A/Number=1/g'" +
                    " | bgzip -c > " + tx_out_file
