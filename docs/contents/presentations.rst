@@ -1,6 +1,10 @@
 Presentations
 =============
 
+- Description of bcbio and Common Workflow integration with a focus on
+  parallelization strategies. From a bcbio discussion with `Peter Park's lab at Harvard Medical School
+  <https://compbio.hms.harvard.edu/index>`_ (26 January 2018): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/park2018_bcbio/park2018_bcbio.pdf>`_
+
 - In depth description of bcbio and Common Workflow Language integration,
   including motivation and practical examples of running on clusters, DNAnexus,
   SevenBridges and Arvados. From the
