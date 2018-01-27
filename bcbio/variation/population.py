@@ -18,6 +18,7 @@ from bcbio.variation import normalize, vcfanno, vcfutils
 
 # Current callers we can't create databases for
 # mutect2 -- fails on multi-allelic inputs represented as non-diploid
+# https://github.com/broadinstitute/gatk/issues/3564
 NO_DB_CALLERS = ["mutect2"]
 
 def prep_gemini_db(fnames, call_info, samples, extras):
