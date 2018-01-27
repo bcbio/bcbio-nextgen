@@ -250,7 +250,8 @@ def dedup_bam(in_bam, data):
     """Perform non-stream based deduplication of BAM input files using biobambam.
     """
     if _check_dedup(data):
-        out_file = "%s-dedup%s" % utils.splitext_plus(in_bam)
+        out_file = os.path.join(utils.safe_makedir(os.path.join(os.getcwd(), "align", dd.get_sample_name(data))),
+                                "%s-dedup%s" % utils.splitext_plus(os.path.basename(in_bam)))
         if not utils.file_exists(out_file):
             with tx_tmpdir(data) as tmpdir:
                 with file_transaction(data, out_file) as tx_out_file:
