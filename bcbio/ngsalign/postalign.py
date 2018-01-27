@@ -7,6 +7,7 @@ samblaster: http://arxiv.org/pdf/1403.7486v1.pdf
 biobambam bammarkduplicates: http://arxiv.org/abs/1306.0836
 """
 import contextlib
+import math
 import os
 
 import toolz as tz
@@ -120,6 +121,8 @@ def _biobambam_dedup_sort(data, tx_out_file):
         sort_opt = "-n" if data.get("align_split") and dd.get_mark_duplicates(data) else ""
         cmd = "{samtools} sort %s -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -" % sort_opt
     else:
+        # scale core usage to avoid memory issues with larger WGS samples
+        cores = max(1, int(math.ceil(cores * 0.75)))
         ds_cmd = bam.get_maxcov_downsample_cl(data, "bamsormadup")
         bamsormadup = config_utils.get_program("bamsormadup", data)
         cmd = ("{bamsormadup} inputformat=sam threads={cores} tmpfile={tmp_file}-markdup "

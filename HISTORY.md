@@ -1,7 +1,5 @@
 ## 1.0.8 (in progress)
 
-- Add Total number of reads and adapter found to metrics in small RNA-seq pipeline.
-- Add mirtop to the tools used in small RNA-seq pipeline for miRNA annotation.
 - GATK4: the default GATK release used in bcbio when running HaplotypeCaller or
   Base Quality Score Recalibration. Use `tools_off: [gatk4]` to use older GATK
   3.x versions.
@@ -15,6 +13,10 @@
   samtools view counting
 - Add `noalt_calling` to avoid variant calling on non standard chromosomes.
   Thanks to Vlad Saveliev and Oliver Hofmann.
+- variant alignment: improve core allocations for non-split alignments to avoid
+  memory issues on 4Gb/core machines with whole genome samples.
+- Add Total number of reads and adapter found to metrics in small RNA-seq pipeline.
+- Add mirtop to the tools used in small RNA-seq pipeline for miRNA annotation.
 - delly: Support 0.7.8 release which calls all variant types together.
 - gVCF: fix basic filtering for GATK and sentieon when running without joint
   calling. Thanks to Tom Morris.
