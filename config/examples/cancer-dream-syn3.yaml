@@ -5,16 +5,9 @@
 details:
 - algorithm:
     aligner: bwa
-    align_split_size: 5000000
-    nomap_split_targets: 100
     mark_duplicates: true
-    recalibrate: true
-    realign: true
     remove_lcr: true
-    platform: illumina
-    quality_format: standard
-    variantcaller: [mutect, freebayes, vardict, varscan]
-    indelcaller: false
+    variantcaller: [mutect2, freebayes, vardict, varscan]
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
@@ -32,16 +25,9 @@ details:
     phenotype: normal
 - algorithm:
     aligner: bwa
-    align_split_size: 5000000
-    nomap_split_targets: 100
     mark_duplicates: true
-    recalibrate: true
-    realign: true
     remove_lcr: true
-    platform: illumina
-    quality_format: standard
-    variantcaller: [mutect, freebayes, vardict, varscan]
-    indelcaller: false
+    variantcaller: [mutect2, freebayes, vardict, varscan]
     ensemble:
       numpass: 2
     variant_regions: ../input/NGv3.bed
