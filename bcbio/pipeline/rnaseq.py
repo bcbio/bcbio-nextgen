@@ -94,9 +94,9 @@ def run_rnaseq_ann_filter(data):
     """
     ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
     if ann_file:
-        dd.set_vrn_file(data, ann_file)
+        data = dd.set_vrn_file(data, ann_file)
     filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
-    dd.set_vrn_file(data, filter_file)
+    data = dd.set_vrn_file(data, filter_file)
     return [[data]]
 
 def quantitate(data):
