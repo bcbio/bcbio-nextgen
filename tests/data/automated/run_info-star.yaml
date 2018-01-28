@@ -6,13 +6,13 @@ details:
       fusion_caller: [pizzly, oncofuse, ericscript]
       variantcaller: [gatk-haplotype]
       transcriptome_align: True
-      aligner: star
+      aligner: hisat2
       quality_format: illumina
       trim_reads: read_through
       adapters: [truseq, polya]
       tools_on: [gatk4]
       expression_caller: [stringtie, dexseq, kallisto, salmon]
-      transcript_assembler: [stringtie]
+      #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1
@@ -30,7 +30,7 @@ details:
       adapters: [truseq, polya]
       tools_on: [gatk4]
       expression_caller: [stringtie, dexseq, kallisto, salmon]
-      transcript_assembler: [stringtie]
+      #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
     metadata:
       batch: TestBatch1

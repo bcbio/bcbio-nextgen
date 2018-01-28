@@ -54,6 +54,15 @@ def rnaseq_variant_calling(samples, run_parallel):
             out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
         samples = out
         samples = run_parallel("run_rnaseq_ann_filter", samples)
+        out = []
+        for data in (to_single_data(xs) for xs in samples):
+            if "variants" not in data:
+                data["variants"] = []
+            data["variants"].append({"variantcaller": "gatk-haplotype", "vcf": data["vrn_file_orig"],
+                                     "population": {"vcf": data["vrn_file"]}})
+            data["vrn_file"] = data.pop("vrn_file_orig")
+            out.append([data])
+        samples = out
     return samples
 
 def run_rnaseq_variant_calling(data):
