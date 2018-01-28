@@ -710,7 +710,10 @@ Structural variant calling
 - ``fusion_caller`` Specify a standalone fusion caller for fusion mode. Supports
   ``oncofuse`` for STAR/tophat runs, ``pizzly`` and ``ericscript`` for all runs.
   If a standalone caller is specified (i.e. ``pizzly`` or ``ericscript`` ),
-  fusion detection will not be performed with aligner.
+  fusion detection will not be performed with aligner. ``oncofuse`` only
+  supports human genome builds GRCh37 and hg19. ``ericscript`` supports human
+  genome builds GRCh37, hg19 and hg38 after installing the associated fusion
+  databases (:ref:`datatarget-install`).
 
 HLA typing
 ==========
