@@ -525,7 +525,7 @@ def _add_segmetrics_to_output(out, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "segmetrics",
-                   "--ci", "--pi",
+                   "--median", "--iqr", "--ci", "--pi",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
             # Use less fine grained bootstrapping intervals for whole genome runs
             if dd.get_coverage_interval(data) == "genome":
