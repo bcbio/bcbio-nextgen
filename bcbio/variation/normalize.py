@@ -46,6 +46,7 @@
    We are using `vt normalize` in this module.
 
 """
+import cyvcf2
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
@@ -73,6 +74,21 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
             utils.symlink_plus(in_file, out_file)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
+def _find_existing_effects(in_file):
+    """Find effects values pre-annotated in VCF to remove.
+    """
+    ann_to_check = ["CSQ", "ANN"]
+    rec_iter = cyvcf2.VCF(in_file)
+    out = []
+    for a in ann_to_check:
+        try:
+            h = rec_iter.get_header_type(a)
+            out.append(a)
+        except KeyError:
+            pass
+    return out
+
+
 def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
                remove_oldeffects=False):
     """Convert multi-allelic variants into single allelic.
@@ -84,7 +100,13 @@ def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biall
     """
     if remove_oldeffects:
         out_file = "%s-noeff-decompose%s" % utils.splitext_plus(in_file)
+        cur_effects = _find_existing_effects(in_file)
+        if cur_effects:
+            clean_effects_cmd = " | bcftools annotate -x %s " % (",".join(["INFO/%s" % x for x in cur_effects]))
+        else:
+            clean_effects_cmd = ""
     else:
+        clean_effects_cmd = ""
         out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         ref_file = dd.get_ref_file(data)
@@ -92,7 +114,7 @@ def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biall
         with file_transaction(data, out_file) as tx_out_file:
             cmd = ("gunzip -c " + in_file +
                    (" | bcftools view -f 'PASS,.'" if passonly else "") +
-                   (" | bcftools annotate -x INFO/CSQ,INFO/ANN " if remove_oldeffects else "") +
+                   clean_effects_cmd +
                    (" | vcfallelicprimitives -t DECOMPOSED --keep-geno" if split_biallelic else "") +
                    " | sed 's/ID=AD,Number=./ID=AD,Number=R/'" +
                    " | vt decompose -s - " +
