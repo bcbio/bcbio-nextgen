@@ -163,6 +163,23 @@ def write_empty_vcf(out_file, config=None, samples=None):
     else:
         return out_file
 
+def to_standardonly(in_file, ref_file, data):
+    """Subset a VCF input file to standard chromosomes (1-22,X,Y,MT).
+    """
+    from bcbio.heterogeneity import chromhacks
+    out_file = "%s-stdchrs.vcf.gz" % utils.splitext_plus(in_file)[0]
+    if not utils.file_exists(out_file):
+        stds = []
+        for c in ref.file_contigs(ref_file):
+            if chromhacks.is_nonalt(c.name):
+                stds.append(c.name)
+        if stds:
+            with file_transaction(data, out_file) as tx_out_file:
+                stds = ",".join(stds)
+                cmd = "bcftools view -o {tx_out_file} -O z {in_file} {stds}"
+                do.run(cmd.format(**locals()), "Subset to standard chromosomes")
+    return bgzip_and_index(out_file, data["config"]) if utils.file_exists(out_file) else in_file
+
 def split_snps_indels(orig_file, ref_file, config):
     """Split a variant call file into SNPs and INDELs for processing.
     """
