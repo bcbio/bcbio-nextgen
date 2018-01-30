@@ -6,9 +6,9 @@ def run(bam_file, data, dir_out):
         with open(data["log_trimming"]) as inh:
             for line in inh:
                 cols = line.strip().split(":")
-                if line.find("Total reads processed:") > -1:
+                if line.find("Total reads processed") > -1:
                     m["reads_before_trimming"] = _get_value(cols[1])
-                elif line.find("Reads with adapter:") > -1:
+                elif line.find("Reads with adapter") > -1:
                     m["read_with_adapter"] = _get_value(cols[1])
                 elif line.find("Reads written") > -1:
                     m["read_pass_filter"] = _get_value(cols[1])
