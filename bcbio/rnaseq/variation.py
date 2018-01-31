@@ -103,6 +103,7 @@ def rnaseq_vardict_variant_calling(data):
                 "> {tx_out_file}")
         message = "Calling RNA-seq variants with VarDict"
         do.run(cmd.format(**locals()), message)
+    out_file = vcfutils.bzip_and_index(out_file, data["config"])
     data = dd.set_vrn_file(data, out_file)
     return data
 

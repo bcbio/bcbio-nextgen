@@ -176,6 +176,7 @@ def to_standardonly(in_file, ref_file, data):
         if stds:
             with file_transaction(data, out_file) as tx_out_file:
                 stds = ",".join(stds)
+                in_file = bgzip_and_index(in_file, data["config"])
                 cmd = "bcftools view -o {tx_out_file} -O z {in_file} {stds}"
                 do.run(cmd.format(**locals()), "Subset to standard chromosomes")
     return bgzip_and_index(out_file, data["config"]) if utils.file_exists(out_file) else in_file
