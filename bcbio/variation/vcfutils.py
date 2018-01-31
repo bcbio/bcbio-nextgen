@@ -17,10 +17,9 @@ from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.split import parallel_split_combine
 from bcbio.distributed.transaction import file_transaction
-from bcbio.pipeline import config_utils, shared, tools
+from bcbio.pipeline import config_utils, tools
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bamprep
 
 # ## Tumor/normal paired cancer analyses
 
@@ -349,15 +348,21 @@ def _sort_by_region(fnames, regions, ref_file, config):
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
-    Uses bcftools concat --naive which only combines samples and does no parsing
-    work, allowing scaling to large file sizes.
+    Uses GATK4's GatherVcfs, falling back to bcftools concat --naive if it fails.
+    These both only combine samples and avoid parsing, allowing scaling to large
+    file sizes.
     """
     if not utils.file_exists(out_file):
         input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        if "gatk4" not in dd.get_tools_off({"config": config}):
-            _run_concat_variant_files_gatk4(input_file_list, out_file, config)
-        else:
-            out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+        try:
+            out_file = _run_concat_variant_files_gatk4(input_file_list, out_file, config)
+        except subprocess.CalledProcessError as msg:
+            if ("We require all VCFs to have complete VCF headers" in str(msg) or
+                  "Features added out of order" in str(msg) or
+                  "The reference allele cannot be missing" in str(msg)):
+                out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+            else:
+                raise
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
@@ -419,41 +424,6 @@ def _fix_gatk_header(exist_files, out_file, config):
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]
 
-def concat_variant_files_catvariants(orig_files, out_file, regions, ref_file, config):
-    """Concatenate multiple variant files from regions into a single output file.
-
-    Uses GATK CatVariants as a lightweight approach to merging VCF files split
-    by regions with the same sample information, so no complex merging needed.
-    Handles both plain text and bgzipped/tabix indexed outputs.
-
-    Falls back to bcftools concat if fails due to GATK stringency issues.
-    """
-    if not utils.file_exists(out_file):
-        input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        failed = False
-        with file_transaction(config, out_file) as tx_out_file:
-            params = ["org.broadinstitute.gatk.tools.CatVariants",
-                      "-R", ref_file,
-                      "-V", input_file_list,
-                      "-out", tx_out_file,
-                      "-assumeSorted"]
-            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), include_gatk=False)
-            try:
-                do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Concat variant files", log_error=False)
-            except subprocess.CalledProcessError as msg:
-                if ("We require all VCFs to have complete VCF headers" in str(msg) or
-                      "Features added out of order" in str(msg) or
-                      "The reference allele cannot be missing" in str(msg)):
-                    os.remove(tx_out_file)
-                    failed = True
-                else:
-                    raise
-        if failed:
-            return _run_concat_variant_files_bcftools(input_file_list, out_file, config)
-    if out_file.endswith(".gz"):
-        bgzip_and_index(out_file, config)
-    return out_file
-
 def concat_variant_files_bcftools(orig_files, out_file, config):
     if not utils.file_exists(out_file):
         exist_files = [x for x in orig_files if os.path.exists(x)]
@@ -489,10 +459,6 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
 
     Handles cases where we split files into SNPs/Indels for processing then
     need to merge back into a final file.
-
-    Will parallelize up to 4 cores based on documented recommendations:
-    https://software.broadinstitute.org/gatk/documentation/tooldocs/current/
-    org_broadinstitute_gatk_tools_walkers_variantutils_CombineVariants.php
     """
     in_pipeline = False
     if isinstance(orig_files, dict):
@@ -503,31 +469,14 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
         with file_transaction(config, out_file) as tx_out_file:
             exist_files = [x for x in orig_files if os.path.exists(x)]
             ready_files = run_multicore(p_bgzip_and_index, [[x, config] for x in exist_files], config)
-            params = ["-T", "CombineVariants",
-                      "-R", ref_file,
-                      "--out", tx_out_file]
-            priority_order = []
-            for i, ready_file in enumerate(ready_files):
-                name = "v%s" % i
-                params.extend(["--variant:{name}".format(name=name), ready_file])
-                priority_order.append(name)
-            params.extend(["--rod_priority_list", ",".join(priority_order)])
-            params.extend(["--genotypemergeoption", "PRIORITIZE"])
-            if quiet_out:
-                params.extend(["--suppressCommandLineHeader", "--setKey", "null"])
-            if region:
-                variant_regions = config["algorithm"].get("variant_regions", None)
-                cur_region = shared.subset_variant_regions(variant_regions, region, out_file)
-                if cur_region:
-                    params += ["-L", bamprep.region_to_gatk(cur_region),
-                               "--interval_set_rule", "INTERSECTION"]
-            cores = tz.get_in(["algorithm", "num_cores"], config, 1)
-            if cores > 1:
-                params += ["-nt", min(cores, 4)]
+            dict_file = "%s.dict" % utils.splitext_plus(ref_file)[0]
+            cores = dd.get_num_cores({"config": config})
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
-            jvm_opts = broad.get_gatk_framework_opts(config, os.path.dirname(tx_out_file), memscale=memscale,
-                                                     parallel_gc=True)
-            do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Combine variant files")
+            cmd = ["picard"] + broad.get_picard_opts(config, memscale) + \
+                  ["MergeVcfs", "D=%s" % dict_file, "O=%s" % tx_out_file] + \
+                  ["I=%s" % f for f in ready_files]
+            cmd = "%s && %s" % (utils.get_java_clprep(), " ".join(cmd))
+            do.run(cmd, "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     if in_pipeline:

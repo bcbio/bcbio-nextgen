@@ -1,10 +1,13 @@
 ## 1.0.8 (in progress)
 
-- GATK4: the default GATK release used in bcbio when running HaplotypeCaller or
+- GATK4 is the new default GATK release used in bcbio when running HaplotypeCaller or
   Base Quality Score Recalibration. Use `tools_off: [gatk4]` to use older GATK
   3.x versions.
 - GATK4: Support 4.0 release with changed command line parameters. Re-enable
   multicore calling for CWL runs.
+- GATK4: remove older GATK3 based gatk-framework in favor of equivalent GATK4
+  commands.
+- install: move to using recent IPython parallel to avoid dependency issues
 - install: fix resolution issues due to conda 4.4.x (old ipython-cluster-helper,
   missing libquadmath.so with numpy due to libgcc update)
 - RNA-seq variant calling: improve joint calling and parallelization with move

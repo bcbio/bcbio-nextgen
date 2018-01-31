@@ -23,17 +23,12 @@ def region_to_gatk(region):
 def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
     """Use GATK to extract reads from full BAM file.
     """
-    requires_gatkfull = False
-    args = ["-T", "PrintReads",
+    args = ["PrintReads",
             "-L", region_to_gatk(region),
             "-R", dd.get_ref_file(data),
             "-I", data["work_bam"]]
-    if requires_gatkfull:
-        runner = broad.runner_from_config(data["config"])
-        return runner.cl_gatk(args, tmp_dir)
-    else:
-        jvm_opts = broad.get_gatk_framework_opts(data["config"], tmp_dir)
-        return broad.gatk_cmd("gatk-framework", jvm_opts, args)
+    runner = broad.runner_from_config(data["config"])
+    return runner.cl_gatk(args, tmp_dir)
 
 def _piped_input_cl(data, region, tmp_dir, out_base_file, prep_params):
     """Retrieve the commandline for streaming input into preparation step.

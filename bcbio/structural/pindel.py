@@ -149,6 +149,6 @@ def _filter_paired(tumor, normal, out_file, reference, data):
     with file_transaction(data, out_file) as tx_out_file:
         params = ["-T", "SomaticPindelFilter", "-V", in_file, "-o",
                   tx_out_file, "-TID", tumor, "-NID", normal, "-R", reference]
-        jvm_opts = broad.get_gatk_framework_opts(config)
+        jvm_opts = broad.get_gatk_opts(config)
         do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter pindel variants")
     return out_file

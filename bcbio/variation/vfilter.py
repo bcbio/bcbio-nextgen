@@ -44,49 +44,6 @@ def cutoff_w_expression(vcf_file, expression, data, name="+", filterext="",
         out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
 
-def genotype_filter(vcf_file, expression, data, name, filterext=""):
-    """Perform genotype based filtering using GATK with the provided expression.
-
-    Adds FT tags to genotypes, rather than the general FILTER flag.
-    """
-    base, ext = utils.splitext_plus(vcf_file)
-    out_file = "{base}-filter{filterext}{ext}".format(**locals())
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            params = ["-T", "VariantFiltration",
-                      "-R", tz.get_in(["reference", "fasta", "base"], data),
-                      "--variant", vcf_file,
-                      "--out", tx_out_file,
-                      "--genotypeFilterName", name,
-                      "--genotypeFilterExpression", "'%s'" % expression]
-            jvm_opts = broad.get_gatk_framework_opts(data["config"], os.path.dirname(tx_out_file))
-            do.run(broad.gatk_cmd("gatk-framework", jvm_opts, params), "Filter with expression: %s" % expression)
-    if out_file.endswith(".vcf.gz"):
-        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file
-
-def genotype_filter_toref(vcf_file, expression, data, filterext=""):
-    """Perform genotype filters by converting failing calls to reference, using bcftools
-
-    Prefer the FT approach used in genotype_filter, but bcftools handles complex filter
-    expressions that GATK will not.
-    """
-    base, ext = utils.splitext_plus(vcf_file)
-    out_file = "{base}-filter{filterext}{ext}".format(**locals())
-    if not utils.file_exists(out_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            if vcfutils.vcf_has_variants(vcf_file):
-                bcftools = config_utils.get_program("bcftools", data["config"])
-                output_type = "z" if tx_out_file.endswith(".gz") else "v"
-                cmd = ("{bcftools} filter -O {output_type} "
-                       "-e '{expression}' -S 0 {vcf_file} > {tx_out_file}")
-                do.run(cmd.format(**locals()), "Genotype filtering to ref %s with %s" % (vcf_file, expression), data)
-            else:
-                shutil.copy(vcf_file, out_file)
-    if out_file.endswith(".vcf.gz"):
-        out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    return out_file
-
 # ## Caller specific
 
 def freebayes(in_file, ref_file, vrn_files, data):

@@ -56,19 +56,15 @@ def _get_gatk_opts(config, names, tmp_dir=None, memscale=None, include_gatk=True
     jvm_opts += get_default_jvm_opts(tmp_dir, parallel_gc=parallel_gc)
     return jvm_opts + opts
 
-def get_gatk_framework_opts(config, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
-    return _get_gatk_opts(config, ["gatk-framework", "gatk"], tmp_dir, memscale, include_gatk=include_gatk,
-                          parallel_gc=parallel_gc)
-
 def get_gatk_opts(config, tmp_dir=None, memscale=None, include_gatk=True, parallel_gc=False):
-    return _get_gatk_opts(config, ["gatk", "gatk-framework"], tmp_dir, memscale,
+    return _get_gatk_opts(config, ["gatk"], tmp_dir, memscale,
                           include_gatk=include_gatk, parallel_gc=parallel_gc)
 
 def get_gatk_vqsr_opts(config, tmp_dir=None, memscale=None):
-    return _get_gatk_opts(config, ["gatk-vqsr", "gatk", "gatk-framework"], tmp_dir, memscale)
+    return _get_gatk_opts(config, ["gatk-vqsr", "gatk"], tmp_dir, memscale)
 
 def get_picard_opts(config, memscale=None):
-    return _get_gatk_opts(config, ["picard", "gatk", "gatk-framework"], memscale=memscale, include_gatk=False)
+    return _get_gatk_opts(config, ["picard", "gatk"], memscale=memscale, include_gatk=False)
 
 def _clean_java_out(version_str):
     """Remove extra environmental information reported in java when querying for versions.
