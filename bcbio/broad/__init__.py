@@ -5,6 +5,7 @@
 """
 from contextlib import closing
 from distutils.version import LooseVersion
+import getpass
 import re
 import sys
 import os
@@ -132,6 +133,28 @@ def get_mutect_version(mutect_jar):
                          "Need to have version contained in jar (ie. muTect-1.1.5.jar): %s" % mutect_jar)
     _check_for_bad_version(version, "MuTect")
     return version + mutect_type
+
+def fix_missing_spark_user(cl, prog, params):
+    """Adjust /etc/passwd and GATK parameters if current username missing.
+
+    Set Spark user to avoid lookup errors on environments like Docker where
+    we run as a user id that is not present in /etc/passwd
+
+    https://stackoverflow.com/questions/45198252/apache-spark-standalone-for-anonymous-uid-without-user-name/45361221#45361221
+    https://github.com/jaceklaskowski/mastering-apache-spark-book/blob/master/spark-sparkcontext-creating-instance-internals.adoc#-utilsgetcurrentusername
+    https://blog.openshift.com/jupyter-on-openshift-part-6-running-as-an-assigned-user-id/
+    """
+    if prog.find("Spark") >= 0 or "--spark-master" in params:
+        try:
+            user = getpass.getuser()
+        except KeyError:
+            if os.access("/etc/passwd", os.W_OK):
+                with open("/etc/passwd", "a") as out_handle:
+                    out_handle.write("sparkanon:x:{uid}:{uid}:sparkanon:/nonexistent:/usr/sbin/nologin\n"
+                                        .format(uid=os.getuid()))
+            user = getpass.getuser()
+        cl = "export SPARK_USER=%s && " % (user) + cl
+    return cl
 
 class BroadRunner:
     """Simplify running Broad commandline tools.
@@ -329,6 +352,7 @@ class BroadRunner:
             atype_index = params.index("-T") if params.count("-T") > 0 \
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
+            cl = fix_missing_spark_user(cl, prog, params)
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
         if needs_java7:
