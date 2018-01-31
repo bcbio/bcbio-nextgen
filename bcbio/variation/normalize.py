@@ -58,7 +58,10 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
               rerun_effects=True, remove_oldeffects=False):
     """Normalizes variants and reruns SnpEFF for resulting VCF
     """
-    out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
+    if remove_oldeffects:
+        out_file = "%s-noeff-nomultiallelic%s" % utils.splitext_plus(in_file)
+    else:
+        out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
     if not utils.file_exists(out_file):
         if vcfutils.vcf_has_variants(in_file):
             ready_ma_file = _normalize(in_file, data, passonly=passonly,
