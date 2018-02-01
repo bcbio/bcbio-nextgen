@@ -53,8 +53,9 @@ def trim_srna_sample(data):
     adapter = dd.get_adapters(data)
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
-    adapters = adapter if adapter else _dnapi_prediction(in_file, out_dir)
-    times = "" if len(adapters) == 1 else "--times %s" % len(adapters)
+    if trim_reads:
+        adapters = adapter if adapter else _dnapi_prediction(in_file, out_dir)
+        times = "" if len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
