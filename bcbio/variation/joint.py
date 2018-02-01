@@ -74,10 +74,10 @@ def finalize_jointvc(items):
     return [utils.to_single_data(x) for x in items]
 
 def _get_callable_regions(data):
-    """Retrieve regions to parallelize by from callable regions, variant regions or chromosomes
+    """Retrieve regions to parallelize by from callable regions or chromosomes.
     """
     import pybedtools
-    callable_files = data.get("callable_regions") or data.get("variant_regions")
+    callable_files = data.get("callable_regions")
     if callable_files:
         assert len(callable_files) == 1
         regions = [(r.chrom, int(r.start), int(r.stop)) for r in pybedtools.BedTool(callable_files[0])]

@@ -1,6 +1,8 @@
 import os
 from bcbio import utils
 from bcbio.utils import file_exists, get_R_exports, safe_makedir
+from bcbio.bam import ref
+from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign.postalign import dedup_bam
@@ -10,6 +12,8 @@ from bcbio.variation import vardict
 from bcbio import broad, bam
 from bcbio.variation import gatk, vcfutils
 from bcbio.rnaseq import gtf
+
+pybedtools = utils.LazyImport("pybedtools")
 
 def rnaseq_gatk_variant_calling(data):
     data = dd.set_deduped_bam(data, dedup_bam(dd.get_work_bam(data), data))
@@ -51,6 +55,28 @@ def gatk_splitreads(data):
     data = dd.set_split_bam(data, split_bam)
     return data
 
+def _setup_variant_regions(data):
+    """Ensure we have variant regions for calling, using transcript if not present.
+
+    Respects noalt_calling by removing additional contigs to improve
+    speeds.
+    """
+    vr_file = dd.get_variant_regions(data)
+    if not vr_file:
+        vr_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
+    contigs = set([c.name for c in ref.file_contigs(dd.get_ref_file(data))])
+    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bedprep")),
+                            "%s-rnaseq_clean.bed" % utils.splitext_plus(vr_file)[0])
+    if not utils.file_uptodate(out_file, vr_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                for r in pybedtools.BedTool(vr_file):
+                    if (r.chrom in contigs and
+                          (chromhacks.is_nonalt(r.chrom) or "noalt_calling" not in dd.get_tools_on(data))):
+                        out_handle.write(str(r))
+    data = dd.set_variant_regions(data, out_file)
+    return data
+
 def gatk_rnaseq_calling(data):
     """Use GATK to perform gVCF variant calling on RNA-seq data
     """
@@ -61,6 +87,7 @@ def gatk_rnaseq_calling(data):
     tools_on.append("gvcf")
     data = dd.set_tools_on(data, tools_on)
     data = dd.set_jointcaller(data, ["%s-joint" % v for v in dd.get_variantcaller(data)])
+    data = _setup_variant_regions(data)
     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
                                                             "variation", "rnaseq", "gatk-haplotype")),
                             "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
@@ -88,7 +115,8 @@ def rnaseq_vardict_variant_calling(data):
     r_setup = get_R_exports()
     ref_file = dd.get_ref_file(data)
     bamfile = dd.get_work_bam(data)
-    bed_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
+    data = _setup_variant_regions(data)
+    bed_file = dd.get_variant_regions(data)
     opts = " -c 1 -S 2 -E 3 -g 4 "
     resources = config_utils.get_resources("vardict", data)
     if resources.get("options"):
