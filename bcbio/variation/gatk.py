@@ -126,10 +126,6 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 params += ["-T", "HaplotypeCaller"]
             params += ["--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
-            if gatk_type == "gatk4":
-                params += ["--output", tx_out_file]
-            else:
-                params += ["-o", tx_out_file]
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
                 # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
@@ -158,6 +154,13 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
+            if gatk_type == "gatk4":
+                # GATK4 Spark calling does not support bgzipped output, use plain VCFs
+                if is_joint and _use_spark(num_cores, gatk_type):
+                    tx_out_file = tx_out_file.replace(".vcf.gz", ".vcf")
+                params += ["--output", tx_out_file]
+            else:
+                params += ["-o", tx_out_file]
             broad_runner.new_resources("gatk-haplotype")
             memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
             try:
@@ -167,11 +170,14 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 # Spark failing on regions without any reads, write an empty VCF instead
                 # https://github.com/broadinstitute/gatk/issues/4234
                 if (_use_spark(num_cores, gatk_type) and
-                      str(msg).find("java.lang.UnsupportedOperationException: empty collection") and
-                      str(msg).find("at org.apache.spark.rdd.RDD")):
+                      str(msg).find("java.lang.UnsupportedOperationException: empty collection") >= 0 and
+                      str(msg).find("at org.apache.spark.rdd.RDD") >= 0):
                     vcfutils.write_empty_vcf(tx_out_file, samples=[dd.get_sample_name(d) for d in items])
                 else:
                     raise
+            if tx_out_file.endswith(".vcf"):
+                vcfutils.bgzip_and_index(tx_out_file, items[0]["config"])
+
 
     # avoid bug in GATK where files can get output as non-compressed
     if out_file.endswith(".gz") and not os.path.exists(out_file + ".tbi"):
