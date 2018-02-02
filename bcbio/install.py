@@ -235,7 +235,6 @@ def _update_conda_packages():
     req_file = "bcbio-update-requirements.txt"
     if os.path.exists(req_file):
         os.remove(req_file)
-    subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
     subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
     subprocess.check_call([conda_bin, "install", "--quiet", "--yes",
                            "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
@@ -248,10 +247,9 @@ def _update_conda_devel():
     """
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
-    subprocess.check_call([conda_bin, "install", "--yes", "nomkl"])
     subprocess.check_call([conda_bin, "install",
                            "--quiet", "--yes", "-c", "bioconda", "-c", "conda-forge",
-                           "bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")]) 
+                           "bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")])
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def get_genome_dir(gid, galaxy_dir, data):

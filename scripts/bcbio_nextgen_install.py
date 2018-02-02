@@ -35,7 +35,7 @@ def main(args, sys_argv):
         print("Installing isolated base python installation")
         anaconda = install_anaconda_python(args)
         print("Installing bcbio-nextgen")
-        bcbio = install_conda_pkgs(anaconda)
+        bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
     print("Installing data and third party dependencies")
     system_config = write_system_config(REMOTES["system_config"], args.datadir,
@@ -54,6 +54,8 @@ def _clean_args(sys_argv, args):
     """
     base = [x for x in sys_argv if
             x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
+    # Remove installer only options we don't pass on
+    base = [x for x in base if x not in set(["--minimize-disk"])]
     if "--nodata" in base:
         base.remove("--nodata")
     else:
@@ -66,10 +68,11 @@ def bootstrap_bcbionextgen(anaconda, args):
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
-def install_conda_pkgs(anaconda):
+def install_conda_pkgs(anaconda, args):
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "nomkl"])
+    if args.minimize_disk:
+        subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "nomkl"])
     subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes",
                            "-c", "bioconda", "-c", "conda-forge",
                            "--file", os.path.basename(REMOTES["requirements"])])
@@ -240,6 +243,8 @@ if __name__ == "__main__":
                         dest="install_data", action="store_false", default=True)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
+    parser.add_argument("--minimize-disk", help="Try to minimize disk usage (no MKL extensions)",
+                        dest="minimize_disk", action="store_true", default=False)
     parser.add_argument("-u", "--upgrade", help="Code version to install",
                         choices=["stable", "development"], default="stable")
     parser.add_argument("--revision", help="Specify a git commit hash or tag to install", default="master")
