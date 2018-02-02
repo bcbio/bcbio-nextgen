@@ -84,8 +84,7 @@ def run_rnaseq_variant_calling(data):
     if vardict.get_vardict_command(data):
         data = variation.rnaseq_vardict_variant_calling(data)
         if dd.get_vrn_file(data):
-            std_file = vcfutils.to_standardonly(dd.get_vrn_file(data), dd.get_ref_file(data), data)
-            ann_file = vcfanno.run_vcfanno(std_file, ["rnaedit"], data)
+            ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
             if ann_file:
                 data = dd.set_vrn_file(data, ann_file)
     return [[data]]
@@ -93,8 +92,7 @@ def run_rnaseq_variant_calling(data):
 def run_rnaseq_ann_filter(data):
     """Run RNA-seq annotation and filtering.
     """
-    std_file = vcfutils.to_standardonly(dd.get_vrn_file(data), dd.get_ref_file(data), data)
-    ann_file = vcfanno.run_vcfanno(std_file, ["rnaedit"], data)
+    ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
     if ann_file:
         data = dd.set_vrn_file(data, ann_file)
     filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
