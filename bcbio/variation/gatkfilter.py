@@ -62,7 +62,10 @@ def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
             resources = config_utils.get_resources("gatk_apply_recalibration", data["config"])
             opts = resources.get("options", [])
             if not opts:
-                opts += ["--ts_filter_level", sensitivity_cutoff]
+                if gatk_type == "gatk4":
+                    opts += ["--truth-sensitivity-filter-level", sensitivity_cutoff]
+                else:
+                    opts += ["--ts_filter_level", sensitivity_cutoff]
             params += opts
             broad_runner.run_gatk(params)
     return out_file
