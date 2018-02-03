@@ -28,9 +28,11 @@ def run(data):
     input_type, input_dir, input_file = _get_input_para(data)
     if genome_build == "GRCh37":  # assume genome_build is hg19 otherwise
         if config["algorithm"].get("aligner") in ["star"]:
-            input_file = _fix_star_junction_output(input_file)
+            if file_exists(input_file):
+                input_file = _fix_star_junction_output(input_file)
         if config["algorithm"].get("aligner") in ["tophat", "tophat2"]:
-            input_file = _fix_tophat_junction_output(input_file)
+            if file_exists(input_file):
+                input_file = _fix_tophat_junction_output(input_file)
     elif "hg19" not in genome_build:
         return None
     #handle cases when fusion file doesn't exist
