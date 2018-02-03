@@ -98,8 +98,8 @@ def _alignment(checkpoints):
                 cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                 cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
                "bcbio-vc", ["bwa", "bwakit", "grabix", "minimap2", "novoalign", "snap-aligner=1.0dev.97",
-                            "sentieon", "samtools", "sambamba", "fgbio", "umis", "biobambam", "seqtk",
-                            "samblaster", "variantbam"],
+                            "sentieon", "samtools", "pysam>=0.13.0", "sambamba", "fgbio", "umis",
+                            "biobambam", "seqtk", "samblaster", "variantbam"],
                disk={"files": 2})]
     if checkpoints["align_split"]:
         align += [s("merge_split_alignments", "single-merge",
@@ -140,9 +140,9 @@ def _variant_vc(checkpoints):
                [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]),
                 cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
-                            "gatk", "gatk4", "sentieon", "gatk-framework",
+                            "gatk", "gatk4", "sentieon",
                             "htslib", "picard", "platypus-variant", "pythonpy",
-                            "samtools", "strelka", "vardict", "vardict-java",
+                            "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java",
                             "varscan", "vcfanno", "vcflib", "vt", "r=3.4.1", "perl"],
                disk={"files": 2.0}),
              s("concat_batch_variantcalls", "batch-merge",
@@ -417,6 +417,7 @@ def _variant_sv(checkpoints):
                             cwlout("inherit")])],
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
                          "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
+                         "pysam>=0.13.0",
                          "seq2c", "simple_sv_annotation", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
@@ -481,7 +482,7 @@ def rnaseq(samples):
                ["config", "algorithm", "expression_caller"],
                ["config", "algorithm", "quality_format"]],
               [cwlout("prep_rec", "record")],
-              "bcbio-rnaseq", programs=["picard", "samtools"]),
+              "bcbio-rnaseq", programs=["picard", "samtools", "pysam>=0.13.0"]),
             s("trim_sample", "multi-parallel",
               [["prep_rec"]],
               [cwlout("trim_rec", "record")],
@@ -497,7 +498,7 @@ def rnaseq(samples):
                   [cwlout(dd.get_keys("count_file"), "File"),
                    cwlout(["quant", "tsv"], "File"),
                    cwlout(["quant", "hdf5"], "File")],
-                  "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto", "subread", "gffread",
+                  "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto>=0.43.1", "subread", "gffread",
                                             "r=3.4.1", "r-wasabi"],
                   disk={"files": 0.5})]
     qc = [s("qc_to_rec", "multi-combined",
