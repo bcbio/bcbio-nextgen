@@ -6,20 +6,20 @@ Configuration
 Two configuration files, in easy to write `YAML format`_, specify
 details about your system and samples to run:
 
+- ``bcbio_sample.yaml`` Details about a set of samples to process,
+  including input files and analysis options. You configure these for
+  each set of samples to process. This will be the main file prepared for each
+  sample run and the documentation below details techniques to
+  help prepare them.
+
 - ``bcbio_system.yaml`` High level information about the system, including
   locations of installed programs like GATK and cores and memory usage (see
   :ref:`tuning-cores`). These apply across multiple runs. The automated
   installer creates a ready to go system configuration file that can be manually
   edited to match the system. Find the file in the galaxy sub-directory within
   your installation data location (ie.
-  ``/usr/local/share/bcbio-nextgen/galaxy``). By default, the pipeline uses the
-  standard pre-created configuration file but multiple system configurations can
-  be independently maintained and passed as the first argument to
-  ``bcbio_nextgen.py`` commands.
-
-- ``bcbio_sample.yaml`` Details about a set of samples to process,
-  including input files and analysis options. You configure these for
-  each set of samples to process.
+  ``/usr/local/share/bcbio-nextgen/galaxy``). To modify system parameters for a
+  specific run, supply :ref:`sample-resources` in your ``bcbio_sample.yaml`` file.
 
 Commented `system`_ and `sample`_ example files are available in the
 ``config`` directory. The :ref:`example-pipelines` section contains
