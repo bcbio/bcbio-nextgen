@@ -1,5 +1,4 @@
 import pytest
-import mock
 
 from bcbio.rnaseq import ericscript
 from tests.unit.conftest import DummyFileTransaction

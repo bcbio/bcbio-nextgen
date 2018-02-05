@@ -26,4 +26,8 @@ fi
 unset PYTHONHOME
 unset PYTHONPATH
 export PYTHONNOUSERSITE=1
+# Ensure version.py exists in raw cloned bcbio directory
+if [ -d "../bcbio/pipeline" ]; then
+	[ -f ../bcbio/pipeline/version.py ] || touch ../bcbio/pipeline/version.py
+fi
 "$BCBIO_DIR/py.test" -v -s -m ${MARK} "$@"
