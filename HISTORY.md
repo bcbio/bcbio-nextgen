@@ -1,4 +1,4 @@
-## 1.0.8 (in progress)
+## 1.0.8 (5 February 2018)
 
 - GATK4 is the new default GATK release used in bcbio when running HaplotypeCaller or
   Base Quality Score Recalibration. Use `tools_off: [gatk4]` to use older GATK
