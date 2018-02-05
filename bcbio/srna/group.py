@@ -90,7 +90,9 @@ def run_cluster(*data):
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
     bam_file = data[0][0]["work_bam"]
     if "seqcluster" in tools:
-        sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"], out_dir, dd.get_ref_file(sample), dd.get_srna_gtf_file(sample))
+        sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"],
+                                        out_dir, dd.get_ref_file(sample),
+                                        dd.get_srna_gtf_file(sample))
         sample["report"] = _report(sample, dd.get_ref_file(sample))
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
