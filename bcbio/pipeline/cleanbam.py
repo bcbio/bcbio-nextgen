@@ -55,7 +55,10 @@ def remove_extracontigs(in_bam, data):
             rg_info = novoalign.get_rg_info(data["rgnames"])
             bcbio_py = sys.executable
             ref_file = dd.get_ref_file(data)
-            cmd = ("samtools view -h {in_bam} {str_chroms} | "
+            local_bam = os.path.join(os.path.dirname(tx_out_file), os.path.basename(in_bam))
+            utils.symlink_plus(in_bam, local_bam)
+            bam.index(local_bam, data["config"])
+            cmd = ("samtools view -h {local_bam} {str_chroms} | "
                    """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
                    """cleanbam.fix_header("{ref_file}")' | """
                    "samtools view -u - | "
