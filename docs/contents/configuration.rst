@@ -1346,6 +1346,8 @@ key names used (like ``GRCh37`` and ``mm10``) should match those used in the
 
 .. _Galaxy .loc files: http://wiki.galaxyproject.org/Admin/NGS%20Local%20Setup
 
+.. _config-custom:
+
 Adding custom genomes
 ~~~~~~~~~~~~~~~~~~~~~~
 ``bcbio_setup_genome.py`` will help you to install a custom genome and apply all changes needed
@@ -1368,3 +1370,31 @@ Here you can use the same file than the transcriptome if no other available.
 To use that genome just need to configure your YAML files as::
 
     genome_build: WBcel135
+
+Effects prediction
+==================
+
+To perform variant calling and predict effects in a custom genome you'd have to
+manually download and link this into your installation. First find the snpEff
+genome build::
+
+    $ snpEff databases | grep Lactobacillus | grep pentosus
+    Lactobacillus_pentosus_dsm_20314                                Lactobacillus_pentosus_dsm_20314                                              ENSEMBL_BFMPP_32_179            http://downloads.sourceforge.net/project/snpeff/databases/v4_3/snpEff_v4_3_ENSEMBL_BFMPP_32_179.zip
+    Lactobacillus_pentosus_kca1                                     Lactobacillus_pentosus_kca1                                                   ENSEMBL_BFMPP_32_179            http://downloads.sourceforge.net/project/snpeff/databases/v4_3/snpEff_v4_3_ENSEMBL_BFMPP_32_179.zip
+
+then download to the appropriate location::
+
+    $ cd /path/to/bcbio/genomes/Lacto/Lactobacillus_pentosus
+    $ mkdir snpEff
+    $ cd snpEff
+    $ wget http://downloads.sourceforge.net/project/snpeff/databases/v4_3/snpEff_v4_3_ENSEMBL_BFMPP_32_179.zip
+    $ unzip snpEff_v4_3_ENSEMBL_BFMPP_32_179.zip
+    $ find . -name "Lactobacillus_pentosus_dsm_20314"
+     ./home/pcingola/snpEff/data/Lactobacillus_pentosus_dsm_20314
+    $ mv ./home/pcingola/snpEff/data/Lactobacillus_pentosus_dsm_20314 .
+
+finally add to your genome configuration file
+(``seq/Lactobacillus_pentosus-resources.yaml``)::
+
+    aliases:
+      snpeff: Lactobacillus_pentosus_dsm_20314

@@ -73,11 +73,11 @@ evolve a consistent analysis environment as algorithms continue to evolve and
 improve. Installing this way is as isolated and self-contained as possible
 without virtual machines or lightweight system containers like `Docker`_. The
 :ref:`upgrade-install` section has additional documentation on including
-additional genome data, and the section on :ref:`toolplus-install` describes how
-to add commercially restricted software like GATK and MuTect. Following installation, you
-should edit the pre-created system configuration file in
-``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match your local
-system or cluster configuration (see :ref:`tuning-cores`).
+additional genome data for supported bcbio genomes. For genome builds not
+included in the defaults, see the documentation on :ref:`config-custom`.
+Following installation, you should edit the pre-created system configuration
+file in ``/usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml`` to match
+your local system or cluster configuration (see :ref:`tuning-cores`).
 
 .. _Docker: http://www.docker.io/
 
