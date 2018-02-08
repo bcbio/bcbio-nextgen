@@ -2,6 +2,8 @@
 
 - CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
   Beltrame.
+- GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for
+  variant calling. Thanks to Luca Beltrame.
 
 ## 1.0.8 (5 February 2018)
 
