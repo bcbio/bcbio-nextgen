@@ -31,7 +31,7 @@ def use_general_sv_bins(data):
 
     Checks if CNVkit is enabled and we haven't already run CNVkit.
     """
-    if "cnvkit" in dd.get_svcaller(data):
+    if "cnvkit" in dd.get_svcaller(data) or "titancna" in dd.get_svcaller(data):
         if not _get_original_coverage(data):
             return True
     return False

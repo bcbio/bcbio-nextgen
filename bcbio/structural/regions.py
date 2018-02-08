@@ -41,11 +41,12 @@ def calculate_sv_bins(*items):
     for i, cnv_group in enumerate(_group_by_cnv_method(multi.group_by_batch(items, False))):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
         for data in cnv_group.items:
-            target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file, size_calc_fn,
-                                                         cnv_group.work_dir, data)
-            if not data.get("regions"):
-                data["regions"] = {}
-            data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}
+            if cnvkit.use_general_sv_bins(data):
+                target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
+                                                             size_calc_fn, cnv_group.work_dir, data)
+                if not data.get("regions"):
+                    data["regions"] = {}
+                data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}
             out.append([data])
     if not len(out) == len(items):
         raise AssertionError("Inconsistent samples in and out of SV bin calculation:\nout: %s\nin : %s" %
@@ -199,6 +200,9 @@ def normalize_sv_coverage(*items):
         return orig_items
     out_files = {}
     for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
+        # No CNVkit calling for this particular set of samples
+        if group_id is None:
+            continue
         inputs, backgrounds = sshared.find_case_control(list(gitems))
         cnns = reduce(operator.add, [[tz.get_in(["depth", "bins", "target"], x),
                                       tz.get_in(["depth", "bins", "antitarget"], x)] for x in backgrounds], [])

@@ -1,5 +1,8 @@
 ## 1.0.9 (in progress)
 
+- CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
+  Beltrame.
+
 ## 1.0.8 (5 February 2018)
 
 - GATK4 is the new default GATK release used in bcbio when running HaplotypeCaller or
