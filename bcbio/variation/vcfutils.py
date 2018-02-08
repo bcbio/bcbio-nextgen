@@ -368,8 +368,8 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
             else:
                 raise
 
-       if out_file.endswith(".gz"):
-           bgzip_and_index(out_file, config)
+    if out_file.endswith(".gz"):
+        bgzip_and_index(out_file, config)
 
       return out_file
 
