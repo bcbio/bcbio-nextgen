@@ -348,24 +348,30 @@ def _sort_by_region(fnames, regions, ref_file, config):
 def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     """Concatenate multiple variant files from regions into a single output file.
 
-    Uses GATK4's GatherVcfs, falling back to bcftools concat --naive if it fails.
+    Uses GATK4's GatherVcfs, falling back to bcftools concat --naive if it fails
+    or if the user has expicitly disabled GATK4 via tools_off.
     These both only combine samples and avoid parsing, allowing scaling to large
     file sizes.
     """
     if not utils.file_exists(out_file):
         input_file_list = _get_file_list(orig_files, out_file, regions, ref_file, config)
-        try:
-            out_file = _run_concat_variant_files_gatk4(input_file_list, out_file, config)
-        except subprocess.CalledProcessError as msg:
-            if ("We require all VCFs to have complete VCF headers" in str(msg) or
-                  "Features added out of order" in str(msg) or
-                  "The reference allele cannot be missing" in str(msg)):
-                out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+        if "gatk4"  in dd.get_tools_off({"config": config}):
+            out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
+        else:
+            try:
+                out_file = _run_concat_variant_files_gatk4(input_file_list, out_file, config)
+            except subprocess.CalledProcessError as msg:
+                if ("We require all VCFs to have complete VCF headers" in str(msg) or
+                        "Features added out of order" in str(msg) or
+                        "The reference allele cannot be missing" in str(msg)):
+                    out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
             else:
                 raise
-    if out_file.endswith(".gz"):
-        bgzip_and_index(out_file, config)
-    return out_file
+
+       if out_file.endswith(".gz"):
+           bgzip_and_index(out_file, config)
+
+      return out_file
 
 def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
     """Use GATK4 GatherVcfs for concatenation of scattered VCFs.
