@@ -371,7 +371,7 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
 
-      return out_file
+    return out_file
 
 def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
     """Use GATK4 GatherVcfs for concatenation of scattered VCFs.
