@@ -48,8 +48,6 @@ def run(items):
 
 def _finalize_sv(solution_file, data):
     """Add output files from TitanCNA calling optional solution.
-
-    TODO: provide conversion of CNV calls to VCF.
     """
     out = {"variantcaller": "titancna"}
     with open(solution_file) as in_handle:
@@ -63,6 +61,7 @@ def _finalize_sv(solution_file, data):
                                                       "/%s_CNA.pdf" % base, "/%s_LOH.pdf" % base]
                    if os.path.exists(solution["path"] + ext)]
     out["subclones"] = "%s.segs.txt" % solution["path"]
+    out["vrn_file"] = _segs_to_vcf(out["subclones"], data)
     return out
 
 def _should_run(het_file):
@@ -140,3 +139,66 @@ def _titan_cn_file(cnr_file, work_dir, data):
                     chunk['start'] += 1
                     chunk.to_csv(handle, mode="a", sep="\t", index=False)
     return out_file
+
+# ## VCF converstion
+
+_vcf_header = """##fileformat=VCFv4.2
+##source=TitanCNA
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=FOLD_CHANGE_LOG,Number=1,Type=Float,Description="Log fold change">
+##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number: Overall">
+##INFO=<ID=MajorCN,Number=1,Type=Integer,Description="Copy Number: Major allele">
+##INFO=<ID=MinorCN,Number=1,Type=Integer,Description="Copy Number: Minor allele">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=LOS,Description="Loss of heterozygosity">
+##ALT=<ID=CNV,Description="Copy number variable region">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+"""
+
+def _segs_to_vcf(in_file, data):
+    """Convert output TitanCNA segs file into bgzipped VCF.
+    """
+    out_file = "%s.vcf" % utils.splitext_plus(in_file)[0]
+    if not utils.file_exists(out_file + ".gz") and not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    out_handle.write(_vcf_header)
+                    out_handle.write("\t".join(["#CHROM", "POS", "ID", "REF", "ALT", "QUAL",
+                                                "FILTER", "INFO", "FORMAT", dd.get_sample_name(data)])
+                                     + "\n")
+                    header = in_handle.readline().strip().split("\t")
+                    for line in in_handle:
+                        cur = dict(zip(header, line.strip().split("\t")))
+                        svtype = _get_svtype(cur["TITAN_call"])
+                        info = ["SVTYPE=%s" % svtype, "END=%s" % cur["End_Position.bp."],
+                                "CN=%s" % cur["Copy_Number"], "MajorCN=%s" % cur["MajorCN"],
+                                "MinorCN=%s" % cur["MinorCN"], "FOLD_CHANGE_LOG=%s" % cur["Median_logR"]]
+                        out = [cur["Chromosome"], cur["Start_Position.bp."], ".", "N", "<%s>" % svtype, ".",
+                            ".", ";".join(info), "GT", "0/1"]
+                        out_handle.write("\t".join(out) + "\n")
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+def _get_svtype(call):
+    """Retrieve structural variant type from current TitanCNA events.
+
+    homozygous deletion (HOMD),
+    hemizygous deletion LOH (DLOH),
+    copy neutral LOH (NLOH),
+    diploid heterozygous (HET),
+    amplified LOH (ALOH),
+    gain/duplication of 1 allele (GAIN),
+    allele-specific copy number amplification (ASCNA),
+    balanced copy number amplification (BCNA),
+    unbalanced copy number amplification (UBCNA)
+    """
+    if call in set(["HOMD", "DLOH"]):
+        return "DEL"
+    elif call in set(["ALOH", "GAIN", "ASCNA", "BCNA", "UBCNA"]):
+        return "DUP"
+    elif call in set(["NLOH"]):
+        return "LOH"
+    else:
+        return "CNV"
