@@ -19,6 +19,7 @@ details:
       #save_diskspace: true
       aligner: bwa
       #aligner: false
+      #mark_duplicates: false
       #bam_clean: remove_extracontigs
       #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
@@ -28,15 +29,15 @@ details:
       #realign: gatk
       recalibrate: gatk
       variantcaller: [freebayes, gatk-haplotype, strelka2]
-      #ensemble:
-      #  numpass: 2
+      ensemble:
+        numpass: 2
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
       svcaller: [seq2c, cnvkit, delly, lumpy]
       #remove_lcr: true
       coverage_interval: genome
-      tools_on: [qualimap_full, gatk4, vqsr, svplots]
+      tools_on: [qualimap_full, vqsr, svplots]
       tools_off: [gemini]
       vcfanno: [gemini]
       mixup_check: qsignature
