@@ -44,7 +44,7 @@ def _get_stats_from_miraligner(fn, out_file, name):
         version = get_version_manifest("seqbuster")
         with file_transaction(out_file) as tx_out:
             with open(tx_out, "w") as out_handle:
-                print >>out_handle, "# stats {name}, version: {version}".format(**locals())
+                print >>out_handle,("# stats {name}, version: {version}").format(**locals())
                 print >>out_handle, ("mirs\t{mirs}\nisomirs\t{isomirs}").format(
                         mirs=len(dfmirs.index), isomirs=len(df.index))
                 print >>out_handle, ("mirs_mutations\t{muts}\nmirs_additions\t{add}").format(
