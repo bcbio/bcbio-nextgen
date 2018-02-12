@@ -166,7 +166,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             try:
                 broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
                                       parallel_gc=_use_spark(num_cores, gatk_type))
-            except subprocess.CalledProcessError, msg:
+            except (subprocess.CalledProcessError, msg):
                 # Spark failing on regions without any reads, write an empty VCF instead
                 # https://github.com/broadinstitute/gatk/issues/4234
                 if (_use_spark(num_cores, gatk_type) and

@@ -41,7 +41,7 @@ def query_gsm(gsm, out_file, config = {}):
     logger.debug("Get id sample for %s" % gsm)
     if ids:
         gsm_info = _query_info("sra", ids[-1])
-        print gsm_info
+        print(gsm_info)
         srrall = []
         for srr in gsm_info:
             srrall.append(_create_link(srr))
