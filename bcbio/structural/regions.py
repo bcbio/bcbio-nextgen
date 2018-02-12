@@ -90,9 +90,8 @@ class MemoizedSizes:
                     if r.stop - r.start > range_map["target"][1]:
                         anti_bps.append(float(r.name))
                 checked_beds.add(region_bed)
-        def scale_in_boundary(raw, round_interval, tupel):
-            min_val=tupel[0]
-            max_val=tupel[1]
+        def scale_in_boundary(raw, round_interval, range_targets):
+            min_val, max_val = range_targets
             out = int(math.ceil(raw / float(round_interval)) * round_interval)
             if out > max_val:
                 return max_val
