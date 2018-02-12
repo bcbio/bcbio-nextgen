@@ -103,7 +103,9 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                 do.run(cmd.format(**locals()), "TitanCNA CNV detection: ploidy %s, cluster %s" % (ploidy, num_clusters))
             for fname in glob.glob(os.path.join(tmp_dir, cluster_dir + "*")):
                 shutil.move(fname, ploidy_dir)
-            shutil.move(os.path.join(tmp_dir, "Rplots.pdf"), os.path.join(ploidy_dir, "%s.Rplots.pdf" % cluster_dir))
+            if os.path.exists(os.path.join(tmp_dir, "Rplots.pdf")):
+                shutil.move(os.path.join(tmp_dir, "Rplots.pdf"),
+                            os.path.join(ploidy_dir, "%s.Rplots.pdf" % cluster_dir))
     return ploidy_dir
 
 def _sv_workdir(data):
