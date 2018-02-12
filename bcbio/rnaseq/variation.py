@@ -4,7 +4,7 @@ from bcbio.utils import file_exists, get_R_exports, safe_makedir
 from bcbio.bam import ref
 from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, shared
 from bcbio.ngsalign.postalign import dedup_bam
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
@@ -66,14 +66,15 @@ def _setup_variant_regions(data):
         vr_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
     contigs = set([c.name for c in ref.file_contigs(dd.get_ref_file(data))])
     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bedprep")),
-                            "%s-rnaseq_clean.bed" % utils.splitext_plus(vr_file)[0])
+                            "%s-rnaseq_clean.bed" % utils.splitext_plus(os.path.basename(vr_file))[0])
     if not utils.file_uptodate(out_file, vr_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                for r in pybedtools.BedTool(vr_file):
-                    if (r.chrom in contigs and
-                          (chromhacks.is_nonalt(r.chrom) or "noalt_calling" not in dd.get_tools_on(data))):
-                        out_handle.write(str(r))
+                with shared.bedtools_tmpdir(data):
+                    for r in pybedtools.BedTool(vr_file):
+                        if (r.chrom in contigs and
+                              (chromhacks.is_nonalt(r.chrom) or "noalt_calling" not in dd.get_tools_on(data))):
+                            out_handle.write(str(r))
     data = dd.set_variant_regions(data, out_file)
     return data
 
