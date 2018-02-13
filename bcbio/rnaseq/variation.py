@@ -125,14 +125,14 @@ def rnaseq_vardict_variant_calling(data):
     with file_transaction(data, out_file) as tx_out_file:
         jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
         cmd = ("{r_setup} && {jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
-                "-N {sample} -b {bamfile} {opts} {bed_file} "
-                "| {strandbias}"
-                "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
-                "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd} "
-                "> {tx_out_file}")
+               "-N {sample} -b {bamfile} {opts} {bed_file} "
+               "| {strandbias}"
+               "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
+               "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd} "
+               "> {tx_out_file}")
         message = "Calling RNA-seq variants with VarDict"
         do.run(cmd.format(**locals()), message)
-    out_file = vcfutils.bzip_and_index(out_file, data["config"])
+    out_file = vcfutils.bgzip_and_index(out_file, data["config"])
     data = dd.set_vrn_file(data, out_file)
     return data
 
