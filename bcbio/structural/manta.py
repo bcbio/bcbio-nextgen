@@ -8,6 +8,7 @@ import sys
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do, programs
@@ -100,8 +101,9 @@ def _maybe_limit_chromosomes(data):
     """
     std_chroms = []
     prob_chroms = []
+    noalt_calling = "noalt_calling" in dd.get_tools_on(data)
     for contig in ref.file_contigs(dd.get_ref_file(data)):
-        if contig.name.find(":") > 0:
+        if contig.name.find(":") > 0 or (noalt_calling and not chromhacks.is_nonalt(contig.name)):
             prob_chroms.append(contig.name)
         else:
             std_chroms.append(contig.name)
