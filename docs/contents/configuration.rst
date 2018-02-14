@@ -1398,3 +1398,6 @@ finally add to your genome configuration file
 
     aliases:
       snpeff: Lactobacillus_pentosus_dsm_20314
+
+For adding an organism not present in snpEff, please see this
+`mailing list discussion <https://groups.google.com/d/msg/biovalidation/LPFBlwVBh5s/AMU7MVvQAwAJ>`_.
