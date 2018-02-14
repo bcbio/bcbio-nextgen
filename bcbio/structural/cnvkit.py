@@ -676,7 +676,7 @@ def _add_diagram_plot(out, data):
             cmd = [_get_cmd(), "diagram", "-s", cns,
                    "-o", tx_out_file, cnr]
             gender = population.get_gender(data)
-            if gender and gender.lower() == "male":
+            if gender:
                 cmd += ["--sample-sex", gender]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit diagram plot")
     return out_file
