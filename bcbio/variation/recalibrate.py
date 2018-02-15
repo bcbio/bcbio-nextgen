@@ -120,6 +120,13 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
 
 def _gatk_apply_bqsr(data):
     """Parallel BQSR support for GATK4.
+
+    Normalized qualities to 4 bin outputs based on pipeline standard
+    recommendations, which will help with output file sizes:
+    https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md#base-quality-score-binning-scheme
+
+    spark host and timeout settings help deal with runs on restricted systems
+    where we encounter network and timeout errors
     """
     in_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
@@ -132,7 +139,9 @@ def _gatk_apply_bqsr(data):
             if gatk_type == "gatk4":
                 params = ["-T", "ApplyBQSRSpark", "--spark-master", "local[%s]" % cores,
                           "--input", in_file, "--output", tx_out_file, "--bqsr-recal-file", data["prep_recal"],
-                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
+                          "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
+                          "--quantize-quals", "4"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
