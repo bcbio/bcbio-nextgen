@@ -39,6 +39,9 @@ def kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data):
     samplename = dd.get_sample_name(data)
     quant_dir = os.path.join(kallisto_dir, "quant")
     safe_makedir(kallisto_dir)
+    sentinel_file = os.path.join(quant_dir, "abundance.h5")
+    if os.path.exists(sentinel_file):
+        return quant_dir
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     kallisto = config_utils.get_program("kallisto", dd.get_config(data))
