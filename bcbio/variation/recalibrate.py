@@ -75,6 +75,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     http://gatkforums.broadinstitute.org/discussion/44/base-quality-score-recalibrator#latest
 
     This identifies large files and calculates the fraction to downsample to.
+
+    spark host and timeout settings help deal with runs on restricted systems
+    where we encounter network and timeout errors
     """
     target_counts = 1e8  # 100 million reads per read group, 20x the plotted max
     out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
@@ -91,6 +94,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                     params += ["-T", "BaseRecalibratorSpark",
                                "--spark-master", "local[%s]" % cores,
                                "--output", tx_out_file, "--reference", dd.get_ref_twobit(data),
+                               "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
                                "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
                     if dbsnp_file:
                         params += ["--known-sites", dbsnp_file]
