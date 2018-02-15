@@ -12,11 +12,7 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: false
-      bam_clean: picard
-      bam_sort: coordinate
-      mark_duplicates: samtools
-      recalibrate: false
-      realign: false
-      variantcaller: freebayes
+      bam_clean: fixrg
+      variantcaller: gatk-haplotype
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

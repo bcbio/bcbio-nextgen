@@ -13,11 +13,7 @@ details:
        phenotype: tumor # or "normal"
     algorithm:
       aligner: bwa
-      mark_duplicates: true
-      recalibrate: false
-      realign: false
-      variantcaller: [vardict, mutect, freebayes]
-      indelcaller: false
+      variantcaller: [vardict, mutect2, strelka2]
       ensemble:
         numpass: 2
       # for targetted projects, set the region
