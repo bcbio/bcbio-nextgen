@@ -72,9 +72,9 @@ def _setup_variant_regions(data):
             with open(tx_out_file, "w") as out_handle:
                 with shared.bedtools_tmpdir(data):
                     for r in pybedtools.BedTool(vr_file):
-                        if (r.chrom in contigs and
-                              (chromhacks.is_nonalt(r.chrom) or "noalt_calling" not in dd.get_tools_on(data))):
-                            out_handle.write(str(r))
+                        if r.chrom in contigs:
+                            if chromhacks.is_nonalt(r.chrom):
+                                out_handle.write(str(r))
     data = dd.set_variant_regions(data, out_file)
     return data
 
