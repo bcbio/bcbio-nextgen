@@ -175,7 +175,13 @@ def _add_log2_depth(in_file, out_file, data):
                     for line in in_handle:
                         parts = line.rstrip().split()
                         if len(parts) > 4:
-                            chrom, start, end, orig_name, depth, gene_name = parts
+                            # Handle inputs unannotated with gene names
+                            if len(parts) == 5:
+                                chrom, start, end, orig_name, depth = parts
+                                gene_name = "."
+                            else:
+                                assert len(parts) == 6, parts
+                                chrom, start, end, orig_name, depth, gene_name = parts
                             depth = float(depth)
                             log2_depth = math.log(float(depth), 2) if depth else -20.0
                             out_handle.write("%s\t%s\t%s\t%s\t%.3f\t%.2f\n" %
