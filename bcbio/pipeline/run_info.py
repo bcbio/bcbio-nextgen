@@ -905,7 +905,7 @@ def _add_algorithm_defaults(algorithm):
                 "bam_clean": False,
                 "nomap_split_size": 250,
                 "nomap_split_targets": 200,
-                "mark_duplicates": True,
+                "mark_duplicates": False if not algorithm.get("aligner") else True,
                 "coverage_interval": None,
                 "recalibrate": False,
                 "realign": False,

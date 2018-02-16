@@ -402,7 +402,8 @@ Alignment
   parameter in BAM read groups. Default 'Illumina'.
 -  ``aligner`` Aligner to use: [bwa, bowtie, bowtie2, hisat2, minimap2, novoalign, snap,
    star, tophat2, false] To use pre-aligned BAM files as inputs to the pipeline,
-   set to ``false``. Using pre-aligned inputs requires proper assignment of BAM read
+   set to ``false``, which will also skip duplicate marking by default.
+   Using pre-aligned inputs requires proper assignment of BAM read
    groups and sorting. The ``bam_clean`` argument can often resolve issues with
    problematic input BAMs.
 -  ``bam_clean`` Clean an input BAM when skipping alignment step. This
@@ -493,7 +494,8 @@ Alignment postprocessing
    Uses `samblaster <https://github.com/GregoryFaust/samblaster>`_ as an
    alternative if you have paired reads and specifying ``lumpy`` as an
    ``svcaller``. Defaults to true for variant calling and false for RNA-seq and
-   small RNA analyses.
+   small RNA analyses. Also defaults to false if you're not doing alignment
+   (``aligner: false``).
 -  ``recalibrate`` Perform base quality score recalibration on the
    aligned BAM file, adjusting quality scores to reflect alignments and known
    variants. Supports both GATK and Sentieon recalibration.

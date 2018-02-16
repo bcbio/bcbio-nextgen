@@ -588,7 +588,7 @@ def _maybe_add_greylist(algorithm, sample, out):
 def _has_alignment_file(algorithm, sample):
     return (((algorithm.get("aligner") or algorithm.get("realign")
               or algorithm.get("recalibrate") or algorithm.get("bam_clean")
-              or algorithm.get("mark_duplicates"))) and
+              or algorithm.get("mark_duplicates", algorithm.get("aligner")))) and
               sample.get("work_bam") is not None and
               "upload_alignment" not in dd.get_tools_off(sample))
 

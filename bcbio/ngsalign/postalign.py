@@ -118,7 +118,7 @@ def _biobambam_dedup_sort(data, tx_out_file):
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
-        sort_opt = "-n" if data.get("align_split") and dd.get_mark_duplicates(data) else ""
+        sort_opt = "-n" if data.get("align_split") and _check_dedup(data) else ""
         cmd = "{samtools} sort %s -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -" % sort_opt
     else:
         # scale core usage to avoid memory issues with larger WGS samples
@@ -235,8 +235,9 @@ def _check_dedup(data):
     Defaults to no de-duplication for RNA-seq and small RNA, the
     back compatible default. Allow overwriting with explicit
     `mark_duplicates: true` setting.
+    Also defaults to false for no alignment inputs.
     """
-    if dd.get_analysis(data).lower() in ["rna-seq", "smallrna-seq"]:
+    if dd.get_analysis(data).lower() in ["rna-seq", "smallrna-seq"] or not dd.get_aligner(data):
         dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), False)
     else:
         dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), True)

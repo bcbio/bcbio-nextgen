@@ -4,6 +4,8 @@
   Beltrame.
 - GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for
   variant calling. Thanks to Luca Beltrame.
+- variant: Default to `mark_duplicates: false` if alignment turned off
+  (`aligner: false`).
 
 ## 1.0.8 (5 February 2018)
 
