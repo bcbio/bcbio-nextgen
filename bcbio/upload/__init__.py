@@ -149,6 +149,7 @@ def _get_files_variantcall(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_callable(sample, out)
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
     out = _maybe_add_sv(algorithm, sample, out)
@@ -172,6 +173,17 @@ def _maybe_add_rnaseq_variant_file(algorithm, sample, out):
         ftype = "vcf.gz" if vfile.endswith(".gz") else "vcf"
         out.append({"path": vfile,
                     "type": ftype})
+    return out
+
+def _maybe_add_callable(data, out):
+    """Add callable and depth regions to output folder.
+    """
+    callable_bed = dd.get_sample_callable(data)
+    if callable_bed:
+        out.append({"path": callable_bed, "type": "bed", "ext": "callable"})
+    perbase_bed = tz.get_in(["depth", "variant_regions", "per_base"], data)
+    if perbase_bed:
+        out.append({"path": perbase_bed, "type": "bed.gz", "ext": "depth-per-base"})
     return out
 
 def _maybe_add_variant_file(algorithm, sample, out):

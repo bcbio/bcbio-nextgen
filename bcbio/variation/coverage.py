@@ -87,15 +87,19 @@ def calculate(bam_file, data):
                                  "%s-coverage.callable.bed" % (dd.get_sample_name(data)))
     if not utils.file_uptodate(callable_file, bam_file):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
-        to_calculate = [("variant_regions", variant_regions, vr_quantize, None),
-                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data), None, None),
-                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data), None, DEPTH_THRESHOLDS)]
+        to_calculate = [("variant_regions", variant_regions,
+                         vr_quantize, None, "coverage_perbase" in dd.get_tools_on(data)),
+                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data),
+                         None, None, False),
+                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data),
+                         None, DEPTH_THRESHOLDS, False)]
         depth_files = {}
-        for target_name, region_bed, quantize, thresholds in to_calculate:
+        for target_name, region_bed, quantize, thresholds, per_base in to_calculate:
             if region_bed:
                 cur_depth = {}
-                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize, thresholds=thresholds)
-                for attr in ("dist", "regions", "thresholds"):
+                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize, thresholds=thresholds,
+                                          per_base=per_base)
+                for attr in ("dist", "regions", "thresholds", "per_base"):
                     val = getattr(depth_info, attr, None)
                     if val:
                         cur_depth[attr] = val

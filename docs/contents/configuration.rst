@@ -1034,7 +1034,10 @@ lists with multiple options:
     genotypes and depths.
   - ``bnd-genotype`` enables genotyping of breakends in Lumpy calls, which
     improves accuracy but can be slow.
-  - ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy calling.
+  - ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy
+    calling.
+  - ``coverage_perbase`` calculates per-base coverage depth for analyzed variant
+    regions.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 
