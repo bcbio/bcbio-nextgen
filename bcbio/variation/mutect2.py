@@ -2,8 +2,10 @@
 """
 from distutils.version import LooseVersion
 import os
+from cyvcf2 import VCF, Writer
 
 from bcbio import bam, broad, utils
+from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
@@ -77,6 +79,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
+        paired = vcfutils.get_paired_bams(align_bams, items)
         broad_runner = broad.runner_from_config(items[0]["config"])
         gatk_type = broad_runner.gatk_type()
         _prep_inputs(align_bams, ref_file, items)
@@ -90,7 +93,6 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             # Avoid issues with BAM CIGAR reads that GATK doesn't like
             if gatk_type == "gatk4":
                 params += ["--read-validation-stringency", "LENIENT"]
-            paired = vcfutils.get_paired_bams(align_bams, items)
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items, gatk_type)
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
@@ -105,17 +107,43 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             if gatk_type == "gatk4":
-                tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
-                filter_cmd = _mutect2_filter(broad_runner, tx_raw_file, tx_out_file)
-                cmd = "{gatk_cmd} -O {tx_raw_file} && {filter_cmd}"
+                tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+                tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
+                filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file, tx_raw_file)
+                cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
             else:
-                cmd = "{gatk_cmd} | bgzip -c > {tx_out_file}"
+                tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+                cmd = "{gatk_cmd} > {tx_raw_file}"
             do.run(cmd.format(**locals()), "MuTect2")
-
-    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+            out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
+        return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _mutect2_filter(broad_runner, in_file, out_file):
     """Filter of MuTect2 calls, a separate step in GATK4.
     """
     params = ["-T", "FilterMutectCalls", "--variant", in_file, "--output", out_file]
     return broad_runner.cl_gatk(params, os.path.dirname(out_file))
+
+def _af_filter(data, in_file, out_file):
+    """Soft-filter variants with AF below min_allele_fraction (appends "MinAF" to FILTER)
+    """
+    min_freq = float(utils.get_in(data["config"], ("algorithm", "min_allele_fraction"), 10)) / 100.0
+    logger.info("Filtering MuTect2 calls with allele fraction threshold of %s" % min_freq)
+    ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
+    if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
+        with file_transaction(data, ungz_out_file) as tx_out_file:
+            vcf = VCF(in_file)
+            vcf.add_filter_to_header({
+                'ID': 'MinAF',
+                'Description': 'Allele frequency is lower than %s%% ' % (min_freq*100) + (
+                    '(configured in bcbio as min_allele_fraction)'
+                    if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
+                    else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
+            w = Writer(tx_out_file, vcf)
+            tumor_index = vcf.samples.index(data['description'])
+            for rec in vcf:
+                if rec.format('AF')[tumor_index] < min_freq:
+                    vcfutils.cyvcf_add_filter(rec, 'MinAF')
+                w.write_record(rec)
+            w.close()
+    return vcfutils.bgzip_and_index(ungz_out_file, data["config"])
