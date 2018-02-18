@@ -9,7 +9,7 @@ from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
+from bcbio.pipeline import (archive, alignment, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
 from bcbio.qc import multiqc, qsignature
 from bcbio.structural import regions as svregions
@@ -121,6 +121,10 @@ def alignment_to_rec(*args):
                     "rgnames__pl", "rgnames__sample", "rgnames__pu",
                     "rgnames__lane", "rgnames__rg", "rgnames__lb"]
     return cwlutils.to_rec_single(*args, default_keys=default_keys)
+
+@utils.map_wrap
+def organize_noalign(*args):
+    return alignment.organize_noalign(args)
 
 @utils.map_wrap
 def postprocess_alignment_to_rec(*args):

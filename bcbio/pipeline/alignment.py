@@ -48,6 +48,17 @@ TOOLS = {
 
 metadata = {"support_bam": [k for k, v in TOOLS.items() if v.bam_align_fn is not None]}
 
+def organize_noalign(data):
+    """CWL target to skip alignment and organize input data.
+    """
+    data = utils.to_single_data(data[0])
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
+    work_bam = os.path.join(work_dir, "%s-input.bam" % dd.get_sample_name(data))
+    utils.symlink_plus(data["files"][0], work_bam)
+    bam.index(work_bam, data["config"])
+    data["align_bam"] = work_bam
+    return data
+
 def align_to_sort_bam(fastq1, fastq2, aligner, data):
     """Align to the named genome build, returning a sorted BAM file.
     """

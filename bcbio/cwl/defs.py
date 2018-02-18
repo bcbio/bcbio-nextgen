@@ -246,9 +246,7 @@ def _variant_checkpoints(samples):
     checkpoints["jointvc"] = any([(dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d))) and dd.get_batch(d)
                                   for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
-    # Currently always have alignment on until expression tool widely supported
-    checkpoints["align"] = True
-    #checkpoints["align"] = any([(dd.get_aligner(d) or dd.get_bam_clean(d)) for d in samples])
+    checkpoints["align"] = any([(dd.get_aligner(d) or dd.get_bam_clean(d)) for d in samples])
     checkpoints["align_split"] = not all([(dd.get_align_split_size(d) is False or
                                            not dd.get_aligner(d))
                                           for d in samples])
@@ -277,13 +275,13 @@ def variant(samples):
                    [["align_split"], ["process_alignment_rec"],
                     ["work_bam"], ["config", "algorithm", "quality_format"]])]
     else:
-        align = [et("organize_align_bam", "multi-parallel",
-                    ["files"],
-                    [cwlout(["align_bam"], ["File", "null"], [".bai"]),
-                     cwlout(["work_bam_plus", "disc"], "null"),
-                     cwlout(["work_bam_plus", "sr"], "null"),
-                     cwlout(["hla", "fastq"], "null")],
-                    """${return {"align_bam": inputs.files[0]}}""")]
+        align = [s("organize_noalign", "multi-parallel",
+                   ["files"],
+                   [cwlout(["align_bam"], "File", [".bai"]),
+                    cwlout(["work_bam_plus", "disc"], "null"),
+                    cwlout(["work_bam_plus", "sr"], "null"),
+                    cwlout(["hla", "fastq"], "null")],
+                   "bcbio-vc", cores=1, no_files=True)]
     align += [s("prep_samples_to_rec", "multi-combined",
                 [["config", "algorithm", "coverage"],
                  ["config", "algorithm", "variant_regions"],
