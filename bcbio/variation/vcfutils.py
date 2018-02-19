@@ -653,3 +653,28 @@ def is_gvcf_file(in_file):
                 # platypue
                 if parts[4] == "N" and parts[6] == "REFCALL":
                     return True
+
+def cyvcf_add_filter(rec, name):
+    """Add a FILTER value to a cyvcf2 record
+    """
+    if rec.FILTER:
+        filters = rec.FILTER.split(";")
+    else:
+        filters = []
+    if name not in filters:
+        filters.append(name)
+        rec.FILTER = filters
+    return rec
+
+def cyvcf_remove_filter(rec, name):
+    """Remove filter with the given name from a cyvcf2 record
+    """
+    if rec.FILTER:
+        filters = rec.FILTER.split(";")
+    else:
+        filters = []
+    new_filters = [x for x in filters if not str(x) == name]
+    if len(new_filters) == 0:
+        new_filters = ["PASS"]
+    rec.FILTER = new_filters
+    return rec

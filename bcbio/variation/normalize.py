@@ -77,21 +77,6 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
             utils.symlink_plus(in_file, out_file)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _find_existing_effects(in_file):
-    """Find effects values pre-annotated in VCF to remove.
-    """
-    ann_to_check = ["CSQ", "ANN"]
-    rec_iter = cyvcf2.VCF(in_file)
-    out = []
-    for a in ann_to_check:
-        try:
-            h = rec_iter.get_header_type(a)
-            out.append(a)
-        except KeyError:
-            pass
-    return out
-
-
 def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
                remove_oldeffects=False):
     """Convert multi-allelic variants into single allelic.
@@ -103,9 +88,9 @@ def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biall
     """
     if remove_oldeffects:
         out_file = "%s-noeff-decompose%s" % utils.splitext_plus(in_file)
-        cur_effects = _find_existing_effects(in_file)
-        if cur_effects:
-            clean_effects_cmd = " | bcftools annotate -x %s " % (",".join(["INFO/%s" % x for x in cur_effects]))
+        old_effects = [a for a in ["CSQ", "ANN"] if a in cyvcf2.VCF(in_file)]
+        if old_effects:
+            clean_effects_cmd = " | bcftools annotate -x %s " % (",".join(["INFO/%s" % x for x in old_effects]))
         else:
             clean_effects_cmd = ""
     else:

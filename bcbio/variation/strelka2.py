@@ -2,8 +2,11 @@
 """
 import os
 import sys
+import numpy as np
+from cyvcf2 import VCF, Writer
 
 from bcbio import utils
+from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
@@ -15,14 +18,16 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
 
     region can be a single region or list of multiple regions for multicore calling.
     """
-    if vcfutils.is_paired_analysis(align_bams, items):
-        paired = vcfutils.get_paired_bams(align_bams, items)
+    call_file = "%s-raw.vcf.gz" % utils.splitext_plus(out_file)[0]
+    strelka_work_dir = "%s-work" % utils.splitext_plus(out_file)[0]
+    paired = vcfutils.get_paired_bams(align_bams, items)
+    if paired:
         assert paired.normal_bam, "Strelka2 requires a normal sample"
-        call_file = _run_somatic(paired, ref_file, assoc_files, region, out_file)
+        call_file = _run_somatic(paired, ref_file, assoc_files, region, call_file, strelka_work_dir)
     else:
         call_file = _run_germline(align_bams, items, ref_file,
-                                  assoc_files, region, out_file)
-    return call_file
+                                  assoc_files, region, call_file, strelka_work_dir)
+    return _af_annotate_and_filter(paired, items, call_file, out_file)
 
 def get_region_bed(region, items, out_file, want_gzip=True):
     """Retrieve BED file of regions to analyze, either single or multi-region.
@@ -71,9 +76,8 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
     do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
     return os.path.join(tx_work_dir, "runWorkflow.py")
 
-def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file):
+def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file, work_dir):
     if not utils.file_exists(out_file):
-        work_dir = "%s-work" % utils.splitext_plus(out_file)[0]
         with file_transaction(items[0], work_dir) as tx_work_dir:
             workflow_file = _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir)
             _run_workflow(items[0], workflow_file, tx_work_dir)
@@ -142,6 +146,58 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
         tumor_gt = alleles_to_gt(sgt_val)
     return tumor_gt, normal_gt
 
+def _af_annotate_and_filter(paired, items, in_file, out_file):
+    """Populating FORMAT/AF, and dropping variants with AF<min_allele_fraction
+
+    Strelka2 doesn't report exact AF for a variant, however it can be calculated as alt_counts/dp from existing fields:
+    somatic
+      snps:    GT:DP:FDP:SDP:SUBDP:AU:CU:GU:TU                 dp=DP                {ALT}U[0] = alt_counts(tier1,tier2)
+      indels:  GT:DP:DP2:TAR:TIR:TOR:DP50:FDP50:SUBDP50:BCN50  dp=DP                TIR = alt_counts(tier1,tier2)
+    germline
+      snps:    GT:GQ:GQX:DP:DPF:AD:ADF:ADR:SB:FT:PL(:PS)       dp=sum(alt_counts)   AD = ref_count,alt_counts
+      indels:  GT:GQ:GQX:DPI:AD:ADF:ADR:FT:PL(:PS)             dp=sum(alt_counts)   AD = ref_count,alt_counts
+    """
+    data = paired.tumor_data if paired else items[0]
+    min_freq = float(utils.get_in(data["config"], ("algorithm", "min_allele_fraction"), 10)) / 100.0
+    logger.info("Filtering Strelka2 calls with allele fraction threshold of %s" % min_freq)
+    ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
+    if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
+        with file_transaction(data, ungz_out_file) as tx_out_file:
+            vcf = VCF(in_file)
+            vcf.add_format_to_header({
+                'ID': 'AF',
+                'Description': 'Allele frequency, as calculated in bcbio: AD/DP (germline), <ALT>U/DP (somatic snps), '
+                               'TIR/DPI (somatic indels)',
+                'Type': 'Float',
+                'Number': '.'})
+            vcf.add_filter_to_header({
+                'ID': 'MinAF',
+                'Description': 'Allele frequency is lower than %s%% ' % (min_freq*100) + (
+                    '(configured in bcbio as min_allele_fraction)'
+                    if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
+                    else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
+            w = Writer(tx_out_file, vcf)
+            tumor_index = vcf.samples.index(data['description'])
+            for rec in vcf:
+                if paired:  # somatic?
+                    if rec.is_snp:  # snps?
+                        alt_counts = rec.format(rec.ALT[0] + 'U')[:,0]  # {ALT}U=tier1_depth,tier2_depth
+                    else:  # indels
+                        alt_counts = rec.format('TIR')[:,0]  # TIR=tier1_depth,tier2_depth
+                    dp = rec.format('DP')[:,0]
+                else:  # germline?
+                    alt_counts = rec.format('AD')[:,1:]  # AD=REF,ALT1,ALT2,...
+                    dp = np.sum(rec.format('AD')[:,0:], axis=1)
+                with np.errstate(divide='ignore', invalid='ignore'):  # ignore division by zero and put AF=.0
+                    af = np.true_divide(alt_counts, dp)
+                    af[~np.isfinite(af)] = .0  # -inf inf NaN -> .0
+                rec.set_format('AF', af)
+                if np.any(af[tumor_index] < min_freq):
+                    vcfutils.cyvcf_add_filter(rec, 'MinAF')
+                w.write_record(rec)
+            w.close()
+    return vcfutils.bgzip_and_index(ungz_out_file, data["config"])
+
 def _postprocess_somatic(in_file, paired):
     """Post-process somatic calls to provide standard output.
 
@@ -179,9 +235,8 @@ def _postprocess_somatic(in_file, paired):
                             out_handle.write("\t".join(parts) + "\n")
     return vcfutils.bgzip_and_index(out_file, paired.tumor_data["config"])
 
-def _run_somatic(paired, ref_file, assoc_files, region, out_file):
+def _run_somatic(paired, ref_file, assoc_files, region, out_file, work_dir):
     if not utils.file_exists(out_file):
-        work_dir = "%s-work" % utils.splitext_plus(out_file)[0]
         with file_transaction(paired.tumor_data, work_dir) as tx_work_dir:
             workflow_file = _configure_somatic(paired, ref_file, region, out_file, tx_work_dir)
             _run_workflow(paired.tumor_data, workflow_file, tx_work_dir)

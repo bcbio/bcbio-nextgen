@@ -97,7 +97,7 @@ def _remove_prioritization(in_file, data):
     return out_file
 
 def _update_prioritization_filters(rec):
-    rec = _remove_filter(rec, "LowPriority")
+    rec = vcfutils.cyvcf_remove_filter(rec, "LowPriority")
     return _update_germline_filters(rec)
 
 def _extract_germline(in_file, data):
@@ -125,7 +125,7 @@ def _update_germline_filters(rec):
 
 def _add_somatic_filter(rec):
     if _is_somatic(rec):
-        return _add_filter(rec, "Somatic")
+        return vcfutils.cyvcf_add_filter(rec, "Somatic")
     return rec
 
 def _remove_germline_filter(rec, name):
@@ -135,10 +135,10 @@ def _remove_germline_filter(rec, name):
     """
     if _is_germline(rec):
         if rec.FILTER and name in rec.FILTER:
-            return _remove_filter(rec, name)
+            return vcfutils.cyvcf_remove_filter(rec, name)
     elif not _is_somatic(rec):
         if rec.FILTER and name in rec.FILTER:
-            return _remove_filter(rec, name)
+            return vcfutils.cyvcf_remove_filter(rec, name)
     return rec
 
 def _is_somatic(rec):
@@ -186,26 +186,3 @@ def _is_germline(rec):
         if str(status_flag).lower() in ["germline", "likelyloh", "strongloh", "afdiff", "deletion"]:
             return True
     return False
-
-def _add_filter(rec, name):
-    if rec.FILTER:
-        filters = rec.FILTER.split(";")
-    else:
-        filters = []
-    if name not in filters:
-        filters.append(name)
-        rec.FILTER = filters
-    return rec
-
-def _remove_filter(rec, name):
-    """Remove filter with the given name from VCF input.
-    """
-    if rec.FILTER:
-        filters = rec.FILTER.split(";")
-    else:
-        filters = []
-    new_filters = [x for x in filters if not str(x) == name]
-    if len(new_filters) == 0:
-        new_filters = ["PASS"]
-    rec.FILTER = new_filters
-    return rec
