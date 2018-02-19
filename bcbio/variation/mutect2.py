@@ -116,7 +116,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                 cmd = "{gatk_cmd} > {tx_raw_file}"
             do.run(cmd.format(**locals()), "MuTect2")
             out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
-        return vcfutils.bgzip_and_index(out_file, items[0]["config"])
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _mutect2_filter(broad_runner, in_file, out_file):
     """Filter of MuTect2 calls, a separate step in GATK4.
