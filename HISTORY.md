@@ -1,5 +1,7 @@
 ## 1.0.9 (in progress)
 
+- Normalize allele frequency calculation and filtering for Strelka2 and MuTect2.
+  Thanks to Vlad Saveliev.
 - CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
   Beltrame.
 - GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for

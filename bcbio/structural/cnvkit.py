@@ -544,6 +544,9 @@ def _add_gainloss_to_output(out, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "gainloss",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
+            gender = _get_batch_gender([data])
+            if gender:
+                cmd += ["--sample-sex", gender]
             do.run(cmd, "CNVkit gainloss")
     out["gainloss"] = out_file
     return out
