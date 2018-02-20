@@ -2,6 +2,8 @@
 """
 from distutils.version import LooseVersion
 import os
+
+import numpy as np
 from cyvcf2 import VCF, Writer
 
 from bcbio import bam, broad, utils
