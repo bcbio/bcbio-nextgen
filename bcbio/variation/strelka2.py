@@ -185,15 +185,18 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
                     else:  # indels
                         alt_counts = rec.format('TIR')[:,0]  # TIR=tier1_depth,tier2_depth
                     dp = rec.format('DP')[:,0]
-                else:  # germline?
+                elif rec.format("AD") is not None:  # germline?
                     alt_counts = rec.format('AD')[:,1:]  # AD=REF,ALT1,ALT2,...
                     dp = np.sum(rec.format('AD')[:,0:], axis=1)
-                with np.errstate(divide='ignore', invalid='ignore'):  # ignore division by zero and put AF=.0
-                    af = np.true_divide(alt_counts, dp)
-                    af[~np.isfinite(af)] = .0  # -inf inf NaN -> .0
-                rec.set_format('AF', af)
-                if np.all(af[tumor_index] < min_freq):
-                    vcfutils.cyvcf_add_filter(rec, 'MinAF')
+                else: # germline gVCF record
+                    alt_counts, dp = (None, None)
+                if dp is not None:
+                    with np.errstate(divide='ignore', invalid='ignore'):  # ignore division by zero and put AF=.0
+                        af = np.true_divide(alt_counts, dp)
+                        af[~np.isfinite(af)] = .0  # -inf inf NaN -> .0
+                    rec.set_format('AF', af)
+                    if paired and np.all(af[tumor_index] < min_freq):
+                        vcfutils.cyvcf_add_filter(rec, 'MinAF')
                 w.write_record(rec)
             w.close()
     return vcfutils.bgzip_and_index(ungz_out_file, data["config"])
