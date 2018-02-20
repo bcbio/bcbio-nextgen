@@ -142,7 +142,7 @@ def _af_filter(data, in_file, out_file):
             w = Writer(tx_out_file, vcf)
             tumor_index = vcf.samples.index(data['description'])
             for rec in vcf:
-                if rec.format('AF')[tumor_index] < min_freq:
+                if np.all(rec.format('AF')[tumor_index] < min_freq):
                     vcfutils.cyvcf_add_filter(rec, 'MinAF')
                 w.write_record(rec)
             w.close()
