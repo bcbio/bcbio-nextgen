@@ -73,7 +73,7 @@ def get_paired_bams(align_bams, items):
             tumor_name = dd.get_sample_name(item)
             tumor_data = item
             tumor_config = item["config"]
-            normal_panel = item["config"]["algorithm"].get("background")
+            normal_panel = dd.get_background_variant(item)
     if tumor_bam or tumor_name:
         return PairedData(tumor_bam, tumor_name, normal_bam,
                           normal_name, normal_panel, tumor_config,

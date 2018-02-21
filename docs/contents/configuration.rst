@@ -635,9 +635,16 @@ Variant calling
           female: 2
           male: 1
 
-- ``background`` Provide a VCF file with variants to use as a background
-  reference during variant calling. For tumor/normal paired calling use this to
-  supply a panel of normal individuals.
+- ``background`` Provide pre-calculated files to use as backgrounds for
+  different processes. Organized as a dictionary with individual keys for
+  different components of the pipeline. You can enter as many or few as needed:
+
+     - ``variant`` A VCF file with variants to use as a background
+       reference during variant calling. For tumor/normal paired calling use this to
+       supply a panel of normal individuals.
+     - ``cnv_reference`` `Background reference file
+       <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_
+       for copy number calling. Work in progress.
 
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html

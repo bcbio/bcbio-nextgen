@@ -218,7 +218,7 @@ def normalize_sv_coverage(*items):
             if tz.get_in(["depth", "bins", "target"], d):
                 target_bed = tz.get_in(["depth", "bins", "target"], d)
                 antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
-        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[00]), "structural",
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
                                                    dd.get_sample_name(inputs[0]), "bins"))
         back_file = cnvkit.cnvkit_background(cnns, os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
                                              backgrounds or inputs, target_bed, antitarget_bed)

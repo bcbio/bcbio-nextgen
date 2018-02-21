@@ -74,6 +74,7 @@ LOOKUPS = {
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
+    "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},

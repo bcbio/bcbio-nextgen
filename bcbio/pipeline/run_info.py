@@ -328,6 +328,31 @@ def _clean_algorithm(data):
             data["algorithm"][key] = val
     return data
 
+def _clean_background(data):
+    """Clean up background specification, remaining back compatible.
+    """
+    allowed_keys = set(["variant", "coverage_bin_target", "coverage_bin_antitarget"])
+    val = tz.get_in(["algorithm", "background"], data)
+    errors = []
+    if val:
+        out = {}
+        # old style specification, single string for variant
+        if isinstance(val, basestring):
+            out["variant"] = _file_to_abs(val, [os.getcwd()])
+        elif isinstance(val, dict):
+            for k, v in val.items():
+                if k in allowed_keys:
+                    out[k] = _file_to_abs(v, [os.getcwd()])
+                else:
+                    errors.append("Unexpected key: %s" % k)
+        else:
+            errors.append("Unexpected input: %s" % val)
+        if errors:
+            raise ValueError("Problematic algorithm background specification for %s:\n %s" %
+                             (data["description"], "\n".join(errors)))
+        data["algorithm"]["background"] = out
+    return data
+
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
@@ -854,6 +879,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
                                  "Batching with a standard sample provides callable regions for validation.")
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
+        item = _clean_background(item)
         # Add any global resource specifications
         if "resources" not in item:
             item["resources"] = {}
