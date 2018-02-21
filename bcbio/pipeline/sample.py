@@ -236,10 +236,10 @@ def postprocess_alignment(data):
             utils.symlink_plus(bam_file, bam_file_ready)
         bam.index(bam_file_ready, data["config"])
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
-        callable_region_bed, nblock_bed, callable_bed = \
+        callable_region_bed, nblock_bed = \
             callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
-                           "callable": callable_bed,
+                           "callable": covinfo.raw_callable,
                            "sample_callable": covinfo.callable,
                            "mapped_stats": readstats.get_cache_file(data)}
         data["depth"] = covinfo.depth_files
@@ -247,7 +247,7 @@ def postprocess_alignment(data):
         data = samtools.run_and_save(data)
         if (os.path.exists(callable_region_bed) and
                 not data["config"]["algorithm"].get("variant_regions")):
-            data["config"]["algorithm"]["variant_regions"] = callable_region_bed
+            data["config"]["algorithm"]["variant_regions"] = covinfo.callable
             data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)

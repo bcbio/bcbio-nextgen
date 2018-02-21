@@ -37,13 +37,12 @@ def sample_callable_bed(bam_file, ref_file, data):
         """Filter to callable region, potentially limiting by chromosomes.
         """
         return r.name == "CALLABLE" and (not noalt_calling or chromhacks.is_nonalt(r.chrom))
-    config = data["config"]
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
-    with shared.bedtools_tmpdir({"config": config}):
+    with shared.bedtools_tmpdir(data):
         callable_bed, depth_files = coverage.calculate(bam_file, data)
-        input_regions_bed = config["algorithm"].get("variant_regions", None)
+        input_regions_bed = dd.get_variant_regions(data)
         if not utils.file_uptodate(out_file, callable_bed):
-            with file_transaction(config, out_file) as tx_out_file:
+            with file_transaction(data, out_file) as tx_out_file:
                 callable_regions = pybedtools.BedTool(callable_bed)
                 filter_regions = callable_regions.filter(callable_chrom_filter)
                 if input_regions_bed:
@@ -101,11 +100,11 @@ def _combine_regions(all_regions, ref_regions):
     bed_lines = ["%s\t%s\t%s" % (c, s, e) for (c, s, e) in all_intervals]
     return pybedtools.BedTool("\n".join(bed_lines), from_string=True)
 
-def _add_config_regions(nblock_regions, ref_regions, config):
+def _add_config_regions(nblock_regions, ref_regions, data):
     """Add additional nblock regions based on configured regions to call.
     Identifies user defined regions which we should not be analyzing.
     """
-    input_regions_bed = config["algorithm"].get("variant_regions", None)
+    input_regions_bed = dd.get_variant_regions(data)
     if input_regions_bed:
         input_regions = pybedtools.BedTool(input_regions_bed)
         # work around problem with single region not subtracted correctly.
@@ -119,9 +118,13 @@ def _add_config_regions(nblock_regions, ref_regions, config):
                              "excludes all genomic regions. Do the chromosome names "
                              "in the BED file match your genome (chr1 vs 1)?" % input_regions_bed)
         all_intervals = _combine_regions([input_nblock, nblock_regions], ref_regions)
-        return all_intervals.merge()
     else:
-        return nblock_regions
+        all_intervals = nblock_regions
+    if "noalt_calling" in dd.get_tools_on(data):
+        from bcbio.heterogeneity import chromhacks
+        remove_intervals = ref_regions.filter(lambda r: not chromhacks.is_nonalt(r.chrom))
+        all_intervals = _combine_regions([all_intervals, remove_intervals], ref_regions)
+    return all_intervals.merge()
 
 class NBlockRegionPicker:
     """Choose nblock regions reasonably spaced across chromosomes.
@@ -179,15 +182,14 @@ def block_regions(callable_bed, in_bam, ref_file, data):
     Identifies islands of callable regions, surrounding by regions
     with no read support, that can be analyzed independently.
     """
-    config = data["config"]
-    min_n_size = int(config["algorithm"].get("nomap_split_size", 250))
-    with shared.bedtools_tmpdir({"config": config}):
+    min_n_size = int(data["config"]["algorithm"].get("nomap_split_size", 250))
+    with shared.bedtools_tmpdir(data):
         nblock_bed = "%s-nblocks.bed" % utils.splitext_plus(callable_bed)[0]
         callblock_bed = "%s-callableblocks.bed" % utils.splitext_plus(callable_bed)[0]
         if not utils.file_uptodate(nblock_bed, callable_bed):
-            ref_regions = get_ref_bedtool(ref_file, config)
+            ref_regions = get_ref_bedtool(ref_file, data["config"])
             nblock_regions = _get_nblock_regions(callable_bed, min_n_size, ref_regions)
-            nblock_regions = _add_config_regions(nblock_regions, ref_regions, config)
+            nblock_regions = _add_config_regions(nblock_regions, ref_regions, data)
             with file_transaction(data, nblock_bed, callblock_bed) as (tx_nblock_bed, tx_callblock_bed):
                 nblock_regions.filter(lambda r: len(r) > min_n_size).saveas(tx_nblock_bed)
                 if len(ref_regions.subtract(nblock_regions, nonamecheck=True)) > 0:
@@ -195,7 +197,7 @@ def block_regions(callable_bed, in_bam, ref_file, data):
                 else:
                     raise ValueError("No callable regions found from BAM file. Alignment regions might "
                                      "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
-    return callblock_bed, nblock_bed, callable_bed
+    return callblock_bed, nblock_bed
 
 def _write_bed_regions(data, final_regions, out_file, out_file_ref):
     ref_file = tz.get_in(["reference", "fasta", "base"], data)

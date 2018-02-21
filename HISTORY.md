@@ -8,6 +8,8 @@
   variant calling. Thanks to Luca Beltrame.
 - variant: Default to `mark_duplicates: false` if alignment turned off
   (`aligner: false`).
+- Fix `noalt_calling` to correctly avoid parallelizing on non-standard
+  chromosomes without a variant regions file.
 
 ## 1.0.8 (5 February 2018)
 
