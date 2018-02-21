@@ -236,7 +236,7 @@ def _create_config_file(out_dir, samples):
     module_order.extend([
         "bcbio",
         "samtools",
-        "goleft_indexcov"
+        "goleft_indexcov",
         "peddy"
     ])
     out['bcftools'] = {'write_separate_table': True}

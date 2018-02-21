@@ -156,6 +156,19 @@ def get_gender(data):
     else:
         return "unknown"
 
+def get_ped_info(data, samples):
+    """Retrieve all PED info from metadata
+    """
+    return {
+        "gender": {"male": 1, "female": 2, "unknown": 0}.get(get_gender(data)),
+        "individual_id": dd.get_sample_name(data),
+        "family_id": _find_shared_batch(samples),
+        "maternal_id": tz.get_in(["metadata", "maternal_id"], data, -9),
+        "paternal_id": tz.get_in(["metadata", "paternal_id"], data, -9),
+        "affected": get_affected_status(data),
+        "ethnicity": tz.get_in(["metadata", "ethnicity"], data, -9)
+    }
+
 def create_ped_file(samples, base_vcf, out_dir=None):
     """Create a GEMINI-compatible PED file, including gender, family and phenotype information.
 
@@ -181,15 +194,16 @@ def create_ped_file(samples, base_vcf, out_dir=None):
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle, dialect="excel-tab")
                 writer.writerow(header)
-                batch = _find_shared_batch(samples)
                 for data in samples:
-                    gender = {"male": 1, "female": 2, "unknown": 0}.get(get_gender(data))
-                    sname = dd.get_sample_name(data)
+                    ped_info = get_ped_info(data, samples)
+                    sname = ped_info["individual_id"]
                     if sname in sample_ped_lines:
                         writer.writerow(sample_ped_lines[sname])
                     else:
-                        writer.writerow([batch, sname, "-9", "-9",
-                                         gender, get_affected_status(data), "-9"])
+                        writer.writerow([ped_info["family_id"], ped_info["individual_id"],
+                                         ped_info["paternal_id"], ped_info["maternal_id"],
+                                         ped_info["gender"], ped_info["affected"],
+                                         ped_info["ethnicity"]])
     return out_file
 
 def _find_shared_batch(samples):

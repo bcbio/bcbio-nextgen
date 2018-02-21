@@ -85,7 +85,13 @@ multiple samples using the template workflow command::
       information from a PED input file and use it for batch, sex and phenotype,
       respectively. The PED inputs supplement information from the standard
       template file, so if you specify a value in the template CSV the PED
-      information will no overwrite it.
+      information will no overwrite it. Alternatively, ``ped`` fields can
+      be specified directly in the metadata as columns with ``batch`` taking the
+      place of ``family_id``, ``description`` as ``individual_id`` and
+      ``phenotype`` as ``affected`` in the PED format::
+
+       samplename,description,phenotype,batch,sex,ethnicity,maternal_id,paternal_id
+       NA12878.bam,NA12878,-9,CEPH,female,-9,NA12892,NA12891
 
   Individual column items can contain booleans (true or false), integers, or
   lists (separated by semi-colons). These get converted into the expected time
