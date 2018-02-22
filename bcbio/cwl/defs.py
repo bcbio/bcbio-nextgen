@@ -173,6 +173,7 @@ def _variant_vc(checkpoints):
              ["metadata", "batch"], ["metadata", "phenotype"],
              ["regions", "sample_callable"], ["config", "algorithm", "variantcaller"],
              ["config", "algorithm", "coverage_interval"],
+             ["config", "algorithm", "effects"],
              ["config", "algorithm", "variant_regions"],
              ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
              ["config", "algorithm", "tools_on"],
