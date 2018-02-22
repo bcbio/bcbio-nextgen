@@ -74,7 +74,7 @@ def _set_align_split_size(data):
     target_size = 5  # Gb
     target_size_reads = 20  # million reads
     max_splits = 100  # Avoid too many pieces, causing merge memory problems
-    val = tz.get_in(["config", "algorithm", "align_split_size"], data)
+    val = dd.get_align_split_size(data)
     umi_consensus = dd.get_umi_consensus(data)
     if val is None:
         if not umi_consensus:
@@ -319,7 +319,7 @@ def _ready_gzip_fastq(in_files, data, require_bgzip=False):
         all_gzipped = all([not x or not _check_gzipped_input(x, data)[0] for x in in_files])
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
     needs_trim = dd.get_trim_ends(data)
-    do_splitting = tz.get_in(["config", "algorithm", "align_split_size"], data) is not False
+    do_splitting = dd.get_align_split_size(data) is not False
     return (all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
             and not needs_trim and not get_downsample_params(data))
 
@@ -370,11 +370,13 @@ def _prep_grabix_indexes(in_files, data):
     """Parallel preparation of grabix indexes for files.
     """
     # if we have gzipped but not bgzipped, add a fake index for CWL support
-    if _ready_gzip_fastq(in_files, data) and not _ready_gzip_fastq(in_files, data, require_bgzip=True):
+    # Also skips bgzip indexing if we don't need alignment splitting
+    if _ready_gzip_fastq(in_files, data) and (not _ready_gzip_fastq(in_files, data, require_bgzip=True)
+                                              or dd.get_align_split_size(data) is False):
         for in_file in in_files:
             with file_transaction(data, in_file + ".gbi") as tx_gbi_file:
                 with open(tx_gbi_file, "w") as out_handle:
-                    out_handle.write("Not grabix indexed. gzipped and index added for compatibility.\n")
+                    out_handle.write("Not grabix indexed; index added for compatibility.\n")
     else:
         items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in in_files if x]
         run_multicore(_grabix_index, items, data["config"])
