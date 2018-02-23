@@ -4,6 +4,8 @@
   Thanks to Vlad Saveliev.
 - CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
   Beltrame.
+- Add support for polyG and polyX trimming to variant calling for NovaSeq 3' end
+  cleanup and generally avoiding low complexity reads.
 - GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for
   variant calling. Thanks to Luca Beltrame.
 - variant: Default to `mark_duplicates: false` if alignment turned off

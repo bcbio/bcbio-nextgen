@@ -926,6 +926,8 @@ def _add_algorithm_defaults(algorithm):
                 "tools_off": [],
                 "tools_on": [],
                 "qc": [],
+                "trim_reads": False,
+                "adapters": [],
                 "effects": "snpeff",
                 "quality_format": "standard",
                 "align_split_size": None,

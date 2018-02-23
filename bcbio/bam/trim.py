@@ -18,6 +18,7 @@ SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
     "truseq": ["AGATCGGAAGAG"],
     "polya": ["AAAAAAAAAAAAA"],
+    "polyx": ["AAAAAAAAAAAAA", "CCCCCCCCCCCCC"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
 def trim_adapters(data):
@@ -73,6 +74,7 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                 adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
                 input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
                 output_args = "-o >(bgzip -c > {tx_out1}) -p >(bgzip -c > {tx_out2})".format(**locals())
+            adapters_args += " --no-default-adapters"  # Prevent GitHub queries
             quality_base = "64" if dd.get_quality_format(data).lower() == "illumina" else "33"
             sample_name = dd.get_sample_name(data)
             report_args = "--report-file %s --report-formats json --sample-id %s" % (tx_report_file,
@@ -81,7 +83,8 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                              config_utils.get_resources("atropos", data["config"]).get("options", []))
             extra_opts = []
             for k, alt_ks, v in [("--quality-cutoff", ["-q "], "5"),
-                                 ("--minimum-length", ["-m "], str(dd.get_min_read_length(data)))]:
+                                 ("--minimum-length", ["-m "], str(dd.get_min_read_length(data))),
+                                 ("--nextseq-trim", [], "25")]:
                 if k not in ropts and not any(alt_k in ropts for alt_k in alt_ks):
                     extra_opts.append("%s=%s" % (k, v))
             extra_opts = " ".join(extra_opts)
