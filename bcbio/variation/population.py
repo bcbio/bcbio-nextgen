@@ -159,10 +159,13 @@ def get_gender(data):
 def get_ped_info(data, samples):
     """Retrieve all PED info from metadata
     """
+    family_id = tz.get_in(["metadata", "family_id"], data, None)
+    if not family_id:
+        family_id = _find_shared_batch(samples)
     return {
         "gender": {"male": 1, "female": 2, "unknown": 0}.get(get_gender(data)),
         "individual_id": dd.get_sample_name(data),
-        "family_id": _find_shared_batch(samples),
+        "family_id": family_id,
         "maternal_id": tz.get_in(["metadata", "maternal_id"], data, -9),
         "paternal_id": tz.get_in(["metadata", "paternal_id"], data, -9),
         "affected": get_affected_status(data),
