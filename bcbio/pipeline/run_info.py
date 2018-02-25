@@ -683,6 +683,16 @@ def _check_realign(data):
                              "Realignment is generally not necessary for most variant callers." %
                              (dd.get_sample_name(data)))
 
+def _check_trim(data):
+    """Check for valid values for trim_reads.
+    """
+    trim = data["algorithm"].get("trim_reads")
+    if trim:
+        if trim == "fastp" and data["algorithm"].get("align_split_size") is not False:
+            raise ValueError("In sample %s, `trim_reads: fastp` currently requires `align_split_size: false`" %
+                             (dd.get_sample_name(data)))
+
+
 def _check_sample_config(items, in_file, config):
     """Identify common problems in input sample configuration files.
     """
@@ -706,6 +716,7 @@ def _check_sample_config(items, in_file, config):
     [_check_jointcaller(x) for x in items]
     [_check_hlacaller(x) for x in items]
     [_check_realign(x) for x in items]
+    [_check_trim(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 

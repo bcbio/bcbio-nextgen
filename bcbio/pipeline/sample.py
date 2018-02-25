@@ -52,8 +52,8 @@ def trim_sample(data):
     # this block is to maintain legacy configuration files
     if not trim_reads:
         logger.info("Skipping trimming of %s." % dd.get_sample_name(data))
-    elif trim_reads == "read_through":
-        if "skewer" in dd.get_tools_on(data):
+    else:
+        if "skewer" in dd.get_tools_on(data) or trim_reads == "skewer":
             trim_adapters = skewer.trim_adapters
         else:
             trim_adapters = trim.trim_adapters

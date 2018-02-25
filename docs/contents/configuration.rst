@@ -471,8 +471,12 @@ Read trimming
   using atropos. ``adapters`` and ``custom_trim`` specify the sequences to trim.
   For RNA-seq, it's recommended to leave as False unless running Tophat2.
   For variant calling, we recommend trimming only in special cases where
-  standard soft-clipping does not resolve false positive problems.
-  [False, read_through]. Default to False,
+  standard soft-clipping does not resolve false positive problems. Supports
+  trimming with `<https://github.com/jdidion/atropos> atropos`_ or `fastp
+  <https://github.com/OpenGene/fastp>`_. ``fastp`` is currently not compatible
+  with alignment splitting in variant calling and requires ``align_split_size:
+  false``. The old parameter ``read_through`` defaults to using atropos trimming.
+  [False, atropos, fastp]. Default to False,
 -  ``adapters`` If trimming adapter read through, trim a set of stock
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
