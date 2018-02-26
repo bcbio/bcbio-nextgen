@@ -650,7 +650,7 @@ Variant calling
        supply a panel of normal individuals.
      - ``cnv_reference`` `Background reference file
        <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_
-       for copy number calling. Work in progress.
+       for copy number calling.
 
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html

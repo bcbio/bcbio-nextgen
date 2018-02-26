@@ -8,6 +8,7 @@ import glob
 import math
 import operator
 import os
+import shutil
 import sys
 import tempfile
 
@@ -431,6 +432,19 @@ def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
             cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
                    "--avg-size", str(anti_bin)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
+    return target_file, anti_file
+
+def targets_from_background(back_cnn, work_dir, data):
+    """Retrieve target and antitarget BEDs from background CNN file.
+    """
+    target_file = os.path.join(work_dir, "%s.target.bed" % dd.get_sample_name(data))
+    anti_file = os.path.join(work_dir, "%s.antitarget.bed" % dd.get_sample_name(data))
+    if not utils.file_exists(target_file):
+        with file_transaction(data, target_file) as tx_out_file:
+            out_base = tx_out_file.replace(".target.bed", "")
+            cmd = [_get_cmd("reference2targets.py"), "-o", out_base, back_cnn]
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit targets from background")
+            shutil.copy(out_base + ".antitarget.bed", anti_file)
     return target_file, anti_file
 
 def _add_seg_to_output(out, data):

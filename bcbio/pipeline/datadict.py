@@ -75,6 +75,7 @@ LOOKUPS = {
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
+    "background_cnv_reference": {"keys": ["config", "algorithm", "background", "cnv_reference"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},

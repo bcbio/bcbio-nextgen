@@ -2,6 +2,8 @@
 
 - Normalize allele frequency calculation and filtering for Strelka2 and MuTect2.
   Thanks to Vlad Saveliev.
+- CNVkit: enable specification of pre-built reference background cnn with
+  `background: cnv_reference`.
 - CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
   Beltrame.
 - Add support for polyG and polyX trimming to variant calling for NovaSeq 3' end

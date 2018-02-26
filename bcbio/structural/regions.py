@@ -42,8 +42,12 @@ def calculate_sv_bins(*items):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
         for data in cnv_group.items:
             if cnvkit.use_general_sv_bins(data):
-                target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
-                                                             size_calc_fn, cnv_group.work_dir, data)
+                if dd.get_background_cnv_reference(data):
+                    target_bed, anti_bed = cnvkit.targets_from_background(dd.get_background_cnv_reference(data),
+                                                                          cnv_group.work_dir, data)
+                else:
+                    target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
+                                                                size_calc_fn, cnv_group.work_dir, data)
                 if not data.get("regions"):
                     data["regions"] = {}
                 data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}
@@ -220,8 +224,15 @@ def normalize_sv_coverage(*items):
                 antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
                                                    dd.get_sample_name(inputs[0]), "bins"))
-        back_file = cnvkit.cnvkit_background(cnns, os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
-                                             backgrounds or inputs, target_bed, antitarget_bed)
+        input_backs = set(filter(lambda x: x is not None,
+                                 [dd.get_background_cnv_reference(d) for d in inputs]))
+        if input_backs:
+            assert len(input_backs) == 1, "Multiple backgrounds in group: %s" % list(input_backs)
+            back_file = list(input_backs)[0]
+        else:
+            back_file = cnvkit.cnvkit_background(cnns,
+                                                 os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
+                                                backgrounds or inputs, target_bed, antitarget_bed)
         for data in inputs:
             work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                        dd.get_sample_name(data), "bins"))

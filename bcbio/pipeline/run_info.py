@@ -331,7 +331,7 @@ def _clean_algorithm(data):
 def _clean_background(data):
     """Clean up background specification, remaining back compatible.
     """
-    allowed_keys = set(["variant", "coverage_bin_target", "coverage_bin_antitarget"])
+    allowed_keys = set(["variant", "cnv_reference"])
     val = tz.get_in(["algorithm", "background"], data)
     errors = []
     if val:
