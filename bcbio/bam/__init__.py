@@ -266,7 +266,7 @@ def _check_sample(in_bam, rgnames):
     if len(msgs) > 0:
         raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
                          + "\n".join(msgs) +
-                         "\nSetting `bam_clean: picard` or `bam_clean: fixrg`\n"
+                         "\nSetting `bam_clean: fixrg`\n"
                          "in the configuration can often fix this issue.")
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
@@ -301,7 +301,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
         warnings.append("Extra reference chromosomes: %s" % rc)
     if problems:
         raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
-                         "Setting `bam_clean: picard` in the configuration can often fix this issue."
+                         "Setting `bam_clean: remove_extracontigs` in the configuration can often fix this issue."
                          % "\n".join(problems))
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
