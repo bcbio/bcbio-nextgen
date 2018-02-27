@@ -26,7 +26,8 @@ def _get_calls(data, cnv_only=False):
 def get_variants(data):
     """Retrieve set of variant calls to use for heterogeneity analysis.
     """
-    supported = ["vardict", "vardict-java", "vardict-perl", "strelka2", "mutect2", "freebayes", "mutect"]
+    supported = ["precalled", "vardict", "vardict-java", "vardict-perl",
+                 "strelka2", "mutect2", "freebayes", "mutect"]
     out = []
     for v in data.get("variants", []):
         if v["variantcaller"] in supported:

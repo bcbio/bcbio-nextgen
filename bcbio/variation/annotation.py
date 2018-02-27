@@ -116,7 +116,7 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
 def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
     """Fix header with additional lines and remapping of generic sample names.
     """
-    new_header = "%s-header.txt" % utils.splitext_plus(base_file)[0]
+    new_header = "%s-sample_header.txt" % utils.splitext_plus(base_file)[0]
     with open(new_header, "w") as out_handle:
         chrom_line = None
         with gzip.open(orig_vcf) as in_handle:

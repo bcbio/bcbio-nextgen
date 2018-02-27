@@ -508,7 +508,7 @@ def sort_by_ref(vcf_file, data):
 def add_contig_to_header_cl(ref_file, out_file):
     """Add update ##contig lines to VCF header, required for bcftools/GATK compatibility.
     """
-    header_file = "%s-header.txt" % utils.splitext_plus(out_file)[0]
+    header_file = "%s-contig_header.txt" % utils.splitext_plus(out_file)[0]
     with open(header_file, "w") as out_handle:
         for region in ref.file_contigs(ref_file, {}):
             out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))

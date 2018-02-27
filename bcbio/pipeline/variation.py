@@ -131,7 +131,7 @@ def _get_orig_items(data):
     """Retrieve original items in a batch, handling CWL and standard cases.
     """
     if isinstance(data, dict):
-        if dd.get_align_bam(data) and tz.get_in(["metadata", "batch"], data):
+        if dd.get_align_bam(data) and tz.get_in(["metadata", "batch"], data) and "group_orig" in data:
             return vmulti.get_orig_items(data)
         else:
             return [data]
