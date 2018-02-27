@@ -703,7 +703,9 @@ Structural variant calling
   cnvkit, seq2c, delly, battenberg]. LUMPY and Manta require paired end reads.
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
-  structural variant calls to highlight changes in known genes. This can be
+  structural variant calls to highlight changes in known genes. See the `paper
+  on cancer genome prioritization <https://peerj.com/articles/3166/>`_ for the
+  full details. This can be
   either the path to a BED file (with ``chrom start end gene_name``, see
   :ref:`input-file-preparation`) or the name
   of one of the pre-installed prioritization files:
@@ -711,11 +713,10 @@ Structural variant calling
      - ``cancer/civic`` (hg19, GRCh37, hg38) -- Known cancer associated genes from
        `CIViC <https://civic.genome.wustl.edu>`_.
      - ``cancer/az300`` (hg19, GRCh37, hg38) -- 300 cancer associated genes
-       contributed by `AstraZeneca oncology
+       contributed by `AstraZeneca oncology <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
      - ``cancer/az-cancer-panel`` (hg19, GRCh37, hg38) -- A text file of genes in the
        AstraZeneca cancer panel. This is only usable for ``svprioritize`` which
        can take a list of gene names instead of a BED file.
-       <https://www.astrazeneca.com/our-focus-areas/oncology.html>`_.
      - ``actionable/ACMG56`` -- Medically actionable genes from the `The American College
        of Medical Genetics and Genomics <http://iobio.io/2016/03/29/acmg56/>`_
      - ``coding/ccds`` (hg38) -- `Consensus CDS (CCDS)
