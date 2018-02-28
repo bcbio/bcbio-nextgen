@@ -886,7 +886,7 @@ Single-cell RNA sequencing
 ==========================
 
 - ``minimum_barcode_depth`` Cellular barcodes with less than this many reads
-  assigned to them are discarded (default 100,000).
+  assigned to them are discarded (default 10,000).
 - ``cellular_barcodes`` A single file or a list of one or two files which have
   valid cellular barcodes. Provide one file if there is only one barcode and
   two files if the barcodes are split. If no file is provided, all cellular
