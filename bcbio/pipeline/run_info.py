@@ -884,7 +884,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
             if os.path.isfile(item["vrn_file"]):
                 item["vrn_file"] = vcfutils.bgzip_and_index(item["vrn_file"], config,
                                                             remove_orig=False, out_dir=inputs_dir)
-            if not tz.get_in(("metadata", "batch"), item):
+            if not tz.get_in(("metadata", "batch"), item) and tz.get_in(["algorithm", "validate"], item):
                 raise ValueError("%s: Please specify a metadata batch for variant file (vrn_file) input.\n" %
                                  (item["description"]) +
                                  "Batching with a standard sample provides callable regions for validation.")
