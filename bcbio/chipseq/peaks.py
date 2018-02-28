@@ -60,10 +60,10 @@ def calling(data):
                           dd.get_chip_method(data), data["resources"], data["config"])
     greylistdir = greylisting(data)
     data.update({"peaks_files": out_files})
+    data["input_bam_filter"] = input_bam
     if greylistdir:
         data["greylist"] = greylistdir
     return [[data]]
-    data["input_bam_filter"] = input_bam
 
 def _prepare_bam(bam_file, bed_file, config):
     """Remove regions from bed files"""
@@ -87,7 +87,7 @@ def _sync(original, processed):
         original_sample[0]["peaks_files"] = {}
         for process_sample in processed:
             if dd.get_sample_name(original_sample[0]) == dd.get_sample_name(process_sample[0]):
-                for key in ["peaks_file", "work_bam_filter", "input_bam_filter"]:
+                for key in ["peaks_files", "work_bam_filter", "input_bam_filter"]:
                     if process_sample[0].get(key):
                         original_sample[0][key] = process_sample[0][key]
     return original
