@@ -759,6 +759,7 @@ def _directory_tarball(dirname):
         tarball_dir = os.path.join(extra_tarball, tarball_dir)
     tarball = os.path.join(base_dir, "%s-wf.tar.gz" % (tarball_dir.replace(os.path.sep, "--")))
     if not utils.file_exists(tarball):
+        print("Preparing CWL input tarball: %s" % tarball)
         with utils.chdir(base_dir):
             with tarfile.open(tarball, "w:gz") as tar:
                 tar.add(tarball_dir)
