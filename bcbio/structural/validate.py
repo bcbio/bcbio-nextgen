@@ -347,16 +347,17 @@ def _plot_evaluation_event(df_csv, svtype):
                 if i == 0:
                     ax.set_title(metric, size=12, y=1.2)
                 vals, labels = _get_plot_val_labels(df, size, metric, callers)
-                ax.barh(np.arange(len(vals)), vals)
+                ax.barh(range(1,len(vals)+1), vals)
                 if j == 0:
                     ax.tick_params(axis='y', which='major', labelsize=8)
-                    ax.locator_params(nbins=len(callers) + 2, axis="y", tight=True)
-                    ax.set_yticklabels(callers, va="bottom")
-                    ax.text(100, len(callers), size_label, fontsize=10)
+                    ax.locator_params(axis="y", tight=True)
+                    ax.set_yticks(range(1,len(callers)+1,1))
+                    ax.set_yticklabels(callers, va="center")
+                    ax.text(100, len(callers)+1, size_label, fontsize=10)
                 else:
                     ax.get_yaxis().set_ticks([])
                 for ai, (val, label) in enumerate(zip(vals, labels)):
-                    ax.annotate(label, (val + 0.75, ai + 0.35), va='center', size=7)
+                    ax.annotate(label, (val + 0.75, ai + 1), va='center', size=7)
         if svtype in titles:
             fig.text(0.025, 0.95, titles[svtype], size=14)
         fig.set_size_inches(7, len(event_sizes) + 1)
