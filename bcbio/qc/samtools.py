@@ -29,7 +29,8 @@ def run(_, data, out_dir=None):
             cmd = "{samtools} idxstats {bam_file}"
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "samtools index stats", data)
-    out = _parse_samtools_stats(stats_file)
+    out = {"base": idxstats_file, "secondary": [stats_file]}
+    out["metrics"] = _parse_samtools_stats(stats_file)
     return out
 
 def run_and_save(data):

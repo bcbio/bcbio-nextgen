@@ -38,7 +38,7 @@ def run(bam_file, data, out_dir):
 
     samtools_stats_dir = os.path.join(out_dir, os.path.pardir, 'samtools')
     from bcbio.qc import samtools
-    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)["metrics"]
 
     out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
     out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])

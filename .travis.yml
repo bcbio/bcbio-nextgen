@@ -22,8 +22,8 @@ install:
   - df -h
   - export PATH=~/install/bcbio-vm/anaconda/bin:$PATH
   - conda install --yes nomkl
-  - travis_wait 40 conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen
-  - travis_wait conda install --yes -c conda-forge -c bioconda cwltool toil rabix-bunny
+  - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm bcbio-nextgen
+  - conda install --yes -c conda-forge -c bioconda cwltool toil rabix-bunny
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
   - conda remove --yes --force qt
