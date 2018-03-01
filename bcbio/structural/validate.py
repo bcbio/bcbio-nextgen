@@ -351,7 +351,7 @@ def _plot_evaluation_event(df_csv, svtype):
                 if j == 0:
                     ax.tick_params(axis='y', which='major', labelsize=8)
                     ax.locator_params(axis="y", tight=True)
-		    ax.set_yticks(range(1,len(callers)+1,1))
+                    ax.set_yticks(range(1,len(callers)+1,1))
                     ax.set_yticklabels(callers, va="center")
                     ax.text(100, len(callers)+1, size_label, fontsize=10)
                 else:
