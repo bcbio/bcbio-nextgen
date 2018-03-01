@@ -429,6 +429,7 @@ def _maybe_add_alignment(algorithm, sample, out):
         for (fname, ext, isplus) in [(sample.get("work_bam"), "ready", False),
                                      (sample.get("work_bam_filter"), "filter", False),
                                      (sample.get("input_bam_filter"), "input-filter", False),
+                                     (sample.get("bigwig"), "ready", False),
                                      (dd.get_disc_bam(sample), "disc", True),
                                      (dd.get_sr_bam(sample), "sr", True)]:
             if fname and os.path.exists(fname):
@@ -436,6 +437,8 @@ def _maybe_add_alignment(algorithm, sample, out):
                     ftype, fext = "bam", ".bai"
                 elif fname.endswith("cram"):
                     ftype, fext = "cram", ".crai"
+                elif fname.endswith("bw"):
+                    ftype, fext = "bw", ".bw"
                 else:
                     raise ValueError("Unexpected alignment file type %s" % fname)
                 out.append({"path": fname,

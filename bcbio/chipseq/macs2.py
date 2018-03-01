@@ -8,11 +8,11 @@ from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio import bam
 
-HS = {"hg19": "2.7e9",
-      "GRCh37": "2.7e9",
-      "hg38": "2.7e9",
-      "mm10": "1.87e9",
-      "dm3": "1.2e8"}
+HS = {"hg19": 2.7e9,
+      "GRCh37": 2.7e9,
+      "hg38": 2.7e9,
+      "mm10": 1.87e9,
+      "dm3": 1.2e8}
 
 def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, config):
     """

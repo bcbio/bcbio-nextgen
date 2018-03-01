@@ -44,38 +44,19 @@ def peakcall_prepare(data, run_parallel):
 
 def calling(data):
     """Main function to parallelize peak calling."""
-    chip_bam = dd.get_work_bam(data)
+    chip_bam = data.get("work_bam_filter")
     input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
-    encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
-    # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
-    if encode_bed:
-        chip_bam = _prepare_bam(chip_bam, encode_bed, data['config'])
-        data["work_bam_filter"] = chip_bam
-        input_bam = _prepare_bam(input_bam, encode_bed, data['config'])
-        data["input_bam_filter"] = input_bam
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
                           dd.get_chip_method(data), data["resources"], data["config"])
     greylistdir = greylisting(data)
     data.update({"peaks_files": out_files})
-    data["input_bam_filter"] = input_bam
+    # data["input_bam_filter"] = input_bam
     if greylistdir:
         data["greylist"] = greylistdir
     return [[data]]
-
-def _prepare_bam(bam_file, bed_file, config):
-    """Remove regions from bed files"""
-    if not bam_file or not bed_file:
-        return bam_file
-    out_file = utils.append_stem(bam_file, '_filter')
-    bedtools = config_utils.get_program("bedtools", config)
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out:
-            cmd = "{bedtools} subtract -nonamecheck -A -a {bam_file} -b {bed_file} > {tx_out}"
-            do.run(cmd.format(**locals()), "Clean %s" % bam_file)
-    return out_file
 
 def _sync(original, processed):
     """
@@ -100,7 +81,7 @@ def _check(sample, data):
         return None
     for origin in data:
         if dd.get_batch(sample) in (dd.get_batches(origin[0]) or []) and dd.get_phenotype(origin[0]) == "input":
-            sample["work_bam_input"] = dd.get_work_bam(origin[0])
+            sample["work_bam_input"] = origin[0].get("work_bam_filter")
             return [sample]
     return [sample]
 
@@ -150,3 +131,4 @@ def greylisting(data):
                             % dd.get_sample_name(data))
                 return None
     return greylistdir
+
