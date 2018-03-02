@@ -57,8 +57,6 @@ def pipeline_summary(data):
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     if data["analysis"].lower().startswith("smallrna-seq"):
         work_bam = data["clean_fastq"]
-    elif data["analysis"].lower().startswith("chip-seq"):
-        work_bam = data["raw_bam"]
     elif not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
     if dd.get_ref_file(data):

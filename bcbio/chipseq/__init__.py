@@ -11,7 +11,7 @@ from bcbio.log import logger
 
 def clean_chipseq_alignment(data):
     aligner = dd.get_aligner(data)
-    data["raw_bam"] = dd.get_work_bam(data)
+    data["align_bam"] = dd.get_work_bam(data)
     if aligner:
         if aligner == "bowtie2":
             filterer = bowtie2.filter_multimappers
@@ -27,9 +27,8 @@ def clean_chipseq_alignment(data):
                     "If BAM is not cleaned for peak calling, can result in downstream errors.")
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
-    data["work_bam_filter"] = data["work_bam"]
     if encode_bed:
-        data["work_bam_filter"] = _prepare_bam(bam, encode_bed, data['config'])
+        data["work_bam"] = _prepare_bam(bam, encode_bed, data['config'])
     data["bigwig"] = _bam_coverage(dd.get_sample_name(data), dd.get_work_bam(data), data)
     return [[data]]
 

@@ -15,7 +15,7 @@ def run(_, data, out_dir=None):
     """
     stats_file, idxstats_file = _get_stats_files(data, out_dir)
     samtools = config_utils.get_program("samtools", data["config"])
-    bam_file = dd.get_work_bam(data) or dd.get_align_bam(data)
+    bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     if not utils.file_exists(stats_file):
         utils.safe_makedir(out_dir)
         with file_transaction(data, stats_file) as tx_out_file:

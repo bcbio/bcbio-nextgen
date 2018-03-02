@@ -427,8 +427,6 @@ def _maybe_add_summary(algorithm, sample, out):
 def _maybe_add_alignment(algorithm, sample, out):
     if _has_alignment_file(algorithm, sample) and dd.get_phenotype(sample) != "germline":
         for (fname, ext, isplus) in [(sample.get("work_bam"), "ready", False),
-                                     (sample.get("work_bam_filter"), "filter", False),
-                                     (sample.get("input_bam_filter"), "input-filter", False),
                                      (sample.get("bigwig"), "ready", False),
                                      (dd.get_disc_bam(sample), "disc", True),
                                      (dd.get_sr_bam(sample), "sr", True)]:

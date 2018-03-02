@@ -1,5 +1,6 @@
 ## 1.0.9 (in progress)
 
+- Add bamCoverage to chip-seq pipeline to calculate bigwig files.
 - Normalize allele frequency calculation and filtering for Strelka2 and MuTect2.
   Thanks to Vlad Saveliev.
 - CNVkit: enable specification of pre-built reference background cnn with

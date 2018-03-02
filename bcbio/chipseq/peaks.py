@@ -44,7 +44,7 @@ def peakcall_prepare(data, run_parallel):
 
 def calling(data):
     """Main function to parallelize peak calling."""
-    chip_bam = data.get("work_bam_filter")
+    chip_bam = data.get("work_bam")
     input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)
@@ -68,7 +68,7 @@ def _sync(original, processed):
         original_sample[0]["peaks_files"] = {}
         for process_sample in processed:
             if dd.get_sample_name(original_sample[0]) == dd.get_sample_name(process_sample[0]):
-                for key in ["peaks_files", "work_bam_filter", "input_bam_filter"]:
+                for key in ["peaks_files"]:
                     if process_sample[0].get(key):
                         original_sample[0][key] = process_sample[0][key]
     return original
@@ -81,7 +81,7 @@ def _check(sample, data):
         return None
     for origin in data:
         if dd.get_batch(sample) in (dd.get_batches(origin[0]) or []) and dd.get_phenotype(origin[0]) == "input":
-            sample["work_bam_input"] = origin[0].get("work_bam_filter")
+            sample["work_bam_input"] = origin[0].get("work_bam")
             return [sample]
     return [sample]
 
