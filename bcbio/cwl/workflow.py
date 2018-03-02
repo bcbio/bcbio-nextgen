@@ -233,9 +233,11 @@ def _flatten_nested_input(v):
                 new_type = x["items"]
             elif isinstance(x, basestring) and x == "null":
                 want_null = True
+            else:
+                new_type = x
         if want_null:
             if not isinstance(new_type, (list, tuple)):
-                new_type = [new_type]
+                new_type = [new_type] if new_type is not None else []
             for toadd in ["null", "string"]:
                 if toadd not in new_type:
                     new_type.append(toadd)

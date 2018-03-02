@@ -54,7 +54,7 @@ def organize_noalign(data):
     data = utils.to_single_data(data[0])
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
     work_bam = os.path.join(work_dir, "%s-input.bam" % dd.get_sample_name(data))
-    utils.symlink_plus(data["files"][0], work_bam)
+    utils.copy_plus(data["files"][0], work_bam)
     bam.index(work_bam, data["config"])
     data["align_bam"] = work_bam
     return data
