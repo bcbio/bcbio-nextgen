@@ -51,6 +51,10 @@ def trim_srna_sample(data):
         return [[data]]
 
     adapter = dd.get_adapters(data)
+    if adapter and not trim_reads:
+        trim_reads = True
+        logger.info("Adapter is set up in config file, but trim_reads is not true."
+                    "If you want to skip trimming, skip adapter option from config.")
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
     if trim_reads:
