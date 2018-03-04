@@ -13,6 +13,7 @@ from bcbio.distributed.split import (grouped_parallel_split_combine, parallel_sp
 from bcbio.distributed import multi as dmulti
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region as pregion
+from bcbio.pipeline import shared as pshared
 from bcbio.variation import (gatk, gatkfilter, germline, multi,
                              ploidy, vcfutils, vfilter)
 
@@ -424,11 +425,12 @@ def variantcall_batch_region(items):
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
                             "%s-%s-block.vcf.gz" % (batch_name, region_str))
     utils.safe_makedir(os.path.dirname(out_file))
-    if variantcaller in SUPPORT_MULTICORE:
-        call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
-                              [_region_to_coords(r) for r in region_block], out_file)
-    else:
-        call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
+    with pshared.bedtools_tmpdir(items[0]):
+        if variantcaller in SUPPORT_MULTICORE:
+            call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
+                                [_region_to_coords(r) for r in region_block], out_file)
+        else:
+            call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
     return {"vrn_file_region": call_file, "region_block": region_block}
 
 def _run_variantcall_batch_multicore(items, regions, final_file):
