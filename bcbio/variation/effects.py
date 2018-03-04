@@ -236,6 +236,8 @@ def snpeff_version(args=None, data=None):
         raw_version = ""
     snpeff_version = "".join([x for x in str(raw_version)
                               if x in set(string.digits + ".")])
+    # Only return major version (4.3 not 4.3.1) which maps to databases
+    snpeff_version = ".".join(snpeff_version.split(".")[:2])
     return snpeff_version
 
 def snpeff_effects(vcf_in, data):
