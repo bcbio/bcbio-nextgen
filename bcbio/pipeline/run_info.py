@@ -459,6 +459,8 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
+                     "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "trim_ends", "adapters", "custom_trim", "species", "kraken",
                       "align_split_size", "save_diskspace",
@@ -539,7 +541,10 @@ def _check_toplevel_misplaced(item):
         raise ValueError("Unexpected configuration keywords found in top level of %s: %s\n"
                          "This should be placed in the 'algorithm' section."
                          % (item["description"], problem_keys))
-
+    problem_keys = [k for k in item.keys() if k not in TOPLEVEL_KEYS]
+    if len(problem_keys) > 0:
+        raise ValueError("Unexpected configuration keywords found in top level of %s: %s\n"
+                         % (item["description"], problem_keys))
 
 def _detect_fastq_format(in_file, MAX_RECORDS=1000):
     ranges = {"sanger": (33, 126),

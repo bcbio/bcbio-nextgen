@@ -375,7 +375,7 @@ def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
             params = ["-T", "GatherVcfs", "-I", input_file_list, "-O", tx_out_file]
             # Use GATK4 for merging, tools_off: [gatk4] applies to variant calling
             config = utils.deepish_copy(config)
-            if "gatk4" in tz.get_in(["algorithm", "tools_off"], config):
+            if "gatk4" in dd.get_tools_off({"config": config}):
                 config["algorithm"]["tools_off"].remove("gatk4")
             broad_runner = broad.runner_from_config(config)
             broad_runner.run_gatk(params)
