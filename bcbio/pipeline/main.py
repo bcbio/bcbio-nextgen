@@ -253,9 +253,8 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("estimate expression (single threaded)", dirs):
             samples = rnaseq.quantitate_expression_noparallel(samples, run_parallel)
 
-
     samples = rnaseq.combine_files(samples)
-    with prun.start(_wres(parallel, ["gatk"]), samples, config,
+    with prun.start(_wres(parallel, ["gatk", "vardict"]), samples, config,
                     dirs, "rnaseq-variation") as run_parallel:
         with profile.report("RNA-seq variant calling", dirs):
             samples = rnaseq.rnaseq_variant_calling(samples, run_parallel)
