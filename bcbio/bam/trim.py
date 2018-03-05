@@ -119,8 +119,10 @@ def _fastp_trim(fastq_files, adapters, out_dir, data):
                     cmd += ["-i", inf, "-o", outf]
                 else:
                     cmd += ["-I", inf, "-O", outf]
-            cmd += ["--trim_poly_g", "--cut_by_quality3", "--cut_mean_quality", "5", "--disable_quality_filtering",
-                    "--length_required", str(dd.get_min_read_length(data))]
+            cmd += ["--trim_poly_g", "--poly_g_min_len", "6",
+                    "--cut_by_quality3", "--cut_mean_quality", "5",
+                    "--length_required", str(dd.get_min_read_length(data)),
+                    "--disable_quality_filtering"]
             for a in adapters:
                 cmd += ["--adapter_sequence", a]
             if not adapters:
