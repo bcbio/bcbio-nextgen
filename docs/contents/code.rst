@@ -275,10 +275,15 @@ happily integrate the new genome.
 This will provide basic integration with bcbio and allow running a minimal
 pipeline with alignment and quality control. We also have utility scripts in
 CloudBioLinux to help with preparing dbSNP (`utils/prepare_dbsnp.py`_)
-and RNA-seq (`utils/prepare_tx_gff.py`_) resources. We are still working on ways
-to best include these as part of the standard build and install since they
-either require additional tools to run locally, or require preparing copies in
-S3 buckets.
+and RNA-seq (`utils/prepare_tx_gff.py`_) resources for some genomes. For
+instance, to prepare RNA-seq transcripts for mm9::
+
+     bcbio_python prepare_tx_gff.py --genome-dir /path/to/bcbio/genomes Mmusculus mm9
+
+
+We are still working on ways to best include these as part of the standard build
+and install since they either require additional tools to run locally, or
+require preparing copies in S3 buckets.
 
 .. _config/biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
 .. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/7a2161a415d3dcd76f41095cd8f16bec84d4b1f3/cloudbio/biodata/genomes.py#L267
