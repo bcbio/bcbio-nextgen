@@ -24,7 +24,9 @@ from bcbio.variation import damage, peddy, vcfutils
 def qc_to_rec(samples):
     """CWL: Convert a set of input samples into records for parallelization.
     """
-    to_analyze, extras = _split_samples_by_qc([utils.to_single_data(x) for x in samples])
+    samples = [utils.to_single_data(x) for x in samples]
+    samples = cwlutils.assign_complex_to_samples(samples)
+    to_analyze, extras = _split_samples_by_qc(samples)
     recs = cwlutils.samples_to_records([utils.to_single_data(x) for x in to_analyze + extras])
     return [[x] for x in recs]
 

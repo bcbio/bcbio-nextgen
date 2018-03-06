@@ -12,8 +12,9 @@ import tarfile
 
 import toolz as tz
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.pipeline import datadict as dd
+from bcbio.variation import vcfutils
 
 def to_rec(samples, default_keys=None):
     """Convert inputs into CWL records, useful for single item parallelization.
@@ -190,3 +191,38 @@ def samples_to_records(samples, default_keys=None):
         data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         out.append(data)
     return out
+
+def assign_complex_to_samples(items):
+    """Assign complex inputs like variants and align outputs to samples.
+
+    Handles list inputs to record conversion where we have inputs from multiple
+    locations and need to ensure they are properly assigned to samples in many
+    environments.
+    """
+    target_keys = {("variants", "samples"): _get_vcf_samples,
+                   ("align_bam",): _get_bam_samples}
+    complex = {k: {} for k in target_keys}
+    for data in items:
+        for k in target_keys:
+            v = tz.get_in(k, data)
+            if v is not None:
+                for s in target_keys[k](v):
+                    if s:
+                        complex[k][s] = v
+    out = []
+    for data in items:
+        for k in target_keys:
+            newv = tz.get_in([k, dd.get_sample_name(data)], complex)
+            if newv:
+                data = tz.update_in(data, k, lambda x: newv)
+        out.append(data)
+    return out
+
+def _get_vcf_samples(calls):
+    all_samples = set([])
+    for f in utils.flatten(calls):
+        all_samples |= set(vcfutils.get_samples(f))
+    return list(all_samples)
+
+def _get_bam_samples(f):
+    return [bam.sample_name(f)]
