@@ -370,7 +370,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
             break
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
-    TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
+    TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_file", "files", "analysis"])
     keep_sample = True
     if item_md and len(item_md) > 0:
         if "metadata" not in item:

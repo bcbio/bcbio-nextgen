@@ -154,7 +154,7 @@ def _variant_vc(checkpoints):
         vc_wf += [s("postprocess_variants", "batch-single",
                     [["batch_rec"], ["vrn_file"]],
                     [cwlout(["vrn_file"], "File", [".tbi"])],
-                    "bcbio-vc", ["snpeff=4.3i"], disk={"files": 0.5})]
+                    "bcbio-vc", ["snpeff=4.3.1t"], disk={"files": 0.5})]
     vc_wf += [s("compare_to_rm", "batch-single",
                 [["batch_rec"], ["vrn_file"]],
                 [cwlout("vc_rec", "record",
@@ -222,7 +222,7 @@ def _variant_jointvc():
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
-            "bcbio-vc", ["snpeff=4.3i"],
+            "bcbio-vc", ["snpeff=4.3.1t"],
             disk={"files": 1.5}),
           s("finalize_jointvc", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
@@ -281,9 +281,9 @@ def variant(samples):
         align = [s("organize_noalign", "multi-parallel",
                    ["files"],
                    [cwlout(["align_bam"], "File", [".bai"]),
-                    cwlout(["work_bam_plus", "disc"], "null"),
-                    cwlout(["work_bam_plus", "sr"], "null"),
-                    cwlout(["hla", "fastq"], "null")],
+                    cwlout(["work_bam_plus", "disc"], ["File", "null"]),
+                    cwlout(["work_bam_plus", "sr"], ["File", "null"]),
+                    cwlout(["hla", "fastq"], ["File", "null"])],
                    "bcbio-vc", cores=1, no_files=True)]
     align += [s("prep_samples_to_rec", "multi-combined",
                 [["config", "algorithm", "coverage"],
