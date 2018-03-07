@@ -28,7 +28,7 @@ def clean_chipseq_alignment(data):
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     if encode_bed:
-        data["work_bam"] = _prepare_bam(bam, encode_bed, data['config'])
+        data["work_bam"] = _prepare_bam(data["work_bam"], encode_bed, data['config'])
     data["bigwig"] = _bam_coverage(dd.get_sample_name(data), dd.get_work_bam(data), data)
     return [[data]]
 
