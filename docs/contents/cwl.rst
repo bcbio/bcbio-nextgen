@@ -242,9 +242,13 @@ Running bcbio CWL on DNAnexus
 
 bcbio runs on the `DNAnexus platform <https://www.dnanexus.com/>`_ by converting
 bcbio generated CWL into DNAnexus workflows and apps using
-`dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This describes first the process
-of running an analysis through the built in 'Create and Run bcbio workflow App`
-and then the details to install and run everything locally if desired.
+`dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This describes the process
+using the
+'Create and Run bcbio workflow applet <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets>`_
+in the public `bcbio_resources
+<https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/>`_
+project, Secondarily, we also show how to install and prepare things locally for
+additional control and debugging.
 
 0. Set some useful environmental variables:
 
@@ -307,17 +311,32 @@ and then the details to install and run everything locally if desired.
          genome_build: hg38
 
 6. Supply the three inputs (``bcbio_system.yaml``, ``project.csv`` and
-   ``template.yaml``) to the 'Create and run bcbio workflow` app. This will
-   lookup all files, prepare a bcbio CWL workflow, convert into a DNAnexus
-   workflow, and submit to the platform.
+   ``template.yaml``) to the `Create and run bcbio workflow` applet
+   <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets>`_.
+   You can do this using the web interface or via the command line with a small
+   script like::
 
-The workflow runs as a standard DNAnexus workflow and you can monitor through
-the command line (with ``dx find executions -n 1`` and ``dx watch``) or the web interface
+      dx select $DX_PROJECT_ID
+      dx mkdir -p $PNAME
+      for F in your-template.yaml $PNAME.csv bcbio_system-dnanexus.yaml
+      do
+              dx rm -a /$PNAME/$F || true
+              dx upload --path /$PNAME/ $F
+
+      done
+      dx ls $PNAME
+      dx rm -a -r /$PNAME/dx-cwl-run || true
+      dx run bcbio_resources:/applets/bcbio-run-workflow -iyaml_template=/$PNAME/qc-template.yaml -isample_spec=/$PNAME/$PNAME.csv -isystem_configuration=/$PNAME/bcbio_system-dnanexus.yaml -ioutput_folder=/$PNAME/dx-cwl-run
+
+The applet will lookup all files, prepare a bcbio CWL workflow, convert into a
+DNAnexus workflow, and submit to the platform. The workflow runs as a standard
+DNAnexus workflow and you can monitor through the command line (with ``dx find
+executions --root job-YOURJOBID`` and ``dx watch``) or the web interface
 (``Monitor`` tab).
 
-If you prefer not to use the DNAnexus app you can by installing
+If you prefer not to use the DNAnexus app you can run locally by installing
 `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_ on your
-local machine. The DNAnexus app internally does the following steps:
+local machine:
 
 
 1. Follow the :ref:`automated-sample-config` workflow to generate a full configuration::
