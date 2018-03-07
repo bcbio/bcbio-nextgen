@@ -210,7 +210,7 @@ def get_normal_sample(in_file):
 def get_samples(in_file):
     """Retrieve samples present in a VCF file
     """
-    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             if line.startswith("#CHROM"):
                 parts = line.strip().split("\t")

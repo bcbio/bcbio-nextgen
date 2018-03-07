@@ -383,7 +383,7 @@ def _qc_workflow(checkpoints):
         qc_inputs += [["variants", "samples"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
-            "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),
+            "bcbio-vc", disk={"files": 1.5}, cores=1),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
             [cwlout("qcout_rec", "record",

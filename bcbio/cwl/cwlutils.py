@@ -199,19 +199,19 @@ def assign_complex_to_samples(items):
     locations and need to ensure they are properly assigned to samples in many
     environments.
     """
-    target_keys = {("variants", "samples"): _get_vcf_samples,
+    extract_fns = {("variants", "samples"): _get_vcf_samples,
                    ("align_bam",): _get_bam_samples}
-    complex = {k: {} for k in target_keys}
+    complex = {k: {} for k in extract_fns.keys()}
     for data in items:
-        for k in target_keys:
+        for k in complex:
             v = tz.get_in(k, data)
             if v is not None:
-                for s in target_keys[k](v):
+                for s in extract_fns[k](v):
                     if s:
                         complex[k][s] = v
     out = []
     for data in items:
-        for k in target_keys:
+        for k in complex:
             newv = tz.get_in([k, dd.get_sample_name(data)], complex)
             if newv:
                 data = tz.update_in(data, k, lambda x: newv)
