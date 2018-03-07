@@ -142,9 +142,13 @@ def _af_filter(data, in_file, out_file):
                     if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
                     else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
             w = Writer(tx_out_file, vcf)
-            tumor_index = vcf.samples.index(data['description'])
+            # GATK 3.x can produce VCFs without sample names for empty VCFs
+            try:
+                tumor_index = vcf.samples.index(dd.get_sample_name(data))
+            except ValueError:
+                tumor_index = None
             for rec in vcf:
-                if np.all(rec.format('AF')[tumor_index] < min_freq):
+                if tumor_index is not None and np.all(rec.format('AF')[tumor_index] < min_freq):
                     vcfutils.cyvcf_add_filter(rec, 'MinAF')
                 w.write_record(rec)
             w.close()
