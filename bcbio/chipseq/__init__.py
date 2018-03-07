@@ -2,6 +2,7 @@ import os
 import sys
 import toolz as tz
 from bcbio import utils
+from bcbio import bam
 from bcbio.pipeline import config_utils
 import bcbio.pipeline.datadict as dd
 from bcbio.ngsalign import bowtie2, bwa
@@ -29,6 +30,7 @@ def clean_chipseq_alignment(data):
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     if encode_bed:
         data["work_bam"] = _prepare_bam(data["work_bam"], encode_bed, data['config'])
+        bam.index(data["work_bam"], data['config'])
     data["bigwig"] = _bam_coverage(dd.get_sample_name(data), dd.get_work_bam(data), data)
     return [[data]]
 
