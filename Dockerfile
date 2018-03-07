@@ -14,7 +14,7 @@ RUN apt-get update && \
     wget --no-check-certificate \
       https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
-      --isolate --nodata -u development --tooldir=/usr/local && \
+      --isolate --minimize-disk --nodata -u development && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda install -y nomkl && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/bcbio_nextgen.py upgrade --isolate --tooldir=/usr/local --tools && \
