@@ -1,4 +1,4 @@
-version: 18
+version: 19
 
 aliases:
   human: true
@@ -25,3 +25,13 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+srnaseq:
+  srna_transcripts: ../srnaseq/srna-transcripts.gtf
+  mirbase_hairpin: ../srnaseq/hairpin.fa
+  mirbase_mature: ../srnaseq/mature.fa
+  mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+  trna_fasta: ../srnaseq/trna_mature_pre.fa
+  mint_lookup: ../srnaseq/LookupTable.tRFs.MINTmap_v1.txt
+  mint_space: ../srnaseq/tRNAspace.Spliced.Sequences.MINTmap_v1.fa
+  mint_other: ../srnaseq/OtherAnnotations.MINTmap_v1.txt
