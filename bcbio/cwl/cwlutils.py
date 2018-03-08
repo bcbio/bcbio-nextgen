@@ -221,7 +221,12 @@ def assign_complex_to_samples(items):
 def _get_vcf_samples(calls):
     all_samples = set([])
     for f in utils.flatten(calls):
-        all_samples |= set(vcfutils.get_samples(f))
+        cur = set(vcfutils.get_samples(f))
+        if cur:
+            if not all_samples:
+                all_samples = cur
+            else:
+                all_samples &= set(cur)
     return list(all_samples)
 
 def _get_bam_samples(f):
