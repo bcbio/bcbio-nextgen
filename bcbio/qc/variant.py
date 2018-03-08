@@ -51,10 +51,10 @@ def _bcftools_stats(data, out_dir, vcf_file_key=None, germline=False):
     if vcinfo:
         out_dir = utils.safe_makedir(out_dir)
         vcf_file = vcinfo[vcf_file_key or "vrn_file"]
-        if tz.get_in(("config", "algorithm", "jointcaller"), data):
+        if dd.get_jointcaller(data) or "gvcf" in dd.get_tools_on(data):
             opts = ""
         else:
-            opts = "-f PASS"
+            opts = "-f PASS,."
         name = dd.get_sample_name(data)
         out_file = os.path.join(out_dir, "%s_bcftools_stats%s.txt" % (name, ("_germline" if germline else "")))
         bcftools = config_utils.get_program("bcftools", data["config"])
