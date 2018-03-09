@@ -222,9 +222,10 @@ def _check_for_conda_problems():
     """
     conda_bin = _get_conda_bin()
     lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "iib")
-    if not os.path.exists(os.path.join(lib_dir, "libquadmath.so")):
-        subprocess.check_call([conda_bin, "install", "-f",
-                               "--yes", "-c", "bioconda", "-c", "conda-forge", "libgcc-ng"])
+    for l in ["libgomp.so.1", "libquadmath.so"]:
+        if not os.path.exists(os.path.join(lib_dir, l)):
+            subprocess.check_call([conda_bin, "install", "-f",
+                                   "--yes", "-c", "bioconda", "-c", "conda-forge", "libgcc-ng"])
 
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
