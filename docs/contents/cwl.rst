@@ -316,9 +316,10 @@ additional control and debugging.
    You can do this using the web interface or via the command line with a small
    script like::
 
+      TEMPLATE=germline
       dx select $DX_PROJECT_ID
       dx mkdir -p $PNAME
-      for F in your-template.yaml $PNAME.csv bcbio_system-dnanexus.yaml
+      for F in $TEMPLATE-template.yaml $PNAME.csv bcbio_system-dnanexus.yaml
       do
               dx rm -a /$PNAME/$F || true
               dx upload --path /$PNAME/ $F
@@ -326,7 +327,7 @@ additional control and debugging.
       done
       dx ls $PNAME
       dx rm -a -r /$PNAME/dx-cwl-run || true
-      dx run bcbio_resources:/applets/bcbio-run-workflow -iyaml_template=/$PNAME/qc-template.yaml -isample_spec=/$PNAME/$PNAME.csv -isystem_configuration=/$PNAME/bcbio_system-dnanexus.yaml -ioutput_folder=/$PNAME/dx-cwl-run
+      dx run bcbio_resources:/applets/bcbio-run-workflow -iyaml_template=/$PNAME/$TEMPLATE-template.yaml -isample_spec=/$PNAME/$PNAME.csv -isystem_configuration=/$PNAME/bcbio_system-dnanexus.yaml -ioutput_folder=/$PNAME/dx-cwl-run
 
 The applet will lookup all files, prepare a bcbio CWL workflow, convert into a
 DNAnexus workflow, and submit to the platform. The workflow runs as a standard
