@@ -72,13 +72,15 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             adapters_args = " ".join(["-a %s" % a for a in adapters])
             aligner_args = "--aligner adapter"
             if len(fastq_files) == 1:
+                cores = dd.get_num_cores(data)
                 input_args = "-se %s" % objectstore.cl_input(fastq_files[0])
-                output_args = "-o >(bgzip --threads %s -c > {tx_out1})".format(**locals())
+                output_args = "-o >(bgzip --threads {cores} -c > {tx_out1})".format(**locals())
             else:
                 assert len(fastq_files) == 2, fastq_files
+                cores = max(1, dd.get_num_cores(data) // 2)
                 adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
                 input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
-                output_args = "-o >(bgzip -c > {tx_out1}) -p >(bgzip -c > {tx_out2})".format(**locals())
+                output_args = "-o >(bgzip --threads {cores} -c > {tx_out1}) -p >(bgzip --threads {cores} -c > {tx_out2})".format(**locals())
             adapters_args += " --no-default-adapters"  # Prevent GitHub queries
             quality_base = "64" if dd.get_quality_format(data).lower() == "illumina" else "33"
             sample_name = dd.get_sample_name(data)
@@ -93,7 +95,7 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                 if k not in ropts and not any(alt_k in ropts for alt_k in alt_ks):
                     extra_opts.append("%s=%s" % (k, v))
             extra_opts = " ".join(extra_opts)
-            thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
+            thread_args = ("--threads %s" % cores if cores > 1 else "")
             cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
                    "{adapters_args} {input_args} {output_args} {report_args} {extra_opts}")
             do.run(cmd.format(**locals()), "Trimming with atropos: %s" % dd.get_sample_name(data))
