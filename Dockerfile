@@ -12,7 +12,7 @@ RUN apt-get update && \
 # bcbio-nextgen installation
     mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
-      https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
+      https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
       --isolate --minimize-disk --nodata -u development && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
@@ -28,7 +28,7 @@ RUN apt-get update && \
 
 # add user run script
     wget --no-check-certificate -O createsetuser \
-      https://raw.github.com/chapmanb/bcbio-nextgen-vm/master/scripts/createsetuser && \
+      https://raw.github.com/bcbio/bcbio-nextgen-vm/master/scripts/createsetuser && \
     chmod a+x createsetuser && mv createsetuser /sbin && \
 
 # clean filesystem

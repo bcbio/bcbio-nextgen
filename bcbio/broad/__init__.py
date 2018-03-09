@@ -26,7 +26,7 @@ def get_default_jvm_opts(tmp_dir=None, parallel_gc=False):
     Avoids issues with multiple spun up Java processes running into out of memory errors.
     Parallel GC can use a lot of cores on big machines and primarily helps reduce task latency
     and responsiveness which are not needed for batch jobs.
-    https://github.com/chapmanb/bcbio-nextgen/issues/532#issuecomment-50989027
+    https://github.com/bcbio/bcbio-nextgen/issues/532#issuecomment-50989027
     https://wiki.csiro.au/pages/viewpage.action?pageId=545034311
     http://stackoverflow.com/questions/9738911/javas-serial-garbage-collector-performing-far-better-than-other-garbage-collect
     However, serial GC causes issues with Spark local runs so we use parallel for those cases:

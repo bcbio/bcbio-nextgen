@@ -10,12 +10,12 @@ We provide an automated script that installs third party analysis tools,
 required genome data and python library dependencies for running human variant
 and RNA-seq analysis, bundled into an isolated directory or virtual environment::
 
-     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+     wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
      python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
        --genomes GRCh37 --aligners bwa --aligners bowtie2
 
 bcbio should install cleanly on Linux systems. For Mac OSX, we suggest
-trying `bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ which runs
+trying `bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ which runs
 bcbio on :ref:`docs-cloud` or isolates all the third party tools inside a
 Docker container. bcbio-vm is still a work in progress but not all of the
 dependencies bcbio uses install cleanly on OSX.
@@ -63,7 +63,7 @@ Optional requirements:
   cancer heterogeneity analysis with BubbleTree.
 
 The `bcbio-nextgen Dockerfile
-<https://github.com/chapmanb/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains
+<https://github.com/bcbio/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains
 the packages needed to install on bare Ubuntu systems.
 
 The automated installer creates a fully integrated environment that allows

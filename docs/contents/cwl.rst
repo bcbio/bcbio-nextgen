@@ -68,7 +68,7 @@ community, and generating inputs for `Broad's Cromwell WDL runner
 Getting started
 ~~~~~~~~~~~~~~~
 
-`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ installs all
+`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ installs all
 dependencies required to generate CWL and run bcbio, along with supported CWL
 runners. To install using `Miniconda <http://conda.pydata.org/miniconda.html>`_
 and `bioconda packages <https://bioconda.github.io/>`_::
@@ -185,7 +185,7 @@ We're actively testing bcbio generated CWL workflows on
 on the `Arvdos public instance <https://cloud.curoverse.com/>`_.
 `Arvados cwl-runner <https://github.com/curoverse/arvados>`_ comes
 pre-installed with
-`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_.
+`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm#installation>`_.
 
 Retrieve API keys from the `Arvados public
 instance <https://cloud.curoverse.com/>`_. Login, then go to `'User
@@ -335,7 +335,7 @@ executions --root job-YOURJOBID`` and ``dx watch``) or the web interface
 (``Monitor`` tab).
 
 If you prefer not to use the DNAnexus app you can run locally by installing
-`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm#installation>`_ on your
+`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm#installation>`_ on your
 local machine:
 
 
@@ -395,10 +395,10 @@ To help with defining the outputs at each step, there is a
 ``WorldWatcher`` object that can output changed files and world
 dictionary objects between steps in the pipeline when running a bcbio in
 the standard way. The `variant
-pipeline <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/main.py>`_
+pipeline <https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/main.py>`_
 has examples using it. This is useful when preparing the CWL definitions
 of inputs and outputs for new steps in the `bcbio CWL step
-definitions <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/cwl/workflow.py>`_.
+definitions <https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/cwl/workflow.py>`_.
 
 ToDo
 ~~~~
@@ -410,5 +410,5 @@ ToDo
 -  Port RNA-seq and small RNA workflows to CWL.
 
 -  Replace the custom python code in the `bcbio step
-   definitions <https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/cwl/defs.py>`_
+   definitions <https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/cwl/defs.py>`_
    with a higher level DSL in YAML we can parse and translate to CWL.

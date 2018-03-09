@@ -60,7 +60,7 @@ multiple samples using the template workflow command::
   so use the base filename without these (``/path/to/yourfile_R1.fastq => yourfile``).
   Note that paired-end samples sequentially numbered without leading zeros
   (e.g., ``sample_1_1.fastq``, ``sample_1_2.fastq``, ``sample_2_1.fastq``, ``sample_2_2.fastq``,
-  etc., will likely not be parsed correctly; see `#1919 <https://github.com/chapmanb/bcbio-nextgen/issues/1919>`_ for more info). In addition, ``.`` characters could be problematic,
+  etc., will likely not be parsed correctly; see `#1919 <https://github.com/bcbio/bcbio-nextgen/issues/1919>`_ for more info). In addition, ``.`` characters could be problematic,
   so it's better to avoid this character and use it only as separation
   for the file extension.
 
@@ -145,7 +145,7 @@ out of the final output YAML::
     bcbio_nextgen.py -w template --only-metadata project1/config/project1-template.yaml project1.csv folder/*
 
 
-.. _best-practice templates: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/templates
+.. _best-practice templates: https://github.com/bcbio/bcbio-nextgen/tree/master/config/templates
 
 .. _multi-files-sample-configuration:
 
@@ -1240,8 +1240,8 @@ at the top level of your sample YAML::
 .. _CloudBioLinux: https://github.com/chapmanb/cloudbiolinux
 .. _YAML format: https://en.wikipedia.org/wiki/YAML#Examples
 .. _GATK: http://www.broadinstitute.org/gatk/
-.. _system: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
-.. _sample: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _system: https://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_system.yaml
+.. _sample: https://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 .. _Galaxy API: http://wiki.galaxyproject.org/Learn/API
 .. _Amazon S3: http://aws.amazon.com/s3/
 .. _Galaxy Admin: http://wiki.galaxyproject.org/Admin/DataLibraries/LibrarySecurity
@@ -1318,7 +1318,7 @@ section of your ``bcbio_system.yaml`` file::
     genome:
       dir: /path/to/resources/files
 
-.. _Example genome configuration files: https://github.com/chapmanb/bcbio-nextgen/tree/master/config/genomes
+.. _Example genome configuration files: https://github.com/bcbio/bcbio-nextgen/tree/master/config/genomes
 .. _GATK resource bundle: http://www.broadinstitute.org/gatk/guide/article.php?id=1213
 
 Reference genome files

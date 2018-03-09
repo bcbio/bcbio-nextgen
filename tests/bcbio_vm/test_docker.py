@@ -13,7 +13,7 @@ from tests.conftest import (make_workdir, get_post_process_yaml, install_cwl_tes
 def test_docker(install_test_files, data_dir):
     """Run an analysis with code and tools inside a docker container.
 
-    Requires https://github.com/chapmanb/bcbio-nextgen-vm
+    Requires https://github.com/bcbio/bcbio-nextgen-vm
     """
     with make_workdir() as workdir:
         cl = [
@@ -34,7 +34,7 @@ def test_docker_ipython(install_test_files, data_dir):
     """Run an analysis with code and tools inside a docker container,
     driven via IPython.
 
-    Requires https://github.com/chapmanb/bcbio-nextgen-vm
+    Requires https://github.com/bcbio/bcbio-nextgen-vm
     """
     with make_workdir() as workdir:
         cl = [
@@ -53,7 +53,7 @@ def test_docker_ipython(install_test_files, data_dir):
 class TestCWL():
     """ Run simple CWL workflows.
 
-    Requires https://github.com/chapmanb/bcbio-nextgen-vm
+    Requires https://github.com/bcbio/bcbio-nextgen-vm
     """
     @pytest.mark.cwl
     @pytest.mark.cwl_docker

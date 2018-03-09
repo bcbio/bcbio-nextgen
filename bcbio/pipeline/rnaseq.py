@@ -74,7 +74,7 @@ def run_rnaseq_variant_calling(data):
     if isinstance(variantcaller, list) and len(variantcaller) > 1:
         logger.error("Only one variantcaller can be run for RNA-seq at "
                      "this time. Post an issue here "
-                     "(https://github.com/chapmanb/bcbio-nextgen/issues) "
+                     "(https://github.com/bcbio/bcbio-nextgen/issues) "
                      "if this is something you need to do.")
         sys.exit(1)
 

@@ -297,7 +297,7 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
                 if cov_interval == "genome":
                     cmd += ["--threshold", "0.00001"]
                 # For tumors, remove very low normalized regions, avoiding upcaptured noise
-                # https://github.com/chapmanb/bcbio-nextgen/issues/2171#issuecomment-348333650
+                # https://github.com/bcbio/bcbio-nextgen/issues/2171#issuecomment-348333650
                 paired = vcfutils.get_paired(items)
                 if paired:
                     cmd += ["--drop-low-coverage"]
@@ -407,7 +407,7 @@ def _get_batch_gender(items):
 
     Better not to specify for mixed populations, CNVkit will work
     it out
-    https://github.com/chapmanb/bcbio-nextgen/commit/1a0e217c8a4d3cee10fa890fb3cfd4db5034281d#r26279752
+    https://github.com/bcbio/bcbio-nextgen/commit/1a0e217c8a4d3cee10fa890fb3cfd4db5034281d#r26279752
     """
     genders = set([population.get_gender(x) for x in items])
     if len(genders) == 1:

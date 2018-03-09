@@ -9,7 +9,7 @@ perform analyses at scale with no investment in local hardware. They also offer
 full programmatic control over the environment, allowing bcbio to automate the
 entire setup, run and teardown process.
 
-`bcbio-vm <https://github.com/chapmanb/bcbio-nextgen-vm>`_ provides a wrapper
+`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ provides a wrapper
 around bcbio-nextgen that automates interaction with AWS and `Docker
 <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans up the command line
 usage to make it more intuitive and provides a superset of functionality
@@ -284,7 +284,7 @@ And plot, slice, zoom it in an jupyter notebook using matplotlib,
 [highcharts](https://github.com/arnoutaertgeerts/python-highcharts).
 
 In addition to plots, the
-`summarize_timing.py <https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
+`summarize_timing.py <https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py>`_
 utility script prepares a summary table of run times per step.
 
 Shutting down
@@ -312,5 +312,5 @@ that automatically reads and writes these configurations to avoid users needing
 to understand elasticluster internals, but all functionality is fully available.
 Edit your ``~/.bcbio/elasticluster/config`` file to change parameters. You can
 also see the `latest example configuration
-<https://github.com/chapmanb/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+<https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
 in the bcbio-vm GitHub repository for more details on the other available options.

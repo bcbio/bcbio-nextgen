@@ -23,8 +23,8 @@ def get_sort_cmd(tmp_dir=None):
     This also fixes versions of sort, like 8.22 in CentOS 7.1, that have broken
     sorting without version sorting specified.
 
-    https://github.com/chapmanb/bcbio-nextgen/issues/624
-    https://github.com/chapmanb/bcbio-nextgen/issues/1017
+    https://github.com/bcbio/bcbio-nextgen/issues/624
+    https://github.com/bcbio/bcbio-nextgen/issues/1017
     """
     has_versionsort = subprocess.check_output("sort --help | grep version-sort; exit 0", shell=True).strip()
     if has_versionsort:

@@ -30,7 +30,7 @@ def run_kallisto_rnaseq(data):
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     assert fq2, ("bcbio doesn't support kallisto for single-end reads, we can "
                  "add support for this if you open up an issue about it here: "
-                 "https://github.com/chapmanb/bcbio-nextgen/issues")
+                 "https://github.com/bcbio/bcbio-nextgen/issues")
     out_file = kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data)
     data = dd.set_kallisto_quant(data, out_file)
     return [[data]]

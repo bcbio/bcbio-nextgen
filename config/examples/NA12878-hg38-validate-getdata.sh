@@ -7,7 +7,7 @@ set -eu -o pipefail
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-hg38-validate.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-hg38-validate.yaml
 cd ..
 
 mkdir -p input

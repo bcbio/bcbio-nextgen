@@ -294,7 +294,7 @@ def demultiplex_samples(data):
     files = data["files"]
     if len(files) == 2:
         logger.error("Sample demultiplexing doesn't handle paired-end reads, but "
-            "we can add it. Open an issue here https://github.com/chapmanb/bcbio-nextgen/issues if you need this and we'll add it.")
+            "we can add it. Open an issue here https://github.com/bcbio/bcbio-nextgen/issues if you need this and we'll add it.")
         sys.exit(1)
     else:
         fq1 = files[0]

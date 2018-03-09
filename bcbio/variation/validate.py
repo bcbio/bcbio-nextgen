@@ -283,7 +283,7 @@ def _pick_best_quality_score(vrn_file):
 
     Implementation based on discussion:
 
-    https://github.com/chapmanb/bcbio-nextgen/commit/a538cecd86c0000d17d3f9d4f8ac9d2da04f9884#commitcomment-14539249
+    https://github.com/bcbio/bcbio-nextgen/commit/a538cecd86c0000d17d3f9d4f8ac9d2da04f9884#commitcomment-14539249
 
     (RTG=AVR/GATK=VQSLOD/MuTect=t_lod_fstar, otherwise GQ, otherwise QUAL, otherwise DP.)
 

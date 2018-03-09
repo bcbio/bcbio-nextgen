@@ -29,7 +29,7 @@ cd ..
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/NA24385-10x.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA24385-10x.yaml
 cd ..
 
 mkdir -p work

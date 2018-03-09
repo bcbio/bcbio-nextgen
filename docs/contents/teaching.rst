@@ -188,7 +188,7 @@ pre-done on the teaching AMI to save time:
      sudo apt-get install -y build-essential zlib1g-dev wget curl python-setuptools git \
                              openjdk-7-jdk openjdk-7-jre ruby libncurses5-dev libcurl4-openssl-dev \
                              libbz2-dev unzip pigz bsdmainutils
-     wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+     wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
      python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir /usr/local \
             --genomes hg38 --aligners bwa --sudo --isolate -u development
 
@@ -196,7 +196,7 @@ pre-done on the teaching AMI to save time:
 
      mkdir -p run
      cd run
-     wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/teaching/cancer-syn3-chr6-prep.sh
+     wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/teaching/cancer-syn3-chr6-prep.sh
      bash cancer-syn3-chr6-prep.sh
 
 5. Run the analysis::

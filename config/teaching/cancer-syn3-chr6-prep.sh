@@ -11,7 +11,7 @@ rm -f cancer-syn3-chr6-input.tar.gz
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/teaching/cancer-syn3-chr6.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/teaching/cancer-syn3-chr6.yaml
 cd ..
 
 mkdir -p work

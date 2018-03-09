@@ -22,9 +22,9 @@ except ImportError:
     import urllib.request as urllib_request
 
 REMOTES = {
-    "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
-    "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
-    "system_config": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
+    "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
+    "gitrepo": "git://github.com/bcbio/bcbio-nextgen.git",
+    "system_config": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda2-latest-%s-x86_64.sh"}
 
 def main(args, sys_argv):

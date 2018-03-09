@@ -150,7 +150,7 @@ def _gatk_apply_bqsr(data):
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
             # Avoid problems with intel deflater for GATK 3.8 and GATK4
-            # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
+            # https://github.com/bcbio/bcbio-nextgen/issues/2145#issuecomment-343095357
             if gatk_type == "gatk4":
                 params += ["--jdk-deflater", "--jdk-inflater"]
             elif LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):

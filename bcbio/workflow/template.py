@@ -150,7 +150,7 @@ def name_to_config(template):
         with open(template) as in_handle:
             config = yaml.load(in_handle)
     else:
-        base_url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/%s.yaml"
+        base_url = "https://raw.github.com/bcbio/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
                 txt_config = in_handle.read()

@@ -9,7 +9,7 @@ set -eu -o pipefail
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-sv.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-sv.yaml
 cd ..
 
 mkdir -p input

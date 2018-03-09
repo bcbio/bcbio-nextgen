@@ -75,12 +75,12 @@ The best approach to build a bcbio :ref:`docs-config` for germline calling is to
 the :ref:`automated-sample-config` with one of the default templates:
 
 - `FreeBayes template
-  <https://github.com/chapmanb/bcbio-nextgen/blob/master/config/templates/freebayes-variant.yaml>`_ --
+  <https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/freebayes-variant.yaml>`_ --
   Call variants using FreeBayes with a minimal preparation pipeline. This is a
   freely available unrestricted pipeline fully included in the bcbio installation.
 
 - `GATK HaplotypeCaller template
-  <https://github.com/chapmanb/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml>`_ --
+  <https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml>`_ --
   Run GATK best practices, including Base Quality Score Recalibration,
   realignment and HaplotypeCaller variant calling. This requires a license from
   Broad for commercial use. You need to manually install GATK along with bcbio
@@ -152,7 +152,7 @@ bcbio uses a majority voting ensemble approach to combining calls from
 multiple SNP and indel callers, and also flattens structural variant calls into a
 combined representation.
 
-The `example configuration <https://github.com/chapmanb/bcbio-nextgen/blob/master/config/examples/cancer-dream-syn3.yaml>`_
+The `example configuration <https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/cancer-dream-syn3.yaml>`_
 for the :ref:`example-cancer` validation is a good starting point for setting up
 a tumor/normal run on your own dataset. The configuration works similarly to
 population based calling. Supply a consistent batch for tumor/normal pairs and
@@ -591,11 +591,11 @@ templating system.
 .. _FastQC: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _HTSeq: http://www-huber.embl.de/users/anders/HTSeq/doc/index.html
 .. _TruSeq: http://www.illumina.com/products/truseq_rna_sample_prep_kit_v2.ilmn
-.. _bcbio_system.yaml: http://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_system.yaml
+.. _bcbio_system.yaml: http://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_system.yaml
 .. _configuration documentation: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#upload
 .. _parameters: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html
 .. _template: http://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#automated-sample-configuration
-.. _illumina-rnaseq: http://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
+.. _illumina-rnaseq: http://raw.github.com/bcbio/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml
 .. _eXpress: http://bio.math.berkeley.edu/eXpress/overview.html
 .. _featureCounts: http://bioinf.wehi.edu.au/featureCounts/
 .. _DEXSeq: https://bioconductor.org/packages/release/bioc/html/DEXSeq.html

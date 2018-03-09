@@ -28,3 +28,4 @@ cwl/*-workflow
 .idea/
 __pycache__
 .coverage
+.pytest_cache

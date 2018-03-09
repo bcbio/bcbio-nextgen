@@ -132,5 +132,5 @@ the documentation.
 - assess the efficiency of targeted enrichment sequencing with `ngscat`_
 
 .. _ngscat: http://www.bioinfomgp.org/ngscat
-.. _Calculate and plot coverage:  https://github.com/chapmanb/bcbio-nextgen/issues/195#issuecomment-39071048
+.. _Calculate and plot coverage:  https://github.com/bcbio/bcbio-nextgen/issues/195#issuecomment-39071048
 .. _Another way: http://gettinggeneticsdone.blogspot.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html

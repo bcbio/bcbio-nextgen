@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/Vagrantfile
-wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/vm/bootstrap.sh
+wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/vm/Vagrantfile
+wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/vm/bootstrap.sh
 vagrant up
 
 echo "Your VM is all set up. You can connect to the VM by typing 'vagrant ssh'."
