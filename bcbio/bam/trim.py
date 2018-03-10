@@ -18,7 +18,6 @@ SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
     "truseq": ["AGATCGGAAGAG"],
     "polya": ["AAAAAAAAAAAAA"],
-    "polyx": ["AAAAAAAAAAAAA", "CCCCCCCCCCCCC"],
     "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
 
 def trim_adapters(data):
@@ -69,7 +68,12 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             tx_report_file, tx_out1 = tx_out[:2]
             if len(tx_out) > 2:
                 tx_out2 = tx_out[2]
-            adapters_args = " ".join(["-a %s" % a for a in adapters])
+            # polyX trimming, anchored to the 3' ends of reads
+            if "polyx" in dd.get_adapters(data):
+                adapters += ["A{200}$", "C{200}$", "G{200}$", "T{200}$"]
+            adapters_args = " ".join(["-a '%s'" % a for a in adapters])
+            adapters_args += " --overlap 8"  # Avoid very short internal matches (default is 3)
+            adapters_args += " --no-default-adapters"  # Prevent GitHub queries
             aligner_args = "--aligner adapter"
             if len(fastq_files) == 1:
                 cores = dd.get_num_cores(data)
@@ -78,10 +82,10 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             else:
                 assert len(fastq_files) == 2, fastq_files
                 cores = max(1, dd.get_num_cores(data) // 2)
-                adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
+                adapters_args = adapters_args + " " + " ".join(["-A '%s'" % a for a in adapters])
                 input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
-                output_args = "-o >(bgzip --threads {cores} -c > {tx_out1}) -p >(bgzip --threads {cores} -c > {tx_out2})".format(**locals())
-            adapters_args += " --no-default-adapters"  # Prevent GitHub queries
+                output_args = ("-o >(bgzip --threads {cores} -c > {tx_out1}) "
+                               "-p >(bgzip --threads {cores} -c > {tx_out2})").format(**locals())
             quality_base = "64" if dd.get_quality_format(data).lower() == "illumina" else "33"
             sample_name = dd.get_sample_name(data)
             report_args = "--report-file %s --report-formats json --sample-id %s" % (tx_report_file,
@@ -121,10 +125,12 @@ def _fastp_trim(fastq_files, adapters, out_dir, data):
                     cmd += ["-i", inf, "-o", outf]
                 else:
                     cmd += ["-I", inf, "-O", outf]
-            cmd += ["--trim_poly_g", "--poly_g_min_len", "6",
+            cmd += ["--trim_poly_g", "--poly_g_min_len", "8",
                     "--cut_by_quality3", "--cut_mean_quality", "5",
                     "--length_required", str(dd.get_min_read_length(data)),
                     "--disable_quality_filtering"]
+            if "polyx" in dd.get_adapters(data):
+                cmd += ["--trim_poly_x", "--poly_x_min_len", "8"]
             for a in adapters:
                 cmd += ["--adapter_sequence", a]
             if not adapters:
