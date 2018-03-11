@@ -36,8 +36,8 @@ details:
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
       svcaller: [seq2c, cnvkit, delly, lumpy]
-      background:
-        cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
+      #background:
+      #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       #remove_lcr: true
       coverage_interval: genome
       tools_on: [qualimap_full, vqsr, svplots]
