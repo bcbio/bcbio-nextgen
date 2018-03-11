@@ -23,7 +23,8 @@ details:
       #bam_clean: remove_extracontigs
       #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
-      #trim_reads: read_through
+      trim_reads: atropos
+      adapters: polyx
       #bam_sort: coordinate
       # mark_duplicates: false
       #realign: gatk
@@ -35,6 +36,8 @@ details:
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
       svcaller: [seq2c, cnvkit, delly, lumpy]
+      background:
+        cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       #remove_lcr: true
       coverage_interval: genome
       tools_on: [qualimap_full, vqsr, svplots]

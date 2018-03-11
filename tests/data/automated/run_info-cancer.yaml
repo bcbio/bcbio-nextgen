@@ -68,6 +68,8 @@ details:
       sex: male
     algorithm:
       aligner: bwa
+      background:
+        variant: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       mark_duplicates: True
       recalibrate: false
       realign: false
