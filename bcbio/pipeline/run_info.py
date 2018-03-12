@@ -873,7 +873,6 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
                                                   fileonly_keys=ALGORITHM_FILEONLY_KEYS,
                                                   do_download=all(not x for x in integrations.values()))
         item["genome_build"] = str(item.get("genome_build", ""))
-        print(item)
         item["algorithm"] = _add_algorithm_defaults(item["algorithm"], item.get("analysis", ""))
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
