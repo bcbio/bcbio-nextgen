@@ -15,6 +15,7 @@
   (`aligner: false`).
 - Fix `noalt_calling` to correctly avoid parallelizing on non-standard
   chromosomes without a variant regions file.
+- Fix broken `kraken` command. Thanks to @choosehappy.
 
 ## 1.0.8 (5 February 2018)
 

@@ -46,7 +46,7 @@ def run(_, data, out_dir):
                 cl = ("{cat} {fn_file} | {kraken_cmd} --db {db} --quick "
                       "--preload --min-hits 2 "
                       "--threads {num_cores} "
-                      "--out {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
+                      "--output {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
                 do.run(cl, "kraken: %s" % dd.get_sample_name(data))
                 if os.path.exists(out_dir):
                     shutil.rmtree(out_dir)
