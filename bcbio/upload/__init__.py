@@ -249,6 +249,7 @@ def _maybe_add_sv(algorithm, sample, out):
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,), sample=batch))
+            out.extend(_get_variant_file(svcall, ("background",), suffix="-background", sample=batch))
             out.extend(_get_variant_file(svcall, ("call_file",), suffix="-call", sample=batch))
             out.extend(_get_variant_file(svcall, ("priority",), suffix="-priority", sample=batch))
             if "plot" in svcall:

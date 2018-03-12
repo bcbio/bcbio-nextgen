@@ -210,6 +210,7 @@ def normalize_sv_coverage(*items):
     if all(not cnvkit.use_general_sv_bins(x) for x in items):
         return orig_items
     out_files = {}
+    back_files = {}
     for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
         # No CNVkit calling for this particular set of samples
         if group_id is None:
@@ -243,9 +244,11 @@ def normalize_sv_coverage(*items):
                                           os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data))),
                                           data)
                 out_files[dd.get_sample_name(data)] = fix_file
+                back_files[dd.get_sample_name(data)] = back_file
     out = []
     for data in items:
         if dd.get_sample_name(data) in out_files:
+            data["depth"]["bins"]["background"] = back_files[dd.get_sample_name(data)]
             data["depth"]["bins"]["normalized"] = out_files[dd.get_sample_name(data)]
         out.append([data])
     return out

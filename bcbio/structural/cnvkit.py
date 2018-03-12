@@ -194,7 +194,8 @@ def _run_cnvkit_shared(inputs, backgrounds):
             cns_file = os.path.join(_sv_workdir(data), "%s.cns" % dd.get_sample_name(data))
             cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data), data,
                                        inputs + backgrounds, cns_file)
-            ckouts.append({"cnr": cnr_file, "cns": cns_file})
+            ckouts.append({"cnr": cnr_file, "cns": cns_file,
+                           "background": tz.get_in(["depth", "bins", "background"], data)})
         return ckouts
     else:
         return _run_cnvkit_shared_orig(inputs, backgrounds)
