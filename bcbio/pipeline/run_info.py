@@ -873,7 +873,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
                                                   fileonly_keys=ALGORITHM_FILEONLY_KEYS,
                                                   do_download=all(not x for x in integrations.values()))
         item["genome_build"] = str(item.get("genome_build", ""))
-        item["algorithm"] = _add_algorithm_defaults(item["algorithm"])
+        print(item)
+        item["algorithm"] = _add_algorithm_defaults(item["algorithm"], item.get("analysis", ""))
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         if item.get("files"):
@@ -930,7 +931,7 @@ def add_metadata_defaults(md):
             md[k] = v
     return md
 
-def _add_algorithm_defaults(algorithm):
+def _add_algorithm_defaults(algorithm, analysis):
     """Central location specifying defaults for algorithm inputs.
 
     Converts allowed multiple inputs into lists if specified as a single item.
@@ -946,6 +947,7 @@ def _add_algorithm_defaults(algorithm):
                 "adapters": [],
                 "effects": "snpeff",
                 "quality_format": "standard",
+                "expression_caller": ["salmon"] if analysis.lower().find("rna-seq") > 0 else None,
                 "align_split_size": None,
                 "bam_clean": False,
                 "nomap_split_size": 250,
