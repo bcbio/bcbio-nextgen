@@ -84,6 +84,9 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
                       "-R", dd.get_ref_file(data),
                       "--output", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
+            # Avoid slow genotyping runtimes with improved quality score calculation in GATK4
+            # https://gatkforums.broadinstitute.org/gatk/discussion/11471/performance-troubleshooting-tips-for-genotypegvcfs/p1
+            params += ["--use-new-qual-calculator"]
             cores = dd.get_cores(data)
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, memscale=memscale)
