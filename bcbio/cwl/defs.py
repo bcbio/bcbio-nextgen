@@ -69,7 +69,7 @@ def et(name, parallel, inputs, outputs, expression):
     ExpressionTool = collections.namedtuple("ExpressionTool", "name inputs outputs expression parallel")
     return ExpressionTool(name, inputs, outputs, expression, parallel)
 
-def cwlout(key, valtype=None, extensions=None, fields=None):
+def cwlout(key, valtype=None, extensions=None, fields=None, exclude=None):
     """Definition of an output variable, defining the type and associated secondary files.
     """
     out = {"id": key}
@@ -79,6 +79,8 @@ def cwlout(key, valtype=None, extensions=None, fields=None):
         out["fields"] = fields
     if extensions:
         out["secondaryFiles"] = extensions
+    if exclude:
+        out["exclude"] = exclude
     return out
 
 def _alignment(checkpoints):
@@ -88,7 +90,7 @@ def _alignment(checkpoints):
                        fields=[cwlout(["files"], ["null", {"type": "array", "items": "File"}], [".gbi"]),
                                cwlout(["config", "algorithm", "quality_format"], ["string", "null"]),
                                cwlout(["align_split"], ["string", "null"])])],
-               "bcbio-vc", ["grabix", "htslib", "biobambam"],
+               "bcbio-vc", ["grabix", "htslib", "biobambam", "atropos;env=python3"],
                disk={"files": 1.5}),
              s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"], ["process_alignment_rec"]],
@@ -163,7 +165,9 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
-                                cwlout("inherit")])],
+                                cwlout("inherit", exclude=[["align_bam"], ["reference", "twobit"],
+                                                           ["reference", "snpeff"], ["reference", "rtg"],
+                                                           ["genome_resources", "variation"]])])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
                 disk={"files": 1.5})]
@@ -452,6 +456,7 @@ def _variant_sv(checkpoints):
                [["sv_rawcoverage_rec"]],
                [cwlout("sv_coverage_rec", "record",
                        fields=[cwlout(["depth", "bins", "normalized"], ["File", "null"]),
+                               cwlout(["depth", "bins", "background"], ["File", "null"]),
                                cwlout("inherit")])],
                "bcbio-vc", ["cnvkit"],
                disk={"files": 1.5}),

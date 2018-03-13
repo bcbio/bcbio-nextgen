@@ -345,10 +345,12 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
         fields = []
         inherit = []
         inherit_all = False
+        inherit_exclude = []
         for fdef in field_defs:
             if not fdef.get("type"):
                 if fdef["id"] == "inherit":
                     inherit_all = True
+                    inherit_exclude = fdef.get("exclude", [])
                 else:
                     inherit.append(fdef["id"])
             else:
@@ -356,7 +358,7 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
                        "type": fdef["type"]}
                 fields.append(_add_secondary_to_rec_field(fdef, cur))
         if inherit_all:
-            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel))
+            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, exclude=inherit_exclude))
         elif inherit:
             fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, inherit))
     else:
@@ -375,13 +377,15 @@ def _add_secondary_to_rec_field(orig, cur):
         cur["secondaryFiles"] = orig.get("secondaryFiles")
     return cur
 
-def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None):
+def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None,
+                          exclude=None):
     """Infer the outputs of a record from the original inputs
     """
     fields = []
     unlist = set([_get_string_vid(x) for x in unlist])
     input_vids = set([_get_string_vid(v) for v in _handle_special_inputs(inputs, file_vs)])
     to_include = set([_get_string_vid(x) for x in to_include]) if to_include else None
+    to_exclude = tuple(set([_get_string_vid(x) for x in exclude])) if exclude else None
     added = set([])
     for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
         # unpack record inside this record and un-nested inputs to avoid double nested
@@ -394,13 +398,14 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
         for orig_v in nested_vs:
             if (get_base_id(orig_v["id"]) not in added
                  and (not to_include or get_base_id(orig_v["id"]) in to_include)):
-                cur_v = {}
-                cur_v["name"] = get_base_id(orig_v["id"])
-                cur_v["type"] = orig_v["type"]
-                if cur_v["name"] in unlist:
-                    cur_v = _flatten_nested_input(cur_v)
-                fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
-                added.add(get_base_id(orig_v["id"]))
+                if to_exclude is None or not get_base_id(orig_v["id"]).startswith(to_exclude):
+                    cur_v = {}
+                    cur_v["name"] = get_base_id(orig_v["id"])
+                    cur_v["type"] = orig_v["type"]
+                    if cur_v["name"] in unlist:
+                        cur_v = _flatten_nested_input(cur_v)
+                    fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
+                    added.add(get_base_id(orig_v["id"]))
     return fields
 
 def _create_variable(orig_v, step, variables):
