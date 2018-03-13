@@ -1,14 +1,16 @@
 ## 1.0.9 (in progress)
 
-- Add bamCoverage to chip-seq pipeline to calculate bigwig files.
 - Normalize allele frequency calculation and filtering for Strelka2 and MuTect2.
   Thanks to Vlad Saveliev.
 - CNVkit: enable specification of pre-built reference background cnn with
   `background: cnv_reference`.
 - CNVkit: handle projects with mixed CNVkit and non-CNVkit usage. Thanks to Luca
   Beltrame.
+- Improved Atropos trimming: better use of multicore parallelization in variant
+  and RNA-seq pipelines.
 - Add support for polyG and polyX trimming to variant calling for NovaSeq 3' end
   cleanup and generally avoiding low complexity reads.
+- Add bamCoverage to chip-seq pipeline to calculate bigwig files.
 - GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for
   variant calling. Thanks to Luca Beltrame.
 - variant: Default to `mark_duplicates: false` if alignment turned off

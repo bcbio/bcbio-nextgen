@@ -122,7 +122,7 @@ def run_sailfish_index(*samples):
     for build in builds:
         indexdirs[build.build] = sailfish_index(build.ref, build.gtf, data,
                                                 build.build)
-    return samples
+    return [[x] for x in samples]
 
 def sailfish_index(gtf_file, ref_file, data, build):
     work_dir = dd.get_work_dir(data)
