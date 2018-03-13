@@ -173,6 +173,10 @@ def _maybe_add_rnaseq_variant_file(algorithm, sample, out):
         ftype = "vcf.gz" if vfile.endswith(".gz") else "vcf"
         out.append({"path": vfile,
                     "type": ftype})
+        if utils.file_exists(vfile + ".tbi"):
+            out.append({"path": vfile + ".tbi",
+                        "type": "vcf.gz.tbi",
+                        "index": True})
     return out
 
 def _maybe_add_callable(data, out):
