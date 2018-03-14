@@ -204,6 +204,7 @@ def get_batches(data):
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         return batches
+    return []
 
 def get_input_sequence_files(data, default=None):
     """
