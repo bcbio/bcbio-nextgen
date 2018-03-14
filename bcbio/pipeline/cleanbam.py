@@ -25,6 +25,8 @@ def fixrg(in_bam, names, ref_file, dirs, data):
     """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-fixrg.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(work_dir, "%s-fixrg.bam" % dd.get_sample_name(data))
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
             rg_info = novoalign.get_rg_info(names)
@@ -48,6 +50,8 @@ def remove_extracontigs(in_bam, data):
     """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-noextras.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(work_dir, "%s-noextras.bam" % dd.get_sample_name(data))
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
             target_chroms = _target_chroms_and_header(in_bam, data)
@@ -126,6 +130,8 @@ def picard_prep(in_bam, names, ref_file, dirs, data):
     runner.run_fn("picard_index_ref", ref_file)
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %
                                os.path.splitext(os.path.basename(in_bam))[0])
+    if not utils.file_exists(reorder_bam):
+        reorder_bam = os.path.join(work_dir, "%s-reorder.bam" % dd.get_sample_name(data))
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
     rg_bam = runner.run_fn("picard_fix_rgs", reorder_bam, names)
     return _filter_bad_reads(rg_bam, ref_file, data)

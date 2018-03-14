@@ -198,6 +198,10 @@ def assign_complex_to_samples(items):
     Handles list inputs to record conversion where we have inputs from multiple
     locations and need to ensure they are properly assigned to samples in many
     environments.
+
+    The unpleasant approach here is to use standard file naming to match
+    with samples so this can work in environments where we don't download/stream
+    the input files (for space/time savings).
     """
     extract_fns = {("variants", "samples"): _get_vcf_samples,
                    ("align_bam",): _get_bam_samples}
@@ -206,7 +210,7 @@ def assign_complex_to_samples(items):
         for k in complex:
             v = tz.get_in(k, data)
             if v is not None:
-                for s in extract_fns[k](v):
+                for s in extract_fns[k](v, data):
                     if s:
                         complex[k][s] = v
     out = []
@@ -218,16 +222,29 @@ def assign_complex_to_samples(items):
         out.append(data)
     return out
 
-def _get_vcf_samples(calls):
+def _get_vcf_samples(calls, data):
+    have_full_file = False
     all_samples = set([])
     for f in utils.flatten(calls):
-        cur = set(vcfutils.get_samples(f))
-        if cur:
-            if not all_samples:
-                all_samples = cur
-            else:
-                all_samples &= set(cur)
+        if have_full_file:
+            cur = set(vcfutils.get_samples(f))
+            if cur:
+                if not all_samples:
+                    all_samples = cur
+                else:
+                    all_samples &= set(cur)
+        else:
+            for test_name in [dd.get_sample_name(data)] + dd.get_batches(data):
+                if os.path.basename(f).startswith("%s-" % test_name):
+                    all_samples.add(dd.get_sample_name(data))
     return list(all_samples)
 
-def _get_bam_samples(f):
-    return [bam.sample_name(f)]
+def _get_bam_samples(f, data):
+    have_full_file = False
+    if have_full_file:
+        return [bam.sample_name(f)]
+    else:
+        if os.path.basename(f).startswith("%s-" % dd.get_sample_name(data)):
+            return [dd.get_sample_name(data)]
+        else:
+            return []

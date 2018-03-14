@@ -373,7 +373,7 @@ def _qc_workflow(checkpoints):
     qc_inputs = \
       [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
        ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
-       ["genome_build"], ["config", "algorithm", "qc"],
+       ["genome_build"], ["config", "algorithm", "qc"], ["metadata", "batch"],
        ["config", "algorithm", "coverage_interval"],
        ["depth", "variant_regions", "regions"], ["depth", "variant_regions", "dist"],
        ["depth", "samtools", "stats"], ["depth", "samtools", "idxstats"],
@@ -387,7 +387,7 @@ def _qc_workflow(checkpoints):
         qc_inputs += [["variants", "samples"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
-            "bcbio-vc", disk={"files": 1.5}, cores=1),
+            "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),
           s("pipeline_summary", "multi-parallel",
             ["qc_rec"],
             [cwlout("qcout_rec", "record",

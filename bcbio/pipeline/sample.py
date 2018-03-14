@@ -68,6 +68,8 @@ def _link_bam_file(in_file, new_dir, data):
     """
     new_dir = utils.safe_makedir(new_dir)
     out_file = os.path.join(new_dir, os.path.basename(in_file))
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(new_dir, "%s-prealign.bam" % dd.get_sample_name(data))
     if data.get("cwl_keys"):
         # Has indexes, we're okay to go with the original file
         if utils.file_exists(in_file + ".bai"):
@@ -146,6 +148,10 @@ def process_alignment(data, alt_input=None):
             runner = broad.runner_from_path("picard", config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
                 os.path.splitext(os.path.basename(fastq1))[0]))
+            if not utils.file_exists(out_file):
+                work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean",
+                                                           dd.get_sample_name(data)))
+                out_file = os.path.join(work_dir, "{}-sort.bam".format(dd.get_sample_name(data)))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
         else:
             out_bam = _link_bam_file(fastq1, os.path.join(dd.get_work_dir(data), "prealign",
