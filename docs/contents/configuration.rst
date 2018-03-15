@@ -572,6 +572,20 @@ the naming schemes described in the
 - ``coverage`` A BED file of regions to check for coverage and completeness in
   QC reporting. This can also be a shorthand for a BED file installed by bcbio
   (see :ref:`sv-config` for options).
+- ``exclude_regions`` List of regions to remove as part of analysis. This allows
+  avoidance of slow and potentially misleading regions. This is a list of the
+  following options:
+
+    -  ``lcr`` Remove variants in low complexity regions (LCRs).
+       `Heng Li's variant artifacts paper`_ provides
+       these regions, which cover ~2% of the genome but contribute to a large
+       fraction of problematic calls due to the difficulty of resolving variants
+       in repetitive regions. Removal can help facilitate comparisons between
+       methods and reduce false positives if you don't need calls in LCRs for your
+       biological analysis.
+    - ``highdepth`` Remove high depth regions during variant calling, identified
+      by collapsed repeats around centromeres in hg19 and GRCh37 as
+      characterized in the `ENCODE blacklist <http://hgdownload-test.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/>`_.
 
 .. _variant-config:
 
@@ -601,13 +615,6 @@ Variant calling
    (for Appistry MuTect users only). Currently an experimental option that adds
    these indel calls to MuTect's SNP-only output. Only one caller supported.
    Omit to ignore. [scalpel, pindel, sid, false]
--  ``remove_lcr`` Remove variants in low complexity regions (LCRs)
-   for human variant calling. `Heng Li's variant artifacts paper`_ provides
-   these regions, which cover ~2% of the genome but contribute to a large
-   fraction of problematic calls due to the difficulty of resolving variants
-   in repetitive regions. Removal can help facilitate comparisons between
-   methods and reduce false positives if you don't need calls in LCRs for your
-   biological analysis. [false, true]
 -  ``jointcaller`` Joint calling algorithm, combining variants called with the
    specified ``variantcaller``. Can be a list of multiple options but needs to
    match with appropriate ``variantcaller``. Joint calling is only needed for

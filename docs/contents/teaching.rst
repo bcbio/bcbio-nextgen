@@ -94,7 +94,7 @@ pre-installed validation sets that come with bcbio. We limit validation regions
 to avoid low complexity regions, which cause bias in ``validating indels
 <http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/>`_::
 
-      remove_lcr: true
+      exclude_regions: [lcr]
       validate: dream-syn3-crossmap/truth_small_variants.vcf.gz
       validate_regions: dream-syn3-crossmap/truth_regions.bed
       svvalidate:

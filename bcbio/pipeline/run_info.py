@@ -485,7 +485,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "min_allele_fraction", "umi_type", "minimum_barcode_depth",
                       "cellular_barcodes", "vcfanno",
                       "sample_barcodes",
-                      "remove_lcr", "joint_group_size",
+                      "exclude_regions", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
                       "mixup_check", "expression_caller", "qc", "positional_umi",
                       "cellular_barcode_correction",
@@ -493,7 +493,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # development
                      ["cwl_reporting"] +
                      # back compatibility
-                      ["coverage_depth_max", "coverage_depth"])
+                      ["remove_lcr", "coverage_depth_max", "coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
@@ -955,11 +955,12 @@ def _add_algorithm_defaults(algorithm, analysis):
                 "coverage_interval": None,
                 "recalibrate": False,
                 "realign": False,
+                "exclude_regions": [],
                 "variant_regions": None,
                 "validate": None,
                 "validate_regions": None}
     convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
-                           "vcfanno", "adapters", "custom_trim"])
+                           "vcfanno", "adapters", "custom_trim", "exclude_regions"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
         if k not in algorithm:

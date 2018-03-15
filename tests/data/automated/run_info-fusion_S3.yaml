@@ -19,7 +19,6 @@ details:
       mark_duplicates: false
       recalibrate: false
       realign: false
-      remove_lcr: true
       # --- Expression and fusion calling
       expression_caller:
        - sailfish

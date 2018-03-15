@@ -3,6 +3,7 @@
 import os
 from contextlib import contextmanager
 import functools
+import operator
 import tempfile
 
 import pybedtools
@@ -137,27 +138,14 @@ def _subset_bed_by_region(in_file, out_file, regions, ref_file, do_merge=True):
         orig_bed.intersect(region_bed, nonamecheck=True).saveas().sort(**sort_kwargs).saveas().\
             filter(lambda x: len(x) > 1).saveas(out_file)
 
-def get_lcr_bed(items):
-    lcr_bed = utils.get_in(items[0], ("genome_resources", "variation", "lcr"))
-    do_lcr = any([utils.get_in(data, ("config", "algorithm", "remove_lcr"), False)
-                  for data in items])
-    if do_lcr and lcr_bed and os.path.exists(lcr_bed):
-        return lcr_bed
-
 def remove_lcr_regions(orig_bed, items):
     """If configured and available, update a BED file to remove low complexity regions.
     """
-    lcr_bed = get_lcr_bed(items)
-    if lcr_bed:
-        nolcr_bed = os.path.join("%s-nolcr.bed" % (utils.splitext_plus(orig_bed)[0]))
-        with file_transaction(items[0], nolcr_bed) as tx_nolcr_bed:
-            with bedtools_tmpdir(items[0]):
-                pybedtools.BedTool(orig_bed).subtract(pybedtools.BedTool(lcr_bed), nonamecheck=True).\
-                    saveas(tx_nolcr_bed)
-        # If we have a non-empty file, convert to the LCR subtracted for downstream analysis
-        if utils.file_exists(nolcr_bed):
-            orig_bed = nolcr_bed
-    return orig_bed
+    lcr_bed = tz.get_in(["genome_resources", "variation", "lcr"], items[0])
+    if lcr_bed and os.path.exists(lcr_bed) and "lcr" in get_exclude_regions(items):
+        return _remove_regions(orig_bed, [lcr_bed], "nolcr", items[0])
+    else:
+        return orig_bed
 
 def remove_highdepth_regions(in_file, items):
     """Remove high depth regions from a BED file for analyzing a set of calls.
@@ -167,27 +155,39 @@ def remove_highdepth_regions(in_file, items):
     Also adds ENCODE blacklist regions which capture additional collapsed repeats
     around centromeres.
     """
-    highdepth_beds = []
-    from bcbio.variation import bedutils
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], items[0])
     if encode_bed and os.path.exists(encode_bed):
-        highdepth_beds.append(encode_bed)
-    out_file = "%s-glimit%s" % utils.splitext_plus(in_file)
+        return _remove_regions(in_file, [encode_bed], "glimit", items[0])
+    else:
+        return in_file
+
+def _remove_regions(in_file, remove_beds, ext, data):
+    """Subtract a list of BED files from an input BED.
+
+    General approach handling none, one and more remove_beds.
+    """
+    from bcbio.variation import bedutils
+    out_file = "%s-%s.bed" % (utils.splitext_plus(in_file)[0], ext)
     if not utils.file_uptodate(out_file, in_file):
-        with file_transaction(items[0], out_file) as tx_out_file:
-            with bedtools_tmpdir(items[0]):
-                all_file = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
-                if len(highdepth_beds) > 0:
-                    with open(all_file, "w") as out_handle:
-                        for highdepth_bed in highdepth_beds:
-                            with utils.open_gzipsafe(highdepth_bed) as in_handle:
+        with file_transaction(data, out_file) as tx_out_file:
+            with bedtools_tmpdir(data):
+                if len(remove_beds) == 0:
+                    to_remove = None
+                elif len(remove_beds) == 1:
+                    to_remove = remove_beds[0]
+                else:
+                    to_remove = "%s-all.bed" % utils.splitext_plus(tx_out_file)[0]
+                    with open(to_remove, "w") as out_handle:
+                        for b in remove_beds:
+                            with utils.open_gzipsafe(b) as in_handle:
                                 for line in in_handle:
                                     parts = line.split("\t")
                                     out_handle.write("\t".join(parts[:4]).rstrip() + "\n")
-                if utils.file_exists(all_file):
-                    to_remove = bedutils.sort_merge(all_file, items[0])
+                    if utils.file_exists(to_remove):
+                        to_remove = bedutils.sort_merge(to_remove, data)
+                if to_remove and utils.file_exists(to_remove):
                     cmd = "bedtools subtract -nonamecheck -a {in_file} -b {to_remove} > {tx_out_file}"
-                    do.run(cmd.format(**locals()), "Remove high depth regions")
+                    do.run(cmd.format(**locals()), "Remove problematic regions: %s" % ext)
                 else:
                     utils.symlink_plus(in_file, out_file)
     return out_file
@@ -203,14 +203,32 @@ def bedtools_tmpdir(data):
         else:
             tempfile.tempdir = None
 
-def subtract_low_complexity(f):
-    """Remove low complexity regions from callable regions if available.
+def get_exclude_regions(items):
+    """Retrieve regions to exclude from a set of items.
+
+    Includes back compatibility for older custom ways of specifying different
+    exclusions.
     """
+    def _get_sample_excludes(d):
+        excludes = dd.get_exclude_regions(d)
+        # back compatible
+        if tz.get_in(("config", "algorithm", "remove_lcr"), d, False):
+            excludes.append("lcr")
+        return excludes
+    out = reduce(operator.add, [_get_sample_excludes(d) for d in items])
+    return sorted(list(set(out)))
+
+def remove_exclude_regions(f):
+    """Remove regions to exclude based on configuration: polyA, LCR, high depth.
+    """
+    exclude_fns = {"lcr": remove_lcr_regions, "highdepth": remove_highdepth_regions}
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None, do_merge=True, data=None):
         region_bed = f(variant_regions, region, out_file, items, do_merge, data)
         if region_bed and isinstance(region_bed, basestring) and os.path.exists(region_bed) and items:
-            region_bed = remove_lcr_regions(region_bed, items)
+            for e in get_exclude_regions(items):
+                if e in exclude_fns:
+                    region_bed = exclude_fns[e](region_bed, items)
         return region_bed
     return wrapper
 
@@ -227,7 +245,7 @@ def to_multiregion(region):
         assert len(region) == 3
         return [tuple(region)]
 
-@subtract_low_complexity
+@remove_exclude_regions
 def subset_variant_regions(variant_regions, region, out_file, items=None, do_merge=True, data=None):
     """Return BED file subset by a specified chromosome region.
 
