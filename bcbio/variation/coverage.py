@@ -89,9 +89,9 @@ def calculate(bam_file, data):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
         to_calculate = [("variant_regions", variant_regions,
                          vr_quantize, None, "coverage_perbase" in dd.get_tools_on(data)),
-                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data),
+                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data, prefix="svregions-"),
                          None, None, False),
-                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data),
+                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-"),
                          None, DEPTH_THRESHOLDS, False)]
         depth_files = {}
         for target_name, region_bed, quantize, thresholds, per_base in to_calculate:

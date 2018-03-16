@@ -18,6 +18,8 @@
   variant calling. Thanks to Luca Beltrame.
 - variant: Default to `mark_duplicates: false` if alignment turned off
   (`aligner: false`).
+- variant: Fix race condition when preparing BED files for coverage and
+  sv_regions. Thanks to Tristan Lubinski.
 - Fix `noalt_calling` to correctly avoid parallelizing on non-standard
   chromosomes without a variant regions file.
 - Fix broken `kraken` command. Thanks to @choosehappy.
