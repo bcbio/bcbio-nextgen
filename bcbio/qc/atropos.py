@@ -1,5 +1,7 @@
 """Get log file from trimming step if file inside data["log_trimming"]"""
 
+from bcbio import utils
+
 def run(bam_file, data, dir_out):
     m = {}
     if "log_trimming" in data and utils.file_exists(data["log_trimming"]):
