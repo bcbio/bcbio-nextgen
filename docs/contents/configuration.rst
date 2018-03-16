@@ -586,7 +586,10 @@ the naming schemes described in the
     - ``highdepth`` Remove high depth regions during variant calling, identified
       by collapsed repeats around centromeres in hg19 and GRCh37 as
       characterized in the `ENCODE blacklist <http://hgdownload-test.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/>`_.
-
+      This is on by default for VarDict and FreeBayes whole genome calling to
+      help with slow runtimes in these regions, and also on for whole genome
+      structural variant calling to avoid false positives from high depth
+      repeats.
 .. _variant-config:
 
 Variant calling

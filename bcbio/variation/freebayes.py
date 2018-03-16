@@ -51,12 +51,10 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
         if isinstance(target, basestring) and os.path.isfile(target):
-            if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
-                   for x in items):
-                target = shared.remove_highdepth_regions(target, items)
-                if os.path.getsize(target) == 0:
-                    no_target_regions = True
-            opts += ["--targets", target]
+            if os.path.getsize(target) == 0:
+                no_target_regions = True
+            else:
+                opts += ["--targets", target]
         else:
             opts += ["--region", region_to_freebayes(target)]
     resources = config_utils.get_resources("freebayes", config)
@@ -83,6 +81,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run FreeBayes variant calling, either paired tumor/normal or germline calling.
     """
+    items = shared.add_highdepth_genome_exclusion(items)
     if is_paired_analysis(align_bams, items):
         paired = get_paired_bams(align_bams, items)
         if not paired.normal_bam:

@@ -85,21 +85,19 @@ def prepare_exclude_file(items, base_file, chrom=None):
     Excludes high depth and centromere regions which contribute to long run times and
     false positive structural variant calls.
     """
+    items = shared.add_highdepth_genome_exclusion(items)
     out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with shared.bedtools_tmpdir(items[0]):
-            # Get a bedtool for the full region if no variant regions
-            want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
-                                                    items[0]["config"], chrom)
-            if chrom:
-                want_bedtool = pybedtools.BedTool(shared.subset_bed_by_chrom(want_bedtool.saveas().fn,
-                                                                             chrom, items[0]))
-            sv_exclude_bed = _get_sv_exclude_file(items)
-            if sv_exclude_bed and len(want_bedtool) > 0:
-                want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
-            if any(dd.get_coverage_interval(d) == "genome" for d in items):
-                want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
             with file_transaction(items[0], out_file) as tx_out_file:
+                # Get a bedtool for the full region if no variant regions
+                want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
+                                                        items[0]["config"], chrom)
+                want_bedtool = pybedtools.BedTool(shared.subset_variant_regions(want_bedtool.saveas().fn,
+                                                                                chrom, tx_out_file))
+                sv_exclude_bed = _get_sv_exclude_file(items)
+                if sv_exclude_bed and len(want_bedtool) > 0:
+                    want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:

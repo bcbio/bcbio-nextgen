@@ -147,6 +147,20 @@ def remove_lcr_regions(orig_bed, items):
     else:
         return orig_bed
 
+def add_highdepth_genome_exclusion(items):
+    """Add exclusions to input items to avoid slow runtimes on whole genomes.
+    """
+    out = []
+    for d in items:
+        d = utils.deepish_copy(d)
+        if dd.get_coverage_interval(d) == "genome":
+            e = dd.get_exclude_regions(d)
+            if "highdepth" not in e:
+                e.append("highdepth")
+                d = dd.set_exclude_regions(d, e)
+        out.append(d)
+    return out
+
 def remove_highdepth_regions(in_file, items):
     """Remove high depth regions from a BED file for analyzing a set of calls.
 

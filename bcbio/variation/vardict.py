@@ -45,9 +45,6 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     if resources.get("options"):
         var2vcf_opts += [str(x) for x in resources["options"]]
     if target and _is_bed_file(target):
-        if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
-                for x in items):
-            target = shared.remove_highdepth_regions(target, items)
         target = _enforce_max_region_size(target, items[0])
         opts += [target]  # this must be the last option
     return " ".join(opts), " ".join(var2vcf_opts)
@@ -81,6 +78,7 @@ def run_vardict(align_bams, items, ref_file, assoc_files, region=None,
                 out_file=None):
     """Run VarDict variant calling.
     """
+    items = shared.add_highdepth_genome_exclusion(items)
     if vcfutils.is_paired_analysis(align_bams, items):
         call_file = _run_vardict_paired(align_bams, items, ref_file,
                                         assoc_files, region, out_file)

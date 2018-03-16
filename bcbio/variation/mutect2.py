@@ -36,10 +36,12 @@ def _add_tumor_params(paired, items, gatk_type):
         else:
             params += ["-I:normal", paired.normal_bam]
     if paired.normal_panel is not None:
+        panel_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "mutect2", "panels"))
+        normal_panel = vcfutils.bgzip_and_index(paired.normal_panel, items[0]["config"], out_dir=panel_dir)
         if gatk_type == "gatk4":
-            params += ["--panel-of-normals", paired.normal_panel]
+            params += ["--panel-of-normals", normal_panel]
         else:
-            params += ["--normal_panel", paired.normal_panel]
+            params += ["--normal_panel", normal_panel]
     return params
 
 def _add_region_params(region, out_file, items, gatk_type):
