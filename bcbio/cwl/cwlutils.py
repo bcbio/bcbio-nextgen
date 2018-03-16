@@ -210,7 +210,7 @@ def assign_complex_to_samples(items):
         for k in complex:
             v = tz.get_in(k, data)
             if v is not None:
-                for s in extract_fns[k](v, data):
+                for s in extract_fns[k](v, items):
                     if s:
                         complex[k][s] = v
     out = []
@@ -222,7 +222,7 @@ def assign_complex_to_samples(items):
         out.append(data)
     return out
 
-def _get_vcf_samples(calls, data):
+def _get_vcf_samples(calls, items):
     have_full_file = False
     all_samples = set([])
     for f in utils.flatten(calls):
@@ -234,17 +234,20 @@ def _get_vcf_samples(calls, data):
                 else:
                     all_samples &= set(cur)
         else:
-            for test_name in [dd.get_sample_name(data)] + dd.get_batches(data):
-                if os.path.basename(f).startswith("%s-" % test_name):
-                    all_samples.add(dd.get_sample_name(data))
+            for data in items:
+                for test_name in [dd.get_sample_name(data)] + dd.get_batches(data):
+                    if os.path.basename(f).startswith(("%s-" % test_name,
+                                                       "%s." % test_name)):
+                        all_samples.add(dd.get_sample_name(data))
     return list(all_samples)
 
-def _get_bam_samples(f, data):
+def _get_bam_samples(f, items):
     have_full_file = False
     if have_full_file:
         return [bam.sample_name(f)]
     else:
-        if os.path.basename(f).startswith("%s-" % dd.get_sample_name(data)):
-            return [dd.get_sample_name(data)]
-        else:
-            return []
+        for data in items:
+            if os.path.basename(f).startswith(("%s-" % dd.get_sample_name(data),
+                                               "%s." % dd.get_sample_name(data))):
+                return [dd.get_sample_name(data)]
+        return []
