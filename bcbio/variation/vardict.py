@@ -233,7 +233,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
     if not utils.file_exists(out_file):
         with file_transaction(items[0], out_file) as tx_out_file:
             target = shared.subset_variant_regions(dd.get_variant_regions(items[0]), region,
-                                                   out_file, do_merge=True)
+                                                   out_file, items=items, do_merge=True)
             paired = vcfutils.get_paired_bams(align_bams, items)
             if not _is_bed_file(target):
                 vcfutils.write_empty_vcf(tx_out_file, config,

@@ -54,7 +54,7 @@ def _config_params(base_config, assoc_files, region, out_file, items):
     if cosmic:
         params += ["--cosmic", cosmic]
     variant_regions = bedutils.population_variant_regions(items)
-    region = subset_variant_regions(variant_regions, region, out_file)
+    region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
         params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule",
                    "INTERSECTION"]

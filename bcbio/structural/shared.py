@@ -94,7 +94,7 @@ def prepare_exclude_file(items, base_file, chrom=None):
                 want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"], chrom)
                 want_bedtool = pybedtools.BedTool(shared.subset_variant_regions(want_bedtool.saveas().fn,
-                                                                                chrom, tx_out_file))
+                                                                                chrom, tx_out_file, items))
                 sv_exclude_bed = _get_sv_exclude_file(items)
                 if sv_exclude_bed and len(want_bedtool) > 0:
                     want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
