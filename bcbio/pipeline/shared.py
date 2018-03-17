@@ -147,6 +147,15 @@ def remove_lcr_regions(orig_bed, items):
     else:
         return orig_bed
 
+def remove_polyx_regions(in_file, items):
+    """Remove polyX stretches, contributing to long variant runtimes.
+    """
+    ex_bed = tz.get_in(["genome_resources", "variation", "polyx"], items[0])
+    if ex_bed and os.path.exists(ex_bed):
+        return _remove_regions(in_file, [ex_bed], "nopolyx", items[0])
+    else:
+        return in_file
+
 def add_highdepth_genome_exclusion(items):
     """Add exclusions to input items to avoid slow runtimes on whole genomes.
     """
@@ -235,7 +244,8 @@ def get_exclude_regions(items):
 def remove_exclude_regions(f):
     """Remove regions to exclude based on configuration: polyA, LCR, high depth.
     """
-    exclude_fns = {"lcr": remove_lcr_regions, "highdepth": remove_highdepth_regions}
+    exclude_fns = {"lcr": remove_lcr_regions, "highdepth": remove_highdepth_regions,
+                   "polyx": remove_polyx_regions}
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None, do_merge=True, data=None):
         region_bed = f(variant_regions, region, out_file, items, do_merge, data)

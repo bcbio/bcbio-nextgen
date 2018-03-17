@@ -38,7 +38,7 @@ details:
       svcaller: [seq2c, cnvkit, delly, lumpy]
       #background:
       #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
-      exclude_regions: [lcr, highdepth]
+      exclude_regions: [lcr, highdepth, polyx]
       coverage_interval: genome
       tools_on: [qualimap_full, vqsr, svplots]
       tools_off: [gemini]
