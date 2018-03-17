@@ -43,7 +43,9 @@ def get_resources(genome, ref_file, data):
 def add_required_resources(resources):
     """Add empty values for required resources referenced in CWL
     """
-    required = [["variation", "cosmic"], ["variation", "dbsnp"]]
+    required = [["variation", "cosmic"], ["variation", "dbsnp"],
+                ["variation", "lcr"], ["variation", "polyx"],
+                ["variation", "encode_blacklist"]]
     for key in required:
         if not tz.get_in(key, resources):
             resources = tz.update_in(resources, key, lambda x: None)
