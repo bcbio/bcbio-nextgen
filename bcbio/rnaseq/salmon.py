@@ -22,9 +22,7 @@ def run_salmon_bam(data):
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
     gtf_file = dd.get_gtf_file(data)
     bam_file = dd.get_transcriptome_bam(data)
-    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
-    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = salmon_quant_bam(bam_file, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
@@ -41,9 +39,7 @@ def run_salmon_reads(data):
         fq1, fq2 = files
     else:
         fq1, fq2 = files[0], None
-    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
-    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
@@ -93,7 +89,10 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
-    gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
+    if dd.get_transcriptome_fasta(data):
+        gtf_fa = dd.get_transcriptome_fasta(data)
+    else:
+        gtf_fa = sailfish.create_combined_fasta(data)
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     salmon = config_utils.get_program("salmon", dd.get_config(data))
@@ -117,7 +116,6 @@ def run_salmon_index(*samples):
         work_dir = dd.get_work_dir(data)
         salmon_dir = os.path.join(work_dir, "salmon")
         gtf_file = dd.get_gtf_file(data)
-        assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
         fasta_file = dd.get_ref_file(data)
         assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
         salmon_index(gtf_file, fasta_file, data, salmon_dir)
