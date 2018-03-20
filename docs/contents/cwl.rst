@@ -258,8 +258,8 @@ additional control and debugging.
    - ``$DX_AUTH_TOKEN`` -- The DNAnexus authorization token for access, used for
      the ``dx`` command line tool and bcbio scripts.
    - ``$DX_PROJECT_ID`` -- The DNAnexus GUID identifier for your project
-      (similar to ``project-F8Q7fJj0XFJJ3XbBPQYXP4B9``). You can get this from
-      ``dx env`` after creating/selecting a project in steps 1 and 2.
+     (similar to ``project-F8Q7fJj0XFJJ3XbBPQYXP4B9``). You can get this from
+     ``dx env`` after creating/selecting a project in steps 1 and 2.
 
 1. Create an analysis project::
 
@@ -311,7 +311,7 @@ additional control and debugging.
          genome_build: hg38
 
 6. Supply the three inputs (``bcbio_system.yaml``, ``project.csv`` and
-   ``template.yaml``) to the `Create and run bcbio workflow` applet
+   ``template.yaml``) to the `Create and run bcbio workflow applet
    <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets>`_.
    You can do this using the web interface or via the command line with a small
    script like::
