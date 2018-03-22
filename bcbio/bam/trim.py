@@ -73,7 +73,7 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                 adapters += ["A{200}$", "C{200}$", "G{200}$", "T{200}$"]
             adapters_args = " ".join(["-a '%s'" % a for a in adapters])
             adapters_args += " --overlap 8"  # Avoid very short internal matches (default is 3)
-            adapters_args += " --no-default-adapters"  # Prevent GitHub queries
+            adapters_args += " --no-default-adapters --no-cache-adapters"  # Prevent GitHub queries and saving pickles
             aligner_args = "--aligner adapter"
             if len(fastq_files) == 1:
                 cores = dd.get_num_cores(data)
