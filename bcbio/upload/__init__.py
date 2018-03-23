@@ -657,6 +657,11 @@ def _get_files_project(sample, upload_config):
         out.append({"path": sample["seqcluster"].get("out_dir"),
                     "type": "directory", "ext": "seqcluster"})
 
+    if sample.get("mirge", {}):
+        for fn in sample["mirge"]:
+            out.append({"path": fn,
+                        "dir": "mirge"})
+
     if sample.get("report", None):
         out.append({"path": os.path.dirname(sample["report"]),
                     "type": "directory", "ext": "seqclusterViz"})

@@ -20,6 +20,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 from bcbio.srna import mirdeep
 from bcbio.rnaseq import spikein
+from bcbio.srna import mirge
 
 def run_prepare(*data):
     """
@@ -47,6 +48,7 @@ def run_prepare(*data):
         with file_transaction(ma_out) as ma_tx:
             with open(ma_tx, 'w') as ma_handle:
                 with open(seq_out, 'w') as seq_handle:
+                    logger.info("Prepare seqs.fastq with -minl 17 -maxl 40 -minc 2 --min_shared 0.1")
                     prepare._create_matrix_uniq_seq(sample_l, seq_l, ma_handle, seq_handle, min_shared)
 
     for sample in data:
@@ -94,6 +96,9 @@ def run_cluster(*data):
                                         out_dir, dd.get_ref_file(sample),
                                         dd.get_srna_gtf_file(sample))
         sample["report"] = _report(sample, dd.get_ref_file(sample))
+
+    if "mirge" in tools:
+        sample["mirge"] = mirge.run(data)
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:

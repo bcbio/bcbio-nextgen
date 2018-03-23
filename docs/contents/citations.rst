@@ -66,6 +66,14 @@ If you have tRNA mapping output, add:
 
 * Selitsky, S. R., & Sethupathy, P. (2015). tDRmapper: challenges and solutions to mapping, naming, and quantifying tRNA-derived RNAs from human small RNA-sequencing data. BMC Bioinformatics, 16(1), 354. doi:10.1186/s12859-015-0800-0
 
+If you have miRge activated:
+
+* Yin Lu, Alexander S. Baras, Marc K Halushka. miRge2.0: An updated tool to comprehensively analyze microRNA sequencing data. bioRxiv.org.
+
+If you have MINTmap activated:
+
+* Loher, P, Telonis, AG, Rigoutsos, I. MINTmap: fast and exhaustive profiling of nuclear and mitochondrial tRNA fragments from short RNA-seq data. Sci Rep. 2017;7 :41184. doi: 10.1038/srep41184. PubMed PMID:28220888 PubMed Central PMC5318995.
+
 Data
 ~~~~
 

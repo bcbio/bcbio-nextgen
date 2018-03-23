@@ -177,6 +177,7 @@ def _collapse(in_file):
     if file_exists(out_file):
         return out_file
     seqs = collapse(in_file)
+    logger.info("Collapsing %s with --min_size 16 --min 1" % in_file)
     write_output(out_file, seqs, minimum=1, size=16)
     return out_file
 

@@ -1,3 +1,5 @@
+.. _pipelines:
+
 Pipelines
 ---------
 
@@ -375,6 +377,7 @@ help implement support for it.
 Most of the heavy lifting for this part of `bcbio-nextgen` is implemented in
 the `umis <https://github.com/vals/umis>`_ repository.
 
+
 smallRNA-seq
 ~~~~~~~~~~~~
 
@@ -392,10 +395,20 @@ detection.
   - `STAR`_ for genome annotation
   - bowtie, `bowtie2` and  `hisat2`_ for genome annotation as an option
 
-- Known small RNAs quantification:
+- Specific small RNAs quantification (miRNA/tRNAs...):
 
   - `seqbuster <https://github.com/lpantano/seqbuster>`_ for miRNA annotation
-  - `tdrmapper`_ for tRNA fragments annotation
+  - `MINTmap`_ for tRNA fragments annotation
+  - `miRge2`_ for alternative small RNA quantification. To setup this tool, you need
+              install manually miRge2.0, and download the library data for your species.
+              Read how to install and download the data `here <https://github.com/mhalushka/miRge#download-libraries>`_. 
+              If you have ``human`` folder at ``/mnt/data/human``
+              the option to pass to resources will be ``/mnt/data``.
+              Then setup ``resources``::
+
+    resources:
+      mirge:
+        options: ["-lib $PATH_TO_PARENT_SPECIES_LIB"]
 
 - Quality control:
 
@@ -419,7 +432,9 @@ tdrmapper results will be inside each sample
 inside ``tdrmapper`` or final project folder.
 
 .. _tdrmapper: https://github.com/sararselitsky/tDRmapper
-.. _miRDeep2: https://www.mdc-berlin.de/8551903/en/
+.. _MINTmap: https://github.com/TJU-CMC-Org/MINTmap
+.. _miRDeep2: https://www.mdc-berlin.de/8551903/en
+.. _miRge2: https://github.com/mhalushka/miRge
 .. _isomiRs: https://github.com/lpantano/isomiRs
 
 ChIP-seq

@@ -1,5 +1,7 @@
 ## 1.0.9 (in progress)
 
+- Support miRge2.0 for alternative small RNA annotation. Users should
+  install the tool manually until compatible with bioconda.
 - Generalize exclusion of regions during variant calling with new
   `exclude_regions` target. Includes previously available LCR and high depth
   regions, in addition to removal of polyX and alternative contigs.
