@@ -585,13 +585,13 @@ the naming schemes described in the
       ends for reads with ``trim_reads`` and ``adapters``. Requires an organism
       with a defined ``polyx`` file in genome resources.
     - ``lcr`` Avoid calling variants in low complexity regions (LCRs).
-       `Heng Li's variant artifacts paper`_ provides
-       these regions, which cover ~2% of the genome but contribute to a large
-       fraction of problematic calls due to the difficulty of resolving variants
-       in repetitive regions. Removal can help facilitate comparisons between
-       methods and reduce false positives if you don't need calls in LCRs for your
-       biological analysis. Requires an organism with a defined ``lcr`` file in
-       genome resources.
+      `Heng Li's variant artifacts paper`_ provides
+      these regions, which cover ~2% of the genome but contribute to a large
+      fraction of problematic calls due to the difficulty of resolving variants
+      in repetitive regions. Removal can help facilitate comparisons between
+      methods and reduce false positives if you don't need calls in LCRs for your
+      biological analysis. Requires an organism with a defined ``lcr`` file in
+      genome resources.
     - ``highdepth`` Remove high depth regions during variant calling, identified
       by collapsed repeats around centromeres in hg19 and GRCh37 as
       characterized in the `ENCODE blacklist <http://hgdownload-test.cse.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/>`_.
