@@ -9,8 +9,8 @@ details:
       aligner: star
       quality_format: illumina
       trim_reads: read_through
+      exclude_regions: [altcontigs]
       adapters: [truseq, polya]
-      tools_on: [noalt_calling]
       expression_caller: [stringtie, dexseq, kallisto, salmon]
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
@@ -27,8 +27,8 @@ details:
       aligner: star
       quality_format: illumina
       trim_reads: read_through
+      exclude_regions: [altcontigs]
       adapters: [truseq, polya]
-      tools_on: [noalt_calling]
       expression_caller: [stringtie, dexseq, kallisto, salmon]
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa

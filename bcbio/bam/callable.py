@@ -32,7 +32,7 @@ def sample_callable_bed(bam_file, ref_file, data):
     """
     from bcbio.heterogeneity import chromhacks
     CovInfo = collections.namedtuple("CovInfo", "callable, raw_callable, depth_files")
-    noalt_calling = "noalt_calling" in dd.get_tools_on(data)
+    noalt_calling = "noalt_calling" in dd.get_tools_on(data) or "altcontigs" in dd.get_exclude_regions(data)
     def callable_chrom_filter(r):
         """Filter to callable region, potentially limiting by chromosomes.
         """
@@ -120,7 +120,7 @@ def _add_config_regions(nblock_regions, ref_regions, data):
         all_intervals = _combine_regions([input_nblock, nblock_regions], ref_regions)
     else:
         all_intervals = nblock_regions
-    if "noalt_calling" in dd.get_tools_on(data):
+    if "noalt_calling" in dd.get_tools_on(data) or "altcontigs" in dd.get_exclude_regions(data):
         from bcbio.heterogeneity import chromhacks
         remove_intervals = ref_regions.filter(lambda r: not chromhacks.is_nonalt(r.chrom))
         all_intervals = _combine_regions([all_intervals, remove_intervals], ref_regions)

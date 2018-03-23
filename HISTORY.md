@@ -2,7 +2,7 @@
 
 - Generalize exclusion of regions during variant calling with new
   `exclude_regions` target. Includes previously available LCR and high depth
-  regions.
+  regions, in addition to removal of polyX and alternative contigs.
 - Normalize allele frequency calculation and filtering for Strelka2 and MuTect2.
   Thanks to Vlad Saveliev.
 - CNVkit: enable specification of pre-built reference background cnn with
