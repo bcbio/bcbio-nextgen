@@ -46,7 +46,7 @@ def check_bed_contigs(in_file, data):
             if not line.startswith(("#", "track", "browser")) and line.strip():
                 contigs.add(line.split()[0])
     ref_contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
-    if len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
+    if contigs and len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
         raise ValueError("Contigs in BED file %s not in reference genome:\n %s\n"
                          % (in_file, list(contigs - ref_contigs)) +
                          "This is typically due to chr1 versus 1 differences in BED file and reference.")
