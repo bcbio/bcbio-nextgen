@@ -152,6 +152,7 @@ LOOKUPS = {
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
     "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
+    "sv_regions": {"keys": ["config", "algorithm", "sv_regions"]},
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
     "coverage_merged": {"keys": ["config", "algorithm", "coverage_merged"]},
     "coverage_orig": {"keys": ["config", "algorithm", "coverage_orig"]},
