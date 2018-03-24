@@ -210,7 +210,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
     bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     prefix = os.path.join(work_dir, "%s-%s" % (dd.get_sample_name(data), target_name))
-    out = MosdepthCov("%s.mosdepth.dist.txt" % prefix,
+    out = MosdepthCov("%s.mosdepth.%s.dist.txt" % (prefix, "region" if bed_file else "global"),
                       ("%s.per-base.bed.gz" % prefix) if per_base else None,
                       ("%s.regions.bed.gz" % prefix) if bed_file else None,
                       ("%s.quantized.bed.gz" % prefix) if quantize else None,
