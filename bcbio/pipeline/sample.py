@@ -31,7 +31,7 @@ from bcbio.pipeline.sra import query_gsm
 from bcbio.bam import skewer
 from bcbio.structural.seq2c import prep_seq2c_bed
 from bcbio.variation.bedutils import clean_file, merge_overlaps
-from bcbio.structural import get_svcallers
+from bcbio.structural import get_svcallers, regions
 from bcbio.qc import samtools
 
 def prepare_sample(data):
@@ -224,6 +224,8 @@ def clean_inputs(data):
             logger.warning("Can't run Seq2C without a svregions or variant_regions BED file")
         else:
             data["config"]["algorithm"]["seq2c_bed_ready"] = seq2c_ready_bed
+    elif regions.get_sv_bed(data):
+        dd.set_sv_regions(data, clean_file(regions.get_sv_bed(data), data, prefix="svregions-"))
     return data
 
 def postprocess_alignment(data):
