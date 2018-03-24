@@ -178,7 +178,7 @@ def _gatk_general():
     https://community.10xgenomics.com/t5/Genome-Exome-Forum/Best-practices-for-trimming-adapters-when-variant-calling/m-p/473
     https://github.com/bcbio/bcbio_validations/tree/master/gatk4#10x-adapter-trimming--low-frequency-allele-filter
     """
-    return ["(QD < 10.0 && AD[1] / (AD[1] + AD[0]) < 0.25 && ReadPosRankSum < 0.0)"]
+    return ["(QD < 10.0 && AD[0:1] / (AD[0:1] + AD[0:0]) < 0.25 && ReadPosRankSum < 0.0)"]
 
 def gatk_snp_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK SNPs using best-practice recommendations.
