@@ -225,6 +225,7 @@ def assign_complex_to_samples(items):
 def _get_vcf_samples(calls, items):
     have_full_file = False
     all_samples = set([])
+    sample_matches = False
     for f in utils.flatten(calls):
         if have_full_file:
             cur = set(vcfutils.get_samples(f))
@@ -235,10 +236,16 @@ def _get_vcf_samples(calls, items):
                     all_samples &= set(cur)
         else:
             for data in items:
-                for test_name in [dd.get_sample_name(data)] + dd.get_batches(data):
+                for i, test_name in enumerate([dd.get_sample_name(data)] + dd.get_batches(data)):
                     if os.path.basename(f).startswith(("%s-" % test_name,
                                                        "%s." % test_name)):
-                        all_samples.add(dd.get_sample_name(data))
+                        # Prefer matches to single samples (gVCF) over joint batches
+                        if i == 0:
+                            sample_matches = True
+                        if sample_matches and i > 0:
+                            continue
+                        else:
+                            all_samples.add(dd.get_sample_name(data))
     return list(all_samples)
 
 def _get_bam_samples(f, items):
