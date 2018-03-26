@@ -99,7 +99,7 @@ def _maybe_limit_chromosomes(data):
     HLAs have ':' characters in them which confuse downstream processing. If
     we have no problematic chromosomes we don't limit anything.
     """
-    utd_chroms = []
+    std_chroms = []
     prob_chroms = []
     noalt_calling = "noalt_calling" in dd.get_tools_on(data) or "altcontigs" in dd.get_exclude_regions(data)
     for contig in ref.file_contigs(dd.get_ref_file(data)):
