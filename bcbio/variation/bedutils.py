@@ -132,10 +132,14 @@ def sort_merge(in_file, data, out_dir=None):
 
 def remove_bad(line):
     """Remove non-increasing BED lines which will cause variant callers to choke.
+
+    Also fixes space separated BED inputs.
     """
     parts = line.strip().split("\t")
+    if len(parts) == 1 and len(line.strip().split()) > 1:
+        parts = line.strip().split()
     if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
-        return line
+        return "\t".join(parts)
     else:
         return None
 
