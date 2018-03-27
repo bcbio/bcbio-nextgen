@@ -20,7 +20,6 @@ import yaml
 from bcbio import broad, utils
 from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -665,6 +664,7 @@ def _get_validation_status(rec):
 def _read_call_freqs(in_file, sample_name):
     """Identify frequencies for calls in the input file.
     """
+    from bcbio.heterogeneity import bubbletree
     out = {}
     with VariantFile(in_file) as call_in:
         for rec in call_in:
