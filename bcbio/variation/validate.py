@@ -502,24 +502,24 @@ def _flatten_grading(stats):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
             yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
 
-def _has_grading_info(samples):
+def _has_grading_info(samples, vkey):
     for data in samples:
-        if data.get("validate"):
+        if data.get(vkey):
             return True
         for variant in data.get("variants", []):
-            if variant.get("validate"):
+            if variant.get(vkey):
                 return True
     return False
 
-def _group_validate_samples(samples):
+def _group_validate_samples(samples, vkey):
     extras = []
     validated = collections.defaultdict(list)
     for data in samples:
         is_v = False
-        if data.get("validate"):
+        if data.get(vkey):
             is_v = True
         for variant in data.get("variants", []):
-            if variant.get("validate"):
+            if variant.get(vkey):
                 is_v = True
         if is_v:
             for batch_key in (["metadata", "validate_batch"], ["metadata", "batch"],
@@ -534,18 +534,18 @@ def _group_validate_samples(samples):
             extras.append([data])
     return validated, extras
 
-def summarize_grading(samples):
+def summarize_grading(samples, vkey="validate"):
     """Provide summaries of grading results across all samples.
 
     Handles both traditional pipelines (validation part of variants) and CWL
     pipelines (validation at top level)
     """
     samples = list(utils.flatten(samples))
-    if not _has_grading_info(samples):
+    if not _has_grading_info(samples, vkey):
         return [[d] for d in samples]
-    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], vkey))
     header = ["sample", "caller", "variant.type", "category", "value"]
-    validated, out = _group_validate_samples(samples)
+    validated, out = _group_validate_samples(samples, vkey)
     for vname, vitems in validated.items():
         out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
         with open(out_csv, "w") as out_handle:
@@ -554,10 +554,10 @@ def summarize_grading(samples):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                validations = [variant.get("validate") for variant in data.get("variants", [])]
+                validations = [variant.get(vkey) for variant in data.get("variants", [])]
                 validations = [v for v in validations if v]
-                if len(validations) == 0 and "validate" in data:
-                    validations = [data.get("validate")]
+                if len(validations) == 0 and vkey in data:
+                    validations = [data.get(vkey)]
                 for validate in validations:
                     if validate:
                         validate["grading_summary"] = out_csv
@@ -578,13 +578,39 @@ def summarize_grading(samples):
         else:
             plots = []
         for data in vitems:
-            if data.get("validate"):
-                data["validate"]["grading_plots"] = plots
+            if data.get(vkey):
+                data[vkey]["grading_plots"] = plots
             for variant in data.get("variants", []):
-                if variant.get("validate"):
-                    variant["validate"]["grading_plots"] = plots
+                if variant.get(vkey):
+                    variant[vkey]["grading_plots"] = plots
             out.append([data])
     return out
+
+def combine_validations(items, vkey="validate"):
+    """Combine multiple batch validations into validation outputs.
+    """
+    csvs = set([])
+    pngs = set([])
+    for v in [x.get(vkey) for x in items]:
+        if v and v.get("grading_summary"):
+            csvs.add(v.get("grading_summary"))
+        if v and v.get("grading_plots"):
+            pngs |= set(v.get("grading_plots"))
+    if len(csvs) == 1:
+        grading_summary = csvs.pop()
+    else:
+        grading_summary = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), vkey)),
+                                       "grading-summary-combined.csv")
+        with open(grading_summary, "w") as out_handle:
+            for i, csv in enumerate(sorted(list(csvs))):
+                with open(csv) as in_handle:
+                    h = in_handle.readline()
+                    if i == 0:
+                        out_handle.write(h)
+                    for l in in_handle:
+                        out_handle.write(l)
+    return {"grading_plots": sorted(list(pngs)), "grading_summary": grading_summary}
+
 
 def _get_validate_plotdata_yaml(grading_file, data):
     """Retrieve validation plot data from grading YAML file (old style).

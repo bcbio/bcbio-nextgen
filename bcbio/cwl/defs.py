@@ -425,10 +425,11 @@ def _variant_sv(checkpoints):
             [cwlout("sv_rec", "record",
                     fields=[cwlout(["sv", "variantcaller"], ["string", "null"]),
                             cwlout(["sv", "vrn_file"], ["File", "null"], [".tbi"]),
+                            cwlout(["svvalidate", "summary"], ["File", "null"]),
                             cwlout("inherit")])],
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
                          "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
-                         "pysam>=0.13.0",
+                         "smoove", "pysam>=0.13.0",
                          "seq2c", "simple_sv_annotation", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
@@ -474,6 +475,7 @@ def _variant_sv(checkpoints):
                 ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
+                ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
                 ["sv_coverage_rec"]],
                [cwlout("sv_batch_rec", "record")],
                "bcbio-vc",
@@ -481,9 +483,11 @@ def _variant_sv(checkpoints):
              w("svcall", "multi-parallel", sv, []),
              s("summarize_sv", "multi-combined",
                [["sv_rec"]],
-               [cwlout(["sv", "calls"], {"type": "array", "items": ["File", "null"]})],
+               [cwlout(["sv", "calls"], {"type": "array", "items": ["File", "null"]}),
+                cwlout(["svvalidate", "grading_summary"], ["File", "null"]),
+                cwlout(["svvalidate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
                "bcbio-vc", disk={"files": 1.0}, cores=1)]
-    final_outputs = [["sv", "calls"]]
+    final_outputs = [["sv", "calls"], ["svvalidate", "grading_summary"]]
     return steps, final_outputs
 
 def rnaseq(samples):

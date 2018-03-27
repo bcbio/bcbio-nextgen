@@ -13,6 +13,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, gridss,
                               lumpy, manta, metasv, prioritize, plot,
                               seq2c, titancna, validate, wham)
+from bcbio.variation import validate as vcvalidate
 from bcbio.variation import vcfutils
 
 # Stratify callers by stage -- see `run` documentation below for definitions
@@ -203,6 +204,9 @@ def detect_sv(items, all_items=None, stage="standard"):
     if "cwl_keys" in items[0]:
         out_cwl = []
         for data in [utils.to_single_data(x) for x in out]:
+            # Run validation directly from CWL runs since we're single stage
+            data = validate.evaluate(data)
+            data["svvalidate"] = {"summary": tz.get_in(["sv-validate", "csv"], data)}
             svs = data.get("sv")
             if svs:
                 assert len(svs) == 1, svs
@@ -216,8 +220,9 @@ def summarize_sv(items):
 
     XXX Need to support non-VCF output as tabix indexed output
     """
-    items = [utils.to_single_data(x) for x in utils.flatten(items)]
-    out = {"sv": {"calls": []}}
+    items = [utils.to_single_data(x) for x in vcvalidate.summarize_grading(items, "svvalidate")]
+    out = {"sv": {"calls": []},
+           "svvalidate": vcvalidate.combine_validations(items, "svvalidate")}
     added = set([])
     for data in items:
         if data.get("sv"):

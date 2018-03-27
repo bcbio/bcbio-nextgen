@@ -36,18 +36,16 @@ def _evaluate_vcf(calls, truth_vcf, work_dir, data):
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
                 for call in calls:
                     detail_dir = utils.safe_makedir(os.path.join(work_dir, call["variantcaller"]))
-                    for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_callable_regions(data),
+                    for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_sample_callable(data),
                                                       call["variantcaller"], detail_dir, data):
 
                         writer.writerow(stats)
     return out_file
 
-def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, detail_dir, data):
+def _validate_caller_vcf(call_vcf, truth_vcf, callable_bed, svcaller, detail_dir, data):
     """Validate a caller VCF against truth within callable regions, returning stratified stats
     """
     stats = _calculate_comparison_stats(truth_vcf)
-    callable_regions = bedutils.clean_file(callable_regions, data)
-    callable_bed = pybedtools.BedTool(callable_regions).merge(d=stats["merge_size"]).saveas().fn
 
     match_calls = set([])
     truth_stats = {"tp": [], "fn": [], "fp": []}

@@ -18,7 +18,7 @@ def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
     items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
-    out = {"validate": _combine_validations(items),
+    out = {"validate": validate.combine_validations(items),
            "variants": {"calls": [], "gvcf": [], "samples": []}}
     added = set([])
     variants_by_sample = collections.defaultdict(list)
@@ -55,31 +55,6 @@ def summarize_vc(items):
     for sample in sample_order:
         out["variants"]["samples"].append(variants_by_sample[sample])
     return [out]
-
-def _combine_validations(items):
-    """Combine multiple batch validations into validation outputs.
-    """
-    csvs = set([])
-    pngs = set([])
-    for v in [x.get("validate") for x in items]:
-        if v and v.get("grading_summary"):
-            csvs.add(v.get("grading_summary"))
-        if v and v.get("grading_plots"):
-            pngs |= set(v.get("grading_plots"))
-    if len(csvs) == 1:
-        grading_summary = csvs.pop()
-    else:
-        grading_summary = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "validation")),
-                                       "grading-summary-combined.csv")
-        with open(grading_summary, "w") as out_handle:
-            for i, csv in enumerate(sorted(list(csvs))):
-                with open(csv) as in_handle:
-                    h = in_handle.readline()
-                    if i == 0:
-                        out_handle.write(h)
-                    for l in in_handle:
-                        out_handle.write(l)
-    return {"grading_plots": sorted(list(pngs)), "grading_summary": grading_summary}
 
 # ## Genotyping
 
