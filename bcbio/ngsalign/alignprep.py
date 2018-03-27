@@ -632,7 +632,7 @@ def _bgzip_from_fastq(data):
                                needs_bgzip, needs_gunzip, needs_convert, data)
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
-        _symlink_or_copy_grabix(in_file, out_file, data)
+        out_file = _symlink_or_copy_grabix(in_file, out_file, data)
     return out_file
 
 def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert, data):
