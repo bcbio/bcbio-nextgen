@@ -64,6 +64,7 @@ def _run_cwltool(args):
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cwltool_work"))
     tmp_dir = utils.safe_makedir(os.path.join(work_dir, "tmpcwl"))
+    log_file = os.path.join(work_dir, "%s-cwltool.log" % project_name)
     os.environ["TMPDIR"] = tmp_dir
     flags = ["--tmpdir-prefix", tmp_dir, "--tmp-outdir-prefix", tmp_dir]
     if args.no_container:
@@ -71,7 +72,7 @@ def _run_cwltool(args):
         flags += ["--no-container", "--preserve-environment", "PATH", "--preserve-environment", "HOME"]
     cmd = ["cwltool"] + flags + args.toolargs + ["--", main_file, json_file]
     with utils.chdir(work_dir):
-        _run_tool(cmd, not args.no_container, work_dir)
+        _run_tool(cmd, not args.no_container, work_dir, log_file=log_file)
 
 def _run_arvados(args):
     """Run CWL on Arvados.
