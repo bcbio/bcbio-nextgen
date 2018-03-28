@@ -159,7 +159,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
     """
     data = paired.tumor_data if paired else items[0]
     min_freq = float(utils.get_in(data["config"], ("algorithm", "min_allele_fraction"), 10)) / 100.0
-    logger.info("Filtering Strelka2 calls with allele fraction threshold of %s" % min_freq)
+    logger.debug("Filtering Strelka2 calls with allele fraction threshold of %s" % min_freq)
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:

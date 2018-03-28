@@ -132,7 +132,7 @@ def _af_filter(data, in_file, out_file):
     """Soft-filter variants with AF below min_allele_fraction (appends "MinAF" to FILTER)
     """
     min_freq = float(utils.get_in(data["config"], ("algorithm", "min_allele_fraction"), 10)) / 100.0
-    logger.info("Filtering MuTect2 calls with allele fraction threshold of %s" % min_freq)
+    logger.debug("Filtering MuTect2 calls with allele fraction threshold of %s" % min_freq)
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:
