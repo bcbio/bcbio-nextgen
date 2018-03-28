@@ -374,9 +374,10 @@ def _prep_grabix_indexes(in_files, data):
     if _ready_gzip_fastq(in_files, data) and (not _ready_gzip_fastq(in_files, data, require_bgzip=True)
                                               or dd.get_align_split_size(data) is False):
         for in_file in in_files:
-            with file_transaction(data, in_file + ".gbi") as tx_gbi_file:
-                with open(tx_gbi_file, "w") as out_handle:
-                    out_handle.write("Not grabix indexed; index added for compatibility.\n")
+            if not utils.file_exists(in_file + ".gbi"):
+                with file_transaction(data, in_file + ".gbi") as tx_gbi_file:
+                    with open(tx_gbi_file, "w") as out_handle:
+                        out_handle.write("Not grabix indexed; index added for compatibility.\n")
     else:
         items = [[{"bgzip_file": x, "config": copy.deepcopy(data["config"])}] for x in in_files if x]
         run_multicore(_grabix_index, items, data["config"])
