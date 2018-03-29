@@ -67,7 +67,7 @@ def _comparison_stats_from_merge(in_file, stats, svcaller, data):
             elif calls["truth"]:
                 metric = "fn"
             else:
-                metrics = "fp"
+                metric = "fp"
             truth_stats[metric].append(_summarize_call(call))
     return _to_csv(truth_stats, stats, dd.get_sample_name(data), svcaller)
 
