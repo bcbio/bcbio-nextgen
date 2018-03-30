@@ -107,12 +107,16 @@ def _to_csv(truth_stats, stats, sample, svcaller):
 def _calculate_comparison_stats(truth_vcf):
     """Identify calls to validate from the input truth VCF.
     """
+    # Avoid very small events for average calculations
+    min_stat_size = 50
+    min_median_size = 250
     sizes = []
     svtypes = set([])
     with utils.open_gzipsafe(truth_vcf) as in_handle:
         for call in (l.rstrip().split("\t") for l in in_handle if not l.startswith("#")):
             stats = _summarize_call(call)
-            sizes.append(stats["size"])
+            if stats["size"] > min_stat_size:
+                sizes.append(stats["size"])
             svtypes.add(stats["svtype"])
     pct10 = int(np.percentile(sizes, 10))
     pct25 = int(np.percentile(sizes, 25))
@@ -122,7 +126,7 @@ def _calculate_comparison_stats(truth_vcf):
                        (pct50, pct75), (pct75, max(sizes))]
     ranges_split = [(int(min(sizes)), pct50), (pct50, max(sizes))]
     return {"min_size": int(min(sizes) * 0.95), "max_size": int(max(sizes) + 1.05),
-            "svtypes": svtypes, "merge_size": int(np.percentile(sizes, 10)),
+            "svtypes": svtypes, "merge_size": int(np.percentile([x for x in sizes if x > min_median_size], 50)),
             "ranges": []}
 
 def _get_start_end(parts, index=7):
@@ -160,7 +164,7 @@ def _prep_vcf(in_file, region_bed, sample, new_sample, stats, work_dir, data):
             ann_str = " | bcftools annotate -x {ann_remove}" if ann_remove else ""
             cmd = ("bcftools view -T {callable_bed} -f 'PASS,.'  -s {sample} {in_file} "
                    + ann_str +
-                   "| sed 's|\t{sample}|\t{new_sample}|' "
+                   r"| sed 's|\t{sample}|\t{new_sample}|' "
                    "| bgzip -c > {out_file}")
             do.run(cmd.format(**locals()), "Create SV validation VCF for %s" % new_sample)
     return vcfutils.bgzip_and_index(out_file, data["config"])
