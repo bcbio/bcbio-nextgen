@@ -9,6 +9,7 @@ from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import vcfutils
 from bcbio.provenance import do, programs
@@ -42,7 +43,14 @@ def _run_break_point_inspector(data, variant_file, paired):
     output_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(variant_file)[0], "bpi")
     if not utils.file_exists(output_vcf):
         with file_transaction(data, output_vcf) as tx_output_vcf:
-            cmd = ["break-point-inspector", "-vcf", variant_file]
+            cores = dd.get_num_cores(data)
+            resources = config_utils.get_resources("break-point-inspector", data["config"])
+            memory = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms1000m", "-Xmx2000m"]),
+                                              {"algorithm": {"memory_adjust": {"magnitude": cores,
+                                                                               "direction": "increase"}}})
+            cmd = ["break-point-inspector"]
+            cmd += memory
+            cmd += ["-vcf", variant_file]
             if paired:
                 cmd += ["-ref", paired.normal_bam, "-tumor", paired.tumor_bam]
             cmd += ["-output_vcf", tx_output_vcf]
