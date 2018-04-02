@@ -95,12 +95,12 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
             check_bed_contigs(in_file, data)
             check_bed_coords(in_file, data)
             with file_transaction(data, out_file) as tx_out_file:
-                py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                bcbio_py = sys.executable
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 sort_cmd = get_sort_cmd(os.path.dirname(tx_out_file))
                 cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
                        "grep -v ^# | {simple} "
-                       "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
+                       "{bcbio_py} -c 'from bcbio.variation import bedutils; bedutils.remove_bad()' | "
                        "{sort_cmd} -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
         vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
@@ -130,18 +130,17 @@ def sort_merge(in_file, data, out_dir=None):
             do.run(cmd.format(**locals()), "Sort and merge BED file", data)
     return out_file
 
-def remove_bad(line):
+def remove_bad():
     """Remove non-increasing BED lines which will cause variant callers to choke.
 
     Also fixes space separated BED inputs.
     """
-    parts = line.strip().split("\t")
-    if len(parts) == 1 and len(line.strip().split()) > 1:
-        parts = line.strip().split()
-    if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
-        return "\t".join(parts)
-    else:
-        return None
+    for line in sys.stdin:
+        parts = line.strip().split("\t")
+        if len(parts) == 1 and len(line.strip().split()) > 1:
+            parts = line.strip().split()
+        if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
+            sys.stdout.write("\t".join(parts) + "\n")
 
 def merge_overlaps(in_file, data, distance=None, out_dir=None):
     """Merge bed file intervals to avoid overlapping regions. Output is always a 3 column file.
