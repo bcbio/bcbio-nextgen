@@ -150,7 +150,8 @@ def _summarize_call(parts):
 def _prep_vcf(in_file, region_bed, sample, new_sample, stats, work_dir, data):
     """Prepare VCF for SV validation:
 
-    - Subsets to passing variants
+    - Subset to passing variants
+    - Subset to genotyped variants -- removes reference and no calls
     - Selects and names samples
     - Subset to callable regions
     - Remove larger annotations which slow down VCF processing
@@ -162,7 +163,7 @@ def _prep_vcf(in_file, region_bed, sample, new_sample, stats, work_dir, data):
         with file_transaction(data, out_file) as tx_out_file:
             ann_remove = _get_anns_to_remove(in_file)
             ann_str = " | bcftools annotate -x {ann_remove}" if ann_remove else ""
-            cmd = ("bcftools view -T {callable_bed} -f 'PASS,.'  -s {sample} {in_file} "
+            cmd = ("bcftools view -T {callable_bed} -f 'PASS,.' --min-ac '1:nref' -s {sample} {in_file} "
                    + ann_str +
                    r"| sed 's|\t{sample}|\t{new_sample}|' "
                    "| bgzip -c > {out_file}")
