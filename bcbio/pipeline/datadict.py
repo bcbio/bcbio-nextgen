@@ -231,7 +231,7 @@ def get_umi_consensus(data):
     consensus_choices = (["fastq_name"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
     # don't run consensus UMI calling for scrna-seq
-    if tz.get_in(["analysis"], data).lower() == "scrna-seq":
+    if tz.get_in(["analysis"], data, "").lower() == "scrna-seq":
         return False
     if umi and (umi in consensus_choices or os.path.exists(umi)):
         assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
