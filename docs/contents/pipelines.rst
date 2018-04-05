@@ -161,16 +161,21 @@ population based calling. Supply a consistent batch for tumor/normal pairs and
 mark them with the phenotype::
 
     - description: your-tumor
+      algorithm:
+        variantcaller: [vardict, strelka2, mutect2]
       metadata:
         batch: batch1
         phenotype: tumor
     - description: your-normal
+      algorithm:
+        variantcaller: [vardict, strelka2, mutect2]
       metadata:
         batch: batch1
         phenotype: normal
 
 Other :ref:`config-cancer` configuration options allow tweaking of the
-processing parameters.
+processing parameters. For pairs you want to analyze together, specify a
+consistent set of ``variantcaller`` options for both samples.
 
 Cancer calling handles both tumor-normal paired calls and tumor-only calling. To
 specify a tumor-only sample, provide a single sample labeled with ``phenotype:
@@ -235,8 +240,8 @@ for both and include germline and somatic events from two structural variant
 callers::
 
     variantcaller:
-       somatic: [vardict, varscan, mutect2]
-       germline: [freebayes, gatk-haplotype, platypue]
+       somatic: [vardict, strelka2, mutect2]
+       germline: [freebayes, gatk-haplotype, strelka2]
     ensemble:
        numpass: 2
     svcaller: [manta, cnvkit]
