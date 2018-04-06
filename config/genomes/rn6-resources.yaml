@@ -1,7 +1,7 @@
-version: 9
+version: 10
 
 aliases:
-  ensembl: rattus_norvegicus_vep_91_Rnor_6.0
+  ensembl: rattus_norvegicus_vep_92_Rnor_6.0
   snpeff: Rnor_6.0.86
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
