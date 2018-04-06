@@ -47,11 +47,29 @@
   gather_facts: true
   tasks:
     - include_vars: project_vars.yaml
+    - name: Create ext4 filesystem if not present
+      filesystem: fstype=ext4 dev=/dev/disk/by-id/google-{{ volume }}
+      become: true
     - name: Mount work volume
       become: true
       mount: name=/mnt/work src=/dev/disk/by-id/google-{{ volume }} fstype=ext4 state=mounted
+    - name: Create bcbio directory if missing
+      file: path=/mnt/work/bcbio state=directory owner=ubuntu
+      become: true
     - name: Add bcbio to path
       lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
+    - apt: update_cache=yes
+      become: true
     - apt: name="{{ item }}" update_cache=yes
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
+    - name: Download docker
+      get_url:
+        url: https://get.docker.com
+        dest: /tmp/docker-install.sh
+    - name: Install docker
+      become: true
+      shell: bash /tmp/docker-install.sh
+    - name: Add to docker group
+      become: true
+      shell: usermod -aG docker ubuntu

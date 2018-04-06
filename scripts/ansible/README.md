@@ -123,14 +123,41 @@ finished you can snapshot this for long term storage.
 
 ### Google Compute
 
+Tools used on your local machine:
+
 - [Ansible](http://docs.ansible.com/ansible/intro_installation.html) with
   [dependencies and environmental variables for Google Compute access](http://docs.ansible.com/ansible/guide_gce.html)
   -- automate starting up instances
 - [gloud from the Google Cloud SDK](https://cloud.google.com/sdk/) -- command
   line interface to access and manage instances. You can install with
-  `bcbio_conda install -c bioconda google-cloud-sdk`
+  `bcbio_conda install -c conda-forge -c bioconda google-cloud-sdk`
+- [Web based console](https://console.cloud.google.com)
 
-[Console](https://console.cloud.google.com)
+Start by [logging into gcloud](https://cloud.google.com/compute/docs/gcloud-compute/)
+and selecting your project:
+
+    gcloud init
+
+Create a disk to store bcbio and associated data:
+
+    gcloud compute disks create dv-bcbio-vol --size 250GB --type pd-ssd --zone us-east1-b
+
+Finally [create credentials](http://docs.ansible.com/ansible/latest/scenario_guides/guide_gce.html#credentials)
+for connecting to your instance. These are key pairs used to automatically
+authenticate to created instances. You'll need to note the e-mail associated
+with the service account and download the json file of key pairs after creating
+it.
+
+Use this information to create a `project_vars.yaml` configuration file:
+
+    instance_type: n1-standard-1
+    image_id: ubuntu-1604-xenial-v20180323
+    zone: us-east1-b
+    service_account_email: 129107966647-compute@developer.gserviceaccount.com
+    credentials_file: /home/chapmanb/.ssh/gce/deepvariant-trustedtester-d4f7663f4adf.json
+    project_id: deepvariant-trustedtester
+    volume: dv-bcbio-vol
+    run_name: dv-bcbio
 
 Launch your instance with:
 
@@ -138,11 +165,11 @@ Launch your instance with:
 
 Then access the machine using your run name:
 
-    gcloud compute ssh ubuntu@giab-val-work
+    gcloud compute ssh ubuntu@dv-bcbio
 
 When finished, you can terminate the instance with:
 
-    gcloud compute instances delete giab-val-work
+    gcloud compute instances delete dv-bcbio
 
 ### Microsoft Azure
 
