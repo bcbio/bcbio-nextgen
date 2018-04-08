@@ -122,6 +122,9 @@ def rnaseq_vardict_variant_calling(data):
     resources = config_utils.get_resources("vardict", data)
     if resources.get("options"):
         opts += " ".join([str(x) for x in resources["options"]])
+    cores = dd.get_num_cores(data)
+    if cores and cores > 1:
+        opts += " -th %s" % str(cores)
     with file_transaction(data, out_file) as tx_out_file:
         jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
         cmd = ("{r_setup} && {jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "

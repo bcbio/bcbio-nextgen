@@ -1,7 +1,5 @@
 ## 1.0.9 (in progress)
 
-- Support miRge2.0 for alternative small RNA annotation. Users should
-  install the tool manually until compatible with bioconda.
 - Generalize exclusion of regions during variant calling with new
   `exclude_regions` target. Includes previously available LCR and high depth
   regions, in addition to removal of polyX and alternative contigs.
@@ -15,6 +13,10 @@
   and RNA-seq pipelines.
 - Add support for polyG and polyX trimming to variant calling for NovaSeq 3' end
   cleanup and generally avoiding low complexity reads.
+- Structural variant: use SURVIVOR for validation comparisons.
+- RNA-seq variant calling: use multiple cores for VarDict.
+- Support miRge2.0 for alternative small RNA annotation. Users should
+  install the tool manually until compatible with bioconda.
 - Add bamCoverage to chip-seq pipeline to calculate bigwig files.
 - GATK4: Correctly use GATK4 GatherVcfs when tools_off: [gatk4] specified for
   variant calling. Thanks to Luca Beltrame.

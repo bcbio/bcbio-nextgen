@@ -34,6 +34,9 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
     # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
     #  "-k", "3", "-r", "4", "-m", "8"]
+    cores = dd.get_num_cores(items[0])
+    if cores and cores > 1:
+        opts += ["-th", str(cores)]
     # remove low mapping quality reads
     opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions

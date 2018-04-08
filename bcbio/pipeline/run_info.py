@@ -32,7 +32,7 @@ ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters)
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "expression_caller",
                          "svcaller", "hetcaller", "jointcaller", "tools_off",
-                         "mixup_check", "qc"]
+                         "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 
 def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,
