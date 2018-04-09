@@ -110,6 +110,7 @@ def assemble(bam_file, ref_file, num_cores, out_dir, data):
     with file_transaction(data, out_dir) as tmp_out_dir:
         cmd = ("cufflinks --output-dir {tmp_out_dir} --num-threads {num_cores} "
                "--frag-bias-correct {ref_file} "
+               "--quiet " 
                "{library_type} --multi-read-correct --upper-quartile-norm {bam_file}")
         cmd = cmd.format(**locals())
         do.run(cmd, "Assembling transcripts with Cufflinks using %s." % bam_file)
