@@ -430,7 +430,7 @@ def _variant_sv(checkpoints):
             "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
                          "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
                          "smoove", "pysam>=0.13.0",
-                         "seq2c", "simple_sv_annotation", "svtools", "svtyper",
+                         "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
     steps = [s("calculate_sv_bins", "multi-combined",
