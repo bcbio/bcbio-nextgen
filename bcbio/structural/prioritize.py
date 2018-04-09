@@ -16,7 +16,7 @@ from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
 from bcbio.structural import lumpy
 
-POST_PRIOR_FNS = {"lumpy": lumpy.run_svtyper_prioritize}
+POST_PRIOR_FNS = {}
 
 def run(items):
     assert len(items) == 1, ("Expect one input to biological prioritization: %s" %

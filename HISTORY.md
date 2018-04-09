@@ -1,5 +1,7 @@
 ## 1.0.9 (in progress)
 
+- Use smoove for lumpy variant calling and genotyping, replacing custom lumpyexpress
+  implementation: [validation](https://github.com/bcbio/bcbio_validations/tree/master/NA24385_sv#smoove-validation)
 - Generalize exclusion of regions during variant calling with new
   `exclude_regions` target. Includes previously available LCR and high depth
   regions, in addition to removal of polyX and alternative contigs.
