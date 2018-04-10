@@ -10,6 +10,8 @@ import sys
 import resource
 import tempfile
 
+import toolz as tz
+
 from bcbio import log, heterogeneity, hla, structural, utils
 from bcbio.cwl.inspect import initialize_watcher
 from bcbio.distributed import prun
@@ -111,7 +113,11 @@ def _wres(parallel, progs, fresources=None, ensure_mem=None):
 
 def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
     ## Alignment and preparation requiring the entire input file (multicore cluster)
-    with prun.start(_wres(parallel, ["aligner", "samtools", "sambamba"],
+    # Assign GATK supplied memory if required for post-process recalibration
+    align_programs = ["aligner", "samtools", "sambamba"]
+    if any(tz.get_in(["algorithm", "recalibrate"], utils.to_single_data(d)) in [True, "gatk"] for d in samples):
+        align_programs.append("gatk")
+    with prun.start(_wres(parallel, align_programs,
                             (["reference", "fasta"], ["reference", "aligner"], ["files"])),
                     samples, config, dirs, "multicore",
                     multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:

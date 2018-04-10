@@ -1,3 +1,5 @@
+## 1.1.0 (in progress)
+
 ## 1.0.9 (10 April 2018)
 
 - Use smoove for lumpy variant calling and genotyping, replacing custom lumpyexpress
