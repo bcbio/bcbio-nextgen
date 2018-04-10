@@ -1,4 +1,4 @@
-## 1.0.9 (in progress)
+## 1.0.9 (10 April 2018)
 
 - Use smoove for lumpy variant calling and genotyping, replacing custom lumpyexpress
   implementation: [validation](https://github.com/bcbio/bcbio_validations/tree/master/NA24385_sv#smoove-validation)
