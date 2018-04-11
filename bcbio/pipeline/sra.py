@@ -4,6 +4,7 @@ import glob
 import subprocess
 import json
 import re
+import traceback
 
 from bcbio.log import logger
 from bcbio import utils
@@ -41,7 +42,7 @@ def query_gsm(gsm, out_file, config = {}):
     logger.debug("Get id sample for %s" % gsm)
     if ids:
         gsm_info = _query_info("sra", ids[-1])
-        print(gsm_info)
+        logger.debug("gsm_info:%s" % gsm_info)
         srrall = []
         for srr in gsm_info:
             srrall.append(_create_link(srr))
@@ -53,7 +54,9 @@ def query_gsm(gsm, out_file, config = {}):
             logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
             if srafiles:
                 for sra in srafiles:
-                    outs.extend(_convert_fastq(sra, out_dir))
+                    fastq_fn = _convert_fastq(sra, out_dir)
+                    if fastq_fn:
+                        outs.extend(fastq_fn)
             logger.debug("Get FASTQ for %s: %s" % (gsm, " ".join(outs)))
         if outs:
             files = combine_pairs(outs)
@@ -69,8 +72,12 @@ def _download_srx(srxid, url, out_dir):
     cmd = "wget -N -r -nH -nd -np -nv {0}".format(url)
     out_dir = os.path.abspath(utils.safe_makedir(out_dir))
     with utils.chdir(out_dir):
-        do.run(cmd, "Download %s" % url )
-        # return [os.path.abspath(fn) for fn in glob.glob("*sra")]
+        try:
+            do.run(cmd, "Download %s" % url )
+        except:
+            logger.warning("Sample path not found in database. Skipping.")
+            traceback.print_exc()
+            return None
     return [os.path.join(out_dir, fn) for fn in os.listdir(out_dir)]
 
 def _download_sra(sraid, outdir):
@@ -85,6 +92,8 @@ def _convert_fastq(srafn, outdir, single=False):
     "convert sra to fastq"
     cmd = "fastq-dump --split-files --gzip {srafn}"
     sraid = os.path.basename(utils.splitext_plus(srafn)[0])
+    if not srafn:
+        return None
     if not single:
         out_file = [os.path.join(outdir, "%s_1.fastq.gz" % sraid),
                     os.path.join(outdir, "%s_2.fastq.gz" % sraid)]
