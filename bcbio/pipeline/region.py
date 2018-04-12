@@ -153,6 +153,8 @@ def parallel_prep_region(samples, run_parallel):
         elif not data.get(file_key):
             extras.append([data])
         else:
+            # Do not want to re-run duplicate marking after realignment
+            data = dd.set_mark_duplicates(data, False)
             torun.append([data])
     return extras + parallel_split_combine(torun, split_fn, run_parallel,
                                            "piped_bamprep", _add_combine_info, file_key, ["config"])
