@@ -14,7 +14,7 @@ def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
-    if dd.get_tools_on(data, "gatkcnn"):
+    if "gatkcnn" in dd.get_tools_on(data):
         return _cnn_filter(call_file, vrn_files, data)
     elif config_utils.use_vqsr(algs):
         if vcfutils.is_gvcf_file(call_file):
