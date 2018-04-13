@@ -1,6 +1,4 @@
-"""Perform GATK based filtering, perferring variant quality score recalibration.
-
-Performs cutoff-based soft filtering when VQSR fails on smaller sets of variant calls.
+"""Perform GATK based filtering: soft filters, CNNs and VQSR.
 """
 import os
 
@@ -16,7 +14,9 @@ def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
-    if config_utils.use_vqsr(algs):
+    if dd.get_tools_on(data, "gatkcnn"):
+        return _cnn_filter(call_file, vrn_files, data)
+    elif config_utils.use_vqsr(algs):
         if vcfutils.is_gvcf_file(call_file):
             raise ValueError("Cannot force gVCF output with joint calling using tools_on: [gvcf] and use VQSR. "
                              "Try using cutoff-based soft filtering with tools_off: [vqsr]")
@@ -33,6 +33,51 @@ def run(call_file, ref_file, vrn_files, data):
         snp_filter = vfilter.gatk_snp_cutoff(call_file, data)
         indel_filter = vfilter.gatk_indel_cutoff(snp_filter, data)
         return indel_filter
+
+# ## Convolutional Neural Networks (CNN)
+
+def _cnn_filter(in_file, vrn_files, data):
+    """Perform CNN filtering on input VCF using pre-trained models.
+    """
+    score_file = _cnn_score_variants(in_file, data)
+    return _cnn_tranch_filtering(score_file, vrn_files, data)
+
+def _cnn_tranch_filtering(in_file, vrn_files, data):
+    """Filter CNN scored VCFs in tranches using standard SNP and Indel truth sets.
+    """
+    out_file = "%s-filter.vcf.gz" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        runner = broad.runner_from_config(data["config"])
+        gatk_type = runner.gatk_type()
+        assert gatk_type == "gatk4", "CNN filtering requires GATK4"
+        if "train_hapmap" not in vrn_files:
+            raise ValueError("CNN filtering requires HapMap training inputs: %s" % vrn_files)
+        with file_transaction(data, out_file) as tx_out_file:
+            params = ["-T", "FilterVariantTranches", "--variant", in_file,
+                      "--output", tx_out_file,
+                      "--info-key", "CNN_2D", "--tranche", "99",
+                      "--snp-truth-vcf", vrn_files["train_hapmap"],
+                      "--indel-truth-vcf", vrn_files["train_indels"]]
+            runner.run_gatk(params)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+def _cnn_score_variants(in_file, data):
+    """Score variants with pre-trained CNN models.
+    """
+    out_file = "%s-cnnscore.vcf.gz" % utils.splitext_plus(in_file)[0]
+    if not utils.file_uptodate(out_file, in_file):
+        runner = broad.runner_from_config(data["config"])
+        gatk_type = runner.gatk_type()
+        assert gatk_type == "gatk4", "CNN filtering requires GATK4"
+        with file_transaction(data, out_file) as tx_out_file:
+            params = ["-T", "CNNScoreVariants", "--variant", in_file, "--reference", dd.get_ref_file(data),
+                    "--output", tx_out_file, "--input", dd.get_align_bam(data)]
+            # 2D tensor
+            params += ["--tensor-type", "read_tensor"]
+            runner.run_gatk(params)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+# ## Variant Quality Score Recalibration (VQSR)
 
 def _apply_vqsr(in_file, ref_file, recal_file, tranch_file,
                 sensitivity_cutoff, filter_type, data):
@@ -187,7 +232,6 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
 
     Use cutoff-based soft filters if configuration indicates too little data or
     already finished a cutoff-based filtering step, otherwise try VQSR.
-
     """
     # Algorithms multiplied by number of input files to check for large enough sample sizes
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
