@@ -1,5 +1,8 @@
 ## 1.1.0 (in progress)
 
+- DeepVariant and Strelka2 support for customized targeted/genome calling models
+  per region to handle heterogeneous inputs.
+
 ## 1.0.9 (10 April 2018)
 
 - Use smoove for lumpy variant calling and genotyping, replacing custom lumpyexpress

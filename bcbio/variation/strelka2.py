@@ -47,6 +47,40 @@ def get_region_bed(region, items, out_file, want_gzip=True):
         out_file += ".gz"
     return out_file
 
+def coverage_interval_from_bed(bed_file):
+    """Calculate a coverage interval for the current region BED.
+
+    This helps correctly work with cases of uneven coverage across an analysis
+    genome. strelka2 and other model based callers have flags for targeted and non
+    which depend on the local context.
+    """
+    total_bases = 0
+    bed_bases = 0
+    cur_chr = None
+    chr_start = None
+    last_end = None
+    with utils.open_gzipsafe(bed_file) as in_handle:
+        for line in in_handle:
+            parts = line.split()
+            if len(parts) >= 3:
+                chrom, start, end = parts[:3]
+                start = int(start)
+                end = int(end)
+                bed_bases += (end - start)
+                if chrom != cur_chr:
+                    if cur_chr and last_end and cur_start is not None:
+                        total_bases += (last_end - cur_start)
+                    cur_chr = chrom
+                    cur_start = int(start)
+                last_end = end
+        if cur_chr and last_end and cur_start is not None:
+            total_bases += (last_end - cur_start)
+    # Should be importing GENOME_COV_THRESH but get circular imports
+    if float(bed_bases) / float(total_bases) >= 0.40:
+        return "genome"
+    else:
+        return "targeted"
+
 def _get_ploidy(regions, items, base_file):
     samples = [dd.get_sample_name(d) for d in items]
     out_file = "%s-ploidy.vcf" % utils.splitext_plus(base_file)[0]
@@ -66,12 +100,13 @@ def _get_ploidy(regions, items, base_file):
 def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir):
     utils.safe_makedir(tx_work_dir)
     cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
+    cur_bed = get_region_bed(region, items, out_file)
     cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % get_region_bed(region, items, out_file),
+            "--callRegions=%s" % cur_bed,
             "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
             "--runDir=%s" % tx_work_dir]
     cmd += ["--bam=%s" % b for b in align_bams]
-    if any(dd.get_coverage_interval(d) not in ["genome"] for d in items):
+    if coverage_interval_from_bed(cur_bed) == "targeted":
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
     return os.path.join(tx_work_dir, "runWorkflow.py")
@@ -91,11 +126,12 @@ def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file, wo
 def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     utils.safe_makedir(tx_work_dir)
     cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaSomaticWorkflow.py"))]
+    cur_bed = get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file)
     cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file),
+            "--callRegions=%s" % cur_bed,
             "--runDir=%s" % tx_work_dir,
             "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
-    if dd.get_coverage_interval(paired.tumor_data) not in ["genome"]:
+    if coverage_interval_from_bed(cur_bed) == "targeted":
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
     return os.path.join(tx_work_dir, "runWorkflow.py")

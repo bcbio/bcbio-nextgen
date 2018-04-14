@@ -20,16 +20,18 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
     assert len(items) == 1, \
         ("DeepVariant currently only supports single sample calling: %s" %
          (", ".join([dd.get_sample_name(d) for d in items])))
-    return _run_germline(align_bams[0], items[0], ref_file,
-                         region, out_file)
+    out_file = _run_germline(align_bams[0], items[0], ref_file,
+                             region, out_file)
+    return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _run_germline(bam_file, data, ref_file, region, out_file):
     """Single sample germline variant calling.
     """
     work_dir = utils.safe_makedir("%s-work" % utils.splitext_plus(out_file)[0])
-    example_dir = _make_examples(bam_file, data, ref_file, region, out_file, work_dir)
+    region_bed = strelka2.get_region_bed(region, [data], out_file, want_gzip=False)
+    example_dir = _make_examples(bam_file, data, ref_file, region_bed, out_file, work_dir)
     if _has_candidate_variants(example_dir):
-        tfrecord_file = _call_variants(example_dir, data, out_file)
+        tfrecord_file = _call_variants(example_dir, region_bed, data, out_file)
         return _postprocess_variants(tfrecord_file, data, ref_file, out_file)
     else:
         return vcfutils.write_empty_vcf(out_file, data["config"], [dd.get_sample_name(data)])
@@ -37,10 +39,9 @@ def _run_germline(bam_file, data, ref_file, region, out_file):
 def _has_candidate_variants(example_dir):
     return all(utils.is_empty_gzipsafe(f) for f in glob.glob(os.path.join(example_dir, "*tfrecord*gz")))
 
-def _make_examples(bam_file, data, ref_file, region, out_file, work_dir):
+def _make_examples(bam_file, data, ref_file, region_bed, out_file, work_dir):
     """Create example pileup images to feed into variant calling.
     """
-    region_bed = strelka2.get_region_bed(region, [data], out_file, want_gzip=False)
     log_dir = utils.safe_makedir(os.path.join(work_dir, "log"))
     example_dir = utils.safe_makedir(os.path.join(work_dir, "examples"))
     if len(glob.glob(os.path.join(example_dir, "%s.tfrecord*.gz" % dd.get_sample_name(data)))) == 0:
@@ -53,15 +54,16 @@ def _make_examples(bam_file, data, ref_file, region, out_file, work_dir):
                 utils.copy_plus(fname, os.path.join(example_dir, os.path.basename(fname)))
     return example_dir
 
-def _call_variants(example_dir, data, out_file):
+def _call_variants(example_dir, region_bed, data, out_file):
     """Call variants from prepared pileup examples, creating tensorflow record file.
     """
     tf_out_file = "%s-tfrecord.gz" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(tf_out_file):
         with file_transaction(data, tf_out_file) as tx_out_file:
+            model = "wes" if strelka2.coverage_interval_from_bed(region_bed) == "targeted" else "wgs"
             cmd = ["dv_call_variants.py", "--cores", dd.get_num_cores(data),
                    "--outfile", tx_out_file, "--examples", example_dir,
-                   "--sample", dd.get_sample_name(data)]
+                   "--sample", dd.get_sample_name(data), "--model", model]
             do.run(cmd, "DeepVariant call_variants %s" % dd.get_sample_name(data))
     return tf_out_file
 
