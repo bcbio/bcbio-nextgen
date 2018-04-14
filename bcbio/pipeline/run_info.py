@@ -957,6 +957,7 @@ def _add_algorithm_defaults(algorithm, analysis):
                 "realign": False,
                 "exclude_regions": [],
                 "variant_regions": None,
+                "svvalidate": None,
                 "validate": None,
                 "validate_regions": None}
     convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",

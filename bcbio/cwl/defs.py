@@ -120,8 +120,14 @@ def _variant_hla(checkpoints):
     """
     if not checkpoints.get("hla"):
         return [], []
-    hla = [s("call_hla", "multi-parallel",
-             [["hla", "fastq"]],
+    hla = [s("hla_to_rec", "multi-batch",
+             [["hla", "fastq"],
+              ["config", "algorithm", "hlacaller"]],
+               [cwlout("hla_rec", "record")],
+               "bcbio-vc",
+               unlist=[["config", "algorithm", "hlacaller"]], cores=1, no_files=True),
+           s("call_hla", "multi-parallel",
+             [["hla_rec"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
               cwlout(["hla", "call_file"], ["File", "null"])],
              "bcbio-vc", ["optitype", "razers3=3.5.0"])]
