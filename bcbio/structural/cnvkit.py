@@ -462,14 +462,14 @@ def _add_seg_to_output(out, data):
 
 def _add_cnr_bedgraph_and_bed_to_output(out, data):
     cnr_file = out["cnr"]
-    bedgraph_file = cnr_file + ".bedgraph"
+    bedgraph_file = os.path.join(_sv_workdir(data), os.path.basename(cnr_file) + ".bedgraph")
     if not utils.file_exists(bedgraph_file):
         with file_transaction(data, bedgraph_file) as tx_out_file:
             cmd = "sed 1d {cnr_file} | cut -f1,2,3,5 > {tx_out_file}"
             do.run(cmd.format(**locals()), "Converting cnr to bedgraph format")
     out["cnr_bedgraph"] = bedgraph_file
 
-    bed_file = cnr_file + ".bed"
+    bed_file = os.path.join(_sv_workdir(data), os.path.basename(cnr_file) + ".bed")
     if not utils.file_exists(bed_file):
         with file_transaction(data, bed_file) as tx_out_file:
             cmd = "sed 1d {cnr_file} | cut -f1,2,3,4,5 > {tx_out_file}"
@@ -636,7 +636,7 @@ def _remove_haplotype_chroms(in_file, data):
     """Remove shorter haplotype chromosomes from cns/cnr files for plotting.
     """
     larger_chroms = set(_get_larger_chroms(dd.get_ref_file(data)))
-    out_file = "%s-chromfilter%s" % utils.splitext_plus(in_file)
+    out_file = os.path.join(_sv_workdir(data), "%s-chromfilter%s" % utils.splitext_plus(os.path.basename(in_file)))
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
@@ -648,7 +648,8 @@ def _remove_haplotype_chroms(in_file, data):
     return out_file
 
 def _add_global_scatter_plot(out, data):
-    out_file = "%s-scatter_global.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-scatter_global.pdf")
     if utils.file_exists(out_file):
         return out_file
     cnr = _remove_haplotype_chroms(out["cnr"], data)
@@ -659,7 +660,8 @@ def _add_global_scatter_plot(out, data):
     return out_file
 
 def _add_scatter_plot(out, data):
-    out_file = "%s-scatter.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-scatter.pdf")
     priority_bed = dd.get_svprioritize(data)
     if not priority_bed:
         return None
@@ -684,7 +686,8 @@ def _cnx_is_empty(in_file):
     return True
 
 def _add_diagram_plot(out, data):
-    out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-diagram.pdf")
     cnr = _remove_haplotype_chroms(out["cnr"], data)
     cns = _remove_haplotype_chroms(out["cns"], data)
     if _cnx_is_empty(cnr) or _cnx_is_empty(cns):
