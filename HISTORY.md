@@ -2,6 +2,7 @@
 
 - DeepVariant and Strelka2 support for customized targeted/genome calling models
   per region to handle heterogeneous inputs.
+- STAR: enable passing custom options for alignment.
 
 ## 1.0.9 (10 April 2018)
 

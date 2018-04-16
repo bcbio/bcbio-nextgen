@@ -86,6 +86,10 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " --outSAMstrandField intronMotif "
         if not srna:
             cmd += " --quantMode TranscriptomeSAM "
+
+        resources = config_utils.get_resources("star", data["config"])
+        if resources.get("options", []):
+            cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
