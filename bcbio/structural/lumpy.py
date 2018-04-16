@@ -93,8 +93,9 @@ def _prepare_smoove_bams(full_bams, sr_bams, disc_bams, items, tx_work_dir):
     return out
 
 def _allowed_errors(msg):
-    allowed = ["covmed: not enough reads to sample for bam stats"]
-    return any([len(re.findall(m, msg)) > 0 for m in allowed])
+    allowed = ["covmed: not enough reads to sample for bam stats",
+               "missing pair end parameters:mean stdev read_length min_non_overlap"]
+    return any([len(re.findall(m, msg)) >= 0 for m in allowed])
 
 def _filter_by_support(in_file, data):
     """Filter call file based on supporting evidence, adding FILTER annotations to VCF.
