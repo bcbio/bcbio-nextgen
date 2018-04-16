@@ -51,8 +51,8 @@ def query_gsm(gsm, out_file, config = {}):
         for srx in srrall:
             sra_dir = utils.safe_makedir(os.path.join(out_dir, name))
             srafiles = _download_srx(gsm, srx, sra_dir)
-            logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
             if srafiles:
+                logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
                 for sra in srafiles:
                     fastq_fn = _convert_fastq(sra, out_dir)
                     if fastq_fn:
