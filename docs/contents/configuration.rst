@@ -941,7 +941,8 @@ Single-cell RNA sequencing
 smallRNA sequencing
 ===================
 
-- ``adapter`` The 3' end adapter that needs to be remove. For NextFlex protocol you can add
+- ``adapters`` The 3' end adapter that needs to be remove. For NextFlex protocol you can add
+  ``adapters: ["4N", "$3PRIME_ADAPTER"]``. For any other options you can use
   resources: ``atropos:options:["-u 4", "-u -4"]``.
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.

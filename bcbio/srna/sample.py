@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import glob
+import re
 import os.path as op
 import shutil
 import subprocess
@@ -51,6 +52,8 @@ def trim_srna_sample(data):
         return [[data]]
 
     adapter = dd.get_adapters(data)
+    is_4n = any([a == "4N" for a in adapter])
+    adapter = [a for a in adapter if re.compile("^([ATGC]+)$").match(a)]
     if adapter and not trim_reads:
         trim_reads = True
         logger.info("Adapter is set up in config file, but trim_reads is not true."
@@ -66,6 +69,8 @@ def trim_srna_sample(data):
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         atropos = _get_atropos()
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
+        if is_4n:
+            options = "-u 4 -u -4 %s" % options
         cores = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
         if " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", "")):
             raise ValueError("Atropos is now used, but cutadapt options found in YAML file."
@@ -81,7 +86,7 @@ def trim_srna_sample(data):
                     in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
                     cmd = "{atropos} {cores} {options} -se {in_file} -o {tx_out_file} -m 17"
-                    do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
+                    do.run(cmd.format(**locals()), "atropos with this parameters %s for %s" %(options, names))
         data["log_trimming"] = log_out
     else:
         if not trim_reads:
