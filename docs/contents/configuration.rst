@@ -584,7 +584,9 @@ the naming schemes described in the
       through these types of repeats, this helps avoid extra calculations for
       assessing the noise. This is an alternative to trimming polyX from the 3'
       ends for reads with ``trim_reads`` and ``adapters``. Requires an organism
-      with a defined ``polyx`` file in genome resources.
+      with a defined ``polyx`` file in genome resources. For structural variant
+      calling, adding ``polyx`` avoids calling small indels for Manta, where
+      these can contribute to long runtimes.
     - ``lcr`` Avoid calling variants in low complexity regions (LCRs).
       `Heng Li's variant artifacts paper`_ provides
       these regions, which cover ~2% of the genome but contribute to a large

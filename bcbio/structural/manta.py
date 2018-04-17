@@ -84,7 +84,8 @@ def _prep_config(items, paired, work_dir):
     assert utils.which("configManta.py"), "Could not find installed configManta.py"
     out_file = os.path.join(work_dir, "runWorkflow.py")
     if not utils.file_exists(out_file) or _out_of_date(out_file):
-        cmd = [sys.executable, os.path.realpath(utils.which("configManta.py"))]
+        config_script = os.path.realpath(utils.which("configManta.py"))
+        cmd = [sys.executable, config_script]
         if paired:
             if paired.normal_bam:
                 cmd += ["--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
@@ -98,7 +99,26 @@ def _prep_config(items, paired, work_dir):
             cmd += ["--exome"]
         for region in _maybe_limit_chromosomes(data):
             cmd += ["--region", region]
+        # If we are removing polyX, avoid calling on small indels which require
+        # excessively long runtimes on noisy WGS runs
+        if "polyx" in dd.get_exclude_regions(data):
+            cmd += ["--config", _prep_nosmallindel_config(config_script, work_dir)]
         do.run(cmd, "Configure manta SV analysis")
+    return out_file
+
+def _prep_nosmallindel_config(config_script, work_dir):
+    """Create manta INI file without calling of small indels.
+    """
+    new_min_size = 100
+    in_file = config_script + ".ini"
+    out_file = os.path.join(work_dir, os.path.basename(in_file))
+    with open(in_file) as in_handle:
+        with open(out_file, "w") as out_handle:
+            for line in in_handle:
+                if line.startswith("minCandidateVariantSize"):
+                    out_handle.write("minCandidateVariantSize = %s\n" % new_min_size)
+                else:
+                    out_handle.write(line)
     return out_file
 
 def _maybe_limit_chromosomes(data):
