@@ -480,9 +480,10 @@ Read trimming
 -  ``adapters`` If trimming adapter read through, trim a set of stock
    adapter sequences. Allows specification of multiple items in a list,
    for example [truseq, polya] will trim both TruSeq adapter sequences
-   and polyA tails. Valid items are [truseq, illumina, nextera, polya, polyx].
-   In the small RNA pipeline, bcbio will try to detect the adapter using DNApi.
-   If you set up this parameter, then bcbio will use this value instead.
+   and polyA tails. polyg trimming removes high quality G stretches present in
+   NovaSeq and NextSeq data. In the small RNA pipeline, bcbio will try to detect
+   the adapter using DNApi. If you set up this parameter, then bcbio will use this value instead.
+   Choices: [truseq, illumina, nextera, polya, polyx, polyg].
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``min_read_length`` Minimum read length to maintain when

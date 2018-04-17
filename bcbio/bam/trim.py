@@ -93,11 +93,13 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             ropts = " ".join(str(x) for x in
                              config_utils.get_resources("atropos", data["config"]).get("options", []))
             extra_opts = []
-            for k, alt_ks, v in [("--quality-cutoff", ["-q "], "5"),
-                                 ("--minimum-length", ["-m "], str(dd.get_min_read_length(data))),
-                                 ("--nextseq-trim", [], "25")]:
+            for k, alt_ks, v, want in [("--quality-cutoff", ["-q "], "5", True),
+                                       ("--minimum-length", ["-m "], str(dd.get_min_read_length(data)), True),
+                                       ("--nextseq-trim", [], "25", ("polyx" in dd.get_adapters(data) or
+                                                                     "polyg" in dd.get_adapters(data)))]:
                 if k not in ropts and not any(alt_k in ropts for alt_k in alt_ks):
-                    extra_opts.append("%s=%s" % (k, v))
+                    if want:
+                        extra_opts.append("%s=%s" % (k, v))
             extra_opts = " ".join(extra_opts)
             thread_args = ("--threads %s" % cores if cores > 1 else "")
             cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
@@ -125,12 +127,13 @@ def _fastp_trim(fastq_files, adapters, out_dir, data):
                     cmd += ["-i", inf, "-o", outf]
                 else:
                     cmd += ["-I", inf, "-O", outf]
-            cmd += ["--trim_poly_g", "--poly_g_min_len", "8",
-                    "--cut_by_quality3", "--cut_mean_quality", "5",
+            cmd += ["--cut_by_quality3", "--cut_mean_quality", "5",
                     "--length_required", str(dd.get_min_read_length(data)),
                     "--disable_quality_filtering"]
             if "polyx" in dd.get_adapters(data):
                 cmd += ["--trim_poly_x", "--poly_x_min_len", "8"]
+            if "polyx" in dd.get_adapters(data) or "polyg" in dd.get_adapters(data):
+                cmd += ["--trim_poly_g", "--poly_g_min_len", "8"]
             for a in adapters:
                 cmd += ["--adapter_sequence", a]
             if not adapters:
