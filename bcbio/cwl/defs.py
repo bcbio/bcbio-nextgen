@@ -124,8 +124,7 @@ def _variant_hla(checkpoints):
              [["hla", "fastq"],
               ["config", "algorithm", "hlacaller"]],
                [cwlout("hla_rec", "record")],
-               "bcbio-vc",
-               unlist=[["config", "algorithm", "hlacaller"]], cores=1, no_files=True),
+               "bcbio-vc", cores=1, no_files=True),
            s("call_hla", "multi-parallel",
              [["hla_rec"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
@@ -272,18 +271,20 @@ def variant(samples):
     checkpoints = _variant_checkpoints(samples)
     if checkpoints["align"]:
         align_wf = _alignment(checkpoints)
-        align = [s("alignment_to_rec", "multi-combined",
-                   [["files"], ["analysis"],
-                    ["config", "algorithm", "align_split_size"],
-                    ["reference", "fasta", "base"],
-                    ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
-                    ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
-                    ["reference", "aligner", "indexes"],
-                    ["config", "algorithm", "aligner"],
-                    ["config", "algorithm", "trim_reads"],
-                    ["config", "algorithm", "adapters"],
-                    ["config", "algorithm", "bam_clean"],
-                    ["config", "algorithm", "mark_duplicates"]],
+        alignin = [["files"], ["analysis"],
+                   ["config", "algorithm", "align_split_size"],
+                   ["reference", "fasta", "base"],
+                   ["rgnames", "pl"], ["rgnames", "sample"], ["rgnames", "pu"],
+                   ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
+                   ["reference", "aligner", "indexes"],
+                   ["config", "algorithm", "aligner"],
+                   ["config", "algorithm", "trim_reads"],
+                   ["config", "algorithm", "adapters"],
+                   ["config", "algorithm", "bam_clean"],
+                   ["config", "algorithm", "mark_duplicates"]]
+        if checkpoints["hla"]:
+            alignin.append(["config", "algorithm", "hlacaller"])
+        align = [s("alignment_to_rec", "multi-combined", alignin,
                    [cwlout("alignment_rec", "record")],
                    "bcbio-vc",
                    disk={"files": 1.5}, cores=1, no_files=True),
