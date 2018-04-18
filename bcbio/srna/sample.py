@@ -255,7 +255,7 @@ def _mirtop(input_fn, sps, db, out_dir, config):
     if not file_exists(hairpin) or not file_exists(gtf):
         logger.warning("%s or %s are not installed. Skipping." % (hairpin, gtf))
         return None
-    out_fn = "%s.gff" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    out_fn = "%s.gtf" % utils.splitext_plus(os.path.basename(input_fn))[0]
     export = _get_env()
     cmd = ("{export} mirtop gff  --sps {sps} --hairpin {hairpin} "
            "--gtf {gtf} --format seqbuster -o {out_tx} {input_fn}")
