@@ -30,8 +30,9 @@ def run(data):
             if utils.file_exists(hla_fq):
                 hlas.append((hla_type, hla_fq))
     if len(hlas) > 0:
-        hla_dir = os.path.dirname(os.path.commonprefix([xs[1] for xs in hlas]))
-        out_dir = os.path.join(hla_dir, "OptiType-HLA-A_B_C")
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
+                                                  dd.get_sample_name(data), "hla",
+                                                  "OptiType-HLA-A_B_C"))
         if len(hlas) == len(SUPPORTED_HLAS):
             hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
             if utils.file_exists(hla_fq):
@@ -40,7 +41,7 @@ def run(data):
                     out_file = out_file[0]
                 else:
                     out_file = _call_hla(hla_fq, out_dir, data)
-                out_file = _prepare_calls(out_file, hla_dir, data)
+                out_file = _prepare_calls(out_file, os.path.dirname(out_dir), data)
                 data["hla"].update({"call_file": out_file,
                                     "hlacaller": "optitype"})
     return data
@@ -57,11 +58,11 @@ def combine_hla_fqs(hlas, out_file, data):
                             shutil.copyfileobj(in_handle, out_handle)
     return out_file
 
-def _prepare_calls(result_file, hla_dir, data):
+def _prepare_calls(result_file, out_dir, data):
     """Write summary file of results of HLA typing by allele.
     """
     sample = dd.get_sample_name(data)
-    out_file = os.path.join(hla_dir, "%s-optitype.csv" % (sample))
+    out_file = os.path.join(out_dir, "%s-optitype.csv" % (sample))
     if not utils.file_uptodate(out_file, result_file):
         hla_truth = bwakit.get_hla_truthset(data)
         with file_transaction(data, out_file) as tx_out_file:
@@ -102,7 +103,7 @@ def _parse_result_file(result_file):
         return hits
 
 def _call_hla(hla_fq, out_dir, data):
-    """Run OptiType HLA calling for a specific
+    """Run OptiType HLA calling for a specific fastq input.
     """
     bin_dir = os.path.dirname(os.path.realpath(sys.executable))
     with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
@@ -124,6 +125,7 @@ def _call_hla(hla_fq, out_dir, data):
     out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
     assert len(out_file) == 1, "Expected one result file for OptiType, found %s" % out_file
     return out_file[0]
+
 
 CONFIG_TMPL = """
 [mapping]
