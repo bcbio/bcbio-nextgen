@@ -53,7 +53,7 @@ def trim_srna_sample(data):
 
     adapter = dd.get_adapters(data)
     is_4n = any([a == "4N" for a in adapter])
-    adapter = [a for a in adapter if re.compile("^([ATGC]+)$").match(a)]
+    adapter = [a for a in adapter if re.compile("^([NATGC]+)$").match(a)]
     if adapter and not trim_reads:
         trim_reads = True
         logger.info("Adapter is set up in config file, but trim_reads is not true."
@@ -65,6 +65,8 @@ def trim_srna_sample(data):
     times = "" if not trim_reads or len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
+        if any([a for a in adapters if re.compile("^N+$").match(a)]):
+            adapter_cmd = "-N %s" % adapter_cmd
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         atropos = _get_atropos()
