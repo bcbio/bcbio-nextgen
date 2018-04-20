@@ -484,6 +484,7 @@ def _variant_sv(checkpoints):
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
                 ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
+                ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
                 ["sv_coverage_rec"]],
                [cwlout("sv_batch_rec", "record")],
                "bcbio-vc",

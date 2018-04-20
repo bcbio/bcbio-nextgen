@@ -184,6 +184,7 @@ def detect_sv(items, all_items=None, stage="standard"):
     """Top level parallel target for examining structural variation.
     """
     items = [utils.to_single_data(x) for x in items]
+    items = cwlutils.unpack_tarballs(items, items[0])
     svcaller = items[0]["config"]["algorithm"].get("svcaller")
     caller_fn = _get_callers(items, stage, special_cases=True).get(svcaller)
     out = []
