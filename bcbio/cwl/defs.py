@@ -90,7 +90,8 @@ def _alignment(checkpoints):
                        fields=[cwlout(["files"], ["null", {"type": "array", "items": "File"}], [".gbi"]),
                                cwlout(["config", "algorithm", "quality_format"], ["string", "null"]),
                                cwlout(["align_split"], ["string", "null"])])],
-               "bcbio-vc", ["grabix", "htslib", "biobambam", "atropos;env=python3"],
+               "bcbio-vc", ["grabix", "htslib", "biobambam", "atropos;env=python3",
+                            "optitype", "razers3=3.5.0"],  # Includes HLA callers for general docker inclusion
                disk={"files": 1.5}),
              s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"], ["process_alignment_rec"]],
