@@ -73,8 +73,8 @@ def run_align(*data):
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
     for sample in data:
-        sample[0]["align_bam"] = sample[0]["clean_fastq"]
-        sample[0]["work_bam"] = new_bam_file
+        # sample[0]["align_bam"] = sample[0]["clean_fastq"]
+        sample[0]["cluster_bam"] = new_bam_file
 
     if "mirdeep2" in tools:
         novel_db = mirdeep.run(data)
@@ -90,11 +90,12 @@ def run_cluster(*data):
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
-    bam_file = data[0][0]["work_bam"]
+    bam_file = data[0][0]["cluster_bam"]
     if "seqcluster" in tools:
+        gtf_file = dd.get_transcriptome_gtf(sample) if dd.get_transcriptome_gtf(sample) else dd.get_srna_gtf_file(sample)
         sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"],
                                         out_dir, dd.get_ref_file(sample),
-                                        dd.get_srna_gtf_file(sample))
+                                        gtf_file)
         sample["report"] = _report(sample, dd.get_ref_file(sample))
 
     if "mirge" in tools:

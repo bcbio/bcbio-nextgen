@@ -322,6 +322,7 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("seqcluster_prepare", [samples])
         with profile.report("alignment", dirs):
             samples = run_parallel("srna_alignment", [samples])
+            samples = run_parallel("process_alignment", samples)
 
     with prun.start(_wres(parallel, ["picard", "miraligner"]),
                     samples, config, dirs, "annotation") as run_parallel:

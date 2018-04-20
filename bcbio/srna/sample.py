@@ -45,6 +45,7 @@ def trim_srna_sample(data):
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
     if utils.file_exists(out_file):
+        data["files"][0] = out_file
         data["clean_fastq"] = out_file
         data["collapse"] = _collapse(data["clean_fastq"])
         data["size_stats"] = _summary(data['collapse'])
@@ -97,6 +98,7 @@ def trim_srna_sample(data):
             logger.info("No adapter founds in %s, this is an issue related"
                         " to no small RNA enrichment in your sample." % names)
         symlink_plus(in_file, out_file)
+    data["files"][0] = out_file
     data["clean_fastq"] = out_file
     data["collapse"] = _collapse(data["clean_fastq"])
     data["size_stats"] = _summary(data['collapse'])

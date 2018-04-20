@@ -57,9 +57,7 @@ def pipeline_summary(data):
     """
     data = utils.to_single_data(data)
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    if data["analysis"].lower().startswith("smallrna-seq"):
-        work_bam = data["clean_fastq"]
-    elif not work_bam or not work_bam.endswith(".bam"):
+    if not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
     if dd.get_ref_file(data):
         if work_bam or (tz.get_in(["config", "algorithm", "kraken"], data)):  # kraken doesn't need bam
@@ -79,12 +77,15 @@ def get_qc_tools(data):
         return dd.get_algorithm_qc(data)
     analysis = data["analysis"].lower()
     to_run = []
+    to_run.append("samtools")
+    if tz.get_in(["config", "algorithm", "kraken"], data):
+        to_run.append("kraken")
     if "fastqc" not in dd.get_tools_off(data):
         to_run.append("fastqc")
     if any([tool in dd.get_tools_on(data)
             for tool in ["qualimap", "qualimap_full"]]):
         to_run.append("qualimap")
-    if analysis.startswith("rna-seq"):
+    if analysis.startswith("rna-seq") or analysis == "smallrna-seq":
         if "qualimap" not in dd.get_tools_off(data):
             if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
                 to_run.append("qualimap_rnaseq")
@@ -93,10 +94,6 @@ def get_qc_tools(data):
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
-    if not analysis.startswith("smallrna-seq"):
-        to_run.append("samtools")
-        if tz.get_in(["config", "algorithm", "kraken"], data):
-            to_run.append("kraken")
     if analysis.startswith(("standard", "variant", "variant2")):
         to_run += ["qsignature", "coverage", "variants", "picard"]
         if peddy.is_human(data):
