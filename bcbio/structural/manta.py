@@ -109,7 +109,7 @@ def _prep_config(items, paired, work_dir):
 def _prep_nosmallindel_config(config_script, work_dir):
     """Create manta INI file without calling of small indels.
     """
-    new_min_size = 100
+    new_min_size = 250
     in_file = config_script + ".ini"
     out_file = os.path.join(work_dir, os.path.basename(in_file))
     with open(in_file) as in_handle:
