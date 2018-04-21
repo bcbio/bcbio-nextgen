@@ -91,7 +91,7 @@ def _alignment(checkpoints):
                                cwlout(["config", "algorithm", "quality_format"], ["string", "null"]),
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam", "atropos;env=python3",
-                            "optitype", "razers3=3.5.0"],  # Includes HLA callers for general docker inclusion
+                            "optitype", "razers3=3.5.0", "coincbc"],  # HLA deps for general docker inclusion
                disk={"files": 1.5}),
              s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"], ["process_alignment_rec"]],
@@ -130,7 +130,7 @@ def _variant_hla(checkpoints):
              [["hla_rec"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
               cwlout(["hla", "call_file"], ["File", "null"])],
-             "bcbio-vc", ["optitype", "razers3=3.5.0"])]
+             "bcbio-vc", ["optitype", "razers3=3.5.0", "coincbc"])]
     return hla, []
 
 def _variant_vc(checkpoints):
