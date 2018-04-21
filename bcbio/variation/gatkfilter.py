@@ -39,10 +39,12 @@ def run(call_file, ref_file, vrn_files, data):
 def _cnn_filter(in_file, vrn_files, data):
     """Perform CNN filtering on input VCF using pre-trained models.
     """
-    score_file = _cnn_score_variants(in_file, data)
-    return _cnn_tranch_filtering(score_file, vrn_files, data)
+    #tensor_type = "reference"  # 1D, reference sequence
+    tensor_type = "read_tensor"  # 2D, reads, flags, mapping quality
+    score_file = _cnn_score_variants(in_file, tensor_type, data)
+    return _cnn_tranch_filtering(score_file, vrn_files, tensor_type, data)
 
-def _cnn_tranch_filtering(in_file, vrn_files, data):
+def _cnn_tranch_filtering(in_file, vrn_files, tensor_type, data):
     """Filter CNN scored VCFs in tranches using standard SNP and Indel truth sets.
     """
     out_file = "%s-filter.vcf.gz" % utils.splitext_plus(in_file)[0]
@@ -55,13 +57,17 @@ def _cnn_tranch_filtering(in_file, vrn_files, data):
         with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "FilterVariantTranches", "--variant", in_file,
                       "--output", tx_out_file,
-                      "--info-key", "CNN_2D", "--tranche", "99",
                       "--snp-truth-vcf", vrn_files["train_hapmap"],
                       "--indel-truth-vcf", vrn_files["train_indels"]]
+            if tensor_type == "reference":
+                params += ["--info-key", "CNN_1D", "--tranche", "99"]
+            else:
+                assert tensor_type == "read_tensor"
+                params += ["--info-key", "CNN_2D", "--tranche", "99"]
             runner.run_gatk(params)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _cnn_score_variants(in_file, data):
+def _cnn_score_variants(in_file, tensor_type, data):
     """Score variants with pre-trained CNN models.
     """
     out_file = "%s-cnnscore.vcf.gz" % utils.splitext_plus(in_file)[0]
@@ -72,8 +78,7 @@ def _cnn_score_variants(in_file, data):
         with file_transaction(data, out_file) as tx_out_file:
             params = ["-T", "CNNScoreVariants", "--variant", in_file, "--reference", dd.get_ref_file(data),
                     "--output", tx_out_file, "--input", dd.get_align_bam(data)]
-            # 2D tensor
-            params += ["--tensor-type", "read_tensor"]
+            params += ["--tensor-type", tensor_type]
             runner.run_gatk(params)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
