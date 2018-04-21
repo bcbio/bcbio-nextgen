@@ -45,7 +45,8 @@ def add_required_resources(resources):
     """
     required = [["variation", "cosmic"], ["variation", "dbsnp"],
                 ["variation", "lcr"], ["variation", "polyx"],
-                ["variation", "encode_blacklist"]]
+                ["variation", "encode_blacklist"],
+                ["variation", "train_hapmap"], ["variation", "train_indels"]]
     for key in required:
         if not tz.get_in(key, resources):
             resources = tz.update_in(resources, key, lambda x: None)
