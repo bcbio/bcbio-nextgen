@@ -1,5 +1,6 @@
 """Germline and somatic calling with Strelka2: https://github.com/illumina/strelka
 """
+import collections
 import os
 import sys
 import numpy as np
@@ -8,6 +9,7 @@ from cyvcf2 import VCF, Writer
 from bcbio import utils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -47,36 +49,43 @@ def get_region_bed(region, items, out_file, want_gzip=True):
         out_file += ".gz"
     return out_file
 
-def coverage_interval_from_bed(bed_file):
+def coverage_interval_from_bed(bed_file, per_chrom=True):
     """Calculate a coverage interval for the current region BED.
 
     This helps correctly work with cases of uneven coverage across an analysis
     genome. strelka2 and other model based callers have flags for targeted and non
     which depend on the local context.
+
+    Checks coverage per chromosome, avoiding non-standard chromosomes, if per_chrom is set.
+    Otherwise does a global check over all regions. The global check performs better for
+    strelka2 but not for DeepVariant:
+
+    https://github.com/bcbio/bcbio_validations/tree/master/deepvariant#deepvariant-v06-release-strelka2-stratification-and-initial-gatk-cnn
     """
-    total_bases = 0
-    bed_bases = 0
-    cur_chr = None
-    chr_start = None
-    last_end = None
+    total_starts = {}
+    total_ends = {}
+    bed_bases = collections.defaultdict(int)
     with utils.open_gzipsafe(bed_file) as in_handle:
         for line in in_handle:
             parts = line.split()
             if len(parts) >= 3:
                 chrom, start, end = parts[:3]
-                start = int(start)
-                end = int(end)
-                bed_bases += (end - start)
-                if chrom != cur_chr:
-                    if cur_chr and last_end and cur_start is not None:
-                        total_bases += (last_end - cur_start)
-                    cur_chr = chrom
-                    cur_start = int(start)
-                last_end = end
-        if cur_chr and last_end and cur_start is not None:
-            total_bases += (last_end - cur_start)
+                if chromhacks.is_autosomal(chrom):
+                    start = int(start)
+                    end = int(end)
+                    bed_bases[chrom] += (end - start)
+                    total_starts[chrom] = min([start, total_starts.get(chrom, sys.maxint)])
+                    total_ends[chrom] = max([end, total_ends.get(chrom, 0)])
+    # can check per chromosome -- any one chromosome with larger, or over all regions
+    if per_chrom:
+        freqs = [float(bed_bases[c]) / float(total_ends[c] - total_starts[c]) for c in sorted(bed_bases.keys())]
+    elif len(bed_bases) > 0:
+        freqs = [sum([bed_bases[c] for c in sorted(bed_bases.keys())]) /
+                 sum([float(total_ends[c] - total_starts[c]) for c in sorted(bed_bases.keys())])]
+    else:
+        freqs = []
     # Should be importing GENOME_COV_THRESH but get circular imports
-    if float(bed_bases) / float(total_bases) >= 0.40:
+    if any([f >= 0.40 for f in freqs]):
         return "genome"
     else:
         return "targeted"
@@ -106,7 +115,7 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
             "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
             "--runDir=%s" % tx_work_dir]
     cmd += ["--bam=%s" % b for b in align_bams]
-    if coverage_interval_from_bed(cur_bed) == "targeted":
+    if coverage_interval_from_bed(cur_bed, per_chrom=False) == "targeted":
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
     return os.path.join(tx_work_dir, "runWorkflow.py")
@@ -131,7 +140,7 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
             "--callRegions=%s" % cur_bed,
             "--runDir=%s" % tx_work_dir,
             "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
-    if coverage_interval_from_bed(cur_bed) == "targeted":
+    if coverage_interval_from_bed(cur_bed, per_chrom=False) == "targeted":
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
     return os.path.join(tx_work_dir, "runWorkflow.py")
