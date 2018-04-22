@@ -2,6 +2,7 @@
 
 It exercises a full analysis pipeline on a smaller subset of data.
 """
+import glob
 import os
 import subprocess
 
@@ -292,3 +293,20 @@ def test_10_umi(install_test_files, data_dir):
               get_post_process_yaml(data_dir, workdir),
               os.path.join(data_dir, "run_info-umi.yaml")]
         subprocess.check_call(cl)
+
+@pytest.mark.hla
+def test_11_hla(install_test_files, data_dir):
+    """Test HLA typing with OptiType.
+    """
+    from bcbio.hla import optitype
+    hla_dir = os.path.join(data_dir, os.pardir, "100326_FC6107FAAXX", "hla")
+    with make_workdir() as workdir:
+        data = {"dirs": {"work": workdir},
+                "rgnames": {"sample": "test"},
+                "config": {},
+                "hla": {"fastq": glob.glob(os.path.join(hla_dir, "*"))}}
+        out = optitype.run(data)
+        with open(out["hla"]["call_file"]) as in_handle:
+            header = in_handle.readline().strip().split(",")
+            hla_a = dict(zip(header), in_handle.readline().strip().split(","))
+            assert hla_a["alleles"] == "HLA-A*11:01;HLA-A*24:02", hla_a

@@ -106,6 +106,7 @@ def _call_hla(hla_fq, out_dir, data):
     """Run OptiType HLA calling for a specific fastq input.
     """
     bin_dir = os.path.dirname(os.path.realpath(sys.executable))
+    out_dir = utils.safe_makedir(out_dir)
     with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
         config_file = os.path.join(tx_out_dir, "config.ini")
         with open(config_file, "w") as out_handle:
@@ -121,7 +122,8 @@ def _call_hla(hla_fq, out_dir, data):
         cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} "
                 "-i {hla_fq} -c {config_file}")
         do.run(cmd.format(**locals()), "HLA typing with OptiType")
-        shutil.move(tx_out_dir, out_dir)
+        for outf in os.listdir(tx_out_dir):
+            shutil.move(os.path.join(tx_out_dir, outf), os.path.join(out_dir, outf))
     out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
     assert len(out_file) == 1, "Expected one result file for OptiType, found %s" % out_file
     return out_file[0]
