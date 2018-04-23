@@ -19,7 +19,7 @@ def _get_main_and_json(directory):
     assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
     main_json = glob.glob(os.path.join(directory, "main-*-samples.json"))
     assert len(main_json) == 1, "Did not find main json in %s" % directory
-    project_name = os.path.basename(directory).replace("-workflow", "")
+    project_name = os.path.basename(directory).split("-workflow")[0]
     return main_cwl[0], main_json[0], project_name
 
 def _run_tool(cmd, use_container=True, work_dir=None, log_file=None):
@@ -131,6 +131,55 @@ def _run_bunny(args):
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
 
+def _run_cromwell(args):
+    """Run CWL with Cromwell.
+    """
+    main_file, json_file, project_name = _get_main_and_json(args.directory)
+    work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cromwell_work"))
+    if args.no_container:
+        _remove_bcbiovm_path()
+        no_docker_workflow = _create_no_docker_workflow(args.directory, work_dir)
+        main_file, json_file, project_name = _get_main_and_json(no_docker_workflow)
+    log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
+    cmd = ["cromwell", "run", "--type", "CWL"]
+    # Avoid overscheduling jobs for local runs
+    # Generalize these settings when providing distributed run support
+    cmd += ["-Dbackend.providers.Local.config.concurrent-job-limit=1", "-Dload-control.memory-threshold-in-mb=1"]
+    cmd += ["--inputs", json_file, main_file]
+    with utils.chdir(work_dir):
+        _run_tool(cmd, not args.no_container, work_dir, log_file)
+
+def _create_no_docker_workflow(orig_dir, work_dir):
+    """Create workflow copy, removing any docker references.
+    """
+    no_docker_workflow = utils.safe_makedir(os.path.join(work_dir,
+                                                            "%s-nodocker" % os.path.basename(orig_dir)))
+    for fname in (glob.glob(os.path.join(no_docker_workflow, "*.cwl")) +
+                  glob.glob(os.path.join(no_docker_workflow, "*.json")) +
+                  glob.glob(os.path.join(no_docker_workflow, "steps", "*.cwl"))):
+        if utils.file_exists(fname):
+            os.remove(fname)
+    for fname in glob.glob(os.path.join(orig_dir, "*.cwl")):
+        shutil.copy(fname, os.path.join(no_docker_workflow, os.path.basename(fname)))
+    # Fix relative locations since we're nesting
+    for fname in glob.glob(os.path.join(orig_dir, "*.json")):
+        with open(fname) as in_handle:
+            with open(os.path.join(no_docker_workflow, os.path.basename(fname)), "w") as out_handle:
+                for line in in_handle:
+                    line = line.replace("../../", "../../../")
+                    out_handle.write(line)
+    # Remove Docker references
+    no_docker_stepdir = utils.safe_makedir(os.path.join(no_docker_workflow, "steps"))
+    for fname in glob.glob(os.path.join(orig_dir, "steps", "*.cwl")):
+        with open(fname) as in_handle:
+            with open(os.path.join(no_docker_stepdir, os.path.basename(fname)), "w") as out_handle:
+                for line in in_handle:
+                    if not (line.find("DockerRequirement") >= 0 or
+                            line.find("dockerImageId") >= 0 or
+                            line.find("dockerPull") >= 0):
+                        out_handle.write(line)
+    return no_docker_workflow
+
 def _run_funnel(args):
     """Run funnel TES server with rabix bunny for CWL.
     """
@@ -169,6 +218,7 @@ def _run_funnel(args):
         funnelp.kill()
 
 _TOOLS = {"cwltool": _run_cwltool,
+          "cromwell": _run_cromwell,
           "arvados": _run_arvados,
           "toil": _run_toil,
           "bunny": _run_bunny,
