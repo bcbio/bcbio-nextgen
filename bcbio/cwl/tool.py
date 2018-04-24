@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 from bcbio import utils
+from bcbio.cwl import hpc
 
 def _get_main_and_json(directory):
     """Retrieve the main CWL and sample JSON files from a bcbio generated directory.
@@ -141,10 +142,8 @@ def _run_cromwell(args):
         no_docker_workflow = _create_no_docker_workflow(args.directory, work_dir)
         main_file, json_file, project_name = _get_main_and_json(no_docker_workflow)
     log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
-    cmd = ["cromwell", "run", "--type", "CWL"]
-    # Avoid overscheduling jobs for local runs
-    # Generalize these settings when providing distributed run support
-    cmd += ["-Dbackend.providers.Local.config.concurrent-job-limit=1", "-Dload-control.memory-threshold-in-mb=1"]
+    cmd = ["cromwell", "run", "--type", "CWL", "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
+    cmd += hpc.args_to_cromwell_cl(args)
     cmd += ["--inputs", json_file, main_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
