@@ -72,8 +72,9 @@ def trim_srna_sample(data):
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
         atropos = _get_atropos()
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
-        if is_4n:
-            options = "-u 4 -u -4 %s" % options
+        if options.strip() == "-u 4 -u -4":
+            options = ""
+            is_4n = "4N"
         cores = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
         if " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", "")):
             raise ValueError("Atropos is now used, but cutadapt options found in YAML file."
@@ -85,7 +86,8 @@ def trim_srna_sample(data):
                 if utils.file_exists(log_out):
                     content = open(log_out).read().replace(out_short_file, names)
                     open(log_out, 'w').write(content)
-                if options:
+                if is_4n:
+                    options = "-u 4 -u -4"
                     in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
                     cmd = "{atropos} {cores} {options} -se {in_file} -o {tx_out_file} -m 17"
@@ -175,7 +177,7 @@ def _cmd_atropos():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{atropos} {cores} {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{atropos} {cores} {times} {options} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):

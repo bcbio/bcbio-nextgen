@@ -1,5 +1,7 @@
 ## 1.1.0 (in progress)
 
+- Adding BAM file for each sample in small-RNAseq pipeline, samtools
+  and qualimap qc metrics to multiqc report.
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models

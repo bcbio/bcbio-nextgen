@@ -949,6 +949,7 @@ smallRNA sequencing
 - ``species`` 3 letters code to indicate the species in mirbase classification (i.e. hsa for human).
 - ``aligner`` Currently STAR is the only one tested although bowtie can be used as well.
 - ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2, mirge (read :ref:`smallRNA-seq` to learn how to set up bcbio to run mirge)
+- ``transcriptome_gtf`` An optional GTF file of the transcriptome to for seqcluster.
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 
 ChIP sequencing
