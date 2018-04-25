@@ -25,13 +25,13 @@ def _args_to_cromwell(args):
     """
     scheduler_map = {"sge": "SGE", "slurm": "SLURM", "lsf": "LSF"}
     default_config = {"slurm": {"timelimit": "1-00:00"}, "sge": {}, "lsf": {}}
+    cl = ["-Dload-control.memory-threshold-in-mb=1"]
     # HPC scheduling
     if args.scheduler:
         if args.scheduler not in scheduler_map:
             raise ValueError("Scheduler not yet supported by Cromwell: %s" % args.scheduler)
         if not args.queue:
             raise ValueError("Need to set queue (-q) for running with an HPC scheduler")
-        cl = []
         config = default_config[args.scheduler]
         cl.append("-Dbackend.default=%s" % scheduler_map[args.scheduler])
         config["queue"] = args.queue
@@ -45,8 +45,7 @@ def _args_to_cromwell(args):
     # Avoid overscheduling jobs for local runs by limiting concurrent jobs
     # Longer term would like to keep these within defined core window
     else:
-        return ["-Dbackend.providers.Local.config.concurrent-job-limit=1",
-                "-Dload-control.memory-threshold-in-mb=1"], {}, None
+        return ["-Dbackend.providers.Local.config.concurrent-job-limit=1"] + cl, {}, None
 
 CROMWELL_CONFIG = """
 include required(classpath("application"))
@@ -64,14 +63,14 @@ HPC_CONFIGS = {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
         runtime-attributes = \"\"\"
-        Int cores = 1
+        Int cpu = 1
         Int memory_mb = 2048
         String timelimit = "%(timelimit)s"
         String queue = "%(queue)s"
         \"\"\"
         submit = \"\"\"
             sbatch -J ${job_name} -D ${cwd} -o ${out} -e ${err} -t ${timelimit} -p ${queue} \
-            ${"--cpus-per-task=" + cores} \
+            ${"--cpus-per-task=" + cpu} \
             --mem=${memory_mb} \
             --wrap "/usr/bin/env bash ${script}"
         \"\"\"
