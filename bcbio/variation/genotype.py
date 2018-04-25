@@ -259,8 +259,11 @@ def batch_for_variantcall(samples):
 
 def _handle_precalled(data):
     """Copy in external pre-called variants fed into analysis.
+
+    Symlinks for non-CWL runs where we want to ensure VCF present
+    in a local directory.
     """
-    if data.get("vrn_file"):
+    if data.get("vrn_file") and not cwlutils.is_cwl_run(data):
         vrn_file = data["vrn_file"]
         if isinstance(vrn_file, (list, tuple)):
             assert len(vrn_file) == 1
