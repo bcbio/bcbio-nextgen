@@ -29,6 +29,9 @@ def run(data):
     species = SPS.get(sps, "")
     if not species:
         raise ValueError("species not supported (hsa, mmu, rno, dre, cel, dme): %s" % sps)
+    if not lib:
+        raise ValueError("-lib option is not set up in resources for mirge tool."
+                         " Read above warnings lines.")
 
     if not utils.file_exists(out_dir):
         with tx_tmpdir() as tmp_dir:
@@ -70,6 +73,8 @@ def _find_lib(data):
     options = " ".join(data.get('resources', {}).get('mirge', {}).get("options", ""))
     if options.find("-lib") > -1 and utils.file_exists(options.split()[1]):
         return options
-    if not libs:
+    if not options:
         logger.warning("miRge libraries not found. Follow these instructions to install them:")
-    return libs
+        logger.warning("https://github.com/mhalushka/miRge#download-libraries")
+        logger.warning("Then, pass -lib LIB_PATH with resourcces:mirge:options:[...]")
+        logger.warning("More information: https://bcbio-nextgen.readthedocs.io/en/latest/contents/pipelines.html#smallrna-seq")
