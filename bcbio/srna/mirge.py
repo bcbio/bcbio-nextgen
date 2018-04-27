@@ -56,8 +56,8 @@ def _create_sample_file(data, out_dir):
     """from data list all the fastq files in a file"""
     sample_file = os.path.join(out_dir, "sample_file.txt")
     with open(sample_file, 'w') as outh:
-        for sample in data[0]:
-            print >>outh, sample["clean_fastq"]
+        for sample in data:
+            print >>outh, sample[0]["clean_fastq"]
     return sample_file
 
 def _find_bowtie(data):
