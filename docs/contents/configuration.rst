@@ -1063,6 +1063,8 @@ lists with multiple options:
     variants is performed but all high quality variants pass.
   - ``upload_alignment`` turns off final upload of large alignment files.
   - ``pbgzip`` turns off use of bgzip with multiple threads.
+  - ``coverage_qc`` turns off calculation of coverage statistics with
+    samtools-stats and picard.
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
