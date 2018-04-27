@@ -7,6 +7,7 @@
 - DeepVariant and Strelka2 support for customized targeted/genome calling models
   per region to handle heterogeneous inputs.
 - STAR: enable passing custom options for alignment.
+- Add `tools_off: [coverage_qc]` option to skip calculating coverage stats (samtools-stats and picard).
 
 ## 1.0.9 (10 April 2018)
 

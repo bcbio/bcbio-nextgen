@@ -77,7 +77,6 @@ def get_qc_tools(data):
         return dd.get_algorithm_qc(data)
     analysis = data["analysis"].lower()
     to_run = []
-    to_run.append("samtools")
     if tz.get_in(["config", "algorithm", "kraken"], data):
         to_run.append("kraken")
     if "fastqc" not in dd.get_tools_off(data):
@@ -94,8 +93,12 @@ def get_qc_tools(data):
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
+    if "coverage_qc" not in dd.get_tools_off(data):
+        to_run.append("samtools")
     if analysis.startswith(("standard", "variant", "variant2")):
-        to_run += ["qsignature", "coverage", "variants", "picard"]
+        if "coverage_qc" not in dd.get_tools_off(data):
+            to_run += ["coverage", "picard"]
+        to_run += ["qsignature", "variants"]
         if peddy.is_human(data):
             to_run += ["peddy"]
         if vcfutils.get_paired([data]):
