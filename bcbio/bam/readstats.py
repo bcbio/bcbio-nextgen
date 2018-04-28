@@ -1,7 +1,9 @@
 """Calculation of mapped reads by BAM counting, currently implemented with samtools.
 """
+import contextlib
 import json
 import os
+import time
 import toolz as tz
 
 from bcbio import bam, utils
@@ -41,8 +43,7 @@ def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target
 
     Uses a global cache file to store counts, making it possible to pass this single
     file for CWL runs. For parallel processes it can have concurrent append writes,
-    with the hopes this will avoid race conditions. Need to revisit with some kind
-    of global file locking if it becomes an issue.
+    so we have a simple file locking mechanism to avoid this.
     """
     # Flag explainer https://broadinstitute.github.io/picard/explain-flags.html
     callable_flags = ["not unmapped", "not mate_is_unmapped", "not secondary_alignment",
@@ -95,7 +96,26 @@ def number_of_mapped_reads(data, bam_file, keep_dups=True, bed_file=None, target
         for line in in_handle:
             count += int(line.rstrip().split()[-1])
 
-    # Update cache
-    with open(cache_file, "a") as out_handle:
-        out_handle.write("%s\t%s\n" % (key, count))
+    with _simple_lock(cache_file):
+        with open(cache_file, "a") as out_handle:
+            out_handle.write("%s\t%s\n" % (key, count))
     return count
+
+@contextlib.contextmanager
+def _simple_lock(f):
+    """Simple file lock, times out after 20 second assuming lock is stale
+    """
+    lock_file = f + ".lock"
+    timeout = 20
+    curtime = 0
+    interval = 2
+    while os.path.exists(lock_file):
+        time.sleep(interval)
+        curtime += interval
+        if curtime > timeout:
+            os.remove(lock_file)
+    with open(lock_file, "w") as out_handle:
+        out_handle.write("locked")
+    yield
+    if os.path.exists(lock_file):
+        os.remove(lock_file)
