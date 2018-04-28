@@ -84,7 +84,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
                 raise
     return {"caller": "bubbletree",
             "report": freqs_out,
-            "plots": {"bubble": bubbleplot_out, "track": trackplot_out}}
+            "plot": {"bubble": bubbleplot_out, "track": trackplot_out}}
 
 def _allowed_bubbletree_errorstates(msg):
     allowed = ["Error in p[i, ] : subscript out of bounds",

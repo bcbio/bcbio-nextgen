@@ -57,9 +57,11 @@ def _finalize_sv(solution_file, data):
     out["ploidy"] = solution["ploidy"]
     out["cellular_prevalence"] = [x.strip() for x in solution["cellPrev"].split(",")]
     base = os.path.basename(solution["path"])
-    out["plot"] = [solution["path"] + ext for ext in [".Rplots.pdf", "/%s_CF.pdf" % base, 
-                                                      "/%s_CNA.pdf" % base, "/%s_LOH.pdf" % base]
-                   if os.path.exists(solution["path"] + ext)]
+    out["plot"] = dict([(n, solution["path"]) + ext for (n, ext) in [("rplots", ".Rplots.pdf"),
+                                                                     ("cf", "/%s_CF.pdf" % base),
+                                                                     ("cna", "/%s_CNA.pdf" % base),
+                                                                     ("loh", "/%s_LOH.pdf" % base)]
+                        if os.path.exists(solution["path"] + ext)])
     out["subclones"] = "%s.segs.txt" % solution["path"]
     out["vrn_file"] = _segs_to_vcf(out["subclones"], data)
     return out
