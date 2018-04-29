@@ -9,7 +9,8 @@ def create_cromwell_config(args, work_dir):
     """
     out_file = os.path.join(work_dir, "bcbio-cromwell.conf")
     cl_args, conf_args, scheduler = _args_to_cromwell(args)
-    main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else ""}
+    main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
+                   "work_dir": work_dir}
     with open(out_file, "w") as out_handle:
         out_handle.write(CROMWELL_CONFIG % main_config)
     return out_file
@@ -49,6 +50,22 @@ def _args_to_cromwell(args):
 
 CROMWELL_CONFIG = """
 include required(classpath("application"))
+
+system {
+  workflow-restart = true
+}
+call-caching {
+  enabled = true
+}
+
+database {
+  profile = "slick.jdbc.HsqldbProfile$"
+  db {
+    driver = "org.hsqldb.jdbcDriver"
+    url = "jdbc:hsqldb:file:%(work_dir)s/persist/metadata;shutdown=false;hsqldb.tx=mvcc"
+    connectionTimeout = 3000
+  }
+}
 
 backend {
   providers {

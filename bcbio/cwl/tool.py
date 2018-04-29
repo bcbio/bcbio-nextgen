@@ -153,30 +153,31 @@ def _create_no_docker_workflow(orig_dir, work_dir):
     """
     no_docker_workflow = utils.safe_makedir(os.path.join(work_dir,
                                                             "%s-nodocker" % os.path.basename(orig_dir)))
-    for fname in (glob.glob(os.path.join(no_docker_workflow, "*.cwl")) +
-                  glob.glob(os.path.join(no_docker_workflow, "*.json")) +
-                  glob.glob(os.path.join(no_docker_workflow, "steps", "*.cwl"))):
-        if utils.file_exists(fname):
-            os.remove(fname)
     for fname in glob.glob(os.path.join(orig_dir, "*.cwl")):
-        shutil.copy(fname, os.path.join(no_docker_workflow, os.path.basename(fname)))
+        no_docker_fname = os.path.join(no_docker_workflow, os.path.basename(fname))
+        if not utils.file_uptodate(no_docker_fname, fname):
+            shutil.copy(fname, no_docker_fname)
     # Fix relative locations since we're nesting
     for fname in glob.glob(os.path.join(orig_dir, "*.json")):
-        with open(fname) as in_handle:
-            with open(os.path.join(no_docker_workflow, os.path.basename(fname)), "w") as out_handle:
-                for line in in_handle:
-                    line = line.replace("../../", "../../../")
-                    out_handle.write(line)
+        no_docker_fname = os.path.join(no_docker_workflow, os.path.basename(fname))
+        if not utils.file_uptodate(no_docker_fname, fname):
+            with open(fname) as in_handle:
+                with open(no_docker_fname, "w") as out_handle:
+                    for line in in_handle:
+                        line = line.replace("../../", "../../../")
+                        out_handle.write(line)
     # Remove Docker references
     no_docker_stepdir = utils.safe_makedir(os.path.join(no_docker_workflow, "steps"))
     for fname in glob.glob(os.path.join(orig_dir, "steps", "*.cwl")):
-        with open(fname) as in_handle:
-            with open(os.path.join(no_docker_stepdir, os.path.basename(fname)), "w") as out_handle:
-                for line in in_handle:
-                    if not (line.find("DockerRequirement") >= 0 or
-                            line.find("dockerImageId") >= 0 or
-                            line.find("dockerPull") >= 0):
-                        out_handle.write(line)
+        no_docker_fname = os.path.join(no_docker_stepdir, os.path.basename(fname))
+        if not utils.file_uptodate(no_docker_fname, fname):
+            with open(fname) as in_handle:
+                with open(no_docker_fname, "w") as out_handle:
+                    for line in in_handle:
+                        if not (line.find("DockerRequirement") >= 0 or
+                                line.find("dockerImageId") >= 0 or
+                                line.find("dockerPull") >= 0):
+                            out_handle.write(line)
     return no_docker_workflow
 
 def _run_funnel(args):
