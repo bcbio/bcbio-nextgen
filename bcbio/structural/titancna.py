@@ -57,7 +57,7 @@ def _finalize_sv(solution_file, data):
     out["ploidy"] = solution["ploidy"]
     out["cellular_prevalence"] = [x.strip() for x in solution["cellPrev"].split(",")]
     base = os.path.basename(solution["path"])
-    out["plot"] = dict([(n, solution["path"]) + ext for (n, ext) in [("rplots", ".Rplots.pdf"),
+    out["plot"] = dict([(n, solution["path"] + ext) for (n, ext) in [("rplots", ".Rplots.pdf"),
                                                                      ("cf", "/%s_CF.pdf" % base),
                                                                      ("cna", "/%s_CNA.pdf" % base),
                                                                      ("loh", "/%s_LOH.pdf" % base)]
