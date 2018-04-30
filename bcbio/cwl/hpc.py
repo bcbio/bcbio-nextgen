@@ -25,22 +25,27 @@ def _args_to_cromwell(args):
     """Convert input arguments into cromwell inputs for config and command line.
     """
     scheduler_map = {"sge": "SGE", "slurm": "SLURM", "lsf": "LSF"}
-    default_config = {"slurm": {"timelimit": "1-00:00"}, "sge": {}, "lsf": {}}
+    default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
+                      "sge": {"memtype": "mem_type", "pename": "smp"},
+                      "lsf": {},
+                      "torque": {},
+                      "pbspro": {}}
+    prefixes = {("account", "slurm"): "-A "}
     cl = ["-Dload-control.memory-threshold-in-mb=1"]
     # HPC scheduling
     if args.scheduler:
-        if args.scheduler not in scheduler_map:
+        if args.scheduler not in default_config:
             raise ValueError("Scheduler not yet supported by Cromwell: %s" % args.scheduler)
         if not args.queue:
             raise ValueError("Need to set queue (-q) for running with an HPC scheduler")
         config = default_config[args.scheduler]
-        cl.append("-Dbackend.default=%s" % scheduler_map[args.scheduler])
+        cl.append("-Dbackend.default=%s" % args.scheduler.upper())
         config["queue"] = args.queue
         for r in args.resources:
             parts = r.split("=")
             if len(parts) == 2:
                 key, val = parts
-                config[key] = val
+                config[key] = prefixes.get((key, args.scheduler), "") + val
         return cl, config, args.scheduler
     # Local multicore runs
     # Avoid overscheduling jobs for local runs by limiting concurrent jobs
@@ -100,13 +105,13 @@ HPC_CONFIGS = {
         runtime-attributes = \"\"\"
         Int cpu = 1
         Int memory_mb = 2048
-        String timelimit = "%(timelimit)s"
         String queue = "%(queue)s"
+        String timelimit = "%(timelimit)s"
+        String account = "%(account)s"
         \"\"\"
         submit = \"\"\"
             sbatch -J ${job_name} -D ${cwd} -o ${out} -e ${err} -t ${timelimit} -p ${queue} \
-            ${"--cpus-per-task=" + cpu} \
-            --mem=${memory_mb} \
+            ${"--cpus-per-task=" + cpu} --mem=${memory_mb} ${account} \
             --wrap "/usr/bin/env bash ${script}"
         \"\"\"
         kill = "scancel ${job_id}"
@@ -114,6 +119,28 @@ HPC_CONFIGS = {
         job-id-regex = "Submitted batch job (\\\\d+).*"
       }
     }
-
+""",
+"sge": """
+    SGE {
+      actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+      config {
+        runtime-attributes = \"\"\"
+        Int cpu = 1
+        Int memory_mb = 2048
+        String queue = "%(queue)s"
+        String pename = "%(pename}s"
+        String memtype = "%(memtype)s"
+        \"\"\"
+        submit = \"\"\"
+        qsub -V -w w -j y -N ${job_name} -wd ${cwd} \
+        -o ${out} -e ${err} -q ${queue} \
+        -pe ${pename} ${cpu} ${"-l " + mem_type + "=" + memory_mb + "m"} \
+        /usr/bin/env bash ${script}
+        \"\"\"
+        kill = "qdel ${job_id}"
+        check-alive = "qstat -j ${job_id}"
+        job-id-regex = "(\\d+)"
+      }
+    }
 """
 }
