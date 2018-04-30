@@ -69,6 +69,24 @@ database {
 
 backend {
   providers {
+    Local {
+      config {
+        runtime-attributes = \"\"\"
+        String? docker
+        String? docker_user
+        Int? cpu
+        Int? memory_mb
+        Int? cpuMin
+        Int? cpuMax
+        Int? memoryMin
+        Int? memoryMax
+        String? outDirMin
+        String? outDirMax
+        String? tmpDirMin
+        String? tmpDirMax
+      \"\"\"
+      }
+    }
 %(hpc)s
   }
 }
