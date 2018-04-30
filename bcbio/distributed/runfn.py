@@ -112,7 +112,7 @@ def _cwlvar_to_wdl(var):
     elif isinstance(var, dict):
         assert var.get("class") == "File", var
         # XXX handle secondary files
-        return var["path"]
+        return var.get("path") or var["value"]
     else:
         return var
 
