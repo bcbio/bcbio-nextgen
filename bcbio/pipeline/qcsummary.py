@@ -183,11 +183,13 @@ def _organize_qc_files(program, qc_dir):
     if os.path.exists(qc_dir):
         out_files = []
         for fname in [os.path.join(qc_dir, x) for x in os.listdir(qc_dir)]:
-            if os.path.isfile(fname):
+            if os.path.isfile(fname) and not fname.endswith(".bcbiotmp"):
                 out_files.append(fname)
             elif os.path.isdir(fname) and not fname.endswith("tx"):
                 for root, dirs, files in os.walk(fname):
-                    out_files.extend([os.path.join(root, x) for x in files])
+                    for f in files:
+                        if os.path.isfile(fname) and not f.endswith(".bcbiotmp"):
+                            out_files.append(os.path.join(root, f))
         if len(out_files) > 0 and all([not f.endswith("-failed.log") for f in out_files]):
             if len(out_files) == 1:
                 base = out_files[0]
