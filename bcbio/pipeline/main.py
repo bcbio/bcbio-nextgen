@@ -329,7 +329,7 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("small RNA annotation", dirs):
             samples = run_parallel("srna_annotation", samples)
 
-    with prun.start(_wres(parallel, ["seqcluster"],
+    with prun.start(_wres(parallel, ["seqcluster", "mirge"],
                             ensure_mem={"seqcluster": 8}),
                     [samples[0]], config, dirs, "cluster") as run_parallel:
         with profile.report("cluster", dirs):
