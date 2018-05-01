@@ -29,8 +29,8 @@ def _args_to_cromwell(args):
                       "sge": {"memtype": "mem_type", "pename": "smp"},
                       "lsf": {},
                       "torque": {},
-                      "pbspro": {}}
-    prefixes = {("account", "slurm"): "-A "}
+                      "pbspro": {"walltime": "1-00:00", "account": ""}}
+    prefixes = {("account", "slurm"): "-A ", ("account", "pbspro"): "-A "}
     cl = ["-Dload-control.memory-threshold-in-mb=1"]
     # HPC scheduling
     if args.scheduler:
@@ -139,8 +139,32 @@ HPC_CONFIGS = {
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
-        job-id-regex = "(\\d+)"
+        job-id-regex = "(\\\\d+)"
       }
     }
+""",
+"pbspro": """
+    PBSPRO {
+      actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+      config {
+        runtime-attributes = \"\"\"
+        Int cpu = 1
+        Int memory_mb = 2048
+        String queue = "%(queue)s"
+        String account = "%(account)s"
+        String walltime = "%(walltime)s"
+        \"\"\"
+        submit = \"\"\"
+        qsub -V -N ${job_name} -W sandbox=${cwd} \
+        -o ${out} -e ${err} -q ${queue} \
+        -l select=1:ncpus=${cpu}:mem=${memory_mb}mb -l walltime=${walltime} \
+        /usr/bin/env bash ${script}
+        \"\"\"
+        kill = "qdel ${job_id}"
+        check-alive = "qstat -j ${job_id}"
+        job-id-regex = "(\\\\d+)"
+      }
+    }
+
 """
 }
