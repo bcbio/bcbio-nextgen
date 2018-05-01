@@ -357,7 +357,7 @@ def adjust_cores_to_mb_target(target_mb, mem_str, cores):
     else:
         return max(1, int(math.ceil(scale * cores)))
 
-def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
+def adjust_memory(val, magnitude, direction="increase", out_modifier="", maximum=None):
     """Adjust memory based on number of cores utilized.
     """
     modifier = val[-1:]
@@ -384,6 +384,14 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     if out_modifier.upper().startswith("M") and modifier.upper().startswith("G"):
         modifier = out_modifier
         modifier = int(amount * 1024)
+    if maximum:
+        max_modifier = maximum[-1]
+        max_amount = float(maximum[:-1])
+        if modifier.upper() == "G" and max_modifier.upper() == "M":
+            max_amount = max_amount / 1024.0
+        elif modifier.upper() == "M" and max_modifier.upper() == "G":
+            max_amount = max_amount * 1024.0
+        amount = min([amount, max_amount])
     return "{amount}{modifier}".format(amount=int(math.floor(amount)), modifier=modifier)
 
 def adjust_opts(in_opts, config):
@@ -400,7 +408,8 @@ def adjust_opts(in_opts, config):
             opt = "{arg}{val}".format(arg=arg,
                                       val=adjust_memory(opt[4:],
                                                         memory_adjust.get("magnitude", 1),
-                                                        memory_adjust.get("direction")))
+                                                        memory_adjust.get("direction"),
+                                                        maximum=memory_adjust.get("maximum")))
         out_opts.append(opt)
     return out_opts
 

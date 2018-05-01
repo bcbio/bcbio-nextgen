@@ -321,9 +321,13 @@ def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     resources = config_utils.get_resources("snpeff", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
     # scale by cores, defaulting to 2x base usage to ensure we have enough memory
-    # for single core runs to use with human genomes
+    # for single core runs to use with human genomes.
+    # Sets a maximum amount of memory to avoid core dumps exceeding 32Gb
+    # We shouldn't need that much memory for snpEff, so avoid issues
+    # https://www.elastic.co/guide/en/elasticsearch/guide/current/heap-sizing.html#compressed_oops
     jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
                                                                  {"direction": "increase",
+                                                                  "maximum": "30000M",
                                                                   "magnitude": max(2, dd.get_cores(data))}}})
     memory = " ".join(jvm_opts)
     snpeff = config_utils.get_program("snpEff", data["config"])
