@@ -109,12 +109,9 @@ def _prep_config(items, paired, work_dir):
 def _prep_streamlined_config(config_script, work_dir):
     """Create manta INI file without steps that potentially increase runtimes.
 
-    This removes calling of small indels and remote read lookup for insertions,
-    which improve runtime for noisier data:
-
-    https://github.com/Illumina/manta/issues/130#issuecomment-385037151
+    This removes calling of small indels.
     """
-    new_min_size = 250
+    new_min_size = 100
     in_file = config_script + ".ini"
     out_file = os.path.join(work_dir, os.path.basename(in_file))
     with open(in_file) as in_handle:
@@ -122,8 +119,6 @@ def _prep_streamlined_config(config_script, work_dir):
             for line in in_handle:
                 if line.startswith("minCandidateVariantSize"):
                     out_handle.write("minCandidateVariantSize = %s\n" % new_min_size)
-                elif line.startswith("enableRemoteReadRetrievalForInsertionsInGermlineCallingModes"):
-                    out_handle.write("enableRemoteReadRetrievalForInsertionsInGermlineCallingModes = 0\n")
                 else:
                     out_handle.write(line)
     return out_file
