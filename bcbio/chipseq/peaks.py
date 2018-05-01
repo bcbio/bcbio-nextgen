@@ -50,7 +50,7 @@ def calling(data):
     name = dd.get_sample_name(data)
     out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
     out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
-                          dd.get_chip_method(data), data["resources"], data["config"])
+                          dd.get_chip_method(data), data["resources"], data)
     greylistdir = greylisting(data)
     data.update({"peaks_files": out_files})
     # data["input_bam_filter"] = input_bam

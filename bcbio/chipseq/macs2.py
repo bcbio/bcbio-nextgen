@@ -1,11 +1,11 @@
 import os
-
 import subprocess
 import glob
 
 from bcbio import utils
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
+from bcbio.pipeline import datadict as dd
 from bcbio import bam
 
 HS = {"hg19": 2.7e9,
@@ -14,12 +14,13 @@ HS = {"hg19": 2.7e9,
       "mm10": 1.87e9,
       "dm3": 1.2e8}
 
-def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, config):
+def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, data):
     """
     Run macs2 for chip and input samples avoiding
     errors due to samples.
     """
     # output file name need to have the caller name
+    config = dd.get_config(data)
     out_file = os.path.join(out_dir, name + "_peaks_macs2.xls")
     macs2_file = os.path.join(out_dir, name + "_peaks.xls")
     if utils.file_exists(out_file):
@@ -27,14 +28,8 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, con
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
     options = " ".join(resources.get("macs2", {}).get("options", ""))
-    if genome_build not in HS and options.find("-g") == -1:
-        raise ValueError("This %s genome doesn't have a pre-set value."
-                          "You can add specific values using resources "
-                          "option for macs2 in the YAML file (-g genome_size)."
-                          "Check Chip-seq configuration in "
-                          "bcbio-nextgen documentation.")
-
-    genome_size = "" if options.find("-g") > -1 else "-g %s" % HS[genome_build]
+    genome_size = HS.get(genome_build, bam.fasta.total_sequence_length(dd.get_ref_file(data)))
+    genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
     paired = "-f BAMPE" if bam.is_paired(chip_bam) else ""
     with utils.chdir(out_dir):
         cmd = _macs2_cmd(method)

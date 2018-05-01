@@ -15,3 +15,9 @@ def sequence_names(fasta):
     sequences = SeqIO.parse(fasta, "fasta")
     records = [record.id for record in sequences]
     return records
+
+def total_sequence_length(fasta):
+    """
+    return the total length of all sequences in a FASTA file
+    """
+    return sum([x for x in sequence_length(fasta).values()])

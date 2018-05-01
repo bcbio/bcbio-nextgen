@@ -8,6 +8,7 @@
   per region to handle heterogeneous inputs.
 - STAR: enable passing custom options for alignment.
 - Add `tools_off: [coverage_qc]` option to skip calculating coverage stats (samtools-stats and picard).
+- Allow arbitrary genomes for ChIP-seq. Thanks to @evchambers for pointing out the issue.
 
 ## 1.0.9 (10 April 2018)
 
