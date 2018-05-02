@@ -28,7 +28,7 @@ def _args_to_cromwell(args):
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
                       "sge": {"memtype": "mem_type", "pename": "smp"},
                       "lsf": {},
-                      "torque": {},
+                      "torque": {"walltime": "1-00:00", "account": ""},
                       "pbspro": {"walltime": "1-00:00", "account": ""}}
     prefixes = {("account", "slurm"): "-A ", ("account", "pbspro"): "-A "}
     cl = ["-Dload-control.memory-threshold-in-mb=1"]
@@ -166,5 +166,28 @@ HPC_CONFIGS = {
       }
     }
 
+""",
+"torque": """
+    TORQUE {
+      actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+      config {
+        runtime-attributes = \"\"\"
+        Int cpu = 1
+        Int memory_mb = 2048
+        String queue = "%(queue)s"
+        String account = "%(account)s"
+        String walltime = "%(walltime)s"
+        \"\"\"
+        submit = \"\"\"
+        qsub -V -N ${job_name} -W sandbox=${cwd} \
+        -o ${out} -e ${err} -q ${queue} \
+        -l nodes=1:ppn=${cpu} -l mem=${memory_mb}mb -l walltime=${walltime} \
+        /usr/bin/env bash ${script}
+        \"\"\"
+        kill = "qdel ${job_id}"
+        check-alive = "qstat -j ${job_id}"
+        job-id-regex = "(\\\\d+)"
+      }
+    }
 """
 }
