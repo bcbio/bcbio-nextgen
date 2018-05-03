@@ -101,7 +101,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
                 cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
-                       "-c", vep_dir, "-u", tmp_dir, "--NO_UPDATE"]
+                       "-c", vep_dir, "-u", tmp_dir, "--NO_UPDATE", "--VERSION", eversion]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
                 cmd = ["%svep_convert_cache" % vep_path, "--species", species, "--version", vepv,
                        "--dir", vep_dir, "--force_overwrite", "--remove"]
