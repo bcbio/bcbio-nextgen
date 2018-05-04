@@ -139,46 +139,12 @@ def _run_cromwell(args):
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cromwell_work"))
     if args.no_container:
         _remove_bcbiovm_path()
-        no_docker_workflow = _create_no_docker_workflow(args.directory, work_dir)
-        main_file, json_file, project_name = _get_main_and_json(no_docker_workflow)
     log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
     cmd = ["cromwell", "run", "--type", "CWL", "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
     cmd += hpc.args_to_cromwell_cl(args)
     cmd += ["--inputs", json_file, main_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
-
-def _create_no_docker_workflow(orig_dir, work_dir):
-    """Create workflow copy, removing any docker references.
-    """
-    no_docker_workflow = utils.safe_makedir(os.path.join(work_dir,
-                                                            "%s-nodocker" % os.path.basename(orig_dir)))
-    for fname in glob.glob(os.path.join(orig_dir, "*.cwl")):
-        no_docker_fname = os.path.join(no_docker_workflow, os.path.basename(fname))
-        if not utils.file_uptodate(no_docker_fname, fname):
-            shutil.copy(fname, no_docker_fname)
-    # Fix relative locations since we're nesting
-    for fname in glob.glob(os.path.join(orig_dir, "*.json")):
-        no_docker_fname = os.path.join(no_docker_workflow, os.path.basename(fname))
-        if not utils.file_uptodate(no_docker_fname, fname):
-            with open(fname) as in_handle:
-                with open(no_docker_fname, "w") as out_handle:
-                    for line in in_handle:
-                        line = line.replace("../../", "../../../")
-                        out_handle.write(line)
-    # Remove Docker references
-    no_docker_stepdir = utils.safe_makedir(os.path.join(no_docker_workflow, "steps"))
-    for fname in glob.glob(os.path.join(orig_dir, "steps", "*.cwl")):
-        no_docker_fname = os.path.join(no_docker_stepdir, os.path.basename(fname))
-        if not utils.file_uptodate(no_docker_fname, fname):
-            with open(fname) as in_handle:
-                with open(no_docker_fname, "w") as out_handle:
-                    for line in in_handle:
-                        if not (line.find("DockerRequirement") >= 0 or
-                                line.find("dockerImageId") >= 0 or
-                                line.find("dockerPull") >= 0):
-                            out_handle.write(line)
-    return no_docker_workflow
 
 def _run_funnel(args):
     """Run funnel TES server with rabix bunny for CWL.
