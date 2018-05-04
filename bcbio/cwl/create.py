@@ -169,7 +169,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         if any(p.startswith(("gatk", "sentieon")) for p in programs):
             out["hints"] += [{"class": "arv:APIRequirement"}]
     # Multi-process methods that read heavily from BAM files need extra keep cache for Arvados
-    if name in ["pipeline_summary", "variantcall_batch_region"]:
+    if name in ["pipeline_summary", "variantcall_batch_region", "detect_sv"]:
         out["hints"] += [{"class": "arv:RuntimeConstraints", "keep_cache": 4096}]
     def add_to_namespaces(k, v, out):
         if "$namespaces" not in out:
