@@ -90,6 +90,20 @@ def coverage_interval_from_bed(bed_file, per_chrom=True):
     else:
         return "targeted"
 
+def _is_targeted_region(cur_bed, data):
+    """Calculate if we should process region as a targeted or WGS.
+
+    Currently always based on total coverage interval, as that validates best and
+    is consistent between CWL (larger blocks) and non-CWL runs (smaller blocks).
+    We can check core usage and provide a consistent report when moving to CWL
+    exclusively.
+    """
+    cores = dd.get_num_cores(data)
+    if cores > 0:  # Apply to all core setups now for consistency
+        return dd.get_coverage_interval(data) not in ["genome"]
+    else:
+        return coverage_interval_from_bed(cur_bed, per_chrom=False) == "targeted"
+
 def _get_ploidy(regions, items, base_file):
     samples = [dd.get_sample_name(d) for d in items]
     out_file = "%s-ploidy.vcf" % utils.splitext_plus(base_file)[0]
@@ -115,7 +129,7 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
             "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
             "--runDir=%s" % tx_work_dir]
     cmd += ["--bam=%s" % b for b in align_bams]
-    if coverage_interval_from_bed(cur_bed, per_chrom=False) == "targeted":
+    if _is_targeted_region(cur_bed, items[0]):
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
     return os.path.join(tx_work_dir, "runWorkflow.py")
@@ -140,7 +154,7 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
             "--callRegions=%s" % cur_bed,
             "--runDir=%s" % tx_work_dir,
             "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
-    if coverage_interval_from_bed(cur_bed, per_chrom=False) == "targeted":
+    if _is_targeted_region(cur_bed, paired.tumor_data):
         cmd += ["--targeted"]
     do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
     return os.path.join(tx_work_dir, "runWorkflow.py")
