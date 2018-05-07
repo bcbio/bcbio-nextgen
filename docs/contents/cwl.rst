@@ -82,12 +82,15 @@ and `bioconda packages <https://bioconda.github.io/>`_::
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
     ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
 
-If you have `Docker <https://www.docker.com/>`_ present on your system this is
-all you need to get started running examples. If you instead prefer to use a
-local installation, `install bcbio
+This install includes bcbio-nextgen libraries, used in generating CWL and
+orchestrating runs, but is not a full bcbio installation. You have two choices
+to run analyses. If you have `Docker <https://www.docker.com/>`_ present on your
+system this is all you need to get started running examples, since the CWL
+runners will pull in Docker containers with the bcbio tools. If you instead
+prefer to use a local installation, `install bcbio
 <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
-and make it available in your path. To only run the tests, you don't need a full
-data installation so can install with ``--nodata``.
+and make it available in your path. To only run the tests and bcbio validations,
+you don't need a full data installation so can install with ``--nodata``.
 
 To make it easy to get started, we have a pre-built CWL description that
 uses test data. This will run in under 5 minutes on a local machine and
@@ -127,8 +130,10 @@ your machine:
 Generating CWL for input to a tool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The first step in running your analysis project in bcbio is to generate CWL. The
-inputs to this are:
+The first step in running your analysis project in bcbio is to generate CWL. If
+you're already familiar with bcbio, the `process of preparing information about
+your sample inputs and analysis <bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_
+are almost identical:
 
 - A `standard bcbio sample configuration file
   <https://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html>`_
@@ -160,16 +165,24 @@ Generate CWL with::
     bcbio_vm.py template --systemconfig bcbio_system.yaml template.yaml samples.csv
     bcbio_vm.py cwl --systemconfig bcbio_system.yaml samples/config/samples.yaml
 
-producing a ``sample-workflow`` output directory with the CWL. You can run this
-with any CWL compatible runner. The ``bcbio_vm.py cwlrun`` wrappers described
-above make this easier for local runs with Toil or Bunny.
+producing a ``sample-workflow`` output directory with the CWL. On a first CWL
+generation run with a new genome, this process will run for a longer time as it
+needs to make your reference compatible with CWL. This includes creating single
+tar.gz files from some reference directories so they can get passed to CWL steps
+where they'll get unpacked. This process only happens a single time and keeps
+unpacked versions so your reference setup is compatible with both old bcbio
+IPython and new CWL runs.
+
+You can now run this with any CWL compatible runner and the ``bcbio_vm.py
+cwlrun`` wrappers standardize running across multiple tools in different
+environments.
 
 Running with Cromwell (local, HPC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `Cromwell <http://cromwell.readthedocs.io/>` workflow management system runs
-bcbio either locally on a single machine or distribution on a cluster using a
-scheduler.
+The `Cromwell <http://cromwell.readthedocs.io/>`_ workflow management system runs
+bcbio either locally on a single machine or distributed on a cluster using a
+scheduler like SLURM, SGE or PBSPro.
 
 To run a bcbio CWL workflow locally using Docker::
 
@@ -181,6 +194,9 @@ commandline.
 To run distributed on a SLURM cluster::
 
     bcbio_vm.py cwlrun cromwell sample-workflow --no-container -q your_que -s slurm -r timelimit=0-12:00
+
+You tweak scheduler parameters using the
+`same options as the older bcbio IPython approach <http://bcbio-nextgen.readthedocs.io/en/latest/contents/parallel.html#ipython-parallel>`_.
 
 Running with Toil (local, HPC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
