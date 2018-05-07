@@ -41,8 +41,10 @@ def _args_to_cromwell(args):
                       "sge": {"memtype": "mem_type", "pename": "smp"},
                       "lsf": {},
                       "torque": {"walltime": "1-00:00", "account": ""},
-                      "pbspro": {"walltime": "1-00:00", "account": ""}}
+                      "pbspro": {"walltime": "1-00:00", "account": "",
+                                 "cpu_and_mem": "-l select=1:ncpus=${cpu}:mem=${memory_mb}mb"}}
     prefixes = {("account", "slurm"): "-A ", ("account", "pbspro"): "-A "}
+    custom = {("noselect", "pbspro"): ("cpu_and_mem", "-l ncpus=${cpu} -l mem=${memory_mb}mb")}
     cl = ["-Dload-control.memory-threshold-in-mb=1"]
     # HPC scheduling
     if args.scheduler:
@@ -53,11 +55,15 @@ def _args_to_cromwell(args):
         config = default_config[args.scheduler]
         cl.append("-Dbackend.default=%s" % args.scheduler.upper())
         config["queue"] = args.queue
-        for r in args.resources:
-            parts = r.split("=")
-            if len(parts) == 2:
-                key, val = parts
-                config[key] = prefixes.get((key, args.scheduler), "") + val
+        for rs in args.resources:
+            for r in rs.split(";"):
+                parts = r.split("=")
+                if len(parts) == 2:
+                    key, val = parts
+                    config[key] = prefixes.get((key, args.scheduler), "") + val
+                elif len(parts) == 1 and (parts[0], args.scheduler) in custom:
+                    key, val = custom[(parts[0], args.scheduler)]
+                    config[key] = val
         return cl, config, args.scheduler
     # Local multicore runs
     # Avoid overscheduling jobs for local runs by limiting concurrent jobs
@@ -182,8 +188,8 @@ HPC_CONFIGS = {
         \"\"\"
         submit = \"\"\"
         qsub -V -N ${job_name} -W sandbox=${cwd} \
-        -o ${out} -e ${err} -q ${queue} \
-        -l select=1:ncpus=${cpu}:mem=${memory_mb}mb -l walltime=${walltime} \
+        -o ${out} -e ${err} -q ${queue} -l walltime=${walltime} \
+        %(cpu_and_mem)s \
         /usr/bin/env bash ${script}
         \"\"\"
         kill = "qdel ${job_id}"
