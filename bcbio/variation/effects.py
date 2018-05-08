@@ -310,8 +310,10 @@ def get_snpeff_files(data):
     if snpeff_db:
         # Clean problem characters for CWL/WDL representation
         clean_snpeff_db = snpeff_db.replace(".", "_")
-        return {clean_snpeff_db: {"base": datadir,
-                                  "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
+        data_files = glob.glob(os.path.join(datadir, snpeff_db, "*"))
+        if len(data_files) > 0:
+            return {clean_snpeff_db: {"base": datadir,
+                                    "indexes": data_files}}
     else:
         return {}
 
