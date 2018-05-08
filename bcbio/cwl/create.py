@@ -754,9 +754,11 @@ def _directory_tarball(dirname):
     """
     assert os.path.isdir(dirname)
     base_dir, tarball_dir = os.path.split(dirname)
-    while base_dir and not os.path.exists(os.path.join(base_dir, "seq")):
+    while not os.path.exists(os.path.join(base_dir, "seq")) and base_dir and base_dir != "/":
         base_dir, extra_tarball = os.path.split(base_dir)
         tarball_dir = os.path.join(extra_tarball, tarball_dir)
+    if base_dir == "/" and not os.path.exists(os.path.join(base_dir, "seq")):
+        raise ValueError("Did not find relative directory to create tarball for %s" % dirname)
     tarball = os.path.join(base_dir, "%s-wf.tar.gz" % (tarball_dir.replace(os.path.sep, "--")))
     if not utils.file_exists(tarball):
         print("Preparing CWL input tarball: %s" % tarball)
