@@ -75,6 +75,7 @@ def _args_to_cromwell(args):
 FILESYSTEM_CONFIG = """
       filesystems {
         local {
+          localization: ["soft-link"]
           caching {
             duplication-strategy: ["soft-link"]
             hashing-strategy: "path"
