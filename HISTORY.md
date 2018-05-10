@@ -1,13 +1,14 @@
 ## 1.1.0 (in progress)
 
-- Adding BAM file for each sample in small-RNAseq pipeline, samtools
-  and qualimap qc metrics to multiqc report.
+- UMI: upload prepared UMI bam file (pre-consensus) to final output directory
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models
   per region to handle heterogeneous inputs.
 - STAR: enable passing custom options for alignment.
 - Add `tools_off: [coverage_qc]` option to skip calculating coverage stats (samtools-stats and picard).
+- Adding BAM file for each sample in small-RNAseq pipeline, samtools
+  and qualimap qc metrics to multiqc report.
 - Allow arbitrary genomes for ChIP-seq. Thanks to @evchambers for pointing out the issue.
 
 ## 1.0.9 (10 April 2018)

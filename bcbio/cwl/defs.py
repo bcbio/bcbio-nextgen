@@ -84,6 +84,13 @@ def cwlout(key, valtype=None, extensions=None, fields=None, exclude=None):
     return out
 
 def _alignment(checkpoints):
+    process_alignment_out = [cwlout(["work_bam"], ["File", "null"], [".bai"]),
+                             cwlout(["align_bam"], ["File", "null"], [".bai"]),
+                             cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}]),
+                             cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
+                             cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])]
+    if checkpoints["umi"]:
+        process_alignment_out.append(cwlout(["umi_bam"], ["File", "null"], [".bai"]))
     align = [s("prep_align_inputs", "single-split" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"]],
                [cwlout("process_alignment_rec", "record",
@@ -94,12 +101,7 @@ def _alignment(checkpoints):
                             "optitype", "razers3=3.5.0", "coincbc"],  # HLA deps for general docker inclusion
                disk={"files": 1.5}),
              s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
-               [["alignment_rec"], ["process_alignment_rec"]],
-               [cwlout(["work_bam"], ["File", "null"], [".bai"]),
-                cwlout(["align_bam"], ["File", "null"], [".bai"]),
-                cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}]),
-                cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
-                cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])],
+               [["alignment_rec"], ["process_alignment_rec"]], process_alignment_out,
                "bcbio-vc", ["bwa", "bwakit", "grabix", "minimap2", "novoalign", "snap-aligner=1.0dev.97",
                             "sentieon", "samtools", "pysam>=0.13.0", "sambamba", "fgbio", "umis",
                             "biobambam", "seqtk", "samblaster", "variantbam"],
@@ -265,6 +267,7 @@ def _variant_checkpoints(samples):
     checkpoints["align_split"] = not all([(dd.get_align_split_size(d) is False or
                                            not dd.get_aligner(d))
                                           for d in samples])
+    checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
     return checkpoints
 
 def variant(samples):
@@ -375,13 +378,15 @@ def variant(samples):
                  cwlout(["config", "algorithm", "callable_count"], "int")],
                 "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
                 disk={"files": 0.5}, cores=1)]
+    align_out = [["align_bam"], ["regions", "sample_callable"]]
+    if checkpoints["umi"]:
+        align_out.append(["umi_bam"])
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
     qc, qc_out = _qc_workflow(checkpoints)
     steps = align + hla + vc + sv + qc
-    final_outputs = [["align_bam"], ["regions", "sample_callable"]] + \
-                    vc_out + hla_out + sv_out + qc_out
+    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out
     return steps, final_outputs
 
 def _qc_workflow(checkpoints):
