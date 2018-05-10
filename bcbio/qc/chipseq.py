@@ -5,7 +5,7 @@ import glob
 
 from bcbio.log import logger
 from bcbio import utils
-from bcbio import bam
+from bcbio.bam.readstats import number_of_mapped_reads
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -24,25 +24,18 @@ def run(bam_file, sample, out_dir):
     #    out = chipqc(bam_file, sample, out_dir)
 
     peaks = sample.get("peaks_files", []).get("main", "NULL")
-    out.update(_reads_in_peaks(bam_file, peaks, dd.get_cores(sample), out_dir, sample['config']))
+    out.update(_reads_in_peaks(bam_file, peaks, dd.get_cores(sample), out_dir, sample))
     return out
 
-def _reads_in_peaks(bam_file, peaks_file, cores, out_dir, config):
+def _reads_in_peaks(bam_file, peaks_file, cores, out_dir, sample):
     """Calculate number of reads in peaks"""
+    config = sample["config"]
     cmd = "{samtools} stats -@ {cores} {bam_file} --target-regions {peaks_file} > {tx_out}"
     samtools = config_utils.get_program("samtools", config)
-    out_file = os.path.join(out_dir, "reads_in_peaks.txt")
     if not peaks_file:
         return {}
-    if not utils.file_exists(out_file):
-        with file_transaction(out_file) as tx_out:
-            do.run(cmd.format(**locals()), "Calculating RIP in %s" % bam_file)
-    with open(out_file) as inh:
-        for line in inh:
-            if line.find("raw total sequences") > 0:
-                reads_in = line.strip().split()[-1]
-                break
-    return {"base": out_file, "metrics": {"RiP": reads_in}}
+    rip = number_of_mapped_reads(sample, bam_file, bed_file = peaks_file)
+    return {"metrics": {"RiP": rip}}
 
 def chipqc(bam_file, sample, out_dir):
     """Attempt code to run ChIPQC bioconductor packate in one sample"""
@@ -65,7 +58,6 @@ def _get_output(out_dir):
 def _sample_template(sample, out_dir):
     """R code to get QC for one sample"""
     bam_fn = dd.get_work_bam(sample)
-    fragment_length = bam.estimate_fragment_size(bam_fn)
     genome = dd.get_genome_build(sample)
     if genome not in supported:
         genome = "NULL"
@@ -74,7 +66,6 @@ def _sample_template(sample, out_dir):
               "sample = ChIPQCsample(\"{bam_fn}\","
               "\"{peaks}\", "
               "annotation = \"{genome}\","
-              "fragmentLength = \"{fragment_length}\""
               ");\n"
               "ChIPQCreport(sample);\n")
     r_code_fn = os.path.join(out_dir, "chipqc.r")

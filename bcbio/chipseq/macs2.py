@@ -55,6 +55,7 @@ def _get_output_files(out_dir):
             break
         elif fn.endswith("broadPeak"):
             peaks = fn
+            break
     return {"main": peaks, "macs2": fns}
 
 def _compres_bdg_files(out_dir):
