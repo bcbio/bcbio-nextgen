@@ -47,7 +47,10 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
     return _get_output_files(out_dir)
 
 def _get_output_files(out_dir):
-    return {"macs2": [os.path.abspath(fn) for fn in glob.glob(os.path.join(out_dir, "*"))]}
+    fns = [os.path.abspath(fn) for fn in glob.glob(os.path.join(out_dir, "*"))]
+    peaks = [fn for fn in fns if fn.find("_peaks.") > 0]
+    peaks = peaks[0] if peaks else None
+    return {"main": peaks, "macs2": fns}
 
 def _compres_bdg_files(out_dir):
     for fn in glob.glob(os.path.join(out_dir, "*bdg")):

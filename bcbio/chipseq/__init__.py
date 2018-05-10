@@ -27,12 +27,34 @@ def clean_chipseq_alignment(data):
         logger.info("Warning: When BAM file is given as input, bcbio skips multimappers removal."
                     "If BAM is not cleaned for peak calling, can result in downstream errors.")
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
+    data["work_bam"] = _keep_assembled_chrom(dd.get_work_bam(data), dd.get_ref_file(data),
+                                             data["config"])
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     if encode_bed:
-        data["work_bam"] = _prepare_bam(data["work_bam"], encode_bed, data['config'])
+        data["work_bam"] = _prepare_bam(dd.get_work_bam(data), encode_bed, data['config'])
         bam.index(data["work_bam"], data['config'])
     data["bigwig"] = _bam_coverage(dd.get_sample_name(data), dd.get_work_bam(data), data)
     return [[data]]
+
+def _keep_assembled_chrom(bam_file, genome, config):
+    """Remove contigs from the BAM file"""
+    fai = "%s.fai" % genome
+    chrom = []
+    with open(fai) as inh:
+        for line in inh:
+            c = line.split("\t")[0]
+            if c.find("_") < 0:
+                chrom.append(c)
+    chroms = " ".join(chrom)
+    out_file = utils.append_stem(bam_file, '_chrom')
+    samtools = config_utils.get_program("samtools", config)
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out:
+            cmd = "{samtools} view -b {bam_file} {chroms} > {tx_out}"
+            do.run(cmd.format(**locals()), "Remove contigs from %s" % bam_file)
+        bam.index(out_file, config)
+    return out_file
+
 
 def _prepare_bam(bam_file, bed_file, config):
     """Remove regions from bed files"""
@@ -43,7 +65,7 @@ def _prepare_bam(bam_file, bed_file, config):
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out:
             cmd = "{bedtools} subtract -nonamecheck -A -a {bam_file} -b {bed_file} > {tx_out}"
-            do.run(cmd.format(**locals()), "Clean %s" % bam_file)
+            do.run(cmd.format(**locals()), "Remove blacklist regions from %s" % bam_file)
     return out_file
 
 def get_genome(data):

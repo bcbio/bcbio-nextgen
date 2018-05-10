@@ -1,5 +1,6 @@
 ## 1.1.0 (in progress)
 
+- Chip-seq: Add RiP calculation for chip-seq data.
 - UMI: upload prepared UMI bam file (pre-consensus) to final output directory
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.

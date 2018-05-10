@@ -90,6 +90,8 @@ def get_qc_tools(data):
                 to_run.append("qualimap_rnaseq")
             else:
                 logger.debug("GTF not compatible with Qualimap, skipping.")
+    if analysis.startswith("chip-seq"):
+        to_run.append("chipqc")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
@@ -109,6 +111,7 @@ def get_qc_tools(data):
         to_run += ["umi"]
     if tz.get_in(["config", "algorithm", "preseq"], data):
         to_run.append("preseq")
+    to_run = [tool for tool in to_run if tool not in dd.get_tools_off(data)]
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -120,7 +123,7 @@ def _run_qc_tools(bam_file, data):
         :returns: dict with output of different tools
     """
     from bcbio.qc import (atropos, coverage, damage, fastqc, kraken, qsignature, qualimap,
-                          samtools, picard, srna, umi, variant, viral, preseq)
+                          samtools, picard, srna, umi, variant, viral, preseq, chipseq)
     tools = {"fastqc": fastqc.run,
              "atropos": atropos.run,
              "small-rna": srna.run,
@@ -137,6 +140,7 @@ def _run_qc_tools(bam_file, data):
              "umi": umi.run,
              "viral": viral.run,
              "preseq": preseq.run,
+             "chipqc": chipseq.run
              }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
