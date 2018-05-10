@@ -40,8 +40,8 @@ def _args_to_cromwell(args):
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
                       "sge": {"memtype": "mem_type", "pename": "smp"},
                       "lsf": {},
-                      "torque": {"walltime": "1-00:00", "account": ""},
-                      "pbspro": {"walltime": "1-00:00", "account": "",
+                      "torque": {"walltime": "24:00:00", "account": ""},
+                      "pbspro": {"walltime": "24:00:00", "account": "",
                                  "cpu_and_mem": "-l select=1:ncpus=${cpu}:mem=${memory_mb}mb"}}
     prefixes = {("account", "slurm"): "-A ", ("account", "pbspro"): "-A "}
     custom = {("noselect", "pbspro"): ("cpu_and_mem", "-l ncpus=${cpu} -l mem=${memory_mb}mb")}
@@ -194,7 +194,7 @@ HPC_CONFIGS = {
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
-        job-id-regex = "(\\\\d+)"
+        job-id-regex = "(\\\\d+).*"
         %(filesystem)s
       }
     }
@@ -220,7 +220,7 @@ HPC_CONFIGS = {
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
-        job-id-regex = "(\\\\d+)"
+        job-id-regex = "(\\\\d+).*"
         %(filesystem)s
       }
     }
