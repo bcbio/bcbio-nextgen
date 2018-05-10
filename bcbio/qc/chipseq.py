@@ -24,14 +24,11 @@ def run(bam_file, sample, out_dir):
     #    out = chipqc(bam_file, sample, out_dir)
 
     peaks = sample.get("peaks_files", []).get("main", "NULL")
-    out.update(_reads_in_peaks(bam_file, peaks, dd.get_cores(sample), out_dir, sample))
+    out.update(_reads_in_peaks(bam_file, peaks, sample))
     return out
 
-def _reads_in_peaks(bam_file, peaks_file, cores, out_dir, sample):
+def _reads_in_peaks(bam_file, peaks_file, sample):
     """Calculate number of reads in peaks"""
-    config = sample["config"]
-    cmd = "{samtools} stats -@ {cores} {bam_file} --target-regions {peaks_file} > {tx_out}"
-    samtools = config_utils.get_program("samtools", config)
     if not peaks_file:
         return {}
     rip = number_of_mapped_reads(sample, bam_file, bed_file = peaks_file)
