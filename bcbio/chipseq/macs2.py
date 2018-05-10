@@ -48,8 +48,13 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
 
 def _get_output_files(out_dir):
     fns = [os.path.abspath(fn) for fn in glob.glob(os.path.join(out_dir, "*"))]
-    peaks = [fn for fn in fns if fn.find("_peaks.") > 0]
-    peaks = peaks[0] if peaks else None
+    peaks = None
+    for fn in fns:
+        if fn.endswith("narrowPeak"):
+            peaks = fn
+            break
+        elif fn.endswith("broadPeak"):
+            peaks = fn
     return {"main": peaks, "macs2": fns}
 
 def _compres_bdg_files(out_dir):
