@@ -42,7 +42,6 @@ def summary(*samples):
     out_file = os.path.join(out_dir, "multiqc_report.html")
     file_list = os.path.join(out_dir, "list_files.txt")
     work_samples = [cwlutils.unpack_tarballs(utils.deepish_copy(x), x) for x in samples]
-    work_samples = _report_summary(work_samples, os.path.join(out_dir, "report"))
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
             in_files = _get_input_files(work_samples, out_dir, tx_out)
@@ -295,81 +294,6 @@ def _is_good_file_for_multiqc(fpath):
     if ftype is not None and ftype.startswith('image'):
         return False
     return True
-
-def _report_summary(samples, out_dir):
-    """
-    Run coverage report with bcbiocov package
-    """
-    try:
-        import bcbreport.prepare as bcbreport
-    except ImportError:
-        logger.info("skipping report. No bcbreport installed.")
-        return samples
-    work_dir = dd.get_work_dir(samples[0])
-    parent_dir = utils.safe_makedir(out_dir)
-    with utils.chdir(parent_dir):
-        logger.info("copy qsignature")
-        qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
-        if qsignature_fn:  # this need to be inside summary/qc dict
-            if utils.file_exists(qsignature_fn) and not utils.file_exists("qsignature.ma"):
-                shutil.copy(qsignature_fn, "bcbio_qsignature.ma")
-
-        out_dir = utils.safe_makedir("fastqc")
-        logger.info("summarize fastqc")
-        with utils.chdir(out_dir):
-            _merge_fastqc(samples)
-
-        logger.info("summarize target information")
-        if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
-            samples = _merge_target_information(samples)
-
-        preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
-        if preseq_samples:
-            out_dir = utils.safe_makedir("preseq")
-            logger.info("summarize preseq")
-            with utils.chdir(out_dir):
-                _merge_preseq(preseq_samples)
-
-        out_dir = utils.safe_makedir("coverage")
-        logger.info("summarize coverage")
-        for data in samples:
-            pfiles = tz.get_in(["summary", "qc", "coverage"], data, [])
-            if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
-            elif pfiles:
-                pfiles = [pfiles]
-            for fn in pfiles:
-                if os.path.basename(fn).find("coverage_fixed") > -1:
-                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
-
-        out_dir = utils.safe_makedir("variants")
-        logger.info("summarize variants")
-        for data in samples:
-            pfiles = tz.get_in(["summary", "qc", "variants"], data, [])
-            if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
-            elif pfiles:
-                pfiles = [pfiles]
-            for fn in pfiles:
-                if os.path.basename(fn).find("gc-depth-parse.tsv") > -1:
-                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
-        bcbreport.report(parent_dir)
-        out_report = os.path.join(parent_dir, "qc-coverage-report.html")
-        if not utils.file_exists(out_report):
-            rmd_file = os.path.join(parent_dir, "report-ready.Rmd")
-            run_file = "%s-run.R" % (os.path.splitext(out_report)[0])
-            with open(run_file, "w") as out_handle:
-                out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
-            # cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
-            # Skip automated generation of coverage report to avoid error
-            # messages. We need to generalize coverage reporting and re-include.
-            # try:
-            #     do.run(cmd, "Prepare coverage summary", log_error=False)
-            # except subprocess.CalledProcessError as msg:
-            #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
-            if utils.file_exists("report-ready.html"):
-                shutil.move("report-ready.html", out_report)
-    return samples
 
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
