@@ -2,6 +2,9 @@
 
 - Chip-seq: Add RiP calculation for chip-seq data.
 - UMI: upload prepared UMI bam file (pre-consensus) to final output directory
+- CWL: adjust defaults for align_split_size and nomap_split_targets to match
+  different parallelization and overhead for these runs
+- CWL: support for Cromwell runner
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models

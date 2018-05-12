@@ -35,7 +35,7 @@ ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller"
                          "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 
-def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True,
+def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
              integrations=None):
     """Organize run information from a passed YAML file or the Galaxy API.
 
@@ -50,7 +50,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
     assert run_info_yaml and os.path.exists(run_info_yaml), \
         "Did not find input sample YAML file: %s" % run_info_yaml
     run_details = _run_info_from_yaml(dirs, run_info_yaml, config, sample_names,
-                                      integrations=integrations)
+                                      is_cwl=is_cwl, integrations=integrations)
     remote_retriever = None
     for iname, retriever in integrations.items():
         if iname in config:
@@ -81,7 +81,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, add_provenance=True
                 tmp_dir = genome.abs_file_paths(tmp_dir, do_download=not integrations)
             item["config"]["resources"]["tmp"]["dir"] = tmp_dir
         out.append(item)
-    out = _add_provenance(out, dirs, config, add_provenance)
+    out = _add_provenance(out, dirs, config, not is_cwl)
     return out
 
 def normalize_world(data):
@@ -805,7 +805,8 @@ def validate_yaml(yaml_in, yaml_fn):
         if problem.level == "error":
             raise ValueError(msg)
 
-def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrations=None):
+def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
+                        is_cwl=False, integrations=None):
     """Read run information from a passed YAML file.
     """
     validate_yaml(run_info_yaml, run_info_yaml)
@@ -873,7 +874,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None, integrat
                                                   fileonly_keys=ALGORITHM_FILEONLY_KEYS,
                                                   do_download=all(not x for x in integrations.values()))
         item["genome_build"] = str(item.get("genome_build", ""))
-        item["algorithm"] = _add_algorithm_defaults(item["algorithm"], item.get("analysis", ""))
+        item["algorithm"] = _add_algorithm_defaults(item["algorithm"], item.get("analysis", ""), is_cwl)
         item["metadata"] = add_metadata_defaults(item.get("metadata", {}))
         item["rgnames"] = prep_rg_names(item, config, fc_name, fc_date)
         if item.get("files"):
@@ -936,7 +937,7 @@ def add_metadata_defaults(md):
             md[k] = v
     return md
 
-def _add_algorithm_defaults(algorithm, analysis):
+def _add_algorithm_defaults(algorithm, analysis, is_cwl):
     """Central location specifying defaults for algorithm inputs.
 
     Converts allowed multiple inputs into lists if specified as a single item.
@@ -956,7 +957,7 @@ def _add_algorithm_defaults(algorithm, analysis):
                 "align_split_size": None,
                 "bam_clean": False,
                 "nomap_split_size": 250,
-                "nomap_split_targets": 200,
+                "nomap_split_targets": 20 if is_cwl else 200,
                 "mark_duplicates": False if not algorithm.get("aligner") else True,
                 "coverage_interval": None,
                 "recalibrate": False,

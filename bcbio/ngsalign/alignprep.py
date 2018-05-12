@@ -70,9 +70,15 @@ def _set_align_split_size(data):
 
     For UMI calculations we skip splitting since we're going to align and
     re-align after consensus.
+
+    For CWL runs, we pick larger split sizes to avoid overhead of staging each chunk.
     """
-    target_size = 5  # Gb
-    target_size_reads = 20  # million reads
+    if cwlutils.is_cwl_run(data):
+        target_size = 20  # Gb
+        target_size_reads = 80  # million reads
+    else:
+        target_size = 5  # Gb
+        target_size_reads = 20  # million reads
     max_splits = 100  # Avoid too many pieces, causing merge memory problems
     val = dd.get_align_split_size(data)
     umi_consensus = dd.get_umi_consensus(data)
