@@ -17,6 +17,7 @@ import yaml
 from bcbio import utils
 from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
@@ -695,7 +696,7 @@ def _to_cwlfile_with_indexes(val, get_retriever):
     else:
         dirname = os.path.dirname(val["base"])
         assert all([x.startswith(dirname) for x in val["indexes"]])
-        return {"class": "File", "path": _directory_tarball(dirname)}
+        return {"class": "File", "path": directory_tarball(dirname)}
 
 def _add_secondary_if_exists(secondary, out, get_retriever):
     """Add secondary files only if present locally or remotely.
@@ -730,7 +731,7 @@ def _item_to_cwldata(x, get_retriever):
             elif x.endswith(".gtf"):
                 out = _add_secondary_if_exists([x + ".db"], out, get_retriever)
         else:
-            out = {"class": "File", "path": _directory_tarball(x)}
+            out = {"class": "File", "path": directory_tarball(x)}
         return out
     elif isinstance(x, bool):
         return str(x)
@@ -746,7 +747,7 @@ def _file_local_or_remote(f, get_retriever):
     if integration:
         return integration.file_exists(f, config)
 
-def _directory_tarball(dirname):
+def directory_tarball(dirname):
     """Create a tarball of a complex directory, avoiding complex secondaryFiles.
 
     Complex secondary files do not work on multiple platforms and are not portable
@@ -762,9 +763,10 @@ def _directory_tarball(dirname):
     tarball = os.path.join(base_dir, "%s-wf.tar.gz" % (tarball_dir.replace(os.path.sep, "--")))
     if not utils.file_exists(tarball):
         print("Preparing CWL input tarball: %s" % tarball)
-        with utils.chdir(base_dir):
-            with tarfile.open(tarball, "w:gz") as tar:
-                tar.add(tarball_dir)
+        with file_transaction({}, tarball) as tx_tarball:
+            with utils.chdir(base_dir):
+                with tarfile.open(tx_tarball, "w:gz") as tar:
+                    tar.add(tarball_dir)
     return tarball
 
 def _clean_final_outputs(keyvals, get_retriever):

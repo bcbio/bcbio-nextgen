@@ -90,7 +90,9 @@ runners will pull in Docker containers with the bcbio tools. If you instead
 prefer to use a local installation, `install bcbio
 <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
 and make it available in your path. To only run the tests and bcbio validations,
-you don't need a full data installation so can install with ``--nodata``.
+you don't need a full data installation so can install with ``--nodata``. When you
+being running your own analysis, pre-prepare your bcbio data directory with
+``bcbio_nextgen.py upgrade --data --cwldata``.
 
 To make it easy to get started, we have a pre-built CWL description that
 uses test data. This will run in under 5 minutes on a local machine and

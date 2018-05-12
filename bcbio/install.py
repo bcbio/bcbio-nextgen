@@ -23,6 +23,7 @@ import toolz as tz
 import yaml
 
 from bcbio import broad, utils
+from bcbio.cwl import create
 from bcbio.pipeline import genome, version
 from bcbio.variation import effects
 from bcbio.distributed.transaction import file_transaction
@@ -39,8 +40,9 @@ SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
                      "rn6", "rn5", "canFam3", "dm3", "galGal4", "phix",
                      "pseudomonas_aeruginosa_ucbpp_pa14", "sacCer3", "TAIR10",
                      "WBcel235", "xenTro3", "GRCz10"]
-SUPPORTED_INDEXES = ["bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",
-                     "star", "twobit", "seq", "hisat2"]
+TARBALL_DIRECTORIES = ["bwa", "rtg", "hisat2"]
+SUPPORTED_INDEXES = TARBALL_DIRECTORIES + ["bowtie", "bowtie2", "minimap2", "novoalign", "twobit",
+                                           "snap", "star", "seq"]
 DEFAULT_INDEXES = ["rtg", "twobit"]
 
 Tool = collections.namedtuple("Tool", ["name", "fname"])
@@ -315,9 +317,28 @@ def upgrade_bcbio_data(args, remotes):
         if "cadd" in args.datatarget:
             extras.extend(["--extra", "cadd_score"])
         ann_dir = get_gemini_dir()
-        subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
+        #subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
+    if args.cwldata:
+        _prepare_cwl_tarballs(data_dir)
+
+def _prepare_cwl_tarballs(data_dir):
+    """Create CWL ready tarballs for complex directories.
+
+    Avoids need for CWL runners to pass and serialize complex directories
+    of files, which is inconsistent between runners.
+    """
+    for dbref_dir in filter(os.path.isdir, glob.glob(os.path.join(data_dir, "genomes", "*", "*"))):
+        base_dir, dbref = os.path.split(dbref_dir)
+        for indexdir in TARBALL_DIRECTORIES:
+            cur_target = os.path.join(dbref_dir, indexdir)
+            if os.path.isdir(cur_target):
+                # Some indices, like rtg, have a single nested directory
+                subdirs = [x for x in os.listdir(cur_target) if os.path.isdir(os.path.join(cur_target, x))]
+                if len(subdirs) == 1:
+                    cur_target = os.path.join(cur_target, subdirs[0])
+                create.directory_tarball(cur_target)
 
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
@@ -377,6 +398,8 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                     dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
                     shutil.move(dl_dir, snpeff_db_dir)
                     os.rmdir(os.path.join(snpeff_base_dir, "data"))
+                if args.cwldata:
+                    create.directory_tarball(snpeff_db_dir)
 
 def _is_old_database(db_dir, args):
     """Check for old database versions, supported in snpEff 4.1.
@@ -726,6 +749,8 @@ def add_subparser(subparsers):
                         choices=SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
+    parser.add_argument("--cwldata", help="Prepare data inputs for CWL",
+                        dest="cwldata", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("--distribution", help="Operating system distribution",
