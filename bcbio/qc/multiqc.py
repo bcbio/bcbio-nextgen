@@ -41,7 +41,7 @@ def summary(*samples):
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     file_list = os.path.join(out_dir, "list_files.txt")
-    work_samples = [cwlutils.unpack_tarballs(utils.deepish_copy(x), x) for x in samples]
+    work_samples = cwlutils.unpack_tarballs([utils.deepish_copy(x) for x in samples], samples[0])
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
             in_files = _get_input_files(work_samples, out_dir, tx_out)

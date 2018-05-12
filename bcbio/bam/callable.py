@@ -260,7 +260,7 @@ def combine_sample_regions(*samples):
     producing a global set of callable regions.
     """
     samples = utils.unpack_worlds(samples)
-    samples = [cwlutils.unpack_tarballs(x, x) for x in samples]
+    samples = cwlutils.unpack_tarballs(samples, samples[0])
     # back compatibility -- global file for entire sample set
     global_analysis_file = os.path.join(samples[0]["dirs"]["work"], "analysis_blocks.bed")
     if utils.file_exists(global_analysis_file) and not _needs_region_update(global_analysis_file, samples):

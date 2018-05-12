@@ -48,7 +48,7 @@ def create_inputs(data):
     data = _set_align_split_size(data)
     out = []
     if tz.get_in(["config", "algorithm", "align_split_size"], data):
-        splits = _find_read_splits(data["files"][0], data["config"]["algorithm"]["align_split_size"])
+        splits = _find_read_splits(data["files"][0], int(data["config"]["algorithm"]["align_split_size"]))
         for split in splits:
             cur_data = copy.deepcopy(data)
             cur_data["align_split"] = split

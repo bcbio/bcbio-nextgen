@@ -10,6 +10,7 @@ import json
 import operator
 import os
 import pprint
+import shutil
 
 import toolz as tz
 import yaml
@@ -58,48 +59,17 @@ def process(args):
             except:
                 logger.exception()
                 raise
+            finally:
+                # Clean up any copied and unpacked workflow inputs, avoiding extra disk usage
+                wf_input_dir = os.path.join(work_dir, "wf-inputs")
+                if os.path.exists(wf_input_dir) and os.path.isdir(wf_input_dir):
+                    shutil.rmtree(wf_input_dir)
     if argfile:
         try:
             _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir)
         except:
             logger.exception()
             raise
-        if argfile.endswith(".json"):
-            _write_wdl_outputs(argfile, out_keys)
-
-def _write_wdl_outputs(argfile, out_keys):
-    """Write variables as WDL compatible output files.
-
-    Writes individual files prefixed with 'wdl.output' that can be read
-    by WDL standard library functions:
-
-    https://github.com/broadinstitute/wdl/blob/develop/SPEC.md#outputs
-    """
-    out_basename = "wdl.output.%s.txt"
-    with open(argfile) as in_handle:
-        outputs = json.load(in_handle)
-    record_name, record_attrs = _get_record_attrs(out_keys)
-    if record_name:
-        recs = outputs[record_name]
-        with open(out_basename % record_name, "w") as out_handle:
-            writer = csv.writer(out_handle)
-            if not isinstance(recs, (list, tuple)):
-                recs = [recs]
-            recs = list(utils.flatten(recs))
-            keys = sorted(list(set(reduce(operator.add, [r.keys() for r in recs]))))
-            writer.writerow(keys)
-            for rec in recs:
-                writer.writerow([_cwlvar_to_wdl(rec.get(k)) for k in keys])
-    else:
-        for key in out_keys:
-            with open(out_basename % key, "w") as out_handle:
-                vals = _cwlvar_to_wdl(outputs.get(key))
-                if not isinstance(vals, (list, tuple)):
-                    vals = [vals]
-                for val in vals:
-                    if isinstance(val, (list, tuple)):
-                        val = "\t".join([str(x) for x in val])
-                    out_handle.write(str(val) + "\n")
 
 def _cwlvar_to_wdl(var):
     """Convert a CWL output object into a WDL output.
