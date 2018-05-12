@@ -69,16 +69,21 @@ def bootstrap_bcbionextgen(anaconda, args):
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
 def install_conda_pkgs(anaconda, args):
+    env = dict(os.environ)
+    # Try to avoid user specific pkgs and envs directories
+    # https://github.com/conda/conda/issues/6748
+    env["CONDA_PKGS_DIRS"] = os.path.join(anaconda["dir"], "pkgs")
+    env["CONDA_ENVS_DIRS"] = os.path.join(anaconda["dir"], "envs")
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
-        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"])
-    subprocess.check_call([anaconda["conda"], "install", "--yes", "conda>=4.4"])
+        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
+    subprocess.check_call([anaconda["conda"], "install", "--yes", "conda>=4.4"], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes",
-                           "-c", "conda-forge", "-c", "bioconda", "--only-deps", "bcbio-nextgen"])
+                           "-c", "conda-forge", "-c", "bioconda", "--only-deps", "bcbio-nextgen"], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes",
                            "-c", "conda-forge", "-c", "bioconda",
-                           "--file", os.path.basename(REMOTES["requirements"])])
+                           "--file", os.path.basename(REMOTES["requirements"])], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():
