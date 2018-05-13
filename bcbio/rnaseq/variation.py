@@ -78,6 +78,19 @@ def _setup_variant_regions(data):
     data = dd.set_variant_regions(data, out_file)
     return data
 
+def _get_chroms(data):
+    """Retrieve chromosomes included in variant_regions for parallelization.
+    """
+    chroms = set([])
+    with shared.bedtools_tmpdir(data):
+        for r in pybedtools.BedTool(dd.get_variant_regions(data)):
+            chroms.add(r.chrom)
+    out = []
+    for c in ref.file_contigs(dd.get_ref_file(data)):
+        if c.name in chroms:
+            out.append((c.name, 0, c.size))
+    return out
+
 def gatk_rnaseq_calling(data):
     """Use GATK to perform gVCF variant calling on RNA-seq data
     """
@@ -92,8 +105,18 @@ def gatk_rnaseq_calling(data):
     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
                                                             "variation", "rnaseq", "gatk-haplotype")),
                             "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
-    out_file = gatk.haplotype_caller([dd.get_split_bam(data)], [data], dd.get_ref_file(data), {},
-                                     out_file=out_file)
+    region_files = []
+    regions = []
+    for cur_region in _get_chroms(data):
+        region_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                                                   "variation", "rnaseq", "gatk-haplotype",
+                                                                   "regions")),
+                                   "%s-%s-gatk-haplotype.vcf.gz" % (dd.get_sample_name(data), cur_region[0]))
+        region_file = gatk.haplotype_caller([dd.get_split_bam(data)], [data], dd.get_ref_file(data), {},
+                                            region=cur_region, out_file=region_file)
+        region_files.append(region_file)
+        regions.append(cur_region)
+    out_file = vcfutils.concat_variant_files(region_files, out_file, regions, dd.get_ref_file(data), data["config"])
     return dd.set_vrn_file(data, out_file)
 
 def rnaseq_vardict_variant_calling(data):
