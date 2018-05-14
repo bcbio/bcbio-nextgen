@@ -14,6 +14,8 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file
     """
+    if not files:
+        return None
     assert all([file_exists(x) for x in files]), \
         "Some count files in %s do not exist." % files
     for f in files:
@@ -48,6 +50,8 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     return out_file
 
 def annotate_combined_count_file(count_file, gtf_file, out_file=None):
+    if not count_file:
+        return None
     dbfn = gtf_file + ".db"
     if not file_exists(dbfn):
         return None

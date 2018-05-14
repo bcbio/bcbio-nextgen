@@ -285,6 +285,7 @@ def fastrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("fastrnaseq", dirs):
             samples = rnaseq.fast_rnaseq(samples, run_parallel)
             ww.report("fastrnaseq", samples)
+        samples = rnaseq.combine_files(samples)
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
             ww.report("qcsummary", samples)

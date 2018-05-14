@@ -231,6 +231,8 @@ def run_express(data):
 
 def combine_express(samples, combined):
     """Combine tpm, effective counts and fpkm from express results"""
+    if not combined:
+        return None
     to_combine = [dd.get_express_counts(x) for x in
                   dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
     gtf_file = dd.get_gtf_file(samples[0][0])
@@ -349,26 +351,25 @@ def combine_files(samples):
     express_counts_combined = combine_express(samples, combined)
 
     # combine Cufflinks files
-    fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
     fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
     if fpkm_files:
+        fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
         fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
     else:
         fpkm_combined = None
-    fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
     isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
     if isoform_files:
+        fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
         fpkm_isoform_combined = count.combine_count_files(isoform_files,
                                                           fpkm_isoform_combined_file,
                                                           ".isoform.fpkm")
     else:
         fpkm_isoform_combined = None
     # combine DEXseq files
-    dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
     to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
                                         in samples])
-
     if to_combine_dexseq:
+        dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
         dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
@@ -377,7 +378,8 @@ def combine_files(samples):
     samples = spikein.combine_spikein(samples)
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
-        data = dd.set_combined_counts(data, combined)
+        if combined:
+            data = dd.set_combined_counts(data, combined)
         if annotated:
             data = dd.set_annotated_combined_counts(data, annotated)
         if fpkm_combined:
