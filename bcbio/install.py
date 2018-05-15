@@ -39,7 +39,7 @@ REMOTES = {
 SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
                      "rn6", "rn5", "canFam3", "dm3", "galGal4", "phix",
                      "pseudomonas_aeruginosa_ucbpp_pa14", "sacCer3", "TAIR10",
-                     "WBcel235", "xenTro3", "GRCz10"]
+                     "WBcel235", "xenTro3", "GRCz10", "GRCz11", "Sscrofa11.1"]
 TARBALL_DIRECTORIES = ["bwa", "rtg", "hisat2"]
 SUPPORTED_INDEXES = TARBALL_DIRECTORIES + ["bowtie", "bowtie2", "minimap2", "novoalign", "twobit",
                                            "snap", "star", "seq"]

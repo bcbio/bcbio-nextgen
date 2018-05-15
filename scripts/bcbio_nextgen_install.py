@@ -242,7 +242,8 @@ if __name__ == "__main__":
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",
                                  "canFam3", "dm3", "galGal4", "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
-                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10"])
+                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10", "GRCz11",
+                                 "Sscrofa11.1"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
                         choices=["bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",

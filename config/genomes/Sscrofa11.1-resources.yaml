@@ -1,0 +1,5 @@
+version: 0
+
+aliases:
+  ensembl: sus_scrofa_vep_92_Sscrofa11.1
+  #snpeff: 
