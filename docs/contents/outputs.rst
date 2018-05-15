@@ -96,10 +96,12 @@ Project directory
 
 - ``counts_mirna.tsv`` -- miRBase miRNA
   count matrix.
-- ``counts.tsv`` -- miRBase isomiRs count matrix.
+- ``counts.tsv`` -- miRBase isomiRs count matrix. The ID is made of 5 tags:
+  miRNA name, SNPs, additions, trimming at 5 and trimming at 3. 
+  Here there is detail explanation of the `naming`_ . 
 - ``counts_mirna_novel.tsv`` -- miRDeep2 miRNA
   count matrix.
-- ``counts_novel.tsv`` -- miRDeep2 isomiRs
+- ``counts_novel.tsv`` -- miRDeep2 isomiRs. See counts.tsv explanation for more detail.
   count matrix.
 - ``seqcluster`` -- output of `seqcluster`_ tool.
   Inside this folder, counts.tsv has count matrix
@@ -109,6 +111,8 @@ Project directory
 - ``report`` -- Rmd template to help with downstream
   analysis like QC metrics, differential expression, and
   clustering.
+
+.. _naming: http://seqcluster.readthedocs.io/mirna_annotation.html
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
