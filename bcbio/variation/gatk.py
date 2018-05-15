@@ -121,7 +121,9 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         with file_transaction(items[0], out_file) as tx_out_file:
             if _use_spark(num_cores, gatk_type):
                 params += ["-T", "HaplotypeCallerSpark", "--spark-master", "local[%s]" % num_cores,
-                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
+                           "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
+                           "--conf", "spark.executor.heartbeatInterval=100"]
             else:
                 params += ["-T", "HaplotypeCaller"]
             params += ["--annotation", "ClippingRankSumTest",
