@@ -246,7 +246,7 @@ if __name__ == "__main__":
                                  "Sscrofa11.1"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices=["bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",
+                        choices=["bbmap", "bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",
                                  "star", "ucsc", "hisat2"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
