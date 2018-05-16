@@ -9,7 +9,7 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, minimap2,
+from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
                             novoalign, snap, star, hisat2)
 from bcbio.pipeline import datadict as dd
 
@@ -29,6 +29,7 @@ NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn",
 BASE_LOCATION_FILE = "sam_fa_indices.loc"
 
 TOOLS = {
+    "bbmap": NgsTool(bbmap.align, None, None, bbmap.remap_index_fn),
     "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
