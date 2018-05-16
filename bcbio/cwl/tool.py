@@ -4,6 +4,7 @@ Handles wrapping and integrating with multiple tools making it easier
 to run bcbio in a standard way in many environments.
 """
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -137,12 +138,17 @@ def _run_cromwell(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     work_dir = utils.safe_makedir(os.path.join(os.getcwd(), "cromwell_work"))
+    final_dir = utils.safe_makedir(os.path.join(work_dir, "final"))
     if args.no_container:
         _remove_bcbiovm_path()
     log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
+    option_file = os.path.join(work_dir, "%s-options.json" % project_name)
+    with open(option_file, "w") as out_handle:
+        json.dump({"final_workflow_outputs_dir": final_dir}, out_handle)
+
     cmd = ["cromwell", "run", "--type", "CWL", "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
     cmd += hpc.args_to_cromwell_cl(args)
-    cmd += ["--inputs", json_file, main_file]
+    cmd += ["--options", option_file, "--inputs", json_file, main_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
 
