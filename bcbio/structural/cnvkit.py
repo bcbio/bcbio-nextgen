@@ -288,8 +288,13 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
                 with open(tx_out_file, "w") as out_handle:
                     out_handle.write("chromosome\tstart\tend\tgene\tlog2\tprobes\tCN1\tCN2\tbaf\tweight\n")
             else:
-                cmd = [_get_cmd(), "segment", "-p", str(dd.get_cores(data)),
-                       "-o", tx_out_file, cnr_file]
+                # Scale cores to avoid memory issues with segmentation
+                # https://github.com/etal/cnvkit/issues/346
+                if cov_interval == "genome":
+                    cores = max(1, dd.get_cores(data) // 2)
+                else:
+                    cores = dd.get_cores(data)
+                cmd = [_get_cmd(), "segment", "-p", str(cores), "-o", tx_out_file, cnr_file]
                 small_vrn_files = _compatible_small_variants(data, items)
                 if len(small_vrn_files) > 0 and _cna_has_values(cnr_file) and cov_interval != "genome":
                     cmd += ["--vcf", small_vrn_files[0].name, "--sample-id", small_vrn_files[0].sample]
