@@ -1,6 +1,8 @@
 ## 1.1.0 (in progress)
 
 - Chip-seq: Add RiP calculation for chip-seq data.
+- CNVkit: improve whole genome runs. Better speed in normalize_sv_coverage
+  through parallelization and avoiding logging. Avoid memory errors in segmentation.
 - UMI: upload prepared UMI bam file (pre-consensus) to final output directory
 - Add support for bbmap as an aligner
 - CWL: adjust defaults for align_split_size and nomap_split_targets to match

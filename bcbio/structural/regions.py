@@ -16,6 +16,7 @@ import toolz as tz
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.cwl import cwlutils
+from bcbio.distributed.multi import run_multicore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -234,17 +235,20 @@ def normalize_sv_coverage(*items):
             back_file = cnvkit.cnvkit_background(cnns,
                                                  os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
                                                 backgrounds or inputs, target_bed, antitarget_bed)
+        fix_cmd_inputs = []
         for data in inputs:
             work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                        dd.get_sample_name(data), "bins"))
             if tz.get_in(["depth", "bins", "target"], data):
-                fix_file = cnvkit.run_fix(tz.get_in(["depth", "bins", "target"], data),
-                                          tz.get_in(["depth", "bins", "antitarget"], data),
-                                          back_file,
-                                          os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data))),
-                                          data)
+                fix_file = os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data)))
+                fix_cmd_inputs.append((tz.get_in(["depth", "bins", "target"], data),
+                                       tz.get_in(["depth", "bins", "antitarget"], data),
+                                       back_file, fix_file, data))
                 out_files[dd.get_sample_name(data)] = fix_file
                 back_files[dd.get_sample_name(data)] = back_file
+        parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
+        run_multicore(cnvkit.run_fix_parallel, fix_cmd_inputs, inputs[0]["config"], parallel)
+
     out = []
     for data in items:
         if dd.get_sample_name(data) in out_files:

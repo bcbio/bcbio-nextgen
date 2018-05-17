@@ -360,6 +360,11 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ckouts, ext=""):
     out_file = ckouts[dindex]["cnr"]
     return (run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data), data)
 
+@utils.map_wrap
+@zeromq_aware_logging
+def run_fix_parallel(target_cnn, antitarget_cnn, background_cnn, out_file, data):
+    return [run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data)]
+
 def run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
