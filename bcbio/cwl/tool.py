@@ -142,13 +142,15 @@ def _run_cromwell(args):
     if args.no_container:
         _remove_bcbiovm_path()
     log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
+    metadata_file = os.path.join(work_dir, "%s-metadata.json" % project_name)
     option_file = os.path.join(work_dir, "%s-options.json" % project_name)
     with open(option_file, "w") as out_handle:
         json.dump({"final_workflow_outputs_dir": final_dir}, out_handle)
 
     cmd = ["cromwell", "run", "--type", "CWL", "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
     cmd += hpc.args_to_cromwell_cl(args)
-    cmd += ["--options", option_file, "--inputs", json_file, main_file]
+    cmd += ["--metadata-output", metadata_file, "--options", option_file,
+            "--inputs", json_file, main_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
 
