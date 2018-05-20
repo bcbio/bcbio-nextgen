@@ -36,10 +36,10 @@ def args_to_cromwell_cl(args):
 def _args_to_cromwell(args):
     """Convert input arguments into cromwell inputs for config and command line.
     """
-    scheduler_map = {"sge": "SGE", "slurm": "SLURM", "lsf": "LSF"}
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
                       "sge": {"memtype": "mem_type", "pename": "smp"},
                       "lsf": {},
+                      "htcondor": {},
                       "torque": {"walltime": "24:00:00", "account": ""},
                       "pbspro": {"walltime": "24:00:00", "account": "",
                                  "cpu_and_mem": "-l select=1:ncpus=${cpu}:mem=${memory_mb}mb"}}
@@ -50,7 +50,7 @@ def _args_to_cromwell(args):
     if args.scheduler:
         if args.scheduler not in default_config:
             raise ValueError("Scheduler not yet supported by Cromwell: %s" % args.scheduler)
-        if not args.queue:
+        if not args.queue and args.scheduler not in ["htcondor"]:
             raise ValueError("Need to set queue (-q) for running with an HPC scheduler")
         config = default_config[args.scheduler]
         cl.append("-Dbackend.default=%s" % args.scheduler.upper())
@@ -222,6 +222,66 @@ HPC_CONFIGS = {
         check-alive = "qstat -j ${job_id}"
         job-id-regex = "(\\\\d+).*"
         %(filesystem)s
+      }
+    }
+""",
+"htcondor": """
+    HTCONDOR {
+      actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+      config {
+        runtime-attributes = \"\"\"
+          Int cpu = 1
+          Float memory_mb = 512.0
+          Float disk_kb = 256000.0
+          String? nativeSpecs
+          %(docker_attrs)s
+          %(cwl_attrs)s
+        \"\"\"
+        submit = \"\"\"
+          chmod 755 ${script}
+          cat > ${cwd}/execution/submitFile <<EOF
+          Iwd=${cwd}/execution
+          requirements=${nativeSpecs}
+          leave_in_queue=true
+          request_memory=${memory_mb}
+          request_disk=${disk_kb}
+          error=${err}
+          output=${out}
+          log_xml=true
+          request_cpus=${cpu}
+          executable=${script}
+          log=${cwd}/execution/execution.log
+          getenv=true
+          queue
+          EOF
+          condor_submit ${cwd}/execution/submitFile
+        \"\"\"
+        # submit-docker = \"\"\"
+        #   chmod 755 ${script}
+        #   cat > ${cwd}/execution/dockerScript <<EOF
+        #   #!/bin/bash
+        #   docker run --rm -i -v ${cwd}:${docker_cwd} ${docker} /bin/bash ${script}
+        #   EOF
+        #   chmod 755 ${cwd}/execution/dockerScript
+        #   cat > ${cwd}/execution/submitFile <<EOF
+        #   Iwd=${cwd}/execution
+        #   requirements=${nativeSpecs}
+        #   leave_in_queue=true
+        #   request_memory=${memory_mb}
+        #   request_disk=${disk_kb}
+        #   error=${cwd}/execution/stderr
+        #   output=${cwd}/execution/stdout
+        #   log_xml=true
+        #   request_cpus=${cpu}
+        #   executable=${cwd}/execution/dockerScript
+        #   log=${cwd}/execution/execution.log
+        #   queue
+        #   EOF
+        #   condor_submit ${cwd}/execution/submitFile
+        # \"\"\"
+        kill = "condor_rm ${job_id}"
+        check-alive = "condor_q ${job_id}"
+        job-id-regex = "(?sm).*cluster (\\\\d+)..*"
       }
     }
 """
