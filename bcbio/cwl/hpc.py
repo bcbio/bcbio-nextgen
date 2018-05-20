@@ -45,7 +45,8 @@ def _args_to_cromwell(args):
                                  "cpu_and_mem": "-l select=1:ncpus=${cpu}:mem=${memory_mb}mb"}}
     prefixes = {("account", "slurm"): "-A ", ("account", "pbspro"): "-A "}
     custom = {("noselect", "pbspro"): ("cpu_and_mem", "-l ncpus=${cpu} -l mem=${memory_mb}mb")}
-    cl = ["-Dload-control.memory-threshold-in-mb=1"]
+    cl = []
+    config = {}
     # HPC scheduling
     if args.scheduler:
         if args.scheduler not in default_config:
@@ -65,11 +66,7 @@ def _args_to_cromwell(args):
                     key, val = custom[(parts[0], args.scheduler)]
                     config[key] = val
         return cl, config, args.scheduler
-    # Local multicore runs
-    # Avoid overscheduling jobs for local runs by limiting concurrent jobs
-    # Longer term would like to keep these within defined core window
-    else:
-        return ["-Dbackend.providers.Local.config.concurrent-job-limit=1"] + cl, {}, None
+    return cl, config, args.scheduler
 
 
 FILESYSTEM_CONFIG = """
@@ -93,6 +90,10 @@ system {
 call-caching {
   enabled = true
 }
+load-control {
+  # Avoid watching memory, since the load-controller stops jobs on local runs
+  memory-threshold-in-mb = 1
+}
 
 database {
   profile = "slick.jdbc.HsqldbProfile$"
@@ -107,6 +108,9 @@ backend {
   providers {
     Local {
       config {
+        # Avoid overscheduling jobs for local runs by limiting concurrent jobs
+        # Longer term would like to keep these within defined core window
+        concurrent-job-limit = 1
         runtime-attributes = \"\"\"
         Int? cpu
         Int? memory_mb
