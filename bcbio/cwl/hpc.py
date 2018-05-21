@@ -11,10 +11,12 @@ def create_cromwell_config(args, work_dir):
     cwl_attrs = ["Int? cpuMin", "Int? cpuMax", "Int? memoryMin", "Int? memoryMax", "String? outDirMin",
                  "String? outDirMax", "String? tmpDirMin", "String? tmpDirMax"]
     out_file = os.path.join(work_dir, "bcbio-cromwell.conf")
+    run_config = _load_custom_config(args.runconfig) if args.runconfig else {}
     std_args = {"docker_attrs": "" if args.no_container else "\n        ".join(docker_attrs),
                 "submit_docker": 'submit-docker: ""' if args.no_container else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
-                "filesystem": FILESYSTEM_CONFIG}
+                "filesystem": FILESYSTEM_CONFIG,
+                "database": run_config.get("database", DATABASE_CONFIG)}
     cl_args, conf_args, scheduler = _args_to_cromwell(args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
@@ -26,6 +28,16 @@ def create_cromwell_config(args, work_dir):
     with open(out_file, "w") as out_handle:
         out_handle.write(CROMWELL_CONFIG % main_config)
     return out_file
+
+def _load_custom_config(run_config):
+    """Load custom configuration input HOCON file for cromwell.
+    """
+    from pyhocon import ConfigFactory, HOCONConverter, ConfigTree
+    conf = ConfigFactory.parse_file(run_config)
+    out = {}
+    if "database" in conf:
+        out["database"] = HOCONConverter.to_hocon(ConfigTree({"database": conf.get_config("database")}))
+    return out
 
 def args_to_cromwell_cl(args):
     """Convert input bcbio arguments into cromwell command line arguments.
@@ -81,6 +93,17 @@ FILESYSTEM_CONFIG = """
       }
 """
 
+DATABASE_CONFIG = """
+database {
+  profile = "slick.jdbc.HsqldbProfile$"
+  db {
+    driver = "org.hsqldb.jdbcDriver"
+    url = "jdbc:hsqldb:file:%(work_dir)s/persist/metadata;shutdown=false;hsqldb.tx=mvcc"
+    connectionTimeout = 20000
+  }
+}
+"""
+
 CROMWELL_CONFIG = """
 include required(classpath("application"))
 
@@ -95,14 +118,7 @@ load-control {
   memory-threshold-in-mb = 1
 }
 
-database {
-  profile = "slick.jdbc.HsqldbProfile$"
-  db {
-    driver = "org.hsqldb.jdbcDriver"
-    url = "jdbc:hsqldb:file:%(work_dir)s/persist/metadata;shutdown=false;hsqldb.tx=mvcc"
-    connectionTimeout = 20000
-  }
-}
+%(database)s
 
 backend {
   providers {
