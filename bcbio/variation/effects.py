@@ -288,6 +288,8 @@ def get_db(data):
                 snpeff_db = snpeff_db.replace("_", ".")
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring) and os.path.isfile(snpeff_base_dir)):
+            snpeff_base_dir = os.path.dirname(snpeff_base_dir)
         if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
               and snpeff_base_dir.endswith("%s%s" % (os.path.sep, snpeff_db))):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
@@ -310,10 +312,12 @@ def get_snpeff_files(data):
     if snpeff_db:
         # Clean problem characters for CWL/WDL representation
         clean_snpeff_db = snpeff_db.replace(".", "_")
-        data_files = glob.glob(os.path.join(datadir, snpeff_db, "*"))
-        if len(data_files) > 0:
-            return {clean_snpeff_db: {"base": datadir,
-                                    "indexes": data_files}}
+        snpeff_files = glob.glob(os.path.join(datadir, snpeff_db, "*"))
+        if len(snpeff_files) > 0:
+            base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
+            assert len(base_files) == 1, base_files
+            del snpeff_files[snpeff_files.index(base_files[0])]
+            return {"base": base_files[0], "indexes": snpeff_files}
     else:
         return {}
 
