@@ -276,7 +276,7 @@ def get_base_cnv_regions(data, work_dir, genome_default="transcripts1e4", includ
                 base_regions = remove_exclude_regions(base_regions, base_regions, [data])
         # Finally, default to the defined variant regions
         if not base_regions:
-            base_regions = dd.get_variant_regions(data)
+            base_regions = dd.get_variant_regions(data) or dd.get_sample_callable(data)
     return bedutils.clean_file(base_regions, data)
 
 def remove_exclude_regions(orig_bed, base_file, items, remove_entire_feature=False):
@@ -305,7 +305,8 @@ def get_sv_bed(data, method=None, out_dir=None, include_gene_names=True):
       - A custom BED file of regions
     """
     if method is None:
-        method = tz.get_in(["config", "algorithm", "sv_regions"], data) or dd.get_variant_regions(data)
+        method = (tz.get_in(["config", "algorithm", "sv_regions"], data) or dd.get_variant_regions(data)
+                  or dd.get_sample_callable(data))
     gene_file = dd.get_gene_bed(data)
     if method and os.path.isfile(method):
         return method

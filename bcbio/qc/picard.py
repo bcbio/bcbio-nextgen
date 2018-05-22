@@ -13,7 +13,7 @@ def run(bam_file, data, out_dir):
         return {}
     ref_file = dd.get_ref_file(data)
     sample = dd.get_sample_name(data)
-    target_file = dd.get_variant_regions(data)
+    target_file = dd.get_variant_regions(data) or dd.get_sample_callable(data)
     broad_runner = broad.PicardCmdRunner("picard", data["config"])
     bam_fname = os.path.abspath(bam_file)
     path = os.path.dirname(bam_fname)

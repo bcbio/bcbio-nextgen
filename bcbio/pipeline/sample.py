@@ -253,10 +253,6 @@ def postprocess_alignment(data):
         data["depth"] = covinfo.depth_files
         data = coverage.assign_interval(data)
         data = samtools.run_and_save(data)
-        if (os.path.exists(callable_region_bed) and
-                not data["config"]["algorithm"].get("variant_regions")):
-            data["config"]["algorithm"]["variant_regions"] = covinfo.callable
-            data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
     return [[data]]

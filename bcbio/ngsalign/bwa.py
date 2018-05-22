@@ -273,7 +273,7 @@ def filter_multimappers(align_file, data):
     type_flag = "" if bam.is_bam(align_file) else "S"
     base, ext = os.path.splitext(align_file)
     out_file = base + ".unique" + ext
-    bed_file = dd.get_variant_regions(data)
+    bed_file = dd.get_variant_regions(data) or dd.get_sample_callable(data)
     bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
     if utils.file_exists(out_file):
         return out_file

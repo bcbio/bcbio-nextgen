@@ -176,15 +176,15 @@ def population_variant_regions(items):
     """
     import pybedtools
     if len(items) == 1:
-        return dd.get_variant_regions(items[0])
+        return dd.get_variant_regions(items[0]) or dd.get_sample_callable(items[0])
     else:
         paired = vcfutils.get_paired(items)
         if paired:
-            return dd.get_variant_regions(paired.tumor_data)
+            return dd.get_variant_regions(paired.tumor_data) or dd.get_sample_callable(paired.tumor_data)
         else:
             vrs = []
             for data in items:
-                vr_bed = dd.get_variant_regions(data)
+                vr_bed = dd.get_variant_regions(data) or dd.get_sample_callable(data)
                 if vr_bed:
                     vrs.append((pybedtools.BedTool(vr_bed).total_coverage(), vr_bed))
             vrs.sort(reverse=True)

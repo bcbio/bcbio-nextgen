@@ -8,6 +8,8 @@
 - CWL: adjust defaults for align_split_size and nomap_split_targets to match
   different parallelization and overhead for these runs
 - CWL: support for Cromwell runner
+- Avoid making variant_regions required during processing (by filling with
+  coverage) to differentiate targeted and non analyses downstream.
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models

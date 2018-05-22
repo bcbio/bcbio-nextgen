@@ -29,7 +29,9 @@ def prep_recal(data):
         broad_runner = broad.runner_from_config(data["config"])
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dd.get_align_bam(data),
                                                      dd.get_ref_file(data), dd.get_platform(data),
-                                                     dbsnp_file, dd.get_variant_regions(data), data)
+                                                     dbsnp_file,
+                                                     dd.get_variant_regions(data) or dd.get_sample_callable(data),
+                                                     data)
     elif dd.get_recalibrate(data) == "sentieon":
         logger.info("Prepare BQSR tables with sentieon: %s " % str(dd.get_sample_name(data)))
         data["prep_recal"] = sentieon.bqsr_table(data)
