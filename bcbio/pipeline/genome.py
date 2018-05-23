@@ -171,9 +171,8 @@ def _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap
     remap_fn = alignment.TOOLS[name].remap_index_fn
     need_remap = remap_fn is not None
     if len(refs) == 0:
-        logger.info("Downloading %s %s from AWS" % (genome_build, name))
-        cur_ref = download_prepped_genome(genome_build, data, name, need_remap)
-    # allow multiple references in a file and use the most recently added
+        raise ValueError("Did not find genome build %s in bcbio installation: %s" %
+                         (genome_build, os.path.normpath(loc_file)))
     else:
         cur_ref = refs[-1]
     # Find genome directory and check for packed wf tarballs
@@ -275,69 +274,3 @@ def get_builds(galaxy_base):
     for dbkey in sorted(fnames.keys()):
         out.append((dbkey, fnames[dbkey]))
     return out
-
-# ## Retrieve pre-prepared genomes
-
-REMAP_NAMES = {"tophat2": ["bowtie2"],
-               "samtools": ["rtg", "seq"]}
-INPLACE_INDEX = {"star": star.index}
-
-def download_prepped_genome(genome_build, data, name, need_remap, out_dir=None):
-    """Get a pre-prepared genome from S3, unpacking it locally.
-
-    Supports runs on AWS where we can retrieve the resources on demand. Upgrades
-    GEMINI in place if installed inside a Docker container with the biological data.
-    GEMINI install requires write permissions to standard data directories -- works
-    on AWS but not generalizable elsewhere.
-    """
-    from bcbio.variation import population
-    from bcbio import install
-    if not out_dir:
-        out_dir = utils.safe_makedir(os.path.join(tz.get_in(["dirs", "work"], data),
-                                                  "inputs", "data", "genomes"))
-    for target in REMAP_NAMES.get(name, [name]):
-        ref_dir = os.path.join(out_dir, genome_build, target)
-        if not os.path.exists(ref_dir):
-            if target in INPLACE_INDEX:
-                ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
-                # Need to add genome resources so we can retrieve GTF files for STAR
-                data["genome_resources"] = get_resources(data["genome_build"], ref_file, data)
-                INPLACE_INDEX[target](ref_file, ref_dir, data)
-            else:
-                # XXX Currently only supports genomes from S3 us-east-1 bucket.
-                # Need to assess how slow this is from multiple regions and generalize to non-AWS.
-                fname = objectstore.BIODATA_INFO["s3"].format(build=genome_build, target=target)
-                try:
-                    objectstore.connect(fname)
-                except:
-                    raise ValueError("Could not find reference genome file %s %s" % (genome_build, name))
-                with utils.chdir(out_dir):
-                    cmd = objectstore.cl_input(fname, unpack=False, anonpipe=False) + " | pigz -d -c | tar -xvp"
-                    do.run(cmd.format(**locals()), "Download pre-prepared genome data: %s" % genome_build)
-    ref_file = glob.glob(os.path.normpath(os.path.join(ref_dir, os.pardir, "seq", "*.fa")))[0]
-    if data.get("genome_build"):
-        if (data.get("files") and population.do_db_build([data], need_bam=False)
-              and population.support_gemini_orig(data)):
-            # symlink base GEMINI directory to work directory, avoiding write/space issues
-            out_gemini_dir = utils.safe_makedir(os.path.join(os.path.dirname(ref_dir), "gemini_data"))
-            orig_gemini_dir = install.get_gemini_dir()
-            # Remove empty initial directory created by installer
-            if os.path.isdir(orig_gemini_dir) and len(os.listdir(orig_gemini_dir)) == 0:
-                if os.path.islink(orig_gemini_dir):
-                    os.remove(orig_gemini_dir)
-                else:
-                    os.rmdir(orig_gemini_dir)
-            if not os.path.exists(orig_gemini_dir):
-                os.symlink(out_gemini_dir, orig_gemini_dir)
-            cmd = [os.path.join(os.path.dirname(sys.executable), "gemini"), "update", "--dataonly"]
-            do.run(cmd, "Download GEMINI data")
-    genome_dir = os.path.join(out_dir, genome_build)
-    genome_build = genome_build.replace("-test", "")
-    if need_remap or name == "samtools":
-        return os.path.join(genome_dir, "seq", "%s.fa" % genome_build)
-    else:
-        ref_dir = os.path.join(genome_dir, REMAP_NAMES.get(name, [name])[-1])
-        base_name = os.path.commonprefix(os.listdir(ref_dir))
-        while base_name.endswith("."):
-            base_name = base_name[:-1]
-        return os.path.join(ref_dir, base_name)
