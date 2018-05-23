@@ -271,6 +271,7 @@ HPC_CONFIGS = {
           request_cpus=${cpu}
           executable=${script}
           log=${cwd}/execution/execution.log
+          description=${job_name}
           getenv=true
           queue
           EOF
