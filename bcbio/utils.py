@@ -340,7 +340,7 @@ def symlink_plus(orig, new):
     orig = os.path.abspath(orig)
     if not os.path.exists(orig):
         raise RuntimeError("File not found: %s" % orig)
-    for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
+    for ext in ["", ".idx", ".gbi", ".tbi", ".bai", ".fai"]:
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
                 remove_safe(new + ext)
@@ -354,7 +354,7 @@ def symlink_plus(orig, new):
                         shutil.copyfile(orig + ext, new + ext)
     orig_noext = splitext_plus(orig)[0]
     new_noext = splitext_plus(new)[0]
-    for sub_ext in [".bai"]:
+    for sub_ext in [".bai", ".dict"]:
         if os.path.exists(orig_noext + sub_ext) and not os.path.lexists(new_noext + sub_ext):
             with chdir(os.path.dirname(new_noext)):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))

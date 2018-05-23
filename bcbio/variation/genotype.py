@@ -311,7 +311,7 @@ SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope", "deepv
 
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
-                                 platypus, scalpel, sentieon, strelka2, vardict, qsnp,
+                                 pisces, platypus, scalpel, sentieon, strelka2, vardict, qsnp,
                                  deepvariant)
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
@@ -322,6 +322,7 @@ def get_variantcallers():
             "samtools": samtools.run_samtools,
             "varscan": varscan.run_varscan,
             "mutect": mutect.mutect_caller,
+            "pisces": pisces.run,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
             "strelka2": strelka2.run,

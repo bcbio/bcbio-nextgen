@@ -160,7 +160,7 @@ LOOKUPS = {
     "avg_coverage": {"keys": ["regions", "avg_coverage"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
-    "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
+    "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"], "default": 10},
     "normalized_depth": {"keys": ["depth", "bins", "normalized"]},
 
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
