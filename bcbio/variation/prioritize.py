@@ -150,7 +150,7 @@ def _calc_priority_filter(row, pops):
     """
     filters = []
     passes = []
-    if row["impact_severity"] in ["LOW"]:
+    if row.get("impact_severity") in ["LOW"]:
         filters.append("lowseverity")
     passes.extend(_find_known(row))
     filters.extend(_known_populations(row, pops))
