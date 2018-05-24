@@ -292,6 +292,10 @@ The sample configuration file defines ``details`` of each sample to process::
      in specific batches, but include multiple batches into the same
      validation plot.
 
+   - ``validate_combine`` -- Specify a batch name to combine multiple samples
+     into an additional validation summary. Useful for larger numbers of small
+     samples to evaluate together.
+
 .. _upload-configuration:
 
 Upload

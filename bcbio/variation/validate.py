@@ -510,7 +510,7 @@ def _has_grading_info(samples, vkey):
                 return True
     return False
 
-def _group_validate_samples(samples, vkey):
+def _group_validate_samples(samples, vkey, batch_keys):
     extras = []
     validated = collections.defaultdict(list)
     for data in samples:
@@ -521,8 +521,7 @@ def _group_validate_samples(samples, vkey):
             if variant.get(vkey):
                 is_v = True
         if is_v:
-            for batch_key in (["metadata", "validate_batch"], ["metadata", "batch"],
-                              ["description"]):
+            for batch_key in batch_keys:
                 vname = tz.get_in(batch_key, data)
                 if vname and not (isinstance(vname, basestring) and vname.lower() in ["none", "false"]):
                     break
@@ -544,7 +543,9 @@ def summarize_grading(samples, vkey="validate"):
         return [[d] for d in samples]
     validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], vkey))
     header = ["sample", "caller", "variant.type", "category", "value"]
-    validated, out = _group_validate_samples(samples, vkey)
+    _summarize_combined(samples, vkey)
+    validated, out = _group_validate_samples(samples, vkey,
+                                             (["metadata", "validate_batch"], ["metadata", "batch"], ["description"]))
     for vname, vitems in validated.items():
         out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
         with open(out_csv, "w") as out_handle:
@@ -584,6 +585,36 @@ def summarize_grading(samples, vkey="validate"):
                     variant[vkey]["grading_plots"] = plots
             out.append([data])
     return out
+
+def _summarize_combined(samples, vkey):
+    """Prepare summarized CSV and plot files for samples to combine together.
+
+    Helps handle cases where we want to summarize over multiple samples.
+    """
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], vkey))
+    combined, _ = _group_validate_samples(samples, vkey, [["metadata", "validate_combine"]])
+    for vname, vitems in combined.items():
+        if vname:
+            cur_combined = collections.defaultdict(int)
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
+                validations = [variant.get(vkey) for variant in data.get("variants", [])]
+                validations = [v for v in validations if v]
+                if len(validations) == 0 and vkey in data:
+                    validations = [data.get(vkey)]
+                for validate in validations:
+                    with open(validate["summary"]) as in_handle:
+                        reader = csv.reader(in_handle)
+                        reader.next()  # header
+                        for _, caller, vtype, metric, value in reader:
+                            cur_combined[(caller, vtype, metric)] += int(value)
+            out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
+            with open(out_csv, "w") as out_handle:
+                writer = csv.writer(out_handle)
+                header = ["sample", "caller", "vtype", "metric", "value"]
+                writer.writerow(header)
+                for (caller, variant_type, category), val in cur_combined.items():
+                    writer.writerow(["combined-%s" % vname, caller, variant_type, category, val])
+            plots = validateplot.classifyplot_from_valfile(out_csv)
 
 def combine_validations(items, vkey="validate"):
     """Combine multiple batch validations into validation outputs.
