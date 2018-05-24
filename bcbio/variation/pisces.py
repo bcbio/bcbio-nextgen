@@ -39,8 +39,9 @@ def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
             shutil.move(os.path.join(out_dir, "%s.vcf" % base_out_name),
                         tx_out_file)
         vcfutils.bgzip_and_index(raw_file, paired.tumor_data["config"],
-                                 prep_cmd="sed 's#%s.bam#%s#'" % (base_out_name,
-                                                                      dd.get_sample_name(paired.tumor_data)))
+                                 prep_cmd="sed 's#%s.bam#%s#' | %s" %
+                                 (base_out_name, dd.get_sample_name(paired.tumor_data),
+                                  vcfutils.add_contig_to_header_cl(dd.get_ref_file(paired.tumor_data), out_file)))
     return vcfutils.bgzip_and_index(out_file, paired.tumor_data["config"])
 
 def _prep_genome(out_dir, data):
