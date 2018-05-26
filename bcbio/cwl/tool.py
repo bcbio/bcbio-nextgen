@@ -3,6 +3,7 @@
 Handles wrapping and integrating with multiple tools making it easier
 to run bcbio in a standard way in many environments.
 """
+from __future__ import print_function
 import glob
 import json
 import os
@@ -153,6 +154,73 @@ def _run_cromwell(args):
             "--inputs", json_file, main_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
+        if metadata_file and utils.file_exists(metadata_file):
+            with open(metadata_file) as in_handle:
+                metadata = json.load(in_handle)
+            if metadata["status"] == "Failed":
+                _cromwell_debug(metadata)
+            else:
+                _cromwell_move_outputs(metadata, final_dir)
+
+def _cromwell_debug(metadata):
+    """Format Cromwell failures to make debugging easier.
+    """
+    def get_failed_calls(cur, key=None):
+        if key is None: key = []
+        out = []
+        if isinstance(cur, dict) and "failures" in cur and "callRoot" in cur:
+            out.append((key, cur))
+        elif isinstance(cur, dict):
+            for k, v in cur.items():
+                out.extend(get_failed_calls(v, key + [k]))
+        elif isinstance(cur, (list, tuple)):
+            for i, v in enumerate(cur):
+                out.extend(get_failed_calls(v, key + [i]))
+        return out
+    print("Failed bcbio Cromwell run")
+    print("-------------------------")
+    for fail_k, fail_call in get_failed_calls(metadata["calls"]):
+        root_dir = os.path.join("cromwell_work", os.path.relpath(fail_call["callRoot"]))
+        print("Failure in step: %s" % ".".join([str(x) for x in fail_k]))
+        print("  bcbio log file     : %s" % os.path.join(root_dir, "execution", "log", "bcbio-nextgen-debug.log"))
+        print("  bcbio commands file: %s" % os.path.join(root_dir, "execution", "log",
+                                                         "bcbio-nextgen-commands.log"))
+        print("  Cromwell directory : %s" % root_dir)
+        print()
+
+def _cromwell_move_outputs(metadata, final_dir):
+    """Move Cromwell outputs to the final upload directory.
+    """
+    sample_key = [k for k in metadata["outputs"].keys() if k.endswith(("rgnames__sample", "rgnames__sample_out"))][0]
+    project_dir = utils.safe_makedir(os.path.join(final_dir, "project"))
+    samples = metadata["outputs"][sample_key]
+    def _copy_with_secondary(f, dirname):
+        if len(f["secondaryFiles"]) > 1:
+            dirname = utils.safe_makedir(os.path.join(dirname, os.path.basename(os.path.dirname(f["location"]))))
+        finalf = os.path.join(dirname, os.path.basename(f["location"]))
+        if not utils.file_uptodate(finalf, f["location"]):
+            print("Copying %s to %s" % (f["location"], dirname))
+            shutil.copy(f["location"], dirname)
+        [_copy_with_secondary(sf, dirname) for sf in f["secondaryFiles"]]
+    def _write_to_dir(val, dirname):
+        if isinstance(val, (list, tuple)):
+            [_write_to_dir(v, dirname) for v in val]
+        else:
+            _copy_with_secondary(val, dirname)
+    for k, vals in metadata["outputs"].items():
+        if k != sample_key:
+            if k.endswith(("summary__multiqc")):
+                vs = [v for v in vals if v]
+                assert len(vs) == 1
+                _write_to_dir(vs[0], project_dir)
+            elif len(vals) == len(samples):
+                for s, v in zip(samples, vals):
+                    if v:
+                        _write_to_dir(v, utils.safe_makedir(os.path.join(final_dir, s)))
+            elif len(vals) == 1:
+                _write_to_dir(vals[0], project_dir)
+            else:
+                raise ValueError("Unexpected sample and outputs: %s %s %s" % (k, samples, vals))
 
 def _run_funnel(args):
     """Run funnel TES server with rabix bunny for CWL.
