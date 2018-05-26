@@ -441,6 +441,9 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None,
                 if "outputSource" not in wf_output:
                     wf_output["outputSource"] = wf_output.pop("source")
                 wf_output = _clean_record(wf_output)
+                # Avoid input/output naming clashes
+                if wf_output["id"] in used_inputs:
+                    wf_output["id"] = "%s_out" % wf_output["id"]
                 out["outputs"].append(wf_output)
         elif cur[0] == "wf_start":
             parent_wfs.append(out)

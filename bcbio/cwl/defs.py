@@ -386,7 +386,7 @@ def variant(samples):
     hla, hla_out = _variant_hla(checkpoints)
     qc, qc_out = _qc_workflow(checkpoints)
     steps = align + hla + vc + sv + qc
-    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out
+    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out + [["rgnames", "sample"]]
     return steps, final_outputs
 
 def _qc_workflow(checkpoints):
