@@ -860,6 +860,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
             # Handle specifying a local directory directly in upload
             if isinstance(upload, basestring):
                 upload = {"dir": upload}
+            if not upload:
+                upload["dir"] = "../final"
             if fc_name:
                 upload["fc_name"] = fc_name
             if fc_date:
