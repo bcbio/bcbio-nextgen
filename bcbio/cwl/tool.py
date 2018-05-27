@@ -148,7 +148,8 @@ def _run_cromwell(args):
     with open(option_file, "w") as out_handle:
         json.dump({"final_workflow_outputs_dir": final_dir}, out_handle)
 
-    cmd = ["cromwell", "run", "--type", "CWL", "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
+    cmd = ["cromwell", "-Xms1g", "-Xmx3g", "run", "--type", "CWL",
+           "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir)]
     cmd += hpc.args_to_cromwell_cl(args)
     cmd += ["--metadata-output", metadata_file, "--options", option_file,
             "--inputs", json_file, main_file]

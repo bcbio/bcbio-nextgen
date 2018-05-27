@@ -99,7 +99,7 @@ database {
   db {
     driver = "org.hsqldb.jdbcDriver"
     url = "jdbc:hsqldb:file:%(work_dir)s/persist/metadata;shutdown=false;hsqldb.tx=mvcc"
-    connectionTimeout = 20000
+    connectionTimeout = 100000
   }
 }
 """
