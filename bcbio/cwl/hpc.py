@@ -16,7 +16,7 @@ def create_cromwell_config(args, work_dir):
                 "submit_docker": 'submit-docker: ""' if args.no_container else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
                 "filesystem": FILESYSTEM_CONFIG,
-                "database": run_config.get("database", DATABASE_CONFIG)}
+                "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir})}
     cl_args, conf_args, scheduler = _args_to_cromwell(args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
