@@ -303,6 +303,7 @@ HPC_CONFIGS = {
         kill = "condor_rm ${job_id}"
         check-alive = "condor_q ${job_id}"
         job-id-regex = "(?sm).*cluster (\\\\d+)..*"
+        %(filesystem)s
       }
     }
 """
