@@ -162,15 +162,6 @@ def _read_group_option(names):
     return (" --outSAMattrRGline ID:{rg_id} PL:{rg_library} "
             "PU:{rg_platform_unit} SM:{rg_sample} {rg_lb}").format(**locals())
 
-def _get_quality_format(config):
-    qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format.lower() == "illumina":
-        return "fastq-illumina"
-    elif qual_format.lower() == "solexa":
-        return "fastq-solexa"
-    else:
-        return "fastq-sanger"
-
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
     """

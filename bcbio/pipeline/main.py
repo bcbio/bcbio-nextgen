@@ -390,7 +390,7 @@ def rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples):
     necessary and trimming if necessary
     """
     pipeline = dd.get_in_samples(samples, dd.get_analysis)
-    trim_reads_set = _is_trim_set(samples)
+    trim_reads_set = any([tz.get_in(["algorithm", "trim_reads"], d) for d in dd.sample_data_iterator(samples)])
     resources = ["picard"]
     needs_trimming = (_is_smallrnaseq(pipeline) or trim_reads_set)
     if needs_trimming:
@@ -463,11 +463,6 @@ SUPPORTED_PIPELINES = {"variant2": variant2pipeline,
                        "chip-seq": chipseqpipeline,
                        "fastrna-seq": fastrnaseqpipeline,
                        "scrna-seq": singlecellrnaseqpipeline}
-
-def _is_trim_set(samples):
-    for sample in dd.sample_data_iterator(samples):
-        return utils.get_in(sample, ["algorithm", "trim_reads"])
-    return None
 
 def _is_smallrnaseq(pipeline):
     return pipeline.lower() == "smallrna-seq"

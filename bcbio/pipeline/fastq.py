@@ -6,6 +6,7 @@ from bcbio import bam, broad, utils
 from bcbio.bam import fastq
 from bcbio.distributed import objectstore
 from bcbio.pipeline import alignment
+from bcbio.pipeline import datadict as dd
 from bcbio.utils import file_exists, safe_makedir, splitext_plus
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
@@ -29,6 +30,10 @@ def get_fastq_files(data):
                 ready_files = [fname]
         elif objectstore.is_remote(fname):
             ready_files.append(fname)
+        # Trimming does quality conversion, so if not doing that, do an explicit conversion
+        elif not(dd.get_trim_reads(data)) and dd.get_quality_format(data) != "standard":
+            out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "fastq_convert"))
+            ready_files.append(fastq.groom(fname, data, out_dir=out_dir))
         else:
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]

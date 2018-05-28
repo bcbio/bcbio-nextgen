@@ -41,6 +41,9 @@ def prepare_sample(data):
     data = utils.to_single_data(data)
     logger.debug("Preparing %s" % data["rgnames"]["sample"])
     data["files"] = get_fastq_files(data)
+    # get_fastq_files swaps over quality scores to standard, unless trimming
+    if not(dd.get_trim_reads(data)):
+        data = dd.set_quality_format(data, "standard")
     return [[data]]
 
 def trim_sample(data):
