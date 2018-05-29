@@ -939,6 +939,20 @@ def add_metadata_defaults(md):
             md[k] = v
     return md
 
+def _get_nomap_split_targets(analysis, is_cwl):
+    """Chromosome splitting logic based on run type.
+
+    RNA-seq -- aim for smaller chunks (half chromosomes) to avoid memory issues
+    CWL -- aim for larger chunks to allow batching and multicore
+    old style -- larger number of chunks for better parallelization
+    """
+    if analysis.lower().find("rna-seq") >= 0:
+        return 50
+    elif is_cwl:
+        return 20
+    else:
+        return 200
+
 def _add_algorithm_defaults(algorithm, analysis, is_cwl):
     """Central location specifying defaults for algorithm inputs.
 
@@ -955,11 +969,11 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "adapters": [],
                 "effects": "snpeff",
                 "quality_format": "standard",
-                "expression_caller": ["salmon"] if analysis.lower().find("rna-seq") > 0 else None,
+                "expression_caller": ["salmon"] if analysis.lower().find("rna-seq") >= 0 else None,
                 "align_split_size": None,
                 "bam_clean": False,
                 "nomap_split_size": 250,
-                "nomap_split_targets": 20 if is_cwl else 200,
+                "nomap_split_targets": _get_nomap_split_targets(analysis, is_cwl),
                 "mark_duplicates": False if not algorithm.get("aligner") else True,
                 "coverage_interval": None,
                 "recalibrate": False,

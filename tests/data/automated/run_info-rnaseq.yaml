@@ -6,6 +6,8 @@ details:
   - analysis: RNA-seq
     algorithm:
       variantcaller: gatk-haplotype
+      nomap_split_size: 5
+      nomap_split_targets: 150
       #variantcaller: vardict
       transcriptome_align: True
       aligner: tophat2

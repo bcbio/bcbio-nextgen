@@ -338,3 +338,30 @@ def _combine_sample_regions_batch(batch, items):
         return analysis_file, no_analysis_file
     else:
         return None, None
+
+def get_split_regions(bed_file, data):
+    """Retrieve a set of split regions using the input BED for callable regions.
+
+    Provides a less inclusive hook for parallelizing over multiple regions.
+    """
+    out_file = "%s-analysis_blocks.bed" % utils.splitext_plus(bed_file)[0]
+    with shared.bedtools_tmpdir(data):
+        if not utils.file_uptodate(out_file, bed_file):
+            ref_regions = get_ref_bedtool(dd.get_ref_file(data), data["config"])
+            nblock_regions = ref_regions.subtract(pybedtools.BedTool(bed_file)).saveas()
+            min_n_size = int(tz.get_in(["config", "algorithm", "nomap_split_size"], data, 250))
+            block_filter = NBlockRegionPicker(ref_regions, data["config"], min_n_size)
+            final_nblock_regions = nblock_regions.filter(
+                block_filter.include_block).saveas().each(block_filter.expand_block).saveas()
+            with file_transaction(data, out_file) as tx_out_file:
+                final_regions = ref_regions.subtract(final_nblock_regions, nonamecheck=True).\
+                                saveas().merge(d=min_n_size).saveas(tx_out_file)
+        chroms = set([])
+        with shared.bedtools_tmpdir(data):
+            for r in pybedtools.BedTool(bed_file):
+                chroms.add(r.chrom)
+        out = []
+        for r in pybedtools.BedTool(out_file):
+            if r.chrom in chroms:
+                out.append((r.chrom, r.start, r.stop))
+        return out
