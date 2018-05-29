@@ -208,9 +208,9 @@ HPC_CONFIGS = {
         %(cwl_attrs)s
         \"\"\"
         submit = \"\"\"
-        qsub -V -l wd -N ${job_name} -o ${out} -e ${err} -q ${queue} -l walltime=${walltime} \
+        qsub -V -N ${job_name} -o ${out} -e ${err} -q ${queue} -l walltime=${walltime} \
         %(cpu_and_mem)s \
-        -- /usr/bin/env bash ${script}
+        ${script}
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
