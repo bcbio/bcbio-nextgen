@@ -1,7 +1,7 @@
 import os
 from bcbio import utils
 from bcbio.utils import file_exists, get_R_exports, safe_makedir
-from bcbio.bam import callable, ref
+from bcbio.bam import ref
 from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils, shared
@@ -81,6 +81,7 @@ def _setup_variant_regions(data):
 def gatk_rnaseq_calling(data):
     """Use GATK to perform gVCF variant calling on RNA-seq data
     """
+    from bcbio.bam import callable
     data = utils.deepish_copy(data)
     tools_on = dd.get_tools_on(data)
     if not tools_on:
