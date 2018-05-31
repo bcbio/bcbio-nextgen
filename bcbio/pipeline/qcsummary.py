@@ -7,6 +7,8 @@ import os
 
 import yaml
 from datetime import datetime
+import pandas as pd
+import glob
 
 import toolz as tz
 
@@ -38,12 +40,14 @@ def generate_parallel(samples, run_parallel):
     samples = _combine_qc_samples(qced) + extras
     qsign_info = run_parallel("qsignature_summary", [samples])
     samples = run_parallel("multiqc_summary", [samples])
+    metadata_file = _merge_metadata([samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
         if "summary" not in data[0]:
             data[0]["summary"] = {}
         data[0]["summary"]["project"] = summary_file
+        data[0]["summary"]["metadata"] = metadata_file
         if qsign_info:
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
         out.append(data)
@@ -282,6 +286,25 @@ def write_project_summary(samples, qsign_info=None):
                        default_flow_style=False, allow_unicode=False)
         yaml.safe_dump({"samples": prev_samples + [_save_fields(sample[0]) for sample in samples]}, out_handle,
                        default_flow_style=False, allow_unicode=False)
+    return out_file
+
+def _merge_metadata(samples):
+    """Merge all metadata into CSV file"""
+    samples = list(utils.flatten(samples))
+    out_dir = dd.get_work_dir(samples[0])
+    logger.info("summarize metadata")
+    out_file = os.path.join(out_dir, "metadata.csv")
+    sample_metrics = collections.defaultdict(dict)
+    for s in samples:
+        m = tz.get_in(['metadata'], s)
+        if isinstance(m, basestring):
+            m = json.loads(m)
+        if m:
+            for me in m.keys():
+                if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
+                    m.pop(me, None)
+            sample_metrics[dd.get_sample_name(s)].update(m)
+    pd.DataFrame(sample_metrics).transpose().to_csv(out_file)
     return out_file
 
 def _other_pipeline_samples(summary_file, cur_samples):

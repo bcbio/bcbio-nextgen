@@ -642,6 +642,8 @@ def _get_files_project(sample, upload_config):
 
     if "summary" in sample and sample["summary"].get("project"):
         out.append({"path": sample["summary"]["project"]})
+    if "summary" in sample and sample["summary"].get("metadata"):
+        out.append({"path": sample["summary"]["metadata"]})
     mixup_check = tz.get_in(["summary", "mixup_check"], sample)
     if mixup_check:
         out.append({"path": sample["summary"]["mixup_check"],

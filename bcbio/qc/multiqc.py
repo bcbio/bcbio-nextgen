@@ -69,6 +69,7 @@ def summary(*samples):
             data_files.add(os.path.join(out_dir, "report", "metrics", dd.get_sample_name(data) + "_bcbio.txt"))
         data_files.add(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
         data_files.add(os.path.join(out_dir, "multiqc_config.yaml"))
+        [data_files.add(f) for f in glob.glob(os.path.join(out_dir, "multiqc_data", "*"))]
         data_files = [f for f in data_files if f and utils.file_exists(f)]
         if "summary" not in samples[0]:
             samples[0]["summary"] = {}
