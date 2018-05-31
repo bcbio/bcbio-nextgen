@@ -153,8 +153,8 @@ def compare_to_rm(data):
         elif not vcfutils.vcf_has_variants(rm_file):
             eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
-        elif vmethod == "rtg":
-            eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
+        elif vmethod in ["rtg", "rtg-squash-ploidy"]:
+            eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data, vmethod)
             eval_files = _annotate_validations(eval_files, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "hap.py":
@@ -229,7 +229,7 @@ def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
     interval_bed = _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data)
     return vrn_file, rm_file, interval_bed
 
-def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
+def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data, validate_method):
     """Run evaluation of a caller against the truth set using rtg vcfeval.
     """
     out_dir = os.path.join(base_dir, "rtg")
@@ -258,6 +258,8 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
+        if validate_method == "rtg-squash-ploidy":
+            cmd += ["--squash-ploidy"]
         rm_samples = vcfutils.get_samples(rm_file)
         if len(rm_samples) > 1 and dd.get_sample_name(data) in rm_samples:
             cmd += ["--sample=%s" % dd.get_sample_name(data)]
