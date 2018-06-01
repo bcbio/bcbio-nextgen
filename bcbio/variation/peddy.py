@@ -4,6 +4,7 @@ correspondence checking with peddy (https://github.com/brentp/peddy)
 import collections
 import os
 import shutil
+import sys
 
 import toolz as tz
 
@@ -49,7 +50,7 @@ def is_human(data):
 def run_peddy(samples, out_dir=None):
     vcf_file = None
     for d in samples:
-        vcinfo = variant.get_active_vcinfo(d)
+        vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
         if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
             if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
                 vcf_file = vcinfo["vrn_file"]
@@ -79,7 +80,9 @@ def run_peddy(samples, out_dir=None):
         peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
         # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
         stderr_log = os.path.join(tx_dir, "run-stderr.log")
-        cmd = "{peddy} -p {num_cores} --plot --prefix {peddy_prefix_tx} {vcf_file} {ped_file} 2> {stderr_log}"
+        sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
+        cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
+               "{vcf_file} {ped_file} 2> {stderr_log}")
         message = "Running peddy on {vcf_file} against {ped_file}."
         try:
             do.run(cmd.format(**locals()), message.format(**locals()))
@@ -88,8 +91,10 @@ def run_peddy(samples, out_dir=None):
             with open(stderr_log) as in_handle:
                 for line in in_handle:
                     to_show.append(line)
-            if any([l.find("IndexError") >=0 and l.find("is out of bounds for axis") >= 0
-                    for l in to_show]):
+            def allowed_errors(l):
+                return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
+                        (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0))
+            if any([allowed_errors(l) for l in to_show]):
                 logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
                 with open(peddy_prefix + "-failed.log", "w") as out_handle:
                     out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")

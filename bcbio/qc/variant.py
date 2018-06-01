@@ -73,7 +73,7 @@ def _bcftools_stats(data, out_dir, vcf_file_key=None, germline=False):
                             out_handle.write(line)
         return out_file
 
-def get_active_vcinfo(data):
+def get_active_vcinfo(data, use_ensemble=True):
     """Use first caller if ensemble is not active
 
     Handles both CWL and standard inputs for organizing variants.
@@ -92,7 +92,8 @@ def get_active_vcinfo(data):
                   isinstance(v[0], basestring) and os.path.exists(v[0])):
                 active_vs.append({"vrn_file": v[0]})
             elif isinstance(v, dict) and v.get("variantcaller") == "ensemble":
-                return v
+                if use_ensemble:
+                    return v
             elif isinstance(v, dict) and v.get("vrn_file"):
                 active_vs.append(v)
         if len(active_vs) > 0:
