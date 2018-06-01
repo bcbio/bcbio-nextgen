@@ -200,7 +200,6 @@ def _cromwell_move_outputs(metadata, final_dir):
             dirname = utils.safe_makedir(os.path.join(dirname, os.path.basename(os.path.dirname(f["location"]))))
         finalf = os.path.join(dirname, os.path.basename(f["location"]))
         if not utils.file_uptodate(finalf, f["location"]):
-            print("Copying %s to %s" % (f["location"], dirname))
             shutil.copy(f["location"], dirname)
         [_copy_with_secondary(sf, dirname) for sf in f["secondaryFiles"]]
     def _write_to_dir(val, dirname):
