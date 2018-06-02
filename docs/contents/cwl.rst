@@ -146,11 +146,18 @@ are almost identical:
   program. This includes the resource specification with `cores and memory per
   core for your machines
   <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources>`_.
-  You generally want to set this to match the parameters of a single machine
-  either for a local run or on a cluster. It also includes paths to the
-  reference biodata and optionally input files if you want to avoid specifying
-  full paths in your inputs. Here is an example for a 16 core machine with 3.5Gb
-  of memory per core::
+  For choosing cores and memory per cores, you generally want to set this to
+  match the parameters of a single machine either for a local run or on a
+  cluster.
+
+  In addition to `resources
+  <http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources>`_
+  specifications, the bcbio system file now also includes paths to the
+  reference biodata and optionally input file directories if you want to avoid
+  specifying full paths to your inputs in the ``bcbio_vm.py template`` command.
+  bcbio will recursively look up file locations within those ``inputs``, and
+  this has the advantage of working identically for non-local file locations.
+  Here is an example for a 16 core machine with 3.5Gb of memory per core::
 
       local:
         ref: /path/to/bcbio/genomes/Hsapiens
@@ -164,16 +171,18 @@ are almost identical:
 
 Generate CWL with::
 
-    bcbio_vm.py template --systemconfig bcbio_system.yaml template.yaml samples.csv
+    bcbio_vm.py template --systemconfig bcbio_system.yaml template.yaml samples.csv [optional list of fastq or BAM inputs]
     bcbio_vm.py cwl --systemconfig bcbio_system.yaml samples/config/samples.yaml
 
-producing a ``sample-workflow`` output directory with the CWL. On a first CWL
-generation run with a new genome, this process will run for a longer time as it
-needs to make your reference compatible with CWL. This includes creating single
-tar.gz files from some reference directories so they can get passed to CWL steps
-where they'll get unpacked. This process only happens a single time and keeps
-unpacked versions so your reference setup is compatible with both old bcbio
-IPython and new CWL runs.
+producing a ``sample-workflow`` output directory with the CWL.
+
+
+On a first CWL generation run with a new genome, this process will run for a
+longer time as it needs to make your reference compatible with CWL. This
+includes creating single tar.gz files from some reference directories so they
+can get passed to CWL steps where they'll get unpacked. This process only
+happens a single time and keeps unpacked versions so your reference setup is
+compatible with both old bcbio IPython and new CWL runs.
 
 You can now run this with any CWL compatible runner and the ``bcbio_vm.py
 cwlrun`` wrappers standardize running across multiple tools in different
@@ -195,7 +204,7 @@ commandline.
 
 To run distributed on a SLURM cluster::
 
-    bcbio_vm.py cwlrun cromwell sample-workflow --no-container -q your_que -s slurm -r timelimit=0-12:00
+    bcbio_vm.py cwlrun cromwell sample-workflow --no-container -q your_queue -s slurm -r timelimit=0-12:00
 
 You tweak scheduler parameters using the
 `same options as the older bcbio IPython approach <http://bcbio-nextgen.readthedocs.io/en/latest/contents/parallel.html#ipython-parallel>`_.

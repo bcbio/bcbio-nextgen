@@ -133,8 +133,10 @@ Tools used on your local machine:
   `bcbio_conda install -c conda-forge -c bioconda google-cloud-sdk`
 - [Web based console](https://console.cloud.google.com)
 
-Start by [logging into gcloud](https://cloud.google.com/compute/docs/gcloud-compute/)
-and selecting your project:
+Use the console to create a project to hold your analysis
+, then add [ssh key access to your project](https://cloud.google.com/compute/docs/instances/adding-removing-ssh-keys#project-wide).
+Then locally, [log into gcloud](https://cloud.google.com/compute/docs/gcloud-compute/)
+and select your project:
 
     gcloud init
 
@@ -144,9 +146,11 @@ Create a disk to store bcbio and associated data:
 
 Finally [create credentials](http://docs.ansible.com/ansible/latest/scenario_guides/guide_gce.html#credentials)
 for connecting to your instance. These are key pairs used to automatically
-authenticate to created instances. You'll need to note the e-mail associated
-with the service account and download the json file of key pairs after creating
-it.
+authenticate to created instances. To create, go to "APIs and Services",
+"Credentials", "Create credentials" and finally "Service account key", then
+download the json file with key pairs after creating it.
+You'll need the e-mail associated with the service account, found under "IAM and
+Admin."
 
 Use this information to create a `project_vars.yaml` configuration file:
 
