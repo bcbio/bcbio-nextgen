@@ -289,6 +289,8 @@ def variant(samples):
                    ["config", "algorithm", "mark_duplicates"]]
         if checkpoints["hla"]:
             alignin.append(["config", "algorithm", "hlacaller"])
+        if checkpoints["umi"]:
+            alignin.append(["config", "algorithm", "umi_type"])
         align = [s("alignment_to_rec", "multi-combined", alignin,
                    [cwlout("alignment_rec", "record")],
                    "bcbio-vc",
@@ -405,6 +407,8 @@ def _qc_workflow(checkpoints):
        ["config", "algorithm", "coverage_merged"]]
     if checkpoints.get("vc"):
         qc_inputs += [["variants", "samples"]]
+    if checkpoints.get("umi"):
+        qc_inputs += [["config", "algorithm", "umi_type"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
             "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),
