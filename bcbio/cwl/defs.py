@@ -107,13 +107,16 @@ def _alignment(checkpoints):
                             "biobambam", "seqtk", "samblaster", "variantbam"],
                disk={"files": 2})]
     if checkpoints["align_split"]:
-        align += [s("merge_split_alignments", "single-merge",
-                  [["alignment_rec"], ["work_bam"], ["align_bam"],
-                   ["work_bam_plus", "disc"], ["work_bam_plus", "sr"], ["hla", "fastq"]],
-                  [cwlout(["align_bam"], ["File", "null"], [".bai"]),
-                   cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
-                   cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
-                   cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])],
+        inp = [["alignment_rec"], ["work_bam"], ["align_bam"],
+               ["work_bam_plus", "disc"], ["work_bam_plus", "sr"], ["hla", "fastq"]]
+        outp = [cwlout(["align_bam"], ["File", "null"], [".bai"]),
+                cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
+                cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"]),
+                cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])]
+        if checkpoints["umi"]:
+            inp.append(["umi_bam"])
+            outp.append(cwlout(["umi_bam"], ["File", "null"], [".bai"]))
+        align += [s("merge_split_alignments", "single-merge", inp, outp,
                   "bcbio-vc", ["biobambam", "samtools", "variantbam"],
                   disk={"files": 3.5})]
     return align

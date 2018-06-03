@@ -331,7 +331,7 @@ def merge_split_alignments(data):
 def _merge_align_bams(data):
     """Merge multiple alignment BAMs, including split and discordant reads.
     """
-    for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
+    for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"], ["umi_bam"]):
         in_files = tz.get_in(key, data, [])
         if not isinstance(in_files, (list, tuple)):
             in_files = [in_files]

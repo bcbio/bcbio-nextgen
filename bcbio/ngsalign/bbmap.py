@@ -10,7 +10,8 @@ from bcbio.provenance import do
 def align(fastq_file, pair_file, index_dir, names, align_dir, data):
     """Perform piped alignment of fastq input files, generating sorted, deduplicated BAM.
     """
-    out_file = os.path.join(align_dir, "{0}-sort.bam".format(dd.get_sample_name(data)))
+    umi_ext = "-cumi" if "umi_bam" in data else ""
+    out_file = os.path.join(align_dir, "{0}-sort{1}.bam".format(dd.get_sample_name(data), umi_ext))
     num_cores = data["config"]["algorithm"].get("num_cores", 1)
     rg_info = "rgid={rg} rgpl={pl} rgpu={pu} rgsm={sample}".format(**names)
     pair_file = pair_file if pair_file else ""
