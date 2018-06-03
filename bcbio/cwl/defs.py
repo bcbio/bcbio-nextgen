@@ -411,7 +411,7 @@ def _qc_workflow(checkpoints):
     if checkpoints.get("vc"):
         qc_inputs += [["variants", "samples"]]
     if checkpoints.get("umi"):
-        qc_inputs += [["config", "algorithm", "umi_type"]]
+        qc_inputs += [["config", "algorithm", "umi_type"], ["umi_bam"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
             "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),
