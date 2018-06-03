@@ -173,7 +173,7 @@ def clean_sample_data(samples):
     """Clean unnecessary information from sample data, reducing size for message passing.
     """
     out = []
-    for data in (x[0] for x in samples):
+    for data in (utils.to_single_data(x) for x in samples):
         if "dirs" in data:
             data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"],
                             "fastq": data["dirs"].get("fastq")}

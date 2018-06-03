@@ -201,7 +201,7 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
 
 def _debug_samples(i, samples):
     print("---", i, len(samples))
-    for sample in (x[0] for x in samples):
+    for sample in (utils.to_single_data(x) for x in samples):
         print("  ", sample["description"], sample.get("region"), \
             utils.get_in(sample, ("config", "algorithm", "variantcaller")), \
             utils.get_in(sample, ("config", "algorithm", "jointcaller")), \

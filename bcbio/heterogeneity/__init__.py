@@ -53,7 +53,7 @@ def _get_batches(data):
 
 def _group_by_batches(items):
     out = collections.OrderedDict()
-    for data in (xs[0] for xs in items):
+    for data in (utils.to_single_data(xs) for xs in items):
         for b in _get_batches(data):
             try:
                 out[b].append(data)
@@ -114,9 +114,12 @@ def run(items, run_parallel):
 
 def _group_by_sample_and_batch(samples):
     """Group samples split by heterogeneity method back one per sample-batch.
+
+    Groups potentially multiple shared samples (multi batch normals) into
+    single items per group.
     """
     out = collections.defaultdict(list)
     for data in [utils.to_single_data(x) for x in samples]:
         out[(dd.get_sample_name(data), dd.get_align_bam(data), tuple(_get_batches(data)))].append(data)
-    return [xs for xs in out.values()]
+    return [[xs[0]] for xs in out.values()]
 
