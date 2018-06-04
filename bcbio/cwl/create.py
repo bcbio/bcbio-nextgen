@@ -195,7 +195,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                          "sentinel_inputs=%s" % ",".join(["%s:%s" %
                                                           (workflow.get_base_id(v["id"]),
                                                            "record" if workflow.is_cwl_record(v) else "var")
-                                                          for v in inputs])]
+                                                          for v in inputs]),
+                         "run_number=0"]
     out = _add_inputs_to_tool(inputs, out, parallel, use_commandline_args)
     out = _add_outputs_to_tool(outputs, out)
     _tool_to_file(out, out_file)
