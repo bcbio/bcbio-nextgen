@@ -176,9 +176,9 @@ def get_context_files(data):
     ref_file = dd.get_ref_file(data)
     all_files = []
     for ext in [".bed.gz"]:
-        all_files += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
-                                                             "coverage", "problem_regions", "*",
-                                                             "*%s" % ext)))
+        all_files += sorted(glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                                    "coverage", "problem_regions", "*",
+                                                                    "*%s" % ext))))
     return sorted(all_files)
 
 def add_genome_context(orig_file, data):
