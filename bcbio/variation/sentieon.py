@@ -61,7 +61,7 @@ def run_tnscope(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -84,7 +84,7 @@ def run_tnhaplotyper(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -118,7 +118,7 @@ def run_haplotyper(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""

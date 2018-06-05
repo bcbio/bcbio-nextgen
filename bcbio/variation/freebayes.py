@@ -43,7 +43,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     if (isinstance(region, (list, tuple)) and chromhacks.is_mitochondrial(region[0])
           and cur_ploidy >= base_ploidy and "--min-alternate-fraction" not in opts and "-F" not in opts):
         opts += ["--min-alternate-fraction", "0.01"]
-    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+    variant_regions = bedutils.population_variant_regions(items, merged=True)
     # Produce gVCF output
     if any("gvcf" in dd.get_tools_on(d) for d in items):
         opts += ["--gvcf", "--gvcf-chunk", "50000"]

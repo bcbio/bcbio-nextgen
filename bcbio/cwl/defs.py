@@ -192,6 +192,7 @@ def _variant_vc(checkpoints):
              ["config", "algorithm", "min_allele_fraction"],
              ["config", "algorithm", "exclude_regions"],
              ["config", "algorithm", "variant_regions"],
+             ["config", "algorithm", "variant_regions_merged"],
              ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
              ["config", "algorithm", "tools_on"],
              ["config", "algorithm", "tools_off"],
