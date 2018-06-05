@@ -7,6 +7,7 @@
 - Add support for bbmap as an aligner
 - RNA-seq variant calling: parallelize GATK HaplotypeCaller over regions to
   avoid memory and timeout issues.
+- RNA-seq variant calling: allow annotation of output variants with vcfanno
 - Support hg38 builds with peddy QC
 - CWL: adjust defaults for align_split_size and nomap_split_targets to match
   different parallelization and overhead for these runs

@@ -32,7 +32,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     if use_gemini:
         passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
         gemini_vcf = normalize.normalize(gemini_vcf, data, passonly=passonly)
-    ann_vcf = _run_vcfanno(gemini_vcf, data, use_gemini)
+    ann_vcf = run_vcfanno(gemini_vcf, data, use_gemini)
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
     if vcfutils.vcf_has_variants(gemini_vcf) and caller not in NO_DB_CALLERS:
         if not utils.file_exists(gemini_db) and use_gemini:
@@ -46,7 +46,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
                               "vcf": ann_vcf or gemini_vcf,
                               "decomposed": use_gemini}]]
 
-def _run_vcfanno(gemini_vcf, data, use_gemini=False):
+def run_vcfanno(gemini_vcf, data, use_gemini=False):
     data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
     conf_files = dd.get_vcfanno(data)
     if not conf_files and use_gemini:
