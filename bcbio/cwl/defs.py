@@ -189,6 +189,7 @@ def _variant_vc(checkpoints):
              ["regions", "sample_callable"], ["config", "algorithm", "variantcaller"],
              ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "effects"],
+             ["config", "algorithm", "min_allele_fraction"],
              ["config", "algorithm", "exclude_regions"],
              ["config", "algorithm", "variant_regions"],
              ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],

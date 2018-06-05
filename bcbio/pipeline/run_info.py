@@ -976,6 +976,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "nomap_split_targets": _get_nomap_split_targets(analysis, is_cwl),
                 "mark_duplicates": False if not algorithm.get("aligner") else True,
                 "coverage_interval": None,
+                "min_allele_fraction": 10,
                 "recalibrate": False,
                 "realign": False,
                 "exclude_regions": [],
