@@ -239,7 +239,7 @@ HPC_CONFIGS = {
         ${script}
         \"\"\"
         kill = "qdel ${job_id}"
-        check-alive = "qstat -j ${job_id}"
+        check-alive = "qstat ${job_id}"
         job-id-regex = "(\\\\d+).*"
         %(filesystem)s
       }
