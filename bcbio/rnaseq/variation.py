@@ -177,6 +177,10 @@ def gatk_filter_rnaseq(vrn_file, data):
                       "--filter-expression", "'QD < 2.0'",
                       "--filter-name", "QD",
                       "--output", tx_out_file]
-            jvm_opts = broad.get_gatk_opts(dd.get_config(data), os.path.dirname(tx_out_file))
-            do.run(broad.gatk_cmd("gatk", jvm_opts, params), "Filter RNA-seq variants.")
+            # Use GATK4 for filtering, tools_off is for varinat calling
+            config = utils.deepish_copy(dd.get_config(data))
+            if "gatk4" in dd.get_tools_off({"config": config}):
+                config["algorithm"]["tools_off"].remove("gatk4")
+            jvm_opts = broad.get_gatk_opts(config, os.path.dirname(tx_out_file))
+            do.run(broad.gatk_cmd("gatk", jvm_opts, params, config), "Filter RNA-seq variants.")
     return out_file
