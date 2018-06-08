@@ -105,7 +105,7 @@ def _find_unprocessed(config):
 
 def _get_directories(config):
     for directory in config["dump_directories"]:
-        for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[Xx][Xx]"))):
+        for dname in sorted(glob.glob(os.path.join(directory, "*[Aa]*[Xx][XxYy2]"))):
             if os.path.isdir(dname):
                 yield dname
 

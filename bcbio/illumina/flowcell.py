@@ -13,7 +13,7 @@ def parse_dirname(fc_dir):
     name = None
     date = None
     for p in parts:
-        if p.endswith(("XX", "xx")):
+        if p.endswith(("XX", "xx", "XY", "X2")):
             name = p
         elif len(p) == 6:
             try:
