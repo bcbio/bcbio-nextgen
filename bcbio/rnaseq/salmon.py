@@ -12,7 +12,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 import bcbio.utils as utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, fastq
 from bcbio import bam
 from bcbio.log import logger
 
@@ -30,11 +30,14 @@ def run_salmon_bam(data):
 
 def run_salmon_reads(data):
     data = utils.to_single_data(data)
+    files = dd.get_input_sequence_files(data)
+    if bam.is_bam(files[0]):
+        files = fastq.convert_bam_to_fastq(files[0], data["dirs"]["work"],
+                                           data, data["dirs"], data["config"])
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
     gtf_file = dd.get_gtf_file(data)
-    files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
     else:
@@ -63,13 +66,13 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     if resources.get("options") is not None:
         params = " ".join([str(x) for x in resources.get("options", [])])
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
-           "--gcBias "
            "-o {tx_out_dir} {params} ")
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
         cmd += " -r {fq1_cmd} "
     else:
+        cmd += " --gcBias "
         fq2_cmd = "<(cat {fq2})" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
