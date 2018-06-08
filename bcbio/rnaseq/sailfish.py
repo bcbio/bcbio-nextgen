@@ -11,6 +11,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped,
                          R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
 from bcbio.bam import fastq
+from bcbio import bam
 
 def run_sailfish(data):
     samplename = dd.get_sample_name(data)
@@ -167,7 +168,10 @@ def pick_kmersize(fq):
     tl;dr version: pick 31 unless the reads are very small, if not then guess
     that readlength / 2 is about right.
     """
-    readlength = fastq.estimate_read_length(fq)
+    if bam.is_bam(fq):
+        readlength = bam.estimate_read_length(fq)
+    else:
+        readlength = fastq.estimate_read_length(fq)
     halfread = int(round(readlength / 2))
     if halfread >= 31:
         kmersize = 31
