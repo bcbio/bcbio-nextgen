@@ -106,7 +106,7 @@ def get_qc_tools(data):
             to_run += ["coverage", "picard"]
         to_run += ["qsignature", "variants"]
         if peddy.is_human(data):
-            to_run += ["peddy"]
+            to_run += ["contamination", "peddy"]
         if vcfutils.get_paired([data]):
             to_run += ["viral"]
         if damage.should_filter([data]):
@@ -126,8 +126,9 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import (atropos, coverage, damage, fastqc, kraken, qsignature, qualimap,
-                          samtools, picard, srna, umi, variant, viral, preseq, chipseq)
+    from bcbio.qc import (atropos, contamination, coverage, damage, fastqc, kraken,
+                          qsignature, qualimap, samtools, picard, srna, umi, variant,
+                          viral, preseq, chipseq)
     tools = {"fastqc": fastqc.run,
              "atropos": atropos.run,
              "small-rna": srna.run,
@@ -135,6 +136,7 @@ def _run_qc_tools(bam_file, data):
              "qualimap": qualimap.run,
              "qualimap_rnaseq": qualimap.run_rnaseq,
              "qsignature": qsignature.run,
+             "contamination": contamination.run,
              "coverage": coverage.run,
              "damage": damage.run,
              "variants": variant.run,
