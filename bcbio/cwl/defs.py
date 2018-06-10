@@ -428,7 +428,7 @@ def _qc_workflow(checkpoints):
                             cwlout(["config", "algorithm", "qc"])])],
             "bcbio-vc", ["bcftools", "bedtools", "fastqc", "goleft", "hts-nim-tools", "mosdepth",
                          "picard", "pythonpy", "qsignature", "qualimap", "sambamba",
-                         "samtools", "preseq", "peddy"],
+                         "samtools", "preseq", "peddy", "verifybamid2"],
             disk={"files": 2.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
