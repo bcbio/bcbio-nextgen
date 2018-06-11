@@ -23,7 +23,7 @@ def run(bam_file, sample, out_dir):
     # if "rchipqc" in dd.get_tools_on(sample):
     #    out = chipqc(bam_file, sample, out_dir)
 
-    peaks = sample.get("peaks_files", []).get("main", "NULL")
+    peaks = sample.get("peaks_files", {}).get("main", "NULL")
     out.update(_reads_in_peaks(bam_file, peaks, sample))
     return out
 
