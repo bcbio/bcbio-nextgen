@@ -94,7 +94,9 @@ def run_peddy(samples, out_dir=None):
             def allowed_errors(l):
                 return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
                         (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0))
-            if any([allowed_errors(l) for l in to_show]):
+            def all_line_errors(l):
+                return (l.find("no intervals found for") >= 0)
+            if any([allowed_errors(l) for l in to_show]) or every([all_line_errors(l) for l in to_show]):
                 logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
                 with open(peddy_prefix + "-failed.log", "w") as out_handle:
                     out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
