@@ -80,9 +80,9 @@ class TestCWL():
             with utils.chdir(os.path.join(workdir, "gvcf_joint")):
                 cl = ["bash", "./run_generate_cwl.sh"]
                 subprocess.check_call(cl)
-                if os.path.exists("bunny_work"):
-                    shutil.rmtree("bunny_work")
-                cl = ["bash", "./run_bunny.sh"]
+                if os.path.exists("cromwell_work"):
+                    shutil.rmtree("cromwell_work")
+                cl = ["bash", "./run_cromwell.sh"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl

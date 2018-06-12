@@ -11,6 +11,7 @@ details:
       #variantcaller: vardict
       transcriptome_align: True
       aligner: tophat2
+      #tools_off: [gatk4]
       trim_reads: read_through
       adapters: [truseq, polya]
       transcript_assembler: ["stringtie"]
