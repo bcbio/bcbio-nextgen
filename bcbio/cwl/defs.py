@@ -313,6 +313,7 @@ def variant(samples):
                    "bcbio-vc", cores=1, no_files=True)]
     align += [s("prep_samples_to_rec", "multi-combined",
                 [["config", "algorithm", "coverage"],
+                 ["rgnames", "sample"],
                  ["config", "algorithm", "variant_regions"],
                  ["reference", "fasta", "base"]],
                 [cwlout("prep_samples_rec", "record")],
@@ -320,7 +321,8 @@ def variant(samples):
                 disk={"files": 0.5}, cores=1, no_files=True),
               s("prep_samples", "multi-parallel",
                 ["prep_samples_rec"],
-                [cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
+                [cwlout(["rgnames", "sample"], "string"),
+                 cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
                  cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
                  cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
                  cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
@@ -385,7 +387,7 @@ def variant(samples):
                  cwlout(["config", "algorithm", "callable_count"], "int")],
                 "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
                 disk={"files": 0.5}, cores=1)]
-    align_out = [["align_bam"], ["regions", "sample_callable"]]
+    align_out = [["rgnames", "sample"], ["align_bam"], ["regions", "sample_callable"]]
     if checkpoints["umi"]:
         align_out.append(["umi_bam"])
     vc, vc_out = _variant_vc(checkpoints)
@@ -393,12 +395,12 @@ def variant(samples):
     hla, hla_out = _variant_hla(checkpoints)
     qc, qc_out = _qc_workflow(checkpoints)
     steps = align + hla + vc + sv + qc
-    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out + [["rgnames", "sample"]]
+    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out
     return steps, final_outputs
 
 def _qc_workflow(checkpoints):
     qc_inputs = \
-      [["align_bam"], ["analysis"], ["reference", "fasta", "base"], ["rgnames", "sample"],
+      [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
        ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
        ["genome_build"], ["config", "algorithm", "qc"], ["metadata", "batch"],
        ["config", "algorithm", "coverage_interval"],
