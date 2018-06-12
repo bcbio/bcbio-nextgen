@@ -398,7 +398,7 @@ def variant(samples):
 
 def _qc_workflow(checkpoints):
     qc_inputs = \
-      [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+      [["align_bam"], ["analysis"], ["reference", "fasta", "base"], ["rgnames", "sample"],
        ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
        ["genome_build"], ["config", "algorithm", "qc"], ["metadata", "batch"],
        ["config", "algorithm", "coverage_interval"],
