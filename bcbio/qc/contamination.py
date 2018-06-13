@@ -30,24 +30,36 @@ def run(bam_file, data, out_dir):
                 do.run(cmd, "VerifyBamID contamination checks")
             except subprocess.CalledProcessError, msg:
                 def allowed_errors(l):
-                    return (l.find("Insufficient Available markers") >= 0)
+                    return (l.find("Insufficient Available markers") >= 0 or
+                            l.find("No reads found in any of the regions") >= 0)
                 if any([allowed_errors(l) for l in str(msg).split("\n")]):
                     logger.info("Skipping VerifyBamID, not enough overlapping markers found: %s" %
                                 dd.get_sample_name(data))
                     with open(failed_file, "w") as out_handle:
                         out_handle.write(str(msg))
                 else:
-                    logger.warning("".join(to_show))
+                    logger.warning(str(msg))
                     raise
             else:
                 # Fix any sample name problems, for pileups
                 shutil.move(tx_out_base + ".selfSM", tx_out_base + ".selfSM.orig")
                 with open(tx_out_base + ".selfSM.orig") as in_handle:
                     with open(tx_out_base + ".selfSM", "w") as out_handle:
+                        sample_name = None
                         for line in in_handle:
                             if line.startswith("DefaultSampleName"):
                                 line = line.replace("DefaultSampleName", dd.get_sample_name(data))
-                            out_handle.write(line)
+                            # work around bug in finding SM from BAM RG at end of line
+                            if len(line.strip().split("\t")) == 1:
+                                sample_name = line.strip()
+                                line = None
+                            elif sample_name:
+                                parts = line.split("\t")
+                                parts[0] = sample_name
+                                line = "\t".join(parts)
+                                sample_name = None
+                            if line:
+                                out_handle.write(line)
                 for e in exts + [".selfSM"]:
                     if os.path.exists(tx_out_base + e):
                         shutil.copy(tx_out_base + e, out_base + e)
