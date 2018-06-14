@@ -52,7 +52,7 @@ def prep_mpileup(align_bams, ref_file, config, max_read_depth=None,
     if max_read_depth:
         cl += ["-d", str(max_read_depth), "-L", str(max_read_depth)]
     if want_bcf:
-        cl += ["-t", "DP", "-u", "-g"]
+        cl += ["-t", "DP", "-t", "AD", "-u", "-g"]
     if target_regions:
         str_regions = bamprep.region_to_gatk(target_regions)
         if os.path.isfile(str_regions):
