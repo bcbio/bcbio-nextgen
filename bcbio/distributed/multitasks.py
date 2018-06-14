@@ -7,7 +7,8 @@ from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
+                          bcbiornaseq)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, alignment, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -72,6 +73,10 @@ def run_salmon_index(*args):
 @utils.map_wrap
 def run_counts_spikein(*args):
     return spikein.run_counts_spikein(*args)
+
+@utils.map_wrap
+def run_bcbiornaseqload(*args):
+    return bcbiornaseq.make_bcbiornaseq_object(*args)
 
 @utils.map_wrap
 def run_sailfish(*args):

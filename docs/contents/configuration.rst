@@ -1099,6 +1099,7 @@ lists with multiple options:
     calling.
   - ``coverage_perbase`` calculates per-base coverage depth for analyzed variant
     regions.
+  - ``bcbiornaseq`` loads a bcbioRNASeq object for use with `bcbioRNASeq <https://github.com/hbc/bcbioRNASeq>`_.
 
 .. _GEMINI database: https://github.com/arq5x/gemini
 

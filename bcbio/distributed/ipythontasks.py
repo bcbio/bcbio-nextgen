@@ -5,12 +5,14 @@ import os
 
 try:
     from ipyparallel import require
-except ImportError:
+except ImportError
+:
     from IPython.parallel import require
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
+                          bcbiornaseq)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
@@ -539,3 +541,9 @@ def upload_samples_project(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(upload.project_from_sample, *args))
+
+@require(bcbiornaeq)
+def run_bcbiornaseqload(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(bcbiornaseq.run_bcbiornaseqload, *args))
