@@ -24,7 +24,12 @@ def _vcf_to_bed(in_file, caller, out_file):
                               not (hasattr(rec.samples[0].data, "FT") and rec.samples[0].data.FT
                                    and rec.samples[0].data.FT not in ["PASS"])):
                             start = max(0, rec.start - 1)
-                            end = int(rec.INFO.get("END", start + 1))
+                            end = rec.INFO.get("END")
+                            if not end:
+                                end = start + 1
+                            if isinstance(end, (list, tuple)):
+                                end = end[0]
+                            end = int(end)
                             if end - start < MAX_SVSIZE:
                                 out_handle.write("\t".join([rec.CHROM, str(start), str(end),
                                                             "%s_%s" % (_get_svtype(rec), caller)])
@@ -46,6 +51,7 @@ def _cnvbed_to_bed(in_file, caller, out_file):
                              + "\n")
 
 CALLER_TO_BED = {"lumpy": _vcf_to_bed,
+                 "longranger": _vcf_to_bed,
                  "delly": _vcf_to_bed,
                  "manta": _vcf_to_bed,
                  "metasv": _vcf_to_bed,
