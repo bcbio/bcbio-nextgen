@@ -14,7 +14,7 @@ def make_bcbiornaseq_object(data):
     report_dir = os.path.join(upload_dir, "bcbioRNASeq")
     safe_makedir(report_dir)
     groups = tz.get_in(("metadata", "interesting_groups"), data, None)
-    organism = None
+    organism = dd.get_bcbiornaseq(data).get("organism", None)
     loadstring = create_load_string(upload_dir, groups, organism)
     r_file = os.path.join(report_dir, "load_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:

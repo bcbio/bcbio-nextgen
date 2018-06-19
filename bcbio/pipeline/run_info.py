@@ -464,7 +464,7 @@ TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "alg
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "trim_reads", "trim_ends", "adapters", "custom_trim", "species", "kraken",
                       "align_split_size", "save_diskspace",
-                      "transcriptome_align",
+                      "transcriptome_align", "bcbiornaseq",
                       "quality_format", "write_summary", "merge_bamprep",
                       "coverage", "coverage_interval", "maxcov_downsample",
                       "ploidy", "indelcaller",
