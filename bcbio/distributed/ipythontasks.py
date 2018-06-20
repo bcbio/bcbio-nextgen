@@ -5,8 +5,7 @@ import os
 
 try:
     from ipyparallel import require
-except ImportError
-:
+except ImportError:
     from IPython.parallel import require
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
