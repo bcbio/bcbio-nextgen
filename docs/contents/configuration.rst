@@ -915,10 +915,11 @@ RNA sequencing
   [oncofuse, pizzly].
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
-- ``bcbiornaseq`` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports `organism` as a key and takes the latin name of the genome used (`mus musculus`, `homo sapiens`, etc):::
+- ``bcbiornaseq`` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports `organism` as a key and takes the latin name of the genome used (`mus musculus`, `homo sapiens`, etc) and `interesting_groups` which will be used to color quality control plots.:::
 
   bcbiornaseq:
     organism: homo sapiens
+    interesting_groups: [treatment, genotype, etc, etc]
 
 Fast RNA-seq
 ============
