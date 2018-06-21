@@ -11,7 +11,7 @@ from bcbio.provenance import do
 from bcbio.variation import vardict
 from bcbio import broad, bam
 from bcbio.variation import gatk, vcfutils
-from bcbio.rnaseq import gtf
+from bcbio.structural import regions
 
 pybedtools = utils.LazyImport("pybedtools")
 
@@ -55,7 +55,7 @@ def gatk_splitreads(data):
     data = dd.set_split_bam(data, split_bam)
     return data
 
-def _setup_variant_regions(data):
+def _setup_variant_regions(data, out_dir):
     """Ensure we have variant regions for calling, using transcript if not present.
 
     Respects noalt_calling by removing additional contigs to improve
@@ -63,7 +63,7 @@ def _setup_variant_regions(data):
     """
     vr_file = dd.get_variant_regions(data)
     if not vr_file:
-        vr_file = gtf.gtf_to_bed(dd.get_gtf_file(data))
+        vr_file = regions.get_sv_bed(data, "transcripts", out_dir=out_dir)
     contigs = set([c.name for c in ref.file_contigs(dd.get_ref_file(data))])
     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bedprep")),
                             "%s-rnaseq_clean.bed" % utils.splitext_plus(os.path.basename(vr_file))[0])
@@ -89,10 +89,10 @@ def gatk_rnaseq_calling(data):
     tools_on.append("gvcf")
     data = dd.set_tools_on(data, tools_on)
     data = dd.set_jointcaller(data, ["%s-joint" % v for v in dd.get_variantcaller(data)])
-    data = _setup_variant_regions(data)
-    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
-                                                            "variation", "rnaseq", "gatk-haplotype")),
-                            "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                              "variation", "rnaseq", "gatk-haplotype"))
+    data = _setup_variant_regions(data, out_dir)
+    out_file = os.path.join(out_dir, "%s-gatk-haplotype.vcf.gz" % dd.get_sample_name(data))
     if not utils.file_exists(out_file):
         region_files = []
         regions = []
@@ -112,9 +112,9 @@ def gatk_rnaseq_calling(data):
 
 def rnaseq_vardict_variant_calling(data):
     sample = dd.get_sample_name(data)
-    variation_dir = os.path.join(dd.get_work_dir(data), "variation")
-    safe_makedir(variation_dir)
-    out_file = os.path.join(variation_dir, sample + "-vardict.vcf.gz")
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data),
+                                              "variation", "rnaseq", "vardict"))
+    out_file = os.path.join(out_dir, sample + "-vardict.vcf.gz")
     if file_exists(out_file):
         data = dd.set_vrn_file(data, out_file)
         return data
@@ -130,7 +130,7 @@ def rnaseq_vardict_variant_calling(data):
     r_setup = get_R_exports()
     ref_file = dd.get_ref_file(data)
     bamfile = dd.get_work_bam(data)
-    data = _setup_variant_regions(data)
+    data = _setup_variant_regions(data, out_dir)
     bed_file = dd.get_variant_regions(data)
     opts = " -c 1 -S 2 -E 3 -g 4 "
     resources = config_utils.get_resources("vardict", data)
@@ -177,7 +177,7 @@ def gatk_filter_rnaseq(vrn_file, data):
                       "--filter-expression", "'QD < 2.0'",
                       "--filter-name", "QD",
                       "--output", tx_out_file]
-            # Use GATK4 for filtering, tools_off is for varinat calling
+            # Use GATK4 for filtering, tools_off is for variant calling
             config = utils.deepish_copy(dd.get_config(data))
             if "gatk4" in dd.get_tools_off({"config": config}):
                 config["algorithm"]["tools_off"].remove("gatk4")
