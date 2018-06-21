@@ -541,7 +541,7 @@ def upload_samples_project(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(upload.project_from_sample, *args))
 
-@require(bcbiornaeq)
+@require(bcbiornaseq)
 def run_bcbiornaseqload(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
