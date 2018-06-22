@@ -230,6 +230,9 @@ def _create_config_file(out_dir, samples):
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
         out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
+    # Avoid confusing peddy outputs, sticking to ancestry and sex prediction
+    out["table_columns_visible"]["Peddy"] = {"family_id": False, "sex_het_ratio": False,
+                                             "error_sex_check": False}
 
     # Setting the module order
     module_order = []
