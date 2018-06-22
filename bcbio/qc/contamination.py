@@ -24,7 +24,7 @@ def run(bam_file, data, out_dir):
     if not utils.file_exists(out_file) and not utils.file_exists(failed_file):
         with file_transaction(data, out_base) as tx_out_base:
             cmd = ["verifybamid2", "1000g.phase3", "100k", "b38" if dd.get_genome_build(data) == "hg38" else "b37",
-                   "--Reference", dd.get_ref_file(data), "--Output", tx_out_base, "--DisableSanityCheck"]
+                   "--Reference", dd.get_ref_file(data), "--Output", tx_out_base]
             cmd += _get_input_args(bam_file, data, out_base)
             try:
                 do.run(cmd, "VerifyBamID contamination checks")
