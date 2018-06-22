@@ -727,6 +727,7 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_merged_gtf(sample)})
     if dd.get_dexseq_counts(sample):
         out.append({"path": dd.get_dexseq_counts(sample)})
+        out.append({"path": "%s.ann" % dd.get_dexseq_counts(sample)})
     if dd.get_express_counts(sample):
         out.append({"path": dd.get_express_counts(sample)})
     if dd.get_express_fpkm(sample):
