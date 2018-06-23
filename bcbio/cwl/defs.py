@@ -522,7 +522,8 @@ def rnaseq(samples):
               [["files"], dd.get_keys("sample_name"),
                dd.get_keys("ref_file"), dd.get_keys("genome_build"), dd.get_keys("gtf_file"),
                ["analysis"],
-               ["rgnames", "pl"], ["rgnames", "pu"], ["rgnames", "lane"], ["rgnames", "rg"], ["rgnames", "lb"],
+               ["rgnames", "pl"], ["rgnames", "pu"], ["rgnames", "lane"],
+               ["rgnames", "rg"], ["rgnames", "lb"],
                ["reference", "aligner", "indexes"],
                ["config", "algorithm", "aligner"],
                ["config", "algorithm", "expression_caller"],
@@ -569,7 +570,7 @@ def rnaseq(samples):
             "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
 
     steps = prep + align + quantitate + qc
-    final_outputs = [dd.get_keys("work_bam"), ["quant", "tsv"], ["summary", "multiqc"]]
+    final_outputs = [["rgnames", "sample"], dd.get_keys("work_bam"), ["quant", "tsv"], ["summary", "multiqc"]]
     return steps, final_outputs
 
 workflows = \
