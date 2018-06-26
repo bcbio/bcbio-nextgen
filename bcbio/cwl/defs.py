@@ -182,28 +182,32 @@ def _variant_vc(checkpoints):
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
                 disk={"files": 1.5})]
-    vc = [s("batch_for_variantcall", "multi-batch",
-            [["analysis"], ["genome_build"], ["align_bam"], ["vrn_file"],
-             ["config", "algorithm", "callable_regions"],
-             ["metadata", "batch"], ["metadata", "phenotype"],
-             ["regions", "sample_callable"], ["config", "algorithm", "variantcaller"],
-             ["config", "algorithm", "coverage_interval"],
-             ["config", "algorithm", "effects"],
-             ["config", "algorithm", "min_allele_fraction"],
-             ["config", "algorithm", "exclude_regions"],
-             ["config", "algorithm", "variant_regions"],
-             ["config", "algorithm", "variant_regions_merged"],
-             ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
-             ["config", "algorithm", "tools_on"],
-             ["config", "algorithm", "tools_off"],
-             ["reference", "fasta", "base"], ["reference", "twobit"],
-             ["reference", "rtg"], ["reference", "genome_context"],
-             ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"],
-             ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
-             ["genome_resources", "variation", "encode_blacklist"],
-             ["genome_resources", "variation", "train_hapmap"], ["genome_resources", "variation", "train_indels"],
-             ["genome_resources", "aliases", "ensembl"], ["genome_resources", "aliases", "human"],
-             ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]],
+    batch_in = [["analysis"], ["genome_build"], ["align_bam"], ["vrn_file"],
+                ["metadata", "batch"], ["metadata", "phenotype"],
+                ["config", "algorithm", "variantcaller"],
+                ["config", "algorithm", "coverage_interval"],
+                ["config", "algorithm", "effects"],
+                ["config", "algorithm", "min_allele_fraction"],
+                ["config", "algorithm", "exclude_regions"],
+                ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
+                ["config", "algorithm", "tools_on"],
+                ["config", "algorithm", "tools_off"],
+                ["reference", "fasta", "base"], ["reference", "twobit"],
+                ["reference", "rtg"], ["reference", "genome_context"],
+                ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"],
+                ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
+                ["genome_resources", "variation", "encode_blacklist"],
+                ["genome_resources", "variation", "train_hapmap"], ["genome_resources", "variation", "train_indels"],
+                ["genome_resources", "aliases", "ensembl"], ["genome_resources", "aliases", "human"],
+                ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]]
+    if checkpoints["rnaseq"]:
+        batch_in += []
+    else:
+        batch_in += [["config", "algorithm", "callable_regions"],
+                     ["regions", "sample_callable"],
+                     ["config", "algorithm", "variant_regions_merged"]]
+    vc = [s("batch_for_variantcall", "multi-batch", batch_in,
             [cwlout("batch_rec", "record")],
             "bcbio-vc",
             disk={"files": 2.0}, cores=1,
@@ -518,6 +522,7 @@ def _variant_sv(checkpoints):
     return steps, final_outputs
 
 def rnaseq(samples):
+    checkpoints = _rnaseq_checkpoints(samples)
     prep = [s("prepare_sample", "multi-parallel",
               [["files"], dd.get_keys("sample_name"),
                dd.get_keys("ref_file"), dd.get_keys("genome_build"), dd.get_keys("gtf_file"),
@@ -536,12 +541,12 @@ def rnaseq(samples):
               "bcbio-rnaseq", programs=["atropos;env=python3"])]
     align = [s("process_alignment", "multi-parallel",
                [["trim_rec"]],
-               [cwlout(["work_bam"], "File", [".bai"])],
+               [cwlout(["align_bam"], "File", [".bai"])],
                "bcbio-rnaseq", ["star", "hisat2", "tophat", "samtools",
                                 "sambamba", "seqtk"],
                {"files": 1.5})]
     quantitate = [s("rnaseq_quantitate", "multi-parallel",
-                  [["trim_rec"], ["work_bam"]],
+                  [["trim_rec"], ["align_bam"]],
                   [cwlout(dd.get_keys("count_file"), "File"),
                    cwlout(["quant", "tsv"], "File"),
                    cwlout(["quant", "hdf5"], "File")],
@@ -549,7 +554,7 @@ def rnaseq(samples):
                                             "r=3.4.1", "r-wasabi"],
                   disk={"files": 0.5})]
     qc = [s("qc_to_rec", "multi-combined",
-            [["work_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),
+            [["align_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),
              ["genome_build"], ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
              ["config", "algorithm", "qc"]],
@@ -568,10 +573,21 @@ def rnaseq(samples):
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
+    #vc, vc_out = _variant_vc(checkpoints)
+    vc, vc_out = [], []
 
-    steps = prep + align + quantitate + qc
-    final_outputs = [["rgnames", "sample"], dd.get_keys("work_bam"), ["quant", "tsv"], ["summary", "multiqc"]]
+    steps = prep + align + quantitate + qc + vc
+    final_outputs = [["rgnames", "sample"], dd.get_keys("align_bam"), ["quant", "tsv"], ["summary", "multiqc"]] + \
+                    vc_out
     return steps, final_outputs
+
+def _rnaseq_checkpoints(samples):
+    """Check sample configuration to identify required steps in analysis.
+    """
+    checkpoints = {}
+    checkpoints["rnaseq"] = True
+    checkpoints["vc"] = any([dd.get_variantcaller(d) for d in samples])
+    return checkpoints
 
 workflows = \
   {"variant": variant, "variant2": variant, "rna-seq": rnaseq}
