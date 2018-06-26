@@ -184,12 +184,14 @@ def _variant_vc(checkpoints):
                 disk={"files": 1.5})]
     batch_in = [["analysis"], ["genome_build"], ["align_bam"], ["vrn_file"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
+                ["config", "algorithm", "callable_regions"], ["regions", "sample_callable"],
                 ["config", "algorithm", "variantcaller"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "effects"],
                 ["config", "algorithm", "min_allele_fraction"],
                 ["config", "algorithm", "exclude_regions"],
                 ["config", "algorithm", "variant_regions"],
+                ["config", "algorithm", "variant_regions_merged"],
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
@@ -201,12 +203,6 @@ def _variant_vc(checkpoints):
                 ["genome_resources", "variation", "train_hapmap"], ["genome_resources", "variation", "train_indels"],
                 ["genome_resources", "aliases", "ensembl"], ["genome_resources", "aliases", "human"],
                 ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]]
-    if checkpoints["rnaseq"]:
-        batch_in += []
-    else:
-        batch_in += [["config", "algorithm", "callable_regions"],
-                     ["regions", "sample_callable"],
-                     ["config", "algorithm", "variant_regions_merged"]]
     vc = [s("batch_for_variantcall", "multi-batch", batch_in,
             [cwlout("batch_rec", "record")],
             "bcbio-vc",
@@ -279,6 +275,86 @@ def _variant_checkpoints(samples):
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
     return checkpoints
 
+def _postprocess_alignment(checkpoints):
+    wf = [s("prep_samples_to_rec", "multi-combined",
+            [["config", "algorithm", "coverage"],
+             ["rgnames", "sample"],
+             ["config", "algorithm", "variant_regions"],
+             ["reference", "fasta", "base"]],
+            [cwlout("prep_samples_rec", "record")],
+            "bcbio-vc",
+            disk={"files": 0.5}, cores=1, no_files=True),
+          s("prep_samples", "multi-parallel",
+            ["prep_samples_rec"],
+            [cwlout(["rgnames", "sample"], "string"),
+             cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
+             cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
+             cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
+             cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])],
+            "bcbio-vc", ["htslib", "bedtools", "pythonpy"],
+            disk={"files": 0.5}, cores=1),
+          s("postprocess_alignment_to_rec", "multi-combined",
+            [["align_bam"],
+             ["config", "algorithm", "coverage_interval"],
+             ["config", "algorithm", "exclude_regions"],
+             ["config", "algorithm", "variant_regions"],
+             ["config", "algorithm", "variant_regions_merged"],
+             ["config", "algorithm", "variant_regions_orig"],
+             ["config", "algorithm", "coverage"],
+             ["config", "algorithm", "coverage_merged"],
+             ["config", "algorithm", "coverage_orig"],
+             ["config", "algorithm", "seq2c_bed_ready"],
+             ["config", "algorithm", "recalibrate"],
+             ["config", "algorithm", "tools_on"],
+             ["genome_resources", "rnaseq", "gene_bed"],
+             ["genome_resources", "variation", "dbsnp"],
+             ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
+             ["genome_resources", "variation", "encode_blacklist"],
+             ["reference", "twobit"],
+             ["reference", "fasta", "base"]],
+            [cwlout("postprocess_alignment_rec", "record")],
+            "bcbio-vc",
+            disk={"files": 1.5}, cores=1, no_files=True),
+          s("postprocess_alignment", "multi-parallel",
+            [["postprocess_alignment_rec"]],
+            [cwlout(["config", "algorithm", "coverage_interval"], ["string", "null"]),
+             cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
+             cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
+             cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
+             cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
+             cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"]),
+             cwlout(["regions", "callable"], ["File", "null"]),
+             cwlout(["regions", "sample_callable"], ["File", "null"]),
+             cwlout(["regions", "nblock"], ["File", "null"]),
+             cwlout(["depth", "samtools", "stats"], ["File", "null"]),
+             cwlout(["depth", "samtools", "idxstats"], ["File", "null"]),
+             cwlout(["depth", "variant_regions", "regions"], ["File", "null"]),
+             cwlout(["depth", "variant_regions", "dist"], ["File", "null"]),
+             cwlout(["depth", "sv_regions", "regions"], ["File", "null"]),
+             cwlout(["depth", "sv_regions", "dist"], ["File", "null"]),
+             cwlout(["depth", "coverage", "regions"], ["File", "null"]),
+             cwlout(["depth", "coverage", "dist"], ["File", "null"]),
+             cwlout(["depth", "coverage", "thresholds"], ["File", "null"]),
+             cwlout(["align_bam"], ["File", "null"])],
+            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4=4.0.3.0", "mosdepth", "sentieon"],
+            disk={"files": 3.0}),
+          s("combine_sample_regions", "multi-combined",
+            [["regions", "callable"], ["regions", "nblock"], ["metadata", "batch"],
+             ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
+             ["reference", "fasta", "base"]],
+            [cwlout(["config", "algorithm", "callable_regions"], "File"),
+             cwlout(["config", "algorithm", "non_callable_regions"], "File"),
+             cwlout(["config", "algorithm", "callable_count"], "int")],
+            "bcbio-vc", ["bedtools", "htslib", "gatk4=4.0.3.0"],
+            disk={"files": 0.5}, cores=1)]
+    out = [["regions", "sample_callable"]]
+    return wf, out
+
 def variant(samples):
     """Variant calling workflow definition for CWL generation.
     """
@@ -315,91 +391,16 @@ def variant(samples):
                     cwlout(["work_bam_plus", "sr"], ["File", "null"]),
                     cwlout(["hla", "fastq"], ["File", "null"])],
                    "bcbio-vc", cores=1, no_files=True)]
-    align += [s("prep_samples_to_rec", "multi-combined",
-                [["config", "algorithm", "coverage"],
-                 ["rgnames", "sample"],
-                 ["config", "algorithm", "variant_regions"],
-                 ["reference", "fasta", "base"]],
-                [cwlout("prep_samples_rec", "record")],
-                "bcbio-vc",
-                disk={"files": 0.5}, cores=1, no_files=True),
-              s("prep_samples", "multi-parallel",
-                ["prep_samples_rec"],
-                [cwlout(["rgnames", "sample"], "string"),
-                 cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"])],
-                "bcbio-vc", ["htslib", "bedtools", "pythonpy"],
-                disk={"files": 0.5}, cores=1),
-              s("postprocess_alignment_to_rec", "multi-combined",
-                [["align_bam"],
-                 ["config", "algorithm", "coverage_interval"],
-                 ["config", "algorithm", "exclude_regions"],
-                 ["config", "algorithm", "variant_regions"],
-                 ["config", "algorithm", "variant_regions_merged"],
-                 ["config", "algorithm", "variant_regions_orig"],
-                 ["config", "algorithm", "coverage"],
-                 ["config", "algorithm", "coverage_merged"],
-                 ["config", "algorithm", "coverage_orig"],
-                 ["config", "algorithm", "seq2c_bed_ready"],
-                 ["config", "algorithm", "recalibrate"],
-                 ["config", "algorithm", "tools_on"],
-                 ["genome_resources", "rnaseq", "gene_bed"],
-                 ["genome_resources", "variation", "dbsnp"],
-                 ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
-                 ["genome_resources", "variation", "encode_blacklist"],
-                 ["reference", "twobit"],
-                 ["reference", "fasta", "base"]],
-                [cwlout("postprocess_alignment_rec", "record")],
-                "bcbio-vc",
-                disk={"files": 1.5}, cores=1, no_files=True),
-              s("postprocess_alignment", "multi-parallel",
-                [["postprocess_alignment_rec"]],
-                [cwlout(["config", "algorithm", "coverage_interval"], ["string", "null"]),
-                 cwlout(["config", "algorithm", "variant_regions"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "variant_regions_merged"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "variant_regions_orig"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage_merged"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "coverage_orig"], ["File", "null"]),
-                 cwlout(["config", "algorithm", "seq2c_bed_ready"], ["File", "null"]),
-                 cwlout(["regions", "callable"], ["File", "null"]),
-                 cwlout(["regions", "sample_callable"], ["File", "null"]),
-                 cwlout(["regions", "nblock"], ["File", "null"]),
-                 cwlout(["depth", "samtools", "stats"], ["File", "null"]),
-                 cwlout(["depth", "samtools", "idxstats"], ["File", "null"]),
-                 cwlout(["depth", "variant_regions", "regions"], ["File", "null"]),
-                 cwlout(["depth", "variant_regions", "dist"], ["File", "null"]),
-                 cwlout(["depth", "sv_regions", "regions"], ["File", "null"]),
-                 cwlout(["depth", "sv_regions", "dist"], ["File", "null"]),
-                 cwlout(["depth", "coverage", "regions"], ["File", "null"]),
-                 cwlout(["depth", "coverage", "dist"], ["File", "null"]),
-                 cwlout(["depth", "coverage", "thresholds"], ["File", "null"]),
-                 cwlout(["align_bam"], ["File", "null"])],
-                "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk", "gatk4", "mosdepth", "sentieon"],
-                disk={"files": 3.0}),
-              s("combine_sample_regions", "multi-combined",
-                [["regions", "callable"], ["regions", "nblock"], ["metadata", "batch"],
-                 ["config", "algorithm", "nomap_split_size"], ["config", "algorithm", "nomap_split_targets"],
-                 ["reference", "fasta", "base"]],
-                [cwlout(["config", "algorithm", "callable_regions"], "File"),
-                 cwlout(["config", "algorithm", "non_callable_regions"], "File"),
-                 cwlout(["config", "algorithm", "callable_count"], "int")],
-                "bcbio-vc", ["bedtools", "htslib", "gatk4", "gatk"],
-                disk={"files": 0.5}, cores=1)]
-    align_out = [["rgnames", "sample"], ["align_bam"], ["regions", "sample_callable"]]
+    align_out = [["rgnames", "sample"], ["align_bam"]]
+    pp_align, pp_align_out = _postprocess_alignment(checkpoints)
     if checkpoints["umi"]:
         align_out.append(["umi_bam"])
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
     qc, qc_out = _qc_workflow(checkpoints)
-    steps = align + hla + vc + sv + qc
-    final_outputs = align_out + vc_out + hla_out + sv_out + qc_out
+    steps = align + pp_align + hla + vc + sv + qc
+    final_outputs = align_out + pp_align_out + vc_out + hla_out + sv_out + qc_out
     return steps, final_outputs
 
 def _qc_workflow(checkpoints):
@@ -545,6 +546,10 @@ def rnaseq(samples):
                "bcbio-rnaseq", ["star", "hisat2", "tophat", "samtools",
                                 "sambamba", "seqtk"],
                {"files": 1.5})]
+    if checkpoints.get("vc"):
+        pp_align, pp_align_out = _postprocess_alignment(checkpoints)
+    else:
+        pp_align, pp_align_out = [], []
     quantitate = [s("rnaseq_quantitate", "multi-parallel",
                   [["trim_rec"], ["align_bam"]],
                   [cwlout(dd.get_keys("count_file"), "File"),
@@ -573,12 +578,11 @@ def rnaseq(samples):
             [["qcout_rec"]],
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
-    #vc, vc_out = _variant_vc(checkpoints)
-    vc, vc_out = [], []
+    vc, vc_out = _variant_vc(checkpoints)
 
-    steps = prep + align + quantitate + qc + vc
+    steps = prep + align + pp_align + quantitate + qc + vc
     final_outputs = [["rgnames", "sample"], dd.get_keys("align_bam"), ["quant", "tsv"], ["summary", "multiqc"]] + \
-                    vc_out
+                    vc_out + pp_align_out
     return steps, final_outputs
 
 def _rnaseq_checkpoints(samples):
