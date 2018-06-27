@@ -21,11 +21,12 @@ Docker container. bcbio-vm is still a work in progress but not all of the
 dependencies bcbio uses install cleanly on OSX.
 
 With the command line above, indexes and associated data files go in
-``/usr/local/share/bcbio-nextgen`` and tools are in ``/usr/local``. If you don't
-have write permissions to install into the ``/usr/local`` directories you can
-install in a user directory like ``~/local`` or use ``sudo chmod`` to give your
-standard user permissions. Please don't run the installer with sudo or as the
-root user.
+``/usr/local/share/bcbio-nextgen`` and tools are in ``/usr/local``. If you
+don't have write permissions to install into the ``/usr/local`` directories you
+can install in a user directory like ``~/local`` or use ``sudo chmod`` to give
+your standard user permissions. Please don't run the installer with sudo or as
+the root user.  Do not use directories with ``:`` in the name, it is not
+POSIX compliant and will cause installation faitures.
 
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.
