@@ -983,7 +983,8 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "variant_regions": None,
                 "svvalidate": None,
                 "validate": None,
-                "validate_regions": None}
+                "validate_regions": None,
+                "vcfanno": ["gemini"]}
     convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
                            "vcfanno", "adapters", "custom_trim", "exclude_regions"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])

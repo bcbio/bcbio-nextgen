@@ -9,7 +9,8 @@ from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import annotation, damage, effects, genotype, germline, prioritize, validate, vcfutils
+from bcbio.variation import (annotation, damage, effects, genotype, germline, population, prioritize,
+                             validate, vcfanno, vcfutils)
 from bcbio.variation import multi as vmulti
 
 # ## CWL summarization
@@ -84,6 +85,17 @@ def postprocess_variants(items):
         orig_items = _get_orig_items(items)
         logger.info("Annotate VCF file: %s" % cur_name)
         data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data), orig_items)
+        if dd.get_analysis(data).lower().find("rna-seq") >= 0:
+            logger.info("Annotate RNA editing sites")
+            ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
+            if ann_file:
+                data[vrn_key] = ann_file
+        if cwlutils.is_cwl_run(data):
+            logger.info("Annotate with population level variation data")
+            ann_file = population.run_vcfanno(dd.get_vrn_file(data), data,
+                                              population.do_db_build([data]))
+            if ann_file:
+                data[vrn_key] = ann_file
         logger.info("Filtering for %s" % cur_name)
         data[vrn_key] = variant_filtration(data[vrn_key], dd.get_ref_file(data),
                                               tz.get_in(("genome_resources", "variation"), data, {}),

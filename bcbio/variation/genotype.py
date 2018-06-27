@@ -34,7 +34,11 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
     elif caller in ["samtools"]:
         return vfilter.samtools(call_file, data)
     elif caller in ["gatk", "gatk-haplotype", "haplotyper"]:
-        return gatkfilter.run(call_file, ref_file, vrn_files, data)
+        if dd.get_analysis(data).lower().find("rna-seq") >= 0:
+            from bcbio.rnaseq import variation as rnaseq_variation
+            return rnaseq_variation.gatk_filter_rnaseq(call_file, data)
+        else:
+            return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
     else:
         return call_file

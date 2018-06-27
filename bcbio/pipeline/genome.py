@@ -41,12 +41,13 @@ def get_resources(genome, ref_file, data):
     return ensure_annotations(cleaned, data)
 
 def add_required_resources(resources):
-    """Add empty values for required resources referenced in CWL
+    """Add default or empty values for required resources referenced in CWL
     """
     required = [["variation", "cosmic"], ["variation", "dbsnp"],
                 ["variation", "lcr"], ["variation", "polyx"],
                 ["variation", "encode_blacklist"],
-                ["variation", "train_hapmap"], ["variation", "train_indels"]]
+                ["variation", "train_hapmap"], ["variation", "train_indels"],
+                ["variation", "editing"]]
     for key in required:
         if not tz.get_in(key, resources):
             resources = tz.update_in(resources, key, lambda x: None)

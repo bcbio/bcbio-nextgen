@@ -186,6 +186,7 @@ def _variant_vc(checkpoints):
                 ["metadata", "batch"], ["metadata", "phenotype"],
                 ["config", "algorithm", "callable_regions"], ["regions", "sample_callable"],
                 ["config", "algorithm", "variantcaller"],
+                ["config", "algorithm", "vcfanno"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "effects"],
                 ["config", "algorithm", "min_allele_fraction"],
@@ -200,9 +201,13 @@ def _variant_vc(checkpoints):
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"],
                 ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
                 ["genome_resources", "variation", "encode_blacklist"],
-                ["genome_resources", "variation", "train_hapmap"], ["genome_resources", "variation", "train_indels"],
                 ["genome_resources", "aliases", "ensembl"], ["genome_resources", "aliases", "human"],
                 ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]]
+    if checkpoints.get("rnaseq"):
+        batch_in += [["genome_resources", "variation", "editing"]]
+    else:
+        batch_in += [["genome_resources", "variation", "train_hapmap"],
+                     ["genome_resources", "variation", "train_indels"]]
     vc = [s("batch_for_variantcall", "multi-batch", batch_in,
             [cwlout("batch_rec", "record")],
             "bcbio-vc",
