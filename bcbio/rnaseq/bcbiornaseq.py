@@ -57,7 +57,6 @@ def write_load_bcbiornaseq_file(string, filename):
             out_handle.write(string)
     return filename
 
-
 def _quotestring(string):
     """ escape quote a string """
     return "\"" + string + "\""
@@ -68,10 +67,3 @@ def _list2Rlist(xs):
         xs = [xs]
     rlist = ",".join([_quotestring(x) for x in xs])
     return "c(" + rlist + ")"
-
-if __name__ == "__main__":
-    upload_dir = "/foo/bar"
-    interesting_groups = 'c("foobar")'
-    organism = "NULL"
-    string = create_load_string(upload_dir, interesting_groups, organism)
-    write_load_bcbiornaseq_file(string, "foo.R")
