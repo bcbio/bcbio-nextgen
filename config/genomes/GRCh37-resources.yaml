@@ -1,4 +1,4 @@
-version: 40
+version: 41
 
 aliases:
   human: true
@@ -21,6 +21,7 @@ variation:
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
   genesplicer: ../variation/genesplicer
+  editing: ../editing/RADAR.bed.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

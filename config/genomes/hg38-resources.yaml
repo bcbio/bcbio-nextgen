@@ -1,4 +1,4 @@
-version: 25
+version: 26
 
 aliases:
   human: true
@@ -19,6 +19,7 @@ variation:
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   qsignature: ../variation/qsignature.txt
   genesplicer: ../variation/genesplicer
+  editing: ../editing/RADAR.bed.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
