@@ -73,7 +73,7 @@ Getting started
 `bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ installs all
 dependencies required to generate CWL and run bcbio, along with supported CWL
 runners. To install using `Miniconda <http://conda.pydata.org/miniconda.html>`_
-and `bioconda packages <https://bioconda.github.io/>`_::
+and `bioconda packages <https://bioconda.github.io/>`_ on Linux::
 
     wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
