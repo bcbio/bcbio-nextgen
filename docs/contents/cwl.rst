@@ -76,18 +76,19 @@ runners. To install using `Miniconda <http://conda.pydata.org/miniconda.html>`_
 and `bioconda packages <https://bioconda.github.io/>`_ on Linux::
 
     wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
-    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
-    ln -s ~/install/bcbio-vm/anaconda/bin/conda /usr/local/bin/bcbiovm_conda
+    export TARGETDIR=~/install/bcbio-vm/anaconda
+    bash Miniconda2-latest-Linux-x86_64.sh -b -p $TARGETDIR
+    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
+    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
+    ln -s $TARGETDIR/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+    ln -s $TARGETDIR/bin/conda /usr/local/bin/bcbiovm_conda
 
-In the above commands, the `bcbio-vm` install goes in the root directory as indicated by 
-`~`. If you don't have enough space or would like to use a different directory for install,
-replace `~` with the `path_of_interest`. Also, as an alternative to symbolic linking, you can 
-specify to export the `path_of_interest` in your `~/.bash_profile`::
- 
-    export PATH=/path_of_interest/install/bcbio-vm/anaconda/bin:$PATH   
+In the above commands, the `bcbio-vm` install goes in ``$TARGETDIR``.
+The example is in your home directory but set to anywhere you have space.
+Also, as an alternative to symbolic linking, you can add the install bin
+directory to your PATH
+
+    export PATH=$TARGETDIR/bin:$PATH
 
 This install includes bcbio-nextgen libraries, used in generating CWL and
 orchestrating runs, but is not a full bcbio installation. You have two choices
