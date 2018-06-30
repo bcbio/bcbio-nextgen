@@ -73,7 +73,12 @@ def _get_caller(data):
     callers = [tz.get_in(["config", "algorithm", "jointcaller"], data),
                tz.get_in(["config", "algorithm", "variantcaller"], data),
                "precalled"]
-    return [c for c in callers if c][0]
+    caller = [c for c in callers if c][0]
+    if isinstance(caller, (list, tuple)):
+        assert len(caller) == 1, caller
+        return caller[0]
+    else:
+        return caller
 
 def _get_caller_supplement(caller, data):
     """Some callers like MuTect incorporate a second caller for indels.

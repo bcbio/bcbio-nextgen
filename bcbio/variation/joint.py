@@ -82,7 +82,7 @@ def _get_callable_regions(data):
         assert len(callable_files) == 1
         regions = [(r.chrom, int(r.start), int(r.stop)) for r in pybedtools.BedTool(callable_files[0])]
     else:
-        work_bam = list(tz.take(1, filter(lambda x: x.endswith(".bam"), data["work_bams"])))
+        work_bam = list(tz.take(1, filter(lambda x: x and x.endswith(".bam"), data["work_bams"])))
         if work_bam:
             with pysam.Samfile(work_bam[0], "rb") as pysam_bam:
                 regions = [(chrom, 0, length) for (chrom, length) in zip(pysam_bam.references,
@@ -131,7 +131,7 @@ def square_off(samples, run_parallel):
     for data in [utils.to_single_data(x) for x in samples]:
         added = False
         if tz.get_in(("metadata", "batch"), data):
-            for add in genotype.handle_multiple_callers(data, "jointcaller"):
+            for add in genotype.handle_multiple_callers(data, "jointcaller", require_bam=False):
                 if _is_jointcaller_compatible(add):
                     added = True
                     to_process.append([add])

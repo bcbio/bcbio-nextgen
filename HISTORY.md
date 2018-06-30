@@ -7,6 +7,7 @@
 - Add support for bbmap as an aligner
 - RNA-seq variant calling: parallelize GATK HaplotypeCaller over regions to
   avoid memory and timeout issues.
+- Support joint calling with GATK using pre-prepared gVCF inputs.
 - RNA-seq variant calling: allow annotation of output variants with vcfanno
 - Support hg38 builds with peddy QC
 - QC: support VerifyBamID2 for contamination detection

@@ -4,7 +4,7 @@ details:
   - description: Test1
     analysis: variant2
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
-    vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-Test1.vcf.gz
+    #vrn_file: ../data/variants/Test1-gatk-haplotype.vcf.gz
     genome_build: hg19
     metadata:
       batch: TestBatch1
@@ -14,24 +14,24 @@ details:
       mark_duplicates: true
       variantcaller: [gatk-haplotype, strelka2]
       jointcaller: [gatk-haplotype-joint, strelka2-joint]
-      tools_on: [gvcf, vqsr, gatk4]
-      coverage_interval: genome
       #aligner: false
-      #mark_duplicates: false
-      #variantcaller: false
-      #jointcaller: freebayes-joint
+      #variantcaller: gatk-haplotype
+      #jointcaller: gatk-haplotype-joint
+      tools_on: [gvcf, vqsr]
+      coverage_interval: genome
       nomap_split_size: 50
       nomap_split_targets: 100
-      #svcaller: cnvkit
       variant_regions: ../data/automated/variant_regions-bam.bed
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
-      #effects: vep
   - algorithm:
       aligner: bwa
       recalibrate: true
       variantcaller: [gatk-haplotype, strelka2]
       jointcaller: [gatk-haplotype-joint, strelka2-joint]
-      tools_on: [gvcf, vqsr, gatk4]
+      #aligner: false
+      #variantcaller: gatk-haplotype
+      #jointcaller: gatk-haplotype-joint
+      tools_on: [gvcf, vqsr]
       #effects: vep
       coverage_interval: genome
       quality_format: Standard
@@ -45,5 +45,6 @@ details:
     description: Test2
     genome_build: hg19
     lane: 7
+    #vrn_file: ../data/variants/Test2-gatk-haplotype.vcf.gz
     files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt,
             ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]

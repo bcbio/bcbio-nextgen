@@ -76,11 +76,14 @@ def combine_multiple_callers(samples):
                     cur["population"] = False
                 ready_calls.append(cur)
             if jointcaller:
-                ready_calls.append({"variantcaller": jointcaller,
-                                    "vrn_file": data.get("vrn_file"),
-                                    "vrn_file_batch": data.get("vrn_file_batch"),
-                                    "validate": data.get("validate"),
-                                    "do_upload": False})
+                cur = {"variantcaller": jointcaller,
+                       "vrn_file": data.get("vrn_file"),
+                       "vrn_file_batch": data.get("vrn_file_batch"),
+                       "validate": data.get("validate"),
+                       "do_upload": False}
+                if not variantcaller:
+                    cur["population"] = {"vcf": data.get("vrn_file")}
+                ready_calls.append(cur)
             if not jointcaller and not variantcaller:
                 ready_calls.append({"variantcaller": "precalled",
                                     "vrn_file": data.get("vrn_file"),
