@@ -91,9 +91,11 @@ information on `using git and GitHub`_ for a community developed
 project. In short, make a fork of the `bcbio code
 <https://github.com/bcbio/bcbio-nextgen>`_ by clicking the ``Fork`` button in
 the upper right corner of the GitHub page, commit your changes to this custom
-fork and keep it up to date with the main bcbio repository as you develop, then
-click ``New Pull Request`` from your fork when you'd like to submit your changes
-for integration in bcbio.
+fork and keep it up to date with the main bcbio repository as you develop. The 
+github help pages have detailed information on keeping your fork updated with 
+the main github repository (e.g. https://help.github.com/articles/syncing-a-fork/).
+After commiting changes, click ``New Pull Request`` from your fork when you'd like 
+to submit your changes for integration in bcbio.
 
 For developing and testing changes locally, you can install directly into a
 bcbio-nextgen installation. The automated bcbio-nextgen
