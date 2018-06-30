@@ -476,29 +476,21 @@ def estimate_fragment_size(bam_file, nreads=5000):
         return 0
     return int(numpy.median(lengths))
 
-def filter_stream_cmd(bam_file, data, filter_flag):
-    """
-    return a command to keep only alignments matching the filter flag
-    see https://github.com/lomereiter/sambamba/wiki/%5Bsambamba-view%5D-Filter-expression-syntax for examples
-    """
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    num_cores = dd.get_num_cores(data)
-    cmd = ('{sambamba} view -t {num_cores} -f bam -F "{filter_flag}" {bam_file}')
-    return cmd.format(**locals())
-
-def filter_primary_stream_cmd(bam_file, data):
-    return filter_stream_cmd(bam_file, data, "not secondary_alignment")
-
 def filter_primary(bam_file, data):
+    """Filter reads to primary only BAM.
+
+    Removes:
+      - not primary alignment (0x100) 256
+      - supplementary alignment (0x800) 2048
+    """
     stem, ext = os.path.splitext(bam_file)
     out_file = stem + ".primary" + ext
-    if utils.file_exists(out_file):
-        return out_file
-    with file_transaction(data, out_file) as tx_out_file:
-        cmd = filter_primary_stream_cmd(bam_file, data)
-        cmd += "> {tx_out_file}"
-        do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %
-                                        os.path.basename(bam_file)))
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cores = dd.get_num_cores(data)
+            cmd = ("samtools view -@ {cores} -F 2304 -b {bam_file} > {tx_out_file}")
+            do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %
+                                            os.path.basename(bam_file)))
     return out_file
 
 def estimate_max_mapq(in_bam, nreads=1e6):
