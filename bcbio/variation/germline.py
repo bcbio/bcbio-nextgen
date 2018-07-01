@@ -18,6 +18,7 @@ def split_somatic(items):
 
     Enables separate germline calling of samples using shared alignments.
     """
+    items = [_clean_flat_variantcaller(x) for x in items]
     somatic_groups, somatic, non_somatic = vcfutils.somatic_batches(items)
     # extract germline samples to run from normals in tumor/normal pairs
     germline_added = set([])
@@ -31,7 +32,7 @@ def split_somatic(items):
                 if cur["description"] not in germline_added:
                     germline_added.add(cur["description"])
                     cur["rgnames"]["sample"] = cur["description"]
-                    del cur["metadata"]["batch"]
+                    cur["metadata"]["batch"] = "%s-germline" % cur["metadata"]["batch"]
                     cur["metadata"]["phenotype"] = "germline"
                     cur = remove_align_qc_tools(cur)
                     cur["config"]["algorithm"]["variantcaller"] = vc["germline"]
@@ -44,6 +45,24 @@ def split_somatic(items):
             data["config"]["algorithm"]["variantcaller"] = vc["somatic"]
         somatic_out.append(data)
     return non_somatic + somatic_out + germline
+
+def _clean_flat_variantcaller(data):
+    """Convert flattened dictionary from CWL representation into dictionary.
+
+    CWL flattens somatic/germline tags into a set of strings, which we
+    reconstitute as a dictionary.
+    """
+    vc = dd.get_variantcaller(data)
+    if isinstance(vc, (list, tuple)) and all([x.count(":") == 1 for x in vc]):
+        out = {}
+        for v in vc:
+            k, v = v.split(":")
+            if k in out:
+                out[k].append(v)
+            else:
+                out[k] = [v]
+        data = dd.set_variantcaller(data, out)
+    return data
 
 def remove_align_qc_tools(data):
     """Remove alignment based QC tools we don't need for data replicates.
