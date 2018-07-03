@@ -27,6 +27,7 @@
 - Adding BAM file for each sample in small-RNAseq pipeline, samtools
   and qualimap qc metrics to multiqc report.
 - Allow arbitrary genomes for ChIP-seq. Thanks to @evchambers for pointing out the issue.
+- Add bcbioRNASeq object creation and automatic quality report generation.
 
 ## 1.0.9 (10 April 2018)
 
