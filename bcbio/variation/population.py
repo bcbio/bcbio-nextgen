@@ -10,11 +10,12 @@ import os
 import toolz as tz
 
 from bcbio import install, utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import normalize, vcfanno, vcfutils
+from bcbio.variation import naming, normalize, vcfanno, vcfutils
 
 # Current callers we can't create databases for
 # mutect2 -- fails on multi-allelic inputs represented as non-diploid
@@ -281,10 +282,18 @@ def do_db_build(samples, need_bam=True):
         return False
 
 def support_gemini_orig(data, all_human=False):
+    """Gemini original supports human build 37, search by name or extra GL contigs.
+    """
     support_gemini = ["hg19", "GRCh37"]
+    def has_build37_contigs(data):
+        for contig in ref.file_contigs(dd.get_ref_file(data)):
+            if contig.name.startswith("GL") or contig.name.find("_gl") >= 0:
+                if contig.name in naming.GMAP["hg19"] or contig.name in naming.GMAP["GRCh37"]:
+                    return True
+        return False
     if all_human:
         support_gemini += ["hg38"]
-    return dd.get_genome_build(data) in set(support_gemini)
+    return dd.get_genome_build(data) in set(support_gemini) or has_build37_contigs(data)
 
 def get_gemini_files(data):
     """Enumerate available gemini data files in a standard installation.
