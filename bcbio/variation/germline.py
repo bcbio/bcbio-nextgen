@@ -32,7 +32,7 @@ def split_somatic(items):
                 if cur["description"] not in germline_added:
                     germline_added.add(cur["description"])
                     cur["rgnames"]["sample"] = cur["description"]
-                    cur["metadata"]["batch"] = "%s-germline" % dd.get_batches(cur)[0]
+                    cur["metadata"]["batch"] = "%s-germline" % cur["description"]
                     cur["metadata"]["phenotype"] = "germline"
                     cur = remove_align_qc_tools(cur)
                     cur["config"]["algorithm"]["variantcaller"] = vc["germline"]

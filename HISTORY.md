@@ -1,6 +1,8 @@
 ## 1.1.0 (in progress)
 
-- Chip-seq: Add RiP calculation for chip-seq data.
+- Germline calls: rename outputs to `samplename-germline` to provide easier
+  to understand outputs in final directory.
+- CWL: Support germline/somatic calling for tumor samples.
 - CNVkit: improve whole genome runs. Better speed in normalize_sv_coverage
   through parallelization and avoiding logging. Avoid memory errors in segmentation.
 - UMI: upload prepared UMI bam file (pre-consensus) to final output directory
@@ -20,6 +22,7 @@
   errors with missing genome installs.
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
+- Chip-seq: Add RiP calculation for chip-seq data.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models
   per region to handle heterogeneous inputs.
 - STAR: enable passing custom options for alignment.
