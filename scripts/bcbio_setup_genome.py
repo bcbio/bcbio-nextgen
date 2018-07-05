@@ -4,12 +4,14 @@ Script to set up a custom genome for bcbio-nextgen
 """
 
 from argparse import ArgumentParser
+import gzip
 import os
 from Bio import SeqIO
 import toolz as tz
-from bcbio.utils import safe_makedir, file_exists, chdir
+from bcbio.utils import safe_makedir, file_exists, chdir, is_gzipped
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
+
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
                            _get_data_dir)
 from bcbio.pipeline.run_info import ALLOWED_CONTIG_NAME_CHARS
@@ -138,7 +140,7 @@ def setup_base_directories(genome_dir, name, build, gtf=None):
 
 def install_fasta_file(build_dir, fasta, build):
     out_file = os.path.join(build_dir, SEQ_DIR, build + ".fa")
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         recs = SeqIO.parse(fasta, "fasta")
         with open(out_file, "w") as out_handle:
             SeqIO.write((_clean_rec_name(rec) for rec in recs), out_handle, "fasta")
@@ -159,15 +161,20 @@ def _clean_rec_name(rec):
 
 def install_gtf_file(build_dir, gtf, build):
     out_file = os.path.join(build_dir, RNASEQ_DIR, "ref-transcripts.gtf")
-    if not os.path.exists(out_file):
-        shutil.copyfile(gtf, out_file)
+    if not file_exists(out_file):
+        if is_gzipped(gtf):
+            with gzip.open(gtf_file, 'rb') as in_handle:
+                with open(out_file, 'wb') as out_handle:
+                    shutil.copyfileobj(in_handle, out_handle)
+        else:
+            shutil.copyfile(gtf, out_file)
     return out_file
 
 def install_srna(species, gtf):
     out_file = os.path.join(SRNASEQ_DIR, "srna-transcripts.gtf")
     safe_makedir(SRNASEQ_DIR)
     if gtf:
-        if not os.path.exists(out_file):
+        if not file_exists(out_file):
             shutil.copyfile(gtf, out_file)
     try:
         from seqcluster import install

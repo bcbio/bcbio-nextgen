@@ -1,5 +1,6 @@
 ## 1.1.0 (in progress)
 
+- Unzip GTF file prior to installation when installing a custom genome.
 - Germline calls: rename outputs to `samplename-germline` to provide easier
   to understand outputs in final directory.
 - CWL: Support germline/somatic calling for tumor samples.
