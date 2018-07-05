@@ -267,15 +267,15 @@ def has_gemini_data(data):
     else:
         return True
 
-def do_db_build(samples, need_bam=True):
+def do_db_build(samples):
     """Confirm we should build a gemini database: need gemini and not in tools_off.
     """
     genomes = set()
     for data in samples:
-        if not need_bam or data.get("align_bam") or _has_precalled(data):
-            genomes.add(data["genome_build"])
         if "gemini" in dd.get_tools_off(data):
             return False
+        else:
+            genomes.add(data["genome_build"])
     if len(genomes) == 1:
         return has_gemini_data(samples[0])
     else:
@@ -330,13 +330,9 @@ def _group_by_batches(samples, check_fn):
             extras.append(data)
     return batch_groups, singles, out_retrieve, extras
 
-def _has_precalled(data):
-    return any(v.get("variantcaller") in ["precalled"] for v in data.get("variants", []))
-
 def _has_variant_calls(data):
     for vrn in data["variants"]:
-        if (vrn.get("vrn_file") and vcfutils.vcf_has_variants(vrn["vrn_file"]) and
-              (_has_precalled(data) or data.get("align_bam"))):
+        if vrn.get("vrn_file") and vcfutils.vcf_has_variants(vrn["vrn_file"]):
             return True
     return False
 

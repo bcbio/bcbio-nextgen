@@ -188,7 +188,7 @@ def add_reference_resources(data, remote_retriever=None):
     data = _fill_capture_regions(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
-        if population.do_db_build([data], need_bam=False):
+        if population.do_db_build([data]):
             data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
 
