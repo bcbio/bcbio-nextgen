@@ -23,7 +23,7 @@ class TestRunInfo(object):
         from bcbio.provenance import programs
         with make_workdir() as workdir:
             config = load_config(get_post_process_yaml(data_dir, workdir))
-            print programs._get_versions(config)
+            print(programs._get_versions(config))
 
 
 class TestVCFUtil(object):
