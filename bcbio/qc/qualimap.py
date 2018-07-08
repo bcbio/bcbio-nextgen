@@ -13,6 +13,7 @@ import toolz.dicttoolz as dtz
 
 from bcbio.log import logger
 from bcbio import bam, utils
+from bcbio.bam import readstats
 from bcbio.ngsalign import postalign
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
@@ -221,19 +222,11 @@ def _detect_duplicates(bam_file, out_dir, data):
     out_file = os.path.join(out_dir, "dup_metrics.txt")
     if not utils.file_exists(out_file):
         dup_align_bam = postalign.dedup_bam(bam_file, data)
-        num_cores = dd.get_num_cores(data)
+        dup_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=False)
+        tot_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=True)
         with file_transaction(data, out_file) as tx_out_file:
-            sambamba = config_utils.get_program("sambamba", data, default="sambamba")
-            dup_count = ("{sambamba} view --nthreads {num_cores} --count "
-                         "-F 'duplicate and not unmapped' "
-                         "{dup_align_bam} >> {tx_out_file}")
-            message = "Counting duplicates in {bam_file}.".format(bam_file=bam_file)
-            do.run(dup_count.format(**locals()), message)
-            tot_count = ("{sambamba} view --nthreads {num_cores} --count "
-                         "-F 'not unmapped' "
-                         "{dup_align_bam} >> {tx_out_file}")
-            message = "Counting reads in {bam_file}.".format(bam_file=bam_file)
-            do.run(tot_count.format(**locals()), message)
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write("%s\n%s\n" % (dup_count, tot_count))
     with open(out_file) as in_handle:
         dupes = float(in_handle.next().strip())
         total = float(in_handle.next().strip())
