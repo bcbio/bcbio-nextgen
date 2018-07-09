@@ -76,7 +76,7 @@ def _output_gff3(gff3_file, out_file, dialect):
                 attr = {"transcript_id": transcript_id, "gene_id": gene_id}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print(file=out_handle, end="", feature)
+                print(feature, file=out_handle, end="")
 
 def _output_ncbi_gff3(gff3_file, out_file, dialect):
     gene_key = "gene"
@@ -103,7 +103,7 @@ def _output_ncbi_gff3(gff3_file, out_file, dialect):
                         "gene_biotype": biotype}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print(file=out_handle, end="", feature)
+                print(feature, file=out_handle, end="")
 
 def _is_from_ncbi(gff3_file):
     with open(gff3_file) as in_handle:
