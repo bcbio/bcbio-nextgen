@@ -26,6 +26,8 @@ import gffutils
 from gffutils.iterators import DataIterator
 import tempfile
 
+from __future__ import print_function
+
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
 SRNASEQ_DIR = "srnaseq"
@@ -76,7 +78,7 @@ def _output_gff3(gff3_file, out_file, dialect):
                 attr = {"transcript_id": transcript_id, "gene_id": gene_id}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print >> out_handle, feature
+                print(file=out_handle, end="", feature)
 
 def _output_ncbi_gff3(gff3_file, out_file, dialect):
     gene_key = "gene"
@@ -103,7 +105,7 @@ def _output_ncbi_gff3(gff3_file, out_file, dialect):
                         "gene_biotype": biotype}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print >> out_handle, feature
+                print(file=out_handle, end="", feature)
 
 def _is_from_ncbi(gff3_file):
     with open(gff3_file) as in_handle:
