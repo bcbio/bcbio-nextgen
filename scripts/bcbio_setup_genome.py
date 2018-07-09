@@ -2,6 +2,7 @@
 """
 Script to set up a custom genome for bcbio-nextgen
 """
+from __future__ import print_function
 
 from argparse import ArgumentParser
 import gzip
@@ -25,8 +26,6 @@ import yaml
 import gffutils
 from gffutils.iterators import DataIterator
 import tempfile
-
-from __future__ import print_function
 
 SEQ_DIR = "seq"
 RNASEQ_DIR = "rnaseq"
