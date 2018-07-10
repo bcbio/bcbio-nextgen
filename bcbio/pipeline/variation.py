@@ -30,7 +30,9 @@ def summarize_vc(items):
             if s not in sample_order:
                 sample_order.append(s)
         if data.get("vrn_file"):
-            names = dd.get_batches(data)
+            # Only get batches if we're actually doing variantcalling in bcbio
+            # otherwise we'll be using the original files
+            names = dd.get_batches(data) if dd.get_variantcaller(data) else None
             if not names:
                 names = [dd.get_sample_name(data)]
             batch_name = names[0]
