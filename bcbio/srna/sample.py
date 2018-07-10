@@ -261,16 +261,25 @@ def _mirtop(input_fn, sps, db, out_dir, config):
     if not file_exists(hairpin) or not file_exists(gtf):
         logger.warning("%s or %s are not installed. Skipping." % (hairpin, gtf))
         return None
-    out_fn = "%s.gtf" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    out_gtf_fn = "%s.gtf" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    out_gff_fn = "%s.gff" % utils.splitext_plus(os.path.basename(input_fn))[0]
     export = _get_env()
     cmd = ("{export} mirtop gff  --sps {sps} --hairpin {hairpin} "
            "--gtf {gtf} --format seqbuster -o {out_tx} {input_fn}")
-    if not file_exists(os.path.join(out_dir, out_fn)):
+    if not file_exists(os.path.join(out_dir, out_gtf_fn)) and \
+       not file_exists(os.path.join(out_dir, out_gff_fn)):
         with tx_tmpdir() as out_tx:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % input_fn)
-            shutil.move(os.path.join(out_tx, out_fn),
-                        os.path.join(out_dir, out_fn))
-    return os.path.join(out_dir, out_fn)
+            with utils.chdir(out_tx):
+                out_fn = out_gtf_fn if utils.file_exists(out_gtf_fn) \
+                                    else out_gff_fn
+                if utils.file_exists(out_fn):
+                    shutil.move(os.path.join(out_tx, out_fn),
+                                os.path.join(out_dir, out_fn))
+    out_fn = out_gtf_fn if utils.file_exists(os.path.join(out_dir, out_gtf_fn)) \
+                        else os.path.join(out_dir, out_gff_fn)
+    if utils.file_exists(os.path.join(out_dir, out_fn)):
+        return os.path.join(out_dir, out_fn)
 
 def _trna_annotation(data):
     """
