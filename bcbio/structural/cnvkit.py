@@ -16,7 +16,7 @@ import pybedtools
 import numpy as np
 import toolz as tz
 
-from bcbio import heterogeneity, utils
+from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
@@ -493,6 +493,7 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
 def _compatible_small_variants(data, items):
     """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
     """
+    from bcbio import heterogeneity
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
     supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
