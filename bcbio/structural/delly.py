@@ -16,8 +16,8 @@ from bcbio.provenance import do
 from bcbio.structural import shared as sshared
 from bcbio.variation import vcfutils
 
-def _get_full_exclude_file(items, work_dir):
-    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
+def _get_full_exclude_file(items, work_bams, work_dir):
+    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(work_bams[0]))[0]))
     return sshared.prepare_exclude_file(items, base_file)
 
 def _delly_exclude_file(items, base_file, chrom):
@@ -149,7 +149,7 @@ def run(items):
     high quality reference pairs (DR).
     """
     work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural",
-                                               items[0]["name"][-1], "delly"))
+                                               dd.get_sample_name(items[0]), "delly"))
     # Add core request for delly
     config = copy.deepcopy(items[0]["config"])
     delly_config = utils.get_in(config, ("resources", "delly"), {})
@@ -159,7 +159,7 @@ def run(items):
                 "progs": ["delly"]}
     work_bams = [dd.get_align_bam(d) for d in items]
     ref_file = dd.get_ref_file(items[0])
-    exclude_file = _get_full_exclude_file(items, work_dir)
+    exclude_file = _get_full_exclude_file(items, work_bams, work_dir)
     bytype_vcfs = run_multicore(_run_delly,
                                 [(work_bams, chrom, ref_file, work_dir, items)
                                  for chrom in sshared.get_sv_chroms(items, exclude_file)],
