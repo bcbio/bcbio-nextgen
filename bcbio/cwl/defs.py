@@ -469,6 +469,15 @@ def _variant_sv(checkpoints):
                          "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
+    sv_batch_inputs = [["analysis"], ["genome_build"],
+                       ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
+                       ["config", "algorithm", "tools_on"],
+                       ["config", "algorithm", "tools_off"],
+                       ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
+                       ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
+                       ["sv_coverage_rec"]]
+    if checkpoints.get("vc"):
+        sv_batch_inputs.append(["variants", "samples"])
     steps = [s("calculate_sv_bins", "multi-combined",
                [["align_bam"], ["reference", "fasta", "base"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
@@ -506,14 +515,7 @@ def _variant_sv(checkpoints):
                                cwlout("inherit")])],
                "bcbio-vc", ["cnvkit"],
                disk={"files": 1.5}),
-             s("batch_for_sv", "multi-batch",
-               [["analysis"], ["genome_build"],
-                ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
-                ["config", "algorithm", "tools_on"],
-                ["config", "algorithm", "tools_off"],
-                ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
-                ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
-                ["sv_coverage_rec"]],
+             s("batch_for_sv", "multi-batch", sv_batch_inputs,
                [cwlout("sv_batch_rec", "record")],
                "bcbio-vc",
                unlist=[["config", "algorithm", "svcaller"]]),

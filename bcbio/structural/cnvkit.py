@@ -16,7 +16,7 @@ import pybedtools
 import numpy as np
 import toolz as tz
 
-from bcbio import utils
+from bcbio import heterogeneity, utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
 from bcbio.distributed.transaction import file_transaction
@@ -496,15 +496,14 @@ def _compatible_small_variants(data, items):
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
     supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
-    for v in data.get("variants", []):
-        vrn_file = v.get("vrn_file")
-        if vrn_file and v.get("variantcaller") in supported:
-            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            paired = vcfutils.get_paired(items)
-            if paired:
-                out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
-            else:
-                out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
+    paired = vcfutils.get_paired(items)
+    for v in heterogeneity.get_variants(data, include_germline=not paired):
+        vrn_file = v["vrn_file"]
+        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+        if paired:
+            out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
+        else:
+            out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
     return out
 
 def _add_variantcalls_to_output(out, data, items, is_somatic=False):

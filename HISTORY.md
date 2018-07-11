@@ -1,3 +1,8 @@
+## 1.1.1 (in progress)
+
+- CWL: support for heterogeneity and structural variant callers that make
+  use of variant inputs.
+
 ## 1.1.0 (11 July 2018)
 
 - Germline calls: rename outputs to `samplename-germline` to provide easier

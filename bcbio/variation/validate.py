@@ -525,7 +525,7 @@ def _group_validate_samples(samples, vkey, batch_keys):
         if data.get(vkey):
             is_v = True
         for variant in data.get("variants", []):
-            if variant.get(vkey):
+            if isinstance(variant, dict) and variant.get(vkey):
                 is_v = True
         if is_v:
             for batch_key in batch_keys:
@@ -561,7 +561,8 @@ def summarize_grading(samples, vkey="validate"):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                validations = [variant.get(vkey) for variant in data.get("variants", [])]
+                validations = [variant.get(vkey) for variant in data.get("variants", [])
+                               if isinstance(variant, dict)]
                 validations = [v for v in validations if v]
                 if len(validations) == 0 and vkey in data:
                     validations = [data.get(vkey)]
@@ -588,7 +589,7 @@ def summarize_grading(samples, vkey="validate"):
             if data.get(vkey):
                 data[vkey]["grading_plots"] = plots
             for variant in data.get("variants", []):
-                if variant.get(vkey):
+                if isinstance(variant, dict) and variant.get(vkey):
                     variant[vkey]["grading_plots"] = plots
             out.append([data])
     return out

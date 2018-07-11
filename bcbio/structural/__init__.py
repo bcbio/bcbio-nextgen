@@ -130,6 +130,7 @@ def batch_for_sv(samples):
     CWL input target -- groups samples into batches and structural variant
     callers for parallel processing.
     """
+    samples = cwlutils.assign_complex_to_samples(samples)
     to_process, extras, background = _batch_split_by_sv(samples, "standard")
     out = [cwlutils.samples_to_records(xs) for xs in to_process.values()] + extras
     return out
