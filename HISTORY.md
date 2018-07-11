@@ -1,8 +1,9 @@
-## 1.1.0 (in progress)
+## 1.1.0 (11 July 2018)
 
-- Unzip GTF file prior to installation when installing a custom genome.
 - Germline calls: rename outputs to `samplename-germline` to provide easier
   to understand outputs in final directory.
+- Add bcbioRNASeq object creation and automatic quality report generation
+  with `tools_on: [bcbiornaseq]`
 - CWL: Support germline/somatic calling for tumor samples.
 - CNVkit: improve whole genome runs. Better speed in normalize_sv_coverage
   through parallelization and avoiding logging. Avoid memory errors in segmentation.
@@ -17,6 +18,7 @@
 - CWL: adjust defaults for align_split_size and nomap_split_targets to match
   different parallelization and overhead for these runs
 - CWL: support for Cromwell runner
+- custom genomes: Unzip GTF file prior to installation.
 - Avoid making variant_regions required during processing (by filling with
   coverage) to differentiate targeted and non analyses downstream.
 - Avoid attempts to download pre-installed S3 genomes, providing better
@@ -31,7 +33,6 @@
 - Adding BAM file for each sample in small-RNAseq pipeline, samtools
   and qualimap qc metrics to multiqc report.
 - Allow arbitrary genomes for ChIP-seq. Thanks to @evchambers for pointing out the issue.
-- Add bcbioRNASeq object creation and automatic quality report generation.
 
 ## 1.0.9 (10 April 2018)
 
