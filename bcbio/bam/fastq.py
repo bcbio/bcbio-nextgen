@@ -23,6 +23,8 @@ def groom(in_file, data, in_qual="illumina", out_dir=None, out_file=None):
     Grooms a FASTQ file from Illumina 1.3/1.5 quality scores into
     sanger format, if it is not already in that format.
     """
+    if not out_file.endswith("gz"):
+        out_file = "%s.gz" % out_file
     seqtk = config_utils.get_program("seqtk", data["config"])
     if in_qual == "fastq-sanger":
         logger.info("%s is already in Sanger format." % in_file)
