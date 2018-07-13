@@ -2,6 +2,9 @@
 
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
+- RNA-seq: output a matrix of un-deduped UMI counts when doing single-cell/DGE
+  for quality control purposes. This is called `tagcounts-dupes.mtx` in the
+  final directory.
 
 ## 1.1.0 (11 July 2018)
 
