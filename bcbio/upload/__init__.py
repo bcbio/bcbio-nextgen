@@ -716,7 +716,7 @@ def _get_files_project(sample, upload_config):
                     "type": "rownames"})
             out.append({"path": count_file + ".colnames",
                     "type": "colnames"})
-            umi_file = os.path.splitext(count_file)[0] + "-undeduped.mtx"
+            umi_file = os.path.splitext(count_file)[0] + "-dupes.mtx"
             if utils.file_exists(umi_file):
                 out.append({"path": umi_file,
                             "type": "mtx"})

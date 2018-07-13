@@ -247,7 +247,7 @@ def tagcount(data):
            "{gene_map_flag}" 
            "--cb_histogram {cb_histogram}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
-    umi_matrix_file = out_prefix + "-undeduped.mtx"
+    umi_matrix_file = out_prefix + "-dupes.mtx"
     out_files += [umi_matrix_file, umi_matrix_file + ".rownames",
                   umi_matrix_file + ".colnames"]
     if has_umi_matrix(data):
