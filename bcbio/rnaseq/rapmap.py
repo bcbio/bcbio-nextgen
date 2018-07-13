@@ -85,7 +85,7 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
     with file_transaction(out_file) as tx_out_file:
         cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file)
         run_message = ("%smapping %s and %s to %s with Rapmap. "
-                       % (algorithm, fq1, fq2, rapmap_index))
+                       % (algorithm, fq1, fq2, rapmap_index_loc))
         do.run(cmd.format(**locals()), run_message, None)
     bam.index(out_file, dd.get_config(data))
     return out_file
