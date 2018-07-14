@@ -177,7 +177,6 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
                                 cwlout("inherit", exclude=[["align_bam"], ["reference", "twobit"],
-                                                           ["reference", "snpeff"], ["reference", "rtg"],
                                                            ["genome_resources", "variation"]])])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
@@ -186,6 +185,7 @@ def _variant_vc(checkpoints):
                 ["metadata", "batch"], ["metadata", "phenotype"],
                 ["config", "algorithm", "callable_regions"], ["regions", "sample_callable"],
                 ["config", "algorithm", "variantcaller"],
+                ["config", "algorithm", "ensemble"],
                 ["config", "algorithm", "vcfanno"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "effects"],
@@ -217,8 +217,12 @@ def _variant_vc(checkpoints):
             [["region"], ["region_block"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
     if checkpoints.get("jointvc"):
         vc += _variant_jointvc()
-    vc += [s("summarize_vc", "multi-combined",
-             [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
+    if checkpoints.get("ensemble"):
+        vc += _variant_ensemble(checkpoints)
+    summarize_in = [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]]
+    if checkpoints.get("ensemble"):
+        summarize_in += [["ensemble_rec"]]
+    vc += [s("summarize_vc", "multi-combined", summarize_in,
              [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
               cwlout(["variants", "gvcf"], ["null", {"type": "array", "items": ["File", "null"]}]),
               cwlout(["variants", "samples"], {"type": "array", "items": {"type": "array",
@@ -228,6 +232,25 @@ def _variant_vc(checkpoints):
              "bcbio-vc",
              disk={"files": 0.5}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
+
+def _variant_ensemble(checkpoints):
+    out = [s("batch_for_ensemble", "multi-combined",
+             [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
+             [cwlout("ensemble_prep_rec", "record",
+                     fields=[cwlout(["batch_id"], "string"),
+                             cwlout(["variants", "calls"], {"type": "array", "items": "File"}),
+                             cwlout(["variants", "variantcallers"], {"type": "array", "items": "string"}),
+                             cwlout("inherit")])],
+             "bcbio-vc", cores=1, no_files=True),
+           s("combine_calls", "multi-parallel",
+             ["ensemble_prep_rec"],
+             [cwlout("ensemble_rec", "record",
+                     fields=[cwlout(["ensemble", "vrn_file"], ["File", "null"]),
+                             cwlout(["ensemble", "validate", "summary"], ["File", "null"]),
+                             cwlout(["ensemble", "batch_samples"], {"type": "array", "items": "string"}),
+                             cwlout(["ensemble", "batch_id"], "string")])],
+             "bcbio-vc", ["bcbio-variation-recall"])]
+    return out
 
 def _variant_jointvc():
     wf = [s("get_parallel_regions_jointvc", "batch-split",
@@ -278,6 +301,7 @@ def _variant_checkpoints(samples):
                                            not dd.get_aligner(d))
                                           for d in samples])
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
+    checkpoints["ensemble"] = any([dd.get_ensemble(d) for d in samples])
     return checkpoints
 
 def _postprocess_alignment(checkpoints):

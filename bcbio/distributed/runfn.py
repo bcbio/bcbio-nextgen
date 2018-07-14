@@ -267,6 +267,28 @@ def _check_for_single_nested(target, items_by_key, input_order):
                 out[tuple(k.split("__"))] = v[0]
     return out
 
+def _concat_records(items_by_key, input_order):
+    """Concatenate records into a single key to avoid merging.
+
+    Handles heterogeneous records that will then be sorted out in
+    the processing fuction.
+    """
+    all_records = []
+    for (k, t) in input_order.items():
+        if t == "record":
+            all_records.append(k)
+    out_items_by_key = utils.deepish_copy(items_by_key)
+    out_input_order = utils.deepish_copy(input_order)
+    if len(all_records) > 1:
+        final_k = all_records[0]
+        final_v = items_by_key[final_k]
+        for k in all_records[1:]:
+            final_v += items_by_key[k]
+            del out_items_by_key[k]
+            del out_input_order[k]
+        out_items_by_key[final_k] = final_v
+    return out_items_by_key, out_input_order
+
 def _merge_cwlinputs(items_by_key, input_order, parallel):
     """Merge multiple cwl records and inputs, handling multiple data items.
 
@@ -275,6 +297,8 @@ def _merge_cwlinputs(items_by_key, input_order, parallel):
       of variables to the record.
     """
     items_by_key = _maybe_nest_bare_single(items_by_key, parallel)
+    if parallel == "multi-combined":
+        items_by_key, input_order = _concat_records(items_by_key, input_order)
     var_items = set([_item_count(items_by_key[tuple(k.split("__"))])
                      for (k, t) in input_order.items() if t == "var"])
     rec_items = set([_item_count(items_by_key[k]) for (k, t) in input_order.items() if t == "record"])

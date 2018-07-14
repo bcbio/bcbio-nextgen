@@ -19,6 +19,7 @@ def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
     items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
+    itemx = [_normalize_vc_input(x) for x in items]
     out = {"validate": validate.combine_validations(items),
            "variants": {"calls": [], "gvcf": [], "samples": []}}
     added = set([])
@@ -58,6 +59,18 @@ def summarize_vc(items):
     for sample in sample_order:
         out["variants"]["samples"].append(variants_by_sample[sample])
     return [out]
+
+def _normalize_vc_input(data):
+    """Normalize different types of variant calling inputs.
+
+    Handles standard and ensemble inputs.
+    """
+    if data.get("ensemble"):
+        for k in ["batch_samples", "validate", "vrn_file"]:
+            data[k] = data["ensemble"][k]
+        data["config"]["algorithm"]["variantcaller"] = "ensemble"
+        data["metadata"] = {"batch": data["ensemble"]["batch_id"]}
+    return data
 
 # ## Genotyping
 
