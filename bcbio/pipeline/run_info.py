@@ -979,6 +979,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "min_allele_fraction": 10,
                 "recalibrate": False,
                 "realign": False,
+                "ensemble": None,
                 "exclude_regions": [],
                 "variant_regions": None,
                 "svvalidate": None,
