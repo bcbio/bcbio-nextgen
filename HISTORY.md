@@ -1,5 +1,6 @@
 ## 1.1.1 (in progress)
 
+- variant: support octopus variant caller for germline and somatic samples.
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
 - CWL: support ensemble calling for combining multiple variant callers.

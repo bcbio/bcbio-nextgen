@@ -29,7 +29,7 @@ def get_variants(data, include_germline=False):
     """
     data = utils.deepish_copy(data)
     supported = ["precalled", "vardict", "vardict-java", "vardict-perl",
-                 "strelka2", "mutect2", "freebayes", "mutect"]
+                 "strelka2", "mutect2", "freebayes", "mutect", "octopus"]
     if include_germline:
         supported.insert(1, "gatk-haplotype")
     out = []
