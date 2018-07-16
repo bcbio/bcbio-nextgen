@@ -120,6 +120,10 @@ def quantitate(data):
         data = to_single_data(kallisto.run_kallisto_rnaseq(data)[0])
         data["quant"]["tsv"] = os.path.join(data["kallisto_quant"], "abundance.tsv")
         data["quant"]["hdf5"] = os.path.join(data["kallisto_quant"], "abundance.h5")
+	if(os.path.exists(data["kallisto_quant"], "fusion.txt")):
+		data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
+        else:
+                data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
         data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
@@ -154,7 +158,7 @@ def quantitate_expression_parallel(samples, run_parallel):
 
 def detect_fusions(data):
     # support the old style of fusion mode calling
-    if dd.get_fusion_mode(data, False):
+    if dd.get_fusioin_mode(data, False):
         data = dd.set_fusion_caller(data, ["oncofuse", "pizzly"])
         logger.warning("``fusion_mode`` is deprecated in favor of turning on "
                        "callers with ``fusion_caller``. It will run pizzly and "
@@ -162,6 +166,7 @@ def detect_fusions(data):
                        "dropped.")
     fusion_caller = dd.get_fusion_caller(data, [])
     if "oncofuse" in fusion_caller:
+        oncofuse_file = oncofuse.run(data)
         oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
@@ -326,7 +331,7 @@ def assemble_transcripts(run_parallel, samples):
         if "stringtie" in assembler and stringtie.supports_merge(data):
             samples = run_parallel("stringtie_merge", [samples])
         else:
-            samples = run_parallel("cufflinks_merge", [samples])
+	    samples = run_parallel("cufflinks_merge", [samples])
     return samples
 
 def combine_files(samples):
