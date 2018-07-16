@@ -2,14 +2,17 @@
 """
 Script to set up a custom genome for bcbio-nextgen
 """
+from __future__ import print_function
 
 from argparse import ArgumentParser
+import gzip
 import os
 from Bio import SeqIO
 import toolz as tz
-from bcbio.utils import safe_makedir, file_exists, chdir
+from bcbio.utils import safe_makedir, file_exists, chdir, is_gzipped
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
+
 from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
                            _get_data_dir)
 from bcbio.pipeline.run_info import ALLOWED_CONTIG_NAME_CHARS
@@ -74,7 +77,7 @@ def _output_gff3(gff3_file, out_file, dialect):
                 attr = {"transcript_id": transcript_id, "gene_id": gene_id}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print >> out_handle, feature
+                print(feature, file=out_handle, end="")
 
 def _output_ncbi_gff3(gff3_file, out_file, dialect):
     gene_key = "gene"
@@ -101,7 +104,7 @@ def _output_ncbi_gff3(gff3_file, out_file, dialect):
                         "gene_biotype": biotype}
                 attributes = gffutils.attributes.Attributes(attr)
                 feature.attributes = attributes
-                print >> out_handle, feature
+                print(feature, file=out_handle, end="")
 
 def _is_from_ncbi(gff3_file):
     with open(gff3_file) as in_handle:
@@ -138,7 +141,7 @@ def setup_base_directories(genome_dir, name, build, gtf=None):
 
 def install_fasta_file(build_dir, fasta, build):
     out_file = os.path.join(build_dir, SEQ_DIR, build + ".fa")
-    if not os.path.exists(out_file):
+    if not file_exists(out_file):
         recs = SeqIO.parse(fasta, "fasta")
         with open(out_file, "w") as out_handle:
             SeqIO.write((_clean_rec_name(rec) for rec in recs), out_handle, "fasta")
@@ -159,15 +162,20 @@ def _clean_rec_name(rec):
 
 def install_gtf_file(build_dir, gtf, build):
     out_file = os.path.join(build_dir, RNASEQ_DIR, "ref-transcripts.gtf")
-    if not os.path.exists(out_file):
-        shutil.copyfile(gtf, out_file)
+    if not file_exists(out_file):
+        if is_gzipped(gtf):
+            with gzip.open(gtf_file, 'rb') as in_handle:
+                with open(out_file, 'wb') as out_handle:
+                    shutil.copyfileobj(in_handle, out_handle)
+        else:
+            shutil.copyfile(gtf, out_file)
     return out_file
 
 def install_srna(species, gtf):
     out_file = os.path.join(SRNASEQ_DIR, "srna-transcripts.gtf")
     safe_makedir(SRNASEQ_DIR)
     if gtf:
-        if not os.path.exists(out_file):
+        if not file_exists(out_file):
             shutil.copyfile(gtf, out_file)
     try:
         from seqcluster import install
@@ -186,20 +194,20 @@ def append_ercc(gtf_file, fasta_file):
     ercc_fa = ERCC_BUCKET + "ERCC92.fasta.gz"
     tmp_fa = tempfile.NamedTemporaryFile(delete=False, suffix=".gz").name
     append_fa_cmd = "wget {ercc_fa} -O {tmp_fa}; gzip -cd {tmp_fa} >> {fasta_file}"
-    print append_fa_cmd.format(**locals())
+    print(append_fa_cmd.format(**locals()))
     subprocess.check_call(append_fa_cmd.format(**locals()), shell=True)
     ercc_gtf = ERCC_BUCKET + "ERCC92.gtf.gz"
     tmp_gtf = tempfile.NamedTemporaryFile(delete=False, suffix=".gz").name
     append_gtf_cmd = "wget {ercc_gtf} -O {tmp_gtf}; gzip -cd {tmp_gtf} >> {gtf_file}"
-    print append_gtf_cmd.format(**locals())
+    print(append_gtf_cmd.format(**locals()))
     subprocess.check_call(append_gtf_cmd.format(**locals()), shell=True)
 
 class MyParser(ArgumentParser):
     def error(self, message):
         self.print_help()
         galaxy_base = os.path.join(_get_data_dir(), "galaxy")
-        print "\nCurrent genomes\n"
-        print open(loc.get_loc_file(galaxy_base, "samtools")).read()
+        print("\nCurrent genomes\n")
+        print(open(loc.get_loc_file(galaxy_base, "samtools")).read())
         sys.exit(0)
 
 if __name__ == "__main__":
@@ -248,12 +256,12 @@ if __name__ == "__main__":
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
     if not file_exists(args.fasta):
-        print "%s does not exist, exiting." % args.fasta
+        print("%s does not exist, exiting." % args.fasta)
         sys.exit(1)
 
     args.gtf = os.path.abspath(args.gtf) if args.gtf else None
     if args.gtf and not file_exists(args.gtf):
-        print "%s does not exist, exiting." % args.gtf
+        print("%s does not exist, exiting." % args.gtf)
         sys.exit(1)
     args.srna_gtf = os.path.abspath(args.srna_gtf) if args.srna_gtf else None
 
@@ -269,30 +277,30 @@ if __name__ == "__main__":
     env.system_install = genome_dir
     prepare_tx = os.path.join(cbl["dir"], "utils", "prepare_tx_gff.py")
 
-    print "Creating directories using %s as the base." % (genome_dir)
+    print("Creating directories using %s as the base." % (genome_dir))
     build_dir = setup_base_directories(genome_dir, args.name, args.build, args.gtf)
     os.chdir(build_dir)
-    print "Genomes will be installed into %s." % (build_dir)
+    print("Genomes will be installed into %s." % (build_dir))
 
     fasta_file = extract_if_gzipped(args.fasta)
     fasta_file = install_fasta_file(build_dir, fasta_file, args.build)
-    print "Installed genome as %s." % (fasta_file)
+    print("Installed genome as %s." % (fasta_file))
     if args.gtf:
         if "bowtie2" not in args.indexes:
             args.indexes.append("bowtie2")
         gtf_file = install_gtf_file(build_dir, gtf_file, args.build)
-        print "Installed GTF as %s." % (gtf_file)
+        print("Installed GTF as %s." % (gtf_file))
 
     if args.ercc:
-        print "Appending ERCC sequences to %s and %s." % (gtf_file, fasta_file)
+        print("Appending ERCC sequences to %s and %s." % (gtf_file, fasta_file))
         append_ercc(gtf_file, fasta_file)
 
     indexed = {}
     for index in args.indexes:
-        print "Creating the %s index." % (index)
+        print("Creating the %s index." % (index))
         index_fn = genomes.get_index_fn(index)
         if not index_fn:
-            print "Do not know how to make the index %s, skipping." % (index)
+            print("Do not know how to make the index %s, skipping." % (index))
             continue
         indexed[index] = index_fn(fasta_file)
     indexed["samtools"] = fasta_file
@@ -310,7 +318,7 @@ if __name__ == "__main__":
     base_dir = os.path.normpath(os.path.dirname(fasta_file))
     resource_file = os.path.join(base_dir, "%s-resources.yaml" % args.build)
 
-    print "Dumping genome resources to %s." % resource_file
+    print("Dumping genome resources to %s." % resource_file)
     resource_dict = {"version": 1}
     if args.gtf:
         transcripts = ["rnaseq", "transcripts"]
@@ -343,9 +351,9 @@ if __name__ == "__main__":
         with open(tx_resource_file, "w") as out_handle:
             out_handle.write(yaml.dump(resource_dict, default_flow_style=False))
 
-    print "Updating Galaxy .loc files."
+    print("Updating Galaxy .loc files.")
     galaxy_base = os.path.join(_get_data_dir(), "galaxy")
     for index, index_file in indexed.items():
         loc.update_loc_file(galaxy_base, index, args.build, index_file)
 
-    print "Genome installation complete."
+    print("Genome installation complete.")

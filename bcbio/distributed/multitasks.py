@@ -340,6 +340,10 @@ def combine_calls(*args):
     return ensemble.combine_calls(*args)
 
 @utils.map_wrap
+def batch_for_ensemble(*args):
+    return ensemble.batch(*args)
+
+@utils.map_wrap
 def prep_gemini_db(*args):
     return population.prep_gemini_db(*args)
 

@@ -500,12 +500,13 @@ def _maybe_add_scrnaseq(algorithm, sample, out):
     count_file = dd.get_count_file(sample)
     if not count_file:
         return out
-    out.append({"path": count_file,
-             "type": "mtx"})
-    out.append({"path": count_file + ".rownames",
-             "type": "rownames"})
-    out.append({"path": count_file + ".colnames",
-             "type": "colnames"})
+    else:
+        out.append({"path": count_file,
+                    "type": "mtx"})
+        out.append({"path": count_file + ".rownames",
+                    "type": "rownames"})
+        out.append({"path": count_file + ".colnames",
+                    "type": "colnames"})
     return out
 
 def _maybe_add_barcode_histogram(algorithm, sample, out):
@@ -715,6 +716,14 @@ def _get_files_project(sample, upload_config):
                     "type": "rownames"})
             out.append({"path": count_file + ".colnames",
                     "type": "colnames"})
+            umi_file = os.path.splitext(count_file)[0] + "-dupes.mtx"
+            if utils.file_exists(umi_file):
+                out.append({"path": umi_file,
+                            "type": "mtx"})
+                out.append({"path": umi_file + ".rownames",
+                            "type": "rownames"})
+                out.append({"path": umi_file + ".colnames",
+                            "type": "colnames"})
         else:
             out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_annotated_combined_counts(sample):

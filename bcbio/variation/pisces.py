@@ -33,8 +33,14 @@ def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
             ref_dir = _prep_genome(os.path.dirname(tx_out_file), paired.tumor_data)
             out_dir = os.path.dirname(tx_out_file)
             cores = dd.get_num_cores(paired.tumor_data)
+            emit_min_af = min_af / 10.0
             cmd = ("pisces --bampaths {paired.tumor_bam} --genomepaths {ref_dir} --intervalpaths {target} "
-                   "--maxthreads {cores} --minvf {min_af} --ploidy somatic --gvcf false -o {out_dir}")
+                   "--maxthreads {cores} --minvf {emit_min_af} --vffilter {min_af} "
+                   "--ploidy somatic --gvcf false -o {out_dir}")
+            # For low frequency UMI tagged variants, set higher variant thresholds
+            # https://github.com/Illumina/Pisces/issues/14#issuecomment-399756862
+            if min_af < (1.0 / 100.0):
+                cmd += " --minbasecallquality 30"
             do.run(cmd.format(**locals()), "Pisces tumor-only somatic calling")
             shutil.move(os.path.join(out_dir, "%s.vcf" % base_out_name),
                         tx_out_file)

@@ -31,10 +31,11 @@ def fixrg(in_bam, names, ref_file, dirs, data):
         with file_transaction(data, out_file) as tx_out_file:
             rg_info = novoalign.get_rg_info(names)
             new_header = "%s-header.txt" % os.path.splitext(out_file)[0]
+            cores = dd.get_cores(data)
             do.run("samtools view -H {in_bam} | grep -v ^@RG > {new_header}".format(**locals()),
                    "Create empty RG header: %s" % dd.get_sample_name(data))
             cmd = ("samtools reheader {new_header} {in_bam} | "
-                   "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} -")
+                   "samtools addreplacerg -@ {cores} -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} -")
             do.run(cmd.format(**locals()), "Fix read groups: %s" % dd.get_sample_name(data))
     return out_file
 
@@ -60,13 +61,14 @@ def remove_extracontigs(in_bam, data):
             bcbio_py = sys.executable
             ref_file = dd.get_ref_file(data)
             local_bam = os.path.join(os.path.dirname(tx_out_file), os.path.basename(in_bam))
+            cores = dd.get_cores(data)
             utils.symlink_plus(in_bam, local_bam)
             bam.index(local_bam, data["config"])
-            cmd = ("samtools view -h {local_bam} {str_chroms} | "
+            cmd = ("samtools view -@ {cores} -h {local_bam} {str_chroms} | "
                    """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
                    """cleanbam.fix_header("{ref_file}")' | """
-                   "samtools view -u - | "
-                   "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
+                   "samtools view -@ {cores} -u - | "
+                   "samtools addreplacerg -@ {cores} -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
             do.run(cmd.format(**locals()), "bamprep, remove extra contigs: %s" % dd.get_sample_name(data))
     return out_file
 

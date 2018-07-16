@@ -76,11 +76,14 @@ def combine_multiple_callers(samples):
                     cur["population"] = False
                 ready_calls.append(cur)
             if jointcaller:
-                ready_calls.append({"variantcaller": jointcaller,
-                                    "vrn_file": data.get("vrn_file"),
-                                    "vrn_file_batch": data.get("vrn_file_batch"),
-                                    "validate": data.get("validate"),
-                                    "do_upload": False})
+                cur = {"variantcaller": jointcaller,
+                       "vrn_file": data.get("vrn_file"),
+                       "vrn_file_batch": data.get("vrn_file_batch"),
+                       "validate": data.get("validate"),
+                       "do_upload": False}
+                if not variantcaller:
+                    cur["population"] = {"vcf": data.get("vrn_file")}
+                ready_calls.append(cur)
             if not jointcaller and not variantcaller:
                 ready_calls.append({"variantcaller": "precalled",
                                     "vrn_file": data.get("vrn_file"),
@@ -311,10 +314,10 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             out.append(base)
         return out
 
-SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope", "deepvariant", "gatk-haplotype", "pisces"]
-
+SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope",
+                     "deepvariant", "gatk-haplotype", "pisces", "octopus"]
 def get_variantcallers():
-    from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
+    from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2, octopus,
                                  pisces, platypus, scalpel, sentieon, strelka2, vardict, qsnp,
                                  deepvariant)
     return {"gatk": gatk.unified_genotyper,
@@ -326,6 +329,7 @@ def get_variantcallers():
             "samtools": samtools.run_samtools,
             "varscan": varscan.run_varscan,
             "mutect": mutect.mutect_caller,
+            "octopus": octopus.run,
             "pisces": pisces.run,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,

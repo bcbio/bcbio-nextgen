@@ -274,7 +274,7 @@ def _biotype_lookup_fn(gtf):
     else:
         return None
 
-def tx2genedict(gtf):
+def tx2genedict(gtf, keep_version=False):
     """
     produce a tx2gene dictionary from a GTF file
     """
@@ -287,7 +287,7 @@ def tx2genedict(gtf):
             geneid = _strip_non_alphanumeric(geneid)
             txid = line.split("transcript_id")[1].split(" ")[1]
             txid = _strip_non_alphanumeric(txid)
-            if "transcript_version" in line:
+            if keep_version and "transcript_version" in line:
                 txversion = line.split("transcript_version")[1].split(" ")[1]
                 txversion = _strip_non_alphanumeric(txversion)
                 txid  += "." + txversion
@@ -297,7 +297,7 @@ def tx2genedict(gtf):
 def _strip_non_alphanumeric(string):
     return string.replace('"', '').replace(';', '')
 
-def tx2genefile(gtf, out_file=None, data=None, tsv=True):
+def tx2genefile(gtf, out_file=None, data=None, tsv=True, keep_version=False):
     """
     write out a file of transcript->gene mappings.
     use the installed tx2gene.csv if it exists, else write a new one out
@@ -315,7 +315,7 @@ def tx2genefile(gtf, out_file=None, data=None, tsv=True):
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
-            for k, v in tx2genedict(gtf).items():
+            for k, v in tx2genedict(gtf, keep_version).items():
                 out_handle.write(sep.join([k, v]) + "\n")
     return out_file
 

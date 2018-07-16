@@ -527,6 +527,8 @@ def gatk_cmd(name, jvm_opts, params, config=None):
             data = config
         if not data or "gatk4" not in dd.get_tools_off(data):
             return _gatk4_cmd(jvm_opts, params, data)
+        else:
+            name = "gatk3"
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
     # if we can't find via the local executable, fallback to being in the path
     if not gatk_cmd:
@@ -537,10 +539,10 @@ def gatk_cmd(name, jvm_opts, params, config=None):
              " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 def _gatk4_cmd(jvm_opts, params, data):
-    """Retrieve unified command for GATK4, using gatk-launch.
+    """Retrieve unified command for GATK4, using 'gatk'. GATK3 is 'gatk3'.
     """
-    gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
-    return "%s && export PATH=%s:$PATH && gatk-launch --java-options '%s' %s" % \
+    gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk"))
+    return "%s && export PATH=%s:$PATH && gatk --java-options '%s' %s" % \
         (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd),
          " ".join(jvm_opts), " ".join([str(x) for x in params]))
 

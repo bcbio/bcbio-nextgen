@@ -26,7 +26,7 @@ don't have write permissions to install into the ``/usr/local`` directories you
 can install in a user directory like ``~/local`` or use ``sudo chmod`` to give
 your standard user permissions. Please don't run the installer with sudo or as
 the root user.  Do not use directories with ``:`` in the name, it is not
-POSIX compliant and will cause installation faitures.
+POSIX compliant and will cause installation failures.
 
 The installation is highly customizable, and you can install
 additional software and data later using ``bcbio_nextgen.py upgrade``.

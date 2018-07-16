@@ -10,7 +10,9 @@ import os
 import copy
 import glob
 import sys
+import subprocess
 from itertools import repeat
+from distutils.version import LooseVersion
 
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -220,7 +222,8 @@ def tagcount(data):
     bam = dd.get_transcriptome_bam(data)
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     sample_dir = os.path.join(umi_dir, dd.get_sample_name(data))
-    out_file = os.path.join(sample_dir, dd.get_sample_name(data) + ".mtx")
+    out_prefix = os.path.join(sample_dir, dd.get_sample_name(data))
+    out_file = out_prefix + ".mtx"
     if file_exists(out_file):
         data = dd.set_count_file(data, out_file)
         return [[data]]
@@ -238,18 +241,33 @@ def tagcount(data):
         gene_map_flag = " --genemap {0} ".format(gene_map_file)
     else:
         gene_map_flag = ""
-    
+
     message = "Counting alignments of transcripts in %s." % bam
     cmd = ("{umis} fasttagcount --cb_cutoff {cutoff} "
-           "{gene_map_flag}"
-           "--cb_histogram {cb_histogram} {bam} {tx_out_file_full}")
+           "{gene_map_flag}" 
+           "--cb_histogram {cb_histogram}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
+    umi_matrix_file = out_prefix + "-dupes.mtx"
+    out_files += [umi_matrix_file, umi_matrix_file + ".rownames",
+                  umi_matrix_file + ".colnames"]
+    if has_umi_matrix(data):
+        umi_matrix_flag = " --umi_matrix {tx_umi_matrix_full} "
+    else:
+        umi_matrix_flag = ""
+    cmd += umi_matrix_flag
+    cmd += " {bam} {tx_out_file_full}"
     with file_transaction(out_files) as tx_out_files:
         tx_out_file = tx_out_files[0]
         tx_out_file_full = tx_out_file + ".full"
+        tx_umi_matrix = tx_out_files[3]
+        tx_umi_matrix_full = tx_out_files[3] + ".full"
         do.run(cmd.format(**locals()), message)
         cmd = ("{umis} sparse {tx_out_file_full} {tx_out_file}")
         message = "Converting %s to sparse format." % tx_out_file_full
+        do.run(cmd.format(**locals()), message)
+        if has_umi_matrix(data):
+            cmd = ("{umis} sparse {tx_umi_matrix_full} {tx_umi_matrix}")
+            message = "Converting %s to sparse format." % tx_umi_matrix_full
         do.run(cmd.format(**locals()), message)
     data = dd.set_count_file(data, out_file)
     return [[data]]
@@ -342,14 +360,24 @@ def split_demultiplexed_sampledata(data, demultiplexed):
     return datadicts
 
 def concatenate_sparse_counts(*samples):
+    samples = concatenate_sparse_matrices(samples, deduped=True)
+    samples = concatenate_sparse_matrices(samples, deduped=False)
+    return samples
+
+def concatenate_sparse_matrices(samples, deduped=True):
     work_dir = dd.get_in_samples(samples, dd.get_work_dir)
     umi_dir = os.path.join(work_dir, "umis")
-    out_file = os.path.join(umi_dir, "tagcounts.mtx")
+    if deduped:
+        out_file = os.path.join(umi_dir, "tagcounts.mtx")
+    else:
+        out_file = os.path.join(umi_dir, "tagcounts-undeduped.mtx")
     if file_exists(out_file):
         return out_file
     files = [dd.get_count_file(data) for data in
-             dd.sample_data_iterator(samples)
-             if dd.get_count_file(data)]
+            dd.sample_data_iterator(samples)
+            if dd.get_count_file(data)]
+    if not deduped:
+        files = [os.path.splitext(x)[0] + "-undeduped.mtx" for x in files]
     descriptions = [dd.get_sample_name(data) for data in
                     dd.sample_data_iterator(samples) if dd.get_count_file(data)]
     if not files:
@@ -362,6 +390,24 @@ def concatenate_sparse_counts(*samples):
         counts.cat(newcounts)
     counts.write(out_file)
     newsamples = []
-    for data in dd.sample_data_iterator(samples):
-        newsamples.append([dd.set_combined_counts(data, out_file)])
-    return newsamples
+    if deduped:
+        for data in dd.sample_data_iterator(samples):
+            newsamples.append([dd.set_combined_counts(data, out_file)])
+        return newsamples
+    return samples
+
+def version(data):
+    umis_cmd = config_utils.get_program("umis", data, default="umis")
+    version_cmd = [umis_cmd, "version"]
+    try:
+        output = subprocess.check_output(version_cmd).strip()
+    except:
+        output = None
+    return output
+
+def has_umi_matrix(data):
+    umis_version = version(data)
+    if not version:
+        return False
+    return LooseVersion(umis_version) >= "1.0.0"
+

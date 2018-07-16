@@ -70,7 +70,7 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
                 tx_out2 = tx_out[2]
             # polyX trimming, anchored to the 3' ends of reads
             if "polyx" in dd.get_adapters(data):
-                adapters += ["A{200}$", "C{200}$", "G{200}$", "T{200}$"]
+                adapters += ["A{200}", "C{200}", "G{200}", "T{200}"]
             adapters_args = " ".join(["-a '%s'" % a for a in adapters])
             adapters_args += " --overlap 8"  # Avoid very short internal matches (default is 3)
             adapters_args += " --no-default-adapters --no-cache-adapters"  # Prevent GitHub queries and saving pickles

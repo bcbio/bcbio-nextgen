@@ -1,24 +1,41 @@
-## 1.1.0 (in progress)
+## 1.1.1 (in progress)
 
-- Chip-seq: Add RiP calculation for chip-seq data.
+- variant: support octopus variant caller for germline and somatic samples.
+- CWL: support for heterogeneity and structural variant callers that make
+  use of variant inputs.
+- CWL: support ensemble calling for combining multiple variant callers.
+- RNA-seq: output a matrix of un-deduped UMI counts when doing single-cell/DGE
+  for quality control purposes. This is called `tagcounts-dupes.mtx` in the
+  final directory.
+
+## 1.1.0 (11 July 2018)
+
+- Germline calls: rename outputs to `samplename-germline` to provide easier
+  to understand outputs in final directory.
+- Add bcbioRNASeq object creation and automatic quality report generation
+  with `tools_on: [bcbiornaseq]`
+- CWL: Support germline/somatic calling for tumor samples.
 - CNVkit: improve whole genome runs. Better speed in normalize_sv_coverage
   through parallelization and avoiding logging. Avoid memory errors in segmentation.
 - UMI: upload prepared UMI bam file (pre-consensus) to final output directory
 - Add support for bbmap as an aligner
 - RNA-seq variant calling: parallelize GATK HaplotypeCaller over regions to
   avoid memory and timeout issues.
+- Support joint calling with GATK using pre-prepared gVCF inputs.
 - RNA-seq variant calling: allow annotation of output variants with vcfanno
 - Support hg38 builds with peddy QC
 - QC: support VerifyBamID2 for contamination detection
 - CWL: adjust defaults for align_split_size and nomap_split_targets to match
   different parallelization and overhead for these runs
 - CWL: support for Cromwell runner
+- custom genomes: Unzip GTF file prior to installation.
 - Avoid making variant_regions required during processing (by filling with
   coverage) to differentiate targeted and non analyses downstream.
 - Avoid attempts to download pre-installed S3 genomes, providing better
   errors with missing genome installs.
 - Trimming: add explicit `polyg` option for removing 3' G stretches in NovaSeq
   and NextSeq data. Now defaults to no polyG trimming unless turned on.
+- Chip-seq: Add RiP calculation for chip-seq data.
 - DeepVariant and Strelka2 support for customized targeted/genome calling models
   per region to handle heterogeneous inputs.
 - STAR: enable passing custom options for alignment.

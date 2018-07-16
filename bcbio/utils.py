@@ -698,6 +698,19 @@ def R_package_path(package):
             return dirname
     return None
 
+def R_package_resource(package, resource):
+    """
+    return a path to an R package resource, if it is available
+    """
+    package_path = R_package_path(package)
+    if not package_path:
+        return None
+    package_resource = os.path.join(package_path, resource)
+    if not file_exists(package_resource):
+        return None
+    else:
+        return package_resource
+
 def get_java_binpath(cmd=None):
     """Retrieve path for java to use, handling custom BCBIO_JAVA_HOME
 

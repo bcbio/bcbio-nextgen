@@ -86,7 +86,7 @@ and `bioconda packages <https://bioconda.github.io/>`_ on Linux::
 In the above commands, the `bcbio-vm` install goes in ``$TARGETDIR``.
 The example is in your home directory but set to anywhere you have space.
 Also, as an alternative to symbolic linking, you can add the install bin
-directory to your PATH
+directory to your PATH::
 
     export PATH=$TARGETDIR/bin:$PATH
 

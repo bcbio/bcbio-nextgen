@@ -493,18 +493,18 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
 def _compatible_small_variants(data, items):
     """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
     """
+    from bcbio import heterogeneity
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
     supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
-    for v in data.get("variants", []):
-        vrn_file = v.get("vrn_file")
-        if vrn_file and v.get("variantcaller") in supported:
-            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            paired = vcfutils.get_paired(items)
-            if paired:
-                out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
-            else:
-                out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
+    paired = vcfutils.get_paired(items)
+    for v in heterogeneity.get_variants(data, include_germline=not paired):
+        vrn_file = v["vrn_file"]
+        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+        if paired:
+            out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
+        else:
+            out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
     return out
 
 def _add_variantcalls_to_output(out, data, items, is_somatic=False):

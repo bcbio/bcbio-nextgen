@@ -13,6 +13,7 @@ from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import postalign
 from bcbio import bam
+import bcbio.bam.fasta as fasta
 
 def run_rapmap_align(data):
     samplename = dd.get_sample_name(data)
@@ -45,6 +46,7 @@ def rapmap_index(gtf_file, ref_file, algorithm, data, out_dir):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data)
+    gtf_fa = fasta.strip_transcript_versions(gtf_fa, os.path.join(out_dir, os.path.basename(gtf_fa)))
     tmpdir = dd.get_tmp_dir(data)
     if file_exists(out_dir + "rapidx.jfhash"):
         return out_dir
@@ -83,7 +85,7 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
     with file_transaction(out_file) as tx_out_file:
         cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file)
         run_message = ("%smapping %s and %s to %s with Rapmap. "
-                       % (algorithm, fq1, fq2, rapmap_index))
+                       % (algorithm, fq1, fq2, rapmap_index_loc))
         do.run(cmd.format(**locals()), run_message, None)
     bam.index(out_file, dd.get_config(data))
     return out_file

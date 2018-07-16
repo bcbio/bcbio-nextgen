@@ -42,6 +42,7 @@ def summary(*samples):
     out_file = os.path.join(out_dir, "multiqc_report.html")
     file_list = os.path.join(out_dir, "list_files.txt")
     work_samples = cwlutils.unpack_tarballs([utils.deepish_copy(x) for x in samples], samples[0])
+    work_samples = _summarize_inputs(work_samples, out_dir)
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
             in_files = _get_input_files(work_samples, out_dir, tx_out)
@@ -85,6 +86,27 @@ def summary(*samples):
             samples[0]["summary"]["multiqc"]["secondary"].append(file_list_final)
 
     return [[data] for data in samples]
+
+def _summarize_inputs(samples, out_dir):
+    """Summarize inputs for MultiQC reporting in display.
+    """
+    logger.info("summarize target information")
+    if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
+        metrics_dir = utils.safe_makedir(os.path.join(out_dir, "report", "metrics"))
+        samples = _merge_target_information(samples, metrics_dir)
+
+    logger.info("summarize fastqc")
+    out_dir = utils.safe_makedir(os.path.join(out_dir, "report", "fastqc"))
+    with utils.chdir(out_dir):
+        _merge_fastqc(samples)
+
+    preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
+    if preseq_samples:
+        logger.info("summarize preseq")
+        out_dir = utils.safe_makedir(os.path.join(out_dir, "report", "preseq"))
+        with utils.chdir(out_dir):
+            _merge_preseq(preseq_samples)
+    return samples
 
 def _save_uploaded_data_json(samples, data_json_work, out_dir):
     """ Fixes all absolute work-rooted paths to relative final-rooted paths
@@ -411,8 +433,7 @@ def _make_preseq_multiqc_config(samples):
 
     return out
 
-def _merge_target_information(samples):
-    metrics_dir = utils.safe_makedir("metrics")
+def _merge_target_information(samples, metrics_dir):
     out_file = os.path.abspath(os.path.join(metrics_dir, "target_info.yaml"))
     if utils.file_exists(out_file):
         return samples

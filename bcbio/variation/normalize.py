@@ -46,6 +46,8 @@
    We are using `vt normalize` in this module.
 
 """
+import os
+
 import cyvcf2
 
 from bcbio import utils
@@ -55,19 +57,22 @@ from bcbio.provenance import do
 from bcbio.variation import effects, vcfutils
 
 def normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
-              rerun_effects=True, remove_oldeffects=False):
+              rerun_effects=True, remove_oldeffects=False, work_dir=None):
     """Normalizes variants and reruns SnpEFF for resulting VCF
     """
     if remove_oldeffects:
         out_file = "%s-noeff-nomultiallelic%s" % utils.splitext_plus(in_file)
     else:
         out_file = "%s-nomultiallelic%s" % utils.splitext_plus(in_file)
+    if work_dir:
+        out_file = os.path.join(work_dir, os.path.basename(out_file))
     if not utils.file_exists(out_file):
         if vcfutils.vcf_has_variants(in_file):
             ready_ma_file = _normalize(in_file, data, passonly=passonly,
                                        normalize_indels=normalize_indels,
                                        split_biallelic=split_biallelic,
-                                       remove_oldeffects=remove_oldeffects)
+                                       remove_oldeffects=remove_oldeffects,
+                                       work_dir=work_dir)
             if rerun_effects:
                 ann_ma_file, _ = effects.add_to_vcf(ready_ma_file, data)
                 if ann_ma_file:
@@ -78,7 +83,7 @@ def normalize(in_file, data, passonly=False, normalize_indels=True, split_bialle
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
-               remove_oldeffects=False):
+               remove_oldeffects=False, work_dir=None):
     """Convert multi-allelic variants into single allelic.
 
     `vt normalize` has the -n flag passed (skipping reference checks) because
@@ -96,6 +101,8 @@ def _normalize(in_file, data, passonly=False, normalize_indels=True, split_biall
     else:
         clean_effects_cmd = ""
         out_file = "%s-decompose%s" % utils.splitext_plus(in_file)
+    if work_dir:
+        out_file = os.path.join(work_dir, os.path.basename(out_file))
     if not utils.file_exists(out_file):
         ref_file = dd.get_ref_file(data)
         assert out_file.endswith(".vcf.gz")

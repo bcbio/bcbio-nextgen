@@ -8,6 +8,8 @@ import toolz as tz
 from bcbio.pipeline import alignment
 
 ALWAYS_AVAILABLE = ["description", "resources"]
+STRING_DICT = ["config__algorithm__ensemble"]
+FLAT_DICT = ["config__algorithm__variantcaller"]
 
 def generate(variables, steps, final_outputs):
     """Generate all of the components of a CWL workflow from input steps.

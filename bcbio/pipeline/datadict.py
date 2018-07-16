@@ -74,6 +74,7 @@ LOOKUPS = {
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
+    "ensemble": {"keys": ["config", "algorithm", "ensemble"], "default": {}},
     "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
     "background_cnv_reference": {"keys": ["config", "algorithm", "background", "cnv_reference"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},

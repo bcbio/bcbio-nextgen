@@ -188,7 +188,7 @@ def add_reference_resources(data, remote_retriever=None):
     data = _fill_capture_regions(data)
     # Re-enable when we have ability to re-define gemini configuration directory
     if False:
-        if population.do_db_build([data], need_bam=False):
+        if population.do_db_build([data]):
             data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
 
@@ -219,7 +219,7 @@ def _fill_validation_targets(data):
     sv_truth = tz.get_in(["config", "algorithm", "svvalidate"], data, {})
     sv_targets = (zip(itertools.repeat("svvalidate"), sv_truth.keys()) if isinstance(sv_truth, dict)
                   else [["svvalidate"]])
-    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + sv_targets]:
+    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"], ["variant_regions"]] + sv_targets]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
@@ -979,6 +979,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "min_allele_fraction": 10,
                 "recalibrate": False,
                 "realign": False,
+                "ensemble": None,
                 "exclude_regions": [],
                 "variant_regions": None,
                 "svvalidate": None,

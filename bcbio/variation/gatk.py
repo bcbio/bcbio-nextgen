@@ -130,9 +130,15 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        "--annotation", "DepthPerSampleHC"]
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
-                # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
-                if not gatk_type == "gatk4" and _supports_avx():
-                    params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
+                if _supports_avx():
+                    # Scale down HMM thread default to avoid overuse of cores
+                    # https://github.com/bcbio/bcbio-nextgen/issues/2442
+                    if gatk_type == "gatk4":
+                        params += ["--native-pair-hmm-threads", "2"]
+                    # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
+                    # GATK3 needs to be explicitly set
+                    else:
+                        params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
             # Prepare gVCFs if doing joint calling
             is_joint = False
             if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):

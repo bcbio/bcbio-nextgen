@@ -73,7 +73,12 @@ def _get_caller(data):
     callers = [tz.get_in(["config", "algorithm", "jointcaller"], data),
                tz.get_in(["config", "algorithm", "variantcaller"], data),
                "precalled"]
-    return [c for c in callers if c][0]
+    caller = [c for c in callers if c][0]
+    if isinstance(caller, (list, tuple)):
+        assert len(caller) == 1, caller
+        return caller[0]
+    else:
+        return caller
 
 def _get_caller_supplement(caller, data):
     """Some callers like MuTect incorporate a second caller for indels.
@@ -146,12 +151,13 @@ def compare_to_rm(data):
                                                    data.get("genome_build"), base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
+        # RTG can fail on totally empty files. Call everything in truth set as false negatives
         if not vcfutils.vcf_has_variants(vrn_file):
-            # RTG can fail on totally empty files. Skip these since we have nothing.
-            pass
+            eval_files = _setup_call_false(rm_file, rm_interval_file, base_dir, toval_data, "fn")
+            data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         # empty validation file, every call is a false positive
         elif not vcfutils.vcf_has_variants(rm_file):
-            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data)
+            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data, "fp")
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod in ["rtg", "rtg-squash-ploidy"]:
             eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data, vmethod)
@@ -174,15 +180,17 @@ def _annotate_validations(eval_files, data):
 
 # ## Empty truth sets
 
-def _setup_call_fps(vrn_file, rm_bed, base_dir, data):
-    """Create set of false positives for inputs with empty truth sets.
+def _setup_call_false(vrn_file, rm_bed, base_dir, data, call_type):
+    """Create set of false positives or ngatives for inputs with empty truth sets.
     """
-    out_file = os.path.join(base_dir, "fp.vcf.gz")
+    out_file = os.path.join(base_dir, "%s.vcf.gz" % call_type)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
+            if not vrn_file.endswith(".gz"):
+                vrn_file = vcfutils.bgzip_and_index(vrn_file, out_dir=os.path.dirname(tx_out_file))
             cmd = ("bcftools view -R {rm_bed} -f 'PASS,.' {vrn_file} -O z -o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Prepare false positives with empty reference", data)
-    return {"fp": out_file}
+            do.run(cmd.format(**locals()), "Prepare %s with empty reference" % call_type, data)
+    return {call_type: out_file}
 
 # ## Real Time Genomics vcfeval
 
@@ -194,7 +202,7 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
     """Parse output TP FP and FN files to generate metrics for plotting.
     """
     out_file = os.path.join(base_dir, "validate-summary.csv")
-    if not utils.file_uptodate(out_file, eval_files.get("tp", eval_files["fp"])):
+    if not utils.file_uptodate(out_file, eval_files.get("tp", eval_files.get("fp", eval_files["fn"]))):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
@@ -520,7 +528,7 @@ def _group_validate_samples(samples, vkey, batch_keys):
         if data.get(vkey):
             is_v = True
         for variant in data.get("variants", []):
-            if variant.get(vkey):
+            if isinstance(variant, dict) and variant.get(vkey):
                 is_v = True
         if is_v:
             for batch_key in batch_keys:
@@ -556,7 +564,8 @@ def summarize_grading(samples, vkey="validate"):
             plot_data = []
             plot_files = []
             for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                validations = [variant.get(vkey) for variant in data.get("variants", [])]
+                validations = [variant.get(vkey) for variant in data.get("variants", [])
+                               if isinstance(variant, dict)]
                 validations = [v for v in validations if v]
                 if len(validations) == 0 and vkey in data:
                     validations = [data.get(vkey)]
@@ -583,7 +592,7 @@ def summarize_grading(samples, vkey="validate"):
             if data.get(vkey):
                 data[vkey]["grading_plots"] = plots
             for variant in data.get("variants", []):
-                if variant.get(vkey):
+                if isinstance(variant, dict) and variant.get(vkey):
                     variant[vkey]["grading_plots"] = plots
             out.append([data])
     return out

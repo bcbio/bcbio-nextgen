@@ -667,8 +667,16 @@ def _to_cwldata(key, val, get_retriever):
             else:
                 out.append((key, _to_cwlfile_with_indexes(val, get_retriever)))
         # Dump shared nested keys like resources as a JSON string
-        elif key in workflow.ALWAYS_AVAILABLE:
+        elif key in workflow.ALWAYS_AVAILABLE or key in workflow.STRING_DICT:
             out.append((key, _item_to_cwldata(json.dumps(val), get_retriever)))
+        elif key in workflow.FLAT_DICT:
+            flat = []
+            for k, vs in val.items():
+                if not isinstance(vs, (list, tuple)):
+                    vs = [vs]
+                for v in vs:
+                    flat.append("%s:%s" % (k, v))
+            out.append((key, _item_to_cwldata(flat, get_retriever)))
         else:
             remain_val = {}
             for nkey, nval in val.items():

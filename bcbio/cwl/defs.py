@@ -153,7 +153,7 @@ def _variant_vc(checkpoints):
                [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]),
                 cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
-                            "gatk", "gatk4", "vqsr_cnn", "deepvariant", "sentieon",
+                            "gatk4", "vqsr_cnn", "deepvariant", "sentieon",
                             "htslib", "picard", "platypus-variant", "pythonpy",
                             "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java",
                             "varscan", "vcfanno", "vcflib", "vt", "r=3.4.1", "perl"],
@@ -177,7 +177,6 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
                                 cwlout("inherit", exclude=[["align_bam"], ["reference", "twobit"],
-                                                           ["reference", "snpeff"], ["reference", "rtg"],
                                                            ["genome_resources", "variation"]])])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
@@ -186,6 +185,7 @@ def _variant_vc(checkpoints):
                 ["metadata", "batch"], ["metadata", "phenotype"],
                 ["config", "algorithm", "callable_regions"], ["regions", "sample_callable"],
                 ["config", "algorithm", "variantcaller"],
+                ["config", "algorithm", "ensemble"],
                 ["config", "algorithm", "vcfanno"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "effects"],
@@ -217,8 +217,12 @@ def _variant_vc(checkpoints):
             [["region"], ["region_block"], ["vrn_file_region"], ["vrn_file"], ["validate", "summary"]])]
     if checkpoints.get("jointvc"):
         vc += _variant_jointvc()
-    vc += [s("summarize_vc", "multi-combined",
-             [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
+    if checkpoints.get("ensemble"):
+        vc += _variant_ensemble(checkpoints)
+    summarize_in = [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]]
+    if checkpoints.get("ensemble"):
+        summarize_in += [["ensemble_rec"]]
+    vc += [s("summarize_vc", "multi-combined", summarize_in,
              [cwlout(["variants", "calls"], {"type": "array", "items": ["File", "null"]}),
               cwlout(["variants", "gvcf"], ["null", {"type": "array", "items": ["File", "null"]}]),
               cwlout(["variants", "samples"], {"type": "array", "items": {"type": "array",
@@ -229,6 +233,25 @@ def _variant_vc(checkpoints):
              disk={"files": 0.5}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
 
+def _variant_ensemble(checkpoints):
+    out = [s("batch_for_ensemble", "multi-combined",
+             [["jointvc_rec" if checkpoints.get("jointvc") else "vc_rec"]],
+             [cwlout("ensemble_prep_rec", "record",
+                     fields=[cwlout(["batch_id"], "string"),
+                             cwlout(["variants", "calls"], {"type": "array", "items": "File"}),
+                             cwlout(["variants", "variantcallers"], {"type": "array", "items": "string"}),
+                             cwlout("inherit")])],
+             "bcbio-vc", cores=1, no_files=True),
+           s("combine_calls", "multi-parallel",
+             ["ensemble_prep_rec"],
+             [cwlout("ensemble_rec", "record",
+                     fields=[cwlout(["ensemble", "vrn_file"], ["File", "null"]),
+                             cwlout(["ensemble", "validate", "summary"], ["File", "null"]),
+                             cwlout(["ensemble", "batch_samples"], {"type": "array", "items": "string"}),
+                             cwlout(["ensemble", "batch_id"], "string")])],
+             "bcbio-vc", ["bcbio-variation-recall"])]
+    return out
+
 def _variant_jointvc():
     wf = [s("get_parallel_regions_jointvc", "batch-split",
             [["jointvc_batch_rec"]],
@@ -238,12 +261,12 @@ def _variant_jointvc():
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]), cwlout(["region"], "string")],
-            "bcbio-vc", ["gatk4", "gatk", "gvcftools", "sentieon"],
+            "bcbio-vc", ["gatk4", "gvcftools", "sentieon"],
             disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
-            "bcbio-vc", ["bcftools", "htslib", "gatk4", "gatk"],
+            "bcbio-vc", ["bcftools", "htslib", "gatk4"],
             disk={"files": 1.5}, cores=1),
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
@@ -278,6 +301,7 @@ def _variant_checkpoints(samples):
                                            not dd.get_aligner(d))
                                           for d in samples])
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
+    checkpoints["ensemble"] = any([dd.get_ensemble(d) for d in samples])
     return checkpoints
 
 def _postprocess_alignment(checkpoints):
@@ -346,7 +370,7 @@ def _postprocess_alignment(checkpoints):
              cwlout(["depth", "coverage", "dist"], ["File", "null"]),
              cwlout(["depth", "coverage", "thresholds"], ["File", "null"]),
              cwlout(["align_bam"], ["File", "null"])],
-            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4=4.0.3.0", "mosdepth", "sentieon"],
+            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4", "mosdepth", "sentieon"],
             disk={"files": 3.0}),
           s("combine_sample_regions", "multi-combined",
             [["regions", "callable"], ["regions", "nblock"], ["metadata", "batch"],
@@ -355,7 +379,7 @@ def _postprocess_alignment(checkpoints):
             [cwlout(["config", "algorithm", "callable_regions"], "File"),
              cwlout(["config", "algorithm", "non_callable_regions"], "File"),
              cwlout(["config", "algorithm", "callable_count"], "int")],
-            "bcbio-vc", ["bedtools", "htslib", "gatk4=4.0.3.0"],
+            "bcbio-vc", ["bedtools", "htslib", "gatk4"],
             disk={"files": 0.5}, cores=1)]
     out = [["regions", "sample_callable"]]
     return wf, out
@@ -469,6 +493,15 @@ def _variant_sv(checkpoints):
                          "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",
                          "r=3.4.1", "vawk"],
             disk={"files": 2.0})]
+    sv_batch_inputs = [["analysis"], ["genome_build"],
+                       ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
+                       ["config", "algorithm", "tools_on"],
+                       ["config", "algorithm", "tools_off"],
+                       ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
+                       ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
+                       ["sv_coverage_rec"]]
+    if checkpoints.get("vc"):
+        sv_batch_inputs.append(["variants", "samples"])
     steps = [s("calculate_sv_bins", "multi-combined",
                [["align_bam"], ["reference", "fasta", "base"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
@@ -506,14 +539,7 @@ def _variant_sv(checkpoints):
                                cwlout("inherit")])],
                "bcbio-vc", ["cnvkit"],
                disk={"files": 1.5}),
-             s("batch_for_sv", "multi-batch",
-               [["analysis"], ["genome_build"],
-                ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
-                ["config", "algorithm", "tools_on"],
-                ["config", "algorithm", "tools_off"],
-                ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
-                ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
-                ["sv_coverage_rec"]],
+             s("batch_for_sv", "multi-batch", sv_batch_inputs,
                [cwlout("sv_batch_rec", "record")],
                "bcbio-vc",
                unlist=[["config", "algorithm", "svcaller"]]),

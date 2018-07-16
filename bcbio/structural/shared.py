@@ -184,7 +184,7 @@ def get_sv_chroms(items, exclude_file):
         if int(region.start) == 0:
             exclude_regions[region.chrom] = int(region.end)
     out = []
-    with pysam.Samfile(items[0]["work_bam"], "rb") as pysam_work_bam:
+    with pysam.Samfile(dd.get_align_bam(items[0]) or dd.get_work_bam(items[0]))as pysam_work_bam:
         for chrom, length in zip(pysam_work_bam.references, pysam_work_bam.lengths):
             exclude_length = exclude_regions.get(chrom, 0)
             if exclude_length < length:
