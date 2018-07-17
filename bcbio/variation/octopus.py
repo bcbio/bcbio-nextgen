@@ -32,13 +32,17 @@ def _produce_compatible_vcf(out_file, data):
       https://github.com/broadinstitute/gatk/issues/2092
     - Use octopus legacy format to avoid incompatibilities.
       https://github.com/luntergroup/octopus#output-format
+    - Fixes `##contig` lines since octopus only writes contigs
+      used in the BED file region, causing incompatibilies with
+      GatherVcfs when merging
     """
     base, ext = utils.splitext_plus(out_file)
     legacy_file = "%s.legacy%s" % (base, ext)
     final_file = "%s.vcf.gz" % base
     cat_cmd = "zcat" if legacy_file.endswith(".gz") else "cat"
+    contig_cl = vcfutils.add_contig_to_header_cl(dd.get_ref_file(data), out_file)
     cmd = ("{cat_cmd} {legacy_file} | sed 's/fileformat=VCFv4.3/fileformat=VCFv4.2/' | "
-           "bgzip -c > {final_file}")
+           "{contig_cl} | bgzip -c > {final_file}")
     do.run(cmd.format(**locals()), "Produce compatible VCF output file from octopus")
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
