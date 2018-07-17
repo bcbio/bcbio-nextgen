@@ -370,14 +370,14 @@ def concatenate_sparse_matrices(samples, deduped=True):
     if deduped:
         out_file = os.path.join(umi_dir, "tagcounts.mtx")
     else:
-        out_file = os.path.join(umi_dir, "tagcounts-undeduped.mtx")
+        out_file = os.path.join(umi_dir, "tagcounts-dupes.mtx")
     if file_exists(out_file):
         return out_file
     files = [dd.get_count_file(data) for data in
             dd.sample_data_iterator(samples)
             if dd.get_count_file(data)]
     if not deduped:
-        files = [os.path.splitext(x)[0] + "-undeduped.mtx" for x in files]
+        files = [os.path.splitext(x)[0] + "-dupes.mtx" for x in files]
     descriptions = [dd.get_sample_name(data) for data in
                     dd.sample_data_iterator(samples) if dd.get_count_file(data)]
     if not files:
