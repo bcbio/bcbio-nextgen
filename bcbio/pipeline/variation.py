@@ -18,8 +18,10 @@ from bcbio.variation import multi as vmulti
 def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
-    items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
+    items = [utils.to_single_data(x) for x in items]
     itemx = [_normalize_vc_input(x) for x in items]
+    items = validate.summarize_grading(items)
+    items = [utils.to_single_data(x) for x in items]
     out = {"validate": validate.combine_validations(items),
            "variants": {"calls": [], "gvcf": [], "samples": []}}
     added = set([])
