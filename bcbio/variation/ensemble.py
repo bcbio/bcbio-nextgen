@@ -15,6 +15,7 @@ import yaml
 import toolz as tz
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -61,6 +62,7 @@ def combine_calls(*args):
     else:
         is_cwl = True
         samples = [utils.to_single_data(x) for x in args]
+        samples = [cwlutils.unpack_tarballs(x, x) for x in samples]
         data = samples[0]
         batch_id = data["batch_id"]
         caller_names = data["variants"]["variantcallers"]
