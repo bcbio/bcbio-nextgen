@@ -372,7 +372,13 @@ def concatenate_sparse_matrices(samples, deduped=True):
     else:
         out_file = os.path.join(umi_dir, "tagcounts-dupes.mtx")
     if file_exists(out_file):
-        return out_file
+        if deduped:
+            newsamples = []
+            for data in dd.sample_data_iterator(samples):
+                newsamples.append([dd.set_combined_counts(data, out_file)])
+            return newsamples
+        else:
+            return samples
     files = [dd.get_count_file(data) for data in
             dd.sample_data_iterator(samples)
             if dd.get_count_file(data)]
