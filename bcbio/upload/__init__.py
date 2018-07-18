@@ -514,9 +514,13 @@ def _maybe_add_barcode_histogram(algorithm, sample, out):
         return out
     count_file = sample["count_file"]
     histogram_file = os.path.join(os.path.dirname(count_file), "cb-histogram.txt")
+    histogram_filtered_file = os.path.join(os.path.dirname(count_file), "cb-histogram-filtered.txt")
     out.append({"path": histogram_file,
                 "type": "tsv",
                 "ext": "barcodes"})
+    out.append({"path": histogram_file,
+                "type": "tsv",
+                "ext": "barcodes-filtered"})
     return out
 
 def _maybe_add_oncofuse(algorithm, sample, out):

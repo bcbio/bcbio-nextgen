@@ -30,7 +30,7 @@ from bcbio.bam.fastq import open_fastq
 
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
-                         "expression_caller",
+                         "expression_caller", "singlecell_quantifier",
                          "svcaller", "hetcaller", "jointcaller", "tools_off",
                          "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
