@@ -168,7 +168,6 @@ def detect_fusions(data):
     fusion_caller = dd.get_fusion_caller(data, [])
     if "oncofuse" in fusion_caller:
         oncofuse_file = oncofuse.run(data)
-        oncofuse_file = oncofuse.run(data)
         if oncofuse_file:
             data = dd.set_oncofuse_file(data, oncofuse_file)
     if "pizzly" in fusion_caller:
