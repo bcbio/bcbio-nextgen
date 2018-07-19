@@ -15,6 +15,7 @@ import yaml
 import toolz as tz
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -61,6 +62,7 @@ def combine_calls(*args):
     else:
         is_cwl = True
         samples = [utils.to_single_data(x) for x in args]
+        samples = [cwlutils.unpack_tarballs(x, x) for x in samples]
         data = samples[0]
         batch_id = data["batch_id"]
         caller_names = data["variants"]["variantcallers"]
@@ -73,8 +75,8 @@ def combine_calls(*args):
         # Decompose multiallelic variants and normalize
         passonly = not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata, False)
         vrn_files = [normalize.normalize(f, data, passonly=passonly, rerun_effects=False, remove_oldeffects=True,
-                                         work_dir=base_dir)
-                     for f in vrn_files]
+                                         work_dir=utils.safe_makedir(os.path.join(base_dir, c)))
+                     for c, f in zip(caller_names, vrn_files)]
         if "classifiers" not in edata["config"]["algorithm"]["ensemble"]:
             callinfo = _run_ensemble_intersection(batch_id, vrn_files, caller_names, base_dir, edata)
         else:

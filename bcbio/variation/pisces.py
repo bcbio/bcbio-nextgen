@@ -37,6 +37,9 @@ def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
             cmd = ("pisces --bampaths {paired.tumor_bam} --genomepaths {ref_dir} --intervalpaths {target} "
                    "--maxthreads {cores} --minvf {emit_min_af} --vffilter {min_af} "
                    "--ploidy somatic --gvcf false -o {out_dir}")
+            # Recommended filtering for low frequency indels
+            # https://github.com/bcbio/bcbio-nextgen/commit/49d0cbb1f6dcbea629c63749e2f9813bd06dcee3#commitcomment-29765373
+            cmd += " -RMxNFilter 5,9,0.35"
             # For low frequency UMI tagged variants, set higher variant thresholds
             # https://github.com/Illumina/Pisces/issues/14#issuecomment-399756862
             if min_af < (1.0 / 100.0):

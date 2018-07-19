@@ -219,7 +219,7 @@ def _cromwell_move_outputs(metadata, final_dir):
                         _write_to_dir(v, utils.safe_makedir(os.path.join(final_dir, s)))
             elif len(vals) == 1:
                 _write_to_dir(vals[0], project_dir)
-            else:
+            elif len(vals) > 0:
                 raise ValueError("Unexpected sample and outputs: %s %s %s" % (k, samples, vals))
 
 def _run_funnel(args):

@@ -209,13 +209,15 @@ def barcode_histogram(data):
     umis = config_utils.get_program("umis", data, default="umis")
     safe_makedir(sample_dir)
     out_file = os.path.join(sample_dir, "cb-histogram.txt")
-    if file_exists(out_file):
-        return [[data]]
+    filtered_out_file = os.path.join(sample_dir, "cb-histogram-filtered.txt")
     fq1_cmd = fq1
     cmd = "{umis} cb_histogram {fq1_cmd} > {tx_out_file}"
-    with file_transaction(out_file) as tx_out_file:
-        message = "Computing cellular barcode counts for %s." % fq1
-        do.run(cmd.format(**locals()), message)
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            message = "Computing cellular barcode counts for %s." % fq1
+            do.run(cmd.format(**locals()), message)
+    cutoff = dd.get_minimum_barcode_depth(data)
+    filter_barcode_histogram(filtered_out_file, out_file, cutoff)
     return [[data]]
 
 def tagcount(data):
@@ -235,7 +237,7 @@ def tagcount(data):
     gtf_file  = dd.get_transcriptome_gtf(data, None)
 
     if gtf_file:
-        gene_map_file = os.path.join(dd.get_work_dir(data), "annotation", 
+        gene_map_file = os.path.join(dd.get_work_dir(data), "annotation",
                                      os.path.splitext(gtf_file)[0] + "-tx2gene.tsv")
         gene_map_file = gtf.tx2genefile(gtf_file, gene_map_file, tsv=True)
         gene_map_flag = " --genemap {0} ".format(gene_map_file)
@@ -244,7 +246,7 @@ def tagcount(data):
 
     message = "Counting alignments of transcripts in %s." % bam
     cmd = ("{umis} fasttagcount --cb_cutoff {cutoff} "
-           "{gene_map_flag}" 
+           "{gene_map_flag}"
            "--cb_histogram {cb_histogram}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
     umi_matrix_file = out_prefix + "-dupes.mtx"
@@ -372,12 +374,20 @@ def concatenate_sparse_matrices(samples, deduped=True):
     else:
         out_file = os.path.join(umi_dir, "tagcounts-dupes.mtx")
     if file_exists(out_file):
-        return out_file
+        if deduped:
+            newsamples = []
+            for data in dd.sample_data_iterator(samples):
+                newsamples.append([dd.set_combined_counts(data, out_file)])
+            return newsamples
+        else:
+            return samples
     files = [dd.get_count_file(data) for data in
             dd.sample_data_iterator(samples)
             if dd.get_count_file(data)]
     if not deduped:
         files = [os.path.splitext(x)[0] + "-dupes.mtx" for x in files]
+
+    files = [fn for fn in files if file_exists(fn)]
     descriptions = [dd.get_sample_name(data) for data in
                     dd.sample_data_iterator(samples) if dd.get_count_file(data)]
     if not files:
@@ -411,3 +421,15 @@ def has_umi_matrix(data):
         return False
     return LooseVersion(umis_version) >= "1.0.0"
 
+def filter_barcode_histogram(filtered_out_file, out_file, cutoff):
+    if file_exists(filtered_out_file):
+        return filtered_out_file
+    sample_name = os.path.basename(os.path.dirname(out_file))
+    with file_transaction(filtered_out_file) as tx_out_file:
+        with open(tx_out_file, "w") as outh:
+            with open(out_file) as inh:
+                for line in inh:
+                    barcode, reads = line.strip().split()
+                    if int(reads) > cutoff:
+                        outh.write("%s-%s\t%s\n" % (sample_name, barcode, reads))
+    return filtered_out_file

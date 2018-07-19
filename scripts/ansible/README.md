@@ -46,6 +46,13 @@ Install these into an isolated conda environment and setup with:
     ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
 
+Provide AWS access for bcbio-vm, ansible and saws using [IAM to create (or find)
+your access keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html):
+
+
+    export AWS_ACCESS_KEY_ID='AK123'
+    export AWS_SECRET_ACCESS_KEY='abc123'
+
 bcbio-vm has an automated script to setup the AWS infrastructure from running:
 
     bcbio_vm.py aws ansible us-east-1d --keypair
@@ -61,7 +68,7 @@ creates a `project_vars.yaml` file with the following information:
 - The name of a [keypair](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName) 
   to use for ssh access, where you have the private key stored locally. If you
   used the bcbio-vm automated setup, you'll have a private keypair in
-  `aws_keypairs/bcbio`.
+  `~/.bcbio/aws_keypairs/bcbio`.
 - An IAM role that allows access to S3 resources. This makes it
   easier to push/pull data to the instance.
 
@@ -227,6 +234,13 @@ on the working volume with the genomes and aligner indices you need:
 
     wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
     python bcbio_nextgen_install.py /mnt/work/bcbio --tooldir=/mnt/work/bcbio --genomes GRCh37 --aligners bwa
+
+To run CWL, you'll also want to [install
+bcbio-vm](https://bcbio-nextgen.readthedocs.io/en/latest/contents/cwl.html#getting-started)
+with:
+
+    export TARGETDIR=/mnt/work/bcbio/bcbio-vm
+    export BINDIR=/mnt/work/bcbio/bin
 
 And you're ready to do an analysis in `/mnt/work/your-project`. Add your
 samples, create a
