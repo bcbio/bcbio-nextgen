@@ -331,7 +331,7 @@ def assemble_transcripts(run_parallel, samples):
         if "stringtie" in assembler and stringtie.supports_merge(data):
             samples = run_parallel("stringtie_merge", [samples])
         else:
-	    samples = run_parallel("cufflinks_merge", [samples])
+            samples = run_parallel("cufflinks_merge", [samples])
     return samples
 
 def combine_files(samples):
