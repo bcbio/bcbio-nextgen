@@ -120,11 +120,10 @@ def quantitate(data):
         data = to_single_data(kallisto.run_kallisto_rnaseq(data)[0])
         data["quant"]["tsv"] = os.path.join(data["kallisto_quant"], "abundance.tsv")
         data["quant"]["hdf5"] = os.path.join(data["kallisto_quant"], "abundance.h5")
-        data["quant"]["fusion"] = os.path.join(os.path.dirname(data["kallisto_quant"]), "fusion.txt")
-	#if(os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
-	#	data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
-        #else:
-        #        data["quant"]["fusion"] = None
+	if(os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
+		data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
+        else:
+                data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
         data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
