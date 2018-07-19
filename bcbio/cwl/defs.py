@@ -617,7 +617,6 @@ def rnaseq(samples):
              [cwlout(["fusion", "fasta"], "File"),
               cwlout(["fusion", "json"], "File")],
 	      "bcbio-rnaseq", ["pizzly"])]
-    #vc, vc_out = _variant_vc(checkpoints)
 
     steps = prep + align + pp_align + quantitate + qc + vc + fusion
     final_outputs = [["rgnames", "sample"], dd.get_keys("align_bam"), ["quant", "tsv"], ["summary", "multiqc"]] + \
