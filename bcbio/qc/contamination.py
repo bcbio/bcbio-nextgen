@@ -84,14 +84,15 @@ def _should_skip_run(data):
     """
     high_coverage_thresh = 1000
     coverage = dd.get_coverage_interval(data)
-    if coverage != "genome":
+    if coverage and coverage != "genome":
         import pybedtools
-        vrs = dd.get_variant_regions_merged(data)
-        callable_size = float(pybedtools.BedTool(vrs).total_coverage())
-        dstats = qc_samtools.run(None, data)
-        avg_cov = float(dstats["metrics"]["Mapped_reads"] * dstats["metrics"]["Average_read_length"]) / callable_size
-        if avg_cov > high_coverage_thresh:
-            return True
+        vrs = dd.get_variant_regions_merged(data) or dd.get_variant_regions(data)
+        if vrs:
+            callable_size = float(pybedtools.BedTool(vrs).total_coverage())
+            dstats = qc_samtools.run(None, data)
+            avg_cov = float(dstats["metrics"]["Mapped_reads"] * dstats["metrics"]["Average_read_length"]) / callable_size
+            if avg_cov > high_coverage_thresh:
+                return True
     return False
 
 def _get_input_args(bam_file, data, out_base):
