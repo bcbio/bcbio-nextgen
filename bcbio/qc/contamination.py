@@ -12,6 +12,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.qc import samtools as qc_samtools
 from bcbio.variation import samtools
 
 def run(bam_file, data, out_dir):
@@ -22,51 +23,76 @@ def run(bam_file, data, out_dir):
     exts = [".out"]
     out = {}
     if not utils.file_exists(out_file) and not utils.file_exists(failed_file):
-        with file_transaction(data, out_base) as tx_out_base:
-            cmd = ["verifybamid2", "1000g.phase3", "100k", "b38" if dd.get_genome_build(data) == "hg38" else "b37",
-                   "--Reference", dd.get_ref_file(data), "--Output", tx_out_base]
-            cmd += _get_input_args(bam_file, data, out_base)
-            try:
-                do.run(cmd, "VerifyBamID contamination checks")
-            except subprocess.CalledProcessError, msg:
-                def allowed_errors(l):
-                    return (l.find("Insufficient Available markers") >= 0 or
-                            l.find("No reads found in any of the regions") >= 0)
-                if any([allowed_errors(l) for l in str(msg).split("\n")]):
-                    logger.info("Skipping VerifyBamID, not enough overlapping markers found: %s" %
-                                dd.get_sample_name(data))
-                    with open(failed_file, "w") as out_handle:
-                        out_handle.write(str(msg))
-                else:
-                    logger.warning(str(msg))
-                    raise
-            else:
-                # Fix any sample name problems, for pileups
-                shutil.move(tx_out_base + ".selfSM", tx_out_base + ".selfSM.orig")
-                with open(tx_out_base + ".selfSM.orig") as in_handle:
-                    with open(tx_out_base + ".selfSM", "w") as out_handle:
-                        sample_name = None
-                        for line in in_handle:
-                            if line.startswith("DefaultSampleName"):
-                                line = line.replace("DefaultSampleName", dd.get_sample_name(data))
-                            # work around bug in finding SM from BAM RG at end of line
-                            if len(line.strip().split("\t")) == 1:
-                                sample_name = line.strip()
-                                line = None
-                            elif sample_name:
-                                parts = line.split("\t")
-                                parts[0] = sample_name
-                                line = "\t".join(parts)
-                                sample_name = None
-                            if line:
-                                out_handle.write(line)
-                for e in exts + [".selfSM"]:
-                    if os.path.exists(tx_out_base + e):
-                        shutil.copy(tx_out_base + e, out_base + e)
+        if _should_skip_run(data):
+            with open(failed_file, "w") as out_handle:
+                out_handle.write("Skipping VerifyBamID, high depth panel data")
+        else:
+            _generate_estimates(bam_file, out_base, failed_file, exts, data)
     if utils.file_exists(out_file):
         out["base"] = out_file
         out["secondary"] = [out_base + e for e in exts if os.path.exists(out_base + e)]
     return out
+
+def _generate_estimates(bam_file, out_base, failed_file, exts, data):
+    with file_transaction(data, out_base) as tx_out_base:
+        cmd = ["verifybamid2", "1000g.phase3", "100k", "b38" if dd.get_genome_build(data) == "hg38" else "b37",
+               "--Reference", dd.get_ref_file(data), "--Output", tx_out_base]
+        cmd += _get_input_args(bam_file, data, out_base)
+        try:
+            do.run(cmd, "VerifyBamID contamination checks")
+        except subprocess.CalledProcessError, msg:
+            def allowed_errors(l):
+                return (l.find("Insufficient Available markers") >= 0 or
+                        l.find("No reads found in any of the regions") >= 0)
+            if any([allowed_errors(l) for l in str(msg).split("\n")]):
+                logger.info("Skipping VerifyBamID, not enough overlapping markers found: %s" %
+                            dd.get_sample_name(data))
+                with open(failed_file, "w") as out_handle:
+                    out_handle.write(str(msg))
+            else:
+                logger.warning(str(msg))
+                raise
+        else:
+            # Fix any sample name problems, for pileups
+            shutil.move(tx_out_base + ".selfSM", tx_out_base + ".selfSM.orig")
+            with open(tx_out_base + ".selfSM.orig") as in_handle:
+                with open(tx_out_base + ".selfSM", "w") as out_handle:
+                    sample_name = None
+                    for line in in_handle:
+                        if line.startswith("DefaultSampleName"):
+                            line = line.replace("DefaultSampleName", dd.get_sample_name(data))
+                        # work around bug in finding SM from BAM RG at end of line
+                        if len(line.strip().split("\t")) == 1:
+                            sample_name = line.strip()
+                            line = None
+                        elif sample_name:
+                            parts = line.split("\t")
+                            parts[0] = sample_name
+                            line = "\t".join(parts)
+                            sample_name = None
+                        if line:
+                            out_handle.write(line)
+            for e in exts + [".selfSM"]:
+                if os.path.exists(tx_out_base + e):
+                    shutil.copy(tx_out_base + e, out_base + e)
+
+def _should_skip_run(data):
+    """Avoid running VerifyBamID2 for high coverage panel BAMs.
+
+    mpileup generation is slow in these cases and doesn't yield good
+    outputs, so skip.
+    """
+    high_coverage_thresh = 1000
+    coverage = dd.get_coverage_interval(data)
+    if coverage != "genome":
+        import pybedtools
+        vrs = dd.get_variant_regions_merged(data)
+        callable_size = float(pybedtools.BedTool(vrs).total_coverage())
+        dstats = qc_samtools.run(None, data)
+        avg_cov = float(dstats["metrics"]["Mapped_reads"] * dstats["metrics"]["Average_read_length"]) / callable_size
+        if avg_cov > high_coverage_thresh:
+            return True
+    return False
 
 def _get_input_args(bam_file, data, out_base):
     """Retrieve input args, depending on genome build.
