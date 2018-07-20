@@ -1,6 +1,7 @@
 ## 1.1.1 (in progress)
 
 - variant: support octopus variant caller for germline and somatic samples.
+- peddy: fix bug where not all files uploaded on first pipeline run
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
 - CWL: support ensemble calling for combining multiple variant callers.

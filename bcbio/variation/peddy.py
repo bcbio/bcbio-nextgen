@@ -69,44 +69,42 @@ def run_peddy(samples, out_dir=None):
     ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
     peddy_prefix = os.path.join(peddy_dir, batch)
     peddy_report = peddy_prefix + ".html"
-    peddyfiles = expected_peddy_files(peddy_report, batch)
-    if file_exists(peddy_report):
-        return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
     if file_exists(peddy_prefix + "-failed.log"):
         return samples
-    num_cores = dd.get_num_cores(data)
-
-    with tx_tmpdir(data) as tx_dir:
-        peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
-        # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
-        stderr_log = os.path.join(tx_dir, "run-stderr.log")
-        sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
-        cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
-               "{vcf_file} {ped_file} 2> {stderr_log}")
-        message = "Running peddy on {vcf_file} against {ped_file}."
-        try:
-            do.run(cmd.format(**locals()), message.format(**locals()))
-        except:
-            to_show = collections.deque(maxlen=100)
-            with open(stderr_log) as in_handle:
-                for line in in_handle:
-                    to_show.append(line)
-            def allowed_errors(l):
-                return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
-                        (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0))
-            def all_line_errors(l):
-                return (l.find("no intervals found for") >= 0)
-            if any([allowed_errors(l) for l in to_show]) or all([all_line_errors(l) for l in to_show]):
-                logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
-                with open(peddy_prefix + "-failed.log", "w") as out_handle:
-                    out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
-                return samples
-            else:
-                logger.warning("".join(to_show))
-                raise
-        for ext in PEDDY_OUT_EXTENSIONS:
-            if os.path.exists(peddy_prefix_tx + ext):
-                shutil.move(peddy_prefix_tx + ext, peddy_prefix + ext)
+    if not file_exists(peddy_report):
+        num_cores = dd.get_num_cores(data)
+        with tx_tmpdir(data) as tx_dir:
+            peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
+            # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
+            stderr_log = os.path.join(tx_dir, "run-stderr.log")
+            sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
+            cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
+                "{vcf_file} {ped_file} 2> {stderr_log}")
+            message = "Running peddy on {vcf_file} against {ped_file}."
+            try:
+                do.run(cmd.format(**locals()), message.format(**locals()))
+            except:
+                to_show = collections.deque(maxlen=100)
+                with open(stderr_log) as in_handle:
+                    for line in in_handle:
+                        to_show.append(line)
+                def allowed_errors(l):
+                    return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
+                            (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0))
+                def all_line_errors(l):
+                    return (l.find("no intervals found for") >= 0)
+                if any([allowed_errors(l) for l in to_show]) or all([all_line_errors(l) for l in to_show]):
+                    logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
+                    with open(peddy_prefix + "-failed.log", "w") as out_handle:
+                        out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
+                    return samples
+                else:
+                    logger.warning("".join(to_show))
+                    raise
+            for ext in PEDDY_OUT_EXTENSIONS:
+                if os.path.exists(peddy_prefix_tx + ext):
+                    shutil.move(peddy_prefix_tx + ext, peddy_prefix + ext)
+    peddyfiles = expected_peddy_files(peddy_report, batch)
     return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
 
 def get_samples_by_batch(samples):
