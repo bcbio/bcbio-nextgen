@@ -134,7 +134,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                     # Scale down HMM thread default to avoid overuse of cores
                     # https://github.com/bcbio/bcbio-nextgen/issues/2442
                     if gatk_type == "gatk4":
-                        params += ["--native-pair-hmm-threads", "2"]
+                        params += ["--native-pair-hmm-threads", "1"]
                     # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
                     # GATK3 needs to be explicitly set
                     else:
