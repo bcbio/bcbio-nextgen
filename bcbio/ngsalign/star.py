@@ -74,12 +74,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += _read_group_option(names)
         if dd.get_fusion_caller(data):
-            cmd += (
-                " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
                 "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                "--chimScoreSeparation 5 "
-                "--chimOutType WithinBAM "
-            )
+                "--chimScoreSeparation 5 ")
+            if "oncofuse" in dd.get_fusion_caller(data):
+                cmd += "--chimOutType Junctions "
+            else:
+                cmd += "--chimOutType WithinBAM "
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:
