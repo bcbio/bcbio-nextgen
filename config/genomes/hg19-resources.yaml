@@ -1,4 +1,4 @@
-version: 43
+version: 44
 
 aliases:
   human: true
@@ -12,6 +12,7 @@ variation:
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
   cosmic: ../variation/cosmic.vcf.gz
+  clinvar: ../variation/clinvar.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   polyx: ../coverage/problem_regions/repeats/polyx.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
