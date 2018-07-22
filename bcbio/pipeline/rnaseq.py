@@ -122,7 +122,7 @@ def quantitate(data):
         data["quant"]["hdf5"] = os.path.join(data["kallisto_quant"], "abundance.h5")
 	if(os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
 		data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
-        else:
+	else:
                 data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
         data = to_single_data(salmon.run_salmon_reads(data)[0])
