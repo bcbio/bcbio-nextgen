@@ -317,7 +317,7 @@ def upgrade_bcbio_data(args, remotes):
         if "cadd" in args.datatarget:
             extras.extend(["--extra", "cadd_score"])
         ann_dir = get_gemini_dir()
-        #subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
+        subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
     if args.cwldata:
