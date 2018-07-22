@@ -105,10 +105,10 @@ def _freebayes_cutoff(in_file, data):
         if stats["avg_depth"] > 0:
             depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
             qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD cutoff filter
-    filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
-               '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50))')
+    filters = ('(AF[0] <= 0.5 && (max(FORMAT/DP) < 4 || (max(FORMAT/DP) < 13 && %QUAL < 10))) || '
+               '(AF[0] > 0.5 && (max(FORMAT/DP) < 4 && %QUAL < 50))')
     if depth_thresh:
-        filters += ' || (%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'.format(**locals())
+        filters += ' || (%QUAL < {qual_thresh} && max(FORMAT/DP) > {depth_thresh} && AF[0] <= 0.5)'.format(**locals())
     return cutoff_w_expression(in_file, filters, data, name="FBQualDepth")
 
 def _do_high_depth_filter(data):
@@ -165,9 +165,9 @@ def platypus(in_file, data):
 def samtools(in_file, data):
     """Filter samtools calls based on depth and quality, using similar approaches to FreeBayes.
     """
-    filters = ('((AC[0] / AN) <= 0.5 && DP < 4 && %QUAL < 20) || '
-               '(DP < 13 && %QUAL < 10) || '
-               '((AC[0] / AN) > 0.5 && DP < 4 && %QUAL < 50)')
+    filters = ('((AC[0] / AN) <= 0.5 && max(FORMAT/DP) < 4 && %QUAL < 20) || '
+               '(max(FORMAT/DP) < 13 && %QUAL < 10) || '
+               '((AC[0] / AN) > 0.5 && max(format/DP) < 4 && %QUAL < 50)')
     return cutoff_w_expression(in_file, filters, data, name="stQualDepth")
 
 def _gatk_general():
