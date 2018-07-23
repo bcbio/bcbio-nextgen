@@ -12,10 +12,11 @@ details:
     metadata:
       batch: TestBatch1
       validate_batch: b1
+      validate_combine: b2
       validate_sample: test-val
   - algorithm:
       archive: cram-lossless
-      align_split_size: 15000
+      #align_split_size: 15000
       #save_diskspace: true
       aligner: bwa
       #aligner: false
@@ -24,12 +25,13 @@ details:
       #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
       trim_reads: atropos
-      adapters: polyx
+      adapters: [polyx]
       #bam_sort: coordinate
       # mark_duplicates: false
       #realign: gatk
       recalibrate: gatk
-      variantcaller: [freebayes, gatk-haplotype, strelka2]
+      variantcaller: gatk-haplotype
+      #variantcaller: [freebayes, gatk-haplotype, strelka2, deepvariant, samtools]
       #ensemble:
       #  numpass: 2
       #effects: vep
@@ -40,7 +42,7 @@ details:
       #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       exclude_regions: [lcr, highdepth, polyx, altcontigs]
       coverage_interval: genome
-      tools_on: [qualimap_full, vqsr, svplots]
+      tools_on: [qualimap_full, vqsr, svplots, picard]
       tools_off: [gemini]
       vcfanno: [gemini]
       mixup_check: qsignature
@@ -68,6 +70,7 @@ details:
     metadata:
       batch: TestBatch1
       validate_batch: b1
+      validate_combine: b2
       validate_sample: test-val-2
     analysis: variant2
     description: Test1

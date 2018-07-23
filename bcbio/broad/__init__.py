@@ -149,7 +149,10 @@ def fix_missing_spark_user(cl, prog, params):
                 with open("/etc/passwd", "a") as out_handle:
                     out_handle.write("sparkanon:x:{uid}:{uid}:sparkanon:/nonexistent:/usr/sbin/nologin\n"
                                         .format(uid=os.getuid()))
-                user = getpass.getuser()
+                try:
+                    user = getpass.getuser()
+                except KeyError:
+                    pass
         if user:
             cl = "export SPARK_USER=%s && " % (user) + cl
     return cl

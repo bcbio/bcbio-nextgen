@@ -77,7 +77,7 @@ def combine_calls(*args):
         vrn_files = [normalize.normalize(f, data, passonly=passonly, rerun_effects=False, remove_oldeffects=True,
                                          work_dir=utils.safe_makedir(os.path.join(base_dir, c)))
                      for c, f in zip(caller_names, vrn_files)]
-        if "classifiers" not in edata["config"]["algorithm"]["ensemble"]:
+        if "classifiers" not in (dd.get_ensemble(edata) or {}):
             callinfo = _run_ensemble_intersection(batch_id, vrn_files, caller_names, base_dir, edata)
         else:
             config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
@@ -125,7 +125,7 @@ def _has_ensemble(data):
     variants_to_process = (len(data["variants"]) > 1
                            and any([x.get('vrn_file', None) is not None or x.get('vrn_file_batch', None) is not None
                                     for x in data["variants"]]))
-    return variants_to_process and "ensemble" in data["config"]["algorithm"]
+    return variants_to_process and dd.get_ensemble(data)
 
 def _group_by_batches(samples, check_fn):
     """Group calls by batches, processing families together during ensemble calling.

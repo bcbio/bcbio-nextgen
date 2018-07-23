@@ -24,7 +24,6 @@ install:
   - conda install --yes nomkl
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
-  - conda install --yes -c conda-forge -c bioconda cwltool toil rabix-bunny
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
   - conda remove --yes --force qt
