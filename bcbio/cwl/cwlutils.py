@@ -123,6 +123,7 @@ def _get_all_cwlkeys(items, default_keys=None):
                             "validate__tp", "validate__fp", "validate__fn",
                             "config__algorithm__coverage", "config__algorithm__coverage_merged",
                             "genome_resources__variation__cosmic", "genome_resources__variation__dbsnp",
+                            "genome_resources__variation__clinvar"
         ])
     all_keys = set([])
     for data in items:

@@ -43,7 +43,7 @@ def get_resources(genome, ref_file, data):
 def add_required_resources(resources):
     """Add default or empty values for required resources referenced in CWL
     """
-    required = [["variation", "cosmic"], ["variation", "dbsnp"],
+    required = [["variation", "cosmic"], ["variation", "clinvar"], ["variation", "dbsnp"],
                 ["variation", "lcr"], ["variation", "polyx"],
                 ["variation", "encode_blacklist"],
                 ["variation", "train_hapmap"], ["variation", "train_indels"],

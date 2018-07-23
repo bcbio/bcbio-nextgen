@@ -39,7 +39,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
         if not utils.file_exists(gemini_db) and use_gemini:
             ped_file = create_ped_file(samples + extras, gemini_vcf)
             # Use original approach for hg19/GRCh37 pending additional testing
-            if support_gemini_orig(data) and not any(dd.get_vcfanno(d) for d in samples):
+            if is_human(data, builds=["37"]) and not any(dd.get_vcfanno(d) for d in samples):
                 gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
             elif ann_vcf:
                 gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
@@ -48,15 +48,30 @@ def prep_gemini_db(fnames, call_info, samples, extras):
                               "decomposed": use_gemini}]]
 
 def run_vcfanno(gemini_vcf, data, use_gemini=False):
-    data_basepath = install.get_gemini_dir(data) if support_gemini_orig(data) else None
+    data_basepath = install.get_gemini_dir(data) if is_human(data, builds=["37"]) else None
     conf_files = dd.get_vcfanno(data)
-    if not conf_files and use_gemini:
-        conf_files = ["gemini"]
+    if not conf_files:
+        conf_files = []
+        if use_gemini:
+            conf_files.append("gemini")
+        if _annotate_somatic(data):
+            conf_files.append("somatic")
     if conf_files:
         return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath=data_basepath,
                                    decomposed=use_gemini)
     else:
         return gemini_vcf
+
+def _annotate_somatic(data):
+    """Annotate somatic calls if we have cosmic data installed.
+    """
+    if is_human(data):
+        paired = vcfutils.get_paired([data])
+        if paired:
+            r = dd.get_variation_resources(data)
+            if os.path.exists(r.get("cosmic", "")):
+                return True
+    return False
 
 def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     """Generalized vcfanno/vcf2db workflow for loading variants into a GEMINI database.
@@ -261,7 +276,7 @@ def has_gemini_data(data):
 
     Other organisms don't have special data targets.
     """
-    if support_gemini_orig(data, all_human=True):
+    if is_human(data):
         from bcbio import install
         return "gemini" in install.get_defaults().get("datatarget", [])
     else:
@@ -281,19 +296,26 @@ def do_db_build(samples):
     else:
         return False
 
-def support_gemini_orig(data, all_human=False):
+def is_human(data, builds=None):
     """Gemini original supports human build 37, search by name or extra GL contigs.
     """
-    support_gemini = ["hg19", "GRCh37"]
     def has_build37_contigs(data):
         for contig in ref.file_contigs(dd.get_ref_file(data)):
             if contig.name.startswith("GL") or contig.name.find("_gl") >= 0:
                 if contig.name in naming.GMAP["hg19"] or contig.name in naming.GMAP["GRCh37"]:
                     return True
         return False
-    if all_human:
-        support_gemini += ["hg38"]
-    return dd.get_genome_build(data) in set(support_gemini) or has_build37_contigs(data)
+    if not builds or "37" in builds:
+        target_builds = ["hg19", "GRCh37"]
+        if dd.get_genome_build(data) in target_builds:
+            return True
+        elif has_build37_contigs(data):
+            return True
+    if not builds or "38" in builds:
+        target_builds = ["hg38"]
+        if dd.get_genome_build(data) in target_builds:
+            return True
+    return False
 
 def get_gemini_files(data):
     """Enumerate available gemini data files in a standard installation.

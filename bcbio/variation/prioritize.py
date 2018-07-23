@@ -31,7 +31,7 @@ def handle_vcf_calls(vcf_file, data, orig_items):
         return vcf_file
     else:
         if population.has_gemini_data(data):
-            data_basepath = install.get_gemini_dir(data) if population.support_gemini_orig(data) else None
+            data_basepath = install.get_gemini_dir(data) if population.is_human(data, builds=["37"]) else None
             ann_vcf = vcfanno.run_vcfanno(vcf_file, ["gemini"], data, data_basepath)
             if ann_vcf:
                 priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
