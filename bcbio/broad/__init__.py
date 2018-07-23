@@ -141,6 +141,7 @@ def fix_missing_spark_user(cl, prog, params):
     https://blog.openshift.com/jupyter-on-openshift-part-6-running-as-an-assigned-user-id/
     """
     if prog.find("Spark") >= 0 or "--spark-master" in params:
+        user = None
         try:
             user = getpass.getuser()
         except KeyError:
@@ -148,8 +149,9 @@ def fix_missing_spark_user(cl, prog, params):
                 with open("/etc/passwd", "a") as out_handle:
                     out_handle.write("sparkanon:x:{uid}:{uid}:sparkanon:/nonexistent:/usr/sbin/nologin\n"
                                         .format(uid=os.getuid()))
-            user = getpass.getuser()
-        cl = "export SPARK_USER=%s && " % (user) + cl
+                user = getpass.getuser()
+        if user:
+            cl = "export SPARK_USER=%s && " % (user) + cl
     return cl
 
 class BroadRunner:
