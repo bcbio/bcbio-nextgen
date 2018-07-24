@@ -30,13 +30,14 @@ def handle_vcf_calls(vcf_file, data, orig_items):
     if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        if population.has_gemini_data(data):
+        conf_files = population.default_conf_files(data)
+        if conf_files:
             data_basepath = install.get_gemini_dir(data) if population.is_human(data, builds=["37"]) else None
-            ann_vcf = vcfanno.run_vcfanno(vcf_file, ["gemini"], data, data_basepath)
+            ann_vcf = vcfanno.run_vcfanno(vcf_file, conf_files, data, data_basepath)
             if ann_vcf:
                 priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
                 return _apply_priority_filter(vcf_file, priority_file, data)
-        # No GEMINI database for filtering, return original file
+        # No GEMINI data available for filtering, return original file
         return vcf_file
 
 def _apply_priority_filter(in_file, priority_file, data):
@@ -66,7 +67,7 @@ def _prep_priority_filter_vcfanno(in_vcf, data):
             'af_exac_all', 'max_aaf_all',
             "af_esp_ea", "af_esp_aa", "af_esp_all", "af_1kg_amr", "af_1kg_eas",
             "af_1kg_sas", "af_1kg_afr", "af_1kg_eur", "af_1kg_all"]
-    known = ["cosmic_ids", "clinvar_sig"]
+    known = ["cosmic_ids", "cosmic_id", "clinvar_sig", "CLNSIG"]
     out_file = "%s-priority.tsv" % utils.splitext_plus(in_vcf)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(data, out_file) as tx_out_file:
@@ -176,9 +177,9 @@ def _find_known(row):
     """
     out = []
     clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic"])
-    if row["cosmic_ids"]:
+    if row["cosmic_ids"] or row["cosmic_id"]:
         out.append("cosmic")
-    if (row["clinvar_sig"] and not row["clinvar_sig"] in clinvar_no):
+    if any([(row[x] and not row[x] in clinvar_no) for x in ["clinvar_sig", "CLNSIG"]]):
         out.append("clinvar")
     return out
 
