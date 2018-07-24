@@ -43,8 +43,6 @@ details:
       exclude_regions: [lcr, highdepth, polyx, altcontigs]
       coverage_interval: genome
       tools_on: [qualimap_full, vqsr, svplots, picard]
-      tools_off: [gemini]
-      vcfanno: [gemini]
       mixup_check: qsignature
       quality_format: standard
       nomap_split_size: 50

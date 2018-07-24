@@ -55,7 +55,7 @@ def run_vcfanno(vcf_file, data, decomposed=False):
     """
     conf_files = dd.get_vcfanno(data)
     if conf_files:
-        conf_files = {None: conf_files}
+        conf_files = [(None, conf_files)]
     else:
         conf_files = _default_conf_files(data)
     out_file = None
