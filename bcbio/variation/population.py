@@ -50,26 +50,33 @@ def prep_gemini_db(fnames, call_info, samples, extras):
                               "vcf": ann_vcf or gemini_vcf,
                               "decomposed": decomposed}]]
 
-def run_vcfanno(gemini_vcf, data, decomposed=False):
+def run_vcfanno(vcf_file, data, decomposed=False):
     """Run vcfanno, providing annotations from external databases.
     """
-    data_basepath = install.get_gemini_dir(data) if is_human(data, builds=["37"]) else None
     conf_files = dd.get_vcfanno(data)
-    if not conf_files:
-        conf_files = default_conf_files(data)
     if conf_files:
-        return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath=data_basepath,
-                                   decomposed=decomposed)
+        conf_files = {None: conf_files}
     else:
-        return gemini_vcf
+        conf_files = _default_conf_files(data)
+    out_file = None
+    if conf_files:
+        for data_basepath, conf_files in conf_files:
+            ann_file = vcfanno.run_vcfanno(vcf_file, conf_files, data,
+                                           data_basepath=data_basepath,
+                                           decomposed=decomposed)
+            if ann_file:
+                out_file = ann_file
+                vcf_file = ann_file
+    return out_file
 
-def default_conf_files(data):
-    conf_files = []
+def _default_conf_files(data):
+    conf_files = collections.defaultdict(list)
     if _has_gemini_data(data):
-        conf_files.append("gemini")
+        data_basepath = install.get_gemini_dir(data) if is_human(data, builds=["37"]) else None
+        conf_files[data_basepath].append("gemini")
     if _annotate_somatic(data):
-        conf_files.append("somatic")
-    return conf_files
+        conf_files[None].append("somatic")
+    return conf_files.items()
 
 def _annotate_somatic(data):
     """Annotate somatic calls if we have cosmic data installed.

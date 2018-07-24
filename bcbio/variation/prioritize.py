@@ -30,15 +30,13 @@ def handle_vcf_calls(vcf_file, data, orig_items):
     if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        conf_files = population.default_conf_files(data)
-        if conf_files:
-            data_basepath = install.get_gemini_dir(data) if population.is_human(data, builds=["37"]) else None
-            ann_vcf = vcfanno.run_vcfanno(vcf_file, conf_files, data, data_basepath)
-            if ann_vcf:
-                priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
-                return _apply_priority_filter(vcf_file, priority_file, data)
-        # No GEMINI data available for filtering, return original file
-        return vcf_file
+        ann_vcf = population.run_vcfanno(vcf_file, data)
+        if ann_vcf:
+            priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
+            return _apply_priority_filter(vcf_file, priority_file, data)
+        # No data available for filtering, return original file
+        else:
+            return vcf_file
 
 def _apply_priority_filter(in_file, priority_file, data):
     """Annotate variants with priority information and use to apply filters.
