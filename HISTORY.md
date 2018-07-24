@@ -8,6 +8,8 @@
 - peddy: fix bug where not all files uploaded on first pipeline run
 - variant calling: support bcftools 1.9 which is more strict about duplicated
   key names in INFO and FORMAT.
+- RNA-seq variant calling: Apply annotations after joint calling for GATK to
+  avoid import errors with GenomicsDB. Thanks to Komal Rathi.
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
 - CWL: support ensemble calling for combining multiple variant callers.

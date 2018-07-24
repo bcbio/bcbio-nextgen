@@ -53,7 +53,8 @@ def rnaseq_variant_calling(samples, run_parallel):
         for d in joint.square_off(samples, run_parallel):
             out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
         samples = out
-        samples = run_parallel("run_rnaseq_ann_filter", samples)
+    samples = run_parallel("run_rnaseq_ann_filter", samples)
+    if variantcaller and ("gatk-haplotype" in variantcaller):
         out = []
         for data in (to_single_data(xs) for xs in samples):
             if "variants" not in data:
@@ -83,23 +84,22 @@ def run_rnaseq_variant_calling(data):
             data = variation.rnaseq_gatk_variant_calling(data)
         if vardict.get_vardict_command(data):
             data = variation.rnaseq_vardict_variant_calling(data)
-    if dd.get_vrn_file(data):
-        ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
-        if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
-        ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
-        if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
     return [[data]]
 
 def run_rnaseq_ann_filter(data):
     """Run RNA-seq annotation and filtering.
     """
+    data = to_single_data(data)
     ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
     if ann_file:
         data = dd.set_vrn_file(data, ann_file)
-    filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
-    data = dd.set_vrn_file(data, filter_file)
+    ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
+    if ann_file:
+        data = dd.set_vrn_file(data, ann_file)
+    variantcaller = dd.get_variantcaller(data)
+    if variantcaller and ("gatk-haplotype" in variantcaller):
+        filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
+        data = dd.set_vrn_file(data, filter_file)
     return [[data]]
 
 def quantitate(data):
