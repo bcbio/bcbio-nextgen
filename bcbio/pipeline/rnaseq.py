@@ -123,7 +123,7 @@ def quantitate(data):
 	if(os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
 		data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
 	else:
-                data["quant"]["fusion"] = None
+		data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
         data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
