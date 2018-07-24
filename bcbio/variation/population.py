@@ -26,41 +26,50 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
     """#
     data = samples[0]
-    use_gemini = do_db_build(samples) and any(vcfutils.vcf_has_variants(f) for f in fnames)
     name, caller, is_batch = call_info
+    build_type = _get_build_type(fnames, samples, caller)
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
     gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
-    if use_gemini:
+    # If we're building a gemini database, normalize the inputs
+    if build_type:
         passonly = all("gemini_allvariants" not in dd.get_tools_on(d) for d in samples)
         gemini_vcf = normalize.normalize(gemini_vcf, data, passonly=passonly)
-    ann_vcf = run_vcfanno(gemini_vcf, data, use_gemini)
+        decomposed = True
+    else:
+        decomposed = False
+    ann_vcf = run_vcfanno(gemini_vcf, data, decomposed)
     gemini_db = os.path.join(out_dir, "%s-%s.db" % (name, caller))
-    if vcfutils.vcf_has_variants(gemini_vcf) and caller not in NO_DB_CALLERS:
-        if not utils.file_exists(gemini_db) and use_gemini:
-            ped_file = create_ped_file(samples + extras, gemini_vcf)
-            # Use original approach for hg19/GRCh37 pending additional testing
-            if is_human(data, builds=["37"]) and not any(dd.get_vcfanno(d) for d in samples):
-                gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
-            elif ann_vcf:
-                gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
+    if ann_vcf and build_type and not utils.file_exists(gemini_db):
+        ped_file = create_ped_file(samples + extras, gemini_vcf)
+        # Original approach for hg19/GRCh37
+        if is_human(data, builds=["37"]) and "gemini_orig" in build_type:
+            gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
+        else:
+            gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": ann_vcf or gemini_vcf,
-                              "decomposed": use_gemini}]]
+                              "decomposed": decomposed}]]
 
-def run_vcfanno(gemini_vcf, data, use_gemini=False):
+def run_vcfanno(gemini_vcf, data, decomposed=False):
+    """Run vcfanno, providing annotations from external databases.
+    """
     data_basepath = install.get_gemini_dir(data) if is_human(data, builds=["37"]) else None
     conf_files = dd.get_vcfanno(data)
     if not conf_files:
-        conf_files = []
-        if use_gemini:
-            conf_files.append("gemini")
-        if _annotate_somatic(data):
-            conf_files.append("somatic")
+        conf_files = default_conf_files(data)
     if conf_files:
         return vcfanno.run_vcfanno(gemini_vcf, conf_files, data, data_basepath=data_basepath,
-                                   decomposed=use_gemini)
+                                   decomposed=decomposed)
     else:
         return gemini_vcf
+
+def default_conf_files(data):
+    conf_files = []
+    if _has_gemini_data(data):
+        conf_files.append("gemini")
+    if _annotate_somatic(data):
+        conf_files.append("somatic")
+    return conf_files
 
 def _annotate_somatic(data):
     """Annotate somatic calls if we have cosmic data installed.
@@ -271,7 +280,7 @@ def get_multisample_vcf(fnames, name, caller, data):
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
-def has_gemini_data(data):
+def _has_gemini_data(data):
     """Use gemini if we installed required data for hg19, hg38.
 
     Other organisms don't have special data targets.
@@ -282,19 +291,24 @@ def has_gemini_data(data):
     else:
         return True
 
-def do_db_build(samples):
-    """Confirm we should build a gemini database: need gemini and not in tools_off.
+def _get_build_type(fnames, samples, caller):
+    """Confirm we should build a gemini database: need gemini in tools_on.
+
+    Checks for valid conditions for running a database and gemini or gemini_orig
+    configured in tools on.
     """
-    genomes = set()
-    for data in samples:
-        if "gemini" in dd.get_tools_off(data):
-            return False
-        else:
-            genomes.add(data["genome_build"])
-    if len(genomes) == 1:
-        return has_gemini_data(samples[0])
-    else:
-        return False
+    build_type = set()
+    if any(vcfutils.vcf_has_variants(f) for f in fnames) and caller not in NO_DB_CALLERS:
+        genomes = set()
+        for data in samples:
+            if any([x in dd.get_tools_on(data)
+                    for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
+                if _has_gemini_data(data):
+                    genomes.add(data["genome_build"])
+                    build_type.add("gemini_orig" if "gemini_orig" in dd.get_tools_on(data) else "gemini")
+        if len(genomes) == 1:
+            return True
+    return build_type
 
 def is_human(data, builds=None):
     """Gemini original supports human build 37, search by name or extra GL contigs.
@@ -370,9 +384,6 @@ def prep_db_parallel(samples, parallel_fn):
         has_batches = True
     for name, caller, data, fname in singles:
         to_process.append([[fname], (str(name), caller, False), [data], extras])
-    if (len(samples) > 0 and not do_db_build([x[0] for x in samples])
-          and not has_batches and not any(dd.get_vcfanno(x[0] for x in samples))):
-        return samples
     output = parallel_fn("prep_gemini_db", to_process)
     out_fetch = {}
     for batch_id, out_file in output:

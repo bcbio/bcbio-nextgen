@@ -711,17 +711,22 @@ Variant annotation
   ``-pick`` in VEP); ``canonical_cancer`` Canonical transcripts with hand
   curated changes for more common cancer transcripts (effects snpEff only).
 - ``vcfanno`` Configuration files for `vcfanno
-  <https://github.com/brentp/vcfanno>`_, allowing use of the new vcfanno/vcf2db
-  approach for creating GEMINI databases. The default is ``[gemini]`` for all
-  organisms except GRCh37/hg19, which defaults to the older GEMINI loading approach.
+  <https://github.com/brentp/vcfanno>`_, allowing the application of additional
+  annotations to variant calls. By default, bcbio will try and apply:
+
+   - `gemini` -- External population level annotations from `GEMINI
+     <http://gemini.readthedocs.io/en/latest/>`_. This is only run for human
+     samples with gemini data installed (:ref:`datatarget-install`).
+   - `somatic` -- Somatic annotations from COSMIC, ClinVar and friends. COSMIC
+     need a custom installation within bcbio (:ref:`datatarget-install`). Only
+     added for tumor or tumor/normal somatic calling.
+
   bcbio installs pre-prepared configuration files in
   ``genomes/build/config/vcfanno`` or you can specify the full path to a
   ``/path/your/anns.conf`` and optionally an equivalently
   named ``/path/your/anns.lua`` file. This value can be a list so you can
   supplement the existing annotation file with: ``[gemini, /path/your/anns.conf]``.
-  or replace it by only specifying your file. You can run only vcfanno without
-  GEMINI database creation by setting ``tools_off: [gemini]`` and explicitly
-  setting ``vcfanno: [gemini]`` (or any other configurations you want).
+  or replace it by only specifying your file.
 
 .. _sv-config:
 
@@ -1050,10 +1055,6 @@ lists with multiple options:
   pipeline. Enables turning off specific components of pipelines if not
   needed:
 
-  - ``gemini`` avoids creation of a `GEMINI database`_ of variants for
-    downstream query during variant calling pipelines. Also skips vcfanno
-    annotation unless turned on explicitly with ``vcfanno`` in
-    :ref:`config-variant-annotation`.
   - ``gatk4`` Use older GATK versions (3.x) for GATK commands like BQSR,
     HaplotypeCaller and VQSR. By default bcbio includes GATK4 and uses it.
   - ``vqsr`` turns off variant quality score recalibration for all samples.
@@ -1093,6 +1094,11 @@ lists with multiple options:
   - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
     SpliceRegion plugin for VEP. Both optional plugins add extra splice site
     annotations.
+  - ``gemini`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_ of variants for
+    downstream query using the new vcfanno and
+    vcf2db approach.
+  - ``gemini_orig`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_
+    of variants using the older GEMINI loader. Only works for GRCh37 and hg19.
   - ``gemini_allvariants`` enables all variants to go into GEMINI, not only
     those that pass filters.
   - ``vcf2db_expand`` decompresses and expands the genotype columns in the
@@ -1106,7 +1112,6 @@ lists with multiple options:
     regions.
   - ``bcbiornaseq`` loads a bcbioRNASeq object for use with `bcbioRNASeq <https://github.com/hbc/bcbioRNASeq>`_.
 
-.. _GEMINI database: https://github.com/arq5x/gemini
 
 parallelization
 ===============

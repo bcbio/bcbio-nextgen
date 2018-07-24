@@ -1,5 +1,9 @@
 ## 1.1.1 (in progress)
 
+- gemini: databases no longer created by default. Use `tools_on: [gemini]` or
+  `tools_on: [gemini_orig]` to create a database.
+- vcfanno: run gemini and somatic annotations by default, producing annotated
+  VCFs with external information.
 - variant: support octopus variant caller for germline and somatic samples.
 - peddy: fix bug where not all files uploaded on first pipeline run
 - variant calling: support bcftools 1.9 which is more strict about duplicated

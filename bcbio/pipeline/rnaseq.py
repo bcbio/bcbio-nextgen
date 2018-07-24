@@ -87,8 +87,7 @@ def run_rnaseq_variant_calling(data):
         ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
         if ann_file:
             data = dd.set_vrn_file(data, ann_file)
-        ann_file = population.run_vcfanno(dd.get_vrn_file(data), data,
-                                          population.do_db_build([data]))
+        ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
         if ann_file:
             data = dd.set_vrn_file(data, ann_file)
     return [[data]]

@@ -109,8 +109,7 @@ def postprocess_variants(items):
                 data[vrn_key] = ann_file
         if cwlutils.is_cwl_run(data):
             logger.info("Annotate with population level variation data")
-            ann_file = population.run_vcfanno(dd.get_vrn_file(data), data,
-                                              population.do_db_build([data]))
+            ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
             if ann_file:
                 data[vrn_key] = ann_file
         logger.info("Filtering for %s" % cur_name)
