@@ -5,6 +5,7 @@ https://github.com/pachterlab/kallisto
 """
 import os
 import pandas as pd
+import toolz as tz
 
 import bcbio.pipeline.datadict as dd
 from bcbio.rnaseq import sailfish
@@ -167,10 +168,14 @@ def get_cell_names(cellsfile):
         return [x.strip() for x in in_handle]
 
 def get_kallisto_h5(data):
-    samplename = dd.get_sample_name(data)
-    work_dir = dd.get_work_dir(data)
-    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
-    return os.path.join(kallisto_dir, "abundance.h5")
+    out_file = tz.get_in(["quant", "hdf5"], data)
+    if out_file:
+        return out_file
+    else:
+        samplename = dd.get_sample_name(data)
+        work_dir = dd.get_work_dir(data)
+        kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+        return os.path.join(kallisto_dir, "abundance.h5")
 
 def get_kallisto_fusions(data):
     samplename = dd.get_sample_name(data)

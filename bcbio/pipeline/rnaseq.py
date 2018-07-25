@@ -119,10 +119,10 @@ def quantitate(data):
         data = to_single_data(kallisto.run_kallisto_rnaseq(data)[0])
         data["quant"]["tsv"] = os.path.join(data["kallisto_quant"], "abundance.tsv")
         data["quant"]["hdf5"] = os.path.join(data["kallisto_quant"], "abundance.h5")
-	if(os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
-		data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
-	else:
-		data["quant"]["fusion"] = None
+    if (os.path.exists(os.path.join(data["kallisto_quant"], "fusion.txt"))):
+        data["quant"]["fusion"] = os.path.join(data["kallisto_quant"], "fusion.txt")
+    else:
+        data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
         data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
@@ -156,6 +156,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     return samples
 
 def detect_fusions(data):
+    data = to_single_data(data)
     # support the old style of fusion mode calling
     if dd.get_fusion_mode(data, False):
         data = dd.set_fusion_caller(data, ["oncofuse", "pizzly"])
@@ -172,6 +173,8 @@ def detect_fusions(data):
         pizzly_dir = pizzly.run_pizzly(data)
         if pizzly_dir:
             data = dd.set_pizzly_dir(data, pizzly_dir)
+            data["fusion"] = {"fasta": os.path.join(pizzly_dir, "%s.fusions.fasta" % dd.get_sample_name(data)),
+                              "json": os.path.join(pizzly_dir, "%s.json" % dd.get_sample_name(data))}
     if "ericscript" in fusion_caller:
         ericscript_dir = ericscript.run(data)
     return [[data]]

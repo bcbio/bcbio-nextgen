@@ -613,11 +613,11 @@ def rnaseq(samples):
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
     vc, vc_out = _variant_vc(checkpoints)
-    fusion = [s("rnaseq_fusion", "multi-parallel", 
-             [["quant", "fusion"],["reference", "fasta", "base"], dd.get_keys("gtf_file")],
-             [cwlout(["fusion", "fasta"], "File"),
-              cwlout(["fusion", "json"], "File")],
-	      "bcbio-rnaseq", ["pizzly"])]
+    fusion = [s("detect_fusions", "multi-parallel",
+                [["quant", "fusion"], ["quant", "hdf5"], ["trim_rec"]],
+                [cwlout(["fusion", "fasta"], "File"),
+                 cwlout(["fusion", "json"], "File")],
+                "bcbio-rnaseq", ["pizzly"])]
 
     steps = prep + align + pp_align + quantitate + qc + vc + fusion
     final_outputs = [["rgnames", "sample"], dd.get_keys("align_bam"), ["quant", "tsv"], ["summary", "multiqc"]] + \
