@@ -565,6 +565,7 @@ def rnaseq(samples):
                ["reference", "aligner", "indexes"],
                ["config", "algorithm", "aligner"],
                ["config", "algorithm", "expression_caller"],
+               ["config", "algorithm", "fusion_caller"],
                ["config", "algorithm", "quality_format"]],
               [cwlout("prep_rec", "record")],
               "bcbio-rnaseq", programs=["picard", "samtools", "pysam>=0.13.0"]),
@@ -586,7 +587,8 @@ def rnaseq(samples):
                   [["trim_rec"], ["align_bam"]],
                   [cwlout(dd.get_keys("count_file"), "File"),
                    cwlout(["quant", "tsv"], "File"),
-                   cwlout(["quant", "hdf5"], "File")],
+                   cwlout(["quant", "hdf5"], "File"),
+                   cwlout(["quant", "fusion"], "File")],
                   "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto>=0.43.1", "subread", "gffread",
                                             "r=3.4.1", "r-wasabi"],
                   disk={"files": 0.5})]
@@ -611,8 +613,13 @@ def rnaseq(samples):
             [cwlout(["summary", "multiqc"], ["File", "null"])],
             "bcbio-rnaseq", ["multiqc", "multiqc-bcbio"])]
     vc, vc_out = _variant_vc(checkpoints)
+    fusion = [s("rnaseq_fusion", "multi-parallel", 
+             [["quant", "fusion"],["reference", "fasta", "base"], dd.get_keys("gtf_file")],
+             [cwlout(["fusion", "fasta"], "File"),
+              cwlout(["fusion", "json"], "File")],
+	      "bcbio-rnaseq", ["pizzly"])]
 
-    steps = prep + align + pp_align + quantitate + qc + vc
+    steps = prep + align + pp_align + quantitate + qc + vc + fusion
     final_outputs = [["rgnames", "sample"], dd.get_keys("align_bam"), ["quant", "tsv"], ["summary", "multiqc"]] + \
                     vc_out + pp_align_out
     return steps, final_outputs
