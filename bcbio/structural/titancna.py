@@ -102,6 +102,8 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
             with utils.chdir(tmp_dir):
                 cmd = ("{export_cmd} && titanCNA.R --id {sample} --hetFile {het_file} --cnFile {cn_file} "
                        "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir}")
+                if data["genome_build"] in ("hg19", "hg38"):
+                    cmd += " --genomeStyle UCSC"
                 do.run(cmd.format(**locals()), "TitanCNA CNV detection: ploidy %s, cluster %s" % (ploidy, num_clusters))
             for fname in glob.glob(os.path.join(tmp_dir, cluster_dir + "*")):
                 shutil.move(fname, ploidy_dir)
