@@ -22,7 +22,7 @@ def sample():
 # XXX Skips runs since there is no database
 
 def test_detect_fusion_callers_calls_for_each_sample(ericscript_run, sample):
-    samples = [[sample], [sample]]
+    samples = [[sample]]
     rnaseq.detect_fusions(samples)
     assert ericscript_run.call_count == 0
     #assert ericscript_run.call_count == len(samples)
