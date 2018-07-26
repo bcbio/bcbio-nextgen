@@ -177,7 +177,7 @@ def _add_log2_depth(in_file, out_file, data):
                 with open(tx_out_file, "w") as out_handle:
                     out_handle.write("chromosome\tstart\tend\tgene\tlog2\tdepth\n")
                     for line in in_handle:
-                        parts = line.rstrip().split()
+                        parts = line.rstrip().split("\t")
                         if len(parts) > 4:
                             # Handle inputs unannotated with gene names
                             if len(parts) == 5:
