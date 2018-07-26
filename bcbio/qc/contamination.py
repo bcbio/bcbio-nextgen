@@ -23,21 +23,20 @@ def run(bam_file, data, out_dir):
     exts = [".out"]
     out = {}
     if not utils.file_exists(out_file) and not utils.file_exists(failed_file):
-        if _should_skip_run(data):
-            with open(failed_file, "w") as out_handle:
-                out_handle.write("Skipping VerifyBamID, high depth panel data")
-        else:
-            _generate_estimates(bam_file, out_base, failed_file, exts, data)
+        _generate_estimates(bam_file, out_base, failed_file, exts, data)
     if utils.file_exists(out_file):
         out["base"] = out_file
         out["secondary"] = [out_base + e for e in exts if os.path.exists(out_base + e)]
     return out
 
 def _generate_estimates(bam_file, out_base, failed_file, exts, data):
+    background = {"dataset": "1000g.phase3",
+                  "nvars": "100k",
+                  "build":"b38" if dd.get_genome_build(data) == "hg38" else "b37"}
     with file_transaction(data, out_base) as tx_out_base:
-        cmd = ["verifybamid2", "1000g.phase3", "100k", "b38" if dd.get_genome_build(data) == "hg38" else "b37",
+        cmd = ["verifybamid2", background["dataset"], background["nvars"], background["build"],
                "--Reference", dd.get_ref_file(data), "--Output", tx_out_base]
-        cmd += _get_input_args(bam_file, data, out_base)
+        cmd += _get_input_args(bam_file, data, out_base, background)
         try:
             do.run(cmd, "VerifyBamID contamination checks")
         except subprocess.CalledProcessError, msg:
@@ -76,48 +75,37 @@ def _generate_estimates(bam_file, out_base, failed_file, exts, data):
                 if os.path.exists(tx_out_base + e):
                     shutil.copy(tx_out_base + e, out_base + e)
 
-def _should_skip_run(data):
-    """Avoid running VerifyBamID2 for high coverage panel BAMs.
-
-    mpileup generation is slow in these cases and doesn't yield good
-    outputs, so skip.
-    """
-    high_coverage_thresh = 1000
-    coverage = dd.get_coverage_interval(data)
-    if coverage and coverage != "genome":
-        import pybedtools
-        vrs = dd.get_variant_regions_merged(data) or dd.get_variant_regions(data)
-        if vrs:
-            callable_size = float(pybedtools.BedTool(vrs).total_coverage())
-            dstats = qc_samtools.run(None, data)
-            avg_cov = float(dstats["metrics"]["Mapped_reads"] * dstats["metrics"]["Average_read_length"]) / callable_size
-            if avg_cov > high_coverage_thresh:
-                return True
-    return False
-
-def _get_input_args(bam_file, data, out_base):
+def _get_input_args(bam_file, data, out_base, background):
     """Retrieve input args, depending on genome build.
 
     VerifyBamID2 only handles GRCh37 (1, 2, 3) not hg19, so need to generate
     a pileup for hg19 and fix chromosome naming.
     """
     if dd.get_genome_build(data) in ["hg19"]:
-        out_file = "%s-mpileup.txt" % out_base
-        if not utils.file_exists(out_file):
-            with file_transaction(data, out_file) as tx_out_file:
-                mpileup_cl = samtools.prep_mpileup([bam_file], dd.get_ref_file(data), data["config"], want_bcf=False,
-                                                   target_regions=_get_autosomal_bed(data, tx_out_file))
-                cl = ("{mpileup_cl} | sed 's/^chr//' > {tx_out_file}")
-                do.run(cl.format(**locals()), "Create pileup from BAM input")
-        return ["--PileupFile", out_file]
+        return ["--PileupFile", _create_pileup(bam_file, data, out_base, background)]
     else:
         return ["--BamFile", bam_file]
 
-def _get_autosomal_bed(data, base_file):
-    out_file = "%s-stdchroms.bed" % utils.splitext_plus(base_file)[0]
-    with open(out_file, "w") as out_handle:
-        for r in ref.file_contigs(dd.get_ref_file(data)):
-            if chromhacks.is_autosomal(r.name):
-                out_handle.write("%s\t0\t%s\n" % (r.name, r.size))
+def _create_pileup(bam_file, data, out_base, background):
+    """Create pileup calls in the regions of interest for hg19 -> GRCh37 chromosome mapping.
+    """
+    out_file = "%s-mpileup.txt" % out_base
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            background_bed = os.path.normpath(os.path.join(
+                os.path.dirname(os.path.realpath(utils.which("verifybamid2"))),
+                "resource", "%s.%s.%s.vcf.gz.dat.bed" % (background["dataset"],
+                                                         background["nvars"], background["build"])))
+            local_bed = os.path.join(os.path.dirname(out_base),
+                                     "%s.%s-hg19.bed" % (background["dataset"], background["nvars"]))
+            if not utils.file_exists(local_bed):
+                with file_transaction(data, local_bed) as tx_local_bed:
+                    with open(background_bed) as in_handle:
+                        with open(tx_local_bed, "w") as out_handle:
+                            for line in in_handle:
+                                out_handle.write("chr%s" % line)
+            mpileup_cl = samtools.prep_mpileup([bam_file], dd.get_ref_file(data), data["config"], want_bcf=False,
+                                                target_regions=local_bed)
+            cl = ("{mpileup_cl} | sed 's/^chr//' > {tx_out_file}")
+            do.run(cl.format(**locals()), "Create pileup from BAM input")
     return out_file
-
