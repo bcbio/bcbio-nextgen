@@ -495,7 +495,6 @@ def _compatible_small_variants(data, items):
     """
     from bcbio import heterogeneity
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
-    supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
     paired = vcfutils.get_paired(items)
     for v in heterogeneity.get_variants(data, include_germline=not paired):

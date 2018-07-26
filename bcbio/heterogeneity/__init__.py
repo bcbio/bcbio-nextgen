@@ -29,7 +29,10 @@ def get_variants(data, include_germline=False):
     """
     data = utils.deepish_copy(data)
     supported = ["precalled", "vardict", "vardict-java", "vardict-perl",
-                 "strelka2", "mutect2", "freebayes", "mutect", "octopus"]
+                 "freebayes", "octopus", "strelka2"]
+    # Right now mutect2 and mutect do not provide heterozygous germline calls
+    # to be useful https://github.com/bcbio/bcbio-nextgen/issues/2464
+    # supported += ["mutect2", "mutect"]
     if include_germline:
         supported.insert(1, "gatk-haplotype")
     out = []
