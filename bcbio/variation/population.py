@@ -85,7 +85,7 @@ def _annotate_somatic(data):
         paired = vcfutils.get_paired([data])
         if paired:
             r = dd.get_variation_resources(data)
-            if os.path.exists(r.get("cosmic", "")):
+            if r.get("cosmic") and os.path.exists(r["cosmic"]):
                 return True
     return False
 
