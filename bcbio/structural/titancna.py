@@ -95,6 +95,14 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
     cores = dd.get_num_cores(data)
     export_cmd = utils.get_R_exports()
     ploidy_dir = utils.safe_makedir(os.path.join(work_dir, "run_ploidy%s" % ploidy))
+
+    extra_params = ""
+    # TitanCNA's model is influenced by the variance in read coverage data
+    # and data type: set reasonable defaults for non-WGS runs
+    # (see https://github.com/gavinha/TitanCNA/tree/master/scripts/R_scripts)
+    if data["coverage_interval"] != "genome":
+        extra_params= " --alphaK=2500 -alphaKHigh=2500"
+
     cluster_dir = "%s_cluster%02d" % (sample, num_clusters)
     out_dir = os.path.join(ploidy_dir, cluster_dir)
     if not utils.file_uptodate(out_dir + ".titan.txt", cn_file):
@@ -104,6 +112,7 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                        "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir}")
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
+                cmd += extra_params
                 do.run(cmd.format(**locals()), "TitanCNA CNV detection: ploidy %s, cluster %s" % (ploidy, num_clusters))
             for fname in glob.glob(os.path.join(tmp_dir, cluster_dir + "*")):
                 shutil.move(fname, ploidy_dir)
