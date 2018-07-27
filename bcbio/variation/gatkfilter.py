@@ -16,7 +16,7 @@ def run(call_file, ref_file, vrn_files, data):
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
     if "gatkcnn" in dd.get_tools_on(data):
         return _cnn_filter(call_file, vrn_files, data)
-    elif config_utils.use_vqsr(algs):
+    elif config_utils.use_vqsr(algs, call_file):
         if vcfutils.is_gvcf_file(call_file):
             raise ValueError("Cannot force gVCF output with joint calling using tools_on: [gvcf] and use VQSR. "
                              "Try using cutoff-based soft filtering with tools_off: [vqsr]")
@@ -240,7 +240,7 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
     """
     # Algorithms multiplied by number of input files to check for large enough sample sizes
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
-    if (not config_utils.use_vqsr(algs) or
+    if (not config_utils.use_vqsr(algs, in_file) or
           _already_cutoff_filtered(in_file, filter_type)):
         logger.info("Skipping VQSR, using cutoff-based filers: we don't have whole genome input data")
         return hard_filter_fn(in_file, data)

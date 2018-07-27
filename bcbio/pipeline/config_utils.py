@@ -415,9 +415,10 @@ def adjust_opts(in_opts, config):
 
 # specific program usage
 
-def use_vqsr(algs):
+def use_vqsr(algs, call_file=None):
     """Processing uses GATK's Variant Quality Score Recalibration.
     """
+    from bcbio.variation import vcfutils
     vqsr_callers = set(["gatk", "gatk-haplotype"])
     vqsr_sample_thresh = 50
     vqsr_supported = collections.defaultdict(int)
@@ -432,11 +433,15 @@ def use_vqsr(algs):
             continue
         for c in callers:
             if c in vqsr_callers:
-                vqsr_supported[c] += 1
                 if "vqsr" in alg.get("tools_on", []):  # VQSR turned on:
+                    vqsr_supported[c] += 1
                     coverage_intervals.add("genome")
+                # Do not try VQSR for gVCF inputs
+                elif call_file and vcfutils.is_gvcf_file(call_file):
+                    pass
                 else:
                     coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+                    vqsr_supported[c] += 1
     if len(vqsr_supported) > 0:
         num_samples = max(vqsr_supported.values())
         if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:
