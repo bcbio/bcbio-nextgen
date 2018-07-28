@@ -212,11 +212,12 @@ def _get_fgbio_options(data, umi_method):
     cons_opts = ["--min-input-base-quality"]
     if umi_method != "paired":
         cons_opts += ["--min-reads", "--max-reads"]
-    filter_opts = ["--min-reads", "--min-base-quality"]
+    filter_opts = ["--min-reads", "--min-base-quality", "--max-base-error-rate"]
     defaults = {"--min-reads": "1",
                 "--max-reads": "100000",
                 "--min-map-q": "1",
                 "--min-base-quality": "13",
+                "--max-base-error-rate": "0.1",
                 "--min-input-base-quality": "2",
                 "--edits": "1"}
     ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
