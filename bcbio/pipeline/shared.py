@@ -133,10 +133,10 @@ def _subset_bed_by_region(in_file, out_file, regions, ref_file, do_merge=True):
     sort_kwargs = {"faidx": ref.fasta_idx(ref_file)} if ref_file else {}
     if do_merge:
         orig_bed.intersect(region_bed, nonamecheck=True).saveas().sort(**sort_kwargs).saveas().\
-            filter(lambda x: len(x) > 1).saveas().merge().saveas(out_file)
+            filter(lambda x: len(x) >= 1).saveas().merge().saveas(out_file)
     else:
         orig_bed.intersect(region_bed, nonamecheck=True).saveas().sort(**sort_kwargs).saveas().\
-            filter(lambda x: len(x) > 1).saveas(out_file)
+            filter(lambda x: len(x) >= 1).saveas(out_file)
 
 def remove_lcr_regions(orig_bed, items):
     """If configured and available, update a BED file to remove low complexity regions.
