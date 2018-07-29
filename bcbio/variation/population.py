@@ -46,6 +46,9 @@ def prep_gemini_db(fnames, call_info, samples, extras):
             gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
         else:
             gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
+    # only pass along gemini_vcf_downstream if uniquely created here
+    if os.path.islink(gemini_vcf):
+        gemini_vcf = None
     return [[(name, caller), {"db": gemini_db if utils.file_exists(gemini_db) else None,
                               "vcf": ann_vcf or gemini_vcf,
                               "decomposed": decomposed}]]
