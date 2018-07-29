@@ -326,7 +326,7 @@ def _place_secondary_files(inp_tool, inp_binding=None):
     """
     def _is_file(val):
         return (val == "File" or (isinstance(val, (list, tuple)) and
-                                  ("File" in val or any(isinstance(x, dict) and x["items"] == "File") for x in val)))
+                                  ("File" in val or any(isinstance(x, dict) and _is_file(val)) for x in val)))
     secondary_files = inp_tool.pop("secondaryFiles", None)
     if secondary_files:
         key = []
@@ -509,7 +509,7 @@ def _indexes_to_secondary_files(gresources, genome_build):
         if isinstance(val, dict) and "indexes" in val:
             # list of indexes -- aligners
             if len(val.keys()) == 1:
-                indexes = val["indexes"]
+                indexes = sorted(val["indexes"])
                 if len(indexes) == 0:
                     if refname not in alignment.allow_noindices():
                         raise ValueError("Did not find indexes for %s: %s" % (refname, val))
@@ -550,7 +550,7 @@ def _get_secondary_files(val):
             for s in _get_secondary_files(x):
                 s_counts[s] += 1
         for s, count in s_counts.items():
-            if s and s not in out and count == len(val):
+            if s and s not in out and count == len([x for x in val if x]):
                 out.append(s)
     elif isinstance(val, dict) and (val.get("class") == "File" or "File" in val.get("class")):
         if "secondaryFiles" in val:
@@ -700,15 +700,20 @@ def _to_cwlfile_with_indexes(val, get_retriever):
     Identifies the top level directory and creates a tarball, avoiding
     trying to handle complex secondary setups which are not cross platform.
 
-    Skips doing this for reference files, which take up too much time and
-    space to unpack multiple times.
+    Skips doing this for reference files and standard setups like bwa, which
+    take up too much time and space to unpack multiple times.
     """
     if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
         return _item_to_cwldata(val["base"], get_retriever)
     else:
-        dirname = os.path.dirname(val["base"])
-        assert all([x.startswith(dirname) for x in val["indexes"]])
-        return {"class": "File", "path": directory_tarball(dirname)}
+        # Standard named set of indices, like bwa
+        cp_dir, cp_base = os.path.split(os.path.commonprefix([val["base"]] + val["indexes"]))
+        if cp_base and cp_dir == os.path.dirname(val["base"]):
+            return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
+        else:
+            dirname = os.path.dirname(val["base"])
+            assert all([x.startswith(dirname) for x in val["indexes"]])
+            return {"class": "File", "path": directory_tarball(dirname)}
 
 def _add_secondary_if_exists(secondary, out, get_retriever):
     """Add secondary files only if present locally or remotely.
@@ -719,7 +724,7 @@ def _add_secondary_if_exists(secondary, out, get_retriever):
         out["secondaryFiles"] = [{"class": "File", "path": f} for f in secondary]
     return out
 
-def _item_to_cwldata(x, get_retriever):
+def _item_to_cwldata(x, get_retriever, indexes=None):
     """"Markup an item with CWL specific metadata.
     """
     if isinstance(x, (list, tuple)):
@@ -729,7 +734,9 @@ def _item_to_cwldata(x, get_retriever):
            objectstore.is_remote(x))):
         if _file_local_or_remote(x, get_retriever):
             out = {"class": "File", "path": x}
-            if x.endswith(".bam"):
+            if indexes:
+                out = _add_secondary_if_exists(indexes, out, get_retriever)
+            elif x.endswith(".bam"):
                 out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
