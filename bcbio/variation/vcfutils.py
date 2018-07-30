@@ -640,6 +640,7 @@ def is_gvcf_file(in_file):
             if not line.startswith("##"):
                 if n > to_check:
                     break
+                n += 1
                 parts = line.split("\t")
                 # GATK
                 if parts[4] == "<NON_REF>":
