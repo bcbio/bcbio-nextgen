@@ -11,7 +11,7 @@ import copy
 import glob
 import sys
 import subprocess
-from itertools import repeat
+from itertools import repeat, islice
 from distutils.version import LooseVersion
 
 import bcbio.pipeline.datadict as dd
@@ -110,6 +110,17 @@ def umi_transform(data):
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     safe_makedir(umi_dir)
     transform = dd.get_umi_type(data)
+    if not transform:
+        logger.info("No UMI transform specified, assuming pre-transformed data.")
+        if is_transformed(fq1):
+            logger.info("%s detected as pre-transformed, passing it on unchanged." % fq1)
+            data["files"] = [fq1]
+            return [[data]]
+        else:
+            logger.error("No UMI transform was specified, but %s does not look "
+                         "pre-transformed." % fq1)
+            sys.exit(1)
+
     if file_exists(transform):
         transform_file = transform
     else:
@@ -433,3 +444,15 @@ def filter_barcode_histogram(filtered_out_file, out_file, cutoff):
                     if int(reads) > cutoff:
                         outh.write("%s-%s\t%s\n" % (sample_name, barcode, reads))
     return filtered_out_file
+
+def is_transformed(fastq):
+    """
+    check the first 100 reads to see if a FASTQ file has already been transformed
+    by umis
+    """
+
+    with open_fastq(fastq) as in_handle:
+        for line in islice(in_handle, 400):
+            if "UMI_" in line:
+                return True
+    return False
