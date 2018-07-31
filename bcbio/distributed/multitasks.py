@@ -71,6 +71,10 @@ def run_salmon_index(*args):
     return salmon.run_salmon_index(*args)
 
 @utils.map_wrap
+def run_rapmap_index(*args):
+    return rapmap.run_rapmap_index(*args)
+
+@utils.map_wrap
 def run_counts_spikein(*args):
     return spikein.run_counts_spikein(*args)
 

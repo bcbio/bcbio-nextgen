@@ -16,6 +16,8 @@
 - RNA-seq: output a matrix of un-deduped UMI counts when doing single-cell/DGE
   for quality control purposes. This is called `tagcounts-dupes.mtx` in the
   final directory.
+- single-cell RNA-seq: allow pre-transformed FASTQ files as input to DGE/single-cell pipeline.
+- single-cell RNA-seq: only create one index per specified genome instead of per sample
 
 ## 1.1.0 (11 July 2018)
 

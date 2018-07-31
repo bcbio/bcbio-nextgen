@@ -31,6 +31,7 @@ def singlecell_rnaseq(samples, run_parallel):
     samples = run_parallel("run_filter_barcodes", samples)
     samples = run_parallel("run_barcode_histogram", samples)
     if quantifier == "rapmap":
+        samples = run_parallel("run_rapmap_index", [samples])
         samples = run_parallel("run_rapmap_align", samples)
         samples = run_parallel("run_tagcount", samples)
         samples = run_parallel("run_concatenate_sparse_counts", [samples])
