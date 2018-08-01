@@ -6,6 +6,7 @@
   VCFs with external information.
 - variant: support octopus variant caller for germline and somatic samples.
 - peddy: fix bug where not all files uploaded on first pipeline run
+- GATK: support ploidy specification during joint calling.
 - variant calling: support bcftools 1.9 which is more strict about duplicated
   key names in INFO and FORMAT.
 - RNA-seq variant calling: Apply annotations after joint calling for GATK to

@@ -162,10 +162,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                         params += ["-GQB", str(boundary)]
             # Enable non-diploid calling in GATK 3.3+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
-                # GenomicsDB does not support non-diploid samples in GATK4 joint calling
-                # https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
-                if not is_joint and gatk_type == "gatk4":
-                    params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
+                params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             if gatk_type == "gatk4":
                 # GATK4 Spark calling does not support bgzipped output, use plain VCFs
                 if is_joint and _use_spark(num_cores, gatk_type):

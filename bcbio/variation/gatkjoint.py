@@ -12,7 +12,7 @@ import toolz as tz
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import bamprep, vcfutils
+from bcbio.variation import bamprep, ploidy, vcfutils
 
 def run_region(data, region, vrn_files, out_file):
     """Perform variant calling on gVCF inputs in a specific genomic region.
@@ -84,6 +84,7 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
                       "-R", dd.get_ref_file(data),
                       "--output", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
+            params += ["-ploidy", str(ploidy.get_ploidy([data], region))]
             # Avoid slow genotyping runtimes with improved quality score calculation in GATK4
             # https://gatkforums.broadinstitute.org/gatk/discussion/11471/performance-troubleshooting-tips-for-genotypegvcfs/p1
             params += ["--use-new-qual-calculator"]
