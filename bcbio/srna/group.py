@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import file_exists, safe_makedir, move_safe, append_stem
+from bcbio.utils import file_exists, safe_makedir, move_safe, append_stem, get_bcbio_bin
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -118,7 +118,7 @@ def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
-    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(get_bcbio_bin(), "seqcluster")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
         annotation_file = "-g " + annotation_file
@@ -137,7 +137,7 @@ def _report(data, reference):
     """
     Run report of seqcluster to get browser options for results
     """
-    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(get_bcbio_bin(), "seqcluster")
     work_dir = dd.get_work_dir(data)
     out_dir = safe_makedir(os.path.join(work_dir, "seqcluster", "report"))
     out_file = op.join(out_dir, "seqcluster.db")

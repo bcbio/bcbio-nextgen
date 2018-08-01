@@ -318,14 +318,21 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     from bcbio.srna.group import report as srna_report
 
     samples = rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples)
+
     with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
-                            ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
+                            ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
+                    samples, config, dirs, "alignment",
+                    multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("alignment", dirs):
+            samples = run_parallel("process_alignment", samples)
+
+    with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
+                          ensure_mem={"bowtie": 8, "bowtie2": 8, "star": 2}),
                     [samples[0]], config, dirs, "alignment") as run_parallel:
         with profile.report("prepare", dirs):
             samples = run_parallel("seqcluster_prepare", [samples])
-        with profile.report("alignment", dirs):
+        with profile.report("seqcluster alignment", dirs):
             samples = run_parallel("srna_alignment", [samples])
-            samples = run_parallel("process_alignment", samples)
 
     with prun.start(_wres(parallel, ["picard", "miraligner"]),
                     samples, config, dirs, "annotation") as run_parallel:
@@ -333,7 +340,7 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("srna_annotation", samples)
 
     with prun.start(_wres(parallel, ["seqcluster", "mirge"],
-                            ensure_mem={"seqcluster": 8}),
+                          ensure_mem={"seqcluster": 8}),
                     [samples[0]], config, dirs, "cluster") as run_parallel:
         with profile.report("cluster", dirs):
             samples = run_parallel("seqcluster_cluster", [samples])
