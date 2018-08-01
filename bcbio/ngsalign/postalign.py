@@ -222,7 +222,11 @@ def _get_fgbio_options(data, umi_method):
                 "--edits": "1"}
     ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
     assert len(ropts) % 2 == 0, "Expect even number of options for fgbio" % ropts
-    defaults.update(dict(tz.partition(2, ropts)))
+    ropts = dict(tz.partition(2, ropts))
+    # Back compatibility for older base quality settings
+    if "--min-consensus-base-quality" in ropts:
+        ropts["--min-base-quality"] = ropts.pop("--min-consensus-base-quality")
+    defaults.update(ropts)
     group_out = " ".join(["%s=%s" % (x, defaults[x]) for x in group_opts])
     cons_out = " ".join(["%s=%s" % (x, defaults[x]) for x in cons_opts])
     filter_out = " ".join(["%s=%s" % (x, defaults[x]) for x in filter_opts])
