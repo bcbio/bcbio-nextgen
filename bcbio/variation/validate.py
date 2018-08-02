@@ -247,6 +247,8 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data, validate_
         vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
 
         rtg_ref = tz.get_in(["reference", "rtg"], data)
+        if isinstance(rtg_ref, dict) and "base" in rtg_ref:
+            rtg_ref = os.path.dirname(rtg_ref["base"])
         assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
                                                      "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
         # handle CWL where we have a reference to a single file in the RTG directory
