@@ -222,6 +222,7 @@ def _detect_duplicates(bam_file, out_dir, data):
     out_file = os.path.join(out_dir, "dup_metrics.txt")
     if not utils.file_exists(out_file):
         dup_align_bam = postalign.dedup_bam(bam_file, data)
+        logger.info("Detecting duplicates in %s." % dup_align_bam)
         dup_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=False)
         tot_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=True)
         with file_transaction(data, out_file) as tx_out_file:
@@ -243,25 +244,41 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
                 if bio.startswith("rRNA"):
                     out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
 
-def _detect_rRNA(data):
-    gtf_file = dd.get_gtf_file(data)
-    quant = tz.get_in(["quant", "tsv"], data)
-    if not quant:
-        salmon_dir = dd.get_salmon_dir(data)
-        if salmon_dir:
-            quant = os.path.join(salmon_dir, "quant", "quant.sf")
-    rrna_features = gtf.get_rRNA(gtf_file)
-    transcripts = set([x[1] for x in rrna_features if x])
-    if not (transcripts and quant and utils.file_exists(quant)):
-        return {'rRNA': "NA", "rRNA_rate": "NA"}
-    sample_table = pd.read_csv(quant, sep="\t")
-    rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
-    total_exp = map(float, sample_table["NumReads"])
-    rrna = sum(rrna_exp)
-    if sum(total_exp) == 0:
-        return {'rRNA': str(rrna), 'rRNA_rate': "NA"}
-    rrna_rate = float(rrna) / sum(total_exp)
-    return {'rRNA': str(rrna), 'rRNA_rate': str(rrna_rate)}
+def _detect_rRNA(data, out_dir):
+    out_file = os.path.join(out_dir, "rRNA_metrics.txt")
+    if not utils.file_exists(out_file):
+        gtf_file = dd.get_gtf_file(data)
+        quant = tz.get_in(["quant", "tsv"], data)
+        if not quant:
+            salmon_dir = dd.get_salmon_dir(data)
+            if salmon_dir:
+                quant = os.path.join(salmon_dir, "quant", "quant.sf")
+        logger.info("Calculating RNA-seq rRNA metrics for %s." % quant)
+        rrna_features = gtf.get_rRNA(gtf_file)
+        transcripts = set([x[1] for x in rrna_features if x])
+        if not (transcripts and quant and utils.file_exists(quant)):
+            return {'rRNA': "NA", "rRNA_rate": "NA"}
+        sample_table = pd.read_csv(quant, sep="\t")
+        rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
+        total_exp = map(float, sample_table["NumReads"])
+        rrna = sum(rrna_exp)
+        if sum(total_exp) == 0:
+            rrna_rate = "NA"
+        else:
+            rrna_rate = float(rrna) / sum(total_exp)
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(",".join(["rRNA", str(rrna)]) + "\n")
+                out_handle.write(",".join(["rRNA_rate", str(rrna_rate)]) + "\n")
+    return _read_memoized_rrna(out_file)
+
+def _read_memoized_rrna(rrna_file):
+    rrna_dict = {}
+    with open(rrna_file) as in_handle:
+        for line in in_handle:
+            tokens = line.split(",")
+            rrna_dict[tokens[0]] = tokens[1]
+    return rrna_dict
 
 def _parse_qualimap_rnaseq(table):
     """
@@ -321,7 +338,7 @@ def run_rnaseq(bam_file, data, out_dir):
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
-    metrics.update(_detect_rRNA(data))
+    metrics.update(_detect_rRNA(data, results_dir))
     metrics.update({"Average_insert_size": bam.estimate_fragment_size(bam_file)})
     metrics = _parse_metrics(metrics)
     # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order
