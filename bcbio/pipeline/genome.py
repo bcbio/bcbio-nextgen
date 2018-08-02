@@ -228,7 +228,8 @@ def get_refs(genome_build, aligner, galaxy_base, data):
             cur_ref = _get_ref_from_galaxy_loc(name, genome_build, loc_file, galaxy_dt, need_remap,
                                                galaxy_config, data)
             base = os.path.normpath(utils.add_full_path(cur_ref, galaxy_config["tool_data_path"]))
-            if os.path.isdir(base):
+            # Expand directories unless we are an aligner like minimap2 that uses the seq directory
+            if os.path.isdir(base) and not (need_remap and os.path.basename(base) == "seq"):
                 indexes = sorted(glob.glob(os.path.join(base, "*")))
             elif name != "samtools":
                 indexes = sorted(glob.glob("%s*" % utils.splitext_plus(base)[0]))
@@ -249,8 +250,11 @@ def get_refs(genome_build, aligner, galaxy_base, data):
         # add additional indices relative to the base
         if tz.get_in(["fasta", "base"], out):
             ref_dir, ref_filebase = os.path.split(out["fasta"]["base"])
-            out["rtg"] = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
-                                                       "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
+            rtg_dir = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "rtg",
+                                                    "%s.sdf" % (os.path.splitext(ref_filebase)[0])))
+            out["rtg"] = {"base": os.path.join(rtg_dir, "mainIndex"),
+                          "indexes": [x for x in glob.glob(os.path.join(rtg_dir, "*"))
+                                      if not x.endswith("/mainIndex")]}
             twobit = os.path.normpath(os.path.join(ref_dir, os.path.pardir, "ucsc",
                                                    "%s.2bit" % (os.path.splitext(ref_filebase)[0])))
             if os.path.exists(twobit):
