@@ -58,7 +58,14 @@ def run_vcfanno(vcf_file, data, decomposed=False):
     """
     conf_files = dd.get_vcfanno(data)
     if conf_files:
-        conf_files = [(None, conf_files)]
+        with_basepaths = collections.defaultdict(list)
+        if not isinstance(conf_files, (list, tuple)):
+            conf_files = [conf_files]
+        for f in conf_files:
+            data_basepath = (install.get_gemini_dir(data)
+                             if f.find("gemini") >= 0 and is_human(data, builds=["37"]) else None)
+            with_basepaths[data_basepath].append(f)
+        conf_files = with_basepaths.items()
     else:
         conf_files = _default_conf_files(data)
     out_file = None
