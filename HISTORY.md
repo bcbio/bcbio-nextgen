@@ -21,6 +21,8 @@
 - single-cell RNA-seq: only create one index per specified genome instead of per
   sample
 - fgbio: back compatibility for older quality setting `--min-consensus-base-quality`
+- RNA-seq: fix for `fusion_caller` getting interpreted as a path, leading to memoization/upload issues.
+- RNA-seq: memoize rRNA quality calculations, speeding up reruns.
 
 ## 1.1.0 (11 July 2018)
 
