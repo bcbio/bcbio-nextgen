@@ -22,6 +22,8 @@ def run(_, data, out_dir):
     # ratio = bam.get_aligned_reads(bam_file, data)
     out = out_stats = None
     db = tz.get_in(["config", "algorithm", "kraken"], data)
+    if db and isinstance(db, (list, tuple)):
+        db = db[0]
     kraken_cmd = config_utils.get_program("kraken", data["config"])
     if db == "minikraken":
         db = os.path.join(install._get_data_dir(), "genomes", "kraken", "minikraken")
