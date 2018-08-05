@@ -19,6 +19,7 @@ def _get_main_and_json(directory):
     """
     directory = os.path.normpath(os.path.abspath(directory))
     main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
+    main_cwl = [x for x in main_cwl if not x.find("-pack") >= 0]
     assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
     main_json = glob.glob(os.path.join(directory, "main-*-samples.json"))
     assert len(main_json) == 1, "Did not find main json in %s" % directory
@@ -42,6 +43,14 @@ def _run_tool(cmd, use_container=True, work_dir=None, log_file=None):
     finally:
         if use_container and work_dir:
             _chown_workdir(work_dir)
+
+def _pack_cwl(unpacked_cwl):
+    """Pack CWL into a single document for submission.
+    """
+    out_file = "%s-pack%s" % os.path.splitext(unpacked_cwl)
+    cmd = "cwltool --pack {unpacked_cwl} > {out_file}"
+    _run_tool(cmd.format(**locals()))
+    return out_file
 
 def _chown_workdir(work_dir):
     """Ensure work directory files owned by original user.
@@ -133,6 +142,19 @@ def _run_bunny(args):
     cmd = ["rabix"] + flags + [main_file, json_file]
     with utils.chdir(work_dir):
         _run_tool(cmd, not args.no_container, work_dir, log_file)
+
+def _run_wes(args):
+    """Run CWL using a Workflow Execution Service (WES) endpoint
+    """
+    main_file, json_file, project_name = _get_main_and_json(args.directory)
+    main_file = _pack_cwl(main_file)
+    opts = []
+    if args.host:
+        opts += ["--host", args.host]
+    if args.auth:
+        opts += ["--auth", args.auth]
+    cmd = ["wes-client"] + opts + [main_file, json_file]
+    _run_tool(cmd)
 
 def _run_cromwell(args):
     """Run CWL with Cromwell.
@@ -264,7 +286,8 @@ _TOOLS = {"cwltool": _run_cwltool,
           "arvados": _run_arvados,
           "toil": _run_toil,
           "bunny": _run_bunny,
-          "funnel": _run_funnel}
+          "funnel": _run_funnel,
+          "wes": _run_wes}
 
 def run(args):
     _TOOLS[args.tool](args)
