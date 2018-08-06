@@ -273,6 +273,16 @@ def vcf_has_variants(in_file):
                     return True
     return False
 
+def vcf_has_nonfiltered_variants(in_file):
+    if os.path.exists(in_file):
+        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+            for line in in_handle:
+                if line.strip() and not line.startswith("#"):
+                    parts = line.split("\t")
+                    if parts[6] in set(["PASS", "."]):
+                        return True
+    return False
+
 # ## Merging of variant files
 
 def merge_variant_files(orig_files, out_file, ref_file, config, region=None):

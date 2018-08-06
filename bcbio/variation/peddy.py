@@ -48,30 +48,41 @@ def is_human(data):
             dd.get_genome_build(data) in ["hg19", "GRCh37", "hg38"])
 
 def run_peddy(samples, out_dir=None):
-    vcf_file = None
-    for d in samples:
-        vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
-        if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
-            if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
-                vcf_file = vcinfo["vrn_file"]
-                break
     data = samples[0]
-    peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
-    if not peddy or not vcf_file or not is_human(data):
-        logger.info("peddy is not installed, not human or sample VCFs don't match, skipping correspondence checking "
-                    "for %s." % vcf_file)
-        return samples
     batch = dd.get_batch(data) or dd.get_sample_name(data)
     if out_dir:
         peddy_dir = safe_makedir(out_dir)
     else:
         peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", batch, "peddy"))
-    ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
     peddy_prefix = os.path.join(peddy_dir, batch)
     peddy_report = peddy_prefix + ".html"
+
+    vcf_file = None
+    for d in samples:
+        vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
+        if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
+            if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
+                if vcinfo["vrn_file"] and vcfutils.vcf_has_nonfiltered_variants(vcinfo["vrn_file"]):
+                    vcf_file = vcinfo["vrn_file"]
+                    break
+    peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
+    if not peddy or not vcf_file or not is_human(data):
+        if not peddy:
+            reason = "peddy executable not found"
+        elif not is_human(data):
+            reason = "sample is not human"
+        else:
+            assert not vcf_file
+            reason = "no suitable VCF files found with the sample and non-filtered variants"
+        msg = "Skipping peddy QC, %s: %s" % (reason, [dd.get_sample_name(d) for d in samples])
+        with open(peddy_prefix + "-failed.log", "w") as out_handle:
+            out_handle.write(msg)
+        logger.info(msg)
+        return samples
     if file_exists(peddy_prefix + "-failed.log"):
         return samples
     if not file_exists(peddy_report):
+        ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
         num_cores = dd.get_num_cores(data)
         with tx_tmpdir(data) as tx_dir:
             peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
