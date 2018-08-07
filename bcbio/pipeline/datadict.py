@@ -134,7 +134,6 @@ LOOKUPS = {
                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": [], "always_list": True},
-    "ericscript_db": {"keys": ["config", "algorithm", "ericscript_db"], "default": None},
     "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},
     "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
