@@ -47,7 +47,8 @@ def add_required_resources(resources):
                 ["variation", "lcr"], ["variation", "polyx"],
                 ["variation", "encode_blacklist"],
                 ["variation", "train_hapmap"], ["variation", "train_indels"],
-                ["variation", "editing"]]
+                ["variation", "editing"], ["variation", "exac"], ['variation", "esp"'],
+                ["variation", "1000g"]]
     for key in required:
         if not tz.get_in(key, resources):
             resources = tz.update_in(resources, key, lambda x: None)
