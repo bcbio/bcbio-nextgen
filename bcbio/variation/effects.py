@@ -18,7 +18,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
-from bcbio.variation import vcfutils
+from bcbio.variation import vcfutils, vcfanno
 
 # ## High level
 
@@ -130,7 +130,6 @@ def run_vep(in_file, data):
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("vep", data["config"])
-                is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 # HGVS requires a bgzip compressed, faidx indexed input file or is unusable slow
                 if dd.get_ref_file_compressed(data):
                     hgvs_compatible = True
@@ -138,7 +137,7 @@ def run_vep(in_file, data):
                 else:
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
-                if is_human:
+                if vcfanno.is_human(data):
                     plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,
                                   "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
                     plugins = ["loftee"]

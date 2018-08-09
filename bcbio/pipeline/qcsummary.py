@@ -19,7 +19,7 @@ from bcbio.pipeline import config_utils, run_info
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
-from bcbio.variation import damage, peddy, vcfutils
+from bcbio.variation import damage, peddy, vcfutils, vcfanno
 
 # ## High level functions to generate summary
 
@@ -105,7 +105,7 @@ def get_qc_tools(data):
         if "coverage_qc" not in dd.get_tools_off(data):
             to_run += ["coverage", "picard"]
         to_run += ["qsignature", "variants"]
-        if peddy.is_human(data):
+        if vcfanno.is_human(data):
             to_run += ["contamination", "peddy"]
         if vcfutils.get_paired([data]):
             to_run += ["viral"]

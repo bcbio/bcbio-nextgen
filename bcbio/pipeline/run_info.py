@@ -24,7 +24,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics, programs, versioncheck
 from bcbio.provenance import data as provenancedata
 from bcbio.qc import viral
-from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils
+from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils, vcfanno
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
 
@@ -72,6 +72,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
         item.pop("algorithm", None)
         item = add_reference_resources(item, remote_retriever)
         item["config"]["algorithm"]["qc"] = qcsummary.get_qc_tools(item)
+        item["config"]["algorithm"]["vcfanno"] = vcfanno.find_annotations(item)
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
         if tmp_dir:

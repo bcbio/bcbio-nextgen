@@ -10,12 +10,11 @@ import os
 import toolz as tz
 
 from bcbio import install, utils
-from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import naming, normalize, vcfanno, vcfutils
+from bcbio.variation import normalize, vcfanno, vcfutils
 
 # Current callers we can't create databases for
 # mutect2 -- fails on multi-allelic inputs represented as non-diploid
@@ -24,7 +23,7 @@ NO_DB_CALLERS = ["mutect2"]
 
 def prep_gemini_db(fnames, call_info, samples, extras):
     """Prepare a gemini database from VCF inputs prepared with snpEff.
-    """#
+    """
     data = samples[0]
     name, caller, is_batch = call_info
     build_type = _get_build_type(fnames, samples, caller)
@@ -42,7 +41,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     if ann_vcf and build_type and not utils.file_exists(gemini_db):
         ped_file = create_ped_file(samples + extras, gemini_vcf)
         # Original approach for hg19/GRCh37
-        if is_human(data, builds=["37"]) and "gemini_orig" in build_type:
+        if vcfanno.is_human(data, builds=["37"]) and "gemini_orig" in build_type:
             gemini_db = create_gemini_db_orig(gemini_vcf, data, gemini_db, ped_file)
         else:
             gemini_db = create_gemini_db(ann_vcf, data, gemini_db, ped_file)
@@ -54,50 +53,36 @@ def prep_gemini_db(fnames, call_info, samples, extras):
                               "decomposed": decomposed}]]
 
 def run_vcfanno(vcf_file, data, decomposed=False):
-    """Run vcfanno, providing annotations from external databases.
+    """Run vcfanno, providing annotations from external databases if needed.
     """
     conf_files = dd.get_vcfanno(data)
+    VcfannoIn = collections.namedtuple("VcfannoIn", ["conf", "lua"])
     if conf_files:
         with_basepaths = collections.defaultdict(list)
-        if not isinstance(conf_files, (list, tuple)):
-            conf_files = [conf_files]
         for f in conf_files:
-            data_basepath = (install.get_gemini_dir(data)
-                             if f.find("gemini") >= 0 and is_human(data, builds=["37"]) else None)
-            with_basepaths[data_basepath].append(f)
+            conf_file = f
+            lua_file = "%s.lua" % utils.splitext_plus(conf_file)[0]
+            assert os.path.exists(conf_file), conf_file
+            if lua_file and not os.path.exists(lua_file):
+                lua_file = None
+            if (conf_file.find("gemini") >= 0 and vcfanno.is_human(data, builds=["37"]) and
+                  not dd.get_variation_resources(data).get("exac")):
+                data_basepath = install.get_gemini_dir(data)
+            else:
+                data_basepath = os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)), os.pardir))
+            with_basepaths[data_basepath].append(VcfannoIn(conf_file, lua_file))
         conf_files = with_basepaths.items()
-    else:
-        conf_files = _default_conf_files(data)
     out_file = None
     if conf_files:
-        for data_basepath, conf_files in conf_files:
-            ann_file = vcfanno.run_vcfanno(vcf_file, conf_files, data,
-                                           data_basepath=data_basepath,
-                                           decomposed=decomposed)
+        for data_basepath, anno_files in conf_files:
+            ann_file = vcfanno.run(vcf_file, [x.conf for x in anno_files],
+                                   [x.lua for x in anno_files], data,
+                                   basepath=data_basepath,
+                                   decomposed=decomposed)
             if ann_file:
                 out_file = ann_file
                 vcf_file = ann_file
     return out_file
-
-def _default_conf_files(data):
-    conf_files = collections.defaultdict(list)
-    if _has_gemini_data(data):
-        data_basepath = install.get_gemini_dir(data) if is_human(data, builds=["37"]) else None
-        conf_files[data_basepath].append("gemini")
-    if _annotate_somatic(data):
-        conf_files[None].append("somatic")
-    return conf_files.items()
-
-def _annotate_somatic(data):
-    """Annotate somatic calls if we have cosmic data installed.
-    """
-    if is_human(data):
-        paired = vcfutils.get_paired([data])
-        if paired:
-            r = dd.get_variation_resources(data)
-            if r.get("cosmic") and os.path.exists(r["cosmic"]):
-                return True
-    return False
 
 def create_gemini_db(gemini_vcf, data, gemini_db=None, ped_file=None):
     """Generalized vcfanno/vcf2db workflow for loading variants into a GEMINI database.
@@ -297,17 +282,6 @@ def get_multisample_vcf(fnames, name, caller, data):
         utils.symlink_plus(unique_fnames[0], gemini_vcf)
         return gemini_vcf
 
-def _has_gemini_data(data):
-    """Use gemini if we installed required data for hg19, hg38.
-
-    Other organisms don't have special data targets.
-    """
-    if is_human(data):
-        from bcbio import install
-        return "gemini" in install.get_defaults().get("datatarget", [])
-    else:
-        return True
-
 def _get_build_type(fnames, samples, caller):
     """Confirm we should build a gemini database: need gemini in tools_on.
 
@@ -316,37 +290,12 @@ def _get_build_type(fnames, samples, caller):
     """
     build_type = set()
     if any(vcfutils.vcf_has_variants(f) for f in fnames) and caller not in NO_DB_CALLERS:
-        genomes = set()
         for data in samples:
             if any([x in dd.get_tools_on(data)
                     for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
-                if _has_gemini_data(data):
-                    genomes.add(data["genome_build"])
+                if vcfanno.annoated_gemini(data):
                     build_type.add("gemini_orig" if "gemini_orig" in dd.get_tools_on(data) else "gemini")
-        if len(genomes) == 1:
-            return True
     return build_type
-
-def is_human(data, builds=None):
-    """Gemini original supports human build 37, search by name or extra GL contigs.
-    """
-    def has_build37_contigs(data):
-        for contig in ref.file_contigs(dd.get_ref_file(data)):
-            if contig.name.startswith("GL") or contig.name.find("_gl") >= 0:
-                if contig.name in naming.GMAP["hg19"] or contig.name in naming.GMAP["GRCh37"]:
-                    return True
-        return False
-    if not builds or "37" in builds:
-        target_builds = ["hg19", "GRCh37"]
-        if dd.get_genome_build(data) in target_builds:
-            return True
-        elif has_build37_contigs(data):
-            return True
-    if not builds or "38" in builds:
-        target_builds = ["hg38"]
-        if dd.get_genome_build(data) in target_builds:
-            return True
-    return False
 
 def get_gemini_files(data):
     """Enumerate available gemini data files in a standard installation.

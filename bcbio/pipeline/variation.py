@@ -10,7 +10,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
 from bcbio.variation import (annotation, damage, effects, genotype, germline, population, prioritize,
-                             validate, vcfanno, vcfutils)
+                             validate, vcfutils)
 from bcbio.variation import multi as vmulti
 
 # ## CWL summarization
@@ -19,7 +19,7 @@ def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
     items = [utils.to_single_data(x) for x in items]
-    itemx = [_normalize_vc_input(x) for x in items]
+    items = [_normalize_vc_input(x) for x in items]
     items = validate.summarize_grading(items)
     items = [utils.to_single_data(x) for x in items]
     out = {"validate": validate.combine_validations(items),
@@ -102,11 +102,6 @@ def postprocess_variants(items):
         orig_items = _get_orig_items(items)
         logger.info("Annotate VCF file: %s" % cur_name)
         data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data), orig_items)
-        if dd.get_analysis(data).lower().find("rna-seq") >= 0:
-            logger.info("Annotate RNA editing sites")
-            ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
-            if ann_file:
-                data[vrn_key] = ann_file
         if cwlutils.is_cwl_run(data):
             logger.info("Annotate with population level variation data")
             ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)

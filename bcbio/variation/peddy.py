@@ -16,7 +16,7 @@ from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
-from bcbio.variation import vcfutils
+from bcbio.variation import vcfutils, vcfanno
 from bcbio.variation.population import create_ped_file
 from bcbio.qc import variant
 from bcbio.provenance import do
@@ -43,13 +43,11 @@ def run_qc(_, data, out_dir):
         if tz.get_in(["summary", "qc", "peddy"], qc_data):
             return tz.get_in(["summary", "qc", "peddy"], qc_data)
 
-def is_human(data):
-    return (tz.get_in(["genome_resources", "aliases", "human"], data, False) or
-            dd.get_genome_build(data) in ["hg19", "GRCh37", "hg38"])
-
 def run_peddy(samples, out_dir=None):
     data = samples[0]
     batch = dd.get_batch(data) or dd.get_sample_name(data)
+    if isinstance(batch, (list, tuple)):
+        batch = batch[0]
     if out_dir:
         peddy_dir = safe_makedir(out_dir)
     else:
@@ -66,10 +64,10 @@ def run_peddy(samples, out_dir=None):
                     vcf_file = vcinfo["vrn_file"]
                     break
     peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
-    if not peddy or not vcf_file or not is_human(data):
+    if not peddy or not vcf_file or not vcfanno.is_human(data):
         if not peddy:
             reason = "peddy executable not found"
-        elif not is_human(data):
+        elif not vcfanno.is_human(data):
             reason = "sample is not human"
         else:
             assert not vcf_file

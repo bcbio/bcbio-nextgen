@@ -5,7 +5,7 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           kallisto, salmon)
 from bcbio.rnaseq.gtf import tx2genefile
 from bcbio.ngsalign import bowtie2, alignprep
-from bcbio.variation import joint, multi, population, vardict, vcfanno, vcfutils
+from bcbio.variation import joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten, to_single_data
 from bcbio.log import logger
@@ -93,9 +93,6 @@ def run_rnaseq_ann_filter(data):
     """
     data = to_single_data(data)
     if dd.get_vrn_file(data):
-        ann_file = vcfanno.run_vcfanno(dd.get_vrn_file(data), ["rnaedit"], data)
-        if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
         ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
         if ann_file:
             data = dd.set_vrn_file(data, ann_file)
