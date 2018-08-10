@@ -52,6 +52,23 @@ def prep_gemini_db(fnames, call_info, samples, extras):
                               "vcf": ann_vcf or gemini_vcf,
                               "decomposed": decomposed}]]
 
+def _back_compatible_gemini(conf_files, data):
+    """Provide old install directory for configuration with GEMINI supplied tidy VCFs.
+
+    Handles new style (bcbio installed) and old style (GEMINI installed)
+    configuration and data locations.
+    """
+    if vcfanno.is_human(data, builds=["37"]):
+        for f in conf_files:
+            if f and os.path.basename(f) == "gemini.conf" and os.path.exists(f):
+                with open(f) as in_handle:
+                    for line in in_handle:
+                        if line.startswith("file"):
+                            fname = line.strip().split("=")[-1].replace('"', '').strip()
+                            if fname.find(".tidy.") > 0:
+                                return install.get_gemini_dir(data)
+    return None
+
 def run_vcfanno(vcf_file, data, decomposed=False):
     """Run vcfanno, providing annotations from external databases if needed.
 
@@ -60,6 +77,7 @@ def run_vcfanno(vcf_file, data, decomposed=False):
     conf_files = dd.get_vcfanno(data)
     if conf_files:
         with_basepaths = collections.defaultdict(list)
+        gemini_basepath = _back_compatible_gemini(conf_files, data)
         for f in conf_files:
             name = os.path.splitext(os.path.basename(f))[0]
             if f.endswith(".lua"):
@@ -70,11 +88,7 @@ def run_vcfanno(vcf_file, data, decomposed=False):
                 lua_file = "%s.lua" % utils.splitext_plus(conf_file)[0]
             if lua_file and not os.path.exists(lua_file):
                 lua_file = None
-            if (name == "gemini" and vcfanno.is_human(data, builds=["37"]) and
-                  not dd.get_variation_resources(data).get("exac")):
-                data_basepath = install.get_gemini_dir(data)
-            else:
-                data_basepath = None
+            data_basepath = gemini_basepath if name == "gemini" else None
             if conf_file and os.path.exists(conf_file):
                 with_basepaths[(data_basepath, name)].append(conf_file)
             if lua_file and os.path.exists(lua_file):
