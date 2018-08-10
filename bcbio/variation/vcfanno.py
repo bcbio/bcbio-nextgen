@@ -30,8 +30,8 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
     if not utils.file_exists(out_file):
         vcfanno = config_utils.get_program("vcfanno", data)
         with file_transaction(out_file) as tx_out_file:
-            conffn = _combine_files(conf_fns, tx_out_file, data)
-            luafn = _combine_files(lua_fns, tx_out_file, data)
+            conffn = _combine_files(conf_fns, tx_out_file, data, basepath is None)
+            luafn = _combine_files(lua_fns, tx_out_file, data, False)
             luaflag = "-lua {0}".format(luafn) if luafn and utils.file_exists(luafn) else ""
             basepathflag = "-base-path {0}".format(basepath) if basepath else ""
             cores = dd.get_num_cores(data)
@@ -42,7 +42,12 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
             do.run(cmd.format(**locals()), message)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _combine_files(orig_files, base_out_file, data):
+def _combine_files(orig_files, base_out_file, data, fill_paths=True):
+    """Combine multiple input files, fixing file paths if needed.
+
+    We fill in full paths from files in the data dictionary if we're
+    not using basepath (old style GEMINI).
+    """
     orig_files = [x for x in orig_files if x and utils.file_exists(x)]
     if not orig_files:
         return None
@@ -52,7 +57,7 @@ def _combine_files(orig_files, base_out_file, data):
         for orig_file in orig_files:
             with open(orig_file) as in_handle:
                 for line in in_handle:
-                    if line.startswith("file"):
+                    if fill_paths and line.startswith("file"):
                         line = _fill_file_path(line, data)
                     out_handle.write(line)
             out_handle.write("\n\n")
