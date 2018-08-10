@@ -20,13 +20,18 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
       to match alleles and make compatible with vcf2db
       (https://github.com/quinlan-lab/vcf2db/issues/14)
     """
-    anno_type = utils.splitext_plus(os.path.basename(conf_fns[0]))[0]
-    out_file = utils.splitext_plus(vcf)[0] + "-annotated-" + anno_type + ".vcf.gz"
+    conf_fns.sort(key=lambda x: os.path.basename(x) if x else x)
+    lua_fns.sort(key=lambda x: os.path.basename(x) if x else x)
+    ext = "-annotated-%s" % utils.splitext_plus(os.path.basename(conf_fns[0]))[0]
+    if vcf.find(ext) > 0:
+        out_file = vcf
+    else:
+        out_file = "%s%s.vcf.gz" % (utils.splitext_plus(vcf)[0], ext)
     if not utils.file_exists(out_file):
         vcfanno = config_utils.get_program("vcfanno", data)
         with file_transaction(out_file) as tx_out_file:
-            conffn = _combine_files(conf_fns, tx_out_file)
-            luafn = _combine_files(lua_fns, tx_out_file)
+            conffn = _combine_files(conf_fns, tx_out_file, data)
+            luafn = _combine_files(lua_fns, tx_out_file, data)
             luaflag = "-lua {0}".format(luafn) if luafn and utils.file_exists(luafn) else ""
             basepathflag = "-base-path {0}".format(basepath) if basepath else ""
             cores = dd.get_num_cores(data)
@@ -37,22 +42,42 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
             do.run(cmd.format(**locals()), message)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _combine_files(orig_files, base_out_file):
+def _combine_files(orig_files, base_out_file, data):
     orig_files = [x for x in orig_files if x and utils.file_exists(x)]
     if not orig_files:
         return None
-    elif len(orig_files) == 1:
-        return orig_files[0]
-    else:
-        out_file = "%s-combine%s" % (utils.splitext_plus(base_out_file)[0],
-                                     utils.splitext_plus(orig_files[0])[-1])
-        with open(out_file, "w") as out_handle:
-            for orig_file in orig_files:
-                with open(orig_file) as in_handle:
-                    for line in in_handle:
-                        out_handle.write(line)
-                out_handle.write("\n\n")
-        return out_file
+    out_file = "%s-combine%s" % (utils.splitext_plus(base_out_file)[0],
+                                    utils.splitext_plus(orig_files[0])[-1])
+    with open(out_file, "w") as out_handle:
+        for orig_file in orig_files:
+            with open(orig_file) as in_handle:
+                for line in in_handle:
+                    if line.startswith("file"):
+                        line = _fill_file_path(line, data)
+                    out_handle.write(line)
+            out_handle.write("\n\n")
+    return out_file
+
+def _fill_file_path(line, data):
+    """Fill in a full file path in the configuration file from data dictionary.
+    """
+    def _find_file(xs, target):
+        if isinstance(xs, dict):
+            for v in xs.values():
+                f = _find_file(v, target)
+                if f:
+                    return f
+        elif isinstance(xs, (list, tuple)):
+            for x in xs:
+                f = _find_file(x, target)
+                if f:
+                    return f
+        elif isinstance(xs, basestring) and os.path.exists(xs) and xs.endswith("/%s" % target):
+            return xs
+    orig_file = os.path.basename(line.split("=")[-1].replace('"', '').strip())
+    full_file = _find_file(data, orig_file)
+    assert full_file, "Did not find vcfanno input file %s" % (orig_file)
+    return 'file="%s"\n' % full_file
 
 def find_annotations(data):
     """Find annotation configuration files for vcfanno, using pre-installed inputs.
@@ -85,6 +110,9 @@ def find_annotations(data):
             logger.warn(CONF_NOT_FOUND.format(**locals()))
         else:
             out.append(conffn)
+            luafn = "%s.lua" % utils.splitext_plus(conffn)[0]
+            if os.path.exists(luafn):
+                out.append(luafn)
     return out
 
 def _default_conf_files(data):

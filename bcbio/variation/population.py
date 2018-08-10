@@ -54,27 +54,50 @@ def prep_gemini_db(fnames, call_info, samples, extras):
 
 def run_vcfanno(vcf_file, data, decomposed=False):
     """Run vcfanno, providing annotations from external databases if needed.
+
+    Puts together lua and conf files from multiple inputs by file names.
     """
     conf_files = dd.get_vcfanno(data)
-    VcfannoIn = collections.namedtuple("VcfannoIn", ["conf", "lua"])
     if conf_files:
         with_basepaths = collections.defaultdict(list)
         for f in conf_files:
-            conf_file = f
-            lua_file = "%s.lua" % utils.splitext_plus(conf_file)[0]
-            assert os.path.exists(conf_file), conf_file
+            name = os.path.splitext(os.path.basename(f))[0]
+            if f.endswith(".lua"):
+                conf_file = None
+                lua_file = f
+            else:
+                conf_file = f
+                lua_file = "%s.lua" % utils.splitext_plus(conf_file)[0]
             if lua_file and not os.path.exists(lua_file):
                 lua_file = None
-            if (conf_file.find("gemini") >= 0 and vcfanno.is_human(data, builds=["37"]) and
+            if (name == "gemini" and vcfanno.is_human(data, builds=["37"]) and
                   not dd.get_variation_resources(data).get("exac")):
                 data_basepath = install.get_gemini_dir(data)
             else:
-                data_basepath = os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)), os.pardir))
-            with_basepaths[data_basepath].append(VcfannoIn(conf_file, lua_file))
+                data_basepath = None
+            if conf_file and os.path.exists(conf_file):
+                with_basepaths[(data_basepath, name)].append(conf_file)
+            if lua_file and os.path.exists(lua_file):
+                with_basepaths[(data_basepath, name)].append(lua_file)
         conf_files = with_basepaths.items()
     out_file = None
     if conf_files:
-        for data_basepath, anno_files in conf_files:
+        VcfannoIn = collections.namedtuple("VcfannoIn", ["conf", "lua"])
+        bp_files = collections.defaultdict(list)
+        for (data_basepath, name), anno_files in conf_files:
+            anno_files = list(set(anno_files))
+            if len(anno_files) == 1:
+                cur = VcfannoIn(anno_files[0], None)
+            elif len(anno_files) == 2:
+                lua_files = [x for x in anno_files if x.endswith(".lua")]
+                assert len(lua_files) == 1, anno_files
+                lua_file = lua_files[0]
+                anno_files.remove(lua_file)
+                cur = VcfannoIn(anno_files[0], lua_file)
+            else:
+                raise ValueError("Unexpected annotation group %s" % anno_files)
+            bp_files[data_basepath].append(cur)
+        for data_basepath, anno_files in bp_files.items():
             ann_file = vcfanno.run(vcf_file, [x.conf for x in anno_files],
                                    [x.lua for x in anno_files], data,
                                    basepath=data_basepath,

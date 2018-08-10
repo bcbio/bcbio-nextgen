@@ -168,6 +168,9 @@ def _variant_vc(checkpoints):
                     [["batch_rec"], ["vrn_file"]],
                     [cwlout(["vrn_file"], "File", [".tbi"])],
                     "bcbio-vc", ["snpeff=4.3.1t"], disk={"files": 0.5})]
+    vc_rec_exclude = [["align_bam"], ["reference", "twobit"]]
+    if not checkpoints.get("jointvc"):
+        vc_rec_exclude.append(["genome_resources", "variation"])
     vc_wf += [s("compare_to_rm", "batch-single",
                 [["batch_rec"], ["vrn_file"]],
                 [cwlout("vc_rec", "record",
@@ -176,8 +179,7 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "tp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
-                                cwlout("inherit", exclude=[["align_bam"], ["reference", "twobit"],
-                                                           ["genome_resources", "variation"]])])],
+                                cwlout("inherit", exclude=vc_rec_exclude)])],
                 "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
                              "htslib", "rtg-tools", "vcfanno"],
                 disk={"files": 1.5})]

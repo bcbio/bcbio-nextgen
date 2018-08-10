@@ -116,6 +116,7 @@ def get_qc_tools(data):
     if tz.get_in(["config", "algorithm", "preseq"], data):
         to_run.append("preseq")
     to_run = [tool for tool in to_run if tool not in dd.get_tools_off(data)]
+    to_run.sort()
     return to_run
 
 def _run_qc_tools(bam_file, data):

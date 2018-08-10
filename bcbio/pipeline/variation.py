@@ -18,7 +18,7 @@ from bcbio.variation import multi as vmulti
 def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
-    items = [utils.to_single_data(x) for x in items]
+    items = [utils.to_single_data(x) for x in utils.flatten(items)]
     items = [_normalize_vc_input(x) for x in items]
     items = validate.summarize_grading(items)
     items = [utils.to_single_data(x) for x in items]
