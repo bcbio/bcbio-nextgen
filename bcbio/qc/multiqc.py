@@ -256,7 +256,7 @@ def _create_config_file(out_dir, samples):
         out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
 
         # Setting up thresholds for Qualimap depth cutoff calculations, based on sample avg depths
-        avg_depths = [tz.get_in(["summary", "qc", "Avg_coverage"], s) for s in samples]
+        avg_depths = [tz.get_in(["summary", "metrics", "Avg_coverage"], s) for s in samples]
         # Picking all thresholds up to the highest sample average depth
         thresholds = [t for t in coverage.DEPTH_THRESHOLDS if t <= max(avg_depths)]
         # ...plus one more
@@ -267,11 +267,11 @@ def _create_config_file(out_dir, samples):
         thresholds_hidden = []
         for i, t in enumerate(thresholds):
             if t > 20:  # Not hiding anything below 20x
-                if any(thresholds[i-1] <= c < thresholds[i+1] for c in avg_depths
-                       if c and i-1 >= 0 and i+1 < len(cov_threshs)):
+                if any(thresholds[i-1] <= c < thresholds[i] for c in avg_depths if c and i-1 >= 0) or \
+                   any(thresholds[i] <= c < thresholds[i+1] for c in avg_depths if c and i+1 < len(thresholds)):
                     pass
                 else:
-                    thresholds_hidden.add(t)
+                    thresholds_hidden.append(t)
 
         out['qualimap_config'] = {
             'general_stats_coverage': [str(t) for t in thresholds],
