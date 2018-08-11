@@ -29,6 +29,7 @@ from bcbio.utils import walk_json
 from bcbio.variation import bedutils
 from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
+from bcbio.variation import coverage
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -250,8 +251,32 @@ def _create_config_file(out_dir, samples):
 
     # Avoid duplicated bcbio columns with qualimap
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
+        # Hiding metrics duplicated by Qualimap
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
         out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
+
+        # Setting up thresholds for Qualimap depth cutoff calculations, based on sample avg depths
+        avg_depths = [tz.get_in(["summary", "qc", "Avg_coverage"], s) for s in samples]
+        # Picking all thresholds up to the highest sample average depth
+        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if t <= max(avg_depths)]
+        # ...plus one more
+        if len(thresholds) < len(coverage.DEPTH_THRESHOLDS):
+            thresholds.append(coverage.DEPTH_THRESHOLDS[len(thresholds)])
+
+        # Showing only thresholds surrounding any of average depths
+        thresholds_hidden = []
+        for i, t in enumerate(thresholds):
+            if t > 20:  # Not hiding anything below 20x
+                if any(thresholds[i-1] <= c < thresholds[i+1] for c in avg_depths
+                       if c and i-1 >= 0 and i+1 < len(cov_threshs)):
+                    pass
+                else:
+                    thresholds_hidden.add(t)
+
+        out['qualimap_config'] = {
+            'general_stats_coverage': [str(t) for t in thresholds],
+            'general_stats_coverage_hidden': [str(t) for t in thresholds_hidden]}
+
     # Avoid confusing peddy outputs, sticking to ancestry and sex prediction
     out["table_columns_visible"]["Peddy"] = {"family_id": False, "sex_het_ratio": False,
                                              "error_sex_check": False}

@@ -24,7 +24,7 @@ from bcbio.variation import bedutils
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
-DEPTH_THRESHOLDS = [1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000]
+DEPTH_THRESHOLDS = [1,5] + sorted([k*10**exp10 for k in [1,2,5] for exp10 in range(1,6)])  # 10,20,50,100...
 
 
 def assign_interval(data):
