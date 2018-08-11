@@ -1,3 +1,5 @@
+.. _docs-cwl:
+
 Common Workflow Language (CWL)
 ------------------------------
 

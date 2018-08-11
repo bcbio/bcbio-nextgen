@@ -17,6 +17,15 @@ available in ``bcbio_nextgen.py``. bcbio-vm uses `Elasticluster
 <https://github.com/gc3-uzh-ch/elasticluster>`_ to build a cluster on AWS with
 an encrypted NFS mounted drive and an optional Lustre shared filesystem.
 
+We're phasing out this approach to cloud support in bcbio. Instead of building
+this directly into bcbio, we'll now be using :ref:`docs-cwl` support. Runners
+like Cromwell can directly interface and run with cloud services and we'll
+document these approaches as they're tested and available. To use cloud
+integration immediately, we'd suggest using the `simplified ansible based
+approach
+<https://github.com/bcbio/bcbio-nextgen/tree/master/scripts/ansible#simplified-bcbio-cloud-usage>`_
+which spins up single multicore machines for running.
+
 Local setup
 ===========
 
@@ -28,7 +37,7 @@ Python::
 
     wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c bioconda bcbio-nextgen-vm
+    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
     ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
 
 We support both Linux and Mac OSX as clients for running remote AWS bcbio clusters.

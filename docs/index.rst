@@ -27,8 +27,8 @@ Contents:
    contents/testing
    contents/configuration
    contents/parallel
-   contents/cloud
    contents/cwl
+   contents/cloud
    contents/outputs
    contents/code
    contents/internals
