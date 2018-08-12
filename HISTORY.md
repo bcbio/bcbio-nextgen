@@ -11,6 +11,7 @@
   key names in INFO and FORMAT.
 - RNA-seq variant calling: Apply annotations after joint calling for GATK to
   avoid import errors with GenomicsDB. Thanks to Komal Rathi.
+- CWL: use standard null instead of string "null" for representing None values.
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
 - CWL: support ensemble calling for combining multiple variant callers.

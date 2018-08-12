@@ -607,16 +607,19 @@ def _get_avro_type(val):
                         types.append(x)
             elif ctype not in types:
                 types.append(ctype)
-        # handle empty types, allow null or a string "null" sentinel
+        # handle empty types, allow null
         if len(types) == 0:
-            types = ["null", "string"]
+            types = ["null"]
             # empty lists
             if isinstance(val, (list, tuple)) and len(val) == 0:
-                types.append({"type": "array", "items": ["null", "string"]})
+                types.append({"type": "array", "items": ["null"]})
         types = _avoid_duplicate_arrays(types)
+        # Avoid empty null only arrays which confuse some runners
+        if len(types) == 1 and types[0] == "null":
+            types.append("string")
         return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
-        return ["null", "string"]
+        return ["null"]
     # encode booleans as string True/False and unencode on other side
     elif isinstance(val, bool) or isinstance(val, basestring) and val.lower() in ["true", "false", "none"]:
         return ["string", "null", "boolean"]
@@ -798,13 +801,6 @@ def _clean_final_outputs(keyvals, get_retriever):
             return integration.clean_file(x)
         else:
             return x
-    def null_to_string(x):
-        """Convert None values into the string 'null'
-
-        Required for platforms like SevenBridges without null support from inputs.
-        """
-        return "null" if x is None else x
-    keyvals = _adjust_items(keyvals, null_to_string)
     keyvals = _adjust_files(keyvals, functools.partial(clean_path, get_retriever))
     return keyvals
 
