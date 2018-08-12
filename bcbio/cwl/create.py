@@ -708,8 +708,10 @@ def _to_cwlfile_with_indexes(val, get_retriever):
     else:
         # Standard named set of indices, like bwa
         # Do not include snpEff, which we need to isolate inside a nested directory
+        # hisat2 indices do also not localize cleanly due to compilicated naming
         cp_dir, cp_base = os.path.split(os.path.commonprefix([val["base"]] + val["indexes"]))
-        if cp_base and cp_dir == os.path.dirname(val["base"]) and not "/snpeff/" in cp_dir:
+        if (cp_base and cp_dir == os.path.dirname(val["base"]) and
+              not ("/snpeff/" in cp_dir or "/hisat2" in cp_dir)):
             return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
         else:
             dirname = os.path.dirname(val["base"])
