@@ -182,6 +182,7 @@ def _run_cromwell(args):
                 metadata = json.load(in_handle)
             if metadata["status"] == "Failed":
                 _cromwell_debug(metadata)
+                sys.exit(1)
             else:
                 _cromwell_move_outputs(metadata, final_dir)
 

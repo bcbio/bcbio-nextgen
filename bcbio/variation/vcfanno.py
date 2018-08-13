@@ -30,8 +30,8 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
     if not utils.file_exists(out_file):
         vcfanno = config_utils.get_program("vcfanno", data)
         with file_transaction(out_file) as tx_out_file:
-            conffn = _combine_files(conf_fns, tx_out_file, data, basepath is None)
-            luafn = _combine_files(lua_fns, tx_out_file, data, False)
+            conffn = _combine_files(conf_fns, out_file, data, basepath is None)
+            luafn = _combine_files(lua_fns, out_file, data, False)
             luaflag = "-lua {0}".format(luafn) if luafn and utils.file_exists(luafn) else ""
             basepathflag = "-base-path {0}".format(basepath) if basepath else ""
             cores = dd.get_num_cores(data)
