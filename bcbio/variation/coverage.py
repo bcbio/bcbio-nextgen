@@ -19,12 +19,11 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.pipeline import shared
-from bcbio.structural import regions
 from bcbio.variation import bedutils
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
-DEPTH_THRESHOLDS = [1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000]
+DEPTH_THRESHOLDS = [1,5] + sorted([k*10**exp10 for k in [1,2,5] for exp10 in range(1,6)])  # 10,20,50,100...
 
 
 def assign_interval(data):
@@ -71,7 +70,7 @@ def _count_offtarget(data, bam_file, bed_file, target_name):
     else:
         return 0.0
 
-def calculate(bam_file, data):
+def calculate(bam_file, data, sv_bed):
     """Calculate coverage in parallel using mosdepth.
 
     Removes duplicates and secondary reads from the counts:
@@ -89,7 +88,7 @@ def calculate(bam_file, data):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
         to_calculate = [("variant_regions", variant_regions,
                          vr_quantize, None, "coverage_perbase" in dd.get_tools_on(data)),
-                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data, prefix="svregions-"),
+                        ("sv_regions", bedutils.clean_file(sv_bed, data, prefix="svregions-"),
                          None, None, False),
                         ("coverage", bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-"),
                          None, DEPTH_THRESHOLDS, False)]

@@ -25,6 +25,7 @@ from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import coverage
 from bcbio.variation import multi as vmulti
+from bcbio.structural import regions
 
 
 def sample_callable_bed(bam_file, ref_file, data):
@@ -39,7 +40,8 @@ def sample_callable_bed(bam_file, ref_file, data):
         return r.name == "CALLABLE" and (not noalt_calling or chromhacks.is_nonalt(r.chrom))
     out_file = "%s-callable_sample.bed" % os.path.splitext(bam_file)[0]
     with shared.bedtools_tmpdir(data):
-        callable_bed, depth_files = coverage.calculate(bam_file, data)
+        sv_bed = regions.get_sv_bed(data)
+        callable_bed, depth_files = coverage.calculate(bam_file, data, sv_bed)
         input_regions_bed = dd.get_variant_regions(data)
         if not utils.file_uptodate(out_file, callable_bed):
             with file_transaction(data, out_file) as tx_out_file:
