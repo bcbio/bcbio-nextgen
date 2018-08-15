@@ -65,7 +65,7 @@ def _prep_priority_filter_vcfanno(in_vcf, data):
             'af_exac_all', 'max_aaf_all',
             "af_esp_ea", "af_esp_aa", "af_esp_all", "af_1kg_amr", "af_1kg_eas",
             "af_1kg_sas", "af_1kg_afr", "af_1kg_eur", "af_1kg_all"]
-    known = ["cosmic_ids", "cosmic_id", "clinvar_sig", "CLNSIG"]
+    known = ["cosmic_ids", "cosmic_id", "clinvar_sig"]
     out_file = "%s-priority.tsv" % utils.splitext_plus(in_vcf)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(data, out_file) as tx_out_file:
@@ -174,10 +174,12 @@ def _find_known(row):
     """Find variant present in known pathogenic databases.
     """
     out = []
-    clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic"])
+    clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic",
+                      "uncertain_significance", "uncertain_significance", "not_provided",
+                      "benign", "likely_benign"])
     if row["cosmic_ids"] or row["cosmic_id"]:
         out.append("cosmic")
-    if any([(row[x] and not row[x] in clinvar_no) for x in ["clinvar_sig", "CLNSIG"]]):
+    if row["clinvar_sig"] and not row["clinvar_sig"].lower() in clinvar_no:
         out.append("clinvar")
     return out
 
