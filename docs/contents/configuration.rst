@@ -1083,6 +1083,10 @@ lists with multiple options:
   - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.
   - ``damage_filter`` annotates low frequency somatic calls in INFO/DKFZBias for
     DNA damage artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
+  - ``tumoronly_germline_filter`` applies a ``LowPriority`` filter to tumor-only calls
+    that match population germline databases. The default is to just apply a tag
+    ``EPR`` (external prioritization) that flags variants present in external
+    databases. Anything missing a ``pass`` here is a likely germline.
   - ``vqsr`` makes GATK try quality score recalibration for variant filtration,
     even for smaller sample sizes.
   - ``svplots`` adds additional coverage and summary plots for CNVkit and detected
