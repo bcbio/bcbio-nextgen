@@ -12,6 +12,7 @@
 - GATK: support ploidy specification during joint calling.
 - variant calling: support bcftools 1.9 which is more strict about duplicated
   key names in INFO and FORMAT.
+- seq2c: Upload global calls, coverage and read_mapping files to project directory.
 - RNA-seq variant calling: Apply annotations after joint calling for GATK to
   avoid import errors with GenomicsDB. Thanks to Komal Rathi.
 - CWL: use standard null instead of string "null" for representing None values.

@@ -247,8 +247,6 @@ def _maybe_add_sv(algorithm, sample, out):
         batch = _get_batch_name(sample)
         for svcall in sample["sv"]:
             if svcall.get("variantcaller") == "seq2c":
-                out.extend(_get_variant_file(svcall, ("coverage",), suffix="-coverage"))
-                out.extend(_get_variant_file(svcall, ("read_mapping",), suffix="-read_mapping", sample=batch))
                 out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
@@ -703,6 +701,14 @@ def _get_files_project(sample, upload_config):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
+    sv_project = set([])
+    for svcall in sample.get("sv", []):
+        if svcall.get("variantcaller") == "seq2c":
+            if svcall["calls_all"] not in sv_project:
+                out.append({"path": svcall["coverage_all"], "batch": "seq2c", "ext": "coverage", "type": "tsv"})
+                out.append({"path": svcall["read_mapping"], "batch": "seq2c", "ext": "read_mapping", "type": "txt"})
+                out.append({"path": svcall["calls_all"], "batch": "seq2c", "ext": "calls", "type": "tsv"})
+                sv_project.add(svcall["calls_all"])
     if "coverage" in sample:
         cov_db = tz.get_in(["coverage", "summary"], sample)
         if cov_db:
