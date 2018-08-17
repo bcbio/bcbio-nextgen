@@ -148,7 +148,7 @@ def _run_wes(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     main_file = _pack_cwl(main_file)
-    opts = []
+    opts = ["--no-wait"]
     if args.host:
         opts += ["--host", args.host]
     if args.auth:
