@@ -1,4 +1,4 @@
-version: 29
+version: 30
 
 aliases:
   human: true
@@ -6,7 +6,7 @@ aliases:
   ensembl: homo_sapiens_merged_vep_93_GRCh38
 
 variation:
-  dbsnp: ../variation/dbsnp-150.vcf.gz
+  dbsnp: ../variation/dbsnp-151.vcf.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   dbscsnv: ../variation/dbscSNV.txt.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
