@@ -3,6 +3,9 @@
 - tumor-only prioritization: do not apply LowPriority filter by default, instead
   annotate with external databases. Use `tumoronly_germline_filter` to re-enable
   previous behavior.
+- UMIs: apply default filtering based on de-duplicated read depth. Uses
+`--min-reads 2` with raw de-duplicated coverage of 800 or more  or `--min-reads 1`
+  otherwise. Allows error correction with UMIs for higher depth samples.
 - gemini: databases no longer created by default. Use `tools_on: [gemini]` or
   `tools_on: [gemini_orig]` to create a database.
 - vcfanno: run gemini and somatic annotations by default, producing annotated

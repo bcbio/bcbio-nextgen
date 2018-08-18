@@ -129,7 +129,8 @@ def process_alignment(data, alt_input=None):
         if dd.get_umi_consensus(data):
             data["umi_bam"] = dd.get_work_bam(data)
             if fastq2:
-                f1, f2 = postalign.umi_consensus(data)
+                f1, f2, avg_cov = postalign.umi_consensus(data)
+                data["config"]["algorithm"]["rawumi_avg_cov"] = avg_cov
                 del data["config"]["algorithm"]["umi_type"]
                 data["config"]["algorithm"]["mark_duplicates"] = False
                 data = align_to_sort_bam(f1, f2, aligner, data)

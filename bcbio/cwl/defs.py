@@ -428,7 +428,7 @@ def variant(samples):
     align_out = [["rgnames", "sample"], ["align_bam"]]
     pp_align, pp_align_out = _postprocess_alignment(checkpoints)
     if checkpoints["umi"]:
-        align_out.append(["umi_bam"])
+        align_out += [["umi_bam"], ["config", "algorithm", "rawumi_avg_cov"]]
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
@@ -454,7 +454,7 @@ def _qc_workflow(checkpoints):
     if checkpoints.get("vc"):
         qc_inputs += [["variants", "samples"]]
     if checkpoints.get("umi"):
-        qc_inputs += [["config", "algorithm", "umi_type"], ["umi_bam"]]
+        qc_inputs += [["config", "algorithm", "umi_type"], ["config", "algorithm", "rawumi_avg_cov"], ["umi_bam"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
             "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),

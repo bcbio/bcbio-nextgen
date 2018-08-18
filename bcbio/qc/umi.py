@@ -60,6 +60,7 @@ def run(_, data, out_dir):
         out["umi_reduction_median"] = int(math.ceil(np.median(umi_reductions)))
         out["umi_reduction_max"] = int(max(umi_reductions))
         out["umi_counts"] = dict(umi_counts)
+        out["umi_raw_avg_cov"] = data["config"]["algorithm"]["rawumi_avg_cov"]
         with open(stats_file, "w") as out_handle:
             yaml.safe_dump({dd.get_sample_name(data): out}, out_handle,
                            default_flow_style=False, allow_unicode=False)
