@@ -207,7 +207,7 @@ def umi_consensus(data):
                    "-i /dev/stdin -o /dev/stdout | "
                    "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
-    return f1_out, f2_out, avg_coverage, data
+    return f1_out, f2_out, avg_coverage
 
 def _check_umi_type(bam_file):
     """Determine the type of UMI from BAM tags: standard or paired.
