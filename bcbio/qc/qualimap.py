@@ -231,7 +231,11 @@ def _detect_duplicates(bam_file, out_dir, data):
     with open(out_file) as in_handle:
         dupes = float(in_handle.next().strip())
         total = float(in_handle.next().strip())
-    return {"Duplication Rate of Mapped": dupes / total}
+    if total == 0:
+        rate = "NA"
+    else:
+        rate = dupes / total
+    return {"Duplication Rate of Mapped": rate}
 
 def _transform_browser_coor(rRNA_interval, rRNA_coor):
     """
