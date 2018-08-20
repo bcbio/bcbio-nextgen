@@ -431,7 +431,7 @@ def variant(samples):
     align_out = [["rgnames", "sample"], ["align_bam"]]
     pp_align, pp_align_out = _postprocess_alignment(checkpoints)
     if checkpoints["umi"]:
-        align_out += [["umi_bam"], ["config", "algorithm", "rawumi_avg_cov"]]
+        align_out += [["umi_bam"]]
     vc, vc_out = _variant_vc(checkpoints)
     sv, sv_out = _variant_sv(checkpoints)
     hla, hla_out = _variant_hla(checkpoints)
