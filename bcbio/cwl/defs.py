@@ -90,6 +90,7 @@ def _alignment(checkpoints):
                              cwlout(["work_bam_plus", "disc"], ["File", "null"], [".bai"]),
                              cwlout(["work_bam_plus", "sr"], ["File", "null"], [".bai"])]
     if checkpoints["umi"]:
+        process_alignment_out.append(cwlout(["config", "algorithm", "rawumi_avg_cov"], ["int", "null"]))
         process_alignment_out.append(cwlout(["umi_bam"], ["File", "null"], [".bai"]))
     align = [s("prep_align_inputs", "single-split" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"]],
@@ -115,10 +116,12 @@ def _alignment(checkpoints):
                 cwlout(["hla", "fastq"], ["null", {"type": "array", "items": "File"}])]
         if checkpoints["umi"]:
             inp.append(["umi_bam"])
+            inp.append(["config", "algorithm", "rawumi_avg_cov"])
             outp.append(cwlout(["umi_bam"], ["File", "null"], [".bai"]))
+            outp.append(cwlout(["config", "algorithm", "rawumi_avg_cov"], ["int", "null"]))
         align += [s("merge_split_alignments", "single-merge", inp, outp,
                   "bcbio-vc", ["biobambam", "samtools", "variantbam"],
-                  disk={"files": 3.5})]
+                    disk={"files": 3.5})]
     return align
 
 def _variant_hla(checkpoints):
