@@ -46,10 +46,11 @@ def batch(samples):
             cur.update({"batch_id": sorted(list(batches))[0] if batches else "_".join(batch_samples),
                         "batch_samples": batch_samples,
                         "variants": {"variantcallers": [dd.get_variantcaller(d) for d in gsamples],
-                                    "calls": [d.get("vrn_file") for d in gsamples]}})
+                                     "calls": [d.get("vrn_file") for d in gsamples]}})
             out.append(cur)
+
     def by_original_order(d):
-        return min([sample_order.index(s) for s in d["batch_samples"]])
+        return min([sample_order.index(s) for s in d["batch_samples"] if s in sample_order])
     return sorted(out, key=by_original_order)
 
 def combine_calls(*args):

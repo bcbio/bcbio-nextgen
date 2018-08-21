@@ -89,6 +89,17 @@ def _get_caller_supplement(caller, data):
             caller = "%s/%s" % (caller, icaller)
     return caller
 
+def _pick_lead_item(items):
+    """Choose lead item for a set of samples.
+
+    Picks tumors for tumor/normal pairs and first sample for batch groups.
+    """
+    paired = vcfutils.get_paired(items)
+    if paired:
+        return paired.tumor_data
+    else:
+        return items[0]
+
 def _normalize_cwl_inputs(items):
     """Extract variation and validation data from CWL input list of batched samples.
     """
@@ -104,12 +115,13 @@ def _normalize_cwl_inputs(items):
             vrn_files.append(data["vrn_file"])
         ready_items.append(data)
     if len(with_validate) == 0:
-        ready_items[0]["batch_samples"] = batch_samples
-        return ready_items[0]
+        data = _pick_lead_item(items)
+        data["batch_samples"] = batch_samples
+        return data
     else:
         assert len(with_validate) == 1, len(with_validate)
         assert len(set(vrn_files)) == 1, set(vrn_files)
-        data = with_validate.values()[0]
+        data = _pick_lead_item(with_validate.values())
         data["batch_samples"] = batch_samples
         data["vrn_file"] = vrn_files[0]
         return data
