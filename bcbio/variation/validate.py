@@ -115,7 +115,7 @@ def _normalize_cwl_inputs(items):
             vrn_files.append(data["vrn_file"])
         ready_items.append(data)
     if len(with_validate) == 0:
-        data = _pick_lead_item(items)
+        data = _pick_lead_item(ready_items)
         data["batch_samples"] = batch_samples
         return data
     else:
