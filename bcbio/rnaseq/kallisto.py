@@ -178,10 +178,14 @@ def get_kallisto_h5(data):
         return os.path.join(kallisto_dir, "abundance.h5")
 
 def get_kallisto_fusions(data):
-    samplename = dd.get_sample_name(data)
-    work_dir = dd.get_work_dir(data)
-    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
-    return os.path.join(kallisto_dir, "fusion.txt")
+    out_file = tz.get_in(["quant", "fusion"], data)
+    if out_file:
+        return out_file
+    else:
+        samplename = dd.get_sample_name(data)
+        work_dir = dd.get_work_dir(data)
+        kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+        return os.path.join(kallisto_dir, "fusion.txt")
 
 def run_kallisto_index(*samples):
     for data in dd.sample_data_iterator(samples):
