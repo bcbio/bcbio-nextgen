@@ -427,7 +427,7 @@ def variant(samples):
                     cwlout(["work_bam_plus", "disc"], ["File", "null"]),
                     cwlout(["work_bam_plus", "sr"], ["File", "null"]),
                     cwlout(["hla", "fastq"], ["File", "null"])],
-                   "bcbio-vc", cores=1, no_files=True)]
+                   "bcbio-vc", cores=1)]
     align_out = [["rgnames", "sample"], ["align_bam"]]
     pp_align, pp_align_out = _postprocess_alignment(checkpoints)
     if checkpoints["umi"]:
