@@ -15,7 +15,7 @@ import string
 import toolz as tz
 import yaml
 from bcbio import install, utils, structural
-from bcbio.bam import ref
+from bcbio.bam import fastq, ref
 from bcbio.log import logger
 from bcbio.distributed import objectstore
 from bcbio.illumina import flowcell
@@ -747,7 +747,7 @@ def _file_to_abs(x, dnames, makedir=False):
 
 def _normalize_files(item, fc_dir=None):
     """Ensure the files argument is a list of absolute file names.
-    Handles BAM, single and paired end fastq.
+    Handles BAM, single and paired end fastq, as well as split inputs.
     """
     files = item.get("files")
     if files:
@@ -761,7 +761,9 @@ def _normalize_files(item, fc_dir=None):
     return item
 
 def _sanity_check_files(item, files):
-    """Ensure input files correspond with supported
+    """Ensure input files correspond with supported approaches.
+
+    Handles BAM, fastqs, plus split fastqs.
     """
     msg = None
     file_types = set([("bam" if x.endswith(".bam") else "fastq") for x in files if x])
@@ -773,7 +775,9 @@ def _sanity_check_files(item, files):
             msg = "Expect a single BAM file input as input"
     elif file_type == "fastq":
         if len(files) not in [1, 2] and item["analysis"].lower() != "scrna-seq":
-            msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
+            pair_types = set([len(xs) for xs in fastq.combine_pairs(files)])
+            if len(pair_types) != 1 or pair_types.pop() not in [1, 2]:
+                msg = "Expect either 1 (single end) or 2 (paired end) fastq inputs"
         if len(files) == 2 and files[0] == files[1]:
             msg = "Expect both fastq files to not be the same"
     if msg:

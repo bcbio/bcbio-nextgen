@@ -37,7 +37,7 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
-      svcaller: [seq2c, cnvkit, delly, lumpy]
+      svcaller: [seq2c, cnvkit, delly, lumpy, gridss]
       #background:
       #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       exclude_regions: [lcr, highdepth, polyx, altcontigs]
@@ -78,6 +78,7 @@ details:
     #files: s3://bcbio_test_run1/align/Test1/Test1-sort.bam
     #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    #files: [../data/100326_FC6107FAAXX/split/Test1_L000_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L000_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R2_001.fastq.gz]
     #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
 #  - algorithm:
 #      aligner: bwa

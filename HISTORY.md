@@ -10,6 +10,8 @@
   `tools_on: [gemini_orig]` to create a database.
 - vcfanno: run gemini and somatic annotations by default, producing annotated
   VCFs with external information.
+- alignment preparation: support a list of split files from multiple sequencing
+  lanes, merging into a single fastq
 - variant: support octopus variant caller for germline and somatic samples.
 - peddy: fix bug where not all files uploaded on first pipeline run
 - GATK: support ploidy specification during joint calling.

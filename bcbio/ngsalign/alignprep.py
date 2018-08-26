@@ -10,7 +10,7 @@ import subprocess
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.bam import cram
+from bcbio.bam import cram, fastq
 from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed import objectstore
@@ -326,19 +326,27 @@ def _ready_gzip_fastq(in_files, data, require_bgzip=False):
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
     needs_trim = dd.get_trim_ends(data)
     do_splitting = dd.get_align_split_size(data) is not False
-    return (all_gzipped and not needs_convert and not do_splitting and not objectstore.is_remote(in_files[0])
-            and not needs_trim and not get_downsample_params(data))
+    return (all_gzipped and not needs_convert and not do_splitting and
+            not objectstore.is_remote(in_files[0]) and not needs_trim and not get_downsample_params(data))
 
 def _prep_fastq_inputs(in_files, data):
     """Prepare bgzipped fastq inputs
     """
-    if _is_bam_input(in_files):
+    if len(in_files) == 1 and _is_bam_input(in_files):
         out = _bgzip_from_bam(in_files[0], data["dirs"], data)
-    elif _is_cram_input(in_files):
+    elif len(in_files) == 1 and _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], data["dirs"], data)
-    elif _ready_gzip_fastq(in_files, data):
+    elif len(in_files) >= 2 and _ready_gzip_fastq(in_files, data):
         out = _symlink_in_files(in_files, data)
     else:
+        if len(in_files) > 2:
+            fpairs = fastq.combine_pairs(in_files)
+            pair_types = set([len(xs) for xs in fpairs])
+            assert len(pair_types) == 1
+            organized = [[xs[0] for xs in fpairs]]
+            if len(fpairs[0]) > 1:
+                organized.append([xs[1] for xs in fpairs])
+            in_files = organized
         parallel = {"type": "local", "num_jobs": len(in_files),
                     "cores_per_job": max(1, data["config"]["algorithm"]["num_cores"] // len(in_files))}
         inputs = [{"in_file": x, "read_num": i, "dirs": data["dirs"], "config": data["config"],
@@ -618,6 +626,8 @@ def _bgzip_from_fastq(data):
     """Prepare a bgzipped file from a fastq input, potentially gzipped (or bgzipped already).
     """
     in_file = data["in_file"]
+    if isinstance(in_file, (list, tuple)):
+        in_file = in_file[0]
     needs_convert = dd.get_quality_format(data).lower() == "illumina"
     # special case, empty files that have been cleaned
     if not objectstore.is_remote(in_file) and os.path.getsize(in_file) == 0:
@@ -634,25 +644,33 @@ def _bgzip_from_fastq(data):
     else:
         needs_bgzip, needs_gunzip = True, False
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
-    if needs_bgzip or needs_gunzip or needs_convert or dd.get_trim_ends(data) or objectstore.is_remote(in_file):
-        out_file = _bgzip_file(in_file, data["config"], work_dir,
+    if (needs_bgzip or needs_gunzip or needs_convert or dd.get_trim_ends(data) or
+          objectstore.is_remote(in_file) or len(data["in_file"]) > 1):
+        out_file = _bgzip_file(data["in_file"], data["config"], work_dir,
                                needs_bgzip, needs_gunzip, needs_convert, data)
     else:
         out_file = os.path.join(work_dir, "%s_%s" % (dd.get_sample_name(data), os.path.basename(in_file)))
         out_file = _symlink_or_copy_grabix(in_file, out_file, data)
     return out_file
 
-def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_convert, data):
+def _bgzip_file(finput, config, work_dir, needs_bgzip, needs_gunzip, needs_convert, data):
     """Handle bgzip of input file, potentially gunzipping an existing file.
+
+    Handles cases where finput might be multiple files and need to be concatenated.
     """
+    if isinstance(finput, basestring):
+        in_file = finput[0]
+    else:
+        assert not needs_convert, "Do not yet handle quality conversion with multiple inputs"
+        return _bgzip_multiple_files(finput, work_dir, data)
     out_file = os.path.join(work_dir, os.path.basename(in_file).replace(".bz2", "") +
                             (".gz" if not in_file.endswith(".gz") else ""))
     if not utils.file_exists(out_file):
         with file_transaction(config, out_file) as tx_out_file:
             bgzip = tools.get_bgzip_cmd(config)
             is_remote = objectstore.is_remote(in_file)
-            in_file = objectstore.cl_input(in_file, unpack=needs_gunzip or needs_convert
-                                           or needs_bgzip or dd.get_trim_ends(data))
+            in_file = objectstore.cl_input(in_file, unpack=needs_gunzip or needs_convert or
+                                           needs_bgzip or dd.get_trim_ends(data))
             if needs_convert or dd.get_trim_ends(data):
                 in_file = fastq_convert_pipe_cl(in_file, data)
             if needs_gunzip and not (needs_convert or dd.get_trim_ends(data)):
@@ -673,6 +691,22 @@ def _bgzip_file(in_file, config, work_dir, needs_bgzip, needs_gunzip, needs_conv
             else:
                 raise ValueError("Unexpected inputs: %s %s %s %s" % (in_file, needs_bgzip,
                                                                      needs_gunzip, needs_convert))
+    return out_file
+
+def _bgzip_multiple_files(in_files, work_dir, data):
+    out_file = os.path.join(work_dir, "%s-combined-%s" % (dd.get_sample_name(data),
+                                                          os.path.basename(in_files[0]).replace(".bz2", "") +
+                                                          (".gz" if not in_files[0].endswith(".gz") else "")))
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            if in_files[0].endswith(".bz2"):
+                gunzip_cmd = "bunzip2 -c"
+            elif in_files[0].endswith(".gz"):
+                gunzip_cmd = "gunzip -c"
+            else:
+                gunzip_cmd = "cat"
+            cmd = "%s %s | bgzip -c > %s" % (gunzip_cmd, " ".join(in_files), tx_out_file)
+            do.run(cmd, "Combine and bgzip multiple input files: %s" % dd.get_sample_name(data))
     return out_file
 
 def _check_gzipped_input(in_file, data):
