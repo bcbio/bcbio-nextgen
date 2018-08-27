@@ -697,6 +697,11 @@ def _to_cwldata(key, val, get_retriever):
         out.append((key, _item_to_cwldata(val, get_retriever)))
     return out
 
+def _remove_remote_prefix(f):
+    """Remove any remote references to allow object lookups by file paths.
+    """
+    return f.split(":")[-1] if objectstore.is_remote(f) else f
+
 def _to_cwlfile_with_indexes(val, get_retriever):
     """Convert reads with ready to go indexes into the right CWL object.
 
@@ -709,16 +714,18 @@ def _to_cwlfile_with_indexes(val, get_retriever):
     if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
         return _item_to_cwldata(val["base"], get_retriever)
     else:
+        tval = {"base": _remove_remote_prefix(val["base"]),
+                "indexes": [_remove_remote_prefix(f) for f in val["indexes"]]}
         # Standard named set of indices, like bwa
         # Do not include snpEff, which we need to isolate inside a nested directory
         # hisat2 indices do also not localize cleanly due to compilicated naming
-        cp_dir, cp_base = os.path.split(os.path.commonprefix([val["base"]] + val["indexes"]))
-        if (cp_base and cp_dir == os.path.dirname(val["base"]) and
+        cp_dir, cp_base = os.path.split(os.path.commonprefix([tval["base"]] + tval["indexes"]))
+        if (cp_base and cp_dir == os.path.dirname(tval["base"]) and
               not ("/snpeff/" in cp_dir or "/hisat2" in cp_dir)):
             return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
         else:
-            dirname = os.path.dirname(val["base"])
-            assert all([x.startswith(dirname) for x in val["indexes"]])
+            dirname = os.path.dirname(tval["base"])
+            assert all([x.startswith(dirname) for x in tval["indexes"]])
             return {"class": "File", "path": directory_tarball(dirname)}
 
 def _add_secondary_if_exists(secondary, out, get_retriever):
