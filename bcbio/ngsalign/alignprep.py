@@ -336,7 +336,7 @@ def _prep_fastq_inputs(in_files, data):
         out = _bgzip_from_bam(in_files[0], data["dirs"], data)
     elif len(in_files) == 1 and _is_cram_input(in_files):
         out = _bgzip_from_cram(in_files[0], data["dirs"], data)
-    elif len(in_files) >= 2 and _ready_gzip_fastq(in_files, data):
+    elif len(in_files) in [1, 2] and _ready_gzip_fastq(in_files, data):
         out = _symlink_in_files(in_files, data)
     else:
         if len(in_files) > 2:
@@ -644,8 +644,10 @@ def _bgzip_from_fastq(data):
     else:
         needs_bgzip, needs_gunzip = True, False
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
+    print(data["in_file"])
     if (needs_bgzip or needs_gunzip or needs_convert or dd.get_trim_ends(data) or
-          objectstore.is_remote(in_file) or len(data["in_file"]) > 1):
+          objectstore.is_remote(in_file) or
+          (isinstance(data["in_file"], (tuple, list)) and len(data["in_file"]) > 1)):
         out_file = _bgzip_file(data["in_file"], data["config"], work_dir,
                                needs_bgzip, needs_gunzip, needs_convert, data)
     else:
