@@ -11,6 +11,7 @@ import copy
 import csv
 import datetime
 import glob
+import fnmatch
 import itertools
 import os
 import shutil
@@ -56,7 +57,7 @@ def setup_args(parser):
 
 # ## Prepare sequence data inputs
 
-def _prep_bam_input(f, i, base):
+def _prep_bam_input(f, base):
     if not os.path.exists(f) and not objectstore.is_remote(f):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
@@ -65,8 +66,8 @@ def _prep_bam_input(f, i, base):
         cur["description"] = os.path.splitext(os.path.basename(f))[0]
     else:
         cur["files"] = [os.path.abspath(f)]
-        cur["description"] = ((sample_name(f) if f.endswith(".bam") else None)
-                              or os.path.splitext(os.path.basename(f))[0])
+        cur["description"] = ((sample_name(f) if f.endswith(".bam") else None) or
+                              os.path.splitext(os.path.basename(f))[0])
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -86,25 +87,45 @@ KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
               ".txt.bz2": "fastq", ".bz2": "fastq"}
 
-def _prep_items_from_base(base, in_files, separators, force_single=False):
+def _prep_items_from_base(base, in_files, metadata, separators, force_single=False):
     """Prepare a set of configuration items for input files.
     """
     details = []
     in_files = _expand_dirs(in_files, KNOWN_EXTS)
     in_files = _expand_wildcards(in_files)
 
-    for i, (ext, files) in enumerate(itertools.groupby(
-            in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower()))):
+    ext_groups = collections.defaultdict(list)
+    for ext, files in itertools.groupby(
+            in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower())):
+        ext_groups[ext].extend(list(files))
+    for ext, files in ext_groups.items():
         if ext == "bam":
             for f in files:
-                details.append(_prep_bam_input(f, i, base))
+                details.append(_prep_bam_input(f, base))
         elif ext in ["fastq", "fq", "fasta"]:
-            files = list(files)
-            for fs in fastq.combine_pairs(files, force_single, separators = separators):
+            files, glob_files = _find_glob_matches(files, metadata)
+            for fs in glob_files:
+                details.append(_prep_fastq_input(fs, base))
+            for fs in fastq.combine_pairs(files, force_single, separators=separators):
                 details.append(_prep_fastq_input(fs, base))
         else:
             print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
     return details
+
+def _find_glob_matches(in_files, metadata):
+    """Group files that match by globs for merging, rather than by explicit pairs.
+    """
+    reg_files = copy.deepcopy(in_files)
+    glob_files = []
+    for glob_search in [x for x in metadata.keys() if "*" in x]:
+        cur = []
+        for fname in in_files:
+            if fnmatch.fnmatch(fname, "*/%s" % glob_search):
+                cur.append(fname)
+                reg_files.remove(fname)
+        assert cur, "Did not find file matches for %s" % glob_search
+        glob_files.append(cur)
+    return reg_files, glob_files
 
 def _expand_file(x):
     return os.path.abspath(os.path.normpath(os.path.expanduser(os.path.expandvars(x))))
@@ -368,6 +389,8 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
         item_md = metadata.get(check_key)
         if item_md:
             break
+    if not item_md:
+        item_md = _find_glob_metadata(item["files"], metadata)
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
     TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_file", "files", "analysis"])
@@ -393,6 +416,20 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     if tz.get_in(["metadata", "ped"], item):
         item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
     return item if keep_sample else None
+
+def _find_glob_metadata(cur_files, metadata):
+    md_key = None
+    for check_key in metadata.keys():
+        matches = 0
+        if "*" in check_key:
+            for fname in cur_files:
+                if fnmatch.fnmatch(fname, "*/%s" % check_key):
+                    matches += 1
+        if matches == len(cur_files):
+            md_key = check_key
+            break
+    if md_key:
+        return metadata[md_key]
 
 def _retrieve_remote(fnames):
     """Retrieve remote inputs found in the same bucket as the template or metadata files.
@@ -432,6 +469,8 @@ def _check_all_metadata_found(metadata, items):
                 if sample["files"][0].find(name[0]) > -1:
                     seen = True
             elif sample['files'][0].find(name) > -1:
+                seen = True
+            elif "*" in name and fnmatch.fnmatch(sample["files"][0], "*/%s" % name):
                 seen = True
         if not seen:
             print("WARNING: sample not found %s" % str(name))
@@ -479,7 +518,8 @@ def setup(args):
                 remote_config = remote_retriever.set_cache(config[iname])
                 inputs += remote_retriever.get_files(metadata, remote_config)
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
-                 for item in _prep_items_from_base(base_item, inputs, args.separators.split(","), args.force_single)]
+                 for item in _prep_items_from_base(base_item, inputs, metadata,
+                                                   args.separators.split(","), args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
     if remote_retriever and remote_config:
