@@ -79,8 +79,10 @@ def _fill_file_path(line, data):
                     return f
         elif isinstance(xs, basestring) and os.path.exists(xs) and xs.endswith("/%s" % target):
             return xs
-    orig_file = os.path.basename(line.split("=")[-1].replace('"', '').strip())
-    full_file = _find_file(data, orig_file)
+    orig_file = line.split("=")[-1].replace('"', '').strip()
+    full_file = _find_file(data, os.path.basename(orig_file))
+    if not full_file and os.path.exists(os.path.abspath(orig_file)):
+        full_file = os.path.abspath(orig_file)
     assert full_file, "Did not find vcfanno input file %s" % (orig_file)
     return 'file="%s"\n' % full_file
 
