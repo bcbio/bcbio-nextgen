@@ -97,6 +97,8 @@ def _setup_reference_files(data, tx_out_dir):
     """Create a reference directory with fasta and bwa indices.
 
     GRIDSS requires all files in a single directory, so setup with symlinks.
+    This needs bwa aligner indices available, which we ensure with `get_aligner_with_aliases`
+    during YAML sample setup.
     """
     aligner = dd.get_aligner(data) or "bwa"
     out_dir = utils.safe_makedir(os.path.join(tx_out_dir, aligner))

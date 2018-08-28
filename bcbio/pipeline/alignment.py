@@ -89,10 +89,16 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
                 bam.index(extra_bam, data["config"])
     return data
 
-def get_aligner_with_aliases(aligner):
+def get_aligner_with_aliases(aligner, data):
     """Retrieve aligner index retriever, including aliases for shared.
+
+    Handles tricky cases like gridss where we need bwa indices even with
+    no aligner specified since they're used internally within GRIDSS.
     """
     aligner_aliases = {"sentieon-bwa": "bwa"}
+    from bcbio import structural
+    if not aligner and "gridss" in structural.get_svcallers(data):
+        aligner = "bwa"
     return aligner_aliases.get(aligner) or aligner
 
 def allow_noindices():
@@ -104,7 +110,7 @@ def _get_aligner_index(aligner, data):
     Original bcbio case -- a list of indices.
     CWL case: a single file with secondaryFiles staged in the same directory.
     """
-    aligner_indexes = tz.get_in(("reference", get_aligner_with_aliases(aligner), "indexes"), data)
+    aligner_indexes = tz.get_in(("reference", get_aligner_with_aliases(aligner, data), "indexes"), data)
     # standard bcbio case
     if aligner_indexes and isinstance(aligner_indexes, (list, tuple)):
         aligner_index = os.path.commonprefix(aligner_indexes)

@@ -162,10 +162,11 @@ def add_reference_resources(data, remote_retriever=None):
     aligner = data["config"]["algorithm"].get("aligner", None)
     if remote_retriever:
         data["reference"] = remote_retriever.get_refs(data["genome_build"],
-                                                      alignment.get_aligner_with_aliases(aligner),
+                                                      alignment.get_aligner_with_aliases(aligner, data),
                                                       data["config"])
     else:
-        data["reference"] = genome.get_refs(data["genome_build"], aligner, data["dirs"]["galaxy"], data)
+        data["reference"] = genome.get_refs(data["genome_build"], alignment.get_aligner_with_aliases(aligner, data),
+                                            data["dirs"]["galaxy"], data)
         _check_ref_files(data["reference"], data)
     # back compatible `sam_ref` target
     data["sam_ref"] = utils.get_in(data, ("reference", "fasta", "base"))
