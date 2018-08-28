@@ -343,6 +343,7 @@ def _prep_fastq_inputs(in_files, data):
             fpairs = fastq.combine_pairs(in_files)
             pair_types = set([len(xs) for xs in fpairs])
             assert len(pair_types) == 1
+            fpairs.sort(key=lambda x: os.path.basename(x[0]))
             organized = [[xs[0] for xs in fpairs]]
             if len(fpairs[0]) > 1:
                 organized.append([xs[1] for xs in fpairs])
@@ -385,8 +386,8 @@ def _prep_grabix_indexes(in_files, data):
     """
     # if we have gzipped but not bgzipped, add a fake index for CWL support
     # Also skips bgzip indexing if we don't need alignment splitting
-    if _ready_gzip_fastq(in_files, data) and (not _ready_gzip_fastq(in_files, data, require_bgzip=True)
-                                              or dd.get_align_split_size(data) is False):
+    if _ready_gzip_fastq(in_files, data) and (not _ready_gzip_fastq(in_files, data, require_bgzip=True) or
+                                              dd.get_align_split_size(data) is False):
         for in_file in in_files:
             if not utils.file_exists(in_file + ".gbi"):
                 with file_transaction(data, in_file + ".gbi") as tx_gbi_file:
@@ -644,7 +645,6 @@ def _bgzip_from_fastq(data):
     else:
         needs_bgzip, needs_gunzip = True, False
     work_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "align_prep"))
-    print(data["in_file"])
     if (needs_bgzip or needs_gunzip or needs_convert or dd.get_trim_ends(data) or
           objectstore.is_remote(in_file) or
           (isinstance(data["in_file"], (tuple, list)) and len(data["in_file"]) > 1)):
