@@ -42,6 +42,6 @@ details:
           interesting_groups: batch
     metadata:
       batch: TestBatch1
-    description: Test2
+    description: 2Test2
     files: [../data/test_fusion/1_1.fq.gz, ../data/test_fusion/1_2.fq.gz]
     genome_build: hg19

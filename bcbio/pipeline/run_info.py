@@ -35,6 +35,10 @@ ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller"
                          "svcaller", "hetcaller", "jointcaller", "tools_off",
                          "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
+# these analysis pipelines use R heavily downstream, and need to have samplenames
+# cleaned up to conform to R specifications
+R_DOWNSTREAM_ANALYSIS = ["rna-seq", "fastrna-seq", "scrna-seq", "chip-seq",
+                         "scrna-seq"]
 
 def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
              integrations=None):
@@ -859,7 +863,14 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                 item["description"] = get_sample_name(item["files"][0])
             else:
                 raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
-        item["description"] = _clean_characters(str(item["description"]))
+        description = _clean_characters(str(item["description"]))
+        item["description"] = description
+        # make names R safe if we are likely to use R downstream
+        if item["analysis"].lower() in R_DOWNSTREAM_ANALYSIS:
+            if description[0].isdigit():
+                valid = "X" + description
+                logger.info("%s is not a valid R name, converting to %s." % (description, valid))
+                item["description"] = valid
         if "upload" not in item:
             upload = global_config.get("upload", {})
             # Handle specifying a local directory directly in upload
