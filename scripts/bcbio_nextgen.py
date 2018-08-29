@@ -38,7 +38,6 @@ from bcbio import install, utils, workflow
 from bcbio.illumina import machine
 from bcbio.distributed import runfn, clargs
 from bcbio.pipeline.main import run_main
-from bcbio.server import main as server_main
 from bcbio.graph import graph
 from bcbio.provenance import programs
 from bcbio.pipeline import version
@@ -52,7 +51,6 @@ def parse_cl_args(in_args):
     Returns the main config file and set of kwargs.
     """
     sub_cmds = {"upgrade": install.add_subparser,
-                "server": server_main.add_subparser,
                 "runfn": runfn.add_subparser,
                 "graph": graph.add_subparser,
                 "version": programs.add_subparser,
@@ -221,8 +219,6 @@ if __name__ == "__main__":
     kwargs = parse_cl_args(sys.argv[1:])
     if "upgrade" in kwargs and kwargs["upgrade"]:
         install.upgrade_bcbio(kwargs["args"])
-    elif "server" in kwargs and kwargs["server"]:
-        server_main.start(kwargs["args"])
     elif "runfn" in kwargs and kwargs["runfn"]:
         runfn.process(kwargs["args"])
     elif "graph" in kwargs and kwargs["graph"]:
