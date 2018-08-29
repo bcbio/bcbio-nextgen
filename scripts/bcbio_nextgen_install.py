@@ -78,7 +78,6 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
         subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
-    subprocess.check_call([anaconda["conda"], "install", "--yes", "conda>=4.4"], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes",
                            "-c", "conda-forge", "-c", "bioconda", "--only-deps", "bcbio-nextgen"], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes",
