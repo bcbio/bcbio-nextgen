@@ -155,8 +155,8 @@ op="delete"
 def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
     """Annotate a VCF file with dbSNP.
 
-    Adds rsIDs to NON_REF positions for gVCF inputs, but requires strict
-    allele matching for non-gVCF.
+    vcfanno has flexible matching for NON_REF gVCF positions, matching
+    at position and REF allele, matching ALT NON_REF as a wildcard.
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
     if out_file is None:
@@ -168,8 +168,7 @@ def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
                 out_handle.write(_DBSNP_TEMPLATE % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
             if not post_cl: post_cl = ""
             cores = dd.get_num_cores(data)
-            opts = " -permissive-overlap" if vcfutils.is_gvcf_file(orig_file) else ""
-            cmd = ("vcfanno -p {cores}{opts} {conf_file} {orig_file} | {post_cl} "
+            cmd = ("vcfanno -p {cores} {conf_file} {orig_file} | {post_cl} "
                    "bgzip -c > {tx_out_file}")
             do.run(cmd.format(**locals()), "Annotate with dbSNP")
     return vcfutils.bgzip_and_index(out_file, data["config"])
