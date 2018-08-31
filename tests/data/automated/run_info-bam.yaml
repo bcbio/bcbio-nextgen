@@ -37,7 +37,7 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
-      svcaller: [seq2c, cnvkit, delly, lumpy, gridss]
+      svcaller: [seq2c, cnvkit, delly, lumpy]
       #background:
       #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       exclude_regions: [lcr, highdepth, polyx, altcontigs]
