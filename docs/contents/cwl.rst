@@ -305,10 +305,10 @@ bcbio runs on the `DNAnexus platform <https://www.dnanexus.com/>`_ by converting
 bcbio generated CWL into DNAnexus workflows and apps using
 `dx-cwl <https://github.com/dnanexus/dx-cwl>`_. This describes the process
 using the bcbio workflow app (bcbio-run-workflow) and
-'bcbio workflow applet (bcbio_resources:/applets/bcbio-run-workflow) <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets>`_
+`bcbio workflow applet (bcbio_resources:/applets/bcbio-run-workflow) <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets>`_
 in the public `bcbio_resources
 <https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/>`_
-project, These are both `regularly updated and maintained on the DNAnexus
+project, Both are `regularly updated and maintained on the DNAnexus
 platform <https://github.com/bcbio/bcbio-dnanexus-wrapper>`_. Secondarily, we
 also show how to install and create workflows locally for
 additional control and debugging.
@@ -394,8 +394,8 @@ additional control and debugging.
       dx rm -a -r /$FOLDER/dx-cwl-run || true
       dx run bcbio-run-workflow/$APP_VERSION -iyaml_template=/$FOLDER/$TEMPLATE-template.yaml -isample_spec=/$FOLDER/$PNAME.csv -isystem_configuration=/$FOLDER/bcbio_system-dnanexus.yaml -ioutput_folder=/$FOLDER/dx-cwl-run
 
-    Alternatively if you want the latest bcbio code, change the final command to
-    use the applet. Everything else in the script is identical::
+   Alternatively if you want the latest bcbio code, change the final command to
+   use the applet. Everything else in the script is identical::
 
        dx run bcbio_resources:/applets/bcbio-run-workflow -iyaml_template=/$FOLDER/$TEMPLATE-template.yaml -isample_spec=/$FOLDER/$PNAME.csv -isystem_configuration=/$FOLDER/bcbio_system-dnanexus.yaml -ioutput_folder=/$FOLDER/dx-cwl-run
 
