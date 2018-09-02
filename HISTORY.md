@@ -15,6 +15,8 @@
 - variant: support octopus variant caller for germline and somatic samples.
 - peddy: fix bug where not all files uploaded on first pipeline run
 - GATK: support ploidy specification during joint calling.
+- GATK BQSR: bin qualities into static groups (10, 20, 30) to match GATK4
+  recommendations. Thanks to Severine Catreux.
 - variant calling: support bcftools 1.9 which is more strict about duplicated
   key names in INFO and FORMAT.
 - seq2c: Upload global calls, coverage and read_mapping files to project directory.

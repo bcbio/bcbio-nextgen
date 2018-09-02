@@ -128,9 +128,10 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
 def _gatk_apply_bqsr(data):
     """Parallel BQSR support for GATK4.
 
-    Normalized qualities to 4 bin outputs based on pipeline standard
+    Normalized qualities to 3 bin outputs at 10, 20 and 30 based on pipeline standard
     recommendations, which will help with output file sizes:
     https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md#base-quality-score-binning-scheme
+    https://github.com/gatk-workflows/broad-prod-wgs-germline-snps-indels/blob/5585cdf7877104f2c61b2720ddfe7235f2fad577/PairedEndSingleSampleWf.gatk4.0.wdl#L1081
 
     spark host and timeout settings help deal with runs on restricted systems
     where we encounter network and timeout errors
@@ -148,7 +149,8 @@ def _gatk_apply_bqsr(data):
                           "--input", in_file, "--output", tx_out_file, "--bqsr-recal-file", data["prep_recal"],
                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
                           "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
-                          "--quantize-quals", "4"]
+                          "--static-quantized-quals", "10", "--static-quantized-quals", "20",
+                          "--static-quantized-quals", "30"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
