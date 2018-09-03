@@ -1,0 +1,16 @@
+
+# Template for joint genotyping of gvcf inputs created with GATK
+---
+details:
+  - analysis: variant2
+    genome_build: hg38
+    # to do multi-sample variant calling, assign samples the same metadata / batch
+    # metadata:
+    #   batch: your-arbitrary-batch-name
+    algorithm:
+      variantcaller: gatk-haplotype
+      # for targetted projects, set the region
+      # variant_regions: /path/to/your.bed
+      jointcaller: gatk-haplotype-joint
+    # set the path to your gvcf file here
+    vrn_file: 
