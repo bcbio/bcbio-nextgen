@@ -107,7 +107,7 @@ def get_qc_tools(data):
         to_run += ["qsignature", "variants"]
         if vcfanno.is_human(data):
             to_run += ["contamination", "peddy"]
-        if vcfutils.get_paired([data]):
+        if vcfutils.get_paired_phenotype(data):
             to_run += ["viral"]
         if damage.should_filter([data]):
             to_run += ["damage"]
