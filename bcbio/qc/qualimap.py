@@ -280,7 +280,7 @@ def _read_memoized_rrna(rrna_file):
     rrna_dict = {}
     with open(rrna_file) as in_handle:
         for line in in_handle:
-            tokens = line.split(",")
+            tokens = line.strip().split(",")
             rrna_dict[tokens[0]] = tokens[1]
     return rrna_dict
 
