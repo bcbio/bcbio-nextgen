@@ -12,8 +12,14 @@ def create_cromwell_config(args, work_dir):
                  "String? outDirMax", "String? tmpDirMin", "String? tmpDirMax"]
     out_file = os.path.join(work_dir, "bcbio-cromwell.conf")
     run_config = _load_custom_config(args.runconfig) if args.runconfig else {}
+    # Avoid overscheduling jobs for local runs by limiting concurrent jobs
+    # Longer term would like to keep these within defined core window
+    joblimit = args.joblimit
+    if joblimit == 0 and not args.scheduler:
+        joblimit = 1
     std_args = {"docker_attrs": "" if args.no_container else "\n        ".join(docker_attrs),
                 "submit_docker": 'submit-docker: ""' if args.no_container else "",
+                "joblimit": "concurrent-job-limit = %s" % (joblimit) if joblimit > 0 else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
                 "filesystem": FILESYSTEM_CONFIG if args.no_container else "",
                 "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir})}
@@ -124,9 +130,7 @@ backend {
   providers {
     Local {
       config {
-        # Avoid overscheduling jobs for local runs by limiting concurrent jobs
-        # Longer term would like to keep these within defined core window
-        concurrent-job-limit = 1
+        %(joblimit)s
         runtime-attributes = \"\"\"
         Int? cpu
         Int? memory_mb
@@ -147,6 +151,7 @@ HPC_CONFIGS = {
     SLURM {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
+        %(joblimit)s
         runtime-attributes = \"\"\"
         Int cpu = 1
         Int memory_mb = 2048
@@ -172,6 +177,7 @@ HPC_CONFIGS = {
     SGE {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
+        %(joblimit)s
         runtime-attributes = \"\"\"
         Int cpu = 1
         Int memory_mb = 2048
@@ -198,6 +204,7 @@ HPC_CONFIGS = {
     PBSPRO {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
+        %(joblimit)s
         runtime-attributes = \"\"\"
         Int cpu = 1
         Int memory_mb = 2048
@@ -224,6 +231,7 @@ HPC_CONFIGS = {
     TORQUE {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
+        %(joblimit)s
         runtime-attributes = \"\"\"
         Int cpu = 1
         Int memory_mb = 2048
@@ -249,6 +257,7 @@ HPC_CONFIGS = {
     HTCONDOR {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
       config {
+        %(joblimit)s
         runtime-attributes = \"\"\"
           Int cpu = 1
           Float memory_mb = 512.0

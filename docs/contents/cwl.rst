@@ -218,8 +218,16 @@ To run distributed on a SLURM cluster::
 
     bcbio_vm.py cwlrun cromwell sample-workflow --no-container -q your_queue -s slurm -r timelimit=0-12:00
 
-You tweak scheduler parameters using the
+Tweak scheduler parameters using the
 `same options as the older bcbio IPython approach <http://bcbio-nextgen.readthedocs.io/en/latest/contents/parallel.html#ipython-parallel>`_.
+
+To control the resources used Cromwell, set `--joblimit` to the allowed jobs
+allocated concurrently. This isn't total cores used, but rather the number of jobs
+either locally or remotely scheduled concurrently. Since CWL steps are
+heterogeneous and use only cores necessary for that job, the total cores used
+will max out at joblimit times maximum cores for an individual process. Setting
+this helps avoid over-committing jobs to a shared scheduler during highly
+parallel processes like variant calling.
 
 Running with Toil (local, HPC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
