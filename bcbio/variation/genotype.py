@@ -314,12 +314,15 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             out.append(base)
         return out
 
+
 SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope",
-                     "deepvariant", "gatk-haplotype", "pisces", "octopus"]
+                     "deepvariant", "gatk-haplotype", "pisces", "octopus",
+                     "smcounter2"]
+
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2, octopus,
                                  pisces, platypus, scalpel, sentieon, strelka2, vardict, qsnp,
-                                 deepvariant)
+                                 deepvariant, smcounter2)
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "mutect2": mutect2.mutect2_caller,
@@ -333,6 +336,7 @@ def get_variantcallers():
             "pisces": pisces.run,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
+            "smcounter2": smcounter2.run,
             "strelka2": strelka2.run,
             "vardict": vardict.run_vardict,
             "vardict-java": vardict.run_vardict,
