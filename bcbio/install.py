@@ -11,6 +11,7 @@ import datetime
 import dateutil
 from distutils.version import LooseVersion
 import gzip
+import json
 import os
 import shutil
 import subprocess
@@ -68,6 +69,8 @@ def upgrade_bcbio(args):
             _update_conda_packages()
             _check_for_conda_problems()
             print("Upgrade of bcbio-nextgen code complete.")
+    if args.cwl:
+        _update_bcbiovm()
 
     try:
         _set_matplotlib_default_backend()
@@ -81,6 +84,9 @@ def upgrade_bcbio(args):
             _symlink_bcbio(args, script="bcbio_setup_genome.py")
             _symlink_bcbio(args, script="bcbio_prepare_samples.py")
             _symlink_bcbio(args, script="bcbio_fastq_umi_prep.py")
+            if args.cwl:
+                _symlink_bcbio(args, "bcbio_vm.py", "bcbiovm")
+                _symlink_bcbio(args, "python", "bcbiovm", "bcbiovm")
             upgrade_thirdparty_tools(args, REMOTES)
             print("Third party tools upgrade complete.")
     if args.toolplus:
@@ -154,13 +160,19 @@ def _matplotlib_installed():
         return False
     return True
 
-def _symlink_bcbio(args, script="bcbio_nextgen.py"):
+def _symlink_bcbio(args, script="bcbio_nextgen.py", env_name=None, prefix=None):
     """Ensure a bcbio-nextgen script symlink in final tool directory.
     """
-    bcbio_anaconda = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), script)
+    if env_name:
+        bcbio_anaconda = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(sys.executable))),
+                                      "envs", env_name, "bin", script)
+    else:
+        bcbio_anaconda = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), script)
     bindir = os.path.join(args.tooldir, "bin")
     if not os.path.exists(bindir):
         os.makedirs(bindir)
+    if prefix:
+        script = "%s_%s" % (prefix, script)
     bcbio_final = os.path.join(bindir, script)
     if not os.path.exists(bcbio_final):
         if os.path.lexists(bcbio_final):
@@ -228,6 +240,30 @@ def _check_for_conda_problems():
         if not os.path.exists(os.path.join(lib_dir, l)):
             subprocess.check_call([conda_bin, "install", "-f",
                                    "--yes", "-c", "bioconda", "-c", "conda-forge", "libgcc-ng"])
+
+def _update_bcbiovm():
+    """Update or install a local bcbiovm install with tools and dependencies.
+    """
+    print("## CWL support with bcbio-vm")
+    conda_bin, env_name = _add_environment("bcbiovm", "python=2")
+    base_cmd = [conda_bin, "install", "--yes", "--name", env_name,
+                "-c", "conda-forge", "-c", "bioconda"]
+    subprocess.check_call(base_cmd + ["bcbio-nextgen"])
+    extra_uptodate = ["cromwell"]
+    subprocess.check_call(base_cmd + ["bcbio-nextgen-vm"] + extra_uptodate)
+
+def _get_envs(conda_bin):
+    info = json.loads(subprocess.check_output("{conda_bin} info --envs --json".format(**locals()), shell=True))
+    return [e for e in info["envs"] if e.startswith(info["conda_prefix"])]
+
+def _add_environment(addenv, deps):
+    conda_bin = _get_conda_bin()
+    conda_envs = _get_envs(conda_bin)
+    if not any(x.endswith("/%s" % addenv) for x in conda_envs):
+        subprocess.check_call("{conda_bin} create --no-default-packages -y "
+                              "--name {addenv} {deps}".format(**locals()), shell=True)
+        conda_envs = _get_envs(conda_bin)
+    return conda_bin, addenv
 
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
@@ -320,7 +356,7 @@ def upgrade_bcbio_data(args, remotes):
         subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
-    if args.cwldata:
+    if args.cwl:
         _prepare_cwl_tarballs(data_dir)
 
 def _prepare_cwl_tarballs(data_dir):
@@ -398,7 +434,7 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
                     dl_dir = os.path.join(snpeff_base_dir, "data", snpeff_db)
                     shutil.move(dl_dir, snpeff_db_dir)
                     os.rmdir(os.path.join(snpeff_base_dir, "data"))
-                if args.cwldata:
+                if args.cwl:
                     create.directory_tarball(snpeff_db_dir)
 
 def _is_old_database(db_dir, args):
@@ -749,8 +785,8 @@ def add_subparser(subparsers):
                         choices=SUPPORTED_INDEXES)
     parser.add_argument("--data", help="Upgrade data dependencies",
                         dest="install_data", action="store_true", default=False)
-    parser.add_argument("--cwldata", help="Prepare data inputs for CWL",
-                        dest="cwldata", action="store_true", default=False)
+    parser.add_argument("--cwl", help="Install code and data for running CWL workflows",
+                        dest="cwl", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("--distribution", help="Operating system distribution",
