@@ -22,6 +22,7 @@
 - seq2c: Upload global calls, coverage and read_mapping files to project directory.
 - RNA-seq variant calling: Apply annotations after joint calling for GATK to
   avoid import errors with GenomicsDB. Thanks to Komal Rathi.
+- CWL: add `--cwl` target to bcbio_nextgen.py upgrade to add and maintain bcbio-vm.
 - CWL: use standard null instead of string "null" for representing None values.
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.

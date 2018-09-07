@@ -69,13 +69,42 @@ includes supporting additional CWL runners. We're working on evaluating
 `Galaxy/Planemo <https://github.com/galaxyproject/planemo>`_ for integration
 with the Galaxy community.
 
-Getting started
-~~~~~~~~~~~~~~~
+Installation
+~~~~~~~~~~~~
 
 `bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ installs all
 dependencies required to generate CWL and run bcbio, along with supported CWL
-runners. To install using `Miniconda <http://conda.pydata.org/miniconda.html>`_
-and `bioconda packages <https://bioconda.github.io/>`_ on Linux::
+runners. There are two install choices, depending on your usage of bcbio:
+running CWL with a existing local bcbio install, or running with containers.
+
+Install bcbio-vm with a local bcbio
+===================================
+
+To run bcbio without using containers, first `install bcbio
+<https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
+and make it available in your path. You'll need both the bcbio code and tools.
+To only run the tests and bcbio validations, you don't need a full data
+installation so can install with ``--nodata``.
+
+To then install bcbio-vm, add the ``--cwl`` flag to the install::
+
+    bcbio_nextgen.py upgrade --cwl
+
+Adding this to any future upgrades will also update the bcbio-vm wrapper code
+and tools.
+
+When you begin running your own analysis and need the data available,
+pre-prepare your bcbio data directory with ``bcbio_nextgen.py upgrade --data
+--cwl``.
+
+Install bcbio-vm with containers
+================================
+
+If you don't have an existing local bcbio installation and want to run with CWL
+using the tools and data embedded in containers, you can do a stand along
+install of just bcbio-vm. To install using `Miniconda
+<http://conda.pydata.org/miniconda.html>`_ and `bioconda packages
+<https://bioconda.github.io/>`_ on Linux::
 
     wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     export TARGETDIR=~/install/bcbio-vm/anaconda
@@ -95,16 +124,13 @@ add the install bin directory to your PATH::
     export PATH=$TARGETDIR/bin:$PATH
 
 This install includes bcbio-nextgen libraries, used in generating CWL and
-orchestrating runs, but is not a full bcbio installation. You have two choices
-to run analyses. If you have `Docker <https://www.docker.com/>`_ present on your
+orchestrating runs, but is not a full bcbio installation. It requires
+`Docker <https://www.docker.com/>`_ present on your
 system this is all you need to get started running examples, since the CWL
-runners will pull in Docker containers with the bcbio tools. If you instead
-prefer to use a local installation, `install bcbio
-<https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#automated>`_
-and make it available in your path. To only run the tests and bcbio validations,
-you don't need a full data installation so can install with ``--nodata``. When you
-being running your own analysis, pre-prepare your bcbio data directory with
-``bcbio_nextgen.py upgrade --data --cwl``.
+runners will pull in Docker containers with the bcbio tools.
+
+Getting started
+~~~~~~~~~~~~~~~
 
 To make it easy to get started, we have pre-built CWL descriptions that
 use test data. These run in under 5 minutes on a local machine and
