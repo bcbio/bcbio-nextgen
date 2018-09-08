@@ -14,7 +14,6 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
-from bcbio.structural import lumpy
 
 POST_PRIOR_FNS = {}
 
@@ -32,15 +31,21 @@ def run(items):
             inputs.append((call["variantcaller"], vcf_file, pp_fn))
     if len(inputs) > 0:
         prioritize_by = tz.get_in(["config", "algorithm", "svprioritize"], data)
-        if not prioritize_by:
-            raise ValueError("Missing structural variant prioritization with `svprioritize`")
-        work_dir = _sv_workdir(data)
-        priority_files = [_prioritize_vcf(vcaller, vfile, prioritize_by, post_prior_fn, work_dir, data)
-                          for vcaller, vfile, post_prior_fn in inputs]
-        priority_tsv = _combine_files([xs[0] for xs in priority_files], work_dir, data)
-        data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv,
-                           "raw_files": dict(zip([xs[0] for xs in inputs], [xs[1] for xs in priority_files]))})
-    data = _cnv_prioritize(data)
+        if prioritize_by:
+            work_dir = _sv_workdir(data)
+            priority_files = [_prioritize_vcf(vcaller, vfile, prioritize_by, post_prior_fn, work_dir, data)
+                              for vcaller, vfile, post_prior_fn in inputs]
+            priority_tsv = _combine_files([xs[0] for xs in priority_files], work_dir, data)
+            raw_files = {}
+            for svcaller, fname in zip([xs[0] for xs in inputs], [xs[1] for xs in priority_files]):
+                clean_fname = os.path.join(os.path.dirname(fname), "%s-%s-prioritized%s" %
+                                           (dd.get_sample_name(data), svcaller, utils.splitext_plus(fname)[-1]))
+                utils.symlink_plus(fname, clean_fname)
+                raw_files[svcaller] = clean_fname
+            data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv,
+                               "raw_files": raw_files})
+    # Disabled on move to CWL, not used and tested with CNVkit changes
+    # data = _cnv_prioritize(data)
     return [data]
 
 def is_gene_list(bed_file):

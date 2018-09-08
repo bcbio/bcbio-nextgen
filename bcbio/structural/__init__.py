@@ -203,16 +203,24 @@ def detect_sv(items, all_items=None, stage="standard"):
         for data in items:
             out.append([data])
     # Avoid nesting of callers for CWL runs for easier extraction
-    if "cwl_keys" in items[0]:
+    if cwlutils.is_cwl_run(items[0]):
         out_cwl = []
         for data in [utils.to_single_data(x) for x in out]:
-            # Run validation directly from CWL runs since we're single stage
+            # Run validation and prioritization directly from CWL runs since we're single stage
             data = validate.evaluate(data)
             data["svvalidate"] = {"summary": tz.get_in(["sv-validate", "csv"], data)}
+            prioritysv = [x for x in prioritize.run([utils.deepish_copy(data)])[0].get("sv", [])
+                          if x["variantcaller"] == "sv-prioritize"]
             svs = data.get("sv")
             if svs:
                 assert len(svs) == 1, svs
                 data["sv"] = svs[0]
+            else:
+                data["sv"] = {}
+            data["sv"]["prioritize"] = {"vrn_file": None, "raw_files": []}
+            if prioritysv:
+                data["sv"]["prioritize"] = {"vrn_file": prioritysv[0]["vrn_file"],
+                                            "raw_files": prioritysv[0]["raw_files"].values()}
             out_cwl.append([data])
         return out_cwl
     return out
@@ -223,7 +231,9 @@ def summarize_sv(items):
     XXX Need to support non-VCF output as tabix indexed output
     """
     items = [utils.to_single_data(x) for x in vcvalidate.summarize_grading(items, "svvalidate")]
-    out = {"sv": {"calls": []},
+    out = {"sv": {"calls": [],
+                  "prioritize": {"tsv": [],
+                                 "raw": []}},
            "svvalidate": vcvalidate.combine_validations(items, "svvalidate")}
     added = set([])
     for data in items:
@@ -243,6 +253,11 @@ def summarize_sv(items):
                     utils.copy_plus(data["sv"]["vrn_file"], out_file)
                     out_file = vcfutils.bgzip_and_index(out_file, data["config"])
                     out["sv"]["calls"].append(out_file)
+            if data["sv"].get("prioritize"):
+                if data["sv"]["prioritize"].get("vrn_file"):
+                    out["sv"]["prioritize"]["tsv"].append(data["sv"]["prioritize"]["vrn_file"])
+                if data["sv"]["prioritize"].get("raw_files"):
+                    out["sv"]["prioritize"]["raw"].extend(data["sv"]["prioritize"]["raw_files"])
     return [out]
 
 # ## configuration

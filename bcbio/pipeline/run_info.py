@@ -999,6 +999,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "exclude_regions": [],
                 "variant_regions": None,
                 "svvalidate": None,
+                "svprioritize": None,
                 "validate": None,
                 "validate_regions": None,
                 "vcfanno": []}
