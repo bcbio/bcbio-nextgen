@@ -315,9 +315,12 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
         return out
 
 
+# Avoid use of multicore GATK HaplotypeCallerSpark due to bugs in gVCF output
+# during joint calling Intermittent failures where we don't produce correct headers
+# https://github.com/broadinstitute/gatk/issues/4821
+# "gatk-haplotype"
 SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope",
-                     "deepvariant", "gatk-haplotype", "pisces", "octopus",
-                     "smcounter2"]
+                     "deepvariant", "pisces", "octopus", "smcounter2"]
 
 def get_variantcallers():
     from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2, octopus,
@@ -444,7 +447,7 @@ def variantcall_batch_region(items):
     with pshared.bedtools_tmpdir(items[0]):
         if variantcaller in SUPPORT_MULTICORE:
             call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
-                                [_region_to_coords(r) for r in region_block], out_file)
+                                  [_region_to_coords(r) for r in region_block], out_file)
         else:
             call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
     return {"vrn_file_region": call_file, "region_block": region_block}
