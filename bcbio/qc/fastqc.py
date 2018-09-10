@@ -45,7 +45,8 @@ def run(bam_file, data, fastqc_out):
                 cl = [config_utils.get_program("fastqc", data["config"]),
                       "-d", tx_tmp_dir,
                       "-t", str(num_cores), "--extract", "-o", tx_tmp_dir, "-f", frmt, bam_file]
-                cl = "%s %s" % (utils.local_path_export(), " ".join([str(x) for x in cl]))
+                cl = "%s %s %s" % (utils.java_freetype_fix(),
+                                   utils.local_path_export(), " ".join([str(x) for x in cl]))
                 do.run(cl, "FastQC: %s" % dd.get_sample_name(data))
                 tx_fastqc_out = os.path.join(tx_tmp_dir, "%s_fastqc" % fastqc_name)
                 tx_combo_file = os.path.join(tx_tmp_dir, "%s_fastqc.html" % fastqc_name)

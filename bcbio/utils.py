@@ -787,6 +787,15 @@ def local_path_export(at_start=True):
     else:
         return "export PATH=$PATH:%s && " % (path)
 
+def java_freetype_fix():
+    """Provide workaround for issues FreeType library symbols.
+
+    libfontconfig.so.1: undefined symbol: FT_Done_MM_Var
+
+    Cheap workaround with LD_PRELOAD, I don't know a better one.
+    """
+    return "LD_PRELOAD=%s/lib && " % os.path.dirname(get_bcbio_bin())
+
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
     return ext in [".gz", "gzip"]

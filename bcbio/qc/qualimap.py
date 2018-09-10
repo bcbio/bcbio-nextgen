@@ -54,7 +54,7 @@ def run(bam_file, data, out_dir):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
 
-            export = utils.local_path_export()
+            export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
             cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_results_dir} "
                    "--skip-duplicated --skip-dup-mode 0 "
                    "-nt {num_cores} --java-mem-size={max_mem} {options}")
@@ -363,7 +363,7 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
     num_cores = resources.get("cores", dd.get_num_cores(data))
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
-    export = utils.local_path_export()
+    export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
     cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
            "-a proportional -bam {bam_file} -p {library} "
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
