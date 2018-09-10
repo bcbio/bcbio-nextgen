@@ -794,7 +794,7 @@ def java_freetype_fix():
 
     Cheap workaround with LD_PRELOAD, I don't know a better one.
     """
-    return "LD_PRELOAD=%s/lib && " % os.path.dirname(get_bcbio_bin())
+    return "LD_PRELOAD=%s/lib/libfreetype.so && " % os.path.dirname(get_bcbio_bin())
 
 def is_gzipped(fname):
     _, ext = os.path.splitext(fname)
