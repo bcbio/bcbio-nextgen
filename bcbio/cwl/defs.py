@@ -492,8 +492,6 @@ def _variant_sv(checkpoints):
             [cwlout("sv_rec", "record",
                     fields=[cwlout(["sv", "variantcaller"], ["string", "null"]),
                             cwlout(["sv", "vrn_file"], ["File", "null"], [".tbi"]),
-                            cwlout(["sv", "prioritize", "vrn_file"], ["File", "null"]),
-                            cwlout(["sv", "prioritize", "raw_files"], {"type": "array", "items": ["File", "null"]}),
                             cwlout(["svvalidate", "summary"], ["File", "null"]),
                             cwlout("inherit", exclude=[["align_bam"], ["work_bam_plus"],
                                                        ["reference", "snpeff"]])])],

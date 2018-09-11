@@ -206,23 +206,33 @@ def detect_sv(items, all_items=None, stage="standard"):
     if cwlutils.is_cwl_run(items[0]):
         out_cwl = []
         for data in [utils.to_single_data(x) for x in out]:
-            # Run validation and prioritization directly from CWL runs since we're single stage
+            # Run validation directly from CWL runs since we're single stage
             data = validate.evaluate(data)
             data["svvalidate"] = {"summary": tz.get_in(["sv-validate", "csv"], data)}
-            prioritysv = [x for x in prioritize.run([utils.deepish_copy(data)])[0].get("sv", [])
-                          if x["variantcaller"] == "sv-prioritize"]
             svs = data.get("sv")
             if svs:
                 assert len(svs) == 1, svs
                 data["sv"] = svs[0]
             else:
                 data["sv"] = {}
-            data["sv"]["prioritize"] = {"vrn_file": None, "raw_files": []}
-            if prioritysv:
-                data["sv"]["prioritize"] = {"vrn_file": prioritysv[0]["vrn_file"],
-                                            "raw_files": prioritysv[0]["raw_files"].values()}
             out_cwl.append([data])
         return out_cwl
+    return out
+
+def _group_by_sample(items):
+    """Group a set of items by sample names + multiple callers for prioritization
+    """
+    by_sample = collections.defaultdict(list)
+    for d in items:
+        by_sample[dd.get_sample_name(d)].append(d)
+    out = []
+    for sample_group in by_sample.values():
+        cur = utils.deepish_copy(sample_group[0])
+        svs = []
+        for d in sample_group:
+            svs.append(d["sv"])
+        cur["sv"] = svs
+        out.append(cur)
     return out
 
 def summarize_sv(items):
@@ -236,6 +246,7 @@ def summarize_sv(items):
                                  "raw": []}},
            "svvalidate": vcvalidate.combine_validations(items, "svvalidate")}
     added = set([])
+    # Standard callers
     for data in items:
         if data.get("sv"):
             names = dd.get_batches(data)
@@ -253,11 +264,13 @@ def summarize_sv(items):
                     utils.copy_plus(data["sv"]["vrn_file"], out_file)
                     out_file = vcfutils.bgzip_and_index(out_file, data["config"])
                     out["sv"]["calls"].append(out_file)
-            if data["sv"].get("prioritize"):
-                if data["sv"]["prioritize"].get("vrn_file"):
-                    out["sv"]["prioritize"]["tsv"].append(data["sv"]["prioritize"]["vrn_file"])
-                if data["sv"]["prioritize"].get("raw_files"):
-                    out["sv"]["prioritize"]["raw"].extend(data["sv"]["prioritize"]["raw_files"])
+    # prioritization
+    for pdata in _group_by_sample(items):
+        prioritysv = [x for x in prioritize.run([utils.deepish_copy(pdata)])[0].get("sv", [])
+                      if x["variantcaller"] == "sv-prioritize"]
+        if prioritysv:
+            out["sv"]["prioritize"]["tsv"].append(prioritysv[0]["vrn_file"])
+            out["sv"]["prioritize"]["raw"].extend(prioritysv[0]["raw_files"].values())
     return [out]
 
 # ## configuration
