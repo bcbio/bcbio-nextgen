@@ -215,9 +215,51 @@ def detect_sv(items, all_items=None, stage="standard"):
                 data["sv"] = svs[0]
             else:
                 data["sv"] = {}
+            data = _add_supplemental(data)
             out_cwl.append([data])
         return out_cwl
     return out
+
+def _add_supplemental(data):
+    """Add additional supplemental files to CWL sv output, give useful names.
+    """
+    if "supplemental" not in data["sv"]:
+        data["sv"]["supplemental"] = []
+    if data["sv"].get("variantcaller"):
+        cur_name = _useful_basename(data)
+        for k in ["cns", "vrn_bed"]:
+            if data["sv"].get(k) and os.path.exists(data["sv"][k]):
+                dname, orig = os.path.split(data["sv"][k])
+                orig_base, orig_ext = utils.splitext_plus(orig)
+                orig_base = _clean_name(orig_base, data)
+                if orig_base:
+                    fname = "%s-%s%s" % (cur_name, orig_base, orig_ext)
+                else:
+                    fname = "%s%s" % (cur_name, orig_ext)
+                sup_out_file = os.path.join(dname, fname)
+                utils.symlink_plus(data["sv"][k], sup_out_file)
+                data["sv"]["supplemental"].append(sup_out_file)
+    return data
+
+def _clean_name(fname, data):
+    """Remove standard prefixes from a filename before renaming with useful names.
+    """
+    for to_remove in dd.get_batches(data) + [dd.get_sample_name(data), data["sv"]["variantcaller"]]:
+        for ext in ("-", "_"):
+            if fname.startswith("%s%s" % (to_remove, ext)):
+                fname = fname[len(to_remove) + len(ext):]
+        if fname.startswith(to_remove):
+            fname = fname[len(to_remove):]
+    return fname
+
+def _useful_basename(data):
+    """Provide a useful file basename for outputs, referencing batch/sample and caller.
+    """
+    names = dd.get_batches(data)
+    if not names:
+        names = [dd.get_sample_name(data)]
+    batch_name = names[0]
+    return "%s-%s" % (batch_name, data["sv"]["variantcaller"])
 
 def _group_by_sample(items):
     """Group a set of items by sample names + multiple callers for prioritization
@@ -242,6 +284,7 @@ def summarize_sv(items):
     """
     items = [utils.to_single_data(x) for x in vcvalidate.summarize_grading(items, "svvalidate")]
     out = {"sv": {"calls": [],
+                  "supplemental": [],
                   "prioritize": {"tsv": [],
                                  "raw": []}},
            "svvalidate": vcvalidate.combine_validations(items, "svvalidate")}
@@ -249,13 +292,9 @@ def summarize_sv(items):
     # Standard callers
     for data in items:
         if data.get("sv"):
-            names = dd.get_batches(data)
-            if not names:
-                names = [dd.get_sample_name(data)]
-            batch_name = names[0]
-            cur_name = "%s-%s" % (batch_name, data["sv"]["variantcaller"])
             if data["sv"].get("vrn_file"):
                 ext = utils.splitext_plus(data["sv"]["vrn_file"])[-1]
+                cur_name = _useful_basename(data)
                 if cur_name not in added and ext.startswith(".vcf"):
                     added.add(cur_name)
                     out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data),
@@ -264,6 +303,8 @@ def summarize_sv(items):
                     utils.copy_plus(data["sv"]["vrn_file"], out_file)
                     out_file = vcfutils.bgzip_and_index(out_file, data["config"])
                     out["sv"]["calls"].append(out_file)
+            if data["sv"].get("supplemental"):
+                out["sv"]["supplemental"].extend([x for x in data["sv"]["supplemental"] if x])
     # prioritization
     for pdata in _group_by_sample(items):
         prioritysv = [x for x in prioritize.run([utils.deepish_copy(pdata)])[0].get("sv", [])

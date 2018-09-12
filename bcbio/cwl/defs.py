@@ -492,6 +492,7 @@ def _variant_sv(checkpoints):
             [cwlout("sv_rec", "record",
                     fields=[cwlout(["sv", "variantcaller"], ["string", "null"]),
                             cwlout(["sv", "vrn_file"], ["File", "null"], [".tbi"]),
+                            cwlout(["sv", "supplemental"], {"type": "array", "items": ["File"]}),
                             cwlout(["svvalidate", "summary"], ["File", "null"]),
                             cwlout("inherit", exclude=[["align_bam"], ["work_bam_plus"],
                                                        ["reference", "snpeff"]])])],
@@ -556,13 +557,14 @@ def _variant_sv(checkpoints):
              s("summarize_sv", "multi-combined",
                [["sv_rec"]],
                [cwlout(["sv", "calls"], {"type": "array", "items": ["File", "null"]}),
+                cwlout(["sv", "supplemental"], {"type": "array", "items": ["File"]}),
                 cwlout(["sv", "prioritize", "tsv"], {"type": "array", "items": ["File", "null"]}),
                 cwlout(["sv", "prioritize", "raw"], {"type": "array", "items": ["File", "null"]}),
                 cwlout(["svvalidate", "grading_summary"], ["File", "null"]),
                 cwlout(["svvalidate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
                "bcbio-vc", disk={"files": 1.0}, cores=1)]
     final_outputs = [["sv", "calls"], ["svvalidate", "grading_summary"], ["sv", "prioritize", "tsv"],
-                     ["sv", "prioritize", "raw"]]
+                     ["sv", "prioritize", "raw"], ["sv", "supplemental"]]
     return steps, final_outputs
 
 def rnaseq(samples):
