@@ -87,7 +87,7 @@ def postprocess_variants(items):
     data, items = _get_batch_representative(items, vrn_key)
     items = cwlutils.unpack_tarballs(items, data)
     data = cwlutils.unpack_tarballs(data, data)
-    cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
+    cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data, require_bam=False))
     logger.info("Finalizing variant calls: %s" % cur_name)
     orig_vrn_file = data.get(vrn_key)
     data = _symlink_to_workdir(data, [vrn_key])
@@ -101,16 +101,17 @@ def postprocess_variants(items):
             data["vrn_stats"] = vrn_stats
         orig_items = _get_orig_items(items)
         logger.info("Annotate VCF file: %s" % cur_name)
-        data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data), orig_items)
+        data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data, require_bam=False),
+                                                orig_items)
         if cwlutils.is_cwl_run(data):
             logger.info("Annotate with population level variation data")
-            ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
+            ann_file = population.run_vcfanno(data[vrn_key], data)
             if ann_file:
                 data[vrn_key] = ann_file
         logger.info("Filtering for %s" % cur_name)
         data[vrn_key] = variant_filtration(data[vrn_key], dd.get_ref_file(data),
-                                              tz.get_in(("genome_resources", "variation"), data, {}),
-                                              data, orig_items)
+                                           tz.get_in(("genome_resources", "variation"), data, {}),
+                                           data, orig_items)
         logger.info("Prioritization for %s" % cur_name)
         prio_vrn_file = prioritize.handle_vcf_calls(data[vrn_key], data, orig_items)
         if prio_vrn_file != data[vrn_key]:
@@ -141,7 +142,7 @@ def _symlink_to_workdir(data, key):
     """
     orig_file = tz.get_in(key, data)
     if orig_file and not orig_file.startswith(dd.get_work_dir(data)):
-        variantcaller = genotype.get_variantcaller(data)
+        variantcaller = genotype.get_variantcaller(data, require_bam=False)
         if not variantcaller:
             variantcaller = "precalled"
         out_file = os.path.join(dd.get_work_dir(data), variantcaller, os.path.basename(orig_file))

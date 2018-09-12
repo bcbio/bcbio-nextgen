@@ -311,7 +311,7 @@ def _clean_metadata(data):
             batches = _clean_characters(str(batches))
         data["metadata"]["batch"] = batches
     # If we have jointcalling, add a single batch if not present
-    elif tz.get_in(["algorithm", "jointcaller"], data):
+    elif tz.get_in(["algorithm", "jointcaller"], data) or "gvcf" in tz.get_in(["algorithm", "tools_on"], data):
         if "metadata" not in data:
             data["metadata"] = {}
         data["metadata"]["batch"] = "%s-joint" % dd.get_sample_name(data)

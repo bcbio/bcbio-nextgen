@@ -417,7 +417,7 @@ def _get_batch_name(items, skip_jointcheck=False):
     return sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
 
 def _get_batch_variantcaller(items):
-    variantcaller = [vc for vc in list(set([get_variantcaller(x) for x in items])) if vc]
+    variantcaller = [vc for vc in list(set([get_variantcaller(x, require_bam=False) for x in items])) if vc]
     if not variantcaller:
         return None
     assert len(variantcaller) == 1, "%s\n%s" % (variantcaller, pprint.pformat(items))

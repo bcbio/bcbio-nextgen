@@ -301,7 +301,7 @@ def _variant_checkpoints(samples):
     checkpoints = {}
     checkpoints["vc"] = any([dd.get_variantcaller(d) or d.get("vrn_file") for d in samples])
     checkpoints["sv"] = any([dd.get_svcaller(d) for d in samples])
-    checkpoints["jointvc"] = any([(dd.get_jointcaller(d) or ("gvcf" in dd.get_tools_on(d))) and dd.get_batch(d)
+    checkpoints["jointvc"] = any([(dd.get_jointcaller(d) or "gvcf" in dd.get_tools_on(d))
                                   for d in samples])
     checkpoints["hla"] = any([dd.get_hlacaller(d) for d in samples])
     checkpoints["align"] = any([(dd.get_aligner(d) or dd.get_bam_clean(d)) for d in samples])
