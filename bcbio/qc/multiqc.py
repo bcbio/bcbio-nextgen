@@ -82,9 +82,17 @@ def summary(*samples):
         if data_json_final:
             samples[0]["summary"]["multiqc"]["secondary"].append(data_json_final)
 
+        # Prepare final file list and inputs for downstream usage
         file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
         if file_list_final:
             samples[0]["summary"]["multiqc"]["secondary"].append(file_list_final)
+            if any([cwlutils.is_cwl_run(d) for d in samples]):
+                for indir in ["inputs", "report"]:
+                    tarball = os.path.join(out_dir, "multiqc-%s.tar.gz" % (indir))
+                    if not utils.file_exists(tarball):
+                        cmd = ["tar", "-czvpf", tarball, os.path.join(out_dir, indir)]
+                        do.run(cmd, "Compress multiqc inputs: %s" % indir)
+                    samples[0]["summary"]["multiqc"]["secondary"].append(tarball)
 
     return [[data] for data in samples]
 
@@ -133,24 +141,33 @@ def _save_uploaded_data_json(samples, data_json_work, out_dir):
 
 def _save_uploaded_file_list(samples, file_list_work, out_dir):
     """ Fixes all absolute work-rooted paths to relative final-rooted paths
+
+    For CWL, prepare paths relative to output directory.
     """
     if not utils.file_exists(file_list_work):
         return None
 
-    upload_path_mapping = dict()
-    for sample in samples:
-        upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
-    if not upload_path_mapping:
-        return None
+    if any([cwlutils.is_cwl_run(d) for d in samples]):
+        upload_paths = []
+        with open(file_list_work) as f:
+            for p in (l.strip() for l in f.readlines() if os.path.exists(l.strip())):
+                if p.startswith(out_dir):
+                    upload_paths.append(p.replace(out_dir + "/", ""))
+    else:
+        upload_path_mapping = dict()
+        for sample in samples:
+            upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
+        if not upload_path_mapping:
+            return None
 
-    with open(file_list_work) as f:
-        paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
-    upload_paths = [p for p in [
-        _work_path_to_rel_final_path(path, upload_path_mapping, samples[0]["upload"]["dir"])
-        for path in paths
-    ] if p]
-    if not upload_paths:
-        return None
+        with open(file_list_work) as f:
+            paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
+        upload_paths = [p for p in [
+            _work_path_to_rel_final_path(path, upload_path_mapping, samples[0]["upload"]["dir"])
+            for path in paths
+        ] if p]
+        if not upload_paths:
+            return None
 
     file_list_final = os.path.join(out_dir, "list_files_final.txt")
     with open(file_list_final, "w") as f:
@@ -202,20 +219,21 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             in_files[(dd.get_sample_name(data), program)].extend(pfiles)
     staged_files = []
     for (sample, program), files in in_files.items():
-        cur_dir = utils.safe_makedir(os.path.join(tx_out_dir, sample, program))
+        cur_dir = utils.safe_makedir(os.path.join(base_dir, "inputs", sample, program))
         for f in files:
             if _check_multiqc_input(f) and _is_good_file_for_multiqc(f):
-                if _in_temp_directory(f):
+                if _in_temp_directory(f) or any([cwlutils.is_cwl_run(d) for d in samples]):
                     staged_f = os.path.join(cur_dir, os.path.basename(f))
                     shutil.copy(f, staged_f)
                     staged_files.append(staged_f)
                 else:
                     staged_files.append(f)
     # Back compatible -- to migrate to explicit specifications in input YAML
-    staged_files += ["trimmed", "htseq-count/*summary"]
-    # Add in created target_info file
-    if os.path.isfile(os.path.join(base_dir, "report", "metrics", "target_info.yaml")):
-        staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
+    if not any([cwlutils.is_cwl_run(d) for d in samples]):
+        staged_files += ["trimmed", "htseq-count/*summary"]
+        # Add in created target_info file
+        if os.path.isfile(os.path.join(base_dir, "report", "metrics", "target_info.yaml")):
+            staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
     return sorted(list(set(staged_files)))
 
 def _in_temp_directory(f):
