@@ -330,7 +330,7 @@ def _get_build_type(fnames, samples, caller):
         for data in samples:
             if any([x in dd.get_tools_on(data)
                     for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
-                if vcfanno.annoated_gemini(data):
+                if vcfanno.annotate_gemini(data):
                     build_type.add("gemini_orig" if "gemini_orig" in dd.get_tools_on(data) else "gemini")
     return build_type
 
