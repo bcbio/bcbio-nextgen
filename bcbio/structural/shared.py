@@ -37,6 +37,34 @@ def finalize_sv(orig_vcf, data, items):
         effects_vcf = None
     return effects_vcf or sample_vcf
 
+def annotate_with_depth(in_file, items):
+    """Annotate called VCF file with depth using duphold (https://github.com/brentp/duphold)
+
+    Currently annotates single sample and tumor samples in somatic analysis.
+    """
+    bam_file = None
+    if len(items) == 1:
+        bam_file = dd.get_align_bam(items[0])
+    else:
+        paired = vcfutils.get_paired(items)
+        if paired:
+            bam_file = paired.tumor_bam
+    if bam_file:
+        out_file = "%s-duphold.vcf.gz" % utils.splitext_plus(in_file)[0]
+        if not utils.file_exists(out_file):
+            with file_transaction(items[0], out_file) as tx_out_file:
+                if not in_file.endswith(".gz"):
+                    in_file = vcfutils.bgzip_and_index(in_file, remove_orig=False,
+                                                       out_dir=os.path.dirname(tx_out_file))
+                ref_file = dd.get_ref_file(items[0])
+                cores = max([dd.get_num_cores(items[0]), 4])
+                cmd = ("duphold --threads {cores} --vcf {in_file} --bam {bam_file} --fasta {ref_file} "
+                       "| bgzip -c > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Annotate SV depth with duphold")
+        vcfutils.bgzip_and_index(out_file)
+        return out_file
+    else:
+        return in_file
 # ## Case/control
 
 def find_case_control(items):

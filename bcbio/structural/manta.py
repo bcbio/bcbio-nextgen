@@ -28,6 +28,7 @@ def run(items):
             tx_workflow_file = _prep_config(items, paired, tx_work_dir)
             _run_workflow(items, paired, tx_workflow_file, tx_work_dir)
     assert utils.file_exists(variant_file), "Manta finished without output file %s" % variant_file
+    variant_file = shared.annotate_with_depth(variant_file, items)
     out = []
     for data in items:
         if paired and paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):

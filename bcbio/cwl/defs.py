@@ -496,7 +496,7 @@ def _variant_sv(checkpoints):
                             cwlout(["svvalidate", "summary"], ["File", "null"]),
                             cwlout("inherit", exclude=[["align_bam"], ["work_bam_plus"],
                                                        ["reference", "snpeff"]])])],
-            "bcbio-vc", ["bedtools", "cnvkit", "delly", "extract-sv-reads",
+            "bcbio-vc", ["bedtools", "cnvkit", "delly", "duphold", "extract-sv-reads",
                          "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
                          "smoove", "pysam>=0.13.0",
                          "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",

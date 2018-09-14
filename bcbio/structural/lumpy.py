@@ -4,11 +4,8 @@ Uses smoove for automating lumpy variant calling:
 https://github.com/brentp/smoove
 https://github.com/arq5x/lumpy-sv
 """
-import contextlib
 import os
 import re
-import sys
-import shutil
 import subprocess
 
 import vcf
@@ -16,7 +13,7 @@ import vcf
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.log import logger
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
@@ -64,7 +61,7 @@ def _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items):
                 except subprocess.CalledProcessError as msg:
                     if _allowed_errors(str(msg)):
                         vcfutils.write_empty_vcf(tx_out_file, config=items[0]["config"],
-                                                samples=[dd.get_sample_name(d) for d in items])
+                                                 samples=[dd.get_sample_name(d) for d in items])
                     else:
                         logger.exception()
                         raise
@@ -166,6 +163,7 @@ def run(items):
         if cur_dups and utils.file_exists(cur_dups):
             previous_evidence[dd.get_sample_name(data)]["dups"] = cur_dups
     lumpy_vcf, exclude_file = _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items)
+    lumpy_vcf = sshared.annotate_with_depth(lumpy_vcf, items)
     gt_vcfs = {}
     # Retain paired samples with tumor/normal genotyped in one file
     if paired and paired.normal_name:
