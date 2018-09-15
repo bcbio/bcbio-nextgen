@@ -102,7 +102,8 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
         with tx_tmpdir(data) as tmp_dir:
             with utils.chdir(tmp_dir):
                 cmd = ("{export_cmd} && titanCNA.R --id {sample} --hetFile {het_file} --cnFile {cn_file} "
-                       "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir}")
+                       "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir} "
+                       "--libdir None")
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
                 # TitanCNA's model is influenced by the variance in read coverage data
