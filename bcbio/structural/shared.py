@@ -57,7 +57,8 @@ def annotate_with_depth(in_file, items):
                     in_file = vcfutils.bgzip_and_index(in_file, remove_orig=False,
                                                        out_dir=os.path.dirname(tx_out_file))
                 ref_file = dd.get_ref_file(items[0])
-                cores = max([dd.get_num_cores(items[0]), 4])
+                # cores for BAM reader thread, so max out at 4 based on recommendations
+                cores = min([dd.get_num_cores(items[0]), 4])
                 cmd = ("duphold --threads {cores} --vcf {in_file} --bam {bam_file} --fasta {ref_file} "
                        "| bgzip -c > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Annotate SV depth with duphold")
