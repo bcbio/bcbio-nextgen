@@ -1,6 +1,6 @@
 import os
 from bcbio import utils
-from bcbio.utils import file_exists, get_R_exports, safe_makedir
+from bcbio.utils import file_exists, get_R_exports
 from bcbio.bam import ref
 from bcbio.heterogeneity import chromhacks
 import bcbio.pipeline.datadict as dd

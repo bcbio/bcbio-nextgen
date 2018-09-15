@@ -57,12 +57,13 @@ def run_peddy(samples, out_dir=None):
 
     vcf_file = None
     for d in samples:
-        vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
-        if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
-            if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
-                if vcinfo["vrn_file"] and vcfutils.vcf_has_nonfiltered_variants(vcinfo["vrn_file"]):
-                    vcf_file = vcinfo["vrn_file"]
-                    break
+        if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor", "normal"]:
+            vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
+            if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
+                if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
+                    if vcinfo["vrn_file"] and vcfutils.vcf_has_nonfiltered_variants(vcinfo["vrn_file"]):
+                        vcf_file = vcinfo["vrn_file"]
+                        break
     peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
     if not peddy or not vcf_file or not vcfanno.is_human(data):
         if not peddy:
@@ -88,7 +89,7 @@ def run_peddy(samples, out_dir=None):
             stderr_log = os.path.join(tx_dir, "run-stderr.log")
             sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
             cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
-                "{vcf_file} {ped_file} 2> {stderr_log}")
+                   "{vcf_file} {ped_file} 2> {stderr_log}")
             message = "Running peddy on {vcf_file} against {ped_file}."
             try:
                 do.run(cmd.format(**locals()), message.format(**locals()))
