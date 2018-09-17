@@ -275,12 +275,15 @@ To run distributed on a Slurm cluster::
 Running on Arvados (hosted cloud)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We're actively testing bcbio generated CWL workflows on
-`Arvados <https://arvados.org/>`_. These instructions detail how to run
-on the `Arvdos public instance <https://cloud.curoverse.com/>`_.
-`Arvados cwl-runner <https://github.com/curoverse/arvados>`_ comes
-pre-installed with
-`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm#installation>`_.
+bcbio generated CWL workflows run on `Arvados <https://arvados.org/>`_ and these
+instructions detail how to run on the `Arvdos public instance
+<https://cloud.curoverse.com/>`_. `Arvados cwl-runner
+<https://github.com/curoverse/arvados>`_ comes pre-installed with `bcbio-vm
+<https://github.com/bcbio/bcbio-nextgen-vm#installation>`_.
+We have a publicly accessible project, called `bcbio_resources
+<https://workbench.qr1hi.arvadosapi.com/projects/qr1hi-j7d0g-8g1u4lh8mwev36n>`_
+that contains the latest Docker images, test data and genome references you can
+use for runs.
 
 Retrieve API keys from the `Arvados public
 instance <https://cloud.curoverse.com/>`_. Login, then go to `'User
@@ -295,7 +298,8 @@ To run an analysis:
    identifier like ``qr1hi-j7d0g-7t73h4hrau3l063``).
 
 2. Upload reference data to Arvados Keep. Note the genome collection
-   UUID::
+   UUID. You can also use the existing genomes pre-installed in the
+   ``bcbio_resources`` project if using the public Arvados playground::
 
      arv-put --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
 
