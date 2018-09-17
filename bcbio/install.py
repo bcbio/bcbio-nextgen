@@ -309,7 +309,7 @@ def _get_data_dir():
     if "anaconda" not in os.path.basename(base_dir) and "virtualenv" not in os.path.basename(base_dir):
         raise ValueError("Cannot update data for bcbio-nextgen not installed by installer.\n"
                          "bcbio-nextgen needs to be installed inside an anaconda environment \n"
-                         "located in the same directory as `galaxy` `genomes` and `gemini_data` directories.")
+                         "located in the same directory as the `genomes` directory.")
     return os.path.dirname(base_dir)
 
 def get_gemini_dir(data=None):
@@ -347,13 +347,6 @@ def upgrade_bcbio_data(args, remotes):
     _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
     if "vep" in args.datatarget:
         _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
-    if 'gemini' in args.datatarget and ("hg19" in args.genomes or "GRCh37" in args.genomes):
-        gemini = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gemini")
-        extras = []
-        if "cadd" in args.datatarget:
-            extras.extend(["--extra", "cadd_score"])
-        ann_dir = get_gemini_dir()
-        subprocess.check_call([gemini, "--annotation-dir", ann_dir, "update", "--dataonly"] + extras)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
     if args.cwl:

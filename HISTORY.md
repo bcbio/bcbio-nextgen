@@ -7,7 +7,8 @@
 `--min-reads 2` with raw de-duplicated coverage of 800 or more  or `--min-reads 1`
   otherwise. Allows error correction with UMIs for higher depth samples.
 - gemini: databases no longer created by default. Use `tools_on: [gemini]` or
-  `tools_on: [gemini_orig]` to create a database.
+  `tools_on: [gemini_orig]` to create a database. We now use a reduced database
+  for build 37 to match build 38 and make this forward compatible with CWL.
 - vcfanno: run gemini and somatic annotations by default, producing annotated
   VCFs with external information.
 - alignment preparation: support a list of split files from multiple sequencing
