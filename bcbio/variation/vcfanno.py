@@ -92,20 +92,17 @@ def find_annotations(data):
     Creates absolute paths for user specified inputs and finds locally
     installed defaults.
 
-    Default annotations if not specified:
+    Default annotations:
       - gemini for variant pipelines
       - somatic for variant tumor pipelines
       - rnaedit for RNA-seq variant calling
     """
     conf_files = dd.get_vcfanno(data)
-    if not conf_files:
-        conf_files = _default_conf_files(data)
     if not isinstance(conf_files, (list, tuple)):
         conf_files = [conf_files]
-    if any([x in dd.get_tools_on(data)
-            for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
-        if annotate_gemini(data) and "gemini" not in conf_files:
-            conf_files.append("gemini")
+    for c in _default_conf_files(data):
+        if c not in conf_files:
+            conf_files.append(c)
     out = []
     annodir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)),
                                                             os.pardir, "config", "vcfanno")))

@@ -714,19 +714,19 @@ Variant annotation
   <https://github.com/brentp/vcfanno>`_, allowing the application of additional
   annotations to variant calls. By default, bcbio will try and apply:
 
-   - `gemini` -- External population level annotations from `GEMINI
+   - ``gemini`` -- External population level annotations from `GEMINI
      <http://gemini.readthedocs.io/en/latest/>`_. This is only run for human
      samples with gemini data installed (:ref:`datatarget-install`).
-   - `somatic` -- Somatic annotations from COSMIC, ClinVar and friends. COSMIC
+   - ``somatic`` -- Somatic annotations from COSMIC, ClinVar and friends. COSMIC
      need a custom installation within bcbio (:ref:`datatarget-install`). Only
      added for tumor or tumor/normal somatic calling.
+   - ``rnaedit`` -- RNA editing sites for RNA-seq variant calling runs.
 
   bcbio installs pre-prepared configuration files in
   ``genomes/build/config/vcfanno`` or you can specify the full path to a
   ``/path/your/anns.conf`` and optionally an equivalently
-  named ``/path/your/anns.lua`` file. This value can be a list so you can
-  supplement the existing annotation file with: ``[gemini, /path/your/anns.conf]``.
-  or replace it by only specifying your file.
+  named ``/path/your/anns.lua`` file. This value can be a list for multiple
+  inputs.
 
 .. _sv-config:
 
