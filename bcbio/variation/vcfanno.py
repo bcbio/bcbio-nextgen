@@ -102,6 +102,10 @@ def find_annotations(data):
         conf_files = _default_conf_files(data)
     if not isinstance(conf_files, (list, tuple)):
         conf_files = [conf_files]
+    if any([x in dd.get_tools_on(data)
+            for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
+        if annotate_gemini(data) and "gemini" not in conf_files:
+            conf_files.append("gemini")
     out = []
     annodir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)),
                                                             os.pardir, "config", "vcfanno")))
