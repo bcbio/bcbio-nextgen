@@ -291,6 +291,11 @@ def _create_config_file(out_dir, samples):
                 else:
                     thresholds_hidden.append(t)
 
+        # Hide coverage unless running full qualimap, downsampled inputs are confusing
+        if not any(("qualimap_full" in dd.get_tools_on(d)) for d in samples):
+            thresholds_hidden = thresholds + thresholds_hidden
+            thresholds_hidden.sort()
+            thresholds = []
         out['qualimap_config'] = {
             'general_stats_coverage': [str(t) for t in thresholds],
             'general_stats_coverage_hidden': [str(t) for t in thresholds_hidden]}
