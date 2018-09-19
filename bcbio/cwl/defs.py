@@ -411,6 +411,7 @@ def variant(samples):
                    ["config", "algorithm", "trim_reads"],
                    ["config", "algorithm", "adapters"],
                    ["config", "algorithm", "bam_clean"],
+                   ["config", "algorithm", "variant_regions"],
                    ["config", "algorithm", "mark_duplicates"]]
         if checkpoints["hla"]:
             alignin.append(["config", "algorithm", "hlacaller"])

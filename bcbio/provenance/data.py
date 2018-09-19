@@ -10,7 +10,7 @@ def write_versions(dirs, items):
     """
     genomes = {}
     for d in items:
-        genomes[d["genome_build"]] = d["reference"].get("versions")
+        genomes[d["genome_build"]] = d.get("reference", {}).get("versions")
     out_file = _get_out_file(dirs)
     found_versions = False
     if genomes and out_file:
