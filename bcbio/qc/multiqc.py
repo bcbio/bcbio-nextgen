@@ -20,7 +20,8 @@ from bcbio import utils
 from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
+from bcbio.provenance import data as provenancedata
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
@@ -94,7 +95,17 @@ def summary(*samples):
                         do.run(cmd, "Compress multiqc inputs: %s" % indir)
                     samples[0]["summary"]["multiqc"]["secondary"].append(tarball)
 
+    if any([cwlutils.is_cwl_run(d) for d in samples]):
+        samples = _add_versions(samples)
+
     return [[data] for data in samples]
+
+def _add_versions(samples):
+    """Add tool and data versions to the summary.
+    """
+    samples[0]["versions"] = {"tools": programs.write_versions(samples[0]["dirs"], samples[0]["config"]),
+                              "data": provenancedata.write_versions(samples[0]["dirs"], samples)}
+    return samples
 
 def _summarize_inputs(samples, out_dir):
     """Summarize inputs for MultiQC reporting in display.

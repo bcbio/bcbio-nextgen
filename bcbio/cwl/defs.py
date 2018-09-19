@@ -159,7 +159,8 @@ def _variant_vc(checkpoints):
                             "gatk4=4.0.7.0", "vqsr_cnn", "deepvariant", "sentieon",
                             "htslib", "octopus", "picard", "platypus-variant", "pythonpy",
                             "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java=1.5.1",
-                            "varscan", "vcfanno", "vcflib", "vt", "r=3.4.1", "perl"],
+                            "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.4.1", "r-base=3.4.1=h4fe35fd_8",
+                            "perl"],
                disk={"files": 2.0}),
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region_block"], ["vrn_file_region"]],
@@ -211,6 +212,8 @@ def _variant_vc(checkpoints):
                 ["genome_resources", "variation", "encode_blacklist"],
                 ["genome_resources", "aliases", "ensembl"], ["genome_resources", "aliases", "human"],
                 ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"]]
+    if checkpoints.get("umi"):
+        batch_in.append(["config", "algorithm", "umi_type"])
     if checkpoints.get("rnaseq"):
         batch_in += [["genome_resources", "variation", "editing"]]
     else:
@@ -442,7 +445,7 @@ def variant(samples):
 
 def _qc_workflow(checkpoints):
     qc_inputs = \
-      [["align_bam"], ["analysis"], ["reference", "fasta", "base"],
+      [["align_bam"], ["analysis"], ["reference", "fasta", "base"], ["reference", "versions"],
        ["config", "algorithm", "tools_on"], ["config", "algorithm", "tools_off"],
        ["genome_build"], ["config", "algorithm", "qc"], ["metadata", "batch"],
        ["config", "algorithm", "coverage_interval"],
@@ -467,6 +470,7 @@ def _qc_workflow(checkpoints):
                     fields=[cwlout(["summary", "qc"], ["File", "null"]),
                             cwlout(["summary", "metrics"], ["string", "null"]),
                             cwlout(["genome_build"]), cwlout(["description"]),
+                            cwlout(["reference", "versions"]),
                             cwlout(["config", "algorithm", "tools_off"]),
                             cwlout(["config", "algorithm", "tools_on"]),
                             cwlout(["config", "algorithm", "qc"])])],
@@ -476,10 +480,13 @@ def _qc_workflow(checkpoints):
             disk={"files": 2.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
-            [cwlout(["summary", "multiqc"], ["File", "null"])],
+            [cwlout(["summary", "multiqc"], ["File", "null"]),
+             cwlout(["versions", "tools"], ["File", "null"]),
+             cwlout(["versions", "data"], ["File", "null"])],
             "bcbio-vc", ["multiqc", "multiqc-bcbio"],
             disk={"files": 2.0}, cores=1)]
-    qc_out = [cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]})]
+    qc_out = [cwlout(["summary", "multiqc"], {"type": "array", "items": ["File", "null"]}),
+              ["versions", "tools"], ["versions", "data"]]
     return qc, qc_out
 
 def _variant_sv(checkpoints):
@@ -500,7 +507,7 @@ def _variant_sv(checkpoints):
                          "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
                          "smoove", "pysam>=0.13.0",
                          "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",
-                         "r=3.4.1", "vawk"],
+                         "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "vawk"],
             disk={"files": 2.0})]
     sv_batch_inputs = [["analysis"], ["genome_build"],
                        ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
@@ -603,7 +610,7 @@ def rnaseq(samples):
                    cwlout(["quant", "hdf5"], "File"),
                    cwlout(["quant", "fusion"], "File")],
                   "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto>=0.43.1", "subread", "gffread",
-                                            "r=3.4.1", "r-wasabi"],
+                                            "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "r-wasabi"],
                   disk={"files": 0.5})]
     qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),
