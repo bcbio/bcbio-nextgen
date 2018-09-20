@@ -39,7 +39,9 @@
 - RNA-seq: fix for `fusion_caller` getting interpreted as a path, leading to memoization/upload issues.
 - RNA-seq: memoize rRNA quality calculations, speeding up reruns.
 - RNA-seq: prefix `description` with an X if it starts with a number, for R compatibility.
-Thanks to Avinash Reddy and Dan Stetson at AstraZeneca.
+  Thanks to Avinash Reddy and Dan Stetson at AstraZeneca.
+- single-cell RNA-seq: respect `--positional` flag with the new tag counting. Thanks to
+  Babak Alaei at AstraZeneca.
 
 ## 1.1.0 (11 July 2018)
 

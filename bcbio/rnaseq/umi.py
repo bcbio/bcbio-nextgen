@@ -257,7 +257,8 @@ def tagcount(data):
 
     message = "Counting alignments of transcripts in %s." % bam
     cmd = ("{umis} fasttagcount --cb_cutoff {cutoff} "
-           "{gene_map_flag}"
+           "{gene_map_flag} "
+           "{positional} "
            "--cb_histogram {cb_histogram}")
     out_files = [out_file, out_file + ".rownames", out_file + ".colnames"]
     umi_matrix_file = out_prefix + "-dupes.mtx"
