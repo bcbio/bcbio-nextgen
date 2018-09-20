@@ -189,6 +189,8 @@ def add_reference_resources(data, remote_retriever=None):
         data["reference"]["viral"] = viral.get_files(data)
     if not data["reference"]["viral"]:
         data["reference"]["viral"] = None
+    if "versions" not in data["reference"]:
+        data["reference"]["versions"] = _get_data_versions(data)
 
     data = _fill_validation_targets(data)
     data = _fill_prioritization_targets(data)
@@ -197,6 +199,16 @@ def add_reference_resources(data, remote_retriever=None):
     if False:
         data["reference"]["gemini"] = population.get_gemini_files(data)
     return data
+
+def _get_data_versions(data):
+    """Retrieve CSV file with version information for reference data.
+    """
+    genome_dir = install.get_genome_dir(data["genome_build"], data["dirs"].get("galaxy"), data)
+    if genome_dir:
+        version_file = os.path.join(genome_dir, "versions.csv")
+        if version_file and os.path.exists(version_file):
+            return version_file
+    return None
 
 def _check_ref_files(ref_info, data):
     problems = []
