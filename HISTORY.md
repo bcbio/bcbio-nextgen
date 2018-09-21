@@ -1,5 +1,6 @@
 ## 1.1.1 (in progress)
 
+- Support SRR ids to download samples with bcbio_prepare_samples script.
 - tumor-only prioritization: do not apply LowPriority filter by default, instead
   annotate with external databases. Use `tumoronly_germline_filter` to re-enable
   previous behavior.
@@ -32,21 +33,21 @@
 - RNA-seq: output a matrix of un-deduped UMI counts when doing single-cell/DGE
   for quality control purposes. This is called `tagcounts-dupes.mtx` in the
   final directory.
-- single-cell RNA-seq: allow pre-transformed FASTQ files as input to DGE/single-cell 
+- single-cell RNA-seq: allow pre-transformed FASTQ files as input to DGE/single-cell
   pipeline.
 - single-cell RNA-seq: only create one index per specified genome instead of per
   sample
 - fgbio: back compatibility for older quality setting `--min-consensus-base-quality`
-- RNA-seq: fix for `fusion_caller` getting interpreted as a path, leading to 
+- RNA-seq: fix for `fusion_caller` getting interpreted as a path, leading to
   memoization/upload issues.
 - RNA-seq: memoize rRNA quality calculations, speeding up reruns.
-- RNA-seq: prefix `description` with an X if it starts with a number, for R 
+- RNA-seq: prefix `description` with an X if it starts with a number, for R
   compatibility.
   Thanks to Avinash Reddy and Dan Stetson at AstraZeneca.
 - single-cell RNA-seq: respect `--positional` flag with the new tag counting. Thanks to
   Babak Alaei at AstraZeneca.
-- RNA-seq: turn on `--seqBias` flag by default for Salmon as early-version overfitting 
-  issues have been fixed. 
+- RNA-seq: turn on `--seqBias` flag by default for Salmon as early-version overfitting
+  issues have been fixed.
 
 ## 1.1.0 (11 July 2018)
 
@@ -177,9 +178,9 @@
   255.
 - RNA-seq: Ensure BAM files fed into Cufflinks have 255 as the uniquely mapped
   MAPQ instead of 60 as output by hisat2/STAR/etc.
-- RNA-seq: omit duplicate files from stringtie assembly merging. Thanks to 
+- RNA-seq: omit duplicate files from stringtie assembly merging. Thanks to
   @mmoisse for the bug report.
-- Add support for peddy (https://github.com/brentp/peddy) for PED file 
+- Add support for peddy (https://github.com/brentp/peddy) for PED file
   correspondence/ancestry checking.
 - ChIP-seq: pass through encode filtered BAMs to upload directory.
 - seq2c: pass through mapping_reads.txt file to directory.

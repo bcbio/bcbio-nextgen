@@ -1,6 +1,5 @@
 """Deal with sra Id names as input"""
 import os
-import glob
 import subprocess
 import json
 import re
@@ -9,11 +8,16 @@ import traceback
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.provenance import do
-from bcbio.bam.fastq import is_fastq, combine_pairs
+from bcbio.bam.fastq import combine_pairs
 from bcbio.pipeline import fastq
 
 def is_gsm(fn):
     p = re.compile("^GSM[0-9]+$")
+    if p.match(fn) and not utils.file_exists(fn):
+        return True
+
+def is_srr(fn):
+    p = re.compile("^SRR[0-9]+$")
     if p.match(fn) and not utils.file_exists(fn):
         return True
 
@@ -50,7 +54,7 @@ def query_gsm(gsm, out_file, config = {}):
         outs = []
         for srx in srrall:
             sra_dir = utils.safe_makedir(os.path.join(out_dir, name))
-            srafiles = _download_srx(gsm, srx, sra_dir)
+            srafiles = _download_srx(srx, sra_dir)
             if srafiles:
                 logger.debug("Get SRA for %s: %s" % (gsm, " ".join(srafiles)))
                 for sra in srafiles:
@@ -63,12 +67,36 @@ def query_gsm(gsm, out_file, config = {}):
             out_file = fastq.merge(files, out_file, config)
             return out_file
 
+def query_srr(sra, out_file, config = {}):
+    sra = sra[0]
+    outs = []
+    out_dir = os.path.dirname(os.path.abspath(out_file))
+    name = utils.splitext_plus(os.path.basename(out_file))[0]
+    srrall = []
+    for srr in sra:
+        srrall.append(_create_link(srr))
+    logger.debug("Get FTP link for %s : %s" % (name, srrall))
+    for srx in srrall:
+        sra_dir = utils.safe_makedir(os.path.join(out_dir, name))
+        srafiles = _download_srx(srx, sra_dir)
+        if srafiles:
+            logger.debug("Get SRA for %s: %s" % (sra, " ".join(srafiles)))
+            for sra in srafiles:
+                fastq_fn = _convert_fastq(sra, out_dir)
+                if fastq_fn:
+                    outs.extend(fastq_fn)
+        logger.debug("Get FASTQ for %s: %s" % (sra, " ".join(outs)))
+    if outs:
+        files = combine_pairs(outs)
+        out_file = fastq.merge(files, out_file, config)
+        return out_file
+
 def _create_link(sraid):
     sraprex = sraid[0:6]
     url = "ftp://ftp-trace.ncbi.nih.gov/sra/sra-instant/reads/ByRun/sra/SRR/{sraprex}/{sraid}"
     return url.format(**locals())
 
-def _download_srx(srxid, url, out_dir):
+def _download_srx(url, out_dir):
     cmd = "wget -N -r -nH -nd -np -nv {0}".format(url)
     out_dir = os.path.abspath(utils.safe_makedir(out_dir))
     with utils.chdir(out_dir):
@@ -91,6 +119,7 @@ def _download_sra(sraid, outdir):
 def _convert_fastq(srafn, outdir, single=False):
     "convert sra to fastq"
     cmd = "fastq-dump --split-files --gzip {srafn}"
+    cmd = "%s %s" % (utils.local_path_export(), cmd)
     sraid = os.path.basename(utils.splitext_plus(srafn)[0])
     if not srafn:
         return None

@@ -5,6 +5,7 @@ Script that creates bcbio-compatible inputs in case of multiple files samples
 
 
 import os
+import sys
 import yaml
 from collections import defaultdict
 from argparse import ArgumentParser
@@ -13,7 +14,7 @@ from bcbio.log import logger
 from bcbio.install import _get_data_dir
 from bcbio import utils
 from bcbio.bam import is_bam
-from bcbio.pipeline.sra import is_gsm
+from bcbio.pipeline.sra import is_gsm, is_srr
 from bcbio.bam.fastq import is_fastq, combine_pairs
 from bcbio.distributed.transaction import file_transaction
 from bcbio.distributed import clargs, resources, prun
@@ -51,7 +52,7 @@ def _get_samples_to_process(fn, out_dir, config, force_single, separators):
             if len(cols) > 0:
                 if len(cols) < 2:
                     raise ValueError("Line needs 2 values: file and name.")
-                if utils.file_exists(cols[0]) or is_gsm(cols[0]):
+                if utils.file_exists(cols[0]) or is_gsm(cols[0]) or is_srr(cols[0]):
                     if cols[0].find(" ") > -1:
                         new_name = os.path.abspath(cols[0].replace(" ", "_"))
                         logger.warning("Space finds in %s. Linked to %s." % (cols[0], new_name))
@@ -71,7 +72,10 @@ def _get_samples_to_process(fn, out_dir, config, force_single, separators):
         elif is_gsm(items[0][0]):
             fn = "query_gsm"
             ext = ".fastq.gz"
-        files = [os.path.abspath(fn_file[0]) if not is_gsm(fn_file[0]) else fn_file[0] for fn_file in items]
+        elif is_srr(items[0][0]):
+            fn = "query_srr"
+            ext = ".fastq.gz"
+        files = [os.path.abspath(fn_file[0]) if utils.file_exists(fn_file[0]) else fn_file[0] for fn_file in items]
         samples[sample] = [{'files': _check_paired(files, force_single, separators),
                             'out_file': os.path.join(out_dir, sample + ext),
                             'fn': fn, 'anno': items[0][2:], 'config': config,
@@ -172,6 +176,9 @@ if __name__ == "__main__":
     system.write_info(dirs, parallel, config)
     sysinfo = system.machine_info()[0]
     samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single, args.separators)
+    if not samples:
+        print("No samples found.")
+        sys.exit(0)
     parallel = resources.calculate(parallel, [samples], sysinfo, config)
 
     with prun.start(parallel, samples, config, dirs) as run_parallel:
