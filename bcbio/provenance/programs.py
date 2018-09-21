@@ -167,8 +167,11 @@ def _get_versions(config=None):
     """
     try:
         from bcbio.pipeline import version
-        bcbio_version = ("%s-%s" % (version.__version__, version.__git_revision__)
-                         if version.__git_revision__ else version.__version__)
+        if hasattr(version, "__version__"):
+            bcbio_version = ("%s-%s" % (version.__version__, version.__git_revision__)
+                             if version.__git_revision__ else version.__version__)
+        else:
+            bcbio_version = ""
     except ImportError:
         bcbio_version = ""
     out = [{"program": "bcbio-nextgen", "version": bcbio_version}]
