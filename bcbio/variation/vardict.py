@@ -140,11 +140,12 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
+                lowfreq_filter = _lowfreq_linear_filter(0, False)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {strandbias}"
                        "| {var2vcf} -A -N {sample} -E -f {freq} {var2vcf_opts} "
-                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' "
+                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' | {lowfreq_filter} "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
@@ -170,6 +171,30 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                                              out_file=tx_out_file, ref_file=ref_file,
                                              config=config, region=bamprep.region_to_gatk(region))
     return out_file
+
+def _lowfreq_linear_filter(tumor_index, is_paired):
+    """Linear classifier for removing low frequency false positives.
+
+    Uses a logistic classifier based on 0.5% tumor only variants from the smcounter2 paper:
+
+    https://github.com/bcbio/bcbio_validations/tree/master/somatic-lowfreq
+
+    The classifier uses strand bias (SBF), variant depth (VD) and read mismatches (NM) and
+    applies only for low frequency (<2%) and low depth (<30) variants.
+    """
+    if is_paired:
+        sbf = "FORMAT/SBF[%s]" % tumor_index
+        nm = "FORMAT/NM[%s]" % tumor_index
+    else:
+        sbf = "INFO/SBF"
+        nm = "INFO/NM"
+    cmd = ("""bcftools filter --soft-filter 'LowFreqBiasIndel' --mode '+' """
+           """-e 'TYPE!="snp" && (FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30) """
+           """&& -1.9549 + 0.9401 * {sbf} + (-2.2070 * {nm}) + 0.0755 * FORMAT/VD[{tumor_index}] < -2.5'"""
+           """ | bcftools filter --soft-filter 'LowFreqBiasSNP' --mode '+' """
+           """-e 'TYPE="snp" && (FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30) """
+           """&& -1.7075 + 1.6367 * {sbf} + (-2.7534 * {nm}) + 0.2206 * FORMAT/VD[{tumor_index}] < -2.5'""")
+    return cmd.format(**locals())
 
 def depth_freq_filter(line, tumor_index, aligner):
     """Command line to filter VarDict calls based on depth, frequency and quality.
@@ -274,9 +299,11 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                       """freebayes.call_somatic("%s", "%s")' """
                                       % (sys.executable, paired.tumor_name, paired.normal_name))
                     freq_filter = ("| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+                                   "| %s "
                                    "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
-                                   (os.path.join(os.path.dirname(sys.executable), "py"),
-                                     0, dd.get_aligner(paired.tumor_data)))
+                                   (_lowfreq_linear_filter(0, True),
+                                    os.path.join(os.path.dirname(sys.executable), "py"),
+                                    0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
