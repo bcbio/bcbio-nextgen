@@ -176,7 +176,7 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
             return "0/1"
         elif val.lower() == "hom":
             return "1/1"
-        elif val.lower() in set(["ref", "confict"]):
+        elif val.lower() in set(["ref", "conflict"]):
             return "0/0"
         else:
             # Non-standard representations, het is our best imperfect representation
