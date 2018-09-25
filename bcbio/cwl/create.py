@@ -21,7 +21,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
-                   "dx:": "dnanexus"}
+                   "dx:": "dnanexus", "gs:": "gs"}
 
 def from_world(world, run_info_file, integrations=None, add_container_tag=None):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
@@ -785,7 +785,7 @@ def directory_tarball(dirname):
     Complex secondary files do not work on multiple platforms and are not portable
     to WDL, so for now we create a tarball that workers will unpack.
     """
-    assert os.path.isdir(dirname)
+    assert os.path.isdir(dirname), dirname
     base_dir, tarball_dir = os.path.split(dirname)
     while not os.path.exists(os.path.join(base_dir, "seq")) and base_dir and base_dir != "/":
         base_dir, extra_tarball = os.path.split(base_dir)

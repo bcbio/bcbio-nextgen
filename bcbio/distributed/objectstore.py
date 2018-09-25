@@ -580,6 +580,16 @@ class DNAnexus:
     def download(self, filename, input_dir, dl_dir=None):
         return None
 
+class GoogleCloud:
+    """Files stored in Google Cloud Storage. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("gs:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
+
 class RegularServer:
     """Files stored in FTP/http that can be downloaded by wget
     """
@@ -619,7 +629,7 @@ class RegularServer:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, RegularServer):
+    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, GoogleCloud, RegularServer):
         if manager.check_resource(resource):
             return manager()
 
