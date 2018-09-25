@@ -2,9 +2,10 @@
 
 Contains support for setting up configuration inputs for Cromwell.
 """
+import json
 import os
 
-def create_cromwell_config(args, work_dir):
+def create_cromwell_config(args, work_dir, sample_file):
     """Prepare a cromwell configuration within the current working directory.
     """
     docker_attrs = ["String? docker", "String? docker_user"]
@@ -21,8 +22,9 @@ def create_cromwell_config(args, work_dir):
                 "submit_docker": 'submit-docker: ""' if args.no_container else "",
                 "joblimit": "concurrent-job-limit = %s" % (joblimit) if joblimit > 0 else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
-                "filesystem": FILESYSTEM_CONFIG if args.no_container else "",
-                "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir})}
+                "filesystem": FILESYSTEM_CONFIG[_get_filesystem_type(args, sample_file)],
+                "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir}),
+                "auth": AUTH_CONFIG}
     cl_args, conf_args, scheduler = _args_to_cromwell(args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
@@ -30,10 +32,38 @@ def create_cromwell_config(args, work_dir):
     main_config.update(std_args)
     # Local run always seems to need docker set because of submit-docker in default configuration
     # Can we unset submit-docker based on configuration so it doesn't inherit?
-    #main_config["docker_attrs"] = "\n        ".join(docker_attrs)
+    # main_config["docker_attrs"] = "\n        ".join(docker_attrs)
     with open(out_file, "w") as out_handle:
         out_handle.write(CROMWELL_CONFIG % main_config)
     return out_file
+
+def _get_file_paths(cur):
+    """Retrieve a list of file paths, recursively traversing the
+    """
+    out = []
+    if isinstance(cur, (list, tuple)):
+        for x in cur:
+            new = _get_file_paths(x)
+            if new:
+                out.extend(new)
+    elif isinstance(cur, dict):
+        if "class" in cur:
+            out.append(cur["path"])
+        else:
+            for k, v in cur.items():
+                new = _get_file_paths(v)
+                if new:
+                    out.extend(new)
+    return out
+
+def _get_filesystem_type(args, sample_file):
+    """Retrieve the type of inputs and staging based on sample JSON and arguments.
+    """
+    with open(sample_file) as in_handle:
+        for f in _get_file_paths(json.load(in_handle)):
+            if f.startswith("gs:"):
+                return "gcp" if args.no_container else "gcp_container"
+    return "nocontainer" if args.no_container else "container"
 
 def _load_custom_config(run_config):
     """Load custom configuration input HOCON file for cromwell.
@@ -87,7 +117,28 @@ def _args_to_cromwell(args):
     return cl, config, args.scheduler
 
 
-FILESYSTEM_CONFIG = """
+FILESYSTEM_CONFIG = {
+  "gcp": """
+      filesystems {
+        gcs {
+          auth = "application-default"
+          caching {
+            duplication-strategy = "reference"
+          }
+        }
+      }
+  """,
+  "gcp_container": """
+      filesystems {
+        gcs {
+          auth = "application-default"
+          caching {
+            duplication-strategy = "copy"
+          }
+        }
+      }
+  """,
+  "nocontainer": """
       filesystems {
         local {
           localization: ["soft-link"]
@@ -97,7 +148,18 @@ FILESYSTEM_CONFIG = """
           }
         }
       }
+""",
+  "container": """
+      filesystems {
+        gcs {
+          auth = "application-default"
+          caching {
+            duplication-strategy = "copy"
+          }
+        }
+      }
 """
+}
 
 DATABASE_CONFIG = """
 database {
@@ -106,6 +168,25 @@ database {
     driver = "org.hsqldb.jdbcDriver"
     url = "jdbc:hsqldb:file:%(work_dir)s/persist/metadata;shutdown=false;hsqldb.tx=mvcc"
     connectionTimeout = 200000
+  }
+}
+"""
+
+AUTH_CONFIG = """
+google {
+  application-name = "cromwell"
+  auths = [
+    {
+      name = "application-default"
+      scheme = "application_default"
+    }
+  ]
+}
+engine {
+  filesystems {
+    gcs {
+      auth = "application-default"
+    }
   }
 }
 """
@@ -125,6 +206,8 @@ load-control {
 }
 
 %(database)s
+
+%(auth)s
 
 backend {
   providers {
