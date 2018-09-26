@@ -63,6 +63,8 @@ def _get_filesystem_type(args, sample_file):
         for f in _get_file_paths(json.load(in_handle)):
             if f.startswith("gs:"):
                 return "gcp" if args.no_container else "gcp_container"
+            elif f.startswith(("https:", "http:")):
+                return "http"
     return "nocontainer" if args.no_container else "container"
 
 def _load_custom_config(run_config):
@@ -138,6 +140,11 @@ FILESYSTEM_CONFIG = {
         }
       }
   """,
+  "http": """
+      filesystems {
+        http { }
+      }
+  """,
   "nocontainer": """
       filesystems {
         local {
@@ -172,6 +179,7 @@ database {
 }
 """
 
+
 AUTH_CONFIG = """
 google {
   application-name = "cromwell"
@@ -187,6 +195,7 @@ engine {
     gcs {
       auth = "application-default"
     }
+    http {}
   }
 }
 """

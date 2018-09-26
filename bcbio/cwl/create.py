@@ -805,7 +805,7 @@ def _clean_final_outputs(keyvals, get_retriever):
     def clean_path(get_retriever, x):
         integration, config = get_retriever.integration_and_config(x)
         if integration:
-            return integration.clean_file(x)
+            return integration.clean_file(x, config)
         else:
             return x
     keyvals = _adjust_files(keyvals, functools.partial(clean_path, get_retriever))
