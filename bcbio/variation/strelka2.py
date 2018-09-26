@@ -169,6 +169,11 @@ def _tumor_normal_genotypes(ref, alt, info, fname, coords):
         pending longer term inclusion of genotypes in Strelka2 directly
         (https://github.com/Illumina/strelka/issues/16)
       - For indels, uses the ref, het, hom convention
+
+    ref: The REF allele from a VCF line
+    alt: A list of potentially multiple ALT alleles (rec.ALT.split(";"))
+    info: The VCF INFO field
+    fname, coords: not currently used, for debugging purposes
     """
     known_names = set(["het", "hom", "ref", "conflict"])
     def name_to_gt(val):
