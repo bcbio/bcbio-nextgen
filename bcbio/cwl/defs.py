@@ -156,7 +156,7 @@ def _variant_vc(checkpoints):
                [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]),
                 cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
-                            "gatk4=4.0.7.0", "vqsr_cnn", "deepvariant", "sentieon",
+                            "gatk4", "vqsr_cnn", "deepvariant", "sentieon",
                             "htslib", "octopus", "picard", "platypus-variant", "pythonpy",
                             "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java=1.5.1",
                             "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.4.1", "r-base=3.4.1=h4fe35fd_8",
@@ -165,7 +165,7 @@ def _variant_vc(checkpoints):
              s("concat_batch_variantcalls", "batch-merge",
                [["batch_rec"], ["region_block"], ["vrn_file_region"]],
                [cwlout(["vrn_file"], "File", [".tbi"])],
-               "bcbio-vc", ["bcftools", "htslib", "gatk4=4.0.7.0"],
+               "bcbio-vc", ["bcftools", "htslib", "gatk4"],
                disk={"files": 1.5}, cores=1)]
     if not checkpoints.get("jointvc"):
         vc_wf += [s("postprocess_variants", "batch-single",
@@ -272,12 +272,12 @@ def _variant_jointvc():
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]), cwlout(["region"], "string")],
-            "bcbio-vc", ["gatk4=4.0.7.0", "gvcftools", "sentieon"],
+            "bcbio-vc", ["gatk4", "gvcftools", "sentieon"],
             disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
             [cwlout(["vrn_file_joint"], "File", [".tbi"])],
-            "bcbio-vc", ["bcftools", "htslib", "gatk4=4.0.7.0"],
+            "bcbio-vc", ["bcftools", "htslib", "gatk4"],
             disk={"files": 1.5}, cores=1),
           s("postprocess_variants", "batch-single",
             [["jointvc_batch_rec"], ["vrn_file_joint"]],
@@ -381,7 +381,7 @@ def _postprocess_alignment(checkpoints):
              cwlout(["depth", "coverage", "dist"], ["File", "null"]),
              cwlout(["depth", "coverage", "thresholds"], ["File", "null"]),
              cwlout(["align_bam"], ["File", "null"])],
-            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4=4.0.7.0", "mosdepth", "sentieon"],
+            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4", "mosdepth", "sentieon"],
             disk={"files": 3.0}),
           s("combine_sample_regions", "multi-combined",
             [["regions", "callable"], ["regions", "nblock"], ["metadata", "batch"],
@@ -390,7 +390,7 @@ def _postprocess_alignment(checkpoints):
             [cwlout(["config", "algorithm", "callable_regions"], "File"),
              cwlout(["config", "algorithm", "non_callable_regions"], "File"),
              cwlout(["config", "algorithm", "callable_count"], "int")],
-            "bcbio-vc", ["bedtools", "htslib", "gatk4=4.0.7.0"],
+            "bcbio-vc", ["bedtools", "htslib", "gatk4"],
             disk={"files": 0.5}, cores=1)]
     out = [["regions", "sample_callable"]]
     return wf, out
