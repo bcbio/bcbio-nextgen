@@ -37,10 +37,10 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     cores = dd.get_num_cores(items[0])
     if cores and cores > 1:
         opts += ["-th", str(cores)]
-    # Disable SV calling for vardict perl, causes issues with regional analysis
+    # Disable SV calling for vardict, causes issues with regional analysis
     # by detecting SVs outside of target regions, which messes up merging
-    if get_vardict_command(items[0]) == "vardict":
-        opts += ["--nosv"]
+    # SV calling will be worked on as a separate step
+    opts += ["--nosv"]
     # remove low mapping quality reads
     opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions
