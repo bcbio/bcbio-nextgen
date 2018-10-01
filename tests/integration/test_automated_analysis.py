@@ -256,6 +256,17 @@ def test_7_cancer_nonormal(install_test_files, data_dir):
               os.path.join(data_dir, "run_info-cancer2.yaml")]
         subprocess.check_call(cl)
 
+@pytest.mark.cancer
+@pytest.mark.cancerprecall
+@pytest.mark.install_required
+def test_7b_cancer_precall(install_test_files, data_dir):
+    """Test somatic prioritization and effects prediction with pre-called inputs.
+    """
+    with make_workdir() as workdir:
+        cl = ["bcbio_nextgen.py",
+              get_post_process_yaml(data_dir, workdir),
+              os.path.join(data_dir, "run_info-cancer3.yaml")]
+        subprocess.check_call(cl)
 
 @pytest.mark.speed1
 @pytest.mark.template

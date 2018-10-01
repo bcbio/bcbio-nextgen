@@ -125,7 +125,7 @@ def find_annotations(data):
 
 def _default_conf_files(data):
     conf_files = []
-    if dd.get_variantcaller(data):
+    if dd.get_variantcaller(data) or dd.get_vrn_file(data):
         if annotate_gemini(data):
             conf_files.append("gemini")
         if _annotate_somatic(data):
