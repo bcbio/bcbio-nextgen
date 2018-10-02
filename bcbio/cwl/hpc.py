@@ -214,6 +214,11 @@ load-control {
   memory-threshold-in-mb = 1
 }
 
+cwltool-runner {
+  # Use external cwltool to avoid slow runtimes with java embedded pre-processing
+  class = "cwl.CwltoolProcess"
+}
+
 %(database)s
 
 %(auth)s
