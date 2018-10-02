@@ -18,13 +18,14 @@ def create_cromwell_config(args, work_dir, sample_file):
     joblimit = args.joblimit
     if joblimit == 0 and not args.scheduler:
         joblimit = 1
+    file_types = _get_filesystem_types(args, sample_file)
     std_args = {"docker_attrs": "" if args.no_container else "\n        ".join(docker_attrs),
                 "submit_docker": 'submit-docker: ""' if args.no_container else "",
                 "joblimit": "concurrent-job-limit = %s" % (joblimit) if joblimit > 0 else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
-                "filesystem": FILESYSTEM_CONFIG[_get_filesystem_type(args, sample_file)],
+                "filesystem": _get_filesystem_config(file_types),
                 "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir}),
-                "auth": AUTH_CONFIG}
+                "engine": _get_engine_filesystem_config(file_types)}
     cl_args, conf_args, scheduler = _args_to_cromwell(args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
@@ -55,17 +56,6 @@ def _get_file_paths(cur):
                 if new:
                     out.extend(new)
     return out
-
-def _get_filesystem_type(args, sample_file):
-    """Retrieve the type of inputs and staging based on sample JSON and arguments.
-    """
-    with open(sample_file) as in_handle:
-        for f in _get_file_paths(json.load(in_handle)):
-            if f.startswith("gs:"):
-                return "gcp" if args.no_container else "gcp_container"
-            elif f.startswith(("https:", "http:")):
-                return "http"
-    return "nocontainer" if args.no_container else "container"
 
 def _load_custom_config(run_config):
     """Load custom configuration input HOCON file for cromwell.
@@ -118,35 +108,55 @@ def _args_to_cromwell(args):
         return cl, config, args.scheduler
     return cl, config, args.scheduler
 
+def _get_filesystem_types(args, sample_file):
+    """Retrieve the types of inputs and staging based on sample JSON and arguments.
+    """
+    out = set([])
+    ext = "" if args.no_container else "_container"
+    with open(sample_file) as in_handle:
+        for f in _get_file_paths(json.load(in_handle)):
+            if f.startswith("gs:"):
+                out.add("gcp%s" % ext)
+            elif f.startswith(("https:", "http:")):
+                out.add("http%s" % ext)
+            else:
+                out.add("local%s" % ext)
+    return out
 
-FILESYSTEM_CONFIG = {
+def _get_filesystem_config(file_types):
+    """Retrieve filesystem configuration, including support for specified file types.
+    """
+    out = "     filesystems {\n"
+    for file_type in sorted(list(file_types)):
+        out += _FILESYSTEM_CONFIG[file_type]
+    out += "      }\n"
+    return out
+
+
+_FILESYSTEM_CONFIG = {
   "gcp": """
-      filesystems {
         gcs {
           auth = "application-default"
           caching {
             duplication-strategy = "reference"
           }
         }
-      }
   """,
   "gcp_container": """
-      filesystems {
         gcs {
           auth = "application-default"
           caching {
             duplication-strategy = "copy"
           }
         }
-      }
   """,
   "http": """
-      filesystems {
         http { }
-      }
   """,
-  "nocontainer": """
-      filesystems {
+  "http_container": """
+        http { }
+  """,
+  "local": """
         local {
           localization: ["soft-link"]
           caching {
@@ -154,17 +164,14 @@ FILESYSTEM_CONFIG = {
             hashing-strategy: "path"
           }
         }
-      }
 """,
-  "container": """
-      filesystems {
+  "local_container": """
         gcs {
           auth = "application-default"
           caching {
             duplication-strategy = "copy"
           }
         }
-      }
 """
 }
 
@@ -179,8 +186,28 @@ database {
 }
 """
 
+def _get_engine_filesystem_config(file_types):
+    """Retriever authorization and engine filesystem configuration.
+    """
+    file_types = [x.replace("_container", "") for x in list(file_types)]
+    out = ""
+    if "gcp" in file_types:
+        out += _AUTH_CONFIG_GOOGLE
+    if "gcp" in file_types or "http" in file_types:
+        out += "engine {\n"
+        out += "  filesystems {\n"
+        if "gcp" in file_types:
+            out += '    gcs {\n'
+            out += '      auth = "application-default"\n'
+            out += '    }\n'
+        if "http" in file_types:
+            out += '    http {}\n'
+        out += "  }\n"
+        out += "}\n"
+    return out
 
-AUTH_CONFIG = """
+
+_AUTH_CONFIG_GOOGLE = """
 google {
   application-name = "cromwell"
   auths = [
@@ -189,14 +216,6 @@ google {
       scheme = "application_default"
     }
   ]
-}
-engine {
-  filesystems {
-    gcs {
-      auth = "application-default"
-    }
-    http {}
-  }
 }
 """
 
@@ -221,7 +240,7 @@ cwltool-runner {
 
 %(database)s
 
-%(auth)s
+%(engine)s
 
 backend {
   providers {
