@@ -1,5 +1,5 @@
-version: 1
+version: 2
 
 aliases:
-  ensembl: danio_rerio_vep_93_GRCz11
+  ensembl: danio_rerio_vep_94_GRCz11
   #snpeff: 

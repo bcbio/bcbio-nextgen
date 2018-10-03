@@ -1,5 +1,5 @@
-version: 8
+version: 9
 
 aliases:
-  ensembl: gallus_gallus_vep_93_Galgal4
+  ensembl: gallus_gallus_vep_94_Galgal4
   snpeff: Galgal4.75
