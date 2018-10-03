@@ -26,6 +26,7 @@ variation:
   qsignature: ../variation/qsignature.vcf
   genesplicer: ../variation/genesplicer
   editing: ../editing/RADAR.bed.gz
+  genotype2phenotype: ../variation/G2P.csv
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

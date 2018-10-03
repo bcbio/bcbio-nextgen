@@ -16,6 +16,7 @@ variation:
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
   cosmic: ../variation/cosmic.vcf.gz
   lcr: ../variation/LCR.bed.gz
+  genotype2phenotype: ../variation/G2P.csv
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
