@@ -11,6 +11,7 @@ https://github.com/AstraZeneca-NGS/VarDict
 
 specify 'vardict-perl'.
 """
+from distutils.version import LooseVersion
 import os
 import sys
 from six.moves import zip
@@ -23,8 +24,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
-from bcbio.provenance import do
-from bcbio.variation import annotation, bamprep, bedutils, vcfutils
+from bcbio.provenance import do, programs
+from bcbio.variation import bamprep, bedutils, vcfutils
 
 def _is_bed_file(target):
     return target and isinstance(target, basestring) and os.path.isfile(target)
@@ -40,7 +41,12 @@ def _vardict_options_from_config(items, config, out_file, target=None):
     # Disable SV calling for vardict, causes issues with regional analysis
     # by detecting SVs outside of target regions, which messes up merging
     # SV calling will be worked on as a separate step
-    opts += ["--nosv"]
+    vardict_cl = get_vardict_command(items[0])
+    version = programs.get_version_manifest(vardict_cl)
+    if (vardict_cl and version and
+        ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
+         (vardict_cl == "vardict" and LooseVersion(version) >= LooseVersion("2018.07.25")))):
+        opts += ["--nosv"]
     # remove low mapping quality reads
     opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions
