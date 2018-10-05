@@ -24,9 +24,8 @@ def is_empty(bam_file):
     """Determine if a BAM file is empty
     """
     bam_file = objectstore.cl_input(bam_file)
-    sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "{sambamba} view {bam_file} | head -1 | wc -l")
+           "samtools view {bam_file} | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -46,10 +45,9 @@ def is_paired(bam_file):
     http://stackoverflow.com/a/12451083/252589
     """
     bam_file = objectstore.cl_input(bam_file)
-    sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "{sambamba} view {bam_file} | head -50000 | "
-           "{sambamba} view -S -F paired /dev/stdin  | head -1 | wc -l")
+           "samtools view -h {bam_file} | head -50000 | "
+           "samtools view -S -f 1 /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
