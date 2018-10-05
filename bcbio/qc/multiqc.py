@@ -224,7 +224,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             # CWL: presents output files as single file plus associated secondary files
             elif isinstance(pfiles, basestring):
                 if os.path.exists(pfiles):
-                    pfiles = [os.path.join(os.path.dirname(pfiles), x) for x in os.listdir(os.path.dirname(pfiles))]
+                    pfiles = [os.path.join(basedir, f) for basedir, subdir, filenames in os.walk(os.path.dirname(pfiles)) for f in filenames]
                 else:
                     pfiles = []
             in_files[(dd.get_sample_name(data), program)].extend(pfiles)
