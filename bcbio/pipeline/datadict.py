@@ -263,17 +263,6 @@ def get_dexseq_gff(config, default=None):
     else:
         return None
 
-def get_ref_twobit(data):
-    out = tz.get_in(["reference", "twobit"], data)
-    if not out:
-        ref_dir, ref_name = os.path.split(tz.get_in(["reference", "fasta", "base"], data))
-        base_name = ref_name.replace(".fa", "").replace(".gz", "")
-        raise ValueError("GATK4 BaseRecalibratorSpark requires UCSC twobit reference."
-                            "We did not find it in the expected location: %s" %
-                            os.path.join(os.path.dirname(ref_dir), "ucsc",
-                                        "%s.2bit" % base_name))
-    return out
-
 def getter(keys, global_default=None, always_list=False):
     def lookup(config, default=None):
         default = global_default if not default else default

@@ -44,13 +44,9 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     gatk_type = broad_runner.gatk_type()
     for x in align_bams:
         bam.index(x, config)
-    if _use_spark(num_cores, gatk_type):
-        # GATK4 spark runs use 2bit reference index
-        params = ["--reference", dd.get_ref_twobit(items[0])]
-    else:
-        picard_runner = broad.runner_from_path("picard", config)
-        picard_runner.run_fn("picard_index_ref", ref_file)
-        params = ["-R", ref_file]
+    picard_runner = broad.runner_from_path("picard", config)
+    picard_runner.run_fn("picard_index_ref", ref_file)
+    params = ["-R", ref_file]
     coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
     if coverage_depth_min and coverage_depth_min < 4:
         confidence = "4.0"

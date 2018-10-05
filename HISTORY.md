@@ -20,6 +20,7 @@
 - GATK: support ploidy specification during joint calling.
 - GATK BQSR: bin qualities into static groups (10, 20, 30) to match GATK4
   recommendations. Thanks to Severine Catreux.
+- GATK: support 4.0.10.0 which does not use UCSC 2bit references for Spark tools
 - variant calling: support bcftools 1.9 which is more strict about duplicated
   key names in INFO and FORMAT.
 - seq2c: Upload global calls, coverage and read_mapping files to project directory.

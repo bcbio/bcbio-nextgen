@@ -44,7 +44,7 @@ SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
 TARBALL_DIRECTORIES = ["bwa", "rtg", "hisat2"]
 SUPPORTED_INDEXES = TARBALL_DIRECTORIES + ["bbmap", "bowtie", "bowtie2", "minimap2", "novoalign", "twobit",
                                            "snap", "star", "seq"]
-DEFAULT_INDEXES = ["rtg", "twobit"]
+DEFAULT_INDEXES = ["rtg"]
 
 Tool = collections.namedtuple("Tool", ["name", "fname"])
 

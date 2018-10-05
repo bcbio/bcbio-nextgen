@@ -95,7 +95,7 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 if gatk_type == "gatk4":
                     params += ["-T", "BaseRecalibratorSpark",
                                "--spark-master", "local[%s]" % cores,
-                               "--output", tx_out_file, "--reference", dd.get_ref_twobit(data),
+                               "--output", tx_out_file, "--reference", dd.get_ref_file(data),
                                "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
                                "--conf", "spark.executor.heartbeatInterval=100",
                                "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
