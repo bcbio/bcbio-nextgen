@@ -49,6 +49,7 @@
   Babak Alaei at AstraZeneca.
 - RNA-seq: turn on `--seqBias` flag by default for Salmon as early-version overfitting
   issues have been fixed.
+- RNA-seq: report insert size from Salmon fragment distribution, not samtools stats.
 
 ## 1.1.0 (11 July 2018)
 

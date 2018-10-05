@@ -5,6 +5,7 @@ http://biorxiv.org/content/early/2015/06/27/021592
 """
 
 import os
+import numpy as np
 
 from bcbio.rnaseq import sailfish
 import bcbio.pipeline.datadict as dd
@@ -26,6 +27,7 @@ def run_salmon_bam(data):
     out_file = salmon_quant_bam(bam_file, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
+    data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
     return [[data]]
 
 def run_salmon_reads(data):
@@ -46,6 +48,7 @@ def run_salmon_reads(data):
     out_file = salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
+    data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
     return [[data]]
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
@@ -148,3 +151,22 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
         message = "Creating Salmon index for {gtf_fa} with {kmersize} bp kmers."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
+
+def _get_fraglen_file(salmondir):
+    flenfile = os.path.join(salmondir, "quant", "libParams", "flenDist.txt")
+    if not file_exists(flenfile):
+        return None
+    else:
+        return flenfile
+
+def parse_fragment_length_file(filename):
+    with open(filename) as in_handle:
+        flens = [float(x) for x in in_handle.next().split("\t")]
+    return flens
+
+def estimate_fragment_size(data):
+    filename = dd.get_salmon_fraglen_file(data)
+    if not file_exists(filename):
+        return None
+    flen = parse_fragment_length_file(filename)
+    return float(np.sum(np.multiply(flen, range(len(flen)))))

@@ -19,7 +19,7 @@ from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.rnaseq import gtf
+from bcbio.rnaseq import gtf, salmon
 from bcbio.variation import bedutils
 
 # ## Standard Qualimap
@@ -343,7 +343,7 @@ def run_rnaseq(bam_file, data, out_dir):
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
     metrics.update(_detect_rRNA(data, results_dir))
-    metrics.update({"Average_insert_size": bam.estimate_fragment_size(bam_file)})
+    metrics.update({"Average_insert_size": salmon.estimate_fragment_size(data)})
     metrics = _parse_metrics(metrics)
     # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order
     # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):

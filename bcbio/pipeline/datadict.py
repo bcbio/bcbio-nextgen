@@ -177,6 +177,7 @@ LOOKUPS = {
                                     "default": 1},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
     "salmon_dir": {"keys": ["salmon_dir"]},
+    "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},
     "sailfish_transcript_tpm": {"keys": ["sailfish_transcript_tpm"]},
