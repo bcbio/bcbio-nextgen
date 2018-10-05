@@ -14,10 +14,10 @@ details:
       expression_caller: [stringtie, dexseq, kallisto, salmon]
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
-      tools_on: [bcbiornaseq]
-      bcbiornaseq:
-          organism: homo sapiens
-          interesting_groups: batch
+      #tools_on: [bcbiornaseq]
+      #bcbiornaseq:
+      #    organism: homo sapiens
+      #    interesting_groups: batch
     metadata:
       batch: TestBatch1
     description: Test1
@@ -36,10 +36,10 @@ details:
       expression_caller: [stringtie, dexseq, kallisto, salmon]
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
-      tools_on: [bcbiornaseq]
-      bcbiornaseq:
-          organism: homo sapiens
-          interesting_groups: batch
+      #tools_on: [bcbiornaseq]
+      #bcbiornaseq:
+      #    organism: homo sapiens
+      #    interesting_groups: batch
     metadata:
       batch: TestBatch1
     description: 2Test2
