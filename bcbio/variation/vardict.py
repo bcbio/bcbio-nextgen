@@ -47,6 +47,9 @@ def _vardict_options_from_config(items, config, out_file, target=None):
         ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
          (vardict_cl == "vardict" and LooseVersion(version) >= LooseVersion("2018.07.25")))):
         opts += ["--nosv"]
+    if (vardict_cl and version and
+         (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
+        opts += ["--deldupvar"]
     # remove low mapping quality reads
     opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions
