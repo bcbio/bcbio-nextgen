@@ -32,7 +32,7 @@ def use_general_sv_bins(data):
 
     Checks if CNVkit is enabled and we haven't already run CNVkit.
     """
-    if "cnvkit" in dd.get_svcaller(data) or "titancna" in dd.get_svcaller(data):
+    if any([c in dd.get_svcaller(data) for c in ["cnvkit", "titancna", "purecn", "purple"]]):
         if not _get_original_coverage(data):
             return True
     return False
@@ -461,14 +461,17 @@ def targets_from_background(back_cnn, work_dir, data):
             shutil.copy(out_base + ".antitarget.bed", anti_file)
     return target_file, anti_file
 
-def _add_seg_to_output(out, data):
+def _add_seg_to_output(out, data, enumerate_chroms=False):
     """Export outputs to 'seg' format compatible with IGV and GenePattern.
     """
     out_file = "%s.seg" % os.path.splitext(out["cns"])[0]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
-                   "seg", "-o", tx_out_file, out["cns"]]
+                   "seg"]
+            if enumerate_chroms:
+                cmd += ["--enumerate-chroms"]
+            cmd += ["-o", tx_out_file, out["cns"]]
             do.run(cmd, "CNVkit export seg")
     out["seg"] = out_file
     return out
@@ -714,6 +717,14 @@ def _add_diagram_plot(out, data):
                 cmd += ["--sample-sex", gender]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit diagram plot")
     return out_file
+
+def segment_from_cnr(cnr_file, data, out_base):
+    """Provide segmentation on a cnr file, used in external PureCN integration.
+    """
+    cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data),
+                               data, [data], out_file="%s.cns" % out_base)
+    out = _add_seg_to_output({"cns": cns_file}, data, enumerate_chroms=False)
+    return out["seg"]
 
 # ## Theta support
 

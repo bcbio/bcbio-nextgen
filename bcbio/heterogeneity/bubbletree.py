@@ -116,19 +116,20 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                                              cur["end"], cur["probes"], cur["log2"]])
     return out_file
 
-def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None):
+def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None, params=None):
     """Select heterozygous variants in the normal sample with sufficient depth.
 
     writer_class implements write_header and write_row to write VCF outputs
     from a record and extracted tumor/normal statistics.
     """
     data = somatic_info.tumor_data
-    params = {"min_freq": 0.4,
-              "max_freq": 0.6,
-              "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
-              "min_depth": 20,
-              "hetblock": {"min_alleles": 25,
-                           "allowed_misses": 2}}
+    if not params:
+        params = {"min_freq": 0.4,
+                  "max_freq": 0.6,
+                  "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
+                  "min_depth": 20,
+                  "hetblock": {"min_alleles": 25,
+                               "allowed_misses": 2}}
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):

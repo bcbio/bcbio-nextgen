@@ -11,7 +11,7 @@ from bcbio import utils
 from bcbio.cwl import cwlutils
 from bcbio.pipeline import datadict as dd
 from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, gridss,
-                              lumpy, manta, metasv, prioritize, plot,
+                              lumpy, manta, metasv, prioritize, purecn, purple, plot,
                               seq2c, titancna, validate, wham)
 from bcbio.variation import validate as vcvalidate
 from bcbio.variation import vcfutils
@@ -23,7 +23,7 @@ _CALLERS = {
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run, "cnvkit": cnvkit.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
                "battenberg": battenberg.run, "seq2c": seq2c.run, "gridss": gridss.run,
-               "titancna": titancna.run},
+               "titancna": titancna.run, "purecn": purecn.run, "purple": purple.run},
   "ensemble": {"metasv": metasv.run,
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])

@@ -189,7 +189,8 @@ def _find_known(row):
 def _do_prioritize(items):
     """Determine if we should perform prioritization.
 
-    Currently done on tumor-only input samples.
+    Currently done on tumor-only input samples and feeding into PureCN
+    which needs the germline annotations.
     """
     if not any("tumoronly-prioritization" in dd.get_tools_off(d) for d in items):
         if vcfutils.get_paired_phenotype(items[0]):
