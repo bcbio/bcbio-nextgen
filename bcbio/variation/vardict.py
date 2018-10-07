@@ -205,6 +205,20 @@ def _lowfreq_linear_filter(tumor_index, is_paired):
            """&& -1.7075 + 1.6367 * {sbf} + (-2.7534 * {nm}) + 0.2206 * FORMAT/VD[{tumor_index}] < -2.5'""")
     return cmd.format(**locals())
 
+def add_db_germline_flag(line):
+    """Adds a DB flag for Germline filters, allowing downstream compatibility with PureCN.
+    """
+    if line.startswith("#CHROM"):
+        headers = ['##INFO=<ID=DB,Number=0,Type=Flag,Description="Likely germline variant">']
+        return "\n".join(headers) + "\n" + line
+    elif line.startswith("#"):
+        return line
+    else:
+        parts = line.split("\t")
+        if parts[7].find("STATUS=Germline") >= 0:
+            parts[7] += ";DB"
+        return "\t".join(parts)
+
 def depth_freq_filter(line, tumor_index, aligner):
     """Command line to filter VarDict calls based on depth, frequency and quality.
 
@@ -308,9 +322,11 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                       """freebayes.call_somatic("%s", "%s")' """
                                       % (sys.executable, paired.tumor_name, paired.normal_name))
                     freq_filter = ("| bcftools filter -m '+' -s 'REJECT' -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+                                   "| %s -x 'bcbio.variation.vardict.add_db_germline_flag(x)' "
                                    "| %s "
                                    "| %s -x 'bcbio.variation.vardict.depth_freq_filter(x, %s, \"%s\")'" %
-                                   (_lowfreq_linear_filter(0, True),
+                                   (os.path.join(os.path.dirname(sys.executable), "py"),
+                                    _lowfreq_linear_filter(0, True),
                                     os.path.join(os.path.dirname(sys.executable), "py"),
                                     0, dd.get_aligner(paired.tumor_data)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
