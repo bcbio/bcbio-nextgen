@@ -31,6 +31,7 @@
 - CWL: support for heterogeneity and structural variant callers that make
   use of variant inputs.
 - CWL: support ensemble calling for combining multiple variant callers.
+- ensemble: remove no-ALT ref calls that contribute to incorrect ensemble outputs
 - RNA-seq: output a matrix of un-deduped UMI counts when doing single-cell/DGE
   for quality control purposes. This is called `tagcounts-dupes.mtx` in the
   final directory.
