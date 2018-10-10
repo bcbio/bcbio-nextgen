@@ -1,6 +1,11 @@
 Presentations
 =============
 
+- Variant calling and bcbio training for the `Harvard Chan Bioinformatics Core
+  In Depth NGS Data Analysis Course
+  <https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/>`_
+  (10 October 2018): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2018_teaching/ngscourse2018_teaching.pdf>`_
+
 - Building a diverse set of validations; lightning talk at `the GCCBOSC2018 Bioinformatics Community Conference
   <https://gccbosc2018.sched.com/>`_: `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2018_bcbio_validate/chapman_bcbio_validate.pdf>`_
 
