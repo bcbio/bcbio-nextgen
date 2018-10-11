@@ -158,7 +158,7 @@ def _variant_vc(checkpoints):
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
                             "gatk4", "vqsr_cnn", "deepvariant", "sentieon",
                             "htslib", "octopus", "picard", "platypus-variant", "pythonpy",
-                            "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java=1.5.1",
+                            "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java",
                             "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.4.1", "r-base=3.4.1=h4fe35fd_8",
                             "perl"],
                disk={"files": 2.0}),
@@ -172,7 +172,7 @@ def _variant_vc(checkpoints):
                     [["batch_rec"], ["vrn_file"]],
                     [cwlout(["vrn_file"], "File", [".tbi"])],
                     "bcbio-vc", ["snpeff=4.3.1t"], disk={"files": 0.5})]
-    vc_rec_exclude = [["align_bam"], ["reference", "twobit"]]
+    vc_rec_exclude = [["align_bam"]]
     if not checkpoints.get("jointvc"):
         vc_rec_exclude.append(["genome_resources", "variation"])
     vc_wf += [s("compare_to_rm", "batch-single",
@@ -202,7 +202,7 @@ def _variant_vc(checkpoints):
                 ["config", "algorithm", "validate"], ["config", "algorithm", "validate_regions"],
                 ["config", "algorithm", "tools_on"],
                 ["config", "algorithm", "tools_off"],
-                ["reference", "fasta", "base"], ["reference", "twobit"],
+                ["reference", "fasta", "base"],
                 ["reference", "rtg"], ["reference", "genome_context"],
                 ["genome_resources", "variation", "clinvar"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"],
@@ -353,7 +353,6 @@ def _postprocess_alignment(checkpoints):
              ["genome_resources", "variation", "dbsnp"],
              ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
              ["genome_resources", "variation", "encode_blacklist"],
-             ["reference", "twobit"],
              ["reference", "fasta", "base"]],
             [cwlout("postprocess_alignment_rec", "record")],
             "bcbio-vc",
