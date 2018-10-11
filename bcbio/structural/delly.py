@@ -53,9 +53,7 @@ def _run_delly(bam_files, chrom, ref_file, work_dir, items):
         with file_transaction(items[0], out_file) as tx_out_file:
             if sshared.has_variant_regions(items, out_file, chrom):
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
-                # uses -n to skip small indel detection for speed, not yet optimized:
-                # https://github.com/dellytools/delly/issues/36
-                cmd = ["delly", "call", "--noindels", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
+                cmd = ["delly", "call", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
