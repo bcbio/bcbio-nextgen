@@ -203,7 +203,7 @@ def _parse_metrics(metrics):
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
     for name in to_change:
-        if not to_change[name]:
+        if not to_change[name] or metrics[name] is None:
             continue
         try:
             if to_change[name] == 1:
