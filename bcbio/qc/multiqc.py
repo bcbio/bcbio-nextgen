@@ -325,9 +325,9 @@ def _create_config_file(out_dir, samples):
     ])
     out['bcftools'] = {'write_separate_table': True}
     # if germline calling was performed:
-    if any("germline" in (get_active_vcinfo(s) or {})  # tumor-only somatic with germline extraction
-           or dd.get_phenotype(s) == "germline"        # or paired somatic with germline calling for normal
-           or _has_bcftools_germline_stats(s)          # CWL organized statistics
+    if any("germline" in (get_active_vcinfo(s) or {}) or  # tumor-only somatic with germline extraction
+           dd.get_phenotype(s) == "germline" or           # or paired somatic with germline calling for normal
+           _has_bcftools_germline_stats(s)                # CWL organized statistics
            for s in samples):
         # Split somatic and germline variant stats into separate multiqc submodules,
         # with somatic going into General Stats, and germline going into a separate table:
@@ -367,7 +367,12 @@ def _create_config_file(out_dir, samples):
 def _has_bcftools_germline_stats(data):
     """Check for the presence of a germline stats file, CWL compatible.
     """
-    return (tz.get_in(["summary", "qc"], data) or "").find("bcftools_stats_germline") > 0
+    stats_file = tz.get_in(["summary", "qc"], data)
+    if isinstance(stats_file, dict):
+        stats_file = tz.get_in(["variants", "base"], stats_file)
+    if not stats_file:
+        stats_file = ""
+    return stats_file.find("bcftools_stats_germline") > 0
 
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""
