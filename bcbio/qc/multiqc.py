@@ -327,6 +327,7 @@ def _create_config_file(out_dir, samples):
     # if germline calling was performed:
     if any("germline" in (get_active_vcinfo(s) or {})  # tumor-only somatic with germline extraction
            or dd.get_phenotype(s) == "germline"        # or paired somatic with germline calling for normal
+           or _has_bcftools_germline_stats(s)          # CWL organized statistics
            for s in samples):
         # Split somatic and germline variant stats into separate multiqc submodules,
         # with somatic going into General Stats, and germline going into a separate table:
@@ -362,6 +363,11 @@ def _create_config_file(out_dir, samples):
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _has_bcftools_germline_stats(data):
+    """Check for the presence of a germline stats file, CWL compatible.
+    """
+    return (tz.get_in(["summary", "qc"], data) or "").find("bcftools_stats_germline") > 0
 
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""

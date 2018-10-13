@@ -13,6 +13,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+from bcbio.variation import genotype
 
 def run(_, data, out_dir):
     """Prepare variants QC analysis: bcftools stats and snpEff output.
@@ -20,7 +21,9 @@ def run(_, data, out_dir):
     out = []
     vcinfo = get_active_vcinfo(data)
     if vcinfo:
-        if dd.get_phenotype(data) != "germline":
+        if dd.get_phenotype(data) == "normal" and "germline" in vcinfo:
+            out.append(_bcftools_stats(data, out_dir, "germline", germline=True))
+        elif dd.get_phenotype(data) != "germline":
             out.append(_bcftools_stats(data, out_dir))
             if "germline" in vcinfo:
                 out.append(_bcftools_stats(data, out_dir, "germline", germline=True))
@@ -73,6 +76,20 @@ def _bcftools_stats(data, out_dir, vcf_file_key=None, germline=False):
                             out_handle.write(line)
         return out_file
 
+def _add_filename_details(full_f):
+    """Add variant callers and germline information standard CWL filenames.
+
+    This is an ugly way of working around not having metadata with calls.
+    """
+    out = {"vrn_file": full_f}
+    f = os.path.basename(full_f)
+    for vc in genotype.get_variantcallers().keys() + ["ensemble"]:
+        if f.find("-%s.vcf" % vc) > 0:
+            out["variantcaller"] = vc
+    if f.find("-germline-") >= 0:
+        out["germline"] = full_f
+    return out
+
 def get_active_vcinfo(data, use_ensemble=True):
     """Use first caller if ensemble is not active
 
@@ -87,14 +104,16 @@ def get_active_vcinfo(data, use_ensemble=True):
         for v in variants:
             # CWL -- a single variant file
             if isinstance(v, basestring) and os.path.exists(v):
-                active_vs.append({"vrn_file": v})
+                active_vs.append(_add_filename_details(v))
             elif (isinstance(v, (list, tuple)) and len(v) > 0 and
                   isinstance(v[0], basestring) and os.path.exists(v[0])):
-                active_vs.append({"vrn_file": v[0]})
-            elif isinstance(v, dict) and v.get("variantcaller") == "ensemble":
-                if use_ensemble:
-                    return v
+                for subv in v:
+                    active_vs.append(_add_filename_details(subv))
             elif isinstance(v, dict) and v.get("vrn_file"):
                 active_vs.append(v)
         if len(active_vs) > 0:
+            if use_ensemble:
+                e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
+                if len(e_active_vs) > 0:
+                    return e_active_vs[0]
             return active_vs[0]

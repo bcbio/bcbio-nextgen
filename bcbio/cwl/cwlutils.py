@@ -238,6 +238,10 @@ def _get_vcf_samples(calls, items):
         else:
             for data in items:
                 for i, test_name in enumerate([dd.get_sample_name(data)] + dd.get_batches(data)):
+                    # For tumor/normal batches, want to attach germline VCFs to normals
+                    # Standard somatics go to tumors
+                    if dd.get_phenotype(data) == "normal":
+                        test_name += "-germline"
                     if os.path.basename(f).startswith(("%s-" % test_name,
                                                        "%s." % test_name)):
                         # Prefer matches to single samples (gVCF) over joint batches
