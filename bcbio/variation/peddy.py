@@ -57,13 +57,14 @@ def run_peddy(samples, out_dir=None):
 
     vcf_file = None
     for d in samples:
-        if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor", "normal"]:
+        if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor"]:
             vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
-            if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
-                if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
-                    if vcinfo["vrn_file"] and vcfutils.vcf_has_nonfiltered_variants(vcinfo["vrn_file"]):
-                        vcf_file = vcinfo["vrn_file"]
-                        break
+            for key in ["germline", "vrn_file"]:
+                if vcinfo and vcinfo.get(key) and utils.file_exists(vcinfo[key]):
+                    if vcinfo[key] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo[key]):
+                        if vcinfo[key] and vcfutils.vcf_has_nonfiltered_variants(vcinfo[key]):
+                            vcf_file = vcinfo[key]
+                            break
     peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
     if not peddy or not vcf_file or not vcfanno.is_human(data):
         if not peddy:
