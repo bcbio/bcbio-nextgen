@@ -136,8 +136,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 # prepare commands
                 sample = dd.get_sample_name(item)
                 vardict = get_vardict_command(items[0])
-                strandbias = "teststrandbias.R"
-                var2vcf = "var2vcf_valid.pl"
                 opts, var2vcf_opts = _vardict_options_from_config(items, config, out_file, target)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
@@ -152,8 +150,8 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 lowfreq_filter = _lowfreq_linear_filter(0, False)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {sample} -b {bamfile} {opts} "
-                       "| {strandbias}"
-                       "| {var2vcf} -A -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| teststrandbias.R "
+                       "| var2vcf_valid.pl -A -N {sample} -E -f {freq} {var2vcf_opts} "
                        "| {contig_cl} | bcftools filter -i 'QUAL >= 0' | {lowfreq_filter} "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
@@ -301,8 +299,6 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                     return ann_file
                 vardict = get_vardict_command(items[0])
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
-                strandbias = "testsomatic.R"
-                var2vcf = "var2vcf_paired.pl"
                 compress_cmd = "| bgzip -c" if out_file.endswith("gz") else ""
                 freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 # merge bed file regions as amplicon VarDict is only supported in single sample mode
@@ -335,8 +331,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
-                       "| {strandbias} "
-                       "| {var2vcf} -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
+                       "| awk 'NF>=48' | testsomatic.R "
+                       "| var2vcf_paired.pl -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "| {contig_cl} {freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
