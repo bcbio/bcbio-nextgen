@@ -10,7 +10,9 @@ import shutil
 import pandas as pd
 
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -104,6 +106,11 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                 cmd = ("{export_cmd} && titanCNA.R --id {sample} --hetFile {het_file} --cnFile {cn_file} "
                        "--numClusters {num_clusters} --ploidy {ploidy} --numCores {cores} --outDir {tmp_dir} "
                        "--libdir None")
+                chroms = ["'%s'" % c.name.replace("chr", "") for c in ref.file_contigs(dd.get_ref_file(data))
+                          if chromhacks.is_autosomal_or_x(c.name)]
+                # For supporting next development release
+                # cmd += """ --chrs "c(%s)" """ % ",".join(chroms)
+                # cmd += " --genomeBuild {data[genome_build]}"
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
                 # TitanCNA's model is influenced by the variance in read coverage data
@@ -132,8 +139,9 @@ def _titan_het_file(vrn_files, work_dir, paired):
         def write_header(self):
             self.writer.writerow(["Chr", "Position", "Ref", "RefCount", "Nref", "NrefCount", "NormQuality"])
         def write_row(self, rec, stats):
-            self.writer.writerow([rec.chrom, rec.pos, rec.ref, stats["tumor"]["depth"] - stats["tumor"]["alt"],
-                                  rec.alts[0], stats["tumor"]["alt"], rec.qual])
+            if rec.qual and float(rec.qual) > 0:
+                self.writer.writerow([rec.chrom, rec.pos, rec.ref, stats["tumor"]["depth"] - stats["tumor"]["alt"],
+                                      rec.alts[0], stats["tumor"]["alt"], rec.qual])
     return bubbletree.prep_vrn_file(vrn_files[0]["vrn_file"], vrn_files[0]["variantcaller"],
                                     work_dir, paired, OutWriter)
 
