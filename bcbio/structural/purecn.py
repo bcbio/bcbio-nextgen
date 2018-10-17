@@ -39,7 +39,7 @@ def _run_purecn_dx(out, paired):
     out_base, out, all_files = _get_purecn_dx_files(paired, out)
     if not utils.file_uptodate(out["mutation_burden"], out["rds"]):
         with file_transaction(paired.tumor_data, out_base) as tx_out_base:
-            cmd = ["PureCN_Dx.R", "--rds", out["rds"], "--callable", dd.get_callable_regions(paired.tumor_data),
+            cmd = ["PureCN_Dx.R", "--rds", out["rds"], "--callable", dd.get_sample_callable(paired.tumor_data),
                    "--signatures", "--out", tx_out_base]
             do.run(cmd, "PureCN Dx mutational burden and signatures")
             for f in all_files:
