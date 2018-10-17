@@ -108,9 +108,11 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                        "--libdir None")
                 chroms = ["'%s'" % c.name.replace("chr", "") for c in ref.file_contigs(dd.get_ref_file(data))
                           if chromhacks.is_autosomal_or_x(c.name)]
+                if 'X' not in chroms:
+                    chroms += ["'X'"]
                 # For supporting next development release
-                # cmd += """ --chrs "c(%s)" """ % ",".join(chroms)
-                # cmd += " --genomeBuild {data[genome_build]}"
+                cmd += """ --chrs "c(%s)" """ % ",".join(chroms)
+                cmd += " --genomeBuild {data[genome_build]}"
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
                 # TitanCNA's model is influenced by the variance in read coverage data
