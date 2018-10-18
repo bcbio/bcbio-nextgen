@@ -108,7 +108,7 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                        "--libdir None")
                 chroms = ["'%s'" % c.name.replace("chr", "") for c in ref.file_contigs(dd.get_ref_file(data))
                           if chromhacks.is_autosomal_or_x(c.name)]
-                if 'X' not in chroms:
+                if "'X'" not in chroms:
                     chroms += ["'X'"]
                 # For supporting next development release
                 cmd += """ --chrs "c(%s)" """ % ",".join(chroms)

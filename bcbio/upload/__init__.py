@@ -704,7 +704,7 @@ def _get_files_project(sample, upload_config):
     sv_project = set([])
     for svcall in sample.get("sv", []):
         if svcall.get("variantcaller") == "seq2c":
-            if svcall["calls_all"] not in sv_project and svcall.get("calls_all"):
+            if svcall.get("calls_all") and svcall["calls_all"] not in sv_project:
                 out.append({"path": svcall["coverage_all"], "batch": "seq2c", "ext": "coverage", "type": "tsv"})
                 out.append({"path": svcall["read_mapping"], "batch": "seq2c", "ext": "read_mapping", "type": "txt"})
                 out.append({"path": svcall["calls_all"], "batch": "seq2c", "ext": "calls", "type": "tsv"})
