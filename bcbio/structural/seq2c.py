@@ -277,7 +277,8 @@ def _combine_coverages(items, work_dir):
             with open(tx_out_file, 'w') as out_f:
                 for data in items:
                     svouts = [x for x in data["sv"] if x["variantcaller"] == "seq2c"]
-                    assert len(svouts) == 1
+                    cfiles = list(set([os.path.basename(x["coverage"]) for x in svouts]))
+                    assert len(cfiles) == 1, (dd.get_sample_name(data), cfiles)
                     cov_file = svouts[0]["coverage"]
                     with open(cov_file) as cov_f:
                         out_f.write(cov_f.read())
