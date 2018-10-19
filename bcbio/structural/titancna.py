@@ -110,9 +110,11 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                           if chromhacks.is_autosomal_or_x(c.name)]
                 if "'X'" not in chroms:
                     chroms += ["'X'"]
-                # For supporting next development release
+                # Use UCSC style naming for human builds to support BSgenome
+                genome_build = ("hg19" if dd.get_genome_build(data) in ["GRCh37", "hg19"]
+                                else dd.get_genome_build(data))
                 cmd += """ --chrs "c(%s)" """ % ",".join(chroms)
-                cmd += " --genomeBuild {data[genome_build]}"
+                cmd += " --genomeBuild {genome_build}"
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
                 # TitanCNA's model is influenced by the variance in read coverage data

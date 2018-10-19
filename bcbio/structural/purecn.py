@@ -73,9 +73,12 @@ def _run_purecn(paired, work_dir):
         from bcbio import heterogeneity
         vcf_file = heterogeneity.get_variants(paired.tumor_data)[0]["vrn_file"]
         with file_transaction(paired.tumor_data, out_base) as tx_out_base:
+            # Use UCSC style naming for human builds to support BSgenome
+            genome = ("hg19" if dd.get_genome_build(paired.tumor_data) in ["GRCh37", "hg19"]
+                      else dd.get_genome_build(paired.tumor_data))
             cmd = ["PureCN.R", "--seed", "42", "--out", tx_out_base, "--rds", "%s.rds" % tx_out_base,
                    "--sampleid", dd.get_sample_name(paired.tumor_data),
-                   "--genome", dd.get_genome_build(paired.tumor_data),
+                   "--genome", genome,
                    "--vcf", vcf_file, "--tumor", cnr_file,
                    "--segfile", seg_file, "--funsegmentation", "none"]
             do.run(cmd, "PureCN copy number calling")
