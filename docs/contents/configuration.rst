@@ -927,6 +927,8 @@ RNA sequencing
       organism: homo sapiens
       interesting_groups: [treatment, genotype, etc, etc]
 
+You will need to also turn on ``bcbiornaseq`` by turning it on via ``tools_on: [bcbiornaseq]``.
+
 Fast RNA-seq
 ============
 - ``transcriptome_fasta`` An optional FASTA file of transcriptome sequences to
