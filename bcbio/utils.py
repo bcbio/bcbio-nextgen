@@ -670,9 +670,9 @@ def Rscript_cmd():
     """
     rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
     if rscript:
-        return rscript
+        return rscript + "--no-environ"
     else:
-        return which("Rscript")
+        return which("Rscript") + "--no-environ"
 
 def R_sitelib():
     """Retrieve the R site-library installed with the bcbio installer.

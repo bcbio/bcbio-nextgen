@@ -1,5 +1,6 @@
 ## 1.1.1 (in progress)
 
+- Ignore .Renviron when running Rscript to head-off PATH conflicts.
 - Support SRR ids to download samples with bcbio_prepare_samples script.
 - tumor-only prioritization: do not apply LowPriority filter by default, instead
   annotate with external databases. Use `tumoronly_germline_filter` to re-enable
