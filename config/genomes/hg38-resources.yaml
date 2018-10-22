@@ -1,4 +1,4 @@
-version: 30
+version: 31
 
 aliases:
   human: true
@@ -19,6 +19,7 @@ variation:
   exac: ../variation/exac.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   polyx: ../coverage/problem_regions/repeats/polyx.bed.gz
+  gc_profile: ../coverage/gc/GC_profile.1000bp.cnp
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   qsignature: ../variation/qsignature.txt
   genesplicer: ../variation/genesplicer
