@@ -24,7 +24,7 @@ def make_bcbiornaseq_object(data):
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, r_file], "Loading bcbioRNASeq object.")
+        do.run([rcmd, "--no-environ", r_file], "Loading bcbioRNASeq object.")
     make_quality_report(data)
     return data
 
@@ -53,7 +53,7 @@ def rmarkdown_draft(filename, template, package):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "-e", draft_string], "Creating bcbioRNASeq quality control template.")
+        do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
     render_rmarkdown_file(filename)
     return filename
@@ -70,7 +70,7 @@ def render_rmarkdown_file(filename):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "-e", render_string], "Rendering bcbioRNASeq quality control report.")
+        do.run([rcmd, "--no-environ", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
     return filename
 
 def create_load_string(upload_dir, groups=None, organism=None):

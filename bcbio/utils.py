@@ -670,9 +670,9 @@ def Rscript_cmd():
     """
     rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
     if rscript:
-        return rscript + "--no-environ"
+        return rscript
     else:
-        return which("Rscript") + "--no-environ"
+        return which("Rscript")
 
 def R_sitelib():
     """Retrieve the R site-library installed with the bcbio installer.
@@ -685,7 +685,7 @@ def R_package_path(package):
     """
     local_sitelib = R_sitelib()
     rscript = Rscript_cmd()
-    cmd = """{rscript} -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
+    cmd = """{rscript} --no-environ -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:

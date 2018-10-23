@@ -72,7 +72,7 @@ def sleuthify_sailfish(sailfish_dir):
         return None
     else:
         rscript = Rscript_cmd()
-        cmd = """{rscript} -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
+        cmd = """{rscript} --no-environ -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
         do.run(cmd.format(**locals()), "Converting Sailfish to Sleuth format.")
     return os.path.join(sailfish_dir, "abundance.h5")
 
