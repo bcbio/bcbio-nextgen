@@ -5,6 +5,7 @@ in addition to somatic variants. Different callers distinguish germline calls
 in different ways. This unifies the output and extracts into a separate VCF
 with germline calls included.
 """
+import os
 import cyvcf2
 
 from bcbio import utils
@@ -75,12 +76,12 @@ def remove_align_qc_tools(data):
                                          if t not in align_qc]
     return data
 
-def extract(data, items):
+def extract(data, items, out_dir=None):
     """Extract germline calls for the given sample, if tumor only.
     """
     if vcfutils.get_paired_phenotype(data):
         if len(items) == 1:
-            germline_vcf = _remove_prioritization(data["vrn_file"], data)
+            germline_vcf = _remove_prioritization(data["vrn_file"], data, out_dir)
             germline_vcf = vcfutils.bgzip_and_index(germline_vcf, data["config"])
             data["vrn_file_plus"] = {"germline": germline_vcf}
     return data
@@ -98,10 +99,12 @@ def fix_germline_samplename(in_file, sample_name, data):
             do.run(cmd.format(**locals()), "Fix germline samplename: %s" % sample_name)
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _remove_prioritization(in_file, data):
+def _remove_prioritization(in_file, data, out_dir=None):
     """Remove tumor-only prioritization and return non-filtered calls.
     """
     out_file = "%s-germline.vcf" % utils.splitext_plus(in_file)[0]
+    if out_dir:
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(str(in_file))
@@ -190,7 +193,7 @@ def _is_mutect2_somatic(rec):
     return rec.INFO.get("TLOD") is not None and rec.FILTER is None
 
 def _is_germline(rec):
-    """Handle somatic INFO classifications from MuTect, MuTect2, VarDict and VarScan
+    """Handle somatic INFO classifications from MuTect, MuTect2, VarDict, VarScan and Octopus.
     """
     if _has_somatic_flag(rec):
         return False
@@ -200,6 +203,11 @@ def _is_germline(rec):
     if ss_flag is not None:
         if str(ss_flag) == "1":
             return True
+    # Octopus, assessed for potentially being Germline and not flagged SOMATIC
+    # https://github.com/luntergroup/octopus/wiki/Calling-models:-Cancer#qual-vs-pp
+    pp = rec.INFO.get("PP")
+    if pp and float(pp) / float(rec.QUAL) >= 0.5:
+        return True
     status_flag = rec.INFO.get("STATUS")
     if status_flag is not None:
         if str(status_flag).lower() in ["germline", "likelyloh", "strongloh", "afdiff", "deletion"]:

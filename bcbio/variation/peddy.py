@@ -4,7 +4,6 @@ correspondence checking with peddy (https://github.com/brentp/peddy)
 import collections
 import os
 import shutil
-import sys
 
 import toolz as tz
 
@@ -57,8 +56,12 @@ def run_peddy(samples, out_dir=None):
 
     vcf_file = None
     for d in samples:
+        vcinfo = None
         if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor"]:
             vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
+        if not vcinfo and dd.get_phenotype(d) in ["tumor"]:
+            vcinfo = variant.extract_germline_vcinfo(d, peddy_dir)
+        if vcinfo:
             for key in ["germline", "vrn_file"]:
                 if vcinfo and vcinfo.get(key) and utils.file_exists(vcinfo[key]):
                     if vcinfo[key] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo[key]):

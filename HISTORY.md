@@ -17,7 +17,9 @@
   lanes, merging into a single fastq
 - variant: support octopus variant caller for germline and somatic samples.
 - peddy: fix bug where not all files uploaded on first pipeline run
-- peddy: skip runs on somatic analyses where we do not get reliable output
+- peddy: For somatic analyses use separate germline calls for tumor/normal, if
+  available, or extracted germline calls from supported callers, instead of
+  somatic variants.
 - GATK: support ploidy specification during joint calling.
 - GATK BQSR: bin qualities into static groups (10, 20, 30) to match GATK4
   recommendations. Thanks to Severine Catreux.

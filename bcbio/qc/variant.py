@@ -13,7 +13,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
-from bcbio.variation import genotype
+from bcbio.variation import genotype, germline
 
 def run(_, data, out_dir):
     """Prepare variants QC analysis: bcftools stats and snpEff output.
@@ -90,10 +90,8 @@ def _add_filename_details(full_f):
         out["germline"] = full_f
     return out
 
-def get_active_vcinfo(data, use_ensemble=True):
-    """Use first caller if ensemble is not active
-
-    Handles both CWL and standard inputs for organizing variants.
+def _get_variants(data):
+    """Retrieve variants from CWL and standard inputs for organizing variants.
     """
     active_vs = []
     if "variants" in data:
@@ -111,9 +109,32 @@ def get_active_vcinfo(data, use_ensemble=True):
                     active_vs.append(_add_filename_details(subv))
             elif isinstance(v, dict) and v.get("vrn_file"):
                 active_vs.append(v)
-        if len(active_vs) > 0:
-            if use_ensemble:
-                e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
-                if len(e_active_vs) > 0:
-                    return e_active_vs[0]
-            return active_vs[0]
+    return active_vs
+
+def get_active_vcinfo(data, use_ensemble=True):
+    """Use first caller if ensemble is not active
+    """
+    active_vs = _get_variants(data)
+    if len(active_vs) > 0:
+        if use_ensemble:
+            e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
+            if len(e_active_vs) > 0:
+                return e_active_vs[0]
+        return active_vs[0]
+
+def extract_germline_vcinfo(data, out_dir):
+    """Extract germline VCFs from existing tumor inputs.
+    """
+    supported_germline = set(["vardict", "octopus", "freebayes"])
+    if dd.get_phenotype(data) in ["tumor"]:
+        for v in _get_variants(data):
+            if v.get("variantcaller") in supported_germline:
+                if v.get("germline"):
+                    return v
+                else:
+                    d = utils.deepish_copy(data)
+                    d["vrn_file"] = v["vrn_file"]
+                    gd = germline.extract(d, [d], out_dir)
+                    v["germline"] = gd["vrn_file_plus"]["germline"]
+                    return v
+        raise NotImplementedError
