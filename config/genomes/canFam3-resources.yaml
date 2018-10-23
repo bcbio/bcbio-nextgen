@@ -1,4 +1,4 @@
-version: 19
+version: 20
 
 aliases:
   ensembl: canis_familiaris_vep_93_CanFam3.1
@@ -15,3 +15,9 @@ rnaseq:
   dexseq: ../rnaseq/ref-transcripts.dexseq.gff3
   refflat: ../rnaseq/ref-transcripts.refFlat
   rRNA_fa: ../rnaseq/rRNA.fa
+
+srnaseq:
+  srna_transcripts: ../srnaseq/srna-transcripts.gtf
+  mirbase_hairpin: ../srnaseq/hairpin.fa
+  mirbase_mature: ../srnaseq/mature.fa
+  mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
