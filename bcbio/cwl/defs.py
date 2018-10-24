@@ -515,6 +515,7 @@ def _variant_sv(checkpoints):
                        ["config", "algorithm", "tools_off"],
                        ["config", "algorithm", "svprioritize"],
                        ["config", "algorithm", "svvalidate"], ["regions", "sample_callable"],
+                       ["genome_resources", "variation", "gc_profile"],
                        ["genome_resources", "aliases", "snpeff"], ["reference", "snpeff", "genome_build"],
                        ["sv_coverage_rec"]]
     if checkpoints.get("vc"):

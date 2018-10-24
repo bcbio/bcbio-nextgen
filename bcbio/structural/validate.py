@@ -14,8 +14,8 @@ from bcbio.bam import ref
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import convert
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.variation import bedutils, vcfutils, ploidy, validateplot
+from bcbio.distributed.transaction import file_transaction
+from bcbio.variation import vcfutils, ploidy, validateplot
 
 mpl = utils.LazyImport("matplotlib")
 plt = utils.LazyImport("matplotlib.pyplot")
@@ -32,10 +32,11 @@ def _evaluate_vcf(calls, truth_vcf, work_dir, data):
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
                 for call in calls:
                     detail_dir = utils.safe_makedir(os.path.join(work_dir, call["variantcaller"]))
-                    for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_sample_callable(data),
-                                                      call["variantcaller"], detail_dir, data):
+                    if call.get("vrn_file"):
+                        for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_sample_callable(data),
+                                                          call["variantcaller"], detail_dir, data):
 
-                        writer.writerow(stats)
+                            writer.writerow(stats)
     return out_file
 
 def _validate_caller_vcf(call_vcf, truth_vcf, callable_bed, svcaller, work_dir, data):
@@ -384,7 +385,7 @@ def evaluate(data):
             val_summary = _evaluate_vcf(data["sv"], truth_sets, work_dir, data)
             title = "%s structural variants" % dd.get_sample_name(data)
             summary_plots = validateplot.classifyplot_from_valfile(val_summary, outtype="png", title=title)
-            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots[0]}
+            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots[0] if len(summary_plots) > 0 else None}
     return data
 
 if __name__ == "__main__":
