@@ -138,9 +138,9 @@ def run_vep(in_file, data):
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
                 if vcfanno.is_human(data):
-                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,
-                                  "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
-                    plugins = ["loftee"]
+                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,"genesplicer": _get_genesplicer,
+                                  "spliceregion": _get_spliceregion, "G2P": _get_G2P}
+                    plugins = ["loftee", "G2P"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
                         # "genesplicer" too unstable so currently removed
                         plugins += ["maxentscan", "spliceregion"]
@@ -226,6 +226,19 @@ def _get_spliceregion(data):
     https://github.com/Ensembl/VEP_plugins/blob/release/89/SpliceRegion.pm
     """
     return ["--plugin", "SpliceRegion"]
+
+
+def _get_G2P(data):
+    """
+    A VEP plugin that uses G2P allelic requirements to assess variants in genes
+    for potential phenotype involvement.
+    """
+    G2P_file = tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data)
+    args = ["--plugin", "G2P,file:%s" % (G2P_file)]
+    if G2P_file:
+        return args
+    else:
+        return []
 
 # ## snpEff variant effects
 
