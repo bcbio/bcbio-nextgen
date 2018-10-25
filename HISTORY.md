@@ -1,5 +1,6 @@
 ## 1.1.1 (in progress)
 
+- Fix UMI support for small RNA. Compatible with Qiagen UMI small RNA protocol.
 - Ignore .Renviron when running Rscript to head-off PATH conflicts.
 - Support SRR ids to download samples with bcbio_prepare_samples script.
 - tumor-only prioritization: do not apply LowPriority filter by default, instead

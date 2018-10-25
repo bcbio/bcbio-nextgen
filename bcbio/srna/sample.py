@@ -1,16 +1,11 @@
 import os
 import sys
-import json
 import glob
 import re
 import os.path as op
 import shutil
-import subprocess
 from collections import Counter
-from contextlib import closing
-from distutils.version import LooseVersion
 
-from seqcluster.libs.fastq import collapse, write_output
 try:
     from dnapilib.apred import iterative_adapter_prediction
     error_dnapi = None
@@ -22,13 +17,13 @@ except ImportError:
 
 from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
 from bcbio.provenance import do
-from bcbio.provenance.versioncheck import java
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
 from bcbio.rnaseq import spikein
+from bcbio.srna.umis import umi_transform
 
 
 def trim_srna_sample(data):
@@ -36,6 +31,7 @@ def trim_srna_sample(data):
     Remove 3' adapter for smallRNA-seq
     Uses cutadapt but with different parameters than for other pipelines.
     """
+    data = umi_transform(data)
     in_file = data["files"][0]
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
@@ -184,12 +180,13 @@ def _collapse(in_file):
     """
     Collpase reads into unique sequences with seqcluster
     """
-    out_file = append_stem(in_file, ".trimming").replace(".gz", "")
+    seqcluster = op.join(utils.get_bcbio_bin(), "seqcluster")
+    out_file = "%s.fastq" % utils.splitext_plus(append_stem(in_file, "_trimmed"))[0]
+    out_dir = os.path.dirname(in_file)
     if file_exists(out_file):
         return out_file
-    seqs = collapse(in_file)
-    logger.info("Collapsing %s with --min_size 16 --min 1" % in_file)
-    write_output(out_file, seqs, minimum=1, size=16)
+    cmd = ("{seqcluster} collapse -o {out_dir} -f {in_file} -m 1 --min_size 16")
+    do.run(cmd.format(**locals()), "Running seqcluster collapse in %s." % in_file)
     return out_file
 
 def _summary(in_file):
