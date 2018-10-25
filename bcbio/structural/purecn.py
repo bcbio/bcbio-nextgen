@@ -23,7 +23,8 @@ def run(items):
         return items
     work_dir = _sv_workdir(paired.tumor_data)
     purecn_out = _run_purecn(paired, work_dir)
-    purecn_out = _run_purecn_dx(purecn_out, paired)
+    # XXX Currently finding edge case failures with Dx calling, needs additional testing
+    # purecn_out = _run_purecn_dx(purecn_out, paired)
     purecn_out["variantcaller"] = "purecn"
     out = []
     if paired.normal_data:
@@ -34,7 +35,7 @@ def run(items):
     return out
 
 def _run_purecn_dx(out, paired):
-    """Extract copy number and mutational metrics from PureCN rds file.
+    """Extract signatures and mutational burdens from PureCN rds file.
     """
     out_base, out, all_files = _get_purecn_dx_files(paired, out)
     if not utils.file_uptodate(out["mutation_burden"], out["rds"]):
