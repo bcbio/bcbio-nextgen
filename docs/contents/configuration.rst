@@ -968,7 +968,7 @@ smallRNA sequencing
 - ``expression_caller`` A list of expression callers to turn on: trna, seqcluster, mirdeep2, mirge (read :ref:`smallRNA-seq` to learn how to set up bcbio to run mirge)
 - ``transcriptome_gtf`` An optional GTF file of the transcriptome to for seqcluster.
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
-- ``umi_type: 'qiagen_smallRNA_umi'`` Support of Qiagen UMI small RNAseq protocol. 
+- ``umi_type: 'qiagen_smallRNA_umi'`` Support of Qiagen UMI small RNAseq protocol.
 
 ChIP sequencing
 ===============
