@@ -12,7 +12,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.variation import vcfutils
+from bcbio.variation import germline, vcfutils
 from bcbio.structural import cnvkit
 
 def run(items):
@@ -73,6 +73,7 @@ def _run_purecn(paired, work_dir):
         seg_file = cnvkit.segment_from_cnr(cnr_file, paired.tumor_data, cnvkit_base)
         from bcbio import heterogeneity
         vcf_file = heterogeneity.get_variants(paired.tumor_data)[0]["vrn_file"]
+        vcf_file = germline.filter_to_pass_and_reject(vcf_file, paired.tumor_data, out_dir=work_dir)
         with file_transaction(paired.tumor_data, out_base) as tx_out_base:
             # Use UCSC style naming for human builds to support BSgenome
             genome = ("hg19" if dd.get_genome_build(paired.tumor_data) in ["GRCh37", "hg19"]
