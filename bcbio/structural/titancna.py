@@ -117,6 +117,14 @@ def _run_titancna(cn_file, het_file, ploidy, num_clusters, work_dir, data):
                 cmd += " --genomeBuild {genome_build}"
                 if data["genome_build"] in ("hg19", "hg38"):
                     cmd += " --genomeStyle UCSC"
+                if data["genome_build"] in ["hg38"]:
+                    data_dir = os.path.normpath(os.path.join(
+                        os.path.dirname(os.path.realpath(os.path.join(
+                            os.path.dirname(utils.Rscript_cmd()), "titanCNA.R"))),
+                        os.pardir, os.pardir, "data"))
+                    cytoband_file = os.path.join(data_dir, "cytoBand_hg38.txt")
+                    assert os.path.exists(cytoband_file), cytoband_file
+                    cmd += " --cytobandFile %s" % cytoband_file
                 # TitanCNA's model is influenced by the variance in read coverage data
                 # and data type: set reasonable defaults for non-WGS runs
                 # (see https://github.com/gavinha/TitanCNA/tree/master/scripts/R_scripts)
