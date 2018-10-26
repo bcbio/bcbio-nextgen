@@ -55,6 +55,8 @@
 - RNA-seq: turn on `--seqBias` flag by default for Salmon as early-version overfitting
   issues have been fixed.
 - RNA-seq: report insert size from Salmon fragment distribution, not samtools stats.
+- RNA-seq: when processing explant samples, produce a combined tx2gene.csv file from
+  all organisms processed.
 
 ## 1.1.0 (11 July 2018)
 

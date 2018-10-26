@@ -107,6 +107,29 @@ def create_combined_fasta(data):
         do.run(cmd.format(**locals()), "Combining transcriptome FASTA files.")
     return combined_file
 
+def create_combined_tx2gene(data):
+    out_dir = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome")
+    items = disambiguate.split([data])
+    tx2gene_files = []
+    for i in items:
+        odata = i[0]
+        gtf_file = dd.get_gtf_file(odata)
+        out_file = os.path.join(out_dir, dd.get_genome_build(odata) + "-tx2gene.csv")
+        if file_exists(out_file):
+            tx2gene_files.append(out_file)
+        else:
+            out_file = gtf.tx2genefile(gtf_file, out_file, tsv=False)
+            tx2gene_files.append(out_file)
+    combined_file = os.path.join(out_dir, "tx2gene.csv")
+    if file_exists(combined_file):
+        return combined_file
+
+    tx2gene_file_string = " ".join(tx2gene_files)
+    cmd = "cat {tx2gene_file_string} > {tx_out_file}"
+    with file_transaction(data, combined_file) as tx_out_file:
+        do.run(cmd.format(**locals()), "Combining tx2gene CSV files.")
+    return combined_file
+
 def get_build_string(data):
     build_string = dd.get_genome_build(data)
     if dd.get_disambiguate(data):
