@@ -316,6 +316,33 @@ HPC_CONFIGS = {
       }
     }
 """,
+"lsf": """
+    LSF {
+      actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
+      config {
+        %(joblimit)s
+        runtime-attributes = \"\"\"
+        Int cpu = 1
+        Int memory_gb = 2
+        String queue = "%(queue)s"
+        String account = "%(account)s"
+        String walltime = "%(walltime)s"
+        %(docker_attrs)s
+        %(cwl_attrs)s
+        \"\"\"
+        submit = \"\"\"
+        bsub -J ${job_name} -cwd ${cwd} -o ${out} -e ${err} -q ${queue} -W ${walltime} \
+        -R rusage[mem=${memory_gb}] -n ${cpu} \
+        /usr/bin/env bash ${script}
+        \"\"\"
+        kill = "bkill ${job_id}"
+        check-alive = "bjobs ${job_id}"
+        job-id-regex = "Job <(\\d+)>.*"
+        %(filesystem)s
+      }
+    }
+
+""",
 "pbspro": """
     PBSPRO {
       actor-factory = "cromwell.backend.impl.sfs.config.ConfigBackendLifecycleActorFactory"
