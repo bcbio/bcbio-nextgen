@@ -131,13 +131,13 @@ def _remove_prioritization(in_file, data, out_dir=None):
         with file_transaction(data, out_file) as tx_out_file:
             reader = cyvcf2.VCF(str(in_file))
             reader.add_filter_to_header({'ID': 'Somatic', 'Description': 'Variant called as Somatic'})
-            # with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
-            with open(tx_out_file, "w") as out_handle:
-                out_handle.write(reader.raw_header)
+            # with open(tx_out_file, "w") as out_handle:
+            #     out_handle.write(reader.raw_header)
+            with contextlib.closing(cyvcf2.Writer(tx_out_file, reader)) as writer:
                 for rec in reader:
                     rec = _update_prioritization_filters(rec)
-                    out_handle.write(str(rec))
-                    # writer.write_record(rec)
+                    # out_handle.write(str(rec))
+                    writer.write_record(rec)
     return out_file
 
 def _update_prioritization_filters(rec):
