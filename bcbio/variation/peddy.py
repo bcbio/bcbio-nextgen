@@ -104,7 +104,8 @@ def run_peddy(samples, out_dir=None):
                         to_show.append(line)
                 def allowed_errors(l):
                     return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
-                            (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0))
+                            (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0) or
+                            (l.find("Input contains NaN, infinity or a value too large for dtype") >= 0))
                 def all_line_errors(l):
                     return (l.find("no intervals found for") >= 0)
                 if any([allowed_errors(l) for l in to_show]) or all([all_line_errors(l) for l in to_show]):
