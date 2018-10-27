@@ -53,6 +53,8 @@ def _run_purple(paired, het_file, depth_file, work_dir):
                    "-threads", dd.get_num_cores(paired.tumor_data),
                    "-tumor_sample", dd.get_sample_name(paired.tumor_data),
                    "-ref_sample", dd.get_sample_name(paired.normal_data)]
+            # Avoid X11 display errors when writing plots
+            cmd = "unset DISPLAY && %s" % " ".join([str(x) for x in cmd])
             do.run(cmd, "PURPLE: purity and ploidy estimation")
             for f in os.listdir(os.path.dirname(tx_out_file)):
                 if f != os.path.basename(tx_out_file):
