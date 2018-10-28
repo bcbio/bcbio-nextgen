@@ -83,6 +83,8 @@ def _run_purecn(paired, work_dir):
                    "--genome", genome,
                    "--vcf", vcf_file, "--tumor", cnr_file,
                    "--segfile", seg_file, "--funsegmentation", "none"]
+            if dd.get_num_cores(paired.tumor_data) > 1:
+                cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             do.run(cmd, "PureCN copy number calling")
             for f in all_files:
                 shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
