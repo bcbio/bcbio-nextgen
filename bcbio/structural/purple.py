@@ -94,6 +94,8 @@ class AmberWriter:
 
         https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src7/main/java/com/hartwig/hmftools/common/amber/AmberBAF.java#L16
         """
+        if baf is None:
+            baf = 0.0
         return 0.5 + abs(baf - 0.5)
 
     def write_row(self, rec, stats):
