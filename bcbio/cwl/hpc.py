@@ -78,7 +78,7 @@ def _args_to_cromwell(args):
     """
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
                       "sge": {"memtype": "mem_type", "pename": "smp"},
-                      "lsf": {},
+                      "lsf": {"walltime": "24:00", "account": ""},
                       "htcondor": {},
                       "torque": {"walltime": "24:00:00", "account": ""},
                       "pbspro": {"walltime": "24:00:00", "account": "",
@@ -337,7 +337,7 @@ HPC_CONFIGS = {
         \"\"\"
         kill = "bkill ${job_id}"
         check-alive = "bjobs ${job_id}"
-        job-id-regex = "Job <(\\d+)>.*"
+        job-id-regex = "Job <(\\\\d+)>.*"
         %(filesystem)s
       }
     }
