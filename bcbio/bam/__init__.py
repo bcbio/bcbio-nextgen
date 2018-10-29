@@ -443,6 +443,16 @@ def _get_sort_stem(in_bam, order, out_dir):
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
 
+def aligner_from_header(in_bam):
+    """Identify aligner from the BAM header; handling pre-aligned inputs.
+    """
+    from bcbio.pipeline.alignment import TOOLS
+    with pysam.Samfile(in_bam, "rb") as bamfile:
+        for pg in bamfile.header.get("PG", []):
+            for ka in TOOLS.keys():
+                if pg.get("PN", "").lower().find(ka) >= 0:
+                    return ka
+
 def sample_name(in_bam):
     """Get sample name from BAM file.
     """

@@ -19,7 +19,7 @@ from six.moves import zip
 import toolz as tz
 import pybedtools
 
-from bcbio import broad, utils
+from bcbio import bam, broad, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import config_utils, shared
@@ -324,7 +324,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                                    (os.path.join(os.path.dirname(sys.executable), "py"),
                                     _lowfreq_linear_filter(0, True),
                                     os.path.join(os.path.dirname(sys.executable), "py"),
-                                    0, dd.get_aligner(paired.tumor_data)))
+                                    0, bam.aligner_from_header(paired.tumor_bam)))
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
