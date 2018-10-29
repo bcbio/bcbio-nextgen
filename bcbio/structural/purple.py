@@ -83,7 +83,7 @@ def _run_purple(paired, het_file, depth_file, work_dir):
 
 class AmberWriter:
     def __init__(self, out_handle):
-        self.writer = csv.writer(out_handle, dialect="excel-tab")
+        self.writer = csv.writer(out_handle, delimiter="\t")
 
     def write_header(self):
         self.writer.writerow(["Chromosome", "Position", "TumorBAF", "TumorModifiedBAF", "TumorDepth",
@@ -99,11 +99,12 @@ class AmberWriter:
         return 0.5 + abs(baf - 0.5)
 
     def write_row(self, rec, stats):
-        self.writer.writerow([rec.chrom, rec.pos,
-                              stats["tumor"]["freq"], self._normalize_baf(stats["tumor"]["freq"]),
-                              stats["tumor"]["depth"],
-                              stats["normal"]["freq"], self._normalize_baf(stats["normal"]["freq"]),
-                              stats["normal"]["depth"]])
+        if stats["normal"]["freq"] is not None and stats["normal"]["depth"] is not None:
+            self.writer.writerow([rec.chrom, rec.pos,
+                                  stats["tumor"]["freq"], self._normalize_baf(stats["tumor"]["freq"]),
+                                  stats["tumor"]["depth"],
+                                  stats["normal"]["freq"], self._normalize_baf(stats["normal"]["freq"]),
+                                  stats["normal"]["depth"]])
 
 def _amber_het_file(vrn_files, work_dir, paired):
     """Create file of BAFs in normal heterozygous positions compatible with AMBER.
