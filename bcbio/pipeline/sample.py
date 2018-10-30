@@ -134,6 +134,9 @@ def process_alignment(data, alt_input=None):
                 del data["config"]["algorithm"]["umi_type"]
                 data["config"]["algorithm"]["mark_duplicates"] = False
                 data = align_to_sort_bam(f1, f2, aligner, data)
+            else:
+                raise ValueError("Single fastq input for UMI processing; fgbio needs paired reads: %s" %
+                                 dd.get_sample_name(data))
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
