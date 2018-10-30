@@ -74,6 +74,7 @@ def _run_purecn(paired, work_dir):
         cnr_file = chromhacks.bed_to_standardonly(cnr_file, paired.tumor_data, headers="chromosome",
                                                   include_sex_chroms=True,
                                                   out_dir=os.path.dirname(cnvkit_base))
+        cnr_file = _remove_overlaps(cnr_file, os.path.dirname(cnvkit_base), paired.tumor_data)
         seg_file = cnvkit.segment_from_cnr(cnr_file, paired.tumor_data, cnvkit_base)
         from bcbio import heterogeneity
         vcf_file = heterogeneity.get_variants(paired.tumor_data)[0]["vrn_file"]
@@ -94,6 +95,28 @@ def _run_purecn(paired, work_dir):
                 shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
                             os.path.join(os.path.dirname(out_base), f))
     return out
+
+def _remove_overlaps(in_file, out_dir, data):
+    """Remove regions that overlap with next region, these result in issues with PureCN.
+    """
+    out_file = os.path.join(out_dir, "%s-nooverlaps%s" % utils.splitext_plus(os.path.basename(in_file)))
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(in_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    prev_line = None
+                    for line in in_handle:
+                        if prev_line:
+                            pchrom, pstart, pend = prev_line.split("\t", 4)[:3]
+                            cchrom, cstart, cend = line.split("\t", 4)[:3]
+                            # Skip if chromosomes match and end overlaps start
+                            if pchrom == cchrom and int(pend) > int(cstart):
+                                pass
+                            else:
+                                out_handle.write(prev_line)
+                        prev_line = line
+                    out_handle.write(prev_line)
+    return out_file
 
 def _get_purecn_files(paired, work_dir):
     """Retrieve organized structure of PureCN output files.
