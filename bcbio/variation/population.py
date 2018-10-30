@@ -259,18 +259,21 @@ def create_ped_file(samples, base_vcf, out_dir=None):
     if not utils.file_exists(out_file):
         with file_transaction(samples[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
+                want_samples = set(vcfutils.get_samples(base_vcf))
                 writer = csv.writer(out_handle, dialect="excel-tab")
                 writer.writerow(header)
                 for data in samples:
                     ped_info = get_ped_info(data, samples)
                     sname = ped_info["individual_id"]
-                    if sname in sample_ped_lines:
-                        writer.writerow(sample_ped_lines[sname])
-                    else:
-                        writer.writerow([ped_info["family_id"], ped_info["individual_id"],
-                                         ped_info["paternal_id"], ped_info["maternal_id"],
-                                         ped_info["gender"], ped_info["affected"],
-                                         ped_info["ethnicity"]])
+                    if sname in want_samples:
+                        want_samples.remove(sname)
+                        if sname in sample_ped_lines:
+                            writer.writerow(sample_ped_lines[sname])
+                        else:
+                            writer.writerow([ped_info["family_id"], ped_info["individual_id"],
+                                            ped_info["paternal_id"], ped_info["maternal_id"],
+                                            ped_info["gender"], ped_info["affected"],
+                                            ped_info["ethnicity"]])
     return out_file
 
 def _find_shared_batch(samples):
