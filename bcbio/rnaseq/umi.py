@@ -92,9 +92,9 @@ def get_cellular_barcodes(data):
         return dd.get_cellular_barcodes(data)
     if is_supported_transform(data):
         stem = dd.get_umi_type(data)
-        bc1 = os.path.join(TRANSFORM_DIR, stem + "-cb1.txt")
-        bc2 = os.path.join(TRANSFORM_DIR, stem + "-cb2.txt")
-        bc3 = os.path.join(TRANSFORM_DIR, stem + "-cb3.txt")
+        bc1 = os.path.join(TRANSFORM_DIR, stem + "-cb1.txt.gz")
+        bc2 = os.path.join(TRANSFORM_DIR, stem + "-cb2.txt.gz")
+        bc3 = os.path.join(TRANSFORM_DIR, stem + "-cb3.txt.gz")
         return filter(file_exists, [bc1, bc2, bc3])
     else:
         return []
@@ -169,6 +169,7 @@ def filter_barcodes(data):
     correction = dd.get_cellular_barcode_correction(data)
     bc = get_cellular_barcodes(data)
     if not bc:
+        logger.info("No cellular barcodes found, skipping filtering.")
         return [[data]]
     bc1 = None
     bc2 = None

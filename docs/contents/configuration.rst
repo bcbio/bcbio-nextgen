@@ -891,7 +891,7 @@ To convert duplex barcodes present on the ends of read 1 and read 2::
 Configuration options for UMIs:
 
 - ``umi_type`` The UMI/cellular barcode scheme used for your data. For single
-  cell RNA sequencing, supports [harvard-indrop, harvard-indrop-v2, cel-seq].
+  cell RNA sequencing, supports [harvard-indrop, harvard-indrop-v2, 10x_v2, icell8, surecell].
   For variant analysis with UMI based consensus calling, supports either
   ``fastq_name`` with UMIs in read names or the path to a fastq file with
   UMIs for each aligned read.
