@@ -8,6 +8,7 @@ import shutil
 import toolz as tz
 
 from bcbio import utils
+from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
@@ -70,6 +71,9 @@ def _run_purecn(paired, work_dir):
     if not utils.file_uptodate(out["rds"], cnr_file):
         cnvkit_base = os.path.join(utils.safe_makedir(os.path.join(work_dir, "cnvkit")),
                                    dd.get_sample_name(paired.tumor_data))
+        cnr_file = chromhacks.bed_to_standardonly(cnr_file, paired.tumor_data, headers="chromosome",
+                                                  include_sex_chroms=True,
+                                                  out_dir=os.path.dirname(cnvkit_base))
         seg_file = cnvkit.segment_from_cnr(cnr_file, paired.tumor_data, cnvkit_base)
         from bcbio import heterogeneity
         vcf_file = heterogeneity.get_variants(paired.tumor_data)[0]["vrn_file"]
