@@ -277,7 +277,7 @@ def _cna_has_values(fname):
                 return True
     return False
 
-def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
+def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None, detailed=False):
     """Perform segmentation and copy number calling on normalized inputs
     """
     if not out_file:
@@ -307,9 +307,13 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
                     cmd += ["--threshold", "0.00001"]
                 # For tumors, remove very low normalized regions, avoiding upcaptured noise
                 # https://github.com/bcbio/bcbio-nextgen/issues/2171#issuecomment-348333650
+                # unless we want detailed segmentation for downstream tools
                 paired = vcfutils.get_paired(items)
                 if paired and "--drop-low-coverage" not in user_options:
-                    cmd += ["--drop-low-coverage"]
+                    if detailed:
+                        cmd += ["-m", "hmm-tumor"]
+                    else:
+                        cmd += ["--drop-low-coverage"]
                 # preferentially use conda installed Rscript
                 export_cmd = ("%s && export TMPDIR=%s && "
                               % (utils.get_R_exports(), os.path.dirname(tx_out_file)))
@@ -722,7 +726,7 @@ def segment_from_cnr(cnr_file, data, out_base):
     """Provide segmentation on a cnr file, used in external PureCN integration.
     """
     cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data),
-                               data, [data], out_file="%s.cns" % out_base)
+                               data, [data], out_file="%s.cns" % out_base, detailed=True)
     out = _add_seg_to_output({"cns": cns_file}, data, enumerate_chroms=False)
     return out["seg"]
 
