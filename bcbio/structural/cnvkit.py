@@ -309,10 +309,10 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None, detailed
                 # https://github.com/bcbio/bcbio-nextgen/issues/2171#issuecomment-348333650
                 # unless we want detailed segmentation for downstream tools
                 paired = vcfutils.get_paired(items)
-                if paired and "--drop-low-coverage" not in user_options:
-                    if detailed:
-                        cmd += ["-m", "hmm-tumor"]
-                    else:
+                if paired:
+                    #if detailed:
+                    #    cmd += ["-m", "hmm-tumor"]
+                    if "--drop-low-coverage" not in user_options:
                         cmd += ["--drop-low-coverage"]
                 # preferentially use conda installed Rscript
                 export_cmd = ("%s && export TMPDIR=%s && "
