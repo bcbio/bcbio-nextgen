@@ -24,6 +24,12 @@ from bcbio.structural import shared
 from bcbio.variation import bedutils
 
 population_keys = ['AC_AFR', 'AC_AMR', 'AC_EAS', 'AC_FIN', 'AC_NFE', 'AC_OTH', 'AC_SAS']
+PARAMS = {"min_freq": 0.3,
+          "max_freq": 0.7,
+          "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
+          "min_depth": 15,
+          "hetblock": {"min_alleles": 25,
+                       "allowed_misses": 2}}
 
 def run(vrn_info, calls_by_name, somatic_info, do_plots=True, handle_failures=True):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -124,16 +130,11 @@ def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_fi
     """
     data = somatic_info.tumor_data
     if not params:
-        params = {"min_freq": 0.4,
-                  "max_freq": 0.6,
-                  "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
-                  "min_depth": 20,
-                  "hetblock": {"min_alleles": 25,
-                               "allowed_misses": 2}}
+        params = PARAMS
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
-        #ready_bed = _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info)
+        # ready_bed = _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info)
         ready_bed = None
         if ready_bed and utils.file_exists(ready_bed):
             sub_file = _create_subset_file(in_file, ready_bed, work_dir, data)
@@ -269,23 +270,43 @@ def _to_ucsc_style(chrom):
 def _passes_plus_germline(rec):
     """Check if a record passes filters (but might be germline -- labelled with REJECT).
     """
-    allowed = set(["PASS", "REJECT"])
-    filters = [x for x in rec.filter.keys() if x in allowed]
-    return len(filters) > 0
+    allowed = set(["PASS", "REJECT", "."])
+    if hasattr(rec, "FILTER"):
+        if not rec.FILTER:
+            filters = []
+        else:
+            filters = [x for x in rec.FILTER if x not in allowed]
+    else:
+        filters = [x for x in rec.filter.keys() if x not in allowed]
+    return len(filters) == 0
 
 def _is_biallelic_snp(rec):
-    return _is_snp(rec) and len(rec.alts) == 1
+    if hasattr(rec, "ALT"):
+        return _is_snp(rec) and len(rec.ALT) == 1
+    else:
+        return _is_snp(rec) and len(rec.alts) == 1
 
 def _is_snp(rec):
-    return max([len(x) for x in rec.alleles]) == 1
+    if hasattr(rec, "ALT"):
+        return max([len(x) for x in rec.ALT + [rec.REF]]) == 1
+    else:
+        return max([len(x) for x in rec.alleles]) == 1
 
-def _tumor_normal_stats(rec, somatic_info):
+def _tumor_normal_stats(rec, somatic_info, vcf_rec):
     """Retrieve depth and frequency of tumor and normal samples.
     """
     out = {"normal": {"alt": None, "depth": None, "freq": None},
            "tumor": {"alt": 0, "depth": 0, "freq": None}}
+    if hasattr(vcf_rec, "samples"):
+        samples = [(s, {}) for s in vcf_rec.samples]
+        for fkey in ["AD", "AO", "RO", "AF", "DP"]:
+            try:
+                for i, v in enumerate(rec.format(fkey)):
+                    samples[i][1][fkey] = v
+            except KeyError:
+                pass
     # Handle INFO only inputs
-    if len(rec.samples) == 0:
+    elif len(rec.samples) == 0:
         samples = [(somatic_info.tumor_name, None)]
     else:
         samples = rec.samples.items()
@@ -307,7 +328,7 @@ def _is_possible_loh(rec, vcf_rec, params, somatic_info):
     Only returns SNPs, since indels tend to have less precise frequency measurements.
     """
     if _is_biallelic_snp(rec) and _passes_plus_germline(rec):
-        stats = _tumor_normal_stats(rec, somatic_info)
+        stats = _tumor_normal_stats(rec, somatic_info, vcf_rec)
         depths = [tz.get_in([x, "depth"], stats) for x in ["normal", "tumor"]]
         depths = [d for d in depths if d is not None]
         normal_freq = tz.get_in(["normal", "freq"], stats)
@@ -318,7 +339,7 @@ def _is_possible_loh(rec, vcf_rec, params, somatic_info):
                     return stats
             elif (tumor_freq >= params["tumor_only"]["min_freq"] and
                     tumor_freq <= params["tumor_only"]["max_freq"]):
-                if not _has_population_germline(vcf_rec) or is_population_germline(rec):
+                if (vcf_rec and not _has_population_germline(vcf_rec)) or is_population_germline(rec):
                     return stats
 
 def _has_population_germline(rec):

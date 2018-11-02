@@ -87,26 +87,44 @@ def extract(data, items, out_dir=None):
             data["vrn_file_plus"] = {"germline": germline_vcf}
     return data
 
-def filter_to_pass_and_reject(in_file, data, out_dir=None):
+def filter_to_pass_and_reject(in_file, paired, out_dir=None):
     """Filter VCF to only those with a strict PASS/REJECT: somatic + germline.
 
     Removes low quality calls filtered but also labeled with REJECT.
     """
+    from bcbio.heterogeneity import bubbletree
     out_file = "%s-prfilter.vcf.gz" % utils.splitext_plus(in_file)[0]
     if out_dir:
         out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file):
-        with file_transaction(data, out_file) as tx_out_file:
+        with file_transaction(paired.tumor_data, out_file) as tx_out_file:
             tx_out_plain = tx_out_file.replace(".vcf.gz", ".vcf")
             with contextlib.closing(cyvcf2.VCF(in_file)) as reader:
+                reader = _add_db_to_header(reader)
                 with contextlib.closing(cyvcf2.Writer(tx_out_plain, reader)) as writer:
                     for rec in reader:
                         filters = rec.FILTER.split(";") if rec.FILTER else []
-                        filters = [x for x in filters if x not in ["PASS", ".", "REJECT"]]
-                        if len(filters) == 0:
-                            writer.write_record(rec)
-            vcfutils.bgzip_and_index(tx_out_plain, data["config"])
+                        other_filters = [x for x in filters if x not in ["PASS", ".", "REJECT"]]
+                        if len(other_filters) == 0:
+                            # Germline, check if we should include based on frequencies
+                            if "REJECT" in filters or rec.INFO.get("STATUS", "").lower() == "germline":
+                                stats = bubbletree._is_possible_loh(rec, reader, bubbletree.PARAMS, paired)
+                                if stats:
+                                    rec.INFO["DB"] = True
+                                    writer.write_record(rec)
+                            # Somatic, always include
+                            else:
+                                writer.write_record(rec)
+            vcfutils.bgzip_and_index(tx_out_plain, paired.tumor_data["config"])
     return out_file
+
+def _add_db_to_header(reader):
+    try:
+        reader["DB"]
+    except KeyError:
+        reader.add_info_to_header({'ID': 'DB', 'Description': 'Likely germline variant',
+                                   'Type': 'Flag', 'Number': '0'})
+    return reader
 
 def fix_germline_samplename(in_file, sample_name, data):
     """Replace germline sample names, originally from normal BAM file.
