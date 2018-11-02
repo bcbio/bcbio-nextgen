@@ -275,7 +275,7 @@ def _passes_plus_germline(rec):
         if not rec.FILTER:
             filters = []
         else:
-            filters = [x for x in rec.FILTER if x not in allowed]
+            filters = [x for x in rec.FILTER.split(";") if x not in allowed]
     else:
         filters = [x for x in rec.filter.keys() if x not in allowed]
     return len(filters) == 0
