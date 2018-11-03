@@ -87,7 +87,7 @@ def _run_purecn(paired, work_dir):
                    "--sampleid", dd.get_sample_name(paired.tumor_data),
                    "--genome", genome,
                    "--vcf", vcf_file, "--tumor", cnr_file,
-                   "--segfile", seg_file, "--funsegmentation", "none"]
+                   "--segfile", seg_file, "--funsegmentation", "Hclust", "--maxnonclonal", "0.3"]
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             do.run(cmd, "PureCN copy number calling")
