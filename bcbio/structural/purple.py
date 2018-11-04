@@ -3,14 +3,16 @@
 https://github.com/hartwigmedical/hmftools/tree/master/purity-ploidy-estimator
 """
 import csv
+import itertools
 import os
 import shutil
 
 import toolz as tz
 
-from bcbio import utils
+from bcbio import broad, utils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
@@ -35,6 +37,18 @@ def run(items):
     out.append(paired.tumor_data)
     return out
 
+def _get_jvm_opts(out_file, data):
+    """Retrieve Java options, adjusting memory for available cores.
+    """
+    resources = config_utils.get_resources("purple", data["config"])
+    jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3500m"])
+    jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                 {"direction": "increase",
+                                                                  "maximum": "30000M",
+                                                                  "magnitude": dd.get_cores(data)}}})
+    jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
+    return jvm_opts
+
 def _run_purple(paired, het_file, depth_file, work_dir):
     """Run PURPLE with pre-calculated AMBER and COBALT compatible inputs.
 
@@ -44,7 +58,8 @@ def _run_purple(paired, het_file, depth_file, work_dir):
     out_file = os.path.join(purple_dir, "%s.purple.cnv" % dd.get_sample_name(paired.tumor_data))
     if not utils.file_exists(out_file):
         with file_transaction(paired.tumor_data, out_file) as tx_out_file:
-            cmd = ["PURPLE", "-amber", os.path.dirname(het_file), "-baf", het_file,
+            cmd = ["PURPLE"] + _get_jvm_opts(tx_out_file, paired.tumor_data) + \
+                  ["-amber", os.path.dirname(het_file), "-baf", het_file,
                    "-cobalt", os.path.dirname(depth_file),
                    "-gc_profile", dd.get_variation_resources(paired.tumor_data)["gc_profile"],
                    "-output_dir", os.path.dirname(tx_out_file),
@@ -81,6 +96,52 @@ def _run_purple(paired, het_file, depth_file, work_dir):
             out["metrics"][h] = v
     return out
 
+def _normalize_baf(baf):
+    """Provide normalized BAF in the same manner as Amber, relative to het.
+
+    https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src7/main/java/com/hartwig/hmftools/common/amber/AmberBAF.java#L16
+    """
+    if baf is None:
+        baf = 0.0
+    return 0.5 + abs(baf - 0.5)
+
+def _counts_to_amber(t_vals, n_vals):
+    """Converts a line of CollectAllelicCounts into AMBER line.
+    """
+    t_depth = int(t_vals["REF_COUNT"]) + int(t_vals["ALT_COUNT"])
+    n_depth = int(n_vals["REF_COUNT"]) + int(n_vals["ALT_COUNT"])
+    if n_depth > 0 and t_depth > 0:
+        t_baf = float(t_vals["ALT_COUNT"]) / float(t_depth)
+        n_baf = float(n_vals["ALT_COUNT"]) / float(n_depth)
+        return [t_vals["CONTIG"], t_vals["POSITION"], t_baf, _normalize_baf(t_baf), t_depth,
+                n_baf, _normalize_baf(n_baf), n_depth]
+
+def _count_files_to_amber(tumor_counts, normal_counts, work_dir, data):
+    """Converts tumor and normal counts from GATK CollectAllelicCounts into Amber format.
+    """
+    amber_dir = utils.safe_makedir(os.path.join(work_dir, "amber"))
+    out_file = os.path.join(amber_dir, "%s.amber.baf" % dd.get_sample_name(data))
+
+    if not utils.file_uptodate(out_file, tumor_counts):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(tumor_counts) as tumor_handle:
+                with open(normal_counts) as normal_handle:
+                    with open(tx_out_file, "w") as out_handle:
+                        writer = csv.writer(out_handle, delimiter="\t")
+                        writer.writerow(["Chromosome", "Position", "TumorBAF", "TumorModifiedBAF", "TumorDepth",
+                                         "NormalBAF", "NormalModifiedBAF", "NormalDepth"])
+                        header = None
+                        for t, n in itertools.izip(tumor_handle, normal_handle):
+                            if header is None and t.startswith("CONTIG"):
+                                header = t.strip().split()
+                            elif header is not None:
+                                t_vals = dict(zip(header, t.strip().split()))
+                                n_vals = dict(zip(header, n.strip().split()))
+                                amber_line = _counts_to_amber(t_vals, n_vals)
+                                if amber_line:
+                                    writer.writerow(amber_line)
+    return out_file
+
 class AmberWriter:
     def __init__(self, out_handle):
         self.writer = csv.writer(out_handle, delimiter="\t")
@@ -89,21 +150,12 @@ class AmberWriter:
         self.writer.writerow(["Chromosome", "Position", "TumorBAF", "TumorModifiedBAF", "TumorDepth",
                                 "NormalBAF", "NormalModifiedBAF", "NormalDepth"])
 
-    def _normalize_baf(self, baf):
-        """Provide normalized BAF in the same manner as Amber, relative to het.
-
-        https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src7/main/java/com/hartwig/hmftools/common/amber/AmberBAF.java#L16
-        """
-        if baf is None:
-            baf = 0.0
-        return 0.5 + abs(baf - 0.5)
-
     def write_row(self, rec, stats):
         if stats["normal"]["freq"] is not None and stats["normal"]["depth"] is not None:
             self.writer.writerow([rec.chrom, rec.pos,
-                                  stats["tumor"]["freq"], self._normalize_baf(stats["tumor"]["freq"]),
+                                  stats["tumor"]["freq"], _normalize_baf(stats["tumor"]["freq"]),
                                   stats["tumor"]["depth"],
-                                  stats["normal"]["freq"], self._normalize_baf(stats["normal"]["freq"]),
+                                  stats["normal"]["freq"], _normalize_baf(stats["normal"]["freq"]),
                                   stats["normal"]["depth"]])
 
 def _amber_het_file(vrn_files, work_dir, paired):
@@ -168,7 +220,8 @@ def _run_cobalt(paired, work_dir):
     out_file = os.path.join(cobalt_dir, "%s.cobalt" % dd.get_sample_name(paired.tumor_data))
     if not utils.file_exists(out_file):
         with file_transaction(paired.tumor_data, out_file) as tx_out_file:
-            cmd = ["COBALT", "-reference", paired.normal_name, "-reference_bam", paired.normal_bam,
+            cmd = ["COBALT"] + _get_jvm_opts(tx_out_file, paired.tumor_data) + \
+                  ["-reference", paired.normal_name, "-reference_bam", paired.normal_bam,
                    "-tumor", paired.tumor_name, "-tumor_bam", paired.tumor_bam,
                    "-threads", dd.get_num_cores(paired.tumor_data),
                    "-output_dir", os.path.dirname(tx_out_file),
