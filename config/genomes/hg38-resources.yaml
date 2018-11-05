@@ -1,4 +1,4 @@
-version: 31
+version: 32
 
 aliases:
   human: true
@@ -20,6 +20,7 @@ variation:
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   polyx: ../coverage/problem_regions/repeats/polyx.bed.gz
   gc_profile: ../coverage/gc/GC_profile.1000bp.cnp
+  germline_het_pon: ../variation/germline_het_pon.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   qsignature: ../variation/qsignature.txt
   genesplicer: ../variation/genesplicer

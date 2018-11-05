@@ -1,4 +1,4 @@
-version: 48
+version: 49
 
 aliases:
   human: true
@@ -21,6 +21,7 @@ variation:
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
   gc_profile: ../coverage/gc/GC_profile.1000bp.cnp
+  germline_het_pon: ../variation/germline_het_pon.bed.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   dbscsnv: ../variation/dbscSNV.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
