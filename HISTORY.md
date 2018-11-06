@@ -1,4 +1,4 @@
-## 1.1.1 (in progress)
+## 1.1.1 (6 November 2018)
 
 - single-cell RNA-seq: add built-in support for 10x_v2.
 - Fix UMI support for small RNA. Compatible with Qiagen UMI small RNA protocol.
