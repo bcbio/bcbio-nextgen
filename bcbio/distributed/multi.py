@@ -83,7 +83,7 @@ def run_multicore(fn, items, config, parallel=None):
     if joblib is None:
         raise ImportError("Need joblib for multiprocessing parallelization")
     out = []
-    for data in joblib.Parallel(parallel["num_jobs"], batch_size=1)(joblib.delayed(fn)(x) for x in items):
+    for data in joblib.Parallel(parallel["num_jobs"], batch_size=1, backend="multiprocessing")(joblib.delayed(fn)(x) for x in items):
         if data:
             out.extend(data)
     return out
