@@ -1,3 +1,6 @@
+## 1.1.2 (in progress)
+- gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
+
 ## 1.1.1 (6 November 2018)
 
 - single-cell RNA-seq: add built-in support for 10x_v2.

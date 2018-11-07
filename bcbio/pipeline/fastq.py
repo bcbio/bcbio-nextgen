@@ -19,6 +19,7 @@ def get_fastq_files(data):
     assert "files" in data, "Did not find `files` in input; nothing to process"
     ready_files = []
     should_gzip = True
+
     # Bowtie does not accept gzipped fastq
     if 'bowtie' in data['reference'].keys():
         should_gzip = False
@@ -39,45 +40,52 @@ def get_fastq_files(data):
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
     if should_gzip:
-        ready_files = [_gzip_fastq(x) for x in ready_files]
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "fastq"))
+        ready_files = [_gzip_fastq(x, out_dir) for x in ready_files]
     for in_file in ready_files:
         if not objectstore.is_remote(in_file):
             assert os.path.exists(in_file), "%s does not exist." % in_file
     return ready_files
 
-def _gzip_fastq(in_file):
+def _gzip_fastq(in_file, out_dir=None):
     """
     gzip a fastq file if it is not already gzipped, handling conversion
     from bzip to gzipped files
     """
     if fastq.is_fastq(in_file) and not objectstore.is_remote(in_file):
         if utils.is_bzipped(in_file):
-            return _bzip_gzip(in_file)
+            return _bzip_gzip(in_file, out_dir)
         elif not utils.is_gzipped(in_file):
-            gzipped_file = in_file + ".gz"
+            if out_dir:
+                gzipped_file = os.path.join(out_dir, os.path.basename(in_file) + ".gz")
+            else:
+                gzipped_file = in_file + ".gz"
             if file_exists(gzipped_file):
                 return gzipped_file
-            message = "gzipping {in_file}.".format(in_file=in_file)
+            message = "gzipping {in_file} to {gzipped_file}.".format(
+                in_file=in_file, gzipped_file=gzipped_file)
             with file_transaction(gzipped_file) as tx_gzipped_file:
                 do.run("gzip -c {in_file} > {tx_gzipped_file}".format(**locals()),
                        message)
             return gzipped_file
     return in_file
 
-def _bzip_gzip(in_file):
+def _bzip_gzip(in_file, out_dir=None):
     """
     convert from bz2 to gz
     """
     if not utils.is_bzipped(in_file):
         return in_file
-    base, first_ext = os.path.splitext(in_file)
-    gzipped_file = base + ".gz"
-    if (fastq.is_fastq(base) and
-        not objectstore.is_remote(in_file)):
-
+    base, _ = os.path.splitext(in_file)
+    if out_dir:
+        gzipped_file = os.path.join(out_dir, os.path.basename(base) + ".gz")
+    else:
+        gzipped_file = base + ".gz"
+    if (fastq.is_fastq(base) and not objectstore.is_remote(in_file)):
         if file_exists(gzipped_file):
             return gzipped_file
-        message = "gzipping {in_file}.".format(in_file=in_file)
+        message = "gzipping {in_file} to {gzipped_file}.".format(
+            in_file=in_file, gzipped_file=gzipped_file)
         with file_transaction(gzipped_file) as tx_gzipped_file:
             do.run("bunzip2 -c {in_file} | gzip > {tx_gzipped_file}".format(**locals()), message)
         return gzipped_file
