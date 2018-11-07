@@ -47,7 +47,7 @@ def calculate_sv_bins(*items):
                                                                           cnv_group.work_dir, data)
                 else:
                     target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
-                                                                size_calc_fn, cnv_group.work_dir, data)
+                                                                 size_calc_fn, cnv_group.work_dir, data)
                 if not data.get("regions"):
                     data["regions"] = {}
                 data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}

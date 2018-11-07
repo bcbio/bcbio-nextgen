@@ -46,6 +46,7 @@ def add_required_resources(resources):
     required = [["variation", "cosmic"], ["variation", "clinvar"], ["variation", "dbsnp"],
                 ["variation", "lcr"], ["variation", "polyx"],
                 ["variation", "encode_blacklist"], ["variation", "gc_profile"],
+                ["variation", "germline_het_pon"],
                 ["variation", "train_hapmap"], ["variation", "train_indels"],
                 ["variation", "editing"], ["variation", "exac"], ["variation", "esp"],
                 ["variation", "1000g"]]

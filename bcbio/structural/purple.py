@@ -16,6 +16,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+from bcbio.structural import gatkcnv
 
 def run(items):
     paired = vcfutils.get_paired(items)
@@ -25,7 +26,7 @@ def run(items):
         return items
     work_dir = _sv_workdir(paired.tumor_data)
     from bcbio import heterogeneity
-    het_file = _amber_het_file(heterogeneity.get_variants(paired.tumor_data), work_dir, paired)
+    het_file = _amber_het_file("pon", heterogeneity.get_variants(paired.tumor_data), work_dir, paired)
     depth_file = _run_cobalt(paired, work_dir)
     purple_out = _run_purple(paired, het_file, depth_file, work_dir)
     out = []
@@ -158,8 +159,12 @@ class AmberWriter:
                                   stats["normal"]["freq"], _normalize_baf(stats["normal"]["freq"]),
                                   stats["normal"]["depth"]])
 
-def _amber_het_file(vrn_files, work_dir, paired):
+def _amber_het_file(method, vrn_files, work_dir, paired):
     """Create file of BAFs in normal heterozygous positions compatible with AMBER.
+
+    Two available methods:
+      - pon -- Use panel of normals with likely heterozygous sites.
+      - variants -- Use pre-existing variant calls, filtered to likely heterozygotes.
 
     https://github.com/hartwigmedical/hmftools/tree/master/amber
     https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src/test/resources/amber/new.amber.baf
@@ -167,11 +172,16 @@ def _amber_het_file(vrn_files, work_dir, paired):
     assert vrn_files, "Did not find compatible variant calling files for TitanCNA inputs"
     from bcbio.heterogeneity import bubbletree
 
-    prep_file = bubbletree.prep_vrn_file(vrn_files[0]["vrn_file"], vrn_files[0]["variantcaller"],
-                                         work_dir, paired, AmberWriter)
-    amber_dir = utils.safe_makedir(os.path.join(work_dir, "amber"))
-    out_file = os.path.join(amber_dir, "%s.amber.baf" % dd.get_sample_name(paired.tumor_data))
-    utils.symlink_plus(prep_file, out_file)
+    if method == "variants":
+        amber_dir = utils.safe_makedir(os.path.join(work_dir, "amber"))
+        out_file = os.path.join(amber_dir, "%s.amber.baf" % dd.get_sample_name(paired.tumor_data))
+        prep_file = bubbletree.prep_vrn_file(vrn_files[0]["vrn_file"], vrn_files[0]["variantcaller"],
+                                             work_dir, paired, AmberWriter)
+        utils.symlink_plus(prep_file, out_file)
+    else:
+        assert method == "pon"
+        tumor_counts, normal_counts = gatkcnv.heterogzygote_counts(paired)
+        out_file = _count_files_to_amber(tumor_counts, normal_counts, work_dir, paired.tumor_data)
     pcf_file = out_file + ".pcf"
     if not utils.file_exists(pcf_file):
         with file_transaction(paired.tumor_data, pcf_file) as tx_out_file:
