@@ -1,5 +1,8 @@
 ## 1.1.2 (in progress)
-- gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
+
+- Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
+  Ben Liesfeld and Roland Ewald.
+- RNAseq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
 
 ## 1.1.1 (6 November 2018)
 
