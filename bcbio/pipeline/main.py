@@ -329,7 +329,7 @@ def smallrnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
 
     with prun.start(_wres(parallel, ["aligner", "picard", "samtools"],
                             ensure_mem={"tophat": 10, "tophat2": 10, "star": 2, "hisat2": 8}),
-                    samples, config, dirs, "alignment",
+                    samples, config, dirs, "alignment_samples",
                     multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
         with profile.report("alignment", dirs):
             samples = run_parallel("process_alignment", samples)
