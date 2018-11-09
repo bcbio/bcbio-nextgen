@@ -39,7 +39,7 @@ def create_inputs(data):
         if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner):
             return [[data]]
     data["files_orig"] = data["files"]
-    data["files"] = _prep_fastq_inputs(data["files"], data)
+    data["files"] = prep_fastq_inputs(data["files"], data)
     # preparation converts illumina into sanger format
     data["config"]["algorithm"]["quality_format"] = "standard"
     # Handle any necessary trimming
@@ -329,7 +329,7 @@ def _ready_gzip_fastq(in_files, data, require_bgzip=False):
     return (all_gzipped and not needs_convert and not do_splitting and
             not objectstore.is_remote(in_files[0]) and not needs_trim and not get_downsample_params(data))
 
-def _prep_fastq_inputs(in_files, data):
+def prep_fastq_inputs(in_files, data):
     """Prepare bgzipped fastq inputs
     """
     if len(in_files) == 1 and _is_bam_input(in_files):

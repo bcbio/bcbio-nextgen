@@ -11,6 +11,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.utils import file_exists, safe_makedir, splitext_plus
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import alignprep
 
 
 def get_fastq_files(data):
@@ -98,24 +99,11 @@ def _pipeline_needs_fastq(config, data):
     support_bam = aligner in alignment.metadata.get("support_bam", [])
     return aligner and not support_bam
 
+
 def convert_bam_to_fastq(in_file, work_dir, data, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
-    out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
-    out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
-                 os.path.splitext(os.path.basename(in_file))[0], x))
-                 for x in ["1", "2"]]
-    if bam.is_paired(in_file):
-        out1, out2 = out_files
-    else:
-        out1 = out_files[0]
-        out2 = None
-    if not file_exists(out1):
-        broad_runner = broad.runner_from_path("picard", config)
-        broad_runner.run_fn("picard_bam_to_fastq", in_file, out1, out2)
-    if out2 and os.path.getsize(out2) == 0:
-        out2 = None
-    return [out1, out2]
+    return alignprep.prep_fastq_inputs([in_file], data)
 
 def merge(files, out_file, config):
     """merge smartly fastq files. It recognizes paired fastq files."""
