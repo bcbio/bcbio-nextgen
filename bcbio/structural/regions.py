@@ -20,6 +20,7 @@ from bcbio.distributed.multi import run_multicore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import gatkcnv
 from bcbio.variation import bedutils, multi
 
 def calculate_sv_bins(*items):
@@ -33,6 +34,7 @@ def calculate_sv_bins(*items):
     Uses callable_regions as the access BED file and mosdepth regions in
     variant_regions to estimate depth for bin sizes.
     """
+    calcfns = {"cnvkit": _calculate_sv_bins_cnvkit, "gatk-cnv": _calculate_sv_bins_gatk}
     from bcbio.structural import cnvkit
     items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
     if all(not cnvkit.use_general_sv_bins(x) for x in items):
@@ -42,21 +44,37 @@ def calculate_sv_bins(*items):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
         for data in cnv_group.items:
             if cnvkit.use_general_sv_bins(data):
-                if dd.get_background_cnv_reference(data):
-                    target_bed, anti_bed = cnvkit.targets_from_background(dd.get_background_cnv_reference(data),
-                                                                          cnv_group.work_dir, data)
-                else:
-                    target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
-                                                                 size_calc_fn, cnv_group.work_dir, data)
+                target_bed, anti_bed, gcannotated_tsv = calcfns[cnvkit.bin_approach(data)](data, cnv_group,
+                                                                                           size_calc_fn)
                 if not data.get("regions"):
                     data["regions"] = {}
-                data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i)}
+                data["regions"]["bins"] = {"target": target_bed, "antitarget": anti_bed, "group": str(i),
+                                           "gcannotated": gcannotated_tsv}
             out.append([data])
     if not len(out) == len(items):
         raise AssertionError("Inconsistent samples in and out of SV bin calculation:\nout: %s\nin : %s" %
                              (sorted([dd.get_sample_name(utils.to_single_data(x)) for x in out]),
                               sorted([dd.get_sample_name(x) for x in items])))
     return out
+
+def _calculate_sv_bins_gatk(data, cnv_group, size_calc_fn):
+    """Calculate structural variant bins using GATK4 CNV callers region or even intervals approach.
+    """
+    target_bed = gatkcnv.prepare_intervals(data, cnv_group.region_file, cnv_group.work_dir)
+    gc_annotated_tsv = gatkcnv.annotate_intervals(target_bed, data)
+    return target_bed, None, gc_annotated_tsv
+
+def _calculate_sv_bins_cnvkit(data, cnv_group, size_calc_fn):
+    """Calculate structural variant bins using target/anti-target approach from CNVkit.
+    """
+    from bcbio.structural import cnvkit
+    if dd.get_background_cnv_reference(data):
+        target_bed, anti_bed = cnvkit.targets_from_background(dd.get_background_cnv_reference(data),
+                                                              cnv_group.work_dir, data)
+    else:
+        target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
+                                                     size_calc_fn, cnv_group.work_dir, data)
+    return target_bed, anti_bed, None
 
 class MemoizedSizes:
     """Delay calculating sizes unless needed; cache to calculate a single time.
@@ -146,26 +164,40 @@ def calculate_sv_coverage(data):
 
     Creates corrected cnr files with log2 ratios and depths.
     """
-    from bcbio.variation import coverage
-    from bcbio.structural import annotate, cnvkit
+    calcfns = {"cnvkit": _calculate_sv_coverage_cnvkit, "gatk-cnv": _calculate_sv_coverage_gatk}
+    from bcbio.structural import cnvkit
     data = utils.to_single_data(data)
     if not cnvkit.use_general_sv_bins(data):
         return [[data]]
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                dd.get_sample_name(data), "bins"))
+    out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
+    if os.path.exists(out_target_file):
+        data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file}
+    return [[data]]
+
+def _calculate_sv_coverage_gatk(data, work_dir):
+    """Calculate coverage in defined regions using GATK tools
+    """
+    target_file = gatkcnv.collect_read_counts(data, work_dir)
+    return target_file, None
+
+def _calculate_sv_coverage_cnvkit(data, work_dir):
+    """Calculate coverage in an CNVkit ready format using mosdepth.
+    """
+    from bcbio.variation import coverage
+    from bcbio.structural import annotate
     out_target_file = os.path.join(work_dir, "%s-target-coverage.cnn" % dd.get_sample_name(data))
     out_anti_file = os.path.join(work_dir, "%s-antitarget-coverage.cnn" % dd.get_sample_name(data))
-    if ((not utils.file_exists(out_target_file) or not utils.file_exists(out_anti_file))
-          and (dd.get_align_bam(data) or dd.get_work_bam(data))):
+    if ((not utils.file_exists(out_target_file) or not utils.file_exists(out_anti_file)) and
+          (dd.get_align_bam(data) or dd.get_work_bam(data))):
         target_cov = coverage.run_mosdepth(data, "target", tz.get_in(["regions", "bins", "target"], data))
         anti_cov = coverage.run_mosdepth(data, "antitarget", tz.get_in(["regions", "bins", "antitarget"], data))
         target_cov_genes = annotate.add_genes(target_cov.regions, data, max_distance=0)
         anti_cov_genes = annotate.add_genes(anti_cov.regions, data, max_distance=0)
         out_target_file = _add_log2_depth(target_cov_genes, out_target_file, data)
         out_anti_file = _add_log2_depth(anti_cov_genes, out_anti_file, data)
-    if os.path.exists(out_target_file):
-        data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file}
-    return [[data]]
+    return out_target_file, out_anti_file
 
 def _add_log2_depth(in_file, out_file, data):
     """Create a CNVkit cnn file with depths
@@ -193,16 +225,9 @@ def _add_log2_depth(in_file, out_file, data):
     return out_file
 
 def normalize_sv_coverage(*items):
-    """Normalize CNV coverage depths by GC, repeats and background.
-
-    Provides normalized output based on CNVkit approaches, provides a
-    point for providing additional methods in the future:
-
-    - reference: calculates reference backgrounds from normals and pools
-      including GC and repeat information
-    - fix: Uses background to normalize coverage estimations
-    http://cnvkit.readthedocs.io/en/stable/pipeline.html#fix
+    """Normalize CNV coverage, providing flexible point for multiple methods.
     """
+    calcfns = {"cnvkit": _normalize_sv_coverage_cnvkit, "gatk-cnv": _normalize_sv_coverage_gatk}
     from bcbio.structural import cnvkit
     from bcbio.structural import shared as sshared
     items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
@@ -215,38 +240,9 @@ def normalize_sv_coverage(*items):
         if group_id is None:
             continue
         inputs, backgrounds = sshared.find_case_control(list(gitems))
-        cnns = reduce(operator.add, [[tz.get_in(["depth", "bins", "target"], x),
-                                      tz.get_in(["depth", "bins", "antitarget"], x)] for x in backgrounds], [])
         assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
-        for d in inputs:
-            if tz.get_in(["depth", "bins", "target"], d):
-                target_bed = tz.get_in(["depth", "bins", "target"], d)
-                antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
-        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
-                                                   dd.get_sample_name(inputs[0]), "bins"))
-        input_backs = set(filter(lambda x: x is not None,
-                                 [dd.get_background_cnv_reference(d) for d in inputs]))
-        if input_backs:
-            assert len(input_backs) == 1, "Multiple backgrounds in group: %s" % list(input_backs)
-            back_file = list(input_backs)[0]
-        else:
-            back_file = cnvkit.cnvkit_background(cnns,
-                                                 os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
-                                                backgrounds or inputs, target_bed, antitarget_bed)
-        fix_cmd_inputs = []
-        for data in inputs:
-            work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
-                                                       dd.get_sample_name(data), "bins"))
-            if tz.get_in(["depth", "bins", "target"], data):
-                fix_file = os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data)))
-                fix_cmd_inputs.append((tz.get_in(["depth", "bins", "target"], data),
-                                       tz.get_in(["depth", "bins", "antitarget"], data),
-                                       back_file, fix_file, data))
-                out_files[dd.get_sample_name(data)] = fix_file
-                back_files[dd.get_sample_name(data)] = back_file
-        parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
-        run_multicore(cnvkit.run_fix_parallel, fix_cmd_inputs, inputs[0]["config"], parallel)
-
+        back_files, out_files = calcfns[cnvkit.bin_approach(inputs[0])](group_id, inputs, backgrounds,
+                                                                        back_files, out_files)
     out = []
     for data in items:
         if dd.get_sample_name(data) in out_files:
@@ -254,6 +250,54 @@ def normalize_sv_coverage(*items):
             data["depth"]["bins"]["normalized"] = out_files[dd.get_sample_name(data)]
         out.append([data])
     return out
+
+def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, back_files, out_files):
+    """Normalize CNV coverage using panel of normals with GATK's de-noise approaches.
+    """
+    print("target", tz.get_in(["depth", "bins", "target"], inputs[0]))
+    print("gcannotated", tz.get_in(["regions", "bins", "gcannotated"], inputs[0]))
+    raise NotImplementedError
+
+def _normalize_sv_coverage_cnvkit(group_id, inputs, backgrounds, back_files, out_files):
+    """Normalize CNV coverage depths by GC, repeats and background using CNVkit
+
+    - reference: calculates reference backgrounds from normals and pools
+      including GC and repeat information
+    - fix: Uses background to normalize coverage estimations
+    http://cnvkit.readthedocs.io/en/stable/pipeline.html#fix
+    """
+    from bcbio.structural import cnvkit
+    cnns = reduce(operator.add, [[tz.get_in(["depth", "bins", "target"], x),
+                                    tz.get_in(["depth", "bins", "antitarget"], x)] for x in backgrounds], [])
+    for d in inputs:
+        if tz.get_in(["depth", "bins", "target"], d):
+            target_bed = tz.get_in(["depth", "bins", "target"], d)
+            antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
+                                                dd.get_sample_name(inputs[0]), "bins"))
+    input_backs = set(filter(lambda x: x is not None,
+                                [dd.get_background_cnv_reference(d) for d in inputs]))
+    if input_backs:
+        assert len(input_backs) == 1, "Multiple backgrounds in group: %s" % list(input_backs)
+        back_file = list(input_backs)[0]
+    else:
+        back_file = cnvkit.cnvkit_background(cnns,
+                                             os.path.join(work_dir, "background-%s-cnvkit.cnn" % (group_id)),
+                                             backgrounds or inputs, target_bed, antitarget_bed)
+    fix_cmd_inputs = []
+    for data in inputs:
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                                    dd.get_sample_name(data), "bins"))
+        if tz.get_in(["depth", "bins", "target"], data):
+            fix_file = os.path.join(work_dir, "%s-normalized.cnr" % (dd.get_sample_name(data)))
+            fix_cmd_inputs.append((tz.get_in(["depth", "bins", "target"], data),
+                                    tz.get_in(["depth", "bins", "antitarget"], data),
+                                    back_file, fix_file, data))
+            out_files[dd.get_sample_name(data)] = fix_file
+            back_files[dd.get_sample_name(data)] = back_file
+    parallel = {"type": "local", "cores": dd.get_cores(inputs[0]), "progs": ["cnvkit"]}
+    run_multicore(cnvkit.run_fix_parallel, fix_cmd_inputs, inputs[0]["config"], parallel)
+    return back_files, out_files
 
 # Region retrieval for SV calling
 

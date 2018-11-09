@@ -32,10 +32,15 @@ def use_general_sv_bins(data):
 
     Checks if CNVkit is enabled and we haven't already run CNVkit.
     """
-    if any([c in dd.get_svcaller(data) for c in ["cnvkit", "titancna", "purecn", "purple"]]):
+    if any([c in dd.get_svcaller(data) for c in ["cnvkit", "titancna", "purecn", "gatk-cnv"]]):
         if not _get_original_coverage(data):
             return True
     return False
+
+def bin_approach(data):
+    for approach in ["cnvkit", "gatk-cnv"]:
+        if approach in dd.get_svcaller(data):
+            return approach
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
