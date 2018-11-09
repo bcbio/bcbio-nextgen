@@ -18,6 +18,38 @@ def run(items, background=None):
     if not background: background = []
     return items
 
+def denoise(data, pon, work_dir):
+    """Normalize read counts using panel of normal background or GC/mappability
+    """
+    std_file = os.path.join(work_dir, "%s-standardizedcr.tsv" % dd.get_sample_name(data))
+    denoise_file = os.path.join(work_dir, "%s-denoisedcr.tsv" % dd.get_sample_name(data))
+    if not utils.file_exists(std_file):
+        with file_transaction(data, std_file, denoise_file) as (tx_std_file, tx_denoise_file):
+            params = ["-T", "DenoiseReadCounts",
+                      "-I", tz.get_in(["depth", "bins", "target"], data),
+                      "--standardized-copy-ratios", tx_std_file,
+                      "--denoised-copy-ratios", tx_denoise_file]
+            if pon:
+                params += ["--count-panel-of-normals", pon]
+            else:
+                params += ["--annotated-intervals", tz.get_in(["regions", "bins", "gcannotated"], data)]
+            _run_with_memory_scaling(params, tx_std_file, data)
+    return denoise_file if pon else std_file
+
+def create_panel_of_normals(items, group_id, work_dir):
+    """Create a panel of normals from one or more background read counts.
+    """
+    out_file = os.path.join(work_dir, "%s-%s-pon.hdf5" % (dd.get_sample_name(items[0]), group_id))
+    if not utils.file_exists(out_file):
+        with file_transaction(items[0], out_file) as tx_out_file:
+            params = ["-T", "CreateReadCountPanelOfNormals",
+                      "-O", tx_out_file,
+                      "--annotated-intervals", tz.get_in(["regions", "bins", "gcannotated"], items[0])]
+            for data in items:
+                params += ["-I", tz.get_in(["depth", "bins", "target"], data)]
+            _run_with_memory_scaling(params, tx_out_file, items[0])
+    return out_file
+
 def prepare_intervals(data, region_file, work_dir):
     """Prepare interval regions for targeted and gene based regions.
     """
@@ -36,6 +68,8 @@ def prepare_intervals(data, region_file, work_dir):
 
 def annotate_intervals(target_file, data):
     """Provide GC annotated intervals for error correction during panels and denoising.
+
+    TODO: include mappability and segmentation duplication inputs
     """
     out_file = "%s-gcannotated.tsv" % utils.splitext_plus(target_file)[0]
     if not utils.file_uptodate(out_file, target_file):

@@ -241,7 +241,9 @@ def normalize_sv_coverage(*items):
             continue
         inputs, backgrounds = sshared.find_case_control(list(gitems))
         assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
-        back_files, out_files = calcfns[cnvkit.bin_approach(inputs[0])](group_id, inputs, backgrounds,
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
+                                                    dd.get_sample_name(inputs[0]), "bins"))
+        back_files, out_files = calcfns[cnvkit.bin_approach(inputs[0])](group_id, inputs, backgrounds, work_dir,
                                                                         back_files, out_files)
     out = []
     for data in items:
@@ -251,14 +253,19 @@ def normalize_sv_coverage(*items):
         out.append([data])
     return out
 
-def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, back_files, out_files):
+def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, work_dir, back_files, out_files):
     """Normalize CNV coverage using panel of normals with GATK's de-noise approaches.
     """
-    print("target", tz.get_in(["depth", "bins", "target"], inputs[0]))
-    print("gcannotated", tz.get_in(["regions", "bins", "gcannotated"], inputs[0]))
-    raise NotImplementedError
+    pon = gatkcnv.create_panel_of_normals(backgrounds) if backgrounds else None
+    for data in inputs:
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                                   dd.get_sample_name(data), "bins"))
+        denoise_file = gatkcnv.denoise(data, pon, work_dir)
+        out_files[dd.get_sample_name(data)] = denoise_file
+        back_files[dd.get_sample_name(data)] = pon
+    return back_files, out_files
 
-def _normalize_sv_coverage_cnvkit(group_id, inputs, backgrounds, back_files, out_files):
+def _normalize_sv_coverage_cnvkit(group_id, inputs, backgrounds, work_dir, back_files, out_files):
     """Normalize CNV coverage depths by GC, repeats and background using CNVkit
 
     - reference: calculates reference backgrounds from normals and pools
@@ -273,8 +280,6 @@ def _normalize_sv_coverage_cnvkit(group_id, inputs, backgrounds, back_files, out
         if tz.get_in(["depth", "bins", "target"], d):
             target_bed = tz.get_in(["depth", "bins", "target"], d)
             antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
-    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
-                                                dd.get_sample_name(inputs[0]), "bins"))
     input_backs = set(filter(lambda x: x is not None,
                                 [dd.get_background_cnv_reference(d) for d in inputs]))
     if input_backs:
