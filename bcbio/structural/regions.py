@@ -178,9 +178,23 @@ def calculate_sv_coverage(data):
 
 def _calculate_sv_coverage_gatk(data, work_dir):
     """Calculate coverage in defined regions using GATK tools
+
+    TODO: This does double calculations to get GATK4 compatible HDF read counts
+    and then depth and gene annotations. Both are needed for creating heterogeneity inputs.
+    Ideally replace with a single mosdepth coverage calculation, and creat GATK4 TSV format:
+
+    CONTIG  START   END     COUNT
+    chrM    1       1000    13268
     """
+    from bcbio.variation import coverage
+    from bcbio.structural import annotate
+    # GATK compatible
     target_file = gatkcnv.collect_read_counts(data, work_dir)
-    return target_file, None
+    # heterogeneity compatible
+    target_in = bedutils.clean_file(tz.get_in(["regions", "bins", "target"], data), data, bedprep_dir=work_dir)
+    target_cov = coverage.run_mosdepth(data, "target-gatk", target_in)
+    target_cov_genes = annotate.add_genes(target_cov.regions, data, max_distance=0)
+    return target_file, target_cov_genes
 
 def _calculate_sv_coverage_cnvkit(data, work_dir):
     """Calculate coverage in an CNVkit ready format using mosdepth.
@@ -256,7 +270,7 @@ def normalize_sv_coverage(*items):
 def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, work_dir, back_files, out_files):
     """Normalize CNV coverage using panel of normals with GATK's de-noise approaches.
     """
-    pon = gatkcnv.create_panel_of_normals(backgrounds) if backgrounds else None
+    pon = gatkcnv.create_panel_of_normals(backgrounds, group_id, work_dir) if backgrounds else None
     for data in inputs:
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                    dd.get_sample_name(data), "bins"))

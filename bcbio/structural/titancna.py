@@ -17,6 +17,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+from bcbio.structural import cnvkit
 
 def run(items):
     from bcbio import heterogeneity
@@ -159,18 +160,21 @@ def _titan_het_file(vrn_files, work_dir, paired):
                                     work_dir, paired, OutWriter)
 
 def _titan_cn_file(cnr_file, work_dir, data):
-    """Convert generallized CNVkit normalized input into TitanCNA ready format.
+    """Convert CNVkit or GATK4 normalized input into TitanCNA ready format.
     """
     out_file = os.path.join(work_dir, "%s.cn" % (utils.splitext_plus(os.path.basename(cnr_file))[0]))
-
+    support_cols = {"cnvkit": ["chromosome", "start", "end", "log2"],
+                    "gatk-cnv": ["CONTIG", "START", "END", "LOG2_COPY_RATIO"]}
+    cols = support_cols[cnvkit.bin_approach(data)]
     if not utils.file_uptodate(out_file, cnr_file):
         with file_transaction(data, out_file) as tx_out_file:
-            iterator = pd.read_table(cnr_file, iterator=True)
+            iterator = pd.read_table(cnr_file, sep="\t", iterator=True, header=0, comment="@")
             with open(tx_out_file, "w") as handle:
                 for chunk in iterator:
-                    chunk = chunk[["chromosome", "start", "end", "log2"]]
+                    chunk = chunk[cols]
                     chunk.columns = ["chrom", "start", "end", "logR"]
-                    chunk['start'] += 1
+                    if cnvkit.bin_approach(data) == "cnvkit":
+                        chunk['start'] += 1
                     chunk.to_csv(handle, mode="a", sep="\t", index=False)
     return out_file
 

@@ -3,7 +3,9 @@
 https://software.broadinstitute.org/gatk/documentation/article?id=11682
 https://gatkforums.broadinstitute.org/dsde/discussion/11683/
 """
+import glob
 import os
+import shutil
 
 import toolz as tz
 
@@ -18,11 +20,31 @@ def run(items, background=None):
     if not background: background = []
     return items
 
+def model_segments(copy_file, work_dir, paired):
+    """Perform segmentation on input copy number log2 ratio file.
+    """
+    out_file = os.path.join(work_dir, "%s.cr.seg" % dd.get_sample_name(paired.tumor_data))
+    tumor_counts, normal_counts = heterogzygote_counts(paired)
+    if not utils.file_exists(out_file):
+        with file_transaction(paired.tumor_data, out_file) as tx_out_file:
+            params = ["-T", "ModelSegments",
+                      "--denoised-copy-ratios", copy_file,
+                      "--allelic-counts", tumor_counts,
+                      "--output-prefix", dd.get_sample_name(paired.tumor_data),
+                      "-O", os.path.dirname(tx_out_file)]
+            if normal_counts:
+                params += ["--normal-allelic-counts", normal_counts]
+            _run_with_memory_scaling(params, tx_out_file, paired.tumor_data)
+            for tx_fname in glob.glob(os.path.join(os.path.dirname(tx_out_file),
+                                                   "%s*" % dd.get_sample_name(paired.tumor_data))):
+                shutil.copy(tx_fname, os.path.join(work_dir, os.path.basename(tx_fname)))
+    return out_file
+
 def denoise(data, pon, work_dir):
     """Normalize read counts using panel of normal background or GC/mappability
     """
-    std_file = os.path.join(work_dir, "%s-standardizedcr.tsv" % dd.get_sample_name(data))
-    denoise_file = os.path.join(work_dir, "%s-denoisedcr.tsv" % dd.get_sample_name(data))
+    std_file = os.path.join(work_dir, "%s-crstandardized.tsv" % dd.get_sample_name(data))
+    denoise_file = os.path.join(work_dir, "%s-crdenoised.tsv" % dd.get_sample_name(data))
     if not utils.file_exists(std_file):
         with file_transaction(data, std_file, denoise_file) as (tx_std_file, tx_denoise_file):
             params = ["-T", "DenoiseReadCounts",
@@ -90,7 +112,7 @@ def collect_read_counts(data, work_dir):
             params = ["-T", "CollectReadCounts", "-I", dd.get_align_bam(data),
                       "-L", tz.get_in(["regions", "bins", "target"], data),
                       "--interval-merging-rule", "OVERLAPPING_ONLY",
-                      "-O", tx_out_file]
+                      "-O", tx_out_file, "--format", "HDF5"]
             _run_with_memory_scaling(params, tx_out_file, data)
     return out_file
 
@@ -103,7 +125,8 @@ def heterogzygote_counts(paired):
     vr = bedutils.population_variant_regions([x for x in [paired.tumor_data, paired.normal_data] if x])
     cur_het_bed = bedutils.intersect_two(het_bed, vr, work_dir, paired.tumor_data)
     tumor_counts = _run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.tumor_data)
-    normal_counts = _run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.normal_data)
+    normal_counts = (_run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.normal_data)
+                     if paired.normal_data else None)
     return tumor_counts, normal_counts
 
 def _run_collect_allelic_counts(pos_file, pos_name, work_dir, data):
