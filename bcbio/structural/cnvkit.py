@@ -38,9 +38,16 @@ def use_general_sv_bins(data):
     return False
 
 def bin_approach(data):
+    """Check for binning approach from configuration or normalized file.
+    """
     for approach in ["cnvkit", "gatk-cnv"]:
         if approach in dd.get_svcaller(data):
             return approach
+    norm_file = tz.get_in(["depth", "bins", "normalized"], data)
+    if norm_file.endswith(("-crstandardized.tsv", "-crdenoised.tsv")):
+        return "gatk-cnv"
+    if norm_file.endswith(".cnr"):
+        return "cnvkit"
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
