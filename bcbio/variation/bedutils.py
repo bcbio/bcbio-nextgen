@@ -43,7 +43,7 @@ def check_bed_contigs(in_file, data):
     contigs = set([])
     with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
-            if not line.startswith(("#", "track", "browser")) and line.strip():
+            if not line.startswith(("#", "track", "browser", "@")) and line.strip():
                 contigs.add(line.split()[0])
     ref_contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
     if contigs and len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
@@ -62,7 +62,7 @@ def check_bed_coords(in_file, data):
             contig_sizes[contig.name] = contig.size
         with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
-                if not line.startswith(("#", "track", "browser")) and line.strip():
+                if not line.startswith(("#", "track", "browser", "@")) and line.strip():
                     parts = line.split()
                     if len(parts) > 3:
                         try:
@@ -89,6 +89,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
         if prefix and os.path.basename(in_file).startswith(prefix):
             return in_file
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
+        out_file = out_file.replace(".interval_list", ".bed")
         if out_file.endswith(".gz"):
             out_file = out_file[:-3]
         if not utils.file_uptodate(out_file, in_file):
@@ -98,7 +99,7 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
                 bcbio_py = sys.executable
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 sort_cmd = get_sort_cmd(os.path.dirname(tx_out_file))
-                cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
+                cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^@ | "
                        "grep -v ^# | {simple} "
                        "{bcbio_py} -c 'from bcbio.variation import bedutils; bedutils.remove_bad()' | "
                        "{sort_cmd} -k1,1 -k2,2n > {tx_out_file}")
@@ -118,7 +119,7 @@ def sort_merge(in_file, data, out_dir=None):
         column_opt = ""
         with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
-                if not line.startswith(("#", "track", "browser")):
+                if not line.startswith(("#", "track", "browser", "@")):
                     parts = line.split()
                     if len(parts) >= 4:
                         column_opt = "-c 4 -o distinct"
