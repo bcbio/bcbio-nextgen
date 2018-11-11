@@ -538,6 +538,7 @@ def _variant_sv(checkpoints):
                [cwlout("sv_bin_rec", "record",
                        fields=[cwlout(["regions", "bins", "target"], ["File", "null"]),
                                cwlout(["regions", "bins", "antitarget"], ["File", "null"]),
+                               cwlout(["regions", "bins", "gcannotated"], ["File", "null"]),
                                cwlout(["regions", "bins", "group"], ["string", "null"]),
                                cwlout("inherit")])],
                "bcbio-vc", ["bedtools", "cnvkit"],
