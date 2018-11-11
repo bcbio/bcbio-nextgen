@@ -11,14 +11,58 @@ import toolz as tz
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
-from bcbio.variation import bedutils
+from bcbio.variation import bedutils, vcfutils
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using GATK4 CNV calling.
+
+    TODO: implement germline calling with DetermineGermlineContigPloidy and GermlineCNVCaller
     """
     if not background: background = []
-    return items
+    paired = vcfutils.get_paired(items + background)
+    if paired:
+        out = _run_paired(paired)
+    else:
+        out = items
+        logger.warn("GATK4 CNV calling currently only available for somatic samples: %s" %
+                    ", ".join([dd.get_sample_name(d) for d in items + background]))
+    return out
+
+def _run_paired(paired):
+    """Run somatic variant calling pipeline.
+
+    TODO:
+    - Generate summarization plots
+    - Convert to standard VCF format
+    """
+    work_dir = _sv_workdir(paired.tumor_data)
+    seg_file = model_segments(tz.get_in(["depth", "bins", "normalized"], paired.tumor_data),
+                              work_dir, paired)
+    call_file = call_copy_numbers(seg_file, work_dir, paired.tumor_data)
+    print(seg_file, call_file)
+    out = []
+    if paired.normal_data:
+        out.append(paired.normal_data)
+    if "sv" not in paired.tumor_data:
+        paired.tumor_data["sv"] = []
+    paired.tumor_data["sv"].append({"variantcaller": "gatk-cnv",
+                                    "call_file": call_file,
+                                    "seg": seg_file})
+    out.append(paired.tumor_data)
+    return out
+
+def call_copy_numbers(seg_file, work_dir, data):
+    """Call copy numbers from a normalized and segmented input file.
+    """
+    out_file = os.path.join(work_dir, "%s-call.seg" % dd.get_sample_name(data))
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            params = ["-T", "CallCopyRatioSegments",
+                      "-I", seg_file, "-O", tx_out_file]
+            _run_with_memory_scaling(params, tx_out_file, data)
+    return out_file
 
 def model_segments(copy_file, work_dir, paired):
     """Perform segmentation on input copy number log2 ratio file.
@@ -146,3 +190,7 @@ def _run_with_memory_scaling(params, tx_out_file, data):
     memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
     broad_runner = broad.runner_from_config(data["config"])
     broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+
+def _sv_workdir(data):
+    return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                           dd.get_sample_name(data), "gatk-cnv"))
