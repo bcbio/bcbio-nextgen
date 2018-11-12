@@ -96,7 +96,7 @@ def _segment_normalized_gatk(cnr_file, work_dir, paired):
     """Segmentation of normalized inputs using GATK4, converting into standard input formats.
     """
     work_dir = utils.safe_makedir(os.path.join(work_dir, "gatk-cnv"))
-    seg_file = gatkcnv.model_segments(cnr_file, work_dir, paired)
+    seg_file = gatkcnv.model_segments(cnr_file, work_dir, paired)["seg"]
     std_seg_file = seg_file.replace(".cr.seg", ".seg")
     if not utils.file_uptodate(std_seg_file, seg_file):
         with file_transaction(std_seg_file) as tx_out_file:
