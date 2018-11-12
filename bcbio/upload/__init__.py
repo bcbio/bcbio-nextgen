@@ -319,7 +319,7 @@ def _sample_variant_file_in_population(x):
             return True
     return False
 
-def _get_variant_file(x, key, suffix="", sample=None):
+def _get_variant_file(x, key, suffix="", sample=None, ignore_do_upload=False):
     """Retrieve VCF file with the given key if it exists, handling bgzipped.
     """
     out = []
@@ -327,7 +327,7 @@ def _get_variant_file(x, key, suffix="", sample=None):
     upload_key = list(key)
     upload_key[-1] = "do_upload"
     do_upload = tz.get_in(tuple(upload_key), x, True)
-    if fname and do_upload:
+    if fname and (ignore_do_upload or do_upload):
         if fname.endswith(".vcf.gz"):
             out.append({"path": fname,
                         "type": "vcf.gz",
@@ -695,8 +695,11 @@ def _get_files_project(sample, upload_config):
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
             suffix = "-annotated-decomposed" if tz.get_in(("population", "decomposed"), x) else "-annotated"
-            out.extend([_add_batch(x, sample)
-                        for x in _get_variant_file(x, ("population", "vcf"), suffix=suffix)])
+            # Get our VCF, either from the population or the variant batch file
+            vcfs = _get_variant_file(x, ("population", "vcf"), suffix=suffix)
+            if not vcfs:
+                vcfs = _get_variant_file(x, ("vrn_file_batch", ), suffix=suffix, ignore_do_upload=True)
+            out.extend([_add_batch(f, sample) for f in vcfs])
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})

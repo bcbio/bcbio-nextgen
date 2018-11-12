@@ -4,6 +4,7 @@
   Ben Liesfeld and Roland Ewald.
 - RNAseq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
 - use biobambam2 BAM to FASTQ conversion instead of Picard in all cases.
+- joint calling: ensure correct upload to final directory when no annotations present
 
 ## 1.1.1 (6 November 2018)
 
