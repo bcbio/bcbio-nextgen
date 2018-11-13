@@ -301,11 +301,11 @@ To run an analysis:
    UUID. You can also use the existing genomes pre-installed in the
    ``bcbio_resources`` project if using the public Arvados playground::
 
-     arv-put --name hg19-testdata --project-uuid $PROJECT_ID testdata/genomes
+     arv-put --name testdata_genomes --project-uuid $PROJECT_ID testdata/genomes/hg19
 
 3. Upload input data to Arvados Keep. Note the collection UUID::
 
-     arv-put --name input-testdata --project-uuid $PROJECT_ID testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
+     arv-put --name testdata_inputs --project-uuid $PROJECT_ID testdata/100326_FC6107FAAXX testdata/automated testdata/reference_material
 
 4. Create an Arvados section in a ``bcbio_system.yaml`` file specifying
    locations to look for reference and input data. ``input`` can be one or more
@@ -327,14 +327,23 @@ To run an analysis:
 
      bcbio_vm.py cwl --systemconfig bcbio_system_arvados.yaml testcwl/config/testcwl.yaml
 
-6. Import bcbio Docker image to your Arvados project::
+6. Copy latest bcbio Docker image into your project from bcbio_resources using
+   `arv-copy <https://doc.arvados.org/user/topics/arv-copy.html>`_. You'll need
+   to find the UUID of ``quay.io/bcbio/bcbio-vc`` and ``arvados/jobs``::
 
+     arv-copy $JOBS_ID --project-uuid $PROJECT_ID --src qr1hi --dst qr1hi
+     arv-copy $BCBIO_VC_ID --project-uuid $PROJECT_ID --src qr1hi --dst qr1hi
+
+   or import a local bcbio Docker image to your Arvados project::
+
+     docker pull arvados/jobs:1.0.20180216164101
+     arv-keepdocker --project $PROJECT_ID -- arvados/jobs 1.0.20180216164101
      docker pull quay.io/bcbio/bcbio-vc
-     arv-keepdocker --project-$PROJECT_ID -- quay.io/bcbio/bcbio-vc latest
+     arv-keepdocker --project $PROJECT_ID -- quay.io/bcbio/bcbio-vc latest
 
 7. Run the CWL on the Arvados public cloud using the Arvados cwl-runner::
 
-     bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid qr1hi-your-projectuuid
+     bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid $PROJECT_ID
 
 Running on DNAnexus (hosted cloud)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
