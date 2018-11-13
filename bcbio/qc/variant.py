@@ -137,4 +137,3 @@ def extract_germline_vcinfo(data, out_dir):
                     gd = germline.extract(d, [d], out_dir)
                     v["germline"] = gd["vrn_file_plus"]["germline"]
                     return v
-        raise NotImplementedError
