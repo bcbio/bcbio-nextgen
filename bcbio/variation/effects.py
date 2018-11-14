@@ -45,7 +45,7 @@ def add_to_vcf(in_file, data, effect_todo=None):
 def get_type(data):
     """Retrieve the type of effects calculation to do.
     """
-    if data["analysis"].lower().startswith("var"):
+    if data["analysis"].lower().startswith("var") or dd.get_variantcaller(data):
         return tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
 
 # ## Ensembl VEP

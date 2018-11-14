@@ -2,7 +2,8 @@
 
 - Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
   Ben Liesfeld and Roland Ewald.
-- RNAseq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
+- RNA-seq variation: add snpEff effects to output variant calls. Thanks to Manasa Surakala.
+- RNA-seq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
 - use biobambam2 BAM to FASTQ conversion instead of Picard in all cases.
 - joint calling: ensure correct upload to final directory when no annotations present
 
