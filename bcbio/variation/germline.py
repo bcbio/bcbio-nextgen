@@ -105,11 +105,13 @@ def filter_to_pass_and_reject(in_file, paired, out_dir=None):
                     for rec in reader:
                         filters = rec.FILTER.split(";") if rec.FILTER else []
                         other_filters = [x for x in filters if x not in ["PASS", ".", "REJECT"]]
-                        if len(other_filters) == 0:
+                        if len(other_filters) == 0 or bubbletree.is_info_germline(rec):
                             # Germline, check if we should include based on frequencies
-                            if "REJECT" in filters or rec.INFO.get("STATUS", "").lower() == "germline":
-                                stats = bubbletree._is_possible_loh(rec, reader, bubbletree.PARAMS, paired)
+                            if "REJECT" in filters or bubbletree.is_info_germline(rec):
+                                stats = bubbletree._is_possible_loh(rec, reader, bubbletree.PARAMS, paired,
+                                                                    use_status=True)
                                 if stats:
+                                    rec.FILTER = "PASS"
                                     rec.INFO["DB"] = True
                                     writer.write_record(rec)
                             # Somatic, always include

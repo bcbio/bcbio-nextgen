@@ -24,8 +24,8 @@ from bcbio.structural import shared
 from bcbio.variation import bedutils
 
 population_keys = ['AC_AFR', 'AC_AMR', 'AC_EAS', 'AC_FIN', 'AC_NFE', 'AC_OTH', 'AC_SAS']
-PARAMS = {"min_freq": 0.3,
-          "max_freq": 0.7,
+PARAMS = {"min_freq": 0.2,
+          "max_freq": 0.8,
           "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
           "min_depth": 15,
           "hetblock": {"min_alleles": 25,
@@ -267,9 +267,22 @@ def _to_ucsc_style(chrom):
     """
     return "chr%s" % chrom if not str(chrom).startswith("chr") else chrom
 
-def _passes_plus_germline(rec):
+def is_info_germline(rec):
+    """Check if a variant record is germline based on INFO attributes.
+
+    Works with VarDict's annotation of STATUS.
+    """
+    if hasattr(rec, "INFO"):
+        status = rec.INFO.get("STATUS", "").lower()
+    else:
+        status = rec.info.get("STATUS", "").lower()
+    return status == "germline" or status.find("loh") >= 0
+
+def _passes_plus_germline(rec, use_status=False):
     """Check if a record passes filters (but might be germline -- labelled with REJECT).
     """
+    if use_status and is_info_germline(rec):
+        return True
     allowed = set(["PASS", "REJECT", "."])
     if hasattr(rec, "FILTER"):
         if not rec.FILTER:
@@ -322,12 +335,12 @@ def _tumor_normal_stats(rec, somatic_info, vcf_rec):
             out[key]["alt"] = alt
     return out
 
-def _is_possible_loh(rec, vcf_rec, params, somatic_info):
+def _is_possible_loh(rec, vcf_rec, params, somatic_info, use_status=False):
     """Check if the VCF record is a het in the normal with sufficient support.
 
     Only returns SNPs, since indels tend to have less precise frequency measurements.
     """
-    if _is_biallelic_snp(rec) and _passes_plus_germline(rec):
+    if _is_biallelic_snp(rec) and _passes_plus_germline(rec, use_status=use_status):
         stats = _tumor_normal_stats(rec, somatic_info, vcf_rec)
         depths = [tz.get_in([x, "depth"], stats) for x in ["normal", "tumor"]]
         depths = [d for d in depths if d is not None]
