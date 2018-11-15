@@ -4,9 +4,11 @@ https://software.broadinstitute.org/gatk/documentation/article?id=11682
 https://gatkforums.broadinstitute.org/dsde/discussion/11683/
 """
 import glob
+import itertools
 import os
 import shutil
 
+import numpy as np
 import toolz as tz
 
 from bcbio import broad, utils
@@ -201,7 +203,58 @@ def heterogzygote_counts(paired):
     tumor_counts = _run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.tumor_data)
     normal_counts = (_run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.normal_data)
                      if paired.normal_data else None)
+    if normal_counts:
+        _filter_by_normal_depth(tumor_counts, normal_counts, paired.tumor_data)
     return tumor_counts, normal_counts
+
+def _filter_by_normal_depth(tumor_counts, normal_counts, data):
+    """Filter count files based on median depth, avoiding high depth regions.
+
+    Matches approach used in AMBER to try and avoid problematic genomic regions
+    with high count in the normal:
+    https://github.com/hartwigmedical/hmftools/tree/master/amber#usage
+    """
+    from bcbio.heterogeneity import bubbletree
+    fparams = bubbletree.NORMAL_FILTER_PARAMS
+    tumor_out = "%s-normfilter%s" % utils.splitext_plus(tumor_counts)
+    normal_out = "%s-normfilter%s" % utils.splitext_plus(normal_counts)
+    if not utils.file_uptodate(tumor_out, tumor_counts):
+        with file_transaction(data, tumor_out, normal_out) as (tx_tumor_out, tx_normal_out):
+            median_depth = _get_normal_median_depth(normal_counts)
+            min_normal_depth = median_depth * fparams["min_depth_percent"]
+            max_normal_depth = median_depth * fparams["max_depth_percent"]
+            with open(tumor_counts) as tumor_handle:
+                with open(normal_counts) as normal_handle:
+                    with open(tx_tumor_out, "w") as tumor_out_handle:
+                        with open(tx_normal_out, "w") as normal_out_handle:
+                            header = None
+                            for t, n in itertools.izip(tumor_handle, normal_handle):
+                                if header is None:
+                                    if not n.startswith("@"):
+                                        header = n.strip().split()
+                                    tumor_out_handle.write(t)
+                                    normal_out_handle.write(n)
+                                elif _normal_passes_depth(header, n, min_normal_depth, max_normal_depth):
+                                    tumor_out_handle.write(t)
+                                    normal_out_handle.write(n)
+    return tumor_out, normal_out
+
+def _normal_passes_depth(header, line, min_normal_depth, max_normal_depth):
+    vals = dict(zip(header, line.strip().split()))
+    cur_depth = int(vals["REF_COUNT"]) + int(vals["ALT_COUNT"])
+    return cur_depth >= min_normal_depth and cur_depth <= max_normal_depth
+
+def _get_normal_median_depth(normal_counts):
+    depths = []
+    with open(normal_counts) as in_handle:
+        header = None
+        for line in in_handle:
+            if header is None and not line.startswith("@"):
+                header = line.strip().split()
+            elif header:
+                n_vals = dict(zip(header, line.strip().split()))
+                depths.append(int(n_vals["REF_COUNT"]) + int(n_vals["ALT_COUNT"]))
+    return np.median(depths)
 
 def _run_collect_allelic_counts(pos_file, pos_name, work_dir, data):
     """Counts by alleles for a specific sample and set of positions.

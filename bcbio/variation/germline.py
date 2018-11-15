@@ -98,6 +98,7 @@ def filter_to_pass_and_reject(in_file, paired, out_dir=None):
         out_file = os.path.join(out_dir, os.path.basename(out_file))
     if not utils.file_uptodate(out_file, in_file):
         with file_transaction(paired.tumor_data, out_file) as tx_out_file:
+            max_depth = bubbletree.max_normal_germline_depth(in_file, bubbletree.PARAMS, paired)
             tx_out_plain = tx_out_file.replace(".vcf.gz", ".vcf")
             with contextlib.closing(cyvcf2.VCF(in_file)) as reader:
                 reader = _add_db_to_header(reader)
@@ -109,7 +110,7 @@ def filter_to_pass_and_reject(in_file, paired, out_dir=None):
                             # Germline, check if we should include based on frequencies
                             if "REJECT" in filters or bubbletree.is_info_germline(rec):
                                 stats = bubbletree._is_possible_loh(rec, reader, bubbletree.PARAMS, paired,
-                                                                    use_status=True)
+                                                                    use_status=True, max_normal_depth=max_depth)
                                 if stats:
                                     rec.FILTER = "PASS"
                                     rec.INFO["DB"] = True

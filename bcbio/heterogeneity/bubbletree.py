@@ -140,16 +140,35 @@ def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_fi
             sub_file = _create_subset_file(in_file, ready_bed, work_dir, data)
         else:
             sub_file = in_file
+        max_depth = max_normal_germline_depth(sub_file, params, somatic_info)
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = writer_class(out_handle)
                 writer.write_header()
                 bcf_in = pysam.VariantFile(sub_file)
                 for rec in bcf_in:
-                    stats = _is_possible_loh(rec, bcf_in, params, somatic_info)
+                    stats = _is_possible_loh(rec, bcf_in, params, somatic_info, max_normal_depth=max_depth)
                     if chromhacks.is_autosomal(rec.chrom) and stats is not None:
                         writer.write_row(rec, stats)
     return out_file
+
+
+# thresholds for filtering normal samples based on depth
+# matches those used in PURPLE AMBER caller
+# https://github.com/hartwigmedical/hmftools/blob/a8c5dd2487c8c294c457eb8961c78e08c61a604a/amber/src/main/java/com/hartwig/hmftools/amber/AmberApplication.java#L41
+NORMAL_FILTER_PARAMS = {"min_depth_percent": 0.5, "max_depth_percent": 1.5}
+
+def max_normal_germline_depth(in_file, params, somatic_info):
+    """Calculate threshold for excluding potential heterozygotes based on normal depth.
+    """
+    bcf_in = pysam.VariantFile(in_file)
+    depths = []
+    for rec in bcf_in:
+        stats = _is_possible_loh(rec, bcf_in, params, somatic_info)
+        if tz.get_in(["normal", "depth"], stats):
+            depths.append(tz.get_in(["normal", "depth"], stats))
+    if depths:
+        return np.median(depths) * NORMAL_FILTER_PARAMS["max_depth_percent"]
 
 def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info):
     """Identify heterogeneity blocks corresponding to segmentation from CNV input file.
@@ -335,7 +354,7 @@ def _tumor_normal_stats(rec, somatic_info, vcf_rec):
             out[key]["alt"] = alt
     return out
 
-def _is_possible_loh(rec, vcf_rec, params, somatic_info, use_status=False):
+def _is_possible_loh(rec, vcf_rec, params, somatic_info, use_status=False, max_normal_depth=None):
     """Check if the VCF record is a het in the normal with sufficient support.
 
     Only returns SNPs, since indels tend to have less precise frequency measurements.
@@ -347,6 +366,8 @@ def _is_possible_loh(rec, vcf_rec, params, somatic_info, use_status=False):
         normal_freq = tz.get_in(["normal", "freq"], stats)
         tumor_freq = tz.get_in(["tumor", "freq"], stats)
         if all([d > params["min_depth"] for d in depths]):
+            if max_normal_depth and tz.get_in(["normal", "depth"], stats, 0) > max_normal_depth:
+                return None
             if normal_freq is not None:
                 if normal_freq >= params["min_freq"] and normal_freq <= params["max_freq"]:
                     return stats
