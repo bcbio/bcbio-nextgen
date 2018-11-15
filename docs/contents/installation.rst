@@ -50,7 +50,7 @@ bcbio:
 - The git version control system (http://git-scm.com/)
 - wget for file retrieval (https://www.gnu.org/software/wget/)
 
-Optional requirements:
+Optional tool specific requirements:
 
 - Java 1.7, needed when running GATK < 3.6 or MuTect. This must be available in
   your path so typing ``java -version`` resolves a 1.7 version. bcbio
@@ -62,6 +62,8 @@ Optional requirements:
   <http://mesa3d.sourceforge.net/>`_ (On Ubuntu/deb systems: ``libglu1-mesa``,
   On RedHat/rpm systems: ``mesa-libGLU-devel``). This is only required for
   cancer heterogeneity analysis with BubbleTree.
+- The Pisces tumor-only variant callers requires the `Microsoft .NET runtime
+  <https://www.microsoft.com/net/download/linux-package-manager/rhel/runtime-current>`_.
 
 The `bcbio-nextgen Dockerfile
 <https://github.com/bcbio/bcbio-nextgen/blob/master/Dockerfile#L5>`_ contains
