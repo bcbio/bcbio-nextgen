@@ -327,14 +327,17 @@ To run an analysis:
 
      bcbio_vm.py cwl --systemconfig bcbio_system_arvados.yaml testcwl/config/testcwl.yaml
 
-6. Copy latest bcbio Docker image into your project from bcbio_resources using
-   `arv-copy <https://doc.arvados.org/user/topics/arv-copy.html>`_. You'll need
-   to find the UUID of ``quay.io/bcbio/bcbio-vc`` and ``arvados/jobs``::
+6. In most cases, Arvados should directly pick up the Docker images you need
+   from the public bcbio_resources project in your instance. If you need to
+   manually add to your project, you can copy latest bcbio Docker image into
+   your project from bcbio_resources using `arv-copy
+   <https://doc.arvados.org/user/topics/arv-copy.html>`_. You'll need to find
+   the UUID of ``quay.io/bcbio/bcbio-vc`` and ``arvados/jobs``::
 
      arv-copy $JOBS_ID --project-uuid $PROJECT_ID --src qr1hi --dst qr1hi
      arv-copy $BCBIO_VC_ID --project-uuid $PROJECT_ID --src qr1hi --dst qr1hi
 
-   or import a local bcbio Docker image to your Arvados project::
+   or import local Docker images to your Arvados project::
 
      docker pull arvados/jobs:1.0.20180216164101
      arv-keepdocker --project $PROJECT_ID -- arvados/jobs 1.0.20180216164101
