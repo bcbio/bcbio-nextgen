@@ -3,7 +3,9 @@
 https://github.com/lima1/PureCN
 """
 import os
+import re
 import shutil
+import subprocess
 
 import pandas as pd
 import toolz as tz
@@ -27,13 +29,15 @@ def run(items):
     purecn_out = _run_purecn(paired, work_dir)
     # XXX Currently finding edge case failures with Dx calling, needs additional testing
     # purecn_out = _run_purecn_dx(purecn_out, paired)
-    purecn_out["variantcaller"] = "purecn"
     out = []
     if paired.normal_data:
         out.append(paired.normal_data)
-    if "sv" not in paired.tumor_data:
-        paired.tumor_data["sv"] = []
-    paired.tumor_data["sv"].append(purecn_out)
+    if purecn_out:
+        purecn_out["variantcaller"] = "purecn"
+        if "sv" not in paired.tumor_data:
+            paired.tumor_data["sv"] = []
+        paired.tumor_data["sv"].append(purecn_out)
+    out.append(paired.tumor_data)
     return out
 
 def _run_purecn_dx(out, paired):
@@ -69,8 +73,9 @@ def _run_purecn(paired, work_dir):
     """
     segfns = {"cnvkit": _segment_normalized_cnvkit, "gatk-cnv": _segment_normalized_gatk}
     out_base, out, all_files = _get_purecn_files(paired, work_dir)
+    failed_file = out_base + "-failed.log"
     cnr_file = tz.get_in(["depth", "bins", "normalized"], paired.tumor_data)
-    if not utils.file_uptodate(out["rds"], cnr_file):
+    if not utils.file_uptodate(out["rds"], cnr_file) and not utils.file_exists(failed_file):
         cnr_file, seg_file = segfns[cnvkit.bin_approach(paired.tumor_data)](cnr_file, work_dir, paired)
         from bcbio import heterogeneity
         vcf_file = heterogeneity.get_variants(paired.tumor_data, include_germline=False)[0]["vrn_file"]
@@ -86,11 +91,26 @@ def _run_purecn(paired, work_dir):
                    "--segfile", seg_file, "--funsegmentation", "Hclust", "--maxnonclonal", "0.3"]
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
-            do.run(cmd, "PureCN copy number calling")
+            try:
+                do.run(cmd, "PureCN copy number calling")
+            except subprocess.CalledProcessError as msg:
+                if _allowed_errors(str(msg)):
+                    logger.info("PureCN failed to find solution for %s: skipping" %
+                                dd.get_sample_name(paired.tumor_data))
+                    with open(failed_file, "w") as out_handle:
+                        out_handle.write(str(msg))
+                else:
+                    logger.exception()
+                    raise
             for f in all_files:
-                shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
-                            os.path.join(os.path.dirname(out_base), f))
-    return out
+                if os.path.exists(os.path.join(os.path.dirname(tx_out_base), f)):
+                    shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
+                                os.path.join(os.path.dirname(out_base), f))
+    return out if os.path.exists(out["rds"]) else None
+
+def _allowed_errors(msg):
+    allowed = ["Could not find valid purity and ploidy solution."]
+    return any([len(re.findall(m, msg)) >= 0 for m in allowed])
 
 def _segment_normalized_gatk(cnr_file, work_dir, paired):
     """Segmentation of normalized inputs using GATK4, converting into standard input formats.
