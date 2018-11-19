@@ -92,7 +92,7 @@ def run_rnaseq_ann_filter(data):
     """
     data = to_single_data(data)
     if dd.get_vrn_file(data):
-        eff_file = effects.add_to_vcf(dd.get_vrn_file(data), data)
+        eff_file = effects.add_to_vcf(dd.get_vrn_file(data), data)[0]
         if eff_file:
             data = dd.set_vrn_file(data, eff_file)
         ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
