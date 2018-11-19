@@ -106,7 +106,8 @@ def _run_purecn(paired, work_dir):
                 if os.path.exists(os.path.join(os.path.dirname(tx_out_base), f)):
                     shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
                                 os.path.join(os.path.dirname(out_base), f))
-    return out if os.path.exists(out["rds"]) else None
+    out = _get_purecn_files(paired, work_dir, require_exist=True)[1]
+    return out if (out.get("rds") and os.path.exists(out["rds"])) else None
 
 def _allowed_errors(msg):
     allowed = ["Could not find valid purity and ploidy solution."]
@@ -173,7 +174,7 @@ def _remove_overlaps(in_file, out_dir, data):
                     out_handle.write(prev_line)
     return out_file
 
-def _get_purecn_files(paired, work_dir):
+def _get_purecn_files(paired, work_dir, require_exist=False):
     """Retrieve organized structure of PureCN output files.
     """
     out_base = os.path.join(work_dir, "%s-purecn" % (dd.get_sample_name(paired.tumor_data)))
@@ -184,14 +185,16 @@ def _get_purecn_files(paired, work_dir):
             cur_file = "%s.pdf" % out_base
         else:
             cur_file = "%s_%s.pdf" % (out_base, plot)
-        out["plot"][plot] = cur_file
-        all_files.append(os.path.basename(cur_file))
+        if not require_exist or os.path.exists(cur_file):
+            out["plot"][plot] = cur_file
+            all_files.append(os.path.basename(cur_file))
     for key, ext in [["summary", ".csv"], ["dnacopy", "_dnacopy.seg"], ["genes", "_genes.csv"],
                      ["log", ".log"], ["loh", "_loh.csv"], ["rds", ".rds"],
                      ["variants", "_variants.csv"]]:
         cur_file = "%s%s" % (out_base, ext)
-        out[key] = cur_file
-        all_files.append(os.path.basename(cur_file))
+        if not require_exist or os.path.exists(cur_file):
+            out[key] = cur_file
+            all_files.append(os.path.basename(cur_file))
     return out_base, out, all_files
 
 def _sv_workdir(data):
