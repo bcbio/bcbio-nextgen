@@ -128,8 +128,10 @@ def _merge_list_fastqs(files, out_file, config):
     if not file_exists(out_file):
         files = [_gzip_fastq(fn) for fn in files]
         if len(files) == 1:
-            # os.symlink(files[0], out_file)
-            shutil.move(files[0], out_file)
+            if "remove_source" in config and config["remove_source"]:
+                shutil.move(files[0], out_file)
+            else:
+                os.symlink(files[0], out_file)
             return out_file
         with file_transaction(out_file) as file_txt_out:
             files_str = " ".join(list(files))

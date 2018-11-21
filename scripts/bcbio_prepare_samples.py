@@ -132,6 +132,8 @@ if __name__ == "__main__":
     parser.add_argument("--separators", nargs="*",
                         default=["R", "_", "-", "."],
                         help="Space separated list of separators that indicates paired files.")
+    parser.add_argument("--remove-source", action='store_true', default=False,
+                        help="Remove original files.")
     parser.add_argument("-n", "--numcores", type=int,
                         default=1, help="Number of concurrent jobs to process.")
     parser.add_argument("-c", "--cores-per-job", type=int,
@@ -175,6 +177,7 @@ if __name__ == "__main__":
     dirs = {'work': os.path.abspath(os.getcwd())}
     system.write_info(dirs, parallel, config)
     sysinfo = system.machine_info()[0]
+    config["remove_source"] = args.remove_source
     samples = _get_samples_to_process(args.csv, out_dir, config, args.force_single, args.separators)
     if not samples:
         print("No samples found.")
