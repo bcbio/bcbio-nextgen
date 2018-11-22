@@ -138,7 +138,7 @@ def annotate_gemini(data):
     """Annotate with population calls if have data installed.
     """
     r = dd.get_variation_resources(data)
-    if r.get("exac") and os.path.exists(r["exac"]):
+    if all([r.get(k) and os.path.exists(r[k]) for k in ["exac", "gnomad_exome"]]):
         return True
     return False
 
