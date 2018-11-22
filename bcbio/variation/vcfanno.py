@@ -103,6 +103,7 @@ def find_annotations(data):
     for c in _default_conf_files(data):
         if c not in conf_files:
             conf_files.append(c)
+    conf_checkers = {"gemini": annotate_gemini, "somatic": _annotate_somatic}
     out = []
     annodir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)),
                                                             os.pardir, "config", "vcfanno")))
@@ -111,7 +112,9 @@ def find_annotations(data):
             conffn = conf_file
         else:
             conffn = os.path.join(annodir, conf_file + ".conf")
-        if not utils.file_exists(conffn):
+        if conf_file in conf_checkers and not conf_checkers[conf_file](data):
+            logger.warn("Skipping vcfanno configuration: %s. Not all input files found." % conf_file)
+        elif not utils.file_exists(conffn):
             build = dd.get_genome_build(data)
             CONF_NOT_FOUND = (
                 "The vcfanno configuration {conffn} was not found for {build}, skipping.")
@@ -138,9 +141,7 @@ def annotate_gemini(data):
     """Annotate with population calls if have data installed.
     """
     r = dd.get_variation_resources(data)
-    if all([r.get(k) and os.path.exists(r[k]) for k in ["exac", "gnomad_exome"]]):
-        return True
-    return False
+    return all([r.get(k) and os.path.exists(r[k]) for k in ["exac", "gnomad_exome"]])
 
 def _annotate_somatic(data):
     """Annotate somatic calls if we have cosmic data installed.
