@@ -51,7 +51,8 @@ script:
   - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_somatic
   # -- platform integration
   - sudo mkdir -p /etc/pki/tls/certs && sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
-  - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_arvados
+  # XXX Arvados tests failing with 404 when contacting from Travis
+  #- py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_arvados
   # -- Cleanup variant docker image
   - docker ps -a -q | xargs --no-run-if-empty docker rm
   - docker rmi -f quay.io/bcbio/bcbio-vc
