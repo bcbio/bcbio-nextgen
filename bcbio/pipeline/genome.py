@@ -49,6 +49,7 @@ def add_required_resources(resources):
                 ["variation", "germline_het_pon"],
                 ["variation", "train_hapmap"], ["variation", "train_indels"],
                 ["variation", "editing"], ["variation", "exac"], ["variation", "esp"],
+                ["variation", "gnomad_exome"],
                 ["variation", "1000g"], ["aliases", "human"]]
     for key in required:
         if not tz.get_in(key, resources):

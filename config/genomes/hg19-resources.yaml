@@ -1,4 +1,4 @@
-version: 49
+version: 50
 
 aliases:
   human: true
@@ -15,6 +15,7 @@ variation:
   clinvar: ../variation/clinvar.vcf.gz
   esp: ../variation/esp.vcf.gz
   exac: ../variation/exac.vcf.gz
+  gnomad_exome: ../variation/gnomad_exome.vcf.gz
   1000g: ../variation/1000g.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   polyx: ../coverage/problem_regions/repeats/polyx.bed.gz

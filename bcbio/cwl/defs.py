@@ -207,6 +207,7 @@ def _variant_vc(checkpoints):
                 ["genome_resources", "variation", "clinvar"],
                 ["genome_resources", "variation", "cosmic"], ["genome_resources", "variation", "dbsnp"],
                 ["genome_resources", "variation", "esp"], ["genome_resources", "variation", "exac"],
+                ["genome_resources", "variation", "gnomad_exome"],
                 ["genome_resources", "variation", "1000g"],
                 ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
                 ["genome_resources", "variation", "encode_blacklist"],
