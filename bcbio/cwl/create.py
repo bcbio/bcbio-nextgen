@@ -92,7 +92,7 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
         tmp_disk = int(math.ceil(out_disk * 0.5))
         out_disk = int(math.ceil(out_disk))
 
-    bcbio_docker_disk = 10 * 1024  # Minimum requirements for bcbio Docker image
+    bcbio_docker_disk = (10 if cur_remotes else 1) * 1024  # Minimum requirements for bcbio Docker image
     disk_hint = {"outdirMin": bcbio_docker_disk + out_disk, "tmpdirMin": tmp_disk}
     # Skip input disk for steps which require only transformation (and thus no staging)
     if no_files:
