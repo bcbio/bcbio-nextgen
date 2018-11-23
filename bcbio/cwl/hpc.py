@@ -166,10 +166,11 @@ _FILESYSTEM_CONFIG = {
         }
 """,
   "local_container": """
-        gcs {
-          auth = "application-default"
+        local {
+          localization: ["hard-link", "copy"]
           caching {
-            duplication-strategy = "copy"
+            duplication-strategy: ["hard-link", "copy"]
+            hashing-strategy: "file"
           }
         }
 """
