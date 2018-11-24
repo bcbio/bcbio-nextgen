@@ -186,7 +186,7 @@ def _lowfreq_linear_filter(tumor_index, is_paired):
 
     https://github.com/bcbio/bcbio_validations/tree/master/somatic-lowfreq
 
-    The classifier uses strand bias (SBF), variant depth (VD) and read mismatches (NM) and
+    The classifier uses strand bias (SBF) and read mismatches (NM) and
     applies only for low frequency (<2%) and low depth (<30) variants.
     """
     if is_paired:
@@ -195,12 +195,9 @@ def _lowfreq_linear_filter(tumor_index, is_paired):
     else:
         sbf = "INFO/SBF"
         nm = "INFO/NM"
-    cmd = ("""bcftools filter --soft-filter 'LowFreqBiasIndel' --mode '+' """
-           """-e 'TYPE!="snp" && (FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30) """
-           """&& -1.9549 + 0.9401 * {sbf} + (-2.2070 * {nm}) + 0.0755 * FORMAT/VD[{tumor_index}] < -2.5'"""
-           """ | bcftools filter --soft-filter 'LowFreqBiasSNP' --mode '+' """
-           """-e 'TYPE="snp" && (FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30) """
-           """&& -1.7075 + 1.6367 * {sbf} + (-2.7534 * {nm}) + 0.2206 * FORMAT/VD[{tumor_index}] < -2.5'""")
+    cmd = ("""bcftools filter --soft-filter 'LowFreqBias' --mode '+' """
+           """-e  'FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30 """
+           """&& {sbf} < 0.1 && {nm} >= 2.0'""")
     return cmd.format(**locals())
 
 def add_db_germline_flag(line):
