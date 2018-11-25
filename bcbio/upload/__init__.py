@@ -311,7 +311,7 @@ def _sample_variant_file_in_population(x):
     run decomposition for gemini.
     '"""
     if "population" in x:
-        a = _get_variant_file(x, ("population", "vcf"))
+        a = _get_project_vcf(x)
         b = _get_variant_file(x, ("vrn_file",))
         decomposed = tz.get_in(("population", "decomposed"), x)
         if (a and b and not decomposed and len(a) > 0 and len(b) > 0 and
@@ -639,6 +639,16 @@ def _add_batch(x, sample):
         x["batch"] = dd.get_sample_name(sample)
     return x
 
+def _get_project_vcf(x, suffix=""):
+    """Get our project VCF, either from the population or the variant batch file.
+    """
+    vcfs = _get_variant_file(x, ("population", "vcf"), suffix=suffix)
+    if not vcfs:
+        vcfs = _get_variant_file(x, ("vrn_file_batch", ), suffix=suffix, ignore_do_upload=True)
+        if not vcfs and x.get("variantcaller") == "ensemble":
+            vcfs = _get_variant_file(x, ("vrn_file", ), suffix=suffix)
+    return vcfs
+
 def _get_files_project(sample, upload_config):
     """Retrieve output files associated with an entire analysis project.
     """
@@ -695,10 +705,7 @@ def _get_files_project(sample, upload_config):
                             "type": "sqlite",
                             "variantcaller": x["variantcaller"]})
             suffix = "-annotated-decomposed" if tz.get_in(("population", "decomposed"), x) else "-annotated"
-            # Get our VCF, either from the population or the variant batch file
-            vcfs = _get_variant_file(x, ("population", "vcf"), suffix=suffix)
-            if not vcfs:
-                vcfs = _get_variant_file(x, ("vrn_file_batch", ), suffix=suffix, ignore_do_upload=True)
+            vcfs = _get_project_vcf(x, suffix)
             out.extend([_add_batch(f, sample) for f in vcfs])
     for x in sample.get("variants", []):
         if x.get("validate") and x["validate"].get("grading_summary"):
@@ -732,11 +739,11 @@ def _get_files_project(sample, upload_config):
         count_file = dd.get_combined_counts(sample)
         if sample["analysis"].lower() == "scrna-seq":
             out.append({"path": count_file,
-                    "type": "mtx"})
+                        "type": "mtx"})
             out.append({"path": count_file + ".rownames",
-                    "type": "rownames"})
+                        "type": "rownames"})
             out.append({"path": count_file + ".colnames",
-                    "type": "colnames"})
+                        "type": "colnames"})
             umi_file = os.path.splitext(count_file)[0] + "-dupes.mtx"
             if utils.file_exists(umi_file):
                 out.append({"path": umi_file,
