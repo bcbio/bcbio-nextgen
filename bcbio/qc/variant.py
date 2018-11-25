@@ -118,9 +118,10 @@ def get_active_vcinfo(data, use_ensemble=True):
     if len(active_vs) > 0:
         if use_ensemble:
             e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
-            if len(e_active_vs) > 0:
-                return e_active_vs[0]
-        return active_vs[0]
+        else:
+            e_active_vs = [v for v in active_vs if v.get("variantcaller") != "ensemble"]
+        if len(e_active_vs) > 0:
+            return e_active_vs[0]
 
 def extract_germline_vcinfo(data, out_dir):
     """Extract germline VCFs from existing tumor inputs.
