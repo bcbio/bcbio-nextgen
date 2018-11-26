@@ -13,7 +13,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, joint, ploidy, vcfutils
+from bcbio.variation import bamprep, bedutils, joint, ploidy, vcfutils
 
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run strelka2 variant calling, either paired tumor/normal or germline calling.
@@ -320,3 +320,61 @@ def _run_workflow(data, workflow_file, work_dir):
     cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data), "--quiet"]
     do.run(cmd, "Run Strelka2: %s" % dd.get_sample_name(data))
     utils.remove_safe(os.path.join(work_dir, "workspace"))
+
+# ## Joint calling
+
+def run_gvcfgenotyper(data, orig_region, vrn_files, out_file):
+    """Merge strelka2 and Illumina compatible gVCFs with gvcfgenotyper.
+
+    https://github.com/Illumina/gvcfgenotyper
+
+    Also need to explore GLnexus (https://github.com/dnanexus-rnd/GLnexus)
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            regions = _find_gvcf_blocks(vrn_files[0], bamprep.region_to_gatk(orig_region),
+                                        os.path.dirname(tx_out_file))
+            if len(regions) == 1:
+                _run_gvcfgenotyper(data, regions[0], vrn_files, tx_out_file)
+            else:
+                split_outs = [_run_gvcfgenotyper(data, r, vrn_files,
+                                                 "%s-%s.vcf.gz" % (utils.splitext_plus(out_file)[0],
+                                                                   r.replace(":", "_").replace("-", "_")))
+                              for r in regions]
+                vcfutils.concat_variant_files(split_outs, tx_out_file, regions,
+                                              dd.get_ref_file(data), data["config"])
+    return vcfutils.bgzip_and_index(out_file, data["config"])
+
+def _run_gvcfgenotyper(data, region, vrn_files, out_file):
+    """Run gvcfgenotyper on a single gVCF region in input file.
+    """
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            input_file = "%s-inputs.txt" % utils.splitext_plus(tx_out_file)[0]
+            with open(input_file, "w") as out_handle:
+                out_handle.write("%s\n" % "\n".join(vrn_files))
+            cmd = ["gvcfgenotyper", "-f", dd.get_ref_file(data), "-l", input_file,
+                   "-r", region, "-O", "z", "-o", tx_out_file]
+            do.run(cmd, "gvcfgenotyper: %s %s" % (dd.get_sample_name(data), region))
+    return out_file
+
+def _find_gvcf_blocks(vcf_file, region, tmp_dir):
+    """Retrieve gVCF blocks within our current evaluation region.
+
+    gvcfgenotyper does not support calling larger regions with individual
+    coverage blocks, so we split our big region into potentially multiple.
+    """
+    region_file = os.path.join(tmp_dir, "cur_region.bed")
+    with open(region_file, "w") as out_handle:
+        chrom, coords = region.split(":")
+        start, end = coords.split("-")
+        out_handle.write("\t".join([chrom, start, end]) + "\n")
+    final_file = os.path.join(tmp_dir, "split_regions.bed")
+    cmd = "gvcf_regions.py {vcf_file} | bedtools intersect -a - -b {region_file} > {final_file}"
+    do.run(cmd.format(**locals()))
+    regions = []
+    with open(final_file) as in_handle:
+        for line in in_handle:
+            chrom, start, end = line.strip().split("\t")
+            regions.append("%s:%s-%s" % (chrom, start, end))
+    return regions

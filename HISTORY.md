@@ -2,6 +2,8 @@
 
 - VarDict low frequency somatic filters: generalize strand and mismatch based
   filter based on cross-validation to avoid over filtering on high depth panels.
+- strelka2 joint calling: switch to improved gvcfgenotyper approach for calling
+  from gVCFs.
 - Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
   Ben Liesfeld and Roland Ewald.
 - RNA-seq variation: add snpEff effects to output variant calls. Thanks to Manasa Surakala.

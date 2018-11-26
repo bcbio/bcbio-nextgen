@@ -273,7 +273,7 @@ def _variant_jointvc():
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]), cwlout(["region"], "string")],
-            "bcbio-vc", ["gatk4", "gvcftools", "sentieon"],
+            "bcbio-vc", ["gatk4", "gvcfgenotyper", "sentieon"],
             disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
