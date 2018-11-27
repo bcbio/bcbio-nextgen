@@ -24,6 +24,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics, programs, versioncheck
 from bcbio.provenance import data as provenancedata
 from bcbio.qc import viral
+
 from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils, vcfanno
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
@@ -477,6 +478,23 @@ def _check_for_misplaced(xs, subkey, other_keys):
                                     "----------------+-----------------+----------------"] +
                                    ["% 15s | % 15s | % 15s" % (a, b, c) for (a, b, c) in problems]))
 
+def _check_for_degenerate_interesting_groups(items):
+    """ Make sure interesting_groups specify existing metadata and that
+    the interesting_group is not all of the same for all of the samples
+    """
+    igkey = ("algorithm", "bcbiornaseq", "interesting_groups")
+    interesting_groups = tz.get_in(igkey, items[1], [])
+    if isinstance(interesting_groups, str):
+        interesting_groups = [interesting_groups]
+    for group in interesting_groups:
+        values = [tz.get_in(("metadata", group), x, None) for x in items]
+        if all(x is None for x in values):
+            raise ValueError("group %s is labelled as an interesting group, "
+                             "but does not appear in the metadata." % group)
+        if len(list(tz.unique(values))) == 1:
+            raise ValueError("group %s is marked as an interesting group, "
+                             "but all samples have the same value. % group")
+
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
 ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
@@ -722,6 +740,7 @@ def _check_sample_config(items, in_file, config):
     _check_quality_format(items)
     _check_for_duplicates(items, "lane")
     _check_for_duplicates(items, "description")
+    _check_for_degenerate_interesting_groups(items)
     _check_for_batch_clashes(items)
     _check_for_problem_somatic_batches(items, config)
     _check_for_misplaced(items, "algorithm",
