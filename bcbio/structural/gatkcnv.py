@@ -204,13 +204,15 @@ def heterogzygote_counts(paired):
     normal_counts = (_run_collect_allelic_counts(cur_het_bed, key, work_dir, paired.normal_data)
                      if paired.normal_data else None)
     if normal_counts:
-        _filter_by_normal_depth(tumor_counts, normal_counts, paired.tumor_data)
+        tumor_counts, normal_counts = _filter_by_normal(tumor_counts, normal_counts, paired.tumor_data)
     return tumor_counts, normal_counts
 
-def _filter_by_normal_depth(tumor_counts, normal_counts, data):
-    """Filter count files based on median depth, avoiding high depth regions.
+def _filter_by_normal(tumor_counts, normal_counts, data):
+    """Filter count files based on normal frequency and median depth, avoiding high depth regions.
 
-    Matches approach used in AMBER to try and avoid problematic genomic regions
+    For frequency, restricts normal positions to those between 0.4 and 0.65
+
+    For depth, matches approach used in AMBER to try and avoid problematic genomic regions
     with high count in the normal:
     https://github.com/hartwigmedical/hmftools/tree/master/amber#usage
     """
@@ -234,10 +236,20 @@ def _filter_by_normal_depth(tumor_counts, normal_counts, data):
                                         header = n.strip().split()
                                     tumor_out_handle.write(t)
                                     normal_out_handle.write(n)
-                                elif _normal_passes_depth(header, n, min_normal_depth, max_normal_depth):
+                                elif (_normal_passes_depth(header, n, min_normal_depth, max_normal_depth) and
+                                      _normal_passes_freq(header, n, fparams)):
                                     tumor_out_handle.write(t)
                                     normal_out_handle.write(n)
     return tumor_out, normal_out
+
+def _normal_passes_freq(header, line, fparams):
+    vals = dict(zip(header, line.strip().split()))
+    cur_depth = float(vals["REF_COUNT"]) + int(vals["ALT_COUNT"])
+    if cur_depth > 0:
+        cur_freq = float(vals["ALT_COUNT"]) / cur_depth
+    else:
+        cur_freq = 0.0
+    return cur_freq >= fparams["min_freq_narrow"] and cur_freq <= fparams["max_freq_narrow"]
 
 def _normal_passes_depth(header, line, min_normal_depth, max_normal_depth):
     vals = dict(zip(header, line.strip().split()))

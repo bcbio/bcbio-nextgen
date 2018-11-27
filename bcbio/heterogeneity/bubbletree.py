@@ -156,7 +156,8 @@ def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_fi
 # thresholds for filtering normal samples based on depth
 # matches those used in PURPLE AMBER caller
 # https://github.com/hartwigmedical/hmftools/blob/a8c5dd2487c8c294c457eb8961c78e08c61a604a/amber/src/main/java/com/hartwig/hmftools/amber/AmberApplication.java#L41
-NORMAL_FILTER_PARAMS = {"min_depth_percent": 0.5, "max_depth_percent": 1.5}
+NORMAL_FILTER_PARAMS = {"min_depth_percent": 0.5, "max_depth_percent": 1.5,
+                        "min_freq_narrow": 0.4, "max_freq_narrow": 0.65}
 
 def max_normal_germline_depth(in_file, params, somatic_info):
     """Calculate threshold for excluding potential heterozygotes based on normal depth.
