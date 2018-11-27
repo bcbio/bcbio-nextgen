@@ -69,7 +69,7 @@ def upgrade_bcbio(args):
             _update_conda_packages()
             _check_for_conda_problems()
             print("Upgrade of bcbio-nextgen code complete.")
-    if args.cwl:
+    if args.cwl and args.upgrade:
         _update_bcbiovm()
 
     try:
@@ -328,7 +328,10 @@ def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
     from fabric.api import env
-    data_dir = _get_data_dir()
+    if hasattr(args, "datadir") and args.datadir and os.path.exists(args.datadir):
+        data_dir = args.datadir
+    else:
+        data_dir = _get_data_dir()
     s = _default_deploy_args(args)
     s["actions"] = ["setup_biodata"]
     tooldir = args.tooldir or get_defaults().get("tooldir")
