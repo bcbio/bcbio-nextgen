@@ -429,11 +429,11 @@ def use_vqsr(algs, call_file=None):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
             continue
-        if "vqsr" in alg.get("tools_off", []):  # VQSR turned off
+        if "vqsr" in (alg.get("tools_off") or []):  # VQSR turned off
             continue
         for c in callers:
             if c in vqsr_callers:
-                if "vqsr" in alg.get("tools_on", []):  # VQSR turned on:
+                if "vqsr" in (alg.get("tools_on") or []):  # VQSR turned on:
                     vqsr_supported[c] += 1
                     coverage_intervals.add("genome")
                 # Do not try VQSR for gVCF inputs
