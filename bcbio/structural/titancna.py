@@ -16,7 +16,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import vcfutils
+from bcbio.variation import effects, vcfutils
 from bcbio.structural import cnvkit
 
 def run(items):
@@ -67,7 +67,7 @@ def _finalize_sv(solution_file, data):
                                                                          ("loh", "/%s_LOH.pdf" % base)]
                             if os.path.exists(solution["path"] + ext)])
         out["subclones"] = "%s.segs.txt" % solution["path"]
-        out["vrn_file"] = _segs_to_vcf(out["subclones"], data)
+        out["vrn_file"] = to_vcf(out["subclones"], "TitanCNA", _get_header, _seg_to_vcf, data)
     return out
 
 def _should_run(het_file):
@@ -181,10 +181,11 @@ def _titan_cn_file(cnr_file, work_dir, data):
 # ## VCF converstion
 
 _vcf_header = """##fileformat=VCFv4.2
-##source=TitanCNA
+##source={caller}
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=FOLD_CHANGE_LOG,Number=1,Type=Float,Description="Log fold change">
+##INFO=<ID=PROBES,Number=1,Type=Integer,Description="Number of probes in CNV">
 ##INFO=<ID=CN,Number=1,Type=Integer,Description="Copy Number: Overall">
 ##INFO=<ID=MajorCN,Number=1,Type=Integer,Description="Copy Number: Major allele">
 ##INFO=<ID=MinorCN,Number=1,Type=Integer,Description="Copy Number: Minor allele">
@@ -195,7 +196,18 @@ _vcf_header = """##fileformat=VCFv4.2
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 """
 
-def _segs_to_vcf(in_file, data):
+def _get_header(in_handle):
+    return in_handle.readline().strip().split("\t")
+
+def _seg_to_vcf(cur):
+    svtype = _get_svtype(cur["TITAN_call"])
+    info = ["SVTYPE=%s" % svtype, "END=%s" % cur["End_Position.bp."],
+            "CN=%s" % cur["Copy_Number"], "MajorCN=%s" % cur["MajorCN"],
+            "MinorCN=%s" % cur["MinorCN"], "FOLD_CHANGE_LOG=%s" % cur["Median_logR"]]
+    return [cur["Chromosome"], cur["Start_Position.bp."], ".", "N", "<%s>" % svtype, ".",
+            ".", ";".join(info), "GT", "0/1"]
+
+def to_vcf(in_file, caller, header_fn, vcf_fn, data):
     """Convert output TitanCNA segs file into bgzipped VCF.
     """
     out_file = "%s.vcf" % utils.splitext_plus(in_file)[0]
@@ -203,21 +215,17 @@ def _segs_to_vcf(in_file, data):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
-                    out_handle.write(_vcf_header)
+                    out_handle.write(_vcf_header.format(caller=caller))
                     out_handle.write("\t".join(["#CHROM", "POS", "ID", "REF", "ALT", "QUAL",
-                                                "FILTER", "INFO", "FORMAT", dd.get_sample_name(data)])
-                                     + "\n")
-                    header = in_handle.readline().strip().split("\t")
+                                                "FILTER", "INFO", "FORMAT", dd.get_sample_name(data)]) + "\n")
+                    header, in_handle = header_fn(in_handle)
                     for line in in_handle:
-                        cur = dict(zip(header, line.strip().split("\t")))
-                        svtype = _get_svtype(cur["TITAN_call"])
-                        info = ["SVTYPE=%s" % svtype, "END=%s" % cur["End_Position.bp."],
-                                "CN=%s" % cur["Copy_Number"], "MajorCN=%s" % cur["MajorCN"],
-                                "MinorCN=%s" % cur["MinorCN"], "FOLD_CHANGE_LOG=%s" % cur["Median_logR"]]
-                        out = [cur["Chromosome"], cur["Start_Position.bp."], ".", "N", "<%s>" % svtype, ".",
-                            ".", ";".join(info), "GT", "0/1"]
-                        out_handle.write("\t".join(out) + "\n")
-    return vcfutils.bgzip_and_index(out_file, data["config"])
+                        out = vcf_fn(dict(zip(header, line.strip().split("\t"))))
+                        if out:
+                            out_handle.write("\t".join(out) + "\n")
+    out_file = vcfutils.bgzip_and_index(out_file, data["config"])
+    effects_vcf, _ = effects.add_to_vcf(out_file, data, "snpeff")
+    return effects_vcf or out_file
 
 def _get_svtype(call):
     """Retrieve structural variant type from current TitanCNA events.

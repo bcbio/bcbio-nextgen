@@ -34,10 +34,8 @@ def run(items, background=None):
 
 def _run_paired(paired):
     """Run somatic variant calling pipeline.
-
-    TODO:
-    - Convert to standard VCF format
     """
+    from bcbio.structural import titancna
     work_dir = _sv_workdir(paired.tumor_data)
     seg_files = model_segments(tz.get_in(["depth", "bins", "normalized"], paired.tumor_data),
                                work_dir, paired)
@@ -49,6 +47,8 @@ def _run_paired(paired):
         paired.tumor_data["sv"] = []
     paired.tumor_data["sv"].append({"variantcaller": "gatk-cnv",
                                     "call_file": call_file,
+                                    "vrn_file": titancna.to_vcf(call_file, "GATK4-CNV", _get_seg_header,
+                                                                _seg_to_vcf, paired.tumor_data),
                                     "seg": seg_files["seg"],
                                     "plot": plot_model_segments(seg_files, work_dir, paired.tumor_data)})
     out.append(paired.tumor_data)
@@ -285,6 +285,26 @@ def _run_with_memory_scaling(params, tx_out_file, data):
     memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
     broad_runner = broad.runner_from_config(data["config"])
     broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+
+# ## VCF output
+
+def _get_seg_header(in_handle):
+    for line in in_handle:
+        if not line.startswith("@"):
+            break
+    return line.strip().split("\t"), in_handle
+
+def _seg_to_vcf(vals):
+    """Convert GATK CNV calls seg output to a VCF line.
+    """
+    call_to_cn = {"+": 3, "-": 1}
+    if vals["CALL"] not in ["0"]:
+        info = ["FOLD_CHANGE_LOG=%s" % vals["MEAN_LOG2_COPY_RATIO"],
+                "PROBES=%s" % vals["NUM_POINTS_COPY_RATIO"],
+                "END=%s" % vals["END"],
+                "CN=%s" % call_to_cn[vals["CALL"]]]
+        return [vals["CONTIG"], vals["START"], ".", "N", "<CNV>", ".",
+                ";".join(info), "GT", "0/1"]
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
