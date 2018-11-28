@@ -139,7 +139,7 @@ def _variant_hla(checkpoints):
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
               cwlout(["hla", "call_file"], ["File", "null"])],
              "bcbio-vc", ["optitype", "razers3=3.5.0", "coincbc"])]
-    return hla, []
+    return hla, [["hla", "call_file"]]
 
 def _variant_vc(checkpoints):
     """Add variant calling to workflow, if configured.
