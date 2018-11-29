@@ -47,8 +47,8 @@ def umi_transform(data):
             return data
         else:
             logger.error("No UMI transform was specified, but %s does not look "
-                         "pre-transformed." % fq1)
-            sys.exit(1)
+                         "pre-transformed. Assuming non-umi data." % fq1)
+            return data
 
     if file_exists(transform):
         transform_file = transform
