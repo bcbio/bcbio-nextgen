@@ -34,6 +34,9 @@ def run(items):
         out.append(paired.normal_data)
     if purecn_out:
         purecn_out["variantcaller"] = "purecn"
+        if "loh" in purecn_out:
+            purecn_out["vcf"] = titancna.to_vcf(out["loh"], "PureCN", _get_header, _loh_to_vcf, paired.tumor_data,
+                                                sep=",")
         if "sv" not in paired.tumor_data:
             paired.tumor_data["sv"] = []
         paired.tumor_data["sv"].append(purecn_out)
@@ -188,7 +191,7 @@ def _get_purecn_files(paired, work_dir, require_exist=False):
         if not require_exist or os.path.exists(cur_file):
             out["plot"][plot] = cur_file
             all_files.append(os.path.basename(cur_file))
-    for key, ext in [["summary", ".csv"], ["dnacopy", "_dnacopy.seg"], ["genes", "_genes.csv"],
+    for key, ext in [["hetsummary", ".csv"], ["dnacopy", "_dnacopy.seg"], ["genes", "_genes.csv"],
                      ["log", ".log"], ["loh", "_loh.csv"], ["rds", ".rds"],
                      ["variants", "_variants.csv"]]:
         cur_file = "%s%s" % (out_base, ext)
@@ -200,3 +203,27 @@ def _get_purecn_files(paired, work_dir, require_exist=False):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                            dd.get_sample_name(data), "purecn"))
+
+# ## VCF output
+
+def _get_header(in_handle):
+    return in_handle.readline().strip().split(","), in_handle
+
+def _loh_to_vcf(cur):
+    """Convert LOH output into standardized VCF.
+    """
+    cn = int(float(cur["C"]))
+    minor_cn = int(float(cur["M"]))
+    if cur["type"].find("LOH"):
+        svtype = "LOH"
+    elif cn > 2:
+        svtype = "DUP"
+    elif cn < 1:
+        svtype = "DEL"
+    else:
+        svtype = None
+    if svtype:
+        info = ["SVTYPE=%s" % svtype, "END=%s" % cur["end"],
+                "CN=%s" % cn, "MajorCN=%s" % (cn - minor_cn), "MinorCN=%s" % minor_cn]
+        return [cur["chr"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
+                ";".join(info), "GT", "0/1"]

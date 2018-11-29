@@ -67,6 +67,7 @@ def _finalize_sv(solution_file, data):
                                                                          ("loh", "/%s_LOH.pdf" % base)]
                             if os.path.exists(solution["path"] + ext)])
         out["subclones"] = "%s.segs.txt" % solution["path"]
+        out["hetsummary"] = solution_file
         out["vrn_file"] = to_vcf(out["subclones"], "TitanCNA", _get_header, _seg_to_vcf, data)
     return out
 
@@ -191,13 +192,13 @@ _vcf_header = """##fileformat=VCFv4.2
 ##INFO=<ID=MinorCN,Number=1,Type=Integer,Description="Copy Number: Minor allele">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
-##ALT=<ID=LOS,Description="Loss of heterozygosity">
+##ALT=<ID=LOH,Description="Loss of heterozygosity">
 ##ALT=<ID=CNV,Description="Copy number variable region">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 """
 
 def _get_header(in_handle):
-    return in_handle.readline().strip().split("\t")
+    return in_handle.readline().strip().split("\t"), in_handle
 
 def _seg_to_vcf(cur):
     svtype = _get_svtype(cur["TITAN_call"])
@@ -207,7 +208,7 @@ def _seg_to_vcf(cur):
     return [cur["Chromosome"], cur["Start_Position.bp."], ".", "N", "<%s>" % svtype, ".",
             ".", ";".join(info), "GT", "0/1"]
 
-def to_vcf(in_file, caller, header_fn, vcf_fn, data):
+def to_vcf(in_file, caller, header_fn, vcf_fn, data, sep="\t"):
     """Convert output TitanCNA segs file into bgzipped VCF.
     """
     out_file = "%s.vcf" % utils.splitext_plus(in_file)[0]
@@ -220,7 +221,7 @@ def to_vcf(in_file, caller, header_fn, vcf_fn, data):
                                                 "FILTER", "INFO", "FORMAT", dd.get_sample_name(data)]) + "\n")
                     header, in_handle = header_fn(in_handle)
                     for line in in_handle:
-                        out = vcf_fn(dict(zip(header, line.strip().split("\t"))))
+                        out = vcf_fn(dict(zip(header, line.strip().split(sep))))
                         if out:
                             out_handle.write("\t".join(out) + "\n")
     out_file = vcfutils.bgzip_and_index(out_file, data["config"])
