@@ -347,6 +347,22 @@ def _clean_algorithm(data):
             data["algorithm"][key] = val
     return data
 
+def _organize_tools_on(data, is_cwl):
+    """Ensure tools_on inputs match items specified elsewhere.
+    """
+    # want tools_on: [gvcf] if joint calling specified in CWL
+    if is_cwl:
+        if tz.get_in(["algorithm", "jointcaller"], data):
+            val = tz.get_in(["algorithm", "tools_on"], data)
+            if not val:
+                val = []
+            if not isinstance(val, (list, tuple)):
+                val = [val]
+            if "gvcf" not in val:
+                val.append("gvcf")
+            data["algorithm"]["tools_on"] = val
+    return data
+
 def _clean_background(data):
     """Clean up background specification, remaining back compatible.
     """
@@ -483,7 +499,7 @@ def _check_for_degenerate_interesting_groups(items):
     the interesting_group is not all of the same for all of the samples
     """
     igkey = ("algorithm", "bcbiornaseq", "interesting_groups")
-    interesting_groups = tz.get_in(igkey, items[1], [])
+    interesting_groups = tz.get_in(igkey, items[0], [])
     if isinstance(interesting_groups, str):
         interesting_groups = [interesting_groups]
     for group in interesting_groups:
@@ -493,7 +509,7 @@ def _check_for_degenerate_interesting_groups(items):
                              "but does not appear in the metadata." % group)
         if len(list(tz.unique(values))) == 1:
             raise ValueError("group %s is marked as an interesting group, "
-                             "but all samples have the same value. % group")
+                             "but all samples have the same value." % group)
 
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
@@ -951,6 +967,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                                  "Batching with a standard sample provides callable regions for validation.")
         item = _clean_metadata(item)
         item = _clean_algorithm(item)
+        item = _organize_tools_on(item, is_cwl)
         item = _clean_background(item)
         # Add any global resource specifications
         if "resources" not in item:
