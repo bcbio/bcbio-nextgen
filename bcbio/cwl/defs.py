@@ -314,6 +314,7 @@ def _variant_checkpoints(samples):
                                           for d in samples])
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
     checkpoints["ensemble"] = any([dd.get_ensemble(d) for d in samples])
+    checkpoints["cancer"] = any(dd.get_phenotype(d) in ["tumor"] for d in samples)
     return checkpoints
 
 def _postprocess_alignment(checkpoints):
@@ -462,6 +463,8 @@ def _qc_workflow(checkpoints):
         qc_inputs += [["variants", "samples"]]
     if checkpoints.get("umi"):
         qc_inputs += [["config", "algorithm", "umi_type"], ["config", "algorithm", "rawumi_avg_cov"], ["umi_bam"]]
+    if checkpoints.get("cancer"):
+        qc_inputs += [["reference", "viral"]]
     qc = [s("qc_to_rec", "multi-combined",
             qc_inputs, [cwlout("qc_rec", "record")],
             "bcbio-vc", disk={"files": 1.5}, cores=1, no_files=True),

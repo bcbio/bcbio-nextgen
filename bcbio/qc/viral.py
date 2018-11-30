@@ -53,6 +53,7 @@ def run(bam_file, data, out_dir):
                            "sort -n -r -k 5,5 >> {tx_out_file}")
                     do.run(cmd.format(**locals()), "Analyse coverage of viral genomes")
             out["base"] = out_file
+            out["secondary"] = []
     return out
 
 def get_files(data):
