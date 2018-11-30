@@ -5,9 +5,7 @@ functionality within bcbio-nextgen.
 """
 import collections
 import contextlib
-import csv
 import json
-import operator
 import os
 import pprint
 import shutil
@@ -46,12 +44,12 @@ def process(args):
     if not work_dir:
         work_dir = os.getcwd()
     if len(fnargs) > 0 and fnargs[0] == "cwl":
-        fnargs, parallel, out_keys = _world_from_cwl(args.name, fnargs[1:], work_dir)
+        fnargs, parallel, out_keys, input_files = _world_from_cwl(args.name, fnargs[1:], work_dir)
         # Can remove this awkward Docker merge when we do not need custom GATK3 installs
         fnargs = config_utils.merge_resources(fnargs)
         argfile = os.path.join(work_dir, "cwl.output.json")
     else:
-        parallel, out_keys = None, {}
+        parallel, out_keys, input_files = None, {}, []
     with utils.chdir(work_dir):
         with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
             try:
@@ -66,7 +64,7 @@ def process(args):
                     shutil.rmtree(wf_input_dir)
     if argfile:
         try:
-            _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir)
+            _write_out_argfile(argfile, out, fnargs, parallel, out_keys, input_files, work_dir)
         except:
             logger.exception()
             raise
@@ -86,7 +84,7 @@ def _cwlvar_to_wdl(var):
     else:
         return var
 
-def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
+def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, input_files, work_dir):
     """Write output argfile, preparing a CWL ready JSON or YAML representation of the world.
     """
     with open(argfile, "w") as out_handle:
@@ -94,20 +92,21 @@ def _write_out_argfile(argfile, out, fnargs, parallel, out_keys, work_dir):
             record_name, record_attrs = _get_record_attrs(out_keys)
             if record_name:
                 if parallel in ["multi-batch"]:
-                    recs = _nested_cwl_record(out, record_attrs)
+                    recs = _nested_cwl_record(out, record_attrs, input_files)
                 elif parallel in ["single-split", "multi-combined", "multi-parallel", "batch-single",
                                   "single-single"]:
-                    recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs), record_attrs) for xs in out]
+                    recs = [_collapse_to_cwl_record_single(utils.to_single_data(xs), record_attrs, input_files)
+                            for xs in out]
                 else:
                     samples = [utils.to_single_data(xs) for xs in out]
-                    recs = [_collapse_to_cwl_record(samples, record_attrs)]
+                    recs = [_collapse_to_cwl_record(samples, record_attrs, input_files)]
                 json.dump(_combine_cwl_records(recs, record_name, parallel),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             elif parallel in ["single-split", "multi-combined", "batch-split"]:
-                json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs),
+                json.dump(_convert_to_cwl_json([utils.to_single_data(xs) for xs in out], fnargs, input_files),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
             else:
-                json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs),
+                json.dump(_convert_to_cwl_json(utils.to_single_data(utils.to_single_data(out)), fnargs, input_files),
                             out_handle, sort_keys=True, indent=4, separators=(', ', ': '))
         else:
             yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
@@ -183,15 +182,15 @@ def _world_from_cwl(fn_name, fnargs, work_dir):
 
     # Read inputs from standard files instead of command line
     assert os.path.exists(os.path.join(work_dir, "cwl.inputs.json"))
-    out = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel,
-                              input_order, output_cwl_keys)
+    out, input_files = _read_from_cwlinput(os.path.join(work_dir, "cwl.inputs.json"), work_dir, runtime, parallel,
+                                           input_order, output_cwl_keys)
 
     if parallel in ["single-parallel", "single-merge", "multi-parallel", "multi-combined", "multi-batch",
                     "batch-split", "batch-parallel", "batch-merge", "batch-single"]:
         out = [out]
     else:
         assert len(out) == 1, "%s\n%s" % (pprint.pformat(out), pprint.pformat(fnargs))
-    return out, parallel, output_cwl_keys
+    return out, parallel, output_cwl_keys, input_files
 
 def _parse_output_keys(val):
     """Parse expected output keys from string, handling records.
@@ -206,12 +205,27 @@ def _parse_output_keys(val):
             out[k] = None
     return out
 
+def _find_input_files(var, out):
+    """Find input files within the given CWL object.
+    """
+    if isinstance(var, (list, tuple)):
+        for x in var:
+            out = _find_input_files(x, out)
+    elif isinstance(var, dict):
+        if var.get("class") == "File":
+            out.append(var["path"])
+            out = _find_input_files(var.get("secondaryFiles", []), out)
+        for key, val in var.items():
+            out = _find_input_files(val, out)
+    return out
+
 def _read_from_cwlinput(in_file, work_dir, runtime, parallel, input_order, output_cwl_keys):
     """Read data records from a JSON dump of inputs. Avoids command line flattening of records.
     """
     with open(in_file) as in_handle:
         inputs = json.load(in_handle)
     items_by_key = {}
+    input_files = []
     passed_keys = set([])
     for key, input_val in ((k, v) for (k, v) in inputs.items() if not k.startswith(("sentinel", "ignore"))):
         if key.endswith("_toolinput"):
@@ -222,6 +236,7 @@ def _read_from_cwlinput(in_file, work_dir, runtime, parallel, input_order, outpu
             items_by_key[key] = items
         else:
             items_by_key[tuple(key.split("__"))] = _cwlvar_to_wdl(input_val)
+        input_files = _find_input_files(input_val, input_files)
     prepped = _merge_cwlinputs(items_by_key, input_order, parallel)
     out = []
     for data in prepped:
@@ -230,7 +245,7 @@ def _read_from_cwlinput(in_file, work_dir, runtime, parallel, input_order, outpu
                                          output_cwl_keys, runtime) for x in data])
         else:
             out.append(_finalize_cwl_in(data, work_dir, list(passed_keys), output_cwl_keys, runtime))
-    return out
+    return out, input_files
 
 def _is_nested_item(x):
     return isinstance(x, (list, tuple))
@@ -455,7 +470,7 @@ def _convert_value(val):
     else:
         return val
 
-def _convert_to_cwl_json(data, fnargs):
+def _convert_to_cwl_json(data, fnargs, input_files):
     """Convert world data object (or list of data objects) into outputs for CWL ingestion.
     """
     out = {}
@@ -468,9 +483,9 @@ def _convert_to_cwl_json(data, fnargs):
                 pass
             keys.append(key)
         if isinstance(data, dict):
-            out[outvar] = _to_cwl(tz.get_in(keys, data))
+            out[outvar] = _to_cwl(tz.get_in(keys, data), input_files)
         else:
-            out[outvar] = [_to_cwl(tz.get_in(keys, x)) for x in data]
+            out[outvar] = [_to_cwl(tz.get_in(keys, x), input_files) for x in data]
     return out
 
 def _get_output_cwl_keys(fnargs):
@@ -493,16 +508,16 @@ def _combine_cwl_records(recs, record_name, parallel):
     else:
         return {record_name: recs}
 
-def _collapse_to_cwl_record_single(data, want_attrs):
+def _collapse_to_cwl_record_single(data, want_attrs, input_files):
     """Convert a single sample into a CWL record.
     """
     out = {}
     for key in want_attrs:
         key_parts = key.split("__")
-        out[key] = _to_cwl(tz.get_in(key_parts, data))
+        out[key] = _to_cwl(tz.get_in(key_parts, data), input_files)
     return out
 
-def _nested_cwl_record(xs, want_attrs):
+def _nested_cwl_record(xs, want_attrs, input_files):
     """Convert arbitrarily nested samples into a nested list of dictionaries.
 
     nests only at the record level, rather than within records. For batching
@@ -510,12 +525,12 @@ def _nested_cwl_record(xs, want_attrs):
     batch.
     """
     if isinstance(xs, (list, tuple)):
-        return [_nested_cwl_record(x, want_attrs) for x in xs]
+        return [_nested_cwl_record(x, want_attrs, input_files) for x in xs]
     else:
         assert isinstance(xs, dict), pprint.pformat(xs)
-        return _collapse_to_cwl_record_single(xs, want_attrs)
+        return _collapse_to_cwl_record_single(xs, want_attrs, input_files)
 
-def _collapse_to_cwl_record(samples, want_attrs):
+def _collapse_to_cwl_record(samples, want_attrs, input_files):
     """Convert nested samples from batches into a CWL record, based on input keys.
     """
     input_keys = sorted(list(set().union(*[d["cwl_keys"] for d in samples])), key=lambda x: (-len(x), tuple(x)))
@@ -526,40 +541,53 @@ def _collapse_to_cwl_record(samples, want_attrs):
             vals = []
             cur = []
             for d in samples:
-                vals.append(_to_cwl(tz.get_in(key_parts, d)))
+                vals.append(_to_cwl(tz.get_in(key_parts, d), input_files))
                 # Remove nested keys to avoid specifying multiple times
                 cur.append(_dissoc_in(d, key_parts) if len(key_parts) > 1 else d)
             samples = cur
             out[key] = vals
     return out
 
-def _to_cwl(val):
+def _file_and_exists(val, input_files):
+    """Check if an input is a file and exists.
+
+    Checks both locally (staged) and from input files (re-passed but never localized).
+    """
+    return ((os.path.exists(val) and os.path.isfile(val)) or
+            val in input_files)
+
+def _to_cwl(val, input_files):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
     if isinstance(val, basestring):
-        if os.path.exists(val) and os.path.isfile(val):
+        if _file_and_exists(val, input_files):
             val = {"class": "File", "path": val}
             secondary = []
             for idx in [".bai", ".tbi", ".gbi", ".fai", ".db"]:
                 idx_file = val["path"] + idx
-                if os.path.exists(idx_file):
+                if _file_and_exists(idx_file, input_files):
                     secondary.append({"class": "File", "path": idx_file})
             for idx in [".dict"]:
                 idx_file = os.path.splitext(val["path"])[0] + idx
-                if os.path.exists(idx_file):
+                if _file_and_exists(idx_file, input_files):
                     secondary.append({"class": "File", "path": idx_file})
             cur_dir, cur_file = os.path.split(val["path"])
             # Handle relative paths
             if not cur_dir:
                 cur_dir = os.getcwd()
             if cur_file.endswith(cwlutils.DIR_TARGETS):
-                for fname in os.listdir(cur_dir):
-                    if fname != cur_file:
-                        secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
+                if os.path.exists(cur_dir):
+                    for fname in os.listdir(cur_dir):
+                        if fname != cur_file:
+                            secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
+                else:
+                    for f in input_files:
+                        if f.startswith(cur_dir) and f != cur_file:
+                            secondary.append({"class": "File", "path": f})
             if secondary:
                 val["secondaryFiles"] = _remove_duplicate_files(secondary)
     elif isinstance(val, (list, tuple)):
-        val = [_to_cwl(x) for x in val]
+        val = [_to_cwl(x, input_files) for x in val]
     elif isinstance(val, dict):
         # File representation with secondary files
         if "base" in val and "secondary" in val:
