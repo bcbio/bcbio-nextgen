@@ -117,6 +117,11 @@ def summary(*samples):
     else:
         return []
 
+def get_qsig_multiqc_files(*samples):
+    work_dir = samples[0][0]["dirs"]["work"]
+    qc_out_dir = utils.safe_makedir(os.path.join(work_dir, "qc", "qsignature"))
+    return [os.path.join(qc_out_dir, "qsignature.ma")]
+
 def _parse_qsignature_output(in_file, out_file, warning_file, data):
     """ Parse xml file produced by qsignature
 

@@ -39,7 +39,6 @@ def generate_parallel(samples, run_parallel):
     qced = run_parallel("pipeline_summary", to_analyze)
     samples = _combine_qc_samples(qced) + extras
     qsign_info = run_parallel("qsignature_summary", [samples])
-    samples = run_parallel("multiqc_summary", [samples])
     metadata_file = _merge_metadata([samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
@@ -52,6 +51,8 @@ def generate_parallel(samples, run_parallel):
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
+    # MultiQC must be run after all file outputs are set:
+    run_parallel("multiqc_summary", [samples])
     return out
 
 def pipeline_summary(data):
