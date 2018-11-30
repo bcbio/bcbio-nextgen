@@ -25,6 +25,7 @@ from bcbio.provenance import data as provenancedata
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
+from bcbio.qc.qsignature import get_qsig_multiqc_files
 from bcbio.structural import annotate
 from bcbio.utils import walk_json
 from bcbio.variation import bedutils
@@ -189,10 +190,18 @@ def _save_uploaded_file_list(samples, file_list_work, out_dir):
 def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     """ Check if `path` is a work-rooted path, and convert to a relative final-rooted path
     """
-    if path in upload_path_mapping:
-        upload_path = upload_path_mapping[path]
+    if not path or not isinstance(path, str):
+        return None
+    upload_path = None
+    for work_path, final_path in upload_path_mapping.items():
+        if os.path.isfile(work_path) and path == work_path:
+            upload_path = final_path
+        elif os.path.isdir(work_path) and path.startswith(work_path):
+            upload_path = path.replace(work_path, final_path)
+    if upload_path:
         return os.path.relpath(upload_path, upload_base_dir)
-    return path
+    else:
+        return None
 
 def _one_exists(input_files):
     """
@@ -239,6 +248,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
                     staged_files.append(staged_f)
                 else:
                     staged_files.append(f)
+    staged_files.extend(get_qsig_multiqc_files(samples))
     # Back compatible -- to migrate to explicit specifications in input YAML
     if not any([cwlutils.is_cwl_run(d) for d in samples]):
         staged_files += ["trimmed", "htseq-count/*summary"]
