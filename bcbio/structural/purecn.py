@@ -35,6 +35,7 @@ def run(items):
     if purecn_out:
         purecn_out["variantcaller"] = "purecn"
         if "loh" in purecn_out:
+            from bcbio.structural import titancna
             purecn_out["vcf"] = titancna.to_vcf(out["loh"], "PureCN", _get_header, _loh_to_vcf, paired.tumor_data,
                                                 sep=",")
         if "sv" not in paired.tumor_data:
