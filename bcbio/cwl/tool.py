@@ -167,8 +167,10 @@ def _run_cromwell(args):
     log_file = os.path.join(work_dir, "%s-cromwell.log" % project_name)
     metadata_file = os.path.join(work_dir, "%s-metadata.json" % project_name)
     option_file = os.path.join(work_dir, "%s-options.json" % project_name)
+    cromwell_opts = {"final_workflow_outputs_dir": final_dir,
+                     "default_runtime_attributes": {"bootDiskSizeGb": 20}}
     with open(option_file, "w") as out_handle:
-        json.dump({"final_workflow_outputs_dir": final_dir}, out_handle)
+        json.dump(cromwell_opts, out_handle)
 
     cmd = ["cromwell", "-Xms1g", "-Xmx3g", "run", "--type", "CWL",
            "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir, json_file)]
