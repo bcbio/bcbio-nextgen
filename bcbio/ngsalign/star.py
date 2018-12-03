@@ -5,6 +5,7 @@ import subprocess
 import contextlib
 from collections import namedtuple
 
+import bcbio.bed as bed
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
@@ -138,6 +139,9 @@ def _update_data(align_file, out_dir, names, data):
     data = dd.set_align_bam(data, align_file)
     transcriptome_file = _move_transcriptome_file(out_dir, names)
     data = dd.set_transcriptome_bam(data, transcriptome_file)
+    sjfile = get_splicejunction_file(out_dir, data)
+    sjbed = junction2bed(sjfile)
+    data = dd.set_junction_bed(data, sjbed)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -198,3 +202,20 @@ def get_star_version(data):
             if "STAR_" in line:
                 version = line.split("STAR_")[1].strip()
     return version
+
+def get_splicejunction_file(out_dir, data):
+    """
+    locate the splicejunction file starting from the alignment directory
+    """
+    samplename = dd.get_sample_name(data)
+    sjfile = os.path.join(out_dir, os.pardir, "{0}SJ.out.tab").format(samplename)
+    if file_exists(sjfile):
+        return sjfile
+    else:
+        return None
+
+def junction2bed(junction_file):
+    """
+    reformat the STAR junction file to BED3 format
+    """
+    return bed.minimize(junction_file).fn

@@ -12,7 +12,8 @@ from bcbio.variation import vardict
 from bcbio import broad, bam
 from bcbio.variation import gatk, vcfutils
 from bcbio.structural import regions
-
+from bcbio.variation.bedutils import get_padded_bed_file
+from bcbio.log import logger
 pybedtools = utils.LazyImport("pybedtools")
 
 def rnaseq_gatk_variant_calling(data):
@@ -183,4 +184,23 @@ def gatk_filter_rnaseq(vrn_file, data):
                 config["algorithm"]["tools_off"].remove("gatk4")
             jvm_opts = broad.get_gatk_opts(config, os.path.dirname(tx_out_file))
             do.run(broad.gatk_cmd("gatk", jvm_opts, params, config), "Filter RNA-seq variants.")
+    return out_file
+
+def filter_junction_variants(vrn_file, data):
+    """
+    filter out variants within 10 basepairs of a splice junction, these are
+    very prone to being false positives with RNA-seq data
+    """
+    SJ_BP_MASK = 10
+    vrn_dir = os.path.dirname(vrn_file)
+    splicebed = dd.get_junction_bed(data)
+    spliceslop = get_padded_bed_file(vrn_dir, splicebed, SJ_BP_MASK, data)
+    out_file = os.path.splitext(vrn_file)[0] + "-junctionfiltered.vcf.gz"
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(data, out_file) as tx_out_file:
+        out_base = os.path.splitext(tx_out_file)[0]
+        logger.info("Removing variants within %d bases of splice junctions listed in %s from %s. " % (SJ_BP_MASK, spliceslop, vrn_file))
+        pybedtools.BedTool(vrn_file).intersect(spliceslop, wa=True, header=True, v=True).saveas(out_base)
+        tx_out_file = vcfutils.bgzip_and_index(out_base, dd.get_config(data))
     return out_file

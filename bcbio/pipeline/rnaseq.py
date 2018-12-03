@@ -85,6 +85,7 @@ def run_rnaseq_variant_calling(data):
             data = variation.rnaseq_gatk_variant_calling(data)
         if vardict.get_vardict_command(data):
             data = variation.rnaseq_vardict_variant_calling(data)
+        vrn_file = dd.get_vrn_file(data)
     return [[data]]
 
 def run_rnaseq_ann_filter(data):
@@ -102,6 +103,10 @@ def run_rnaseq_ann_filter(data):
     if variantcaller and ("gatk-haplotype" in variantcaller):
         filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
         data = dd.set_vrn_file(data, filter_file)
+    # remove variants close to splice junctions
+    vrn_file = dd.get_vrn_file(data)
+    vrn_file = variation.filter_junction_variants(vrn_file, data)
+    data = dd.set_vrn_file(data, vrn_file)
     return [[data]]
 
 def quantitate(data):
