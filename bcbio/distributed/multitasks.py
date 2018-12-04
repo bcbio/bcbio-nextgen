@@ -5,6 +5,8 @@ from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.wgbsseq import trimming as wgbs_prepare
+from bcbio.wgbsseq import cpg_caller
 from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
@@ -111,6 +113,10 @@ def trim_srna_sample(*args):
     return srna.trim_srna_sample(*args)
 
 @utils.map_wrap
+def trim_bs_sample(*args):
+    return wgbs_prepare.trimming(*args)
+
+@utils.map_wrap
 def process_alignment_to_rec(*args):
     return cwlutils.to_rec(*args)
 
@@ -174,6 +180,18 @@ def srna_alignment(*args):
 @utils.map_wrap
 def peakcalling(*args):
     return peaks.calling(*args)
+
+@utils.map_wrap
+def cpg_calling(*args):
+    return cpg_caller.calling(*args)
+
+@utils.map_wrap
+def cpg_processing(*args):
+    return cpg_caller.cpg_postprocessing(*args)
+
+@utils.map_wrap
+def cpg_stats(*args):
+    return cpg_caller.cpg_stats(*args)
 
 @utils.map_wrap
 def prep_align_inputs(*args):

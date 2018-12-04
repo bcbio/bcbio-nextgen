@@ -17,6 +17,8 @@ from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.wgbsseq import trimming as wgbs_prepare
+from bcbio.wgbsseq import cpg_caller
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -92,6 +94,12 @@ def trim_srna_sample(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(srna.trim_srna_sample, *args))
 
+@require(wgbs_prepare)
+def trim_bs_sample(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(wgbs_prepare.trimming, *args))
+
 @require(srna)
 def srna_annotation(*args):
     args = ipython.unzip_args(args)
@@ -121,6 +129,24 @@ def peakcalling(* args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(peaks.calling, *args))
+
+@require(cpg_caller)
+def cpg_calling(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.calling, *args))
+
+@require(cpg_caller)
+def cpg_processing(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.cpg_postprocessing, *args))
+
+@require(cpg_caller)
+def cpg_calling(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.cpg_stats, *args))
 
 @require(sailfish)
 def run_sailfish(*args):
@@ -223,7 +249,7 @@ def run_salmon_index(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(salmon.run_salmon_index, *args))
-    
+
 @require(rapmap)
 def run_rapmap_index(*args):
     args = ipython.unzip_args(args)

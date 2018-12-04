@@ -10,7 +10,7 @@ import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
-                            novoalign, snap, star, hisat2)
+                            novoalign, snap, star, hisat2, bismark, bsmap)
 from bcbio.pipeline import datadict as dd
 
 # Define a next-generation sequencing tool to plugin:
@@ -34,6 +34,8 @@ TOOLS = {
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
+    "bismark": NgsTool(bismark.align, None, None, bismark.remap_index_fn),
+    "bsmap": NgsTool(bsmap.align, None, None, None),
     "sentieon-bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
     "minimap2": NgsTool(minimap2.align, None, None, minimap2.remap_index_fn),
     "novoalign": NgsTool(novoalign.align_pipe, novoalign.align_bam,
