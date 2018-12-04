@@ -149,13 +149,18 @@ def ref_file_from_bam(bam_file, data):
 
 def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
+
+    Avoids minimal downsample which is not especially useful for
+    improving QC times; 90& or more of reads.
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
     with pysam.Samfile(in_bam, "rb") as work_bam:
         n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
-        return float(rg_target) / float(total)
+        pct = float(rg_target) / float(total)
+        if pct < 0.9:
+            return pct
 
 def get_aligned_reads(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
