@@ -1,7 +1,7 @@
 ## 1.1.2 (in progress)
 
-- RNA-seq variation: filter RNA-seq variants close to splice junctions when using
-  STAR as the aligner.
+- RNA-seq variation: filter RNA-seq variants close to splice junctions,
+  supporting STAR and hisat2.
 - VarDict low frequency somatic filters: generalize strand and mismatch based
   filter based on cross-validation to avoid over filtering on high depth panels.
 - strelka2 joint calling: switch to improved gvcfgenotyper approach for calling
