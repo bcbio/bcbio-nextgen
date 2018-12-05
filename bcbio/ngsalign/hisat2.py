@@ -1,6 +1,7 @@
 import os
 from bcbio.utils import file_exists, safe_makedir
 from bcbio import bam
+from bcbio import bed
 import bcbio.pipeline.datadict as dd
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -34,15 +35,11 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         if dd.get_transcript_assembler(data):
             cmd += "--dta-cufflinks "
         if dd.get_analysis(data).lower() == "rna-seq":
-            gtf_file = dd.get_gtf_file(data)
-            splicesites = os.path.join(os.path.dirname(gtf_file),
-                                       "ref-transcripts-splicesites.txt")
-            if not file_exists(splicesites):
-                splicesites = create_splicesites_file(gtf_file, align_dir, data)
-            # empty splicesite files means there is no splicing, so skip this option    
-            # if there is no splicing for this organism
+            splicesites = get_known_splicesites_file(align_dir, data)
             if file_exists(splicesites):
                 cmd += "--known-splicesite-infile {splicesites} "
+        novel_splicesite_file = os.path.join(align_dir, "{0}-novelsplicesites.bed".format(dd.get_sample_name(data)))
+        cmd += "--novel-splicesite-outfile {novel_splicesite_file} "
         # apply additional hisat2 options
         cmd += " ".join(_get_options_from_config(data))
 
@@ -51,7 +48,17 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " | " + tobam_cl
             do.run(cmd.format(**locals()), message)
     data = dd.set_work_bam(data, out_file)
+    junctionbed = get_splicejunction_file(align_dir, data)
+    data = dd.set_junction_bed(data, junctionbed)
     return data
+
+def get_known_splicesites_file(align_dir, data):
+    gtf_file = dd.get_gtf_file(data)
+    splicesites = os.path.join(os.path.dirname(gtf_file),
+                               "ref-transcripts-splicesites.txt")
+    if not file_exists(splicesites):
+        splicesites = create_splicesites_file(gtf_file, align_dir, data)
+    return splicesites
 
 def create_splicesites_file(gtf_file, align_dir, data):
     """
@@ -116,3 +123,24 @@ def remap_index_fn(ref_file):
     """Map sequence references to equivalent hisat2 indexes
     """
     return os.path.splitext(ref_file)[0].replace("/seq/", "/hisat2/")
+
+def get_splicejunction_file(align_dir, data):
+    """
+    locate the splice junction file from hisat2. hisat2 outputs a novel
+    splicesites file to go along with the provided file, if available.
+    this combines the two together and outputs a combined file of all
+    of the known and novel splice junctions
+    """
+    samplename = dd.get_sample_name(data)
+    align_dir = os.path.dirname(dd.get_work_bam(data))
+    knownfile = get_known_splicesites_file(align_dir, data)
+    novelfile = os.path.join(align_dir, "%s-novelsplicesites.bed" % samplename)
+    bed_files = [x for x in [knownfile, novelfile] if file_exists(x)]
+    splicejunction = bed.concat(bed_files)
+    splicejunctionfile = os.path.join(align_dir,
+                                      "%s-splicejunctions.bed" % samplename)
+    if splicejunction:
+        splicejunction.saveas(splicejunctionfile)
+        return splicejunctionfile
+    else:
+        return None
