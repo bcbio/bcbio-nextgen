@@ -131,7 +131,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                     # For multi-sample outputs, ensure consistent order
                     samples = ("-s" + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
                     fix_ambig = vcfutils.fix_ambiguous_cl()
-                    py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                    py_cl = config_utils.get_program("py", config)
                     cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
                            """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                            "| {fix_ambig} | bcftools view {samples} -a - | "
