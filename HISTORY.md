@@ -1,5 +1,6 @@
 ## 1.1.2 (in progress)
 
+- ChIP/ATAC-seq: allow skipping duplicate marking.
 - RNA-seq variation: filter RNA-seq variants close to splice junctions,
   supporting STAR and hisat2.
 - VarDict low frequency somatic filters: generalize strand and mismatch based
