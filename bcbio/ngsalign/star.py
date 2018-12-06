@@ -218,4 +218,10 @@ def junction2bed(junction_file):
     """
     reformat the STAR junction file to BED3 format
     """
-    return bed.minimize(junction_file).fn
+    base, _ = os.path.splitext(junction_file)
+    out_file = base + "-minimized.bed"
+    if file_exists(out_file):
+        return out_file
+    minimized = bed.minimize(junction_file)
+    minimized.saveas(out_file)
+    return out_file
