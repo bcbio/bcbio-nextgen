@@ -1,5 +1,7 @@
 ## 1.1.2 (in progress)
 
+- Trimming: add built-in support for adapters from the SMARTer Universal Low Input RNA Kit 
+(truseq2) and the Illumina NEXTera DNA prep kit from NEB (nextera2).
 - ChIP/ATAC-seq: allow skipping duplicate marking.
 - RNA-seq variation: filter RNA-seq variants close to splice junctions,
   supporting STAR and hisat2.

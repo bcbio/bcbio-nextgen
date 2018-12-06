@@ -488,7 +488,11 @@ Read trimming
    and polyA tails. polyg trimming removes high quality G stretches present in
    NovaSeq and NextSeq data. In the small RNA pipeline, bcbio will try to detect
    the adapter using DNApi. If you set up this parameter, then bcbio will use this value instead.
-   Choices: [truseq, illumina, nextera, polya, polyx, polyg].
+   Choices: [truseq, illumina, nextera, polya, polyx, polyg, nextera2, truseq2].
+
+   - nextera2: Illumina NEXTera DNA prep kit from NEB
+   - truseq2: SMARTer Universal Low Input RNA Kit
+
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``min_read_length`` Minimum read length to maintain when
