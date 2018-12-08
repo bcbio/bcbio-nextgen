@@ -145,7 +145,7 @@ def _get_filesystem_config(file_types):
 _FILESYSTEM_CONFIG = {
   "gcp": """
         gcs {
-          auth = "application-default"
+          auth = "gcp-auth"
           caching {
             duplication-strategy = "reference"
           }
@@ -153,7 +153,7 @@ _FILESYSTEM_CONFIG = {
   """,
   "gcp_container": """
         gcs {
-          auth = "application-default"
+          auth = "gcp-auth"
           caching {
             duplication-strategy = "copy"
           }
@@ -208,7 +208,7 @@ def _get_engine_filesystem_config(file_types, args):
         out += "  filesystems {\n"
         if "gcp" in file_types:
             out += '    gcs {\n'
-            out += '      auth = "application-default"\n'
+            out += '      auth = "gcp-auth"\n'
             if args.cloud_project:
                 out += '      project = "%s"\n' % args.cloud_project
             out += '    }\n'
@@ -224,8 +224,9 @@ google {
   application-name = "cromwell"
   auths = [
     {
-      name = "application-default"
-      scheme = "application_default"
+      name = "gcp-auth"
+      scheme = "service_account"
+      json-file = ${?GOOGLE_APPLICATION_CREDENTIALS}
     }
   ]
 }
@@ -483,13 +484,13 @@ CLOUD_CONFIGS = {
         root = "%(cloud_root)s"
 
         genomics {
-          auth = "application-default"
+          auth = "gcp-auth"
           endpoint-url = "https://genomics.googleapis.com/"
         }
 
         filesystems {
           gcs {
-            auth = "application-default"
+            auth = "gcp-auth"
             project = "(cloud_project)s"
           }
         }
