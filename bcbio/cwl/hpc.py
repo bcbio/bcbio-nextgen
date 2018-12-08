@@ -25,10 +25,11 @@ def create_cromwell_config(args, work_dir, sample_file):
                 "cwl_attrs": "\n        ".join(cwl_attrs),
                 "filesystem": _get_filesystem_config(file_types),
                 "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir}),
-                "engine": _get_engine_filesystem_config(file_types)}
-    cl_args, conf_args, scheduler = _args_to_cromwell(args)
+                "engine": _get_engine_filesystem_config(file_types, args)}
+    cl_args, conf_args, scheduler, cloud_type = _args_to_cromwell(args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
+                   "cloud": (CLOUD_CONFIGS[cloud_type] % conf_args) if cloud_type else "",
                    "work_dir": work_dir}
     main_config.update(std_args)
     # Local run always seems to need docker set because of submit-docker in default configuration
@@ -70,7 +71,7 @@ def _load_custom_config(run_config):
 def args_to_cromwell_cl(args):
     """Convert input bcbio arguments into cromwell command line arguments.
     """
-    cl_args, conf_args, scheduler = _args_to_cromwell(args)
+    cl_args, conf_args, scheduler, cloud = _args_to_cromwell(args)
     return cl_args
 
 def _args_to_cromwell(args):
@@ -105,8 +106,16 @@ def _args_to_cromwell(args):
                 elif len(parts) == 1 and (parts[0], args.scheduler) in custom:
                     key, val = custom[(parts[0], args.scheduler)]
                     config[key] = val
-        return cl, config, args.scheduler
-    return cl, config, args.scheduler
+    cloud_type = None
+    if args.cloud_project:
+        if args.cloud_root and args.cloud_root.startswith("gs:"):
+            cloud_type = "PAPI"
+        else:
+            raise ValueError("Unexpected inputs for Cromwell Cloud support: %s %s" %
+                             (args.cloud_project, args.cloud_root))
+        config = {"cloud_project": args.cloud_project, "cloud_root": args.cloud_root}
+        cl.append("-Dbackend.default=%s" % cloud_type)
+    return cl, config, args.scheduler, cloud_type
 
 def _get_filesystem_types(args, sample_file):
     """Retrieve the types of inputs and staging based on sample JSON and arguments.
@@ -187,7 +196,7 @@ database {
 }
 """
 
-def _get_engine_filesystem_config(file_types):
+def _get_engine_filesystem_config(file_types, args):
     """Retriever authorization and engine filesystem configuration.
     """
     file_types = [x.replace("_container", "") for x in list(file_types)]
@@ -200,6 +209,8 @@ def _get_engine_filesystem_config(file_types):
         if "gcp" in file_types:
             out += '    gcs {\n'
             out += '      auth = "application-default"\n'
+            if args.cloud_project:
+                out += '      project = "%s"\n' % args.cloud_project
             out += '    }\n'
         if "http" in file_types:
             out += '    http {}\n'
@@ -259,6 +270,7 @@ backend {
       }
     }
 %(hpc)s
+%(cloud)s
   }
 }
 """
@@ -457,6 +469,30 @@ HPC_CONFIGS = {
         check-alive = "condor_q ${job_id}"
         job-id-regex = "(?sm).*cluster (\\\\d+)..*"
         %(filesystem)s
+      }
+    }
+"""
+}
+
+CLOUD_CONFIGS = {
+"PAPI": """
+    PAPI {
+      actor-factory = "cromwell.backend.google.pipelines.v2alpha1.PipelinesApiLifecycleActorFactory"
+      config {
+        project = "%(cloud_project)s"
+        root = "%(cloud_root)s"
+
+        genomics {
+          auth = "application-default"
+          endpoint-url = "https://genomics.googleapis.com/"
+        }
+
+        filesystems {
+          gcs {
+            auth = "application-default"
+            project = "(cloud_project)s"
+          }
+        }
       }
     }
 """

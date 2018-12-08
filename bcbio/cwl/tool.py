@@ -18,9 +18,13 @@ def _get_main_and_json(directory):
     """Retrieve the main CWL and sample JSON files from a bcbio generated directory.
     """
     directory = os.path.normpath(os.path.abspath(directory))
-    main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
-    main_cwl = [x for x in main_cwl if not x.find("-pack") >= 0]
-    assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
+    checker_main = os.path.normpath(os.path.join(directory, os.path.pardir, "checker-workflow-wrapping-tool.cwl"))
+    if checker_main and os.path.exists(checker_main):
+        main_cwl = [checker_main]
+    else:
+        main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
+        main_cwl = [x for x in main_cwl if not x.find("-pack") >= 0]
+        assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
     main_json = glob.glob(os.path.join(directory, "main-*-samples.json"))
     assert len(main_json) == 1, "Did not find main json in %s" % directory
     project_name = os.path.basename(directory).split("-workflow")[0]
