@@ -491,7 +491,7 @@ CLOUD_CONFIGS = {
         filesystems {
           gcs {
             auth = "gcp-auth"
-            project = "(cloud_project)s"
+            project = "%(cloud_project)s"
           }
         }
       }
