@@ -37,8 +37,8 @@ def run(items):
         purecn_out["variantcaller"] = "purecn"
         if "loh" in purecn_out:
             from bcbio.structural import titancna
-            purecn_out["vcf"] = titancna.to_vcf(purecn_out["loh"], "PureCN", _get_header, _loh_to_vcf,
-                                                paired.tumor_data, sep=",")
+            purecn_out["vrn_file"] = titancna.to_vcf(purecn_out["loh"], "PureCN", _get_header, _loh_to_vcf,
+                                                     paired.tumor_data, sep=",")
             purecn_out["lohsummary"] = loh.summary_status(purecn_out, paired.tumor_data)
         if "sv" not in paired.tumor_data:
             paired.tumor_data["sv"] = []

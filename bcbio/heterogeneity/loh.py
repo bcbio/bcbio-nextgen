@@ -27,8 +27,8 @@ def summary_status(call, data):
     coords = get_coords(data)
     out_file = None
     if call.get("vrn_file") and os.path.exists(call.get("vrn_file")):
-        out_file = os.path.join((os.path.dirname(call["vrn_file"]),
-                                 "%s-%s-lohsummary.yaml" % (dd.get_sample_name(data), call["variantcaller"])))
+        out_file = os.path.join(os.path.dirname(call["vrn_file"]),
+                                "%s-%s-lohsummary.yaml" % (dd.get_sample_name(data), call["variantcaller"]))
         if not utils.file_uptodate(out_file, call["vrn_file"]):
             out = {}
             if call["variantcaller"] == "titancna":
@@ -37,9 +37,11 @@ def summary_status(call, data):
             elif call["variantcaller"] == "purecn":
                 out.update(_purecn_summary(call, coords))
             if out:
+                out["description"] = dd.get_sample_name(data)
+                out["variantcaller"] = call["variantcaller"]
                 with file_transaction(data, out_file) as tx_out_file:
                     with open(tx_out_file, "w") as out_handle:
-                        yaml.safe_dump(out, out_handle, default_flow_type=False, allow_unicode=False)
+                        yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file if out_file and os.path.exists(out_file) else None
 
 def _titancna_summary(call, coords):
