@@ -15,6 +15,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import loh
 from bcbio.provenance import do
 from bcbio.variation import germline, vcfutils
 from bcbio.structural import cnvkit, gatkcnv
@@ -38,6 +39,7 @@ def run(items):
             from bcbio.structural import titancna
             purecn_out["vcf"] = titancna.to_vcf(purecn_out["loh"], "PureCN", _get_header, _loh_to_vcf,
                                                 paired.tumor_data, sep=",")
+            purecn_out["lohsummary"] = loh.summary_status(purecn_out, paired.tumor_data)
         if "sv" not in paired.tumor_data:
             paired.tumor_data["sv"] = []
         paired.tumor_data["sv"].append(purecn_out)

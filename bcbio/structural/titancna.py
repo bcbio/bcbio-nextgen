@@ -12,7 +12,7 @@ import pandas as pd
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.heterogeneity import chromhacks
+from bcbio.heterogeneity import chromhacks, loh
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -69,6 +69,7 @@ def _finalize_sv(solution_file, data):
         out["subclones"] = "%s.segs.txt" % solution["path"]
         out["hetsummary"] = solution_file
         out["vrn_file"] = to_vcf(out["subclones"], "TitanCNA", _get_header, _seg_to_vcf, data)
+        out["lohsummary"] = loh.summary_status(out, data)
     return out
 
 def _should_run(het_file):

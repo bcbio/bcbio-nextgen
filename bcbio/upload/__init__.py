@@ -277,7 +277,7 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "index": True,
                                     "ext": "%s-%s" % (svcall["variantcaller"], caller),
                                     "variantcaller": svcall["variantcaller"]})
-            for extra in ["subclones", "contamination", "hetsummary"]:
+            for extra in ["subclones", "contamination", "hetsummary", "lohsummary"]:
                 svfile = svcall.get(extra)
                 if svfile and os.path.exists(svfile):
                     ext = os.path.splitext(svfile)[-1].replace(".", "")
