@@ -1,7 +1,109 @@
 .. _docs-cloud:
 
-Amazon Web Services
+bcbio cloud support
 -------------------
+
+bcbio has two approaches to running on cloud providers like
+`Amazon Web Services (AWS) <https://aws.amazon.com/>`_,
+`Google Cloud (GCP) <https://cloud.google.com/>`_ and
+`Microsoft Azure <https://azure.microsoft.com>`_. For smaller projects
+we use a `simplified ansible based
+approach
+<https://github.com/bcbio/bcbio-nextgen/tree/master/scripts/ansible#simplified-bcbio-cloud-usage>`_
+which automates spinning up single multicore machines for running either
+traditional or :ref:`docs-cwl` bcbio runs.
+
+For larger distributed projects, we're actively working on using :ref:`docs-cwl`
+support with runners like `Cromwell <http://cromwell.readthedocs.io>`_ that
+directly interface and run on cloud services. We'll document these approaches
+here as they're tested and available.
+
+For getting started, the CWL :ref:`docs-cwl-installation` documentation
+describes how to install `bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_,
+which provides a wrapper around bcbio that automates interaction with cloud
+providers and `Docker <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans
+up the command line usage to make it more intuitive and provides a superset of
+functionality available in ``bcbio_nextgen.py``.
+
+Google Cloud (GCP)
+------------------
+
+Cromwell runs bcbio CWL pipelines on Google Cloud using the
+`Google Pipelines API <https://cloud.google.com/genomics/reference/rest/>`_.
+
+Setup
+=====
+
+To setup a Google Compute environment, you'll make use of the `Web based console
+<https://console.cloud.google.com>`_ and `gcloud and gsutil from the Google
+Cloud SDK <https://cloud.google.com/sdk/>`_, which provide command line
+interfacts to manage data in Google Storage and Google Compute instances. You
+can install with::
+
+    bcbio_conda install -c conda-forge -c bioconda google-cloud-sdk
+
+For authentication, you want to set up a `Google Cloud Platform service account
+<https://cloud.google.com/docs/authentication/production>`_. The environmental variable
+``GOOGLE_APPLICATION_CREDENTIALS`` identifies a
+`JSON file of credentials <https://cloud.google.com/docs/authentication/getting-started>`_.
+which bcbio passes to Cromwell for authentication::
+
+    gcloud auth login
+    gcloud projects create your-project
+    gcloud iam service-accounts create your-service-account
+    gcloud projects add-iam-policy-binding your-project --member \
+      "serviceAccount:your-service-account@your-project.iam.gserviceaccount.com" --role "roles/owner"
+    gcloud iam service-accounts keys create ~/.config/glcoud/your-service-account.json \
+      --iam-account your-service-account@your-project.iam.gserviceaccount.com
+    export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/your-service-account.json
+
+You'll need a project for your run along with a Google Storage bucket for your
+data and run intermediates::
+
+    gcloud config set project your-project
+    gsutil mb gs://your-project
+
+Additional documentation for Cromwell: `Google Pipelines API
+<https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/>`_ and
+`Google authentication <https://github.com/broadinstitute/cromwell/blob/develop/docs/backends/Google.md>`_.
+
+Data preparation
+================
+
+Cromwell can localize data present in Google Storage buckets as part of the run
+process and bcbio will translate the data present in these storage bucket into
+references for the CWL run inputs.
+
+Upload your data with ``gsutil``::
+
+    gsutil cp your_data.bam gs://your-project/inputs/
+
+
+Create a ``bcbio_system-gcp.yaml`` input file for :ref:`docs-cwl-generate`::
+
+    gs:
+      ref: gs://bcbiodata/collections
+      inputs:
+        - gs://your-project/inputs
+    resources:
+      default: {cores: 2, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
+
+Generate a Common Workflow Language representation::
+
+   bcbio_vm.py template --systemconfig bcbio_system-gcp.yaml ${TEMPLATE}-template.yaml $PNAME.csv
+   bcbio_vm.py cwl --systemconfig bcbio_system-gcp.yaml $PNAME/config/$PNAME.yaml
+
+Running
+=======
+
+Run the CWL using Cromwell by specifying the project and root Google Storage
+bucket for intermediates::
+
+    bcbio_vm.py cwlrun cromwell $PNAME --cloud-project your-project \
+        --cloud-root gs://your-project/work_cromwell
+
+Amazon Web Services (old)
+-------------------------
 
 `Amazon Web Services (AWS) <https://aws.amazon.com/>`_ provides a flexible cloud
 based environment for running analyses. Cloud approaches offer the ability to
@@ -9,40 +111,11 @@ perform analyses at scale with no investment in local hardware. They also offer
 full programmatic control over the environment, allowing bcbio to automate the
 entire setup, run and teardown process.
 
-`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ provides a wrapper
-around bcbio-nextgen that automates interaction with AWS and `Docker
-<https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans up the command line
-usage to make it more intuitive and provides a superset of functionality
-available in ``bcbio_nextgen.py``. bcbio-vm uses `Elasticluster
+bcbio-vm uses `Elasticluster
 <https://github.com/gc3-uzh-ch/elasticluster>`_ to build a cluster on AWS with
 an encrypted NFS mounted drive and an optional Lustre shared filesystem.
-
-We're phasing out this approach to cloud support in bcbio. Instead of building
-this directly into bcbio, we'll now be using :ref:`docs-cwl` support. Runners
-like Cromwell can directly interface and run with cloud services and we'll
-document these approaches as they're tested and available. To use cloud
-integration immediately, we'd suggest using the `simplified ansible based
-approach
-<https://github.com/bcbio/bcbio-nextgen/tree/master/scripts/ansible#simplified-bcbio-cloud-usage>`_
-which spins up single multicore machines for running.
-
-Local setup
-===========
-
-``bcbio_vm.py`` provides the automation to start up and administer remote bcbio
-runs on AWS. This only requires a local installation of the python wrapper code,
-not any of the Docker containers or biological data, which will all get
-installed on AWS. The easier way to install is using `conda`_ with an isolated
-Python::
-
-    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
-    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
-
-We support both Linux and Mac OSX as clients for running remote AWS bcbio clusters.
-
-.. _conda: http://conda.pydata.org/
+We're phasing out this approach to cloud support in bcbio and will be actively
+moving to Common Workflow Language based approaches.
 
 Data preparation
 ================

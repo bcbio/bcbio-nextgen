@@ -3,25 +3,25 @@
 Common Workflow Language (CWL)
 ------------------------------
 
-bcbio supporting running with `Common Workflow Language (CWL)
+bcbio runs with `Common Workflow Language (CWL)
 <https://github.com/common-workflow-language/common-workflow-language>`_
 compatible parallelization software. bcbio generates a CWL workflow from a
 `standard bcbio sample YAML description file
-<https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_.
-Any tool that supports CWL input can run this workflow. CWL-based tools do the
+<https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_
+and any tool that supports CWL input can run the workflow. CWL-based tools do the
 work of managing files and workflows, and bcbio performs the biological analysis
 using either a Docker container or a local installation.
 
 Current status
 ~~~~~~~~~~~~~~
 
-bcbio currently supports creation of CWL for alignment, small variant calls
-(SNPs and indels), coverage assessment, HLA typing, quality control and
-structural variant calling. It generates a `CWL v1.0.2
-<http://www.commonwl.org/v1.0/>`_ compatible workflow. The actual biological
-code execution during runs works with either a `bcbio docker container
-<https://github.com/bcbio/bcbio_docker>`_  or a
-`local installation of bcbio <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html>`_.
+bcbio creates CWL for alignment, small variant calls (SNPs and indels), coverage
+assessment, HLA typing, quality control and structural variant calling. It
+generates a `CWL v1.0.2 <http://www.commonwl.org/v1.0/>`_ compatible workflow.
+The actual biological code execution during runs works with either a `bcbio
+docker container <https://github.com/bcbio/bcbio_docker>`_ or a `local
+installation of bcbio
+<https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html>`_.
 
 The implementation includes bcbio's approaches to splitting and batching
 analyses. At the top level workflow, we parallelize by samples. Using
@@ -43,11 +43,6 @@ bcbio supports these CWL-compatible tools:
   distributed runs on HPC systems with shared filesystems and schedulers like
   SLURM, SGE and PBSPro.
 
-- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
-
-- `Toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
-  distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
-
 - `Arvados <https://arvados.org/>`_ -- a hosted platform that runs on top of
   parallel cloud environments. We include an example below of running on the
   `public Curoverse <https://cloud.curoverse.com/>`_ instance running on
@@ -55,6 +50,11 @@ bcbio supports these CWL-compatible tools:
 
 - `DNANexus <https://www.dnanexus.com/>`_ -- a hosted platform running
   distributed jobs on cloud environments, working with both AWS and Azure.
+
+- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
+
+- `Toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
+  distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
 
 - `Seven Bridges <https://www.sevenbridges.com/>`_ -- parallel distributed
   analyses on the Seven Bridges platform and `Cancer Genomics Cloud
@@ -68,6 +68,8 @@ and also need to evaluate the workflow on larger, real life analyses. This
 includes supporting additional CWL runners. We're working on evaluating
 `Galaxy/Planemo <https://github.com/galaxyproject/planemo>`_ for integration
 with the Galaxy community.
+
+.. _docs-cwl-installation:
 
 Installation
 ~~~~~~~~~~~~
@@ -166,6 +168,8 @@ your machine:
    bcbio
    <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_
    add ``--no-container`` to the commands in the shell scripts.
+
+.. _docs-cwl-generate:
 
 Generating CWL for input to a tool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
