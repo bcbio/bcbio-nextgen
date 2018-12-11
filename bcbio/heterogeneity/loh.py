@@ -11,9 +11,18 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 
-_COORDS = {"hg38": {"HLA": ("chr6", 28510120, 33480577)},
-           "hg19": {"HLA": ("chr6", 29640000, 33120000)},
-           "GRCh37": {"HLA": ("6", 29640000, 33120000)}}
+_COORDS = {"hg38": {"HLA": ("chr6", 28510120, 33480577),
+                    "B2M": ("chr15", 44711487, 44718877),
+                    "PTEN": ("chr10", 87863113, 87971930),
+                    "CDKN2A": ("chr9", 21967753, 21995301)},
+           "hg19": {"HLA": ("chr6", 29640000, 33120000),
+                    "B2M": ("chr15", 45003675, 45011075),
+                    "PTEN": ("chr10", 89622870, 89731687),
+                    "CDKN2A": ("chr9", 21967751, 21995300)},
+           "GRCh37": {"HLA": ("6", 29640000, 33120000),
+                      "B2M": ("15", 45003675, 45011075),
+                      "PTEN": ("10", 89622870, 89731687),
+                      "CDKN2A": ("9", 21967751, 21995300)}}
 
 def get_coords(data):
     return _COORDS.get(dd.get_genome_build(data) or {})
