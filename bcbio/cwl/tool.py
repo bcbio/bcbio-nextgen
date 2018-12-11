@@ -13,6 +13,7 @@ import sys
 
 from bcbio import utils
 from bcbio.cwl import hpc
+from bcbio.distributed import objectstore
 
 def _get_main_and_json(directory):
     """Retrieve the main CWL and sample JSON files from a bcbio generated directory.
@@ -227,9 +228,10 @@ def _cromwell_move_outputs(metadata, final_dir):
     def _copy_with_secondary(f, dirname):
         if len(f["secondaryFiles"]) > 1:
             dirname = utils.safe_makedir(os.path.join(dirname, os.path.basename(os.path.dirname(f["location"]))))
-        finalf = os.path.join(dirname, os.path.basename(f["location"]))
-        if not utils.file_uptodate(finalf, f["location"]):
-            shutil.copy(f["location"], dirname)
+        if not objectstore.is_remote(f["location"]):
+            finalf = os.path.join(dirname, os.path.basename(f["location"]))
+            if not utils.file_uptodate(finalf, f["location"]):
+                shutil.copy(f["location"], dirname)
         [_copy_with_secondary(sf, dirname) for sf in f["secondaryFiles"]]
     def _write_to_dir(val, dirname):
         if isinstance(val, (list, tuple)):
