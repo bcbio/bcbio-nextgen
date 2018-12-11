@@ -230,7 +230,7 @@ You can now run this with any CWL compatible runner and the ``bcbio_vm.py
 cwlrun`` wrappers standardize running across multiple tools in different
 environments.
 
-Running with Cromwell (local, HPC)
+Running with Cromwell (local, HPC, cloud)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The `Cromwell <http://cromwell.readthedocs.io/>`_ workflow management system runs
@@ -258,6 +258,8 @@ heterogeneous and use only cores necessary for that job, the total cores used
 will max out at joblimit times maximum cores for an individual process. Setting
 this helps avoid over-committing jobs to a shared scheduler during highly
 parallel processes like variant calling.
+
+Cromwell can also run directly on cloud resources: :ref:`docs-cloud-gcp`.
 
 Running with Toil (local, HPC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

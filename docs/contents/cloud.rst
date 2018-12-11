@@ -25,8 +25,10 @@ providers and `Docker <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans
 up the command line usage to make it more intuitive and provides a superset of
 functionality available in ``bcbio_nextgen.py``.
 
+.. _docs-cloud-gcp:
+
 Google Cloud (GCP)
-------------------
+##################
 
 Cromwell runs bcbio CWL pipelines on Google Cloud using the
 `Google Pipelines API <https://cloud.google.com/genomics/reference/rest/>`_.
@@ -103,7 +105,7 @@ bucket for intermediates::
         --cloud-root gs://your-project/work_cromwell
 
 Amazon Web Services (old)
--------------------------
+#########################
 
 `Amazon Web Services (AWS) <https://aws.amazon.com/>`_ provides a flexible cloud
 based environment for running analyses. Cloud approaches offer the ability to
