@@ -132,18 +132,15 @@ def rnaseq_vardict_variant_calling(data):
     ref_file = dd.get_ref_file(data)
     bamfile = dd.get_work_bam(data)
     data = _setup_variant_regions(data, out_dir)
-    bed_file = dd.get_variant_regions(data)
-    opts = " -c 1 -S 2 -E 3 -g 4 "
-    resources = config_utils.get_resources("vardict", data)
-    if resources.get("options"):
-        opts += " ".join([str(x) for x in resources["options"]])
+    opts, _ = vardict._vardict_options_from_config([data], data["config"], out_file, dd.get_variant_regions(data),
+                                                   is_rnaseq=True)
     cores = dd.get_num_cores(data)
     if cores and cores > 1:
         opts += " -th %s" % str(cores)
     with file_transaction(data, out_file) as tx_out_file:
         jvm_opts = vardict._get_jvm_opts(data, tx_out_file)
         cmd = ("{r_setup} && {jvm_opts}{vardict_cmd} -G {ref_file} -f {freq} "
-               "-N {sample} -b {bamfile} {opts} {bed_file} "
+               "-N {sample} -b {bamfile} {opts} "
                "| {strandbias}"
                "| {var2vcf} -N {sample} -E -f {freq} {var2vcf_opts} "
                "| {fix_ambig} | {remove_dup} | {vcfstreamsort} {compress_cmd} "

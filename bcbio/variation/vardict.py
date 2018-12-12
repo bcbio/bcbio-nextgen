@@ -30,7 +30,7 @@ from bcbio.variation import bamprep, bedutils, vcfutils
 def _is_bed_file(target):
     return target and isinstance(target, basestring) and os.path.isfile(target)
 
-def _vardict_options_from_config(items, config, out_file, target=None):
+def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq=False):
     var2vcf_opts = []
     opts = ["-c 1", "-S 2", "-E 3", "-g 4"]
     # ["-z", "-F", "-c", "1", "-S", "2", "-E", "3", "-g", "4", "-x", "0",
@@ -51,7 +51,8 @@ def _vardict_options_from_config(items, config, out_file, target=None):
          (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
         opts += ["--deldupvar"]
     # remove low mapping quality reads
-    opts += ["-Q", "10"]
+    if not is_rnaseq:
+        opts += ["-Q", "10"]
     # Remove QCfail reads, avoiding high depth repetitive regions
     opts += ["-F", "0x700"]
     resources = config_utils.get_resources("vardict", config)

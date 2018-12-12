@@ -1,20 +1,21 @@
 ## 1.1.2 (in progress)
 
-- Trimming: add built-in support for adapters from the SMARTer Universal Low Input RNA Kit 
-(truseq2) and the Illumina NEXTera DNA prep kit from NEB (nextera2).
-- ChIP/ATAC-seq: allow skipping duplicate marking.
-- RNA-seq variation: filter RNA-seq variants close to splice junctions,
-  supporting STAR and hisat2.
 - VarDict low frequency somatic filters: generalize strand and mismatch based
   filter based on cross-validation to avoid over filtering on high depth panels.
 - strelka2 joint calling: switch to improved gvcfgenotyper approach for calling
   from gVCFs.
-- Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
-  Ben Liesfeld and Roland Ewald.
+- VarDict RNA-seq variant calling: avoid structural variants with recent vardict-java.
+- RNA-seq variation: filter RNA-seq variants close to splice junctions,
+  supporting STAR and hisat2.
 - RNA-seq variation: add snpEff effects to output variant calls. Thanks to Manasa Surakala.
 - RNA-seq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
 - use biobambam2 BAM to FASTQ conversion instead of Picard in all cases.
+- Trimming: add built-in support for adapters from the SMARTer Universal Low Input RNA Kit
+(truseq2) and the Illumina NEXTera DNA prep kit from NEB (nextera2).
+- ChIP/ATAC-seq: allow skipping duplicate marking.
 - joint calling: ensure correct upload to final directory when no annotations present
+- Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
+  Ben Liesfeld and Roland Ewald.
 
 ## 1.1.1 (6 November 2018)
 
