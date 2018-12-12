@@ -1,4 +1,4 @@
-## 1.1.2 (in progress)
+## 1.1.2 (12 December 2018)
 
 - VarDict low frequency somatic filters: generalize strand and mismatch based
   filter based on cross-validation to avoid over filtering on high depth panels.
