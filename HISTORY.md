@@ -4,6 +4,11 @@
   filter based on cross-validation to avoid over filtering on high depth panels.
 - strelka2 joint calling: switch to improved gvcfgenotyper approach for calling
   from gVCFs.
+- Heterogeneity: initial support for PureCN and TitanCNA heterogeneity analysis
+  including reporting on LOH in HLA for human samples. Work in progress validations:
+  https://github.com/bcbio/bcbio_validations/tree/master/TCGA-heterogeneity
+- CNV: initial support for GATK4 CNV calling as alternative to CNVkit for
+  tumor normal analyses
 - VarDict RNA-seq variant calling: avoid structural variants with recent vardict-java.
 - RNA-seq variation: filter RNA-seq variants close to splice junctions,
   supporting STAR and hisat2.
