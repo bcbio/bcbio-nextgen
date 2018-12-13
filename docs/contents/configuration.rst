@@ -682,9 +682,19 @@ Variant calling
      - ``variant`` A VCF file with variants to use as a background
        reference during variant calling. For tumor/normal paired calling use this to
        supply a panel of normal individuals.
-     - ``cnv_reference`` `Background reference file
-       <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_
-       for copy number calling.
+     - ``cnv_reference`` Background reference file for copy number calling. This
+       can be either a single file for one CNV method or a dictionary for
+       multiple methods. Supports `CNVkit cnn inputs
+       <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_,
+       'GATK4 HDF5 panel of normals <https://software.broadinstitute.org/gatk/documentation/article?id=11682>`_
+       and `seq2c <https://github.com/AstraZeneca-NGS/Seq2C>`_ combined mapping
+       plus coverage files::
+
+           background:
+             cnv_reference:
+               cnvkit: /path/to/background.cnn
+               gatk-cnv: /path/to/background_pon.hdf5
+               seq2c: /path/to/background.tsv
 
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
