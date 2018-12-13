@@ -2,6 +2,8 @@
 
 - CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows
   pre-computed panel of normals for tumor-only or single sample CNV calling.
+- MultiQC upload: fix bug where results from parallel run not moved to final
+  directory.
 
 ## 1.1.2 (12 December 2018)
 

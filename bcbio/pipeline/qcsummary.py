@@ -52,8 +52,7 @@ def generate_parallel(samples, run_parallel):
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
     # MultiQC must be run after all file outputs are set:
-    run_parallel("multiqc_summary", [samples])
-    return out
+    return [[utils.to_single_data(d)] for d in run_parallel("multiqc_summary", [out])]
 
 def pipeline_summary(data):
     """Provide summary information on processing sample.
