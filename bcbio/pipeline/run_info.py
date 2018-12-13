@@ -377,7 +377,13 @@ def _clean_background(data):
         elif isinstance(val, dict):
             for k, v in val.items():
                 if k in allowed_keys:
-                    out[k] = _file_to_abs(v, [os.getcwd()])
+                    if isinstance(v, basestring):
+                        out[k] = _file_to_abs(v, [os.getcwd()])
+                    else:
+                        assert isinstance(v, dict)
+                        for ik, iv in v.items():
+                            v[ik] = _file_to_abs(iv, [os.getcwd()])
+                        out[k] = v
                 else:
                     errors.append("Unexpected key: %s" % k)
         else:

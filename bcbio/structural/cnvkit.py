@@ -459,7 +459,12 @@ def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     if not os.path.exists(anti_file):
         _, anti_bin = target_anti_fn()
         with file_transaction(data, anti_file) as tx_out_file:
-            cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
+            # Create access file without targets to avoid overlap
+            # antitarget in cnvkit is meant to do this but appears to not always happen
+            # after chromosome 1
+            tx_access_file = os.path.join(os.path.dirname(tx_out_file), os.path.basename(access_file))
+            pybedtools.BedTool(access_file).subtract(cnv_file).saveas(tx_access_file)
+            cmd = [_get_cmd(), "antitarget", "-g", tx_access_file, cnv_file, "-o", tx_out_file,
                    "--avg-size", str(anti_bin)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_file, anti_file

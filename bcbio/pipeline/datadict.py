@@ -76,7 +76,6 @@ LOOKUPS = {
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "ensemble": {"keys": ["config", "algorithm", "ensemble"], "default": {}},
     "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
-    "background_cnv_reference": {"keys": ["config", "algorithm", "background", "cnv_reference"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
@@ -202,6 +201,11 @@ LOOKUPS = {
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
 }
+
+def get_background_cnv_reference(data, caller):
+    out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data)
+    if out:
+        return out.get(caller) if isinstance(out, dict) else out
 
 def get_batches(data):
     batches = get_batch(data)

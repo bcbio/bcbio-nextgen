@@ -61,10 +61,17 @@ def run(items):
     items = [utils.to_single_data(x) for x in items]
     work_dir = _sv_workdir(items[0])
 
-    coverage_file = _combine_coverages(items, work_dir)
-    read_mapping_file = _calculate_mapping_reads(items, work_dir)
-
-    normal_names = [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
+    input_backs = list(set(filter(lambda x: x is not None,
+                                  [dd.get_background_cnv_reference(d, "seq2c") for d in items])))
+    coverage_file = _combine_coverages(items, work_dir, input_backs)
+    read_mapping_file = _calculate_mapping_reads(items, work_dir, input_backs)
+    normal_names = []
+    if input_backs:
+        with open(input_backs[0]) as in_handle:
+            for line in in_handle:
+                if len(line.split()) == 2:
+                    normal_names.append(line.split()[0])
+    normal_names += [dd.get_sample_name(x) for x in items if population.get_affected_status(x) == 1]
     seq2c_calls_file = _call_cnv(items, work_dir, read_mapping_file, coverage_file, normal_names)
     items = _split_cnv(items, seq2c_calls_file, read_mapping_file, coverage_file)
     return items
@@ -72,7 +79,10 @@ def run(items):
 def prep_seq2c_bed(data):
     """Selecting the bed file, cleaning, and properly annotating for Seq2C
     """
-    bed_file = regions.get_sv_bed(data)
+    if dd.get_background_cnv_reference(data, "seq2c"):
+        bed_file = _background_to_bed(dd.get_background_cnv_reference(data, "seq2c"), data)
+    else:
+        bed_file = regions.get_sv_bed(data)
     if bed_file:
         bed_file = bedutils.clean_file(bed_file, data, prefix="svregions-")
     else:
@@ -102,6 +112,26 @@ def prep_seq2c_bed(data):
         logger.debug("Saved Seq2C clean annotated ready input BED into " + ready_file)
 
     return ready_file
+
+def _background_to_bed(back_file, data):
+    """Convert a seq2c background file with calls into BED regions for coverage.
+
+    seq2c background files are a concatenation of mapping and sample_coverages from
+    potentially multiple samples. We use the coverage information from the first
+    sample to translate into BED.
+    """
+    out_file = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bedprep")),
+                            "%s-regions.bed" % utils.splitext_plus(os.path.basename(back_file))[0])
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            with open(back_file) as in_handle:
+                with open(tx_out_file, "w") as out_handle:
+                    sample = in_handle.readline().split("\t")[0]
+                    for line in in_handle:
+                        if line.startswith(sample) and len(line.split()) >= 5:
+                            _, gene, chrom, start, end = line.split()[:5]
+                            out_handle.write("%s\n" % ("\t".join([chrom, str(int(start) - 1), end, gene])))
+    return out_file
 
 def _get_seq2c_options(data):
     """Get adjustable, through resources, or default options for seq2c.
@@ -135,7 +165,7 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
         with file_transaction(items[0], output_fpath) as tx_out_file:
             export = utils.local_path_export()
             cmd = ("{export} {cov2lr} -a {cov2lr_opt} {read_mapping_file} {coverage_file} | " +
-                   "{lr2gene} {lr2gene_opt} > {output_fpath}")
+                   "{lr2gene} {lr2gene_opt} > {tx_out_file}")
             do.run(cmd.format(**locals()), "Seq2C CNV calling")
     return output_fpath
 
@@ -268,8 +298,10 @@ def _depth_to_seq2cov(input_fpath, output_fpath, sample_name):
                 out.write('\t'.join(fs) + '\n')
     return output_fpath
 
-def _combine_coverages(items, work_dir):
+def _combine_coverages(items, work_dir, input_backs=None):
     """Combine coverage cnns calculated for individual inputs into single file.
+
+    Optionally moves over pre-calculated coverage samples from a background file.
     """
     out_file = os.path.join(work_dir, "sample_coverages.txt")
     if not utils.file_exists(out_file):
@@ -282,10 +314,18 @@ def _combine_coverages(items, work_dir):
                     cov_file = svouts[0]["coverage"]
                     with open(cov_file) as cov_f:
                         out_f.write(cov_f.read())
+                if input_backs:
+                    for input_back in input_backs:
+                        with open(input_back) as in_handle:
+                            for line in in_handle:
+                                if len(line.split()) >= 4:
+                                    out_f.write(line)
     return out_file
 
-def _calculate_mapping_reads(items, work_dir):
+def _calculate_mapping_reads(items, work_dir, input_backs=None):
     """Calculate read counts from samtools idxstats for each sample.
+
+    Optionally moves over pre-calculated mapping counts from a background file.
     """
     out_file = os.path.join(work_dir, "mapping_reads.txt")
     if not utils.file_exists(out_file):
@@ -299,7 +339,13 @@ def _calculate_mapping_reads(items, work_dir):
             lines.append("%s\t%s" % (dd.get_sample_name(data), count))
         with file_transaction(items[0], out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
-                out_handle.write("\n".join(lines))
+                out_handle.write("\n".join(lines) + "\n")
+                if input_backs:
+                    for input_back in input_backs:
+                        with open(input_back) as in_handle:
+                            for line in in_handle:
+                                if len(line.split()) == 2:
+                                    out_handle.write(line)
     return out_file
 
 # def _count_mapped_reads(data, work_dir, bed_file, bam_file):

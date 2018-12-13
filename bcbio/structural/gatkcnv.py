@@ -148,6 +148,23 @@ def create_panel_of_normals(items, group_id, work_dir):
             _run_with_memory_scaling(params, tx_out_file, items[0])
     return out_file
 
+def pon_to_bed(pon_file, out_dir, data):
+    """Extract BED intervals from a GATK4 hdf5 panel of normal file.
+    """
+    out_file = os.path.join(out_dir, "%s-intervals.bed" % (utils.splitext_plus(os.path.basename(pon_file))[0]))
+    if not utils.file_uptodate(out_file, pon_file):
+        import h5py
+        with file_transaction(data, out_file) as tx_out_file:
+            with h5py.File(pon_file, "r") as f:
+                with open(tx_out_file, "w") as out_handle:
+                    intervals = f["original_data"]["intervals"]
+                    for i in range(len(intervals["transposed_index_start_end"][0])):
+                        chrom = intervals["indexed_contig_names"][intervals["transposed_index_start_end"][0][i]]
+                        start = int(intervals["transposed_index_start_end"][1][i]) - 1
+                        end = int(intervals["transposed_index_start_end"][2][i])
+                        out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
+    return out_file
+
 def prepare_intervals(data, region_file, work_dir):
     """Prepare interval regions for targeted and gene based regions.
     """
@@ -298,12 +315,13 @@ def _seg_to_vcf(vals):
     """Convert GATK CNV calls seg output to a VCF line.
     """
     call_to_cn = {"+": 3, "-": 1}
+    call_to_type = {"+": "<DUP>", "-": "<DEL>"}
     if vals["CALL"] not in ["0"]:
         info = ["FOLD_CHANGE_LOG=%s" % vals["MEAN_LOG2_COPY_RATIO"],
                 "PROBES=%s" % vals["NUM_POINTS_COPY_RATIO"],
                 "END=%s" % vals["END"],
                 "CN=%s" % call_to_cn[vals["CALL"]]]
-        return [vals["CONTIG"], vals["START"], ".", "N", "<CNV>", ".",
+        return [vals["CONTIG"], vals["START"], ".", "N", call_to_type[vals["CALL"]], ".",
                 ";".join(info), "GT", "0/1"]
 
 def _sv_workdir(data):
