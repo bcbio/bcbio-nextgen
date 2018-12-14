@@ -4,6 +4,7 @@
   pre-computed panel of normals for tumor-only or single sample CNV calling.
 - MultiQC upload: fix bug where results from parallel run not moved to final
   directory.
+- GATK4 CNV: fix for standardize VCF output, correcting number of columns.
 
 ## 1.1.2 (12 December 2018)
 

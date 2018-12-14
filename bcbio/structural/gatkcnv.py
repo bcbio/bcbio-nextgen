@@ -322,7 +322,7 @@ def _seg_to_vcf(vals):
                 "END=%s" % vals["END"],
                 "CN=%s" % call_to_cn[vals["CALL"]]]
         return [vals["CONTIG"], vals["START"], ".", "N", call_to_type[vals["CALL"]], ".",
-                ";".join(info), "GT", "0/1"]
+                ".", ";".join(info), "GT", "0/1"]
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
