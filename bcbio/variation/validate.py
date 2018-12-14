@@ -138,7 +138,7 @@ def _checksum(in_file, block_size=65536):
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
-    if isinstance(data, (list, tuple)):
+    if isinstance(data, (list, tuple)) and cwlutils.is_cwl_run(utils.to_single_data(data[0])):
         data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
     toval_data = cwlutils.unpack_tarballs(toval_data, toval_data)

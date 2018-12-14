@@ -55,6 +55,9 @@ def combine_multiple_callers(samples):
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
         work_bam = tz.get_in(("combine", "work_bam", "out"), data, data.get("align_bam"))
+        # For pre-computed VCF inputs, we don't have BAM files
+        if not work_bam:
+            work_bam = dd.get_sample_name(data)
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         variantcaller = get_variantcaller(data)
         key = (multi.get_batch_for_key(data), work_bam)
