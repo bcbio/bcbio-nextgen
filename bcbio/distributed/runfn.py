@@ -578,11 +578,11 @@ def _to_cwl(val, input_files):
             if cur_file.endswith(cwlutils.DIR_TARGETS):
                 if os.path.exists(cur_dir):
                     for fname in os.listdir(cur_dir):
-                        if fname != cur_file:
+                        if fname != cur_file and os.path.isfile(fname):
                             secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
                 else:
                     for f in input_files:
-                        if f.startswith(cur_dir) and f != cur_file:
+                        if f.startswith(cur_dir) and f != cur_file and os.path.isfile(f):
                             secondary.append({"class": "File", "path": f})
             if secondary:
                 val["secondaryFiles"] = _remove_duplicate_files(secondary)
