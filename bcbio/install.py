@@ -145,13 +145,14 @@ def _set_matplotlib_default_backend():
         import matplotlib
         matplotlib.use('Agg', force=True)
         config = matplotlib.matplotlib_fname()
-        with file_transaction(config) as tx_out_file:
-            with open(config) as in_file, open(tx_out_file, "w") as out_file:
-                for line in in_file:
-                    if line.split(":")[0].strip() == "backend":
-                        out_file.write("backend: agg\n")
-                    else:
-                        out_file.write(line)
+        if os.access(config, os.W_OK):
+            with file_transaction(config) as tx_out_file:
+                with open(config) as in_file, open(tx_out_file, "w") as out_file:
+                    for line in in_file:
+                        if line.split(":")[0].strip() == "backend":
+                            out_file.write("backend: agg\n")
+                        else:
+                            out_file.write(line)
 
 def _matplotlib_installed():
     try:
