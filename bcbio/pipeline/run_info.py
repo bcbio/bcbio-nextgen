@@ -710,6 +710,24 @@ def _check_svcaller(item):
                          "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
                                                       sorted(list(allowed))))
 
+def _get_as_list(item, k):
+    out = item["algorithm"].get(k)
+    if not out:
+        out = []
+    if not isinstance(out, (list, tuple)):
+        out = [svs]
+    return out
+
+def _check_hetcaller(item):
+    """Ensure upstream SV callers requires to heterogeneity analysis are available.
+    """
+    svs = _get_as_list(item, "svcaller")
+    hets = _get_as_list(item, "hetcaller")
+    if hets or any([x in svs for x in ["titancna", "purecn"]]):
+        if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
+            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk4-cnv` "
+                             "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
+
 def _check_jointcaller(data):
     """Ensure specified jointcaller is valid.
     """
@@ -775,6 +793,7 @@ def _check_sample_config(items, in_file, config):
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
     [_check_svcaller(x) for x in items]
+    [_check_hetcaller(x) for x in items]
     [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
     [_check_hlacaller(x) for x in items]
