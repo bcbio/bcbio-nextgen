@@ -341,7 +341,12 @@ class BroadRunner:
                ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
-                 data=None, region=None, memscale=None, parallel_gc=False):
+                 data=None, region=None, memscale=None, parallel_gc=False, ld_preload=False):
+        """Top level interface to running a GATK command.
+
+        ld_preload injects required libraries for Java JNI calls:
+        https://gatkforums.broadinstitute.org/gatk/discussion/8810/something-about-create-pon-workflow
+        """
         needs_java7 = LooseVersion(self.get_gatk_version()) < LooseVersion("3.6")
         # For old Java requirements use global java 7
         if needs_java7:
@@ -354,6 +359,8 @@ class BroadRunner:
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
             cl = fix_missing_spark_user(cl, prog, params)
+            if ld_preload:
+                cl = "export LD_PRELOAD=%s/lib/libopenblas.so && %s" % (os.path.dirname(utils.get_bcbio_bin()), cl)
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
         if needs_java7:

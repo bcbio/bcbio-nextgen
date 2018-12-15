@@ -145,7 +145,7 @@ def create_panel_of_normals(items, group_id, work_dir):
                       "--annotated-intervals", tz.get_in(["regions", "bins", "gcannotated"], items[0])]
             for data in items:
                 params += ["-I", tz.get_in(["depth", "bins", "target"], data)]
-            _run_with_memory_scaling(params, tx_out_file, items[0])
+            _run_with_memory_scaling(params, tx_out_file, items[0], ld_preload=True)
     return out_file
 
 def pon_to_bed(pon_file, out_dir, data):
@@ -297,11 +297,11 @@ def _run_collect_allelic_counts(pos_file, pos_name, work_dir, data):
             _run_with_memory_scaling(params, tx_out_file, data)
     return out_file
 
-def _run_with_memory_scaling(params, tx_out_file, data):
+def _run_with_memory_scaling(params, tx_out_file, data, ld_preload=False):
     num_cores = dd.get_num_cores(data)
     memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
     broad_runner = broad.runner_from_config(data["config"])
-    broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+    broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale, ld_preload=ld_preload)
 
 # ## VCF output
 
