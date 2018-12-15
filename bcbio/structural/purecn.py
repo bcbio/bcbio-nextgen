@@ -98,6 +98,7 @@ def _run_purecn(paired, work_dir):
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             try:
+                cmd = "%s && %s" % (utils.get_R_exports(), " ".join([str(x) for x in cmd]))
                 do.run(cmd, "PureCN copy number calling")
             except subprocess.CalledProcessError as msg:
                 if _allowed_errors(str(msg)):
@@ -117,7 +118,7 @@ def _run_purecn(paired, work_dir):
 
 def _allowed_errors(msg):
     allowed = ["Could not find valid purity and ploidy solution."]
-    return any([len(re.findall(m, msg)) >= 0 for m in allowed])
+    return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 def _segment_normalized_gatk(cnr_file, work_dir, paired):
     """Segmentation of normalized inputs using GATK4, converting into standard input formats.
