@@ -578,7 +578,7 @@ def _to_cwl(val, input_files):
             if cur_file.endswith(cwlutils.DIR_TARGETS):
                 if os.path.exists(cur_dir):
                     for fname in os.listdir(cur_dir):
-                        if fname != cur_file:
+                        if fname != cur_file and not os.path.isdir(fname):
                             secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
                 else:
                     for f in input_files:
