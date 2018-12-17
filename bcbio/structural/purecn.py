@@ -98,7 +98,8 @@ def _run_purecn(paired, work_dir):
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             try:
-                cmd = "%s && %s" % (utils.get_R_exports(), " ".join([str(x) for x in cmd]))
+                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(), utils.get_R_exports(),
+                                                             " ".join([str(x) for x in cmd]))
                 do.run(cmd, "PureCN copy number calling")
             except subprocess.CalledProcessError as msg:
                 if _allowed_errors(str(msg)):
