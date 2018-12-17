@@ -29,6 +29,8 @@ _CALLERS = {
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _GLOBAL_BATCHING = set(["seq2c"])
+# CNV callers that have background references
+_CNV_REFERENCE = set(["seq2c", "cnvkit", "gatk-cnv"])
 
 def _get_callers(items, stage, special_cases=False):
     """Retrieve available callers for the provided stage.
@@ -316,6 +318,22 @@ def summarize_sv(items):
     return [out]
 
 # ## configuration
+
+def standardize_cnv_reference(data):
+    """Standardize cnv_reference background to support multiple callers.
+    """
+    out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data, {})
+    cur_callers = set(data["config"]["algorithm"].get("svcaller")) & _CNV_REFERENCE
+    if isinstance(out, basestring):
+        if not len(cur_callers) == 1:
+            raise ValueError("Multiple CNV callers and single background reference for %s: %s" %
+                                data["description"], list(cur_callers))
+        else:
+            out = {cur_callers.pop(): out}
+    return out
+
+def supports_cnv_reference(c):
+    return c in _CNV_REFERENCE
 
 def parallel_multiplier(items):
     """Use more resources (up to available limits) if we have multiple QC samples/svcallers.

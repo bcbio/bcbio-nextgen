@@ -295,6 +295,7 @@ def _handle_special_inputs(inputs, variables):
 
     XXX Need to better expose this at a top level definition.
     """
+    from bcbio import structural
     optional = [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "sv_regions"],
@@ -316,6 +317,12 @@ def _handle_special_inputs(inputs, variables):
                     out.append(vid)
                     found_indexes = True
             assert found_indexes, "Found no snpEff indexes in %s" % [v["id"] for v in variables]
+        elif input == ["config", "algorithm", "background", "cnv_reference"]:
+            for v in variables:
+                vid = get_base_id(v["id"]).split("__")
+                if (vid[:4] == ["config", "algorithm", "background", "cnv_reference"] and
+                      structural.supports_cnv_reference(vid[4])):
+                    out.append(vid)
         elif input in optional:
             if _get_string_vid(input) in all_vs:
                 out.append(input)

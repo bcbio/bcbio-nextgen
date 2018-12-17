@@ -367,7 +367,6 @@ def _clean_background(data):
     """Clean up background specification, remaining back compatible.
     """
     allowed_keys = set(["variant", "cnv_reference"])
-    cnv_callers = set(["seq2c", "cnvkit", "gatk-cnv"])
     val = tz.get_in(["algorithm", "background"], data)
     errors = []
     if val:
@@ -392,18 +391,8 @@ def _clean_background(data):
         if errors:
             raise ValueError("Problematic algorithm background specification for %s:\n %s" %
                              (data["description"], "\n".join(errors)))
-        if "cnv_reference" not in out:
-            out["cnv_reference"] = {}
-        if isinstance(out["cnv_reference"], basestring):
-            cur_caller = set(data["config"]["algorithm"].get("svcaller")) & cnv_callers
-            if not len(cur_caller) == 1:
-                raise ValueError("Multiple CNV callers and single background reference for %s: %s" %
-                                 data["description"], list(cur_caller))
-            else:
-                out["cnv_reference"] = {cur_caller.pop(): out["cnv_reference"]}
-        for c in list(cnv_callers):
-            if c not in out["cnv_reference"]:
-                out["cnv_reference"][c] = None
+        out["cnv_reference"] = structural.standardize_cnv_reference({"config": data,
+                                                                     "description": data["description"]})
         data["algorithm"]["background"] = out
     return data
 
