@@ -229,6 +229,7 @@ def _loh_to_vcf(cur):
         svtype = None
     if svtype:
         info = ["SVTYPE=%s" % svtype, "END=%s" % cur["end"],
+                "SVLEN=%s" % (int(cur["end"]) - int(cur["start"])),
                 "CN=%s" % cn, "MajorCN=%s" % (cn - minor_cn), "MinorCN=%s" % minor_cn]
         return [cur["chr"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
                 ";".join(info), "GT", "0/1"]

@@ -315,13 +315,15 @@ def _seg_to_vcf(vals):
     """Convert GATK CNV calls seg output to a VCF line.
     """
     call_to_cn = {"+": 3, "-": 1}
-    call_to_type = {"+": "<DUP>", "-": "<DEL>"}
+    call_to_type = {"+": "DUP", "-": "DEL"}
     if vals["CALL"] not in ["0"]:
         info = ["FOLD_CHANGE_LOG=%s" % vals["MEAN_LOG2_COPY_RATIO"],
                 "PROBES=%s" % vals["NUM_POINTS_COPY_RATIO"],
+                "SVTYPE=%s" % call_to_type[vals["CAL"]],
+                "SVLEN=%s" % (int(vals["END"]) - int(vals["START"])),
                 "END=%s" % vals["END"],
                 "CN=%s" % call_to_cn[vals["CALL"]]]
-        return [vals["CONTIG"], vals["START"], ".", "N", call_to_type[vals["CALL"]], ".",
+        return [vals["CONTIG"], vals["START"], ".", "N", "<%s>" % call_to_type[vals["CALL"]], ".",
                 ".", ";".join(info), "GT", "0/1"]
 
 def _sv_workdir(data):
