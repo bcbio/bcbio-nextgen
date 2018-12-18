@@ -578,11 +578,11 @@ def _to_cwl(val, input_files):
             if cur_file.endswith(cwlutils.DIR_TARGETS):
                 if os.path.exists(cur_dir):
                     for fname in os.listdir(cur_dir):
-                        if fname != cur_file and not os.path.isdir(os.path.join(cur_dir, fname)):
+                        if fname != cur_file and not os.path.isdir(os.path.join(cur_dir, fname)) and fname != 'sbg.worker.log':
                             secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
                 else:
                     for f in input_files:
-                        if f.startswith(cur_dir) and f != cur_file:
+                        if f.startswith(cur_dir) and f != cur_file and not os.path.isdir(f):
                             secondary.append({"class": "File", "path": f})
             if secondary:
                 val["secondaryFiles"] = _remove_duplicate_files(secondary)
@@ -592,7 +592,7 @@ def _to_cwl(val, input_files):
         # File representation with secondary files
         if "base" in val and "secondary" in val:
             out = {"class": "File", "path": val["base"]}
-            secondary = [{"class": "File", "path": x} for x in val["secondary"]]
+            secondary = [{"class": "File", "path": x} for x in val["secondary"] if not os.path.isdir(x)]
             if secondary:
                 out["secondaryFiles"] = _remove_duplicate_files(secondary)
             val = out
