@@ -593,7 +593,7 @@ def _to_cwl(val, input_files):
         # File representation with secondary files
         if "base" in val and "secondary" in val:
             out = {"class": "File", "path": val["base"]}
-            secondary = [{"class": "File", "path": x} for x in val["secondary"]]
+            secondary = [{"class": "File", "path": x} for x in val["secondary"] if not os.path.isdir(x)]
             if secondary:
                 out["secondaryFiles"] = _remove_duplicate_files(secondary)
             val = out
