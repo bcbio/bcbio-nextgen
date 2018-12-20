@@ -5,7 +5,9 @@ https://github.com/hartwigmedical/hmftools/tree/master/purity-ploidy-estimator
 import csv
 import itertools
 import os
+import re
 import shutil
+import subprocess
 
 import toolz as tz
 
@@ -16,7 +18,6 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
-from bcbio.structural import gatkcnv
 
 def run(items):
     paired = vcfutils.get_paired(items)
@@ -178,20 +179,55 @@ def _amber_het_file(method, vrn_files, work_dir, paired):
         prep_file = bubbletree.prep_vrn_file(vrn_files[0]["vrn_file"], vrn_files[0]["variantcaller"],
                                              work_dir, paired, AmberWriter)
         utils.symlink_plus(prep_file, out_file)
+        pcf_file = out_file + ".pcf"
+        if not utils.file_exists(pcf_file):
+            with file_transaction(paired.tumor_data, pcf_file) as tx_out_file:
+                r_file = os.path.join(os.path.dirname(tx_out_file), "bafSegmentation.R")
+                with open(r_file, "w") as out_handle:
+                    out_handle.write(_amber_seg_script)
+                cmd = "%s && %s --no-environ %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
+                                                          out_file, pcf_file)
+                do.run(cmd, "PURPLE: AMBER baf segmentation")
     else:
         assert method == "pon"
-        tumor_counts, normal_counts = gatkcnv.heterogzygote_counts(paired)
-        out_file = _count_files_to_amber(tumor_counts, normal_counts, work_dir, paired.tumor_data)
-    pcf_file = out_file + ".pcf"
-    if not utils.file_exists(pcf_file):
-        with file_transaction(paired.tumor_data, pcf_file) as tx_out_file:
-            r_file = os.path.join(os.path.dirname(tx_out_file), "bafSegmentation.R")
-            with open(r_file, "w") as out_handle:
-                out_handle.write(_amber_seg_script)
-            cmd = "%s && %s --no-environ %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
-                                                      out_file, pcf_file)
-            do.run(cmd, "PURPLE: AMBER baf segmentation")
+        out_file = _run_amber(paired, work_dir)
     return out_file
+
+def _run_amber(paired, work_dir, lenient=False):
+    """AMBER: calculate allele frequencies at likely heterozygous sites.
+
+    lenient flag allows amber runs on small test sets.
+    """
+    amber_dir = utils.safe_makedir(os.path.join(work_dir, "amber"))
+    out_file = os.path.join(amber_dir, "%s.amber.baf" % dd.get_sample_name(paired.tumor_data))
+    if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".pcf"):
+        with file_transaction(paired.tumor_data, out_file) as tx_out_file:
+            key = "germline_het_pon"
+            het_bed = tz.get_in(["genome_resources", "variation", key], paired.tumor_data)
+            cmd = ["AMBER", "-threads", dd.get_num_cores(paired.tumor_data),
+                   "-tumor", dd.get_sample_name(paired.tumor_data),
+                   "-tumor_bam", dd.get_align_bam(paired.tumor_data),
+                   "-reference", dd.get_sample_name(paired.normal_data),
+                   "-reference_bam", dd.get_align_bam(paired.normal_data),
+                   "-ref_genome", dd.get_ref_file(paired.tumor_data),
+                   "-bed", het_bed,
+                   "-output_dir", os.path.dirname(tx_out_file)]
+            if lenient:
+                cmd += ["-max_het_af_percent", "1.0"]
+            try:
+                do.run(cmd, "PURPLE: AMBER baf generation")
+            except subprocess.CalledProcessError as msg:
+                if not lenient and _amber_allowed_errors(str(msg)):
+                    return _run_amber(paired, work_dir, True)
+            for f in os.listdir(os.path.dirname(tx_out_file)):
+                if f != os.path.basename(tx_out_file):
+                    shutil.move(os.path.join(os.path.dirname(tx_out_file), f),
+                                os.path.join(amber_dir, f))
+    return out_file
+
+def _amber_allowed_errors(msg):
+    allowed = ["R execution failed. Unable to complete segmentation."]
+    return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 # BAF segmentation with copynumber from AMBER
 # https://github.com/hartwigmedical/hmftools/blob/master/amber/src/main/resources/r/bafSegmentation.R
