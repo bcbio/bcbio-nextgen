@@ -1073,7 +1073,6 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "ensemble": None,
                 "exclude_regions": [],
                 "variant_regions": None,
-                "variantcaller": [],
                 "svcaller": [],
                 "svvalidate": None,
                 "svprioritize": None,
