@@ -24,31 +24,19 @@ from bcbio.variation.coverage import regions_coverage
 from bcbio.variation import bedutils, population, vcfutils
 
 
-def precall(items):
+def precall(data):
     """Perform initial pre-calling steps -- coverage calcuation by sample.
 
-    Use sambamba to call average region coverage in regions, and convert into a correct format.
+    Use mosdepth to call average region coverage in regions, and convert
+    into seq2c format.
     """
-    items = [utils.to_single_data(x) for x in items]
-    assert len(items) == 1, "Expect one item to Seq2C coverage calculation"
-    data = items[0]
-    # sv_bed could specify a smaller region than variant coverage, so avoid
-    # this sanity check
-    # assert dd.get_coverage_interval(data) != "genome", "Seq2C only for amplicon and exome sequencing"
-
-    assert "seq2c_bed_ready" in data["config"]["algorithm"], "Error: svregions or variant_regions BED file required for Seq2C"
-
-    bed_file = data["config"]["algorithm"]["seq2c_bed_ready"]
+    data = utils.to_single_data(data)
+    bed_file = tz.get_in(["config", "algorithm", "seq2c_bed_ready"], data)
+    if not bed_file:
+        raise ValueError("Error: svregions or variant_regions BED file required for Seq2C")
     sample_name = dd.get_sample_name(data)
-
     work_dir = _sv_workdir(data)
-    cov_file = _calculate_coverage(data, work_dir, bed_file, sample_name)
-
-    if "sv" not in data:
-        data["sv"] = []
-    data["sv"].append({"variantcaller": "seq2c",
-                       "coverage": cov_file})
-    return [data]
+    return _calculate_coverage(data, work_dir, bed_file, sample_name)
 
 def run(items):
     """Normalization and log2 ratio calculation plus CNV calling for full cohort.
@@ -172,6 +160,7 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
 def _split_cnv(items, calls_fpath, read_mapping_file, coverage_file):
     out_items = []
     for item in items:
+        cur_sv = {"variantcaller": "seq2c", "coverage": tz.get_in(["depth", "bins", "seq2c"], item)}
         if not get_paired_phenotype(item) == "normal":
             sample_name = dd.get_sample_name(item)
             work_dir = _sv_workdir(item)
@@ -183,14 +172,14 @@ def _split_cnv(items, calls_fpath, read_mapping_file, coverage_file):
                         for l in inp:
                             if l.split("\t")[0] == sample_name:
                                 out.write(l)
-            for i, sv in enumerate(item["sv"]):
-                if sv["variantcaller"] == "seq2c":
-                    item["sv"][i]["calls"] = out_fname
-                    item["sv"][i]["vrn_file"] = to_vcf(out_fname, item)
-                    item["sv"][i]["read_mapping"] = read_mapping_file
-                    item["sv"][i]["calls_all"] = calls_fpath
-                    item["sv"][i]["coverage_all"] = coverage_file
-                    break
+            cur_sv.update({"calls": out_fname, "vrn_file": to_vcf(out_fname, item),
+                           "read_mapping": read_mapping_file, "calls_all": calls_fpath,
+                           "coverage_all": coverage_file})
+        if "sv" not in item:
+            item["sv"] = []
+        assert "seq2c" not in [x["variantcaller"] for x in item["sv"]], \
+            "Do not expect existing seq2c variant output: %s" % (dd.get_sample_name(item))
+        item["sv"].append(cur_sv)
         out_items.append(item)
     return out_items
 
@@ -308,10 +297,7 @@ def _combine_coverages(items, work_dir, input_backs=None):
         with file_transaction(items[0], out_file) as tx_out_file:
             with open(tx_out_file, 'w') as out_f:
                 for data in items:
-                    svouts = [x for x in data["sv"] if x["variantcaller"] == "seq2c"]
-                    cfiles = list(set([os.path.basename(x["coverage"]) for x in svouts]))
-                    assert len(cfiles) == 1, (dd.get_sample_name(data), cfiles)
-                    cov_file = svouts[0]["coverage"]
+                    cov_file = tz.get_in(["depth", "bins", "seq2c"], data)
                     with open(cov_file) as cov_f:
                         out_f.write(cov_f.read())
                 if input_backs:

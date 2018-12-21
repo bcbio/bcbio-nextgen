@@ -18,7 +18,6 @@ from bcbio.variation import vcfutils
 
 # Stratify callers by stage -- see `run` documentation below for definitions
 _CALLERS = {
-  "precall": {"seq2c": seq2c.precall},
   "initial": {"cnvkit": cnvkit.run},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run, "cnvkit": cnvkit.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
@@ -149,7 +148,7 @@ def _batch_split_by_sv(samples, stage):
             for x in ready_data:
                 svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
-                if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
+                if stage in ["ensemble"]:  # no batching for ensemble methods
                     if isinstance(batch, basestring) and batch != dd.get_sample_name(x):
                         batch += "_%s" % dd.get_sample_name(x)
                     else:
@@ -172,7 +171,6 @@ def run(samples, run_parallel, stage):
     """Run structural variation detection.
 
     The stage indicates which level of structural variant calling to run.
-      - precall, perform initial sample based assessment of samples
       - initial, callers that can be used in subsequent structural variation steps (cnvkit -> lumpy)
       - standard, regular batch calling
       - ensemble, post-calling, combine other callers or prioritize results

@@ -171,12 +171,22 @@ def calculate_sv_coverage(data):
     from bcbio.structural import cnvkit
     data = utils.to_single_data(data)
     if not cnvkit.use_general_sv_bins(data):
-        return [[data]]
-    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
-                                               dd.get_sample_name(data), "bins"))
-    out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
-    if os.path.exists(out_target_file):
-        data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file}
+        out_target_file, out_anti_file = (None, None)
+    else:
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                                   dd.get_sample_name(data), "bins"))
+        out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
+        if not os.path.exists(out_target_file):
+            out_target_file, out_anti_file = (None, None)
+    if "seq2c" in dd.get_svcaller(data):
+        from bcbio.structural import seq2c
+        seq2c_target = seq2c.precall(data)
+    else:
+        seq2c_target = None
+
+    if not tz.get_in(["depth", "bins"], data):
+        data = tz.update_in(data, ["depth", "bins"], lambda x: {})
+    data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file, "seq2c": seq2c_target}
     return [[data]]
 
 def _calculate_sv_coverage_gatk(data, work_dir):
