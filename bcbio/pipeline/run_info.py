@@ -1078,7 +1078,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "validate": None,
                 "validate_regions": None,
                 "vcfanno": []}
-    convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
+    convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "svcaller", "qc", "disambiguate",
                            "vcfanno", "adapters", "custom_trim", "exclude_regions"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
