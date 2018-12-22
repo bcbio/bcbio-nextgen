@@ -7,7 +7,9 @@
 - MultiQC upload: fix bug where results from parallel run not moved to final
   directory.
 - GATK4 CNV: fix for standardize VCF output, correcting number of columns.
-- RNA-seq variation: fix for over-filtering variants near splice junctions with STAR.
+- RNA-seq variation: fix for over-filtering variants near splice junctions with
+  STAR.
+- Catch and report unicode characters in templating or YAML descriptions.
 
 ## 1.1.2 (12 December 2018)
 

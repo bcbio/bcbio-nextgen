@@ -319,9 +319,9 @@ def _clean_metadata(data):
     # Ensure batches are strings and have no duplicates
     if batches:
         if isinstance(batches, (list, tuple)):
-            batches = [_clean_characters(str(x)) for x in sorted(list(set(batches)))]
+            batches = [_clean_characters(x) for x in sorted(list(set(batches)))]
         else:
-            batches = _clean_characters(str(batches))
+            batches = _clean_characters(batches)
         data["metadata"]["batch"] = batches
     # If we have jointcalling, add a single batch if not present
     elif tz.get_in(["algorithm", "jointcaller"], data) or "gvcf" in tz.get_in(["algorithm", "tools_on"], data):
@@ -399,6 +399,13 @@ def _clean_background(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
+    print(x)
+    print(repr(x))
+    try:
+        x = str(x.decode("ascii"))
+    except UnicodeEncodeError, msg:
+        msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
+        raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:
         x = x.replace(problem, "_")
     return x
@@ -931,13 +938,13 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
         item = _normalize_files(item, dirs.get("flowcell"))
         if "lane" not in item:
             item["lane"] = str(i + 1)
-        item["lane"] = _clean_characters(str(item["lane"]))
+        item["lane"] = _clean_characters(item["lane"])
         if "description" not in item:
             if _item_is_bam(item):
                 item["description"] = get_sample_name(item["files"][0])
             else:
                 raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
-        description = _clean_characters(str(item["description"]))
+        description = _clean_characters(item["description"])
         item["description"] = description
         # make names R safe if we are likely to use R downstream
         if item["analysis"].lower() in R_DOWNSTREAM_ANALYSIS:

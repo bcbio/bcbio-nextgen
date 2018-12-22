@@ -274,6 +274,12 @@ def _parse_metadata(in_handle):
                              "https://bcbio-nextgen.readthedocs.org/en/latest/"
                              "contents/configuration.html#automated-sample-configuration\n"
                              "Duplicate line is %s" % (sample, sinfo))
+        vals = []
+        for v in sinfo[1:]:
+            try:
+                vals.append(str(v.decode("ascii")))
+            except UnicodeDecodeError, msg:
+                raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
         metadata[sample] = dict(zip(keys, sinfo[1:]))
     metadata, global_vars = _set_global_vars(metadata)
     return metadata, global_vars
