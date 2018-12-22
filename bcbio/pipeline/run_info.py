@@ -399,13 +399,14 @@ def _clean_background(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    print(x)
-    print(repr(x))
-    try:
-        x = str(x.decode("ascii"))
-    except UnicodeEncodeError, msg:
-        msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
-        raise ValueError(repr(msg))
+    if not isinstance(x, basestring):
+        x = str(x)
+    else:
+        try:
+            x = str(x.decode("ascii"))
+        except UnicodeEncodeError, msg:
+            msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
+            raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:
         x = x.replace(problem, "_")
     return x
