@@ -26,8 +26,10 @@ def write_versions(dirs, items):
                     found_versions = True
                     with open(version_file) as in_handle:
                         reader = csv.reader(in_handle)
-                        for resource, version in reader:
-                            writer.writerow([genome, resource, version])
+                        for parts in reader:
+                            if len(parts) >= 2:
+                                resource, version = parts[:2]
+                                writer.writerow([genome, resource, version])
     if found_versions:
         return out_file
 
