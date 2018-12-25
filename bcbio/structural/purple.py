@@ -12,7 +12,6 @@ import subprocess
 import toolz as tz
 
 from bcbio import broad, utils
-from bcbio import heterogeneity
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -28,9 +27,10 @@ def run(items):
         return items
     work_dir = _sv_workdir(paired.tumor_data)
     from bcbio import heterogeneity
-    het_file = _amber_het_file("pon", heterogeneity.get_variants(paired.tumor_data), work_dir, paired)
+    vrn_files = heterogeneity.get_variants(paired.tumor_data, include_germline=False)
+    het_file = _amber_het_file("pon", vrn_files, work_dir, paired)
     depth_file = _run_cobalt(paired, work_dir)
-    purple_out = _run_purple(paired, het_file, depth_file, work_dir)
+    purple_out = _run_purple(paired, het_file, depth_file, vrn_files, work_dir)
     out = []
     if paired.normal_data:
         out.append(paired.normal_data)
@@ -52,7 +52,7 @@ def _get_jvm_opts(out_file, data):
     jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
     return jvm_opts
 
-def _run_purple(paired, het_file, depth_file, work_dir):
+def _run_purple(paired, het_file, depth_file, vrn_files, work_dir):
     """Run PURPLE with pre-calculated AMBER and COBALT compatible inputs.
 
     TODO add output conversion into standard annotated VCF
@@ -71,9 +71,8 @@ def _run_purple(paired, het_file, depth_file, work_dir):
                    "-threads", dd.get_num_cores(paired.tumor_data),
                    "-tumor_sample", dd.get_sample_name(paired.tumor_data),
                    "-ref_sample", dd.get_sample_name(paired.normal_data)]
-            vcf_file = heterogeneity.get_variants(paired.tumor_data, include_germline=False)
-            if vcf_file:
-                cmd += ["-somatic_vcf", vcf_file[0]["vrn_file"]]
+            if vrn_files:
+                cmd += ["-somatic_vcf", vrn_files[0]["vrn_file"]]
             # Avoid X11 display errors when writing plots
             cmd = "unset DISPLAY && %s" % " ".join([str(x) for x in cmd])
             do.run(cmd, "PURPLE: purity and ploidy estimation")
@@ -174,7 +173,7 @@ def _amber_het_file(method, vrn_files, work_dir, paired):
     https://github.com/hartwigmedical/hmftools/tree/master/amber
     https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src/test/resources/amber/new.amber.baf
     """
-    assert vrn_files, "Did not find compatible variant calling files for TitanCNA inputs"
+    assert vrn_files, "Did not find compatible variant calling files for PURPLE inputs"
     from bcbio.heterogeneity import bubbletree
 
     if method == "variants":
