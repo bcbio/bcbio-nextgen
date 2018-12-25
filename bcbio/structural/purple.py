@@ -12,6 +12,7 @@ import subprocess
 import toolz as tz
 
 from bcbio import broad, utils
+from bcbio import heterogeneity
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -54,7 +55,7 @@ def _get_jvm_opts(out_file, data):
 def _run_purple(paired, het_file, depth_file, work_dir):
     """Run PURPLE with pre-calculated AMBER and COBALT compatible inputs.
 
-    XXX Need to add output conversion into VCF for standard formats
+    TODO add output conversion into standard annotated VCF
     """
     purple_dir = utils.safe_makedir(os.path.join(work_dir, "purple"))
     out_file = os.path.join(purple_dir, "%s.purple.cnv" % dd.get_sample_name(paired.tumor_data))
@@ -70,6 +71,9 @@ def _run_purple(paired, het_file, depth_file, work_dir):
                    "-threads", dd.get_num_cores(paired.tumor_data),
                    "-tumor_sample", dd.get_sample_name(paired.tumor_data),
                    "-ref_sample", dd.get_sample_name(paired.normal_data)]
+            vcf_file = heterogeneity.get_variants(paired.tumor_data, include_germline=False)
+            if vcf_file:
+                cmd += ["-somatic_vcf", vcf_file[0]["vrn_file"]]
             # Avoid X11 display errors when writing plots
             cmd = "unset DISPLAY && %s" % " ".join([str(x) for x in cmd])
             do.run(cmd, "PURPLE: purity and ploidy estimation")
