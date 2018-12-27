@@ -17,6 +17,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import titancna
 from bcbio.variation import vcfutils
 
 def run(items):
@@ -54,8 +55,6 @@ def _get_jvm_opts(out_file, data):
 
 def _run_purple(paired, het_file, depth_file, vrn_files, work_dir):
     """Run PURPLE with pre-calculated AMBER and COBALT compatible inputs.
-
-    TODO add output conversion into standard annotated VCF
     """
     purple_dir = utils.safe_makedir(os.path.join(work_dir, "purple"))
     out_file = os.path.join(purple_dir, "%s.purple.cnv" % dd.get_sample_name(paired.tumor_data))
@@ -84,6 +83,8 @@ def _run_purple(paired, het_file, depth_file, vrn_files, work_dir):
     if not utils.file_exists(out_file_export):
         utils.symlink_plus(out_file, out_file_export)
     out = {"variantcaller": "purple", "call_file": out_file_export,
+           "vrn_file": titancna.to_vcf(out_file_export, "PURPLE", _get_header, _export_to_vcf,
+                                       paired.tumor_data),
            "plot": {}, "metrics": {}}
     for name, ext in [("copy_number", "copyNumber"), ("minor_allele", "minor_allele"), ("variant", "variant")]:
         plot_file = os.path.join(purple_dir, "plot", "%s.%s.png" % (dd.get_sample_name(paired.tumor_data), ext))
@@ -315,3 +316,23 @@ def _cobalt_ratio_file(paired, work_dir):
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                            dd.get_sample_name(data), "purple"))
+
+# ## VCF output
+
+def _get_header(in_handle):
+    return in_handle.readline().replace("#", "").strip().split(), in_handle
+
+def _export_to_vcf(cur):
+    """Convert PURPLE custom output into VCF.
+    """
+    if float(cur["copyNumber"]) > 2.0:
+        svtype = "DUP"
+    elif float(cur["copyNumber"]) < 2.0:
+        svtype = "DEL"
+    else:
+        svtype = None
+    if svtype:
+        info = ["END=%s" % cur["end"], "SVLEN=%s" % (int(cur["end"]) - int(cur["start"])),
+                "SVTYPE=%s" % svtype, "CN=%s" % cur["copyNumber"], "PROBES=%s" % cur["depthWindowCount"]]
+        return [cur["chromosome"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
+                ";".join(info), "GT", "0/1"]
