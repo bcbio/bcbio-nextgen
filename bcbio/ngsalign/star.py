@@ -140,8 +140,9 @@ def _update_data(align_file, out_dir, names, data):
     transcriptome_file = _move_transcriptome_file(out_dir, names)
     data = dd.set_transcriptome_bam(data, transcriptome_file)
     sjfile = get_splicejunction_file(out_dir, data)
-    sjbed = junction2bed(sjfile)
-    data = dd.set_junction_bed(data, sjbed)
+    if sjfile:
+        sjbed = junction2bed(sjfile)
+        data = dd.set_junction_bed(data, sjbed)
     return data
 
 def _move_transcriptome_file(out_dir, names):
