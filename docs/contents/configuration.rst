@@ -267,6 +267,12 @@ The sample configuration file defines ``details`` of each sample to process::
       specifications (1=unaffected, 2=affected). CNVkit uses case/control
       status to determine how to set background samples for CNV calling.
 
+   - ``disease`` identifies a specific disease name for the sample. Used along
+     with ``svprioritize`` to help identify gene regions for reporting during
+     analysis with heterogeneity callers like PureCN and TitanCNA. This is
+     primarily for cancer studies and you can narrow genes by disease using
+     inputs like `lung`, `breast` or `pancreatic` for different cancer types.
+
    - ``prep_method`` A free text description of the method used in sample
      prep. Used to group together samples during CNV calling for background.
      This is not required and when not present bcbio assumes all samples in

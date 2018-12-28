@@ -67,6 +67,7 @@ LOOKUPS = {
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "svclass": {"keys": ["metadata", "svclass"], "default": ""},
     "prep_method": {"keys": ["metadata", "prep_method"], "default": ""},
+    "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
