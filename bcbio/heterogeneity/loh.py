@@ -8,7 +8,6 @@ import gzip
 import os
 import decimal
 import uuid
-from cStringIO import StringIO
 
 import toolz as tz
 import yaml
@@ -92,6 +91,9 @@ def _check_copy_number_changes(svtype, cn, minor_cn, data):
     else:
         return "std"
 
+def _to_cn(v):
+    return int(round(float(v)))
+
 def _titancna_summary(call, data):
     """Summarize purity, ploidy and LOH for TitanCNA.
     """
@@ -106,8 +108,8 @@ def _titancna_summary(call, data):
                 end = int(val["End_Position.bp."])
                 for region, cur_coords in coords.items():
                     if val["Chromosome"] == cur_coords[0] and are_overlapping((start, end), cur_coords[1:]):
-                        cur_calls[region][_check_copy_number_changes(svtype, int(val["Copy_Number"]),
-                                                                     int(val["MinorCN"]), data)] += 1
+                        cur_calls[region][_check_copy_number_changes(svtype, _to_cn(val["Copy_Number"]),
+                                                                     _to_cn(val["MinorCN"]), data)] += 1
         out[svtype] = {r: _merge_cn_calls(c, svtype) for r, c in cur_calls.items()}
 
     with open(call["hetsummary"]) as in_handle:
@@ -130,7 +132,7 @@ def _purecn_summary(call, data):
                 end = int(end)
                 for region, cur_coords in coords.items():
                     if chrom == cur_coords[0] and are_overlapping((start, end), cur_coords[1:]):
-                        cur_calls[region][_check_copy_number_changes(svtype, int(cn), int(minor_cn), data)] += 1
+                        cur_calls[region][_check_copy_number_changes(svtype, _to_cn(cn), _to_cn(minor_cn), data)] += 1
         out[svtype] = {r: _merge_cn_calls(c, svtype) for r, c in cur_calls.items()}
     with open(call["hetsummary"]) as in_handle:
         vals = dict(zip(in_handle.readline().strip().replace('"', '').split(","),
@@ -141,9 +143,9 @@ def _purecn_summary(call, data):
 
 def _merge_cn_calls(calls, svtype):
     if calls[svtype]:
-        return "mixed %s" % svtype if calls[svtype] else svtype
+        return "mixed" if calls["std"] else svtype
     else:
-        return "no %s" % svtype
+        return "no"
 
 def are_overlapping(r, s):
     """Test if two coordinates overlap.
@@ -160,6 +162,7 @@ def edn_load(fp):
     return decoder.decode()
 
 def edn_loads(s):
+    from cStringIO import StringIO
     buf = StringIO(s)
     result = edn_load(buf)
     buf.close()
