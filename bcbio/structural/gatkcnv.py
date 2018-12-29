@@ -319,7 +319,7 @@ def _seg_to_vcf(vals):
     if vals["CALL"] not in ["0"]:
         info = ["FOLD_CHANGE_LOG=%s" % vals["MEAN_LOG2_COPY_RATIO"],
                 "PROBES=%s" % vals["NUM_POINTS_COPY_RATIO"],
-                "SVTYPE=%s" % call_to_type[vals["CAL"]],
+                "SVTYPE=%s" % call_to_type[vals["CALL"]],
                 "SVLEN=%s" % (int(vals["END"]) - int(vals["START"])),
                 "END=%s" % vals["END"],
                 "CN=%s" % call_to_cn[vals["CALL"]]]
