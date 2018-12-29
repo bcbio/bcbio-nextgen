@@ -103,7 +103,12 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
             if not utils.file_exists(priority_vcf):
                 with file_transaction(data, priority_vcf) as tx_out_file:
                     resources = config_utils.get_resources("bcbio_prioritize", data["config"])
-                    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
+                    jvm_opts = resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"])
+                    jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                                 {"direction": "increase",
+                                                                                  "maximum": "30000M",
+                                                                                  "magnitude": dd.get_cores(data)}}})
+                    jvm_opts = " ".join(jvm_opts)
                     export = utils.local_path_export()
                     cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
                            " -k {prioritize_by}")
