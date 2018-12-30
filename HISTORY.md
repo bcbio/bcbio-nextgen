@@ -9,6 +9,8 @@
 - GATK4 CNV: fix for standardize VCF output, correcting number of columns.
 - RNA-seq variation: fix for over-filtering variants near splice junctions with
   STAR.
+- Structural variant gene annotation: simplify and handle issues with
+  multidirectional comparisons.
 - Catch and report unicode characters in templating or YAML descriptions.
 
 ## 1.1.2 (12 December 2018)

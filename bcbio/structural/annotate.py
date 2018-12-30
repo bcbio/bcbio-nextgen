@@ -49,18 +49,19 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
     # swap over gene name to '.' if beyond maximum distance
     # cut removes the last distance column which can cause issues
     # with bedtools merge: 'ERROR: illegal character '.' found in integer conversion of string'
-    distance_filter = (r"""awk -F$'\t' -v OFS='\t' '{if ($NF > %s) $%s = "."} {print}'""" %
-                       (max_distance, gene_index))
+    distance_filter = (r"""awk -F$'\t' -v OFS='\t' '{if ($NF > %s || $NF < -%s) $%s = "."} {print}'""" %
+                       (max_distance, max_distance, gene_index))
     sort_cmd = bedutils.get_sort_cmd(os.path.dirname(out_file))
     cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
     # Ensure gene transcripts match reference genome
     ready_gene_file = os.path.join(os.path.dirname(out_file), "%s-genomeonly.bed" %
                                    (utils.splitext_plus(os.path.basename(gene_file))[0]))
     ready_gene_file = bedutils.subset_to_genome(gene_file, ready_gene_file, data)
-    cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
-           "{sort_cmd} -k1,1 -k2,2n | "
-            "bedtools closest -g <(cut -f1,2 {fai_file} | {sort_cmd} -k1,1 -k2,2n) "
-            "-d -t all -a - -b <({sort_cmd} -k1,1 -k2,2n {ready_gene_file}) -t first | "
+    exports = "export TMPDIR=%s && %s" % (os.path.dirname(out_file), utils.local_path_export())
+    cmd = ("{exports}{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
+           "gsort - {fai_file} | "
+            "bedtools closest -g {fai_file} "
+            "-D ref -t first -a - -b <(gsort {ready_gene_file} {fai_file}) | "
             "{distance_filter} | cut -f 1-{max_column} | "
             "bedtools merge -i - -c {columns} -o {ops} -delim ',' -d -10 > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")
