@@ -118,7 +118,8 @@ def _run_purecn(paired, work_dir):
     return out if (out.get("rds") and os.path.exists(out["rds"])) else None
 
 def _allowed_errors(msg):
-    allowed = ["Could not find valid purity and ploidy solution."]
+    allowed = ["Could not find valid purity and ploidy solution.",
+               "None of the variants in provided VCF passed filtering."]
     return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 def _segment_normalized_gatk(cnr_file, work_dir, paired):
