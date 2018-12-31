@@ -568,9 +568,9 @@ def _get_relative_ext(of, sf):
                 os.path.basename(orig).count(".") == os.path.basename(prefix).count("."))
     # Handle remote files
     if of.find(":") > 0:
-        of = of.split(":")[-1]
+        of = os.path.basename(of.split(":")[-1])
     if sf.find(":") > 0:
-        sf = sf.split(":")[-1]
+        sf = os.path.basename(sf.split(":")[-1])
     prefix = os.path.commonprefix([sf, of])
     while prefix.endswith(".") or (half_finished_trim(sf, prefix) and half_finished_trim(of, prefix)):
         prefix = prefix[:-1]
@@ -700,7 +700,7 @@ def _to_cwldata(key, val, get_retriever):
 def _remove_remote_prefix(f):
     """Remove any remote references to allow object lookups by file paths.
     """
-    return f.split(":")[-1] if objectstore.is_remote(f) else f
+    return f.split(":")[-1].split("/", 1)[1] if objectstore.is_remote(f) else f
 
 def _to_cwlfile_with_indexes(val, get_retriever):
     """Convert reads with ready to go indexes into the right CWL object.
@@ -805,6 +805,7 @@ def _clean_final_outputs(keyvals, get_retriever):
     def clean_path(get_retriever, x):
         integration, config = get_retriever.integration_and_config(x)
         if integration:
+            print(x, integration.clean_file(x, config))
             return integration.clean_file(x, config)
         else:
             return x
