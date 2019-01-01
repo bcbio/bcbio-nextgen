@@ -51,14 +51,14 @@ bcbio supports these CWL-compatible tools:
 - `DNANexus <https://www.dnanexus.com/>`_ -- a hosted platform running
   distributed jobs on cloud environments, working with both AWS and Azure.
 
-- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
+- `Seven Bridges <https://www.sevenbridges.com/>`_ -- parallel distributed
+  analyses on the Seven Bridges platform and `Cancer Genomics Cloud
+  <http://www.cancergenomicscloud.org/>`_.
 
 - `Toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
   distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
 
-- `Seven Bridges <https://www.sevenbridges.com/>`_ -- parallel distributed
-  analyses on the Seven Bridges platform and `Cancer Genomics Cloud
-  <http://www.cancergenomicscloud.org/>`_.
+- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
 
 - `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
   core analysis engine, primarily used for testing.
@@ -495,6 +495,62 @@ DNAnexus platform.
               $FOLDER/$PNAME-workflow/main-$PNAME-samples.json \
               --project PROJECT_ID --token $DX_AUTH_TOKEN \
               --rootdir $FOLDER/dx-cwl-run
+
+Running on Seven Bridges (hosted cloud)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio runs on the `Seven Bridges <https://www.sevenbridges.com/>`_
+including the main platform and specialized data sources like the
+`Cancer Genomics Cloud <https://www.cancergenomicscloud.org/>`_ and
+`Cavatica <http://www.cavatica.org/>`_. Seven Bridges uses generated CWL
+directly and bcbio has utilities to query your remote data on the platform and
+prepare CWL for direct submission.
+
+1. Since Seven Bridges is available on multiple platforms and data access
+   points, we authenticate with a configuration file in
+   ``$HOME/.sevenbridges/credentials`` with potentially `multiple profiles defining
+   API access URLs and authentication keys
+   <https://sevenbridges-python.readthedocs.io/en/latest/quickstart/#initialize-the-library-using-a-configuration-file>`_.
+   We reference the `specified credentials
+   <https://docs.sevenbridges.com/docs/store-credentials-to-access-seven-bridges-client-applications-and-libraries#section-unified-configuration-file>`_
+   when setting up a ``bcbio_system-sbg.yaml`` file to ensure correct authentication.
+
+2. Upload your inputs and bcbio reference data using the `Seven Bridges command
+   line uploader
+   <https://docs.sevenbridges.com/docs/upload-via-the-command-line>`_. We plan
+   to host standard bcbio reference data in a public project so you should only
+   need to upload your project specific data::
+
+       sbg-uploader.sh -p chapmanb/bcbio-test --folder inputs --preserve-folder fastq_files regions
+
+3. Create ``bcbio_system-sbg.yaml`` file defining locations of inputs::
+
+       sbgenomics:
+         profile: default
+         project: chapmanb/bcbio-test
+         inputs:
+           - /testdata/100326_FC6107FAAXX
+           - /testdata/automated
+           - /testdata/genomes
+           - /testdata/reference_material
+       resources:
+         default:
+           cores: 2
+           memory: 3G
+           jvm_opts: [-Xms750m, -Xmx3000m]
+
+4. Follow the :ref:`automated-sample-config` workflow to generate a full
+   configuration, and generate a CWL description of the workflow::
+
+       PNAME=somatic
+       bcbio_vm.py template --systemconfig=bcbio_system-sbg.yaml ${PNAME}_template.yaml $PNAME.csv
+       bcbio_vm.py cwl --systemconfig=bcbio_system-sbg.yaml $PNAME/config/$PNAME.yaml
+
+5. Run the job on the Seven Bridges platform::
+
+       PNAME=somatic
+       SBG_PROJECT=bcbio-test
+       bcbio_vm.py cwlrun sbg ${PNAME}-workflow -- --project ${SBG_PROJECT}
 
 Development notes
 ~~~~~~~~~~~~~~~~~
