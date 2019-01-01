@@ -805,7 +805,6 @@ def _clean_final_outputs(keyvals, get_retriever):
     def clean_path(get_retriever, x):
         integration, config = get_retriever.integration_and_config(x)
         if integration:
-            print(x, integration.clean_file(x, config))
             return integration.clean_file(x, config)
         else:
             return x

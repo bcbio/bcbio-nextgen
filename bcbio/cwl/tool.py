@@ -253,6 +253,15 @@ def _cromwell_move_outputs(metadata, final_dir):
             elif len(vals) > 0:
                 raise ValueError("Unexpected sample and outputs: %s %s %s" % (k, samples, vals))
 
+def _run_sbgenomics(args):
+    """Run CWL on SevenBridges platform and Cancer Genomics Cloud.
+    """
+    assert not args.no_container, "Seven Bridges runs require containers"
+    main_file, json_file, project_name = _get_main_and_json(args.directory)
+    flags = []
+    cmd = ["sbg-cwl-runner"] + flags + args.toolargs + [main_file, json_file]
+    _run_tool(cmd)
+
 def _run_funnel(args):
     """Run funnel TES server with rabix bunny for CWL.
     """
@@ -293,6 +302,7 @@ def _run_funnel(args):
 _TOOLS = {"cwltool": _run_cwltool,
           "cromwell": _run_cromwell,
           "arvados": _run_arvados,
+          "sbg": _run_sbgenomics,
           "toil": _run_toil,
           "bunny": _run_bunny,
           "funnel": _run_funnel,
