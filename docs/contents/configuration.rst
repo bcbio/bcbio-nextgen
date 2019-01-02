@@ -1005,9 +1005,18 @@ You can pass different parameters for ``macs2`` adding to :ref:`config-resources
           macs2:
             options: ["--broad"]
 
+.. _docs-config-qc:
 Quality control
 ===============
 
+- ``qc`` Allows you to specifically assign quality control modules to run.
+  Generally you want to leave this unset and allow bcbio to run the correct QC
+  metrics for your experiment, or remove specific QC steps you don't want using
+  ``tools_off`` (:ref:`_config-changing-defaults`). However, this can allow
+  turning off most of the QC by specifying a single quick running step like
+  ``picard``. Available tools are ``fastqc``, ``samtools``, ``coverage``,
+  ``picard``, ``contamination`` (VerifyBamID), ``peddy``, ``viral``, ``damage``,
+  ``umi``, ``small-rna``, ``atropos``, ``chipqc``.
 - ``mixup_check`` Detect potential sample mixups. Currently supports
   `qSignature <https://sourceforge.net/p/adamajava/wiki/qSignature/>`_.
   ``qsignature_full`` runs a larger analysis while ``qsignature`` runs a smaller
@@ -1083,8 +1092,7 @@ lists with multiple options:
     HaplotypeCaller and VQSR. By default bcbio includes GATK4 and uses it.
   - ``vqsr`` turns off variant quality score recalibration for all samples.
   - ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this, we
-    use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality control
-    FastQC usage.
+    use bwa mem with 70bp or longer reads.
   - ``lumpy-genotype`` skip genotyping for Lumpy samples, which can be slow in
     the case of many structural variants.
   - ``seqcluster`` turns off use of seqcluster tool in srnaseq pipeline.
@@ -1097,8 +1105,11 @@ lists with multiple options:
     variants is performed but all high quality variants pass.
   - ``upload_alignment`` turns off final upload of large alignment files.
   - ``pbgzip`` turns off use of bgzip with multiple threads.
-  - ``coverage_qc`` turns off calculation of coverage statistics with
-    samtools-stats and picard.
+  - For quality control, you can turn off any specific tool by adding to ``tools_off``.
+    For example, ``fastqc`` turns off quality control FastQC usage.
+    and ``coverage_qc`` turns off calculation of coverage statistics with
+    samtools-stats and picard. See the :ref:`docs-config-qc` docs for
+    details on tools.
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
