@@ -1006,13 +1006,14 @@ You can pass different parameters for ``macs2`` adding to :ref:`config-resources
             options: ["--broad"]
 
 .. _docs-config-qc:
+
 Quality control
 ===============
 
 - ``qc`` Allows you to specifically assign quality control modules to run.
   Generally you want to leave this unset and allow bcbio to run the correct QC
   metrics for your experiment, or remove specific QC steps you don't want using
-  ``tools_off`` (:ref:`_config-changing-defaults`). However, this can allow
+  ``tools_off`` (:ref:`config-changing-defaults`). However, this can allow
   turning off most of the QC by specifying a single quick running step like
   ``picard``. Available tools are ``fastqc``, ``samtools``, ``coverage``,
   ``picard``, ``contamination`` (VerifyBamID), ``peddy``, ``viral``, ``damage``,
