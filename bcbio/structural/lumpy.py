@@ -91,7 +91,8 @@ def _prepare_smoove_bams(full_bams, sr_bams, disc_bams, items, tx_work_dir):
 
 def _allowed_errors(msg):
     allowed = ["covmed: not enough reads to sample for bam stats",
-               "missing pair end parameters:"]
+               "missing pair end parameters:",
+               "mean stdev read_length min_non_overlap"]
     return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 def _filter_by_support(in_file, data):
