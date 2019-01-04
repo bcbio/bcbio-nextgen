@@ -119,6 +119,7 @@ def _run_purecn(paired, work_dir):
 
 def _allowed_errors(msg):
     allowed = ["Could not find valid purity and ploidy solution.",
+               "Cannot find valid purity/ploidy solution",
                "None of the variants in provided VCF passed filtering."]
     return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
