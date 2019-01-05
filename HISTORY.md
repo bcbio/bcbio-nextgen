@@ -2,6 +2,8 @@
 
 - CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows
   pre-computed panel of normals for tumor-only or single sample CNV calling.
+- install: respect pre-specified bioconda and conda-forge in condarc
+  configuration. Allows use of custom package mirrors.
 - seq2c: move specialized pre-call calculation upstream to coverage estimation.
   Allows use of seq2c in CWL runs.
 - MultiQC upload: fix bug where results from parallel run not moved to final
