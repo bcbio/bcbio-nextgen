@@ -75,7 +75,11 @@ def _get_conda_channels(conda_bin):
     """
     channels = ["bioconda", "conda-forge"]
     out = []
-    config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+    try:
+        import yaml
+        config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+    except ImportError:
+        config = {}
     for c in channels:
         present = False
         for orig_c in config.get("channels") or []:
