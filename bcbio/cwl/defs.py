@@ -583,7 +583,7 @@ def _variant_sv(checkpoints):
                 cwlout(["sv", "prioritize", "raw"], {"type": "array", "items": ["File", "null"]}),
                 cwlout(["svvalidate", "grading_summary"], ["File", "null"]),
                 cwlout(["svvalidate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
-               "bcbio-vc", disk={"files": 1.0}, cores=1)]
+               "bcbio-vc", ["bcbio-prioritize"], disk={"files": 1.0}, cores=1)]
     final_outputs = [["sv", "calls"], ["svvalidate", "grading_summary"], ["sv", "prioritize", "tsv"],
                      ["sv", "prioritize", "raw"], ["sv", "supplemental"]]
     return steps, final_outputs
