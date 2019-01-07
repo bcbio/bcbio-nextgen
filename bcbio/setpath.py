@@ -1,6 +1,7 @@
 """Update the PATH environment variable to reflect the value of BCBIOPATH.
 
 """
+from __future__ import print_function
 import contextlib
 import os
 

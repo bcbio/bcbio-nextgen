@@ -278,7 +278,7 @@ def _parse_metadata(in_handle):
         for v in sinfo[1:]:
             try:
                 vals.append(str(v.decode("ascii")))
-            except UnicodeDecodeError, msg:
+            except UnicodeDecodeError as msg:
                 raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
         metadata[sample] = dict(zip(keys, sinfo[1:]))
     metadata, global_vars = _set_global_vars(metadata)

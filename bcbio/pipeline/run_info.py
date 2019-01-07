@@ -404,7 +404,7 @@ def _clean_characters(x):
     else:
         try:
             x = str(x.decode("ascii"))
-        except UnicodeEncodeError, msg:
+        except UnicodeEncodeError as msg:
             msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
             raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:

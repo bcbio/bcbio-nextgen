@@ -99,8 +99,8 @@ def create_dexseq_annotation(gff, count_file):
                         exon = exon[0].replace("\"", "").split()[1]
                         gene = gene[0].replace("\"", "").split()[1]
                         length = int(cols[4]) - int(cols[3]) + 1
-                        line = "%s:%s\t%s\t%s\t%s\t%s\t%s\t%s" % (gene, exon, gene,
-                                                                  cols[0], cols[3],
-                                                                  cols[4],
-                                                                  length, cols[6])
-                        print >>out_handle, line
+                        line = "%s:%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (gene, exon, gene,
+                                                                    cols[0], cols[3],
+                                                                    cols[4],
+                                                                    length, cols[6])
+                        out_handle.write(line)

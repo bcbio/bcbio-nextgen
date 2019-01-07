@@ -1,5 +1,6 @@
 """Functionality to query and extract information from aligned BAM files.
 """
+from __future__ import print_function
 import collections
 import os
 import itertools

@@ -126,7 +126,7 @@ def run_has_samplesheet(fc_dir, config, require_single=True):
     # maximum of 2 mismatches in fcid
 
     potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1, 0.85)
-    if len(potential_fcids) > 0 and fcid_sheet.has_key(potential_fcids[0]):
+    if len(potential_fcids) > 0 and potential_fcids[0] in fcid_sheet:
         return fcid_sheet[potential_fcids[0]]
     else:
         return None

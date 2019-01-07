@@ -3,6 +3,7 @@
 Catalogs the full list of programs used in analysis, enabling reproduction of
 results and tracking of provenance in output files.
 """
+from __future__ import print_function
 import os
 import contextlib
 import subprocess

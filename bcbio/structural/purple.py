@@ -309,7 +309,6 @@ def _cobalt_ratio_file(paired, work_dir):
                 writer = csv.writer(out_handle, delimiter="\t")
                 writer.writerow(["Chromosome", "Position", "ReferenceReadCount", "TumorReadCount",
                                  "ReferenceGCRatio", "TumorGCRatio", "ReferenceGCDiploidRatio"])
-        print(cnr_file)
         raise NotImplementedError
     return out_file
 

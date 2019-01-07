@@ -75,7 +75,7 @@ class GalaxySqnLimsApi:
                 urllib.parse.urlencode(run_data))
         response = urllib.request.urlopen(req)
         info = json.loads(response.read())
-        if info.has_key('error'):
+        if "error" in info:
             raise ValueError("Problem retrieving info: %s" % info["error"])
         else:
             return info["details"]

@@ -39,7 +39,7 @@ def _generate_estimates(bam_file, out_base, failed_file, exts, data):
         cmd += _get_input_args(bam_file, data, out_base, background)
         try:
             do.run(cmd, "VerifyBamID contamination checks")
-        except subprocess.CalledProcessError, msg:
+        except subprocess.CalledProcessError as msg:
             def allowed_errors(l):
                 return (l.find("Insufficient Available markers") >= 0 or
                         l.find("No reads found in any of the regions") >= 0)

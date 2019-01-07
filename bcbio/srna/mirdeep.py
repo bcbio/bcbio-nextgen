@@ -63,7 +63,7 @@ def _prepare_inputs(ma_fn, bam_file, out_dir):
                     cols = line.split("\t")
                     name_with_counts = "%s_x%s" % (cols[0], sum(map(int, cols[2:])))
                     count_name[cols[0]] = name_with_counts
-                    print >>out_handle, ">%s\n%s" % (name_with_counts, cols[1])
+                    out_handle.write(">%s\n%s\n" % (name_with_counts, cols[1]))
     fixed_bam = os.path.join(out_dir, "align.bam")
     bam_handle = pysam.AlignmentFile(bam_file, "rb")
     with pysam.AlignmentFile(fixed_bam, "wb", template=bam_handle) as out_handle:
@@ -99,7 +99,7 @@ def _parse_novel(csv_file, sps="new"):
                     m3p_end = m3p_start + len(m3p) - 1
                     if m5p in seen:
                         continue
-                    print >>fa_handle, (">{sps}-{name} {start}\n{pre}").format(**locals())
-                    print >>str_handle, (">{sps}-{name} ({score}) [{sps}-{name}-5p:{m5p_start}-{m5p_end}] [{sps}-{name}-3p:{m3p_start}-{m3p_end}]").format(**locals())
+                    fa_handle.write(">{sps}-{name} {start}\n{pre}\n").format(**locals())
+                    str_handle.write(">{sps}-{name} ({score}) [{sps}-{name}-5p:{m5p_start}-{m5p_end}] [{sps}-{name}-3p:{m3p_start}-{m3p_end}]\n").format(**locals())
                     seen.add(m5p)
     return op.abspath("novel")
