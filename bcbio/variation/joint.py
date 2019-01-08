@@ -20,7 +20,7 @@ from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils, region
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import gatkjoint, genotype, multi
+from bcbio.variation import bamprep, gatkjoint, genotype, multi
 
 SUPPORTED = {"general": ["freebayes", "platypus", "samtools"],
              "gatk": ["gatk-haplotype"],
