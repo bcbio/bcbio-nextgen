@@ -9,6 +9,7 @@ import os
 import decimal
 import uuid
 
+from six import StringIO
 import toolz as tz
 import yaml
 
@@ -162,7 +163,6 @@ def edn_load(fp):
     return decoder.decode()
 
 def edn_loads(s):
-    from cStringIO import StringIO
     buf = StringIO(s)
     result = edn_load(buf)
     buf.close()

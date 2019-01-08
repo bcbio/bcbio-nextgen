@@ -10,7 +10,7 @@ import re
 import socket
 
 import pandas as pd
-import cPickle as pickle
+import pickle
 
 from bcbio import utils
 from bcbio.graph.collectl import load_collectl

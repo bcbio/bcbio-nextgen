@@ -74,7 +74,7 @@ def coverage_interval_from_bed(bed_file, per_chrom=True):
                     start = int(start)
                     end = int(end)
                     bed_bases[chrom] += (end - start)
-                    total_starts[chrom] = min([start, total_starts.get(chrom, sys.maxint)])
+                    total_starts[chrom] = min([start, total_starts.get(chrom, sys.maxsize)])
                     total_ends[chrom] = max([end, total_ends.get(chrom, 0)])
     # can check per chromosome -- any one chromosome with larger, or over all regions
     if per_chrom:
