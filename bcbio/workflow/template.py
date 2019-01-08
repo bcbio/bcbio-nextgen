@@ -17,6 +17,7 @@ import os
 import shutil
 from six.moves import urllib
 
+import six
 import toolz as tz
 import yaml
 import sys
@@ -228,7 +229,7 @@ def _set_global_vars(metadata):
     fnames = collections.defaultdict(list)
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
-            if isinstance(v, basestring) and os.path.isfile(v):
+            if isinstance(v, six.string_types) and os.path.isfile(v):
                 v = _expand_file(v)
                 metadata[sample][k] = v
                 fnames[v].append(k)
@@ -244,9 +245,21 @@ def _set_global_vars(metadata):
     #         global_vars[name] = fname
     # for sample in metadata.keys():
     #     for k, v in metadata[sample].items():
-    #         if isinstance(v, basestring) and v in global_var_sub:
+    #         if isinstance(v, six.string_types) and v in global_var_sub:
     #             metadata[sample][k] = global_var_sub[v]
     return metadata, global_vars
+
+def _clean_string(v, sinfo):
+    """Test for and clean unicode present in template CSVs.
+    """
+    if isinstance(v, (list, tuple)):
+        return [_clean_string(x, sinfo) for x in v]
+    else:
+        assert isinstance(v, six.string_types), v
+        try:
+            return str(v.decode("ascii"))
+        except UnicodeDecodeError as msg:
+            raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
 
 def _parse_metadata(in_handle):
     """Reads metadata from a simple CSV structured input file.
@@ -274,13 +287,8 @@ def _parse_metadata(in_handle):
                              "https://bcbio-nextgen.readthedocs.org/en/latest/"
                              "contents/configuration.html#automated-sample-configuration\n"
                              "Duplicate line is %s" % (sample, sinfo))
-        vals = []
-        for v in sinfo[1:]:
-            try:
-                vals.append(str(v.decode("ascii")))
-            except UnicodeDecodeError as msg:
-                raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
-        metadata[sample] = dict(zip(keys, sinfo[1:]))
+        vals = [_clean_string(v, sinfo) for v in sinfo[1:]]
+        metadata[sample] = dict(zip(keys, vals))
     metadata, global_vars = _set_global_vars(metadata)
     return metadata, global_vars
 
@@ -462,7 +470,7 @@ def _convert_to_relpaths(data, work_dir):
     data["files"] = [os.path.relpath(f, work_dir) for f in data["files"]]
     for topk in ["metadata", "algorithm"]:
         for k, v in data[topk].items():
-            if isinstance(v, basestring) and os.path.isfile(v) and os.path.isabs(v):
+            if isinstance(v, six.string_types) and os.path.isfile(v) and os.path.isabs(v):
                 data[topk][k] = os.path.relpath(v, work_dir)
     return data
 
