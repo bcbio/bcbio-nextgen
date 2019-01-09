@@ -14,6 +14,7 @@ import subprocess
 import time
 
 from pysam import VariantFile
+import six
 import toolz as tz
 import yaml
 
@@ -547,7 +548,7 @@ def _group_validate_samples(samples, vkey, batch_keys):
         if is_v:
             for batch_key in batch_keys:
                 vname = tz.get_in(batch_key, data)
-                if vname and not (isinstance(vname, basestring) and vname.lower() in ["none", "false"]):
+                if vname and not (isinstance(vname, six.string_types) and vname.lower() in ["none", "false"]):
                     break
             if isinstance(vname, (list, tuple)):
                 vname = vname[0]

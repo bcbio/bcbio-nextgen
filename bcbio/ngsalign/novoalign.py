@@ -15,6 +15,9 @@ from bcbio.provenance import do
 from bcbio.distributed.transaction import tx_tmpdir
 from bcbio.utils import (memoize_outfile, file_exists)
 
+import six
+
+
 # ## BAM realignment
 
 def get_rg_info(names):
@@ -97,7 +100,7 @@ def _novoalign_args_from_config(config, need_quality=True):
     multi_mappers = config["algorithm"].get("multiple_mappers")
     if multi_mappers is True:
         multi_flag = "Random"
-    elif isinstance(multi_mappers, basestring):
+    elif isinstance(multi_mappers, six.string_types):
         multi_flag = multi_mappers
     else:
         multi_flag = "None"

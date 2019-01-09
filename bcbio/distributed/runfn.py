@@ -10,6 +10,7 @@ import os
 import pprint
 import shutil
 
+import six
 import toolz as tz
 import yaml
 
@@ -127,7 +128,7 @@ def _add_resources(data, runtime):
         data["config"] = {}
     # Convert input resources, which may be a JSON string
     resources = data.get("resources", {}) or {}
-    if isinstance(resources, basestring) and resources.startswith(("{", "[")):
+    if isinstance(resources, six.string_types) and resources.startswith(("{", "[")):
         resources = json.loads(resources)
         data["resources"] = resources
     assert isinstance(resources, dict), (resources, data)
@@ -559,7 +560,7 @@ def _file_and_exists(val, input_files):
 def _to_cwl(val, input_files):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         if _file_and_exists(val, input_files):
             val = {"class": "File", "path": val}
             secondary = []

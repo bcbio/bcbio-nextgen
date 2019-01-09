@@ -6,6 +6,7 @@ import os
 import sys
 from xml.etree import ElementTree
 
+import six
 import toolz as tz
 import yaml
 
@@ -34,7 +35,7 @@ def get_resources(genome, ref_file, data):
         resources = yaml.load(in_handle)
 
     def resource_file_path(x):
-        if isinstance(x, basestring) and os.path.exists(os.path.join(base_dir, x)):
+        if isinstance(x, six.string_types) and os.path.exists(os.path.join(base_dir, x)):
             return os.path.normpath(os.path.join(base_dir, x))
         return x
     cleaned = utils.dictapply(resources, resource_file_path)
@@ -87,7 +88,7 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_
     if isinstance(xs, dict):
         out = {}
         for k, v in xs.items():
-            if k not in ignore_keys and v and isinstance(v, basestring):
+            if k not in ignore_keys and v and isinstance(v, six.string_types):
                 if v.lower() == "none":
                     out[k] = None
                 else:
@@ -97,7 +98,7 @@ def abs_file_paths(xs, base_dir=None, ignore_keys=None, fileonly_keys=None, cur_
                           for x in v]
             else:
                 out[k] = v
-    elif isinstance(xs, basestring):
+    elif isinstance(xs, six.string_types):
         if os.path.exists(xs) or (do_download and objectstore.is_remote(xs)):
             dl = objectstore.download(xs, input_dir)
             if dl and cur_key not in ignore_keys and not (cur_key in fileonly_keys and not os.path.isfile(dl)):

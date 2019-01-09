@@ -6,6 +6,7 @@ TODO:
 import os
 import shutil
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -101,10 +102,10 @@ def _get_variants(data):
             variants = variants["samples"]
         for v in variants:
             # CWL -- a single variant file
-            if isinstance(v, basestring) and os.path.exists(v):
+            if isinstance(v, six.string_types) and os.path.exists(v):
                 active_vs.append(_add_filename_details(v))
             elif (isinstance(v, (list, tuple)) and len(v) > 0 and
-                  isinstance(v[0], basestring) and os.path.exists(v[0])):
+                  isinstance(v[0], six.string_types) and os.path.exists(v[0])):
                 for subv in v:
                     active_vs.append(_add_filename_details(subv))
             elif isinstance(v, dict) and v.get("vrn_file"):

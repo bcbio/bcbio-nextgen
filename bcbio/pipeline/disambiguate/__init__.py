@@ -22,6 +22,9 @@ from bcbio.provenance import do
 from bcbio import bam
 
 
+import six
+
+
 def split(*items):
     """Split samples into all possible genomes for alignment.
     """
@@ -34,7 +37,7 @@ def split(*items):
                                         "base": True}
             out.append([data])
             # handle the instance where a single organism is disambiguated
-            if isinstance(dis_orgs, basestring):
+            if isinstance(dis_orgs, six.string_types):
                 dis_orgs = [dis_orgs]
             for dis_org in dis_orgs:
                 dis_data = copy.deepcopy(data)

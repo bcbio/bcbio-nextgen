@@ -10,6 +10,7 @@ import subprocess
 
 import toolz as tz
 
+import six
 from six.moves import zip
 
 from bcbio import broad, utils
@@ -347,7 +348,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
         if fname not in added_fnames:
             if isinstance(region, (list, tuple)):
                 c, s, e = region
-            elif isinstance(region, basestring) and region.find(":") >= 0:
+            elif isinstance(region, six.string_types) and region.find(":") >= 0:
                 c, coords = region.split(":")
                 s, e = [int(x) for x in coords.split("-")]
             else:

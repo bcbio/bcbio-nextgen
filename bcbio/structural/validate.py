@@ -3,6 +3,7 @@
 import csv
 import os
 
+import six
 import toolz as tz
 import numpy as np
 import pandas as pd
@@ -381,7 +382,7 @@ def evaluate(data):
             summary_plots = _plot_evaluation(df_csv)
             data["sv-validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
         else:
-            assert isinstance(truth_sets, basestring) and utils.file_exists(truth_sets), truth_sets
+            assert isinstance(truth_sets, six.string_types) and utils.file_exists(truth_sets), truth_sets
             val_summary = _evaluate_vcf(data["sv"], truth_sets, work_dir, data)
             title = "%s structural variants" % dd.get_sample_name(data)
             summary_plots = validateplot.classifyplot_from_valfile(val_summary, outtype="png", title=title)

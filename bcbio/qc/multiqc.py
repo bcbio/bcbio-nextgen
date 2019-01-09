@@ -13,6 +13,7 @@ import numpy as np
 from collections import OrderedDict
 
 import pybedtools
+import six
 import toolz as tz
 import yaml
 
@@ -223,7 +224,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
         sum_qc = tz.get_in(["summary", "qc"], data, {})
         if sum_qc in [None, "None"]:
             sum_qc = {}
-        elif isinstance(sum_qc, basestring):
+        elif isinstance(sum_qc, six.string_types):
             sum_qc = {dd.get_algorithm_qc(data)[0]: sum_qc}
         elif not isinstance(sum_qc, dict):
             raise ValueError("Unexpected summary qc: %s" % sum_qc)
@@ -231,7 +232,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles.get("secondary", [])
             # CWL: presents output files as single file plus associated secondary files
-            elif isinstance(pfiles, basestring):
+            elif isinstance(pfiles, six.string_types):
                 if os.path.exists(pfiles):
                     pfiles = [os.path.join(basedir, f) for basedir, subdir, filenames in os.walk(os.path.dirname(pfiles)) for f in filenames]
                 else:
@@ -442,7 +443,7 @@ def _merge_metrics(samples, out_dir):
     for s in samples:
         s = _add_disambiguate(s)
         m = tz.get_in(['summary', 'metrics'], s)
-        if isinstance(m, basestring):
+        if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
             for me in m.keys():

@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 
+import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -660,7 +661,7 @@ def _bgzip_file(finput, config, work_dir, needs_bgzip, needs_gunzip, needs_conve
 
     Handles cases where finput might be multiple files and need to be concatenated.
     """
-    if isinstance(finput, basestring):
+    if isinstance(finput, six.string_types):
         in_file = finput
     else:
         assert not needs_convert, "Do not yet handle quality conversion with multiple inputs"

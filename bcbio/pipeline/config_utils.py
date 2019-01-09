@@ -13,6 +13,9 @@ import toolz as tz
 from bcbio import utils
 import bcbio.pipeline.datadict as dd
 
+import six
+
+
 class CmdNotFound(Exception):
     pass
 
@@ -222,7 +225,7 @@ def _get_program_cmd(name, pconfig, config, default):
     """
     if pconfig is None:
         return name
-    elif isinstance(pconfig, basestring):
+    elif isinstance(pconfig, six.string_types):
         return pconfig
     elif "cmd" in pconfig:
         return pconfig["cmd"]
@@ -236,7 +239,7 @@ def _get_program_dir(name, config):
     """
     if config is None:
         raise ValueError("Could not find directory in config for %s" % name)
-    elif isinstance(config, basestring):
+    elif isinstance(config, six.string_types):
         return config
     elif "dir" in config:
         return expand_path(config["dir"])
@@ -425,7 +428,7 @@ def use_vqsr(algs, call_file=None):
     coverage_intervals = set([])
     for alg in algs:
         callers = alg.get("variantcaller")
-        if isinstance(callers, basestring):
+        if isinstance(callers, six.string_types):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
             continue

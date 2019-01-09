@@ -2,6 +2,7 @@
 """
 import gzip
 import os
+import six
 import tempfile
 import time
 import shutil
@@ -545,7 +546,7 @@ def is_pair(arg):
     return is_sequence(arg) and len(arg) == 2
 
 def is_string(arg):
-    return isinstance(arg, basestring)
+    return isinstance(arg, six.string_types)
 
 
 def locate(pattern, root=os.curdir):

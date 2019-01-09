@@ -10,6 +10,9 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import diagnostics
 
 
+import six
+
+
 def run(cmd, descr=None, data=None, checks=None, region=None, log_error=True,
         log_stdout=False, env=None):
     """Run the provided command, logging details and checking for errors.
@@ -19,7 +22,7 @@ def run(cmd, descr=None, data=None, checks=None, region=None, log_error=True,
       logger.debug(descr)
     cmd_id = diagnostics.start_cmd(cmd, descr or "", data)
     try:
-        logger_cl.debug(" ".join(str(x) for x in cmd) if not isinstance(cmd, basestring) else cmd)
+        logger_cl.debug(" ".join(str(x) for x in cmd) if not isinstance(cmd, six.string_types) else cmd)
         _do_run(cmd, checks, log_stdout, env=env)
     except:
         diagnostics.end_cmd(cmd_id, False)
@@ -59,7 +62,7 @@ def _normalize_cmd_args(cmd):
     Piped commands set pipefail and require use of bash to help with debugging
     intermediate errors.
     """
-    if isinstance(cmd, basestring):
+    if isinstance(cmd, six.string_types):
         # check for standard or anonymous named pipes
         if cmd.find(" | ") > 0 or cmd.find(">(") or cmd.find("<("):
             return "set -o pipefail; " + cmd, True, find_bash()
@@ -95,7 +98,7 @@ def _do_run(cmd, checks, log_stdout=False, env=None):
             for line in s.stdout:
                 debug_stdout.append(line)
             if exitcode is not None and exitcode != 0:
-                error_msg = " ".join(cmd) if not isinstance(cmd, basestring) else cmd
+                error_msg = " ".join(cmd) if not isinstance(cmd, six.string_types) else cmd
                 error_msg += "\n"
                 error_msg += "".join(debug_stdout)
                 s.communicate()

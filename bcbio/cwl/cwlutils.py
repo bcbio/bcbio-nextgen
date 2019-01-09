@@ -10,6 +10,7 @@ import os
 import pprint
 import tarfile
 
+import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -57,7 +58,7 @@ def normalize_missing(xs):
             xs[k] = normalize_missing(v)
     elif isinstance(xs, (list, tuple)):
         xs = [normalize_missing(x) for x in xs]
-    elif isinstance(xs, basestring):
+    elif isinstance(xs, six.string_types):
         if xs.lower() in ["none", "null"]:
             xs = None
         elif xs.lower() == "true":
@@ -80,7 +81,7 @@ def unpack_tarballs(xs, data, use_subdir=True):
             xs[k] = unpack_tarballs(v, data, use_subdir)
     elif isinstance(xs, (list, tuple)):
         xs = [unpack_tarballs(x, data, use_subdir) for x in xs]
-    elif isinstance(xs, basestring):
+    elif isinstance(xs, six.string_types):
         if os.path.isfile(xs.encode("utf-8", "ignore")) and xs.endswith("-wf.tar.gz"):
             if use_subdir:
                 tarball_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "wf-inputs"))

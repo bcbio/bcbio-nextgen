@@ -19,6 +19,9 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep, bedutils, joint, vcfutils
 
+import six
+
+
 def license_export(data):
     """Retrieve export statement for sentieon license server.
     """
@@ -31,7 +34,7 @@ def license_export(data):
                          "environmental variables to export \n"
                          "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources\n"
                          "Configuration: %s" % pprint.pformat(data))
-    if isinstance(server, basestring):
+    if isinstance(server, six.string_types):
         return "export SENTIEON_LICENSE=%s && " % server
     else:
         assert isinstance(server, dict), server
@@ -47,7 +50,7 @@ def _get_interval(variant_regions, region, out_file, items):
     """
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
+        if isinstance(target, six.string_types) and os.path.isfile(target):
             return "--interval %s" % target
         else:
             return "--interval %s" % bamprep.region_to_gatk(target)
