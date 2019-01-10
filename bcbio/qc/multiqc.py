@@ -192,7 +192,7 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     """ Check if `path` is a work-rooted path, and convert to a relative final-rooted path
     """
     if not path or not isinstance(path, str):
-        return None
+        return path
     upload_path = None
     for work_path, final_path in upload_path_mapping.items():
         if os.path.isfile(work_path) and path == work_path:
