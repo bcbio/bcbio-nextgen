@@ -117,9 +117,10 @@ def get_active_vcinfo(data, use_ensemble=True):
     """
     active_vs = _get_variants(data)
     if len(active_vs) > 0:
+        e_active_vs = []
         if use_ensemble:
             e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
-        else:
+        if len(e_active_vs) == 0:
             e_active_vs = [v for v in active_vs if v.get("variantcaller") != "ensemble"]
         if len(e_active_vs) > 0:
             return e_active_vs[0]
