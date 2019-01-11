@@ -7,6 +7,7 @@ Supported:
 from __future__ import print_function
 import os
 import pysam
+import toolz as tz
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -151,10 +152,17 @@ def _oncofuse_tissue_arg_from_config(data):
     AVG (average expression, if tissue source is unknown).
     """
     SUPPORTED_TISSUE_TYPE = ["EPI", "HEM", "MES", "AVG"]
-    if data.get("metadata", {}).get("tissue") in SUPPORTED_TISSUE_TYPE:
-        return data.get("metadata", {}).get("tissue")
+    tissue_type = tz.get_in(("metadata", "tissue"), data, None)
+    if not tissue_type:
+        logger.info("Oncofuse: tissue type not set, using average expression (AVG).")
+        tissue_type = "AVG"
+    elif tissue_type not in SUPPORTED_TISSUE_TYPE:
+        logger.info("Oncofuse: %s not a supported tissue type, using average "
+                    "expression (AVG)." % tissue_type)
+        tissue_type = "AVG"
     else:
-        return "AVG"
+        logger.info("Oncofuse: using %s as tissue type." % tissue_type)
+        return tissue_type
 
 def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, disambig_out_file, data):
     """ Disambiguate detected fusions based on alignments to another species.
