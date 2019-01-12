@@ -18,7 +18,6 @@ import subprocess
 import sys
 import glob
 
-import requests
 from six.moves import urllib
 import toolz as tz
 import yaml
@@ -395,6 +394,7 @@ def _prepare_cwl_tarballs(data_dir):
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
     """
+    import requests
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         # Check for a remote genome resources file
         remote_url = base_url % dbkey
@@ -606,6 +606,7 @@ def _update_system_file(system_file, name, new_kvs):
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
+    import requests
     kraken = os.path.join(datadir, "genomes/kraken")
     url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
     compress = os.path.join(kraken, os.path.basename(url))
