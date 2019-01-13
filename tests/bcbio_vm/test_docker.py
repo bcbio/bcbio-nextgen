@@ -67,7 +67,7 @@ class TestCWL():
                 subprocess.check_call(cl)
                 if os.path.exists("cromwell_work"):
                     shutil.rmtree("cromwell_work")
-                cl = ["bash", "./run_cromwell.sh"]
+                cl = ["bcbio_vm.py", "cwlrun", "cromwell", "somatic-workflow"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl
@@ -95,7 +95,7 @@ class TestCWL():
                 cl = ["bash", "./run_generate_cwl.sh"]
                 if os.path.exists("cromwell_work"):
                     shutil.rmtree("cromwell_work")
-                cl = ["bash", "./run_cromwell.sh"]
+                cl = ["bcbio_vm.py", "cwlrun", "cromwell", "rnaseq-workflow"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl
