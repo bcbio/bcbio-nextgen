@@ -162,7 +162,7 @@ def _oncofuse_tissue_arg_from_config(data):
         tissue_type = "AVG"
     else:
         logger.info("Oncofuse: using %s as tissue type." % tissue_type)
-        return tissue_type
+    return tissue_type
 
 def _disambiguate_star_fusion_junctions(star_junction_file, contamination_bam, disambig_out_file, data):
     """ Disambiguate detected fusions based on alignments to another species.
