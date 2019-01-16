@@ -23,7 +23,8 @@ install:
   - export PATH=~/install/bcbio-vm/anaconda/bin:$PATH
   - conda install --yes nomkl
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen
-  - conda install --yes -c conda-forge -c bioconda cromwell cwltool ruamel.yaml
+  - conda install --yes -c conda-forge -c bioconda cwltool ruamel.yaml
+  - conda install --yes -c conda-forge -c bioconda cromwell
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
