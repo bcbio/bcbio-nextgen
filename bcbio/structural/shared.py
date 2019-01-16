@@ -18,6 +18,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared
 from bcbio.provenance import do
 from bcbio.variation import effects, population, vcfutils
+from functools import reduce
 
 # ## Finalizing samples
 
@@ -92,10 +93,10 @@ def _get_sv_exclude_file(items):
 def _get_variant_regions(items):
     """Retrieve variant regions defined in any of the input items.
     """
-    return filter(lambda x: x is not None,
-                  [tz.get_in(("config", "algorithm", "variant_regions"), data)
-                   for data in items
-                   if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"])
+    return list(filter(lambda x: x is not None,
+                       [tz.get_in(("config", "algorithm", "variant_regions"), data)
+                        for data in items
+                        if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"]))
 
 def has_variant_regions(items, base_file, chrom=None):
     """Determine if we should process this chromosome: needs variant regions defined.

@@ -84,7 +84,7 @@ def _add_filename_details(full_f):
     """
     out = {"vrn_file": full_f}
     f = os.path.basename(full_f)
-    for vc in genotype.get_variantcallers().keys() + ["ensemble"]:
+    for vc in list(genotype.get_variantcallers().keys()) + ["ensemble"]:
         if f.find("-%s.vcf" % vc) > 0:
             out["variantcaller"] = vc
     if f.find("-germline-") >= 0:

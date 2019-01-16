@@ -10,6 +10,7 @@ genome and avoid extremes of large blocks or large numbers of
 small blocks.
 """
 import collections
+from functools import reduce
 import os
 
 import numpy

@@ -8,6 +8,7 @@ import collections
 import os
 import shutil
 import time
+import warnings
 
 from bcbio import utils
 from bcbio.log import logger
@@ -16,8 +17,10 @@ from bcbio.pipeline import qcsummary
 
 # Avoid bioblend import errors, raising at time of use
 try:
-    import bioblend
-    from bioblend.galaxy import GalaxyInstance
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        import bioblend
+        from bioblend.galaxy import GalaxyInstance
     import simplejson
 except ImportError:
     GalaxyInstance, bioblend, simplejson = None, None, None

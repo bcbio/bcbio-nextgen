@@ -15,8 +15,11 @@ import fnmatch
 import subprocess
 import sys
 import types
+
+import six
 import toolz as tz
 import yaml
+
 from collections import Mapping, OrderedDict
 
 
@@ -361,7 +364,13 @@ def symlink_plus(orig, new):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
 def open_gzipsafe(f):
-    return gzip.open(f) if f.endswith(".gz") else open(f)
+    if f.endswith(".gz"):
+        if six.PY3:
+            return gzip.open(f, "rt")
+        else:
+            return gzip.open(f)
+    else:
+        return open(f)
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
@@ -430,7 +439,7 @@ def robust_partition_all(n, iterable):
         x = []
         for _ in range(n):
             try:
-                x.append(it.next())
+                x.append(next(it))
             except StopIteration:
                 yield x
                 # Omitting this StopIteration results in a segfault!
@@ -533,9 +542,9 @@ def is_sequence(arg):
     example: arg("lol") -> False
 
     """
-    return (not hasattr(arg, "strip") and
-            hasattr(arg, "__getitem__") or
-            hasattr(arg, "__iter__"))
+    return (not is_string(arg) and
+            (hasattr(arg, "__getitem__") or
+             hasattr(arg, "__iter__")))
 
 
 def is_pair(arg):

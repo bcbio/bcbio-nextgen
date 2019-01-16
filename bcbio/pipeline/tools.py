@@ -14,7 +14,7 @@ def get_tabix_cmd(config):
         bcftools = config_utils.get_program("bcftools", config)
         # bcftools has terrible error codes and stderr output, swallow those.
         bcftools_tabix = subprocess.check_output("{bcftools} 2>&1; echo $?".format(**locals()),
-                                                 shell=True).find("tabix") >= 0
+                                                 shell=True).decode().find("tabix") >= 0
     except config_utils.CmdNotFound:
         bcftools_tabix = False
     if bcftools_tabix:

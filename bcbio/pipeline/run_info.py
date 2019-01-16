@@ -29,6 +29,7 @@ from bcbio.qc import viral
 from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils, vcfanno
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
+from functools import reduce
 
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
@@ -403,10 +404,8 @@ def _clean_characters(x):
     if not isinstance(x, six.string_types):
         x = str(x)
     else:
-        try:
-            x = str(x.decode("ascii"))
-        except UnicodeEncodeError as msg:
-            msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
+        if not all(ord(char) < 128 for char in x):
+            msg = "Found unicode character in input YAML (%s)" % (x)
             raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:
         x = x.replace(problem, "_")
@@ -578,7 +577,7 @@ def _check_algorithm_keys(item):
     Needs to be manually updated when introducing new keys, but avoids silent bugs
     with typos in key names.
     """
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
+    problem_keys = [k for k in item["algorithm"].keys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
@@ -681,7 +680,7 @@ def _check_quality_format(items):
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
-    allowed = set(alignment.TOOLS.keys() + [None, False])
+    allowed = set(list(alignment.TOOLS.keys()) + [None, False])
     if item["algorithm"].get("aligner") not in allowed:
         raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
                          "Supported options: %s\n" %
@@ -690,7 +689,7 @@ def _check_aligner(item):
 def _check_variantcaller(item):
     """Ensure specified variantcaller is a valid choice.
     """
-    allowed = set(genotype.get_variantcallers().keys() + [None, False])
+    allowed = set(list(genotype.get_variantcallers().keys()) + [None, False])
     vcs = item["algorithm"].get("variantcaller")
     if not isinstance(vcs, dict):
         vcs = {"variantcaller": vcs}
@@ -711,7 +710,7 @@ def _check_variantcaller(item):
 def _check_svcaller(item):
     """Ensure the provide structural variant caller is valid.
     """
-    allowed = set(reduce(operator.add, [d.keys() for d in structural._CALLERS.values()]) + [None, False])
+    allowed = set(reduce(operator.add, [list(d.keys()) for d in structural._CALLERS.values()]) + [None, False])
     svs = item["algorithm"].get("svcaller")
     if not isinstance(svs, (list, tuple)):
         svs = [svs]

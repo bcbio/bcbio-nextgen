@@ -82,7 +82,7 @@ def _read_input_csv(in_file):
     """
     with open(in_file, "rU") as in_handle:
         reader = csv.reader(in_handle)
-        reader.next() # header
+        next(reader) # header
         for line in reader:
             if line: # empty lines
                 (fc_id, lane, sample_id, genome, barcode) = line[:5]

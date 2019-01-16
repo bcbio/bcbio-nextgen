@@ -19,6 +19,7 @@ from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.illumina import flowcell
 from bcbio.pipeline.run_info import clean_name
 from bcbio.workflow import template
+from functools import reduce
 
 def prep_samples_and_config(run_folder, ldetails, fastq_dir, config):
     """Prepare sample fastq files and provide global sample configuration for the flowcell.

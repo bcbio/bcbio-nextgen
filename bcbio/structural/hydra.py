@@ -49,8 +49,7 @@ def remove_nopairs(in_bam, out_dir, config):
     """Remove any reads without both pairs present in the file.
     """
     runner = broad.runner_from_config(config)
-    out_bam = os.path.join(out_dir, apply("{}-safepair{}".format,
-                                          os.path.splitext(os.path.basename(in_bam))))
+    out_bam = os.path.join(out_dir, "{}-safepair{}".format(*os.path.splitext(os.path.basename(in_bam))))
     if not utils.file_exists(out_bam):
         read_counts = collections.defaultdict(int)
         with pysam.Samfile(in_bam, "rb") as in_pysam:

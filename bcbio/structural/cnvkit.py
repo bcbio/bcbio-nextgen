@@ -26,6 +26,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import effects, ploidy, population, vcfutils
 from bcbio.structural import annotate, plot, shared
+from functools import reduce
 
 def use_general_sv_bins(data):
     """Check if we should use a general binning approach for a sample.
@@ -360,8 +361,8 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
 
 def _read_metrics_file(in_file):
     with open(in_file) as in_handle:
-        header = in_handle.next().strip().split("\t")[1:]
-        vals = map(float, in_handle.next().strip().split("\t")[1:])
+        header = next(in_handle).strip().split("\t")[1:]
+        vals = map(float, next(in_handle).strip().split("\t")[1:])
     return dict(zip(header, vals))
 
 @utils.map_wrap

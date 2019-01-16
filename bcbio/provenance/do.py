@@ -86,7 +86,7 @@ def _do_run(cmd, checks, log_stdout=False, env=None):
     )
     debug_stdout = collections.deque(maxlen=100)
     while 1:
-        line = s.stdout.readline()
+        line = s.stdout.readline().decode("utf-8", errors="replace")
         if line.rstrip():
             debug_stdout.append(line)
             if log_stdout:
@@ -96,7 +96,7 @@ def _do_run(cmd, checks, log_stdout=False, env=None):
         exitcode = s.poll()
         if exitcode is not None:
             for line in s.stdout:
-                debug_stdout.append(line)
+                debug_stdout.append(line.decode("utf-8", errors="replace"))
             if exitcode is not None and exitcode != 0:
                 error_msg = " ".join(cmd) if not isinstance(cmd, six.string_types) else cmd
                 error_msg += "\n"

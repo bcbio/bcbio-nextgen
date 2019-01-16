@@ -150,7 +150,7 @@ def umi_transform(data):
     cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
     with open_fastq(fq1) as in_handle:
-        read = in_handle.next()
+        read = next(in_handle)
         if "UMI_" in read:
             data["files"] = [out_file]
             return [[data]]
@@ -336,7 +336,7 @@ def demultiplex_samples(data):
         fq1 = files[0]
     # check if samples need to be demultiplexed
     with open_fastq(fq1) as in_handle:
-        read = in_handle.next()
+        read = next(in_handle)
         if "SAMPLE_" not in read:
             return [[data]]
     bcfile = dd.get_sample_barcodes(data)

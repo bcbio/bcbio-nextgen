@@ -270,7 +270,7 @@ def _parse_metadata(in_handle):
     metadata = {}
     reader = csv.reader(in_handle)
     while 1:
-        header = reader.next()
+        header = next(reader)
         if not header[0].startswith("#"):
             break
     keys = [x.strip() for x in header[1:]]

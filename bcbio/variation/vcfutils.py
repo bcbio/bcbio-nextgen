@@ -3,7 +3,6 @@
 
 from collections import namedtuple, defaultdict
 import copy
-import gzip
 import os
 import shutil
 import subprocess
@@ -202,7 +201,7 @@ def split_snps_indels(orig_file, ref_file, config):
 def get_normal_sample(in_file):
     """Retrieve normal sample if normal/turmor
     """
-    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             if line.startswith("##PEDIGREE"):
                 parts = line.strip().split("Original=")[1][:-1]
@@ -268,7 +267,7 @@ def select_sample(in_file, sample, out_file, config, filters=None):
 
 def vcf_has_variants(in_file):
     if os.path.exists(in_file):
-        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
                     return True
@@ -276,7 +275,7 @@ def vcf_has_variants(in_file):
 
 def vcf_has_nonfiltered_variants(in_file):
     if os.path.exists(in_file):
-        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
                     parts = line.split("\t")

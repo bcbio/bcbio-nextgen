@@ -10,8 +10,6 @@ import sys
 import yaml
 
 import toolz as tz
-from bcbio import utils
-import bcbio.pipeline.datadict as dd
 
 import six
 
@@ -216,7 +214,7 @@ def _get_check_program_cmd(fn):
         for adir in os.environ['PATH'].split(":"):
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
-        raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
+        raise CmdNotFound(" ".join(map(repr, (fn.__name__ if six.PY3 else fn.func_name, name, pconfig, default))))
     return wrap
 
 @_get_check_program_cmd

@@ -32,7 +32,8 @@ def is_empty(bam_file):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
-    stderr = stderr.strip()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
         return int(stdout) == 0
@@ -54,6 +55,8 @@ def is_paired(bam_file):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     stderr = stderr.strip()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
@@ -109,7 +112,7 @@ def idxstats(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
     AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
     samtools = config_utils.get_program("samtools", data["config"])
-    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam])
+    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam]).decode()
     out = []
     for line in idxstats_out.split("\n"):
         if line.strip():

@@ -21,6 +21,7 @@ from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
+from functools import reduce
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
                    "dx:": "dnanexus", "gs:": "gs"}

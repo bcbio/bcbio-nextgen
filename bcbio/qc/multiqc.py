@@ -297,8 +297,9 @@ def _create_config_file(out_dir, samples):
 
         # Setting up thresholds for Qualimap depth cutoff calculations, based on sample avg depths
         avg_depths = [tz.get_in(["summary", "metrics", "Avg_coverage"], s) for s in samples]
+        avg_depths = [x for x in avg_depths if x]
         # Picking all thresholds up to the highest sample average depth
-        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if t <= max(avg_depths)]
+        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if not avg_depths or t <= max(avg_depths)]
         # ...plus one more
         if len(thresholds) < len(coverage.DEPTH_THRESHOLDS):
             thresholds.append(coverage.DEPTH_THRESHOLDS[len(thresholds)])

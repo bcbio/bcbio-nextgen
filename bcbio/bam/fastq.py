@@ -259,11 +259,11 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
     """
 
     in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
-    read = in_handle.next()
+    read = next(in_handle)
     average = len(read.seq)
     for _ in range(nreads):
         try:
-            average = (average + len(in_handle.next().seq)) / 2
+            average = (average + len(next(in_handle).seq)) / 2
         except StopIteration:
             break
     in_handle.close()
@@ -278,7 +278,7 @@ def estimate_maximum_read_length(fastq_file, quality_format="fastq-sanger",
     lengths = []
     for _ in range(nreads):
         try:
-            lengths.append(len(in_handle.next().seq))
+            lengths.append(len(next(in_handle).seq))
         except StopIteration:
             break
     in_handle.close()

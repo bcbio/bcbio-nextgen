@@ -17,6 +17,7 @@ from bcbio.variation import validate as vcvalidate
 from bcbio.variation import vcfutils
 
 import six
+from functools import reduce
 
 
 # Stratify callers by stage -- see `run` documentation below for definitions

@@ -17,7 +17,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 
 _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
-              "args": "--version", "stdout_flag": "This is biobambam version"},
+              "args": "--version", "stdout_flag": "This is biobambam2 version"},
              {"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
              {"cmd": "bcftools", "stdout_flag": "Version:"},
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
@@ -56,9 +56,9 @@ def _broad_versioner(type):
         elif type == "mutect":
             try:
                 runner = broad.runner_from_config(config, "mutect")
+                return runner.get_mutect_version()
             except ValueError:
                 return ""
-            return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)
     return get_version
@@ -100,14 +100,14 @@ _alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
                "version_fn": _broad_versioner("mutect")}]
 
 def _parse_from_stdoutflag(stdout, x):
-    for line in stdout:
+    for line in (str(l) for l in stdout):
         if line.find(x) >= 0:
             parts = [p for p in line[line.find(x) + len(x):].split() if p.strip()]
             return parts[0].strip()
     return ""
 
 def _parse_from_parenflag(stdout, x):
-    for line in stdout:
+    for line in (str(l) for l in stdout):
         if line.find(x) >= 0:
             return line.split("(")[-1].split(")")[0]
     return ""
@@ -138,7 +138,7 @@ def _get_cl_version(p, config):
         elif p.get("paren_flag"):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
-            lines = [l.strip() for l in stdout.read().split("\n") if l.strip()]
+            lines = [l.strip() for l in str(stdout.read()).split("\n") if l.strip()]
             v = lines[-1]
     if v.endswith("."):
         v = v[:-1]

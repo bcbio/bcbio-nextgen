@@ -108,7 +108,7 @@ def fastq_size_output(fastq_file, tocheck):
         """
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     count_out = subprocess.check_output(cmd.format(**locals()), shell=True,
-                                        executable="/bin/bash", preexec_fn=fix_signal)
+                                        executable="/bin/bash", preexec_fn=fix_signal).decode()
     if not count_out.strip():
         raise IOError("Failed to check fastq file sizes with: %s" % cmd.format(**locals()))
     for count, size in (l.strip().split() for l in count_out.strip().split("\n")):

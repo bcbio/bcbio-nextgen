@@ -22,6 +22,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import gatkcnv
 from bcbio.variation import bedutils, multi
+from functools import reduce
 
 def calculate_sv_bins(*items):
     """Determine bin sizes and regions to use for samples.

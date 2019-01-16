@@ -58,7 +58,7 @@ def _prepare_inputs(ma_fn, bam_file, out_dir):
     with file_transaction(fixed_fa) as out_tx:
         with open(out_tx, 'w') as out_handle:
             with open(ma_fn) as in_handle:
-                h = in_handle.next()
+                h = next(in_handle)
                 for line in in_handle:
                     cols = line.split("\t")
                     name_with_counts = "%s_x%s" % (cols[0], sum(map(int, cols[2:])))
@@ -85,7 +85,7 @@ def _parse_novel(csv_file, sps="new"):
                     break
                 if line.startswith("novel miRNAs predicted"):
                     read = 1
-                    line = in_handle.next()
+                    line = next(in_handle)
                     continue
                 if read and line.strip():
                     cols = line.strip().split("\t")
