@@ -175,7 +175,7 @@ def name_to_config(template):
         base_url = "https://raw.github.com/bcbio/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
-                txt_config = in_handle.read()
+                txt_config = in_handle.read().decode()
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
                 config = yaml.load(in_handle)
         except (urllib.error.HTTPError, urllib.error.URLError):
@@ -257,7 +257,10 @@ def _clean_string(v, sinfo):
     else:
         assert isinstance(v, six.string_types), v
         try:
-            return str(v.decode("ascii"))
+            if hasattr(v, "decode"):
+                return str(v.decode("ascii"))
+            else:
+                return str(v.encode("ascii").decode("ascii"))
         except UnicodeDecodeError as msg:
             raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
 

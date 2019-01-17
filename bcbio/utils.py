@@ -2,7 +2,6 @@
 """
 import gzip
 import os
-import six
 import tempfile
 import time
 import shutil
@@ -10,7 +9,6 @@ import contextlib
 import itertools
 import functools
 import random
-from six.moves import configparser
 import fnmatch
 import subprocess
 import sys
@@ -270,7 +268,7 @@ def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = configparser.ConfigParser()
+    config = six.moves.configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -450,8 +448,8 @@ def partition(pred, iterable, tolist=False):
     'Use a predicate to partition entries into false entries and true entries'
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
-    ifalse = itertools.ifilterfalse(pred, t1)
-    itrue = itertools.ifilter(pred, t2)
+    ifalse = six.moves.filterfalse(pred, t1)
+    itrue = six.moves.filter(pred, t2)
     if tolist:
         return list(ifalse), list(itrue)
     else:

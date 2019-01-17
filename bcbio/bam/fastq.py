@@ -6,7 +6,6 @@ from six.moves import zip
 from itertools import product
 import os
 import random
-import gzip
 import sys
 
 from Bio import SeqIO
@@ -289,10 +288,5 @@ def open_fastq(in_file):
     """
     if objectstore.is_remote(in_file):
         return objectstore.open_file(in_file)
-    _, ext = os.path.splitext(in_file)
-    if ext == ".gz":
-        return gzip.open(in_file, 'rb')
-    if ext in [".fastq", ".fq"]:
-        return open(in_file, 'r')
-    # default to just opening it
-    return open(in_file, "r")
+    else:
+        return utils.open_gzipsafe(in_file)

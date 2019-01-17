@@ -286,7 +286,7 @@ def delayed_bam_merge(data):
     """
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
-        file_key = data["combine"].keys()[0]
+        file_key = list(data["combine"].keys())[0]
         extras = []
         for x in data["combine"][file_key].get("extras", []):
             if isinstance(x, (list, tuple)):
@@ -298,7 +298,7 @@ def delayed_bam_merge(data):
         in_files = sorted(list(set(extras)))
         out_file = tz.get_in(["combine", file_key, "out"], data, _merge_out_from_infiles(in_files))
         sup_exts = data.get(file_key + "_plus", {}).keys()
-        for ext in sup_exts + [""]:
+        for ext in list(sup_exts) + [""]:
             merged_file = None
             if os.path.exists(utils.append_stem(out_file, "-" + ext)):
                 cur_out_file, cur_in_files = out_file, []
