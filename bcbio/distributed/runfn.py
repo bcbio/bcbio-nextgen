@@ -54,7 +54,7 @@ def process(args):
     with utils.chdir(work_dir):
         with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
             try:
-                out = fn(fnargs)
+                out = fn(*fnargs)
             except:
                 logger.exception()
                 raise
