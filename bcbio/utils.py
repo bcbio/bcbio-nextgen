@@ -698,7 +698,7 @@ def R_package_path(package):
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
         return None
-    for line in output.split("\n"):
+    for line in output.decode().split("\n"):
         if "[1]" not in line:
             continue
         dirname = line.split("[1]")[1].replace("\"", "").strip()
@@ -787,6 +787,19 @@ def append_path(bin, path, at_start=True):
 
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
+
+def get_program_python(cmd):
+    """Get the full path to a python version linked to the command.
+
+    Allows finding python based programs in python 2 versus python 3
+    environments.
+    """
+    full_cmd = os.path.realpath(which(cmd))
+    cmd_python = os.path.join(os.path.dirname(full_cmd), "python")
+    if os.path.exists(cmd_python):
+        return cmd_python
+    else:
+        return sys.executable
 
 def local_path_export(at_start=True):
     path = get_bcbio_bin()

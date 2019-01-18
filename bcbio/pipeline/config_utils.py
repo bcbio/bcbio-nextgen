@@ -78,8 +78,8 @@ def load_system_config(config_file=None, work_dir=None, allow_missing=False):
     config["bcbio_system"] = config_file
     return config, config_file
 
-def get_base_installdir():
-    return os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+def get_base_installdir(cmd=sys.executable):
+    return os.path.normpath(os.path.join(os.path.realpath(cmd), os.pardir, os.pardir, os.pardir))
 
 def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.

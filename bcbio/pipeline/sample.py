@@ -362,7 +362,7 @@ def _merge_hla_fastq_inputs(data):
     if hla_sample_files:
         out_files = collections.defaultdict(list)
         for hla_file in utils.flatten(hla_sample_files):
-            rehla = re.search(".hla.(?P<hlatype>[\w-]+).fq", hla_file)
+            rehla = re.search(r".hla.(?P<hlatype>[\w-]+).fq", hla_file)
             if rehla:
                 hlatype = rehla.group("hlatype")
                 out_files[hlatype].append(hla_file)
