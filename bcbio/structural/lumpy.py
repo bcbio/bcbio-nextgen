@@ -4,6 +4,7 @@ Uses smoove for automating lumpy variant calling:
 https://github.com/brentp/smoove
 https://github.com/arq5x/lumpy-sv
 """
+import collections
 import os
 import re
 import subprocess
@@ -178,6 +179,7 @@ def run(items):
     if paired and paired.normal_name:
         gt_vcfs = _filter_by_background(paired.tumor_name, [paired.normal_name], gt_vcfs, paired.tumor_data)
     out = []
+    upload_counts = collections.defaultdict(int)
     for data in items:
         if "sv" not in data:
             data["sv"] = []
@@ -186,7 +188,9 @@ def run(items):
             effects_vcf, _ = effects.add_to_vcf(vcf_file, data, "snpeff")
             data["sv"].append({"variantcaller": "lumpy",
                                "vrn_file": effects_vcf or vcf_file,
+                               "do_upload": upload_counts[vcf_file] == 0,  # only upload a single file per batch
                                "exclude_file": exclude_file})
+            upload_counts[vcf_file] += 1
         out.append(data)
     return out
 

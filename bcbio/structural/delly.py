@@ -2,6 +2,7 @@
 
 https://github.com/tobiasrausch/delly
 """
+import collections
 import copy
 import os
 import subprocess
@@ -165,6 +166,7 @@ def run(items):
     out_file = "%s.vcf.gz" % sshared.outname_from_inputs(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, config)
     out = []
+    upload_counts = collections.defaultdict(int)
     for data in items:
         if "sv" not in data:
             data["sv"] = []
@@ -173,6 +175,8 @@ def run(items):
         if final_vcf:
             delly_vcf = _delly_count_evidence_filter(final_vcf, data)
             data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
+                               "do_upload": upload_counts[final_vcf] == 0,  # only upload a single file per batch
                                "exclude": exclude_file})
+            upload_counts[final_vcf] += 1
         out.append(data)
     return out
