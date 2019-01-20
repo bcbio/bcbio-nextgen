@@ -49,11 +49,21 @@
   remote_user: ubuntu
   gather_facts: no
   pre_tasks:
-    - raw: sudo apt-get update && sudo apt-get -y install python-simplejson
-      ignore_errors: true
+    - raw: test -e /usr/bin/python || (sudo apt-get update && sudo apt-get update && sudo apt install -y python2.7-minimal python-simplejson)
     - action: setup
   tasks:
     - include_vars: project_vars.yaml
+    - name: Check for nvme filesystem (m5+)
+      stat:
+        path: /dev/nvme1n1
+      register: isnvme
+    - name: Symlink for nvme filesystems (m5+)
+      file:
+        src: /dev/nvme1n1
+        dest: /dev/xvdf
+        state: link
+      when: isnvme.stat.exists
+      become: true
     - name: Create ext4 filesystem if not present
       filesystem: fstype=ext4 dev=/dev/xvdf
       become: true
@@ -107,7 +117,7 @@
     - name: Install Microsoft key and register product repository
       become: true
       apt:
-        deb: https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+        deb: https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
     - name: Install apt-transport-https
       become: true
       apt:
@@ -116,7 +126,7 @@
     - name: Install dotnet core
       become: true
       apt:
-        name: dotnet-runtime-2.0.7
+        name: dotnet-runtime-2.1
         state: latest
         update_cache: yes
 
