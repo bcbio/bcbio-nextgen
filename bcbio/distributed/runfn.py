@@ -54,7 +54,7 @@ def process(args):
     with utils.chdir(work_dir):
         with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
             try:
-                out = fn(fnargs)
+                out = fn(*fnargs)
             except:
                 logger.exception()
                 raise
@@ -564,7 +564,7 @@ def _to_cwl(val, input_files):
         if _file_and_exists(val, input_files):
             val = {"class": "File", "path": val}
             secondary = []
-            for idx in [".bai", ".tbi", ".gbi", ".fai", ".db"]:
+            for idx in [".bai", ".tbi", ".gbi", ".fai", ".crai", ".db"]:
                 idx_file = val["path"] + idx
                 if _file_and_exists(idx_file, input_files):
                     secondary.append({"class": "File", "path": idx_file})

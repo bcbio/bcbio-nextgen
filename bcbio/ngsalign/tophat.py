@@ -4,7 +4,6 @@ http://tophat.cbcb.umd.edu
 """
 import os
 import shutil
-import sys
 import glob
 import subprocess
 
@@ -16,8 +15,7 @@ from bcbio.ngsalign import bowtie, bowtie2
 from bcbio.utils import safe_makedir, file_exists, get_in, symlink_plus
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio import bam
-from bcbio import broad
+from bcbio import bam, broad, utils
 import bcbio.pipeline.datadict as dd
 
 
@@ -126,7 +124,7 @@ def tophat_align(fastq_file, pair_file, ref_file, out_base, align_dir, data,
             options["output-dir"] = tx_out_dir
             options["no-coverage-search"] = True
             options["no-mixed"] = True
-            cmd = [sys.executable, config_utils.get_program("tophat", config)]
+            cmd = [utils.get_program_python("tophat"), config_utils.get_program("tophat", config)]
             for k, v in options.items():
                 if v is True:
                     cmd.append("--%s" % k)
@@ -162,11 +160,14 @@ def merge_unmapped(bam_file, unmapped_bam, config):
 
 def _has_alignments(sam_file):
     with open(sam_file) as in_handle:
-        for line in in_handle:
-            if line.startswith("File removed to save disk space"):
-                return False
-            elif not line.startswith("@"):
-                return True
+        try:
+            for line in in_handle:
+                if line.startswith("File removed to save disk space"):
+                    return False
+                elif not line.startswith("@"):
+                    return True
+        except UnicodeDecodeError:
+            return not bam.is_empty(sam_file)
     return False
 
 def _fix_mates(orig_file, out_file, ref_file, config):
@@ -319,7 +320,7 @@ def _get_bowtie_with_reference(ref_file, version):
 
 def _tophat_major_version(config):
     cmd =  [
-        sys.executable,
+        utils.get_program_python("tophat"),
         config_utils.get_program("tophat", config, default="tophat"),
         "--version"
     ]

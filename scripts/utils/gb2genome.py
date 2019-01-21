@@ -130,7 +130,7 @@ if __name__=='__main__':
     count = SeqIO.convert(args.gbk, "genbank", args.prefix + "_tmp.fa", "fasta")
     with open(args.prefix + ".fa", "w") as out_handle:
         with open(args.prefix + "_tmp.fa") as in_handle:
-            header = in_handle.next()
+            header = next(in_handle)
             print >>out_handle, header.split()[0]
             for line in in_handle:
                 print >>out_handle, line.strip()

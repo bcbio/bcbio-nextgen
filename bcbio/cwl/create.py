@@ -754,6 +754,8 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
                 out = _add_secondary_if_exists(indexes, out, get_retriever)
             elif x.endswith(".bam"):
                 out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
+            elif x.endswith(".cram"):
+                out = _add_secondary_if_exists([x + ".crai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):

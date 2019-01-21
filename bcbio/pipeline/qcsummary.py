@@ -306,7 +306,7 @@ def _merge_metadata(samples):
         if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
-            for me in m.keys():
+            for me in list(m.keys()):
                 if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                     m.pop(me, None)
             sample_metrics[dd.get_sample_name(s)].update(m)

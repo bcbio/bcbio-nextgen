@@ -177,7 +177,7 @@ def _get_versions(config=None):
         bcbio_version = ""
     out = [{"program": "bcbio-nextgen", "version": bcbio_version}]
     manifest_dir = _get_manifest_dir(config)
-    manifest_vs = _get_versions_manifest(manifest_dir)
+    manifest_vs = _get_versions_manifest(manifest_dir) if manifest_dir else []
     if manifest_vs:
         out += manifest_vs
     else:
@@ -194,7 +194,7 @@ def _get_versions(config=None):
     out.sort(key=lambda x: x["program"])
     return out
 
-def _get_manifest_dir(data=None):
+def _get_manifest_dir(data=None, name=None):
     """
     get manifest directory from the data dictionary, falling back on alternatives
     it prefers, in order:
@@ -217,6 +217,8 @@ def _get_manifest_dir(data=None):
                                                          "manifest"))
     if not manifest_dir or not os.path.exists(manifest_dir):
         manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
+        if not os.path.exists(manifest_dir) and name:
+            manifest_dir = os.path.join(config_utils.get_base_installdir(name), "manifest")
     return manifest_dir
 
 def _get_versions_manifest(manifest_dir):
@@ -267,8 +269,8 @@ def write_versions(dirs, config=None, is_wrapper=False):
 def get_version_manifest(name, data=None, required=False):
     """Retrieve a version from the currently installed manifest.
     """
-    manifest_dir = _get_manifest_dir(data)
-    manifest_vs = _get_versions_manifest(manifest_dir)
+    manifest_dir = _get_manifest_dir(data, name)
+    manifest_vs = _get_versions_manifest(manifest_dir) or []
     for x in manifest_vs:
         if x["program"] == name:
             v = x.get("version", "")

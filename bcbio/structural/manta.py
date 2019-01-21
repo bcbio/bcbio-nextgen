@@ -2,6 +2,7 @@
 
 https://github.com/Illumina/manta
 """
+import collections
 import os
 import sys
 
@@ -30,13 +31,17 @@ def run(items):
     assert utils.file_exists(variant_file), "Manta finished without output file %s" % variant_file
     variant_file = shared.annotate_with_depth(variant_file, items)
     out = []
+    upload_counts = collections.defaultdict(int)
     for data in items:
         if paired and paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):
             variant_file = _run_break_point_inspector(data, variant_file, paired)
         if "sv" not in data:
             data["sv"] = []
         final_vcf = shared.finalize_sv(variant_file, data, items)
-        data["sv"].append({"variantcaller": "manta", "vrn_file": final_vcf})
+        data["sv"].append({"variantcaller": "manta",
+                           "do_upload": upload_counts[final_vcf] == 0,  # only upload a single file per batch
+                           "vrn_file": final_vcf})
+        upload_counts[final_vcf] += 1
         out.append(data)
     return out
 

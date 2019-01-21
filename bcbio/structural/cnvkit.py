@@ -75,6 +75,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     """
     assert len(ckouts) == len(items)
     out = []
+    upload_counts = collections.defaultdict(int)
     for ckout, data in zip(ckouts, items):
         ckout = copy.deepcopy(ckout)
         ckout["variantcaller"] = "cnvkit"
@@ -87,9 +88,12 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
                 ckout = _add_plots_to_output(ckout, data)
+            ckout["do_upload"] = upload_counts[ckout.get("vrn_file")] == 0
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
+        if ckout.get("vrn_file"):
+            upload_counts[ckout["vrn_file"]] += 1
         out.append(data)
     return out
 
