@@ -23,6 +23,9 @@ from bcbio.bam.fastq import open_fastq
 from bcbio.log import logger
 from bcbio.rnaseq import gtf
 
+import six
+
+
 class SparseMatrix(object):
 
     def __init__(self, matrix=None, rownames=None, colnames=None):
@@ -55,7 +58,7 @@ class SparseMatrix(object):
             return filename
         out_files = [filename, filename + ".rownames", filename + ".colnames"]
         with file_transaction(out_files) as tx_out_files:
-            with open(tx_out_files[0], "w") as out_handle:
+            with open(tx_out_files[0], "wb") as out_handle:
                 scipy.io.mmwrite(out_handle, scipy.sparse.csr_matrix(self.matrix))
             pd.Series(self.rownames).to_csv(tx_out_files[1], index=False)
             pd.Series(self.colnames).to_csv(tx_out_files[2], index=False)
@@ -95,7 +98,7 @@ def get_cellular_barcodes(data):
         bc1 = os.path.join(TRANSFORM_DIR, stem + "-cb1.txt.gz")
         bc2 = os.path.join(TRANSFORM_DIR, stem + "-cb2.txt.gz")
         bc3 = os.path.join(TRANSFORM_DIR, stem + "-cb3.txt.gz")
-        return filter(file_exists, [bc1, bc2, bc3])
+        return list(filter(file_exists, [bc1, bc2, bc3]))
     else:
         return []
 
@@ -147,7 +150,7 @@ def umi_transform(data):
     cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
     with open_fastq(fq1) as in_handle:
-        read = in_handle.next()
+        read = next(in_handle)
         if "UMI_" in read:
             data["files"] = [out_file]
             return [[data]]
@@ -175,7 +178,7 @@ def filter_barcodes(data):
     bc2 = None
     bc3 = None
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
-    if isinstance(bc, basestring):
+    if isinstance(bc, six.string_types):
         bc1 = bc
     if len(bc) == 1:
         bc1 = bc[0]
@@ -333,7 +336,7 @@ def demultiplex_samples(data):
         fq1 = files[0]
     # check if samples need to be demultiplexed
     with open_fastq(fq1) as in_handle:
-        read = in_handle.next()
+        read = next(in_handle)
         if "SAMPLE_" not in read:
             return [[data]]
     bcfile = dd.get_sample_barcodes(data)
@@ -423,7 +426,7 @@ def version(data):
     umis_cmd = config_utils.get_program("umis", data, default="umis")
     version_cmd = [umis_cmd, "version"]
     try:
-        output = subprocess.check_output(version_cmd).strip()
+        output = subprocess.check_output(version_cmd).decode().strip()
     except:
         output = None
     return output

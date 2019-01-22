@@ -317,7 +317,7 @@ def prep_hla(work_dir, sample, calls, hlas, normal_bam, tumor_bam):
     hla_file = os.path.join(work_dir, "%s-hlas.txt" % sample)
     with open(calls) as in_handle:
         with open(hla_file, "w") as out_handle:
-            in_handle.next()  # header
+            next(in_handle)  # header
             for line in in_handle:
                 _, _, a, _, _ = line.strip().split(",")
                 a1, a2 = a.split(";")
@@ -333,7 +333,7 @@ def prep_ploidy(work_dir, sample, bam_file, cromwell_dir, sv_glob):
     out_file = os.path.join(work_dir, "%s-solutions.txt" % sample)
     with open(purecn_file) as in_handle:
         reader = csv.reader(in_handle)
-        purecn_stats = dict(zip(reader.next(), reader.next()))
+        purecn_stats = dict(zip(next(reader), next(reader)))
     with open(out_file, "w") as out_handle:
         out_handle.write("Ploidy\ttumorPurity\ttumorPloidy\n")
         lohhla_name = utils.splitext_plus(os.path.basename(bam_file))[0]

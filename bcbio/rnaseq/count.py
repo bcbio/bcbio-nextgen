@@ -14,6 +14,7 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     """
     combine a set of count files into a single combined file
     """
+    files = list(files)
     if not files:
         return None
     assert all([file_exists(x) for x in files]), \

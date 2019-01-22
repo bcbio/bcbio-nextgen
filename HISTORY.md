@@ -2,6 +2,11 @@
 
 - CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows
   pre-computed panel of normals for tumor-only or single sample CNV calling.
+- variant: avoid race condition on processing input BED files for variant
+  calling when no pre-specific variant_regions available.
+- structural variation upload: avoid uploading multiple batched calls into
+  sample directories. For lumpy will now have a single output per batch in a
+  sample folder.
 - install: respect pre-specified bioconda and conda-forge in condarc
   configuration. Allows use of custom package mirrors.
 - seq2c: move specialized pre-call calculation upstream to coverage estimation.

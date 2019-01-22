@@ -9,13 +9,15 @@ import contextlib
 import itertools
 import functools
 import random
-from six.moves import configparser
 import fnmatch
 import subprocess
 import sys
 import types
+
+import six
 import toolz as tz
 import yaml
+
 from collections import Mapping, OrderedDict
 
 
@@ -49,7 +51,7 @@ def map_wrap(f):
     """
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        return apply(f, *args, **kwargs)
+        return f(*args, **kwargs)
     return wrapper
 
 def transform_to(ext):
@@ -266,7 +268,7 @@ def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = configparser.ConfigParser()
+    config = six.moves.configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -360,7 +362,13 @@ def symlink_plus(orig, new):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
 def open_gzipsafe(f):
-    return gzip.open(f) if f.endswith(".gz") else open(f)
+    if f.endswith(".gz"):
+        if six.PY3:
+            return gzip.open(f, "rt")
+        else:
+            return gzip.open(f)
+    else:
+        return open(f)
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
@@ -429,7 +437,7 @@ def robust_partition_all(n, iterable):
         x = []
         for _ in range(n):
             try:
-                x.append(it.next())
+                x.append(next(it))
             except StopIteration:
                 yield x
                 # Omitting this StopIteration results in a segfault!
@@ -440,8 +448,8 @@ def partition(pred, iterable, tolist=False):
     'Use a predicate to partition entries into false entries and true entries'
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
-    ifalse = itertools.ifilterfalse(pred, t1)
-    itrue = itertools.ifilter(pred, t2)
+    ifalse = six.moves.filterfalse(pred, t1)
+    itrue = six.moves.filter(pred, t2)
     if tolist:
         return list(ifalse), list(itrue)
     else:
@@ -532,9 +540,9 @@ def is_sequence(arg):
     example: arg("lol") -> False
 
     """
-    return (not hasattr(arg, "strip") and
-            hasattr(arg, "__getitem__") or
-            hasattr(arg, "__iter__"))
+    return (not is_string(arg) and
+            (hasattr(arg, "__getitem__") or
+             hasattr(arg, "__iter__")))
 
 
 def is_pair(arg):
@@ -545,7 +553,7 @@ def is_pair(arg):
     return is_sequence(arg) and len(arg) == 2
 
 def is_string(arg):
-    return isinstance(arg, basestring)
+    return isinstance(arg, six.string_types)
 
 
 def locate(pattern, root=os.curdir):
@@ -690,7 +698,7 @@ def R_package_path(package):
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
         return None
-    for line in output.split("\n"):
+    for line in output.decode().split("\n"):
         if "[1]" not in line:
             continue
         dirname = line.split("[1]")[1].replace("\"", "").strip()
@@ -779,6 +787,19 @@ def append_path(bin, path, at_start=True):
 
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
+
+def get_program_python(cmd):
+    """Get the full path to a python version linked to the command.
+
+    Allows finding python based programs in python 2 versus python 3
+    environments.
+    """
+    full_cmd = os.path.realpath(which(cmd))
+    cmd_python = os.path.join(os.path.dirname(full_cmd), "python")
+    if os.path.exists(cmd_python):
+        return cmd_python
+    else:
+        return sys.executable
 
 def local_path_export(at_start=True):
     path = get_bcbio_bin()

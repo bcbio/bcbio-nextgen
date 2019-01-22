@@ -66,7 +66,7 @@ def svevent_reader(in_file):
     """
     with open(in_file) as in_handle:
         while 1:
-            line = in_handle.next()
+            line = next(in_handle)
             if line.startswith(">"):
                 break
         header = line[1:].rstrip().split("\t")

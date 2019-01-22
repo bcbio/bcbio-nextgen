@@ -12,6 +12,7 @@ import os
 import tarfile
 
 import requests
+import six
 import toolz as tz
 import yaml
 
@@ -20,6 +21,7 @@ from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
+from functools import reduce
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
                    "dx:": "dnanexus", "gs:": "gs"}
@@ -400,7 +402,7 @@ def _get_cur_remotes(path):
     elif isinstance(path, dict):
         for v in path.values():
             cur_remotes |= _get_cur_remotes(v)
-    elif path and isinstance(path, basestring):
+    elif path and isinstance(path, six.string_types):
         if path.startswith(tuple(INTEGRATION_MAP.keys())):
             cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
     return cur_remotes
@@ -622,7 +624,7 @@ def _get_avro_type(val):
     elif val is None:
         return ["null"]
     # encode booleans as string True/False and unencode on other side
-    elif isinstance(val, bool) or isinstance(val, basestring) and val.lower() in ["true", "false", "none"]:
+    elif isinstance(val, bool) or isinstance(val, six.string_types) and val.lower() in ["true", "false", "none"]:
         return ["string", "null", "boolean"]
     elif isinstance(val, int):
         return "long"
@@ -743,7 +745,7 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
     """
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx, get_retriever) for subx in x]
-    elif (x and isinstance(x, basestring) and
+    elif (x and isinstance(x, six.string_types) and
           (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
            objectstore.is_remote(x))):
         if _file_local_or_remote(x, get_retriever):
@@ -752,6 +754,8 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
                 out = _add_secondary_if_exists(indexes, out, get_retriever)
             elif x.endswith(".bam"):
                 out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
+            elif x.endswith(".cram"):
+                out = _add_secondary_if_exists([x + ".crai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):

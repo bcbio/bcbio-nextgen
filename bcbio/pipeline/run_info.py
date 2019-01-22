@@ -12,6 +12,7 @@ import operator
 import os
 import string
 
+import six
 import toolz as tz
 import yaml
 from bcbio import install, utils, structural
@@ -28,6 +29,7 @@ from bcbio.qc import viral
 from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils, vcfanno
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
+from functools import reduce
 
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
@@ -67,7 +69,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        elif isinstance(item["name"], basestring):
+        elif isinstance(item["name"], six.string_types):
             description = "%s-%s" % (item["name"], clean_name(item["description"]))
             item["name"] = [item["name"], description]
             item["description"] = description
@@ -337,11 +339,11 @@ def _clean_algorithm(data):
     for key in ["variantcaller", "jointcaller", "svcaller"]:
         val = tz.get_in(["algorithm", key], data)
         if val:
-            if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
+            if not isinstance(val, (list, tuple)) and isinstance(val, six.string_types):
                 val = [val]
             # check for cases like [false] or [None]
             if isinstance(val, (list, tuple)):
-                if len(val) == 1 and not val[0] or (isinstance(val[0], basestring)
+                if len(val) == 1 and not val[0] or (isinstance(val[0], six.string_types)
                                                     and val[0].lower() in ["none", "false"]):
                     val = False
             data["algorithm"][key] = val
@@ -372,12 +374,12 @@ def _clean_background(data):
     if val:
         out = {}
         # old style specification, single string for variant
-        if isinstance(val, basestring):
+        if isinstance(val, six.string_types):
             out["variant"] = _file_to_abs(val, [os.getcwd()])
         elif isinstance(val, dict):
             for k, v in val.items():
                 if k in allowed_keys:
-                    if isinstance(v, basestring):
+                    if isinstance(v, six.string_types):
                         out[k] = _file_to_abs(v, [os.getcwd()])
                     else:
                         assert isinstance(v, dict)
@@ -399,13 +401,11 @@ def _clean_background(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    if not isinstance(x, basestring):
+    if not isinstance(x, six.string_types):
         x = str(x)
     else:
-        try:
-            x = str(x.decode("ascii"))
-        except UnicodeEncodeError as msg:
-            msg = "Found unicode character in input YAML (%s): %s" % (x, str(msg))
+        if not all(ord(char) < 128 for char in x):
+            msg = "Found unicode character in input YAML (%s)" % (x)
             raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:
         x = x.replace(problem, "_")
@@ -577,7 +577,7 @@ def _check_algorithm_keys(item):
     Needs to be manually updated when introducing new keys, but avoids silent bugs
     with typos in key names.
     """
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
+    problem_keys = [k for k in item["algorithm"].keys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
@@ -680,7 +680,7 @@ def _check_quality_format(items):
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
-    allowed = set(alignment.TOOLS.keys() + [None, False])
+    allowed = set(list(alignment.TOOLS.keys()) + [None, False])
     if item["algorithm"].get("aligner") not in allowed:
         raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
                          "Supported options: %s\n" %
@@ -689,7 +689,7 @@ def _check_aligner(item):
 def _check_variantcaller(item):
     """Ensure specified variantcaller is a valid choice.
     """
-    allowed = set(genotype.get_variantcallers().keys() + [None, False])
+    allowed = set(list(genotype.get_variantcallers().keys()) + [None, False])
     vcs = item["algorithm"].get("variantcaller")
     if not isinstance(vcs, dict):
         vcs = {"variantcaller": vcs}
@@ -710,7 +710,7 @@ def _check_variantcaller(item):
 def _check_svcaller(item):
     """Ensure the provide structural variant caller is valid.
     """
-    allowed = set(reduce(operator.add, [d.keys() for d in structural._CALLERS.values()]) + [None, False])
+    allowed = set(reduce(operator.add, [list(d.keys()) for d in structural._CALLERS.values()]) + [None, False])
     svs = item["algorithm"].get("svcaller")
     if not isinstance(svs, (list, tuple)):
         svs = [svs]
@@ -817,9 +817,9 @@ def _file_to_abs(x, dnames, makedir=False):
     """
     if x is None or os.path.isabs(x):
         return x
-    elif isinstance(x, basestring) and objectstore.is_remote(x):
+    elif isinstance(x, six.string_types) and objectstore.is_remote(x):
         return x
-    elif isinstance(x, basestring) and x.lower() == "none":
+    elif isinstance(x, six.string_types) and x.lower() == "none":
         return None
     else:
         for dname in dnames:
@@ -838,7 +838,7 @@ def _normalize_files(item, fc_dir=None):
     """
     files = item.get("files")
     if files:
-        if isinstance(files, basestring):
+        if isinstance(files, six.string_types):
             files = [files]
         fastq_dir = flowcell.get_fastq_dir(fc_dir) if fc_dir else os.getcwd()
         files = [_file_to_abs(x, [os.getcwd(), fc_dir, fastq_dir]) for x in files]
@@ -956,7 +956,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
         if "upload" not in item:
             upload = global_config.get("upload", {})
             # Handle specifying a local directory directly in upload
-            if isinstance(upload, basestring):
+            if isinstance(upload, six.string_types):
                 upload = {"dir": upload}
             if not upload:
                 upload["dir"] = "../final"
@@ -982,7 +982,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                              for f in item["files"]]
         elif "files" in item:
             del item["files"]
-        if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
+        if item.get("vrn_file") and isinstance(item["vrn_file"], six.string_types):
             inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
                                                          item["description"]))
             item["vrn_file"] = genome.abs_file_paths(item["vrn_file"],
@@ -1108,7 +1108,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
             elif v is None:
                 algorithm[k] = []
         elif k in convert_to_single:
-            if v and not isinstance(v, basestring):
+            if v and not isinstance(v, six.string_types):
                 if isinstance(v, (list, tuple)) and len(v) == 1:
                     algorithm[k] = v[0]
                 else:
@@ -1127,7 +1127,7 @@ def _replace_global_vars(xs, global_vars):
     elif isinstance(xs, dict):
         final = {}
         for k, v in xs.items():
-            if isinstance(v, basestring) and v in global_vars:
+            if isinstance(v, six.string_types) and v in global_vars:
                 v = global_vars[v]
             final[k] = v
         return final

@@ -108,7 +108,7 @@ def version(data):
                             shell=True)
     with contextlib.closing(subp.stdout) as stdout:
         for line in stdout:
-            version = line.strip()
+            version = line.decode().strip()
     return LooseVersion(version)
 
 def supports_merge(data):

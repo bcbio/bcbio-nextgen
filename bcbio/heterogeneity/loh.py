@@ -9,6 +9,7 @@ import os
 import decimal
 import uuid
 
+import six
 from six import StringIO
 import toolz as tz
 import yaml
@@ -46,7 +47,7 @@ def _matches(tocheck, target):
 def _civic_regions(civic_file, variant_types=None, diseases=None, drugs=None):
     """Retrieve gene regions and names filtered by variant_types and diseases.
     """
-    if isinstance(diseases, basestring):
+    if isinstance(diseases, six.string_types):
         diseases = [diseases]
     with gzip.open(civic_file) as in_handle:
         reader = csv.reader(in_handle, delimiter="\t")
@@ -361,7 +362,7 @@ class CljDecoder(object):
 
                 ## read next value as string
                 s = self.__read_token()
-                if not isinstance(s, basestring):
+                if not isinstance(s, six.string_types):
                     raise ValueError('Str expected, but got %s' % str(s))
 
                 ## remove read string from the value_stack
@@ -376,7 +377,7 @@ class CljDecoder(object):
 
                 ## read next value as string
                 s = self.__read_token()
-                if not isinstance(s, basestring):
+                if not isinstance(s, six.string_types):
                     raise ValueError('Str expected, but got %s' % str(s))
 
                 ## remove read string from the value_stack

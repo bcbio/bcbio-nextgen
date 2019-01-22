@@ -185,7 +185,7 @@ def _organize_by_position(orig_file, cmp_file, chunk_size):
     """
     with open(orig_file) as in_handle:
         reader1 = csv.reader(in_handle)
-        positions = len(reader1.next()) - 1
+        positions = len(next(reader1)) - 1
     for positions in _chunks(range(positions), chunk_size):
         with open(orig_file) as orig_handle:
             with open(cmp_file) as cmp_handle:
@@ -210,7 +210,7 @@ def _counts_at_position(positions, orig_reader, cmp_reader):
                  collections.defaultdict(lambda:
                  collections.defaultdict(int)))
     for orig_parts in orig_reader:
-        cmp_parts = cmp_reader.next()
+        cmp_parts = next(cmp_reader)
         for pos in positions:
             try:
                 pos_counts[pos][int(orig_parts[pos+1])][int(cmp_parts[pos+1])] += 1

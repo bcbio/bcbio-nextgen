@@ -7,7 +7,6 @@ details:
     vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     genome_build: hg19
     algorithm:
-      tools_off: [gemini]
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     metadata:
       batch: TestBatch1
@@ -37,7 +36,7 @@ details:
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
-      svcaller: [seq2c, cnvkit, delly, lumpy]
+      svcaller: [seq2c, gatk-cnv, delly, lumpy]
       #background:
       #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
       exclude_regions: [lcr, highdepth, polyx, altcontigs]

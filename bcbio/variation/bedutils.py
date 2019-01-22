@@ -177,7 +177,8 @@ def population_variant_regions(items, merged=False):
     """
     def _get_variant_regions(data):
         out = dd.get_variant_regions(data) or dd.get_sample_callable(data)
-        if merged:
+        # Only need to merge for variant region inputs, not callable BED regions which don't overlap
+        if merged and dd.get_variant_regions(data):
             merged_out = dd.get_variant_regions_merged(data)
             if merged_out:
                 out = merged_out

@@ -319,7 +319,7 @@ def _calculate_mapping_reads(items, work_dir, input_backs=None):
         for data in items:
             count = 0
             for line in subprocess.check_output([
-                "samtools", "idxstats", dd.get_align_bam(data)]).split("\n"):
+                "samtools", "idxstats", dd.get_align_bam(data)]).decode().split("\n"):
                 if line.strip():
                     count += int(line.split("\t")[2])
             lines.append("%s\t%s" % (dd.get_sample_name(data), count))

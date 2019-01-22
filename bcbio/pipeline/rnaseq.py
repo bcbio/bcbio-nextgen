@@ -255,7 +255,7 @@ def combine_express(samples, combined):
     gtf_file = dd.get_gtf_file(samples[0][0])
     isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
     isoform_to_gene_file = express.isoform_to_gene_name(
-        gtf_file, isoform_to_gene_file, dd.sample_data_iterator(samples).next())
+        gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
     if len(to_combine) > 0:
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
@@ -369,13 +369,13 @@ def combine_files(samples):
 
     # combine Cufflinks files
     fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
-    if fpkm_files:
+    if fpkm_files and combined:
         fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
         fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
     else:
         fpkm_combined = None
     isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
-    if isoform_files:
+    if isoform_files and combined:
         fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
         fpkm_isoform_combined = count.combine_count_files(isoform_files,
                                                           fpkm_isoform_combined_file,
@@ -385,11 +385,12 @@ def combine_files(samples):
     # combine DEXseq files
     to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
                                         in samples])
-    if to_combine_dexseq:
+    if to_combine_dexseq and combined:
         dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
-        dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
+        if dexseq_combined:
+            dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
     else:
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)

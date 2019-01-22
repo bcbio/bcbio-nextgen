@@ -124,7 +124,7 @@ class S3Handle(FileHandle):
 
     def next(self):
         """Return the next item from the container."""
-        return self._iter.next()
+        return next(self._iter)
 
     def close(self):
         """Close the file handle."""
@@ -214,7 +214,7 @@ class BlobHandle(FileHandle):
 
     def next(self):
         """Return the next item from the container."""
-        return self._iter.next()
+        return next(self._iter)
 
     def close(self):
         """Close the file handle."""

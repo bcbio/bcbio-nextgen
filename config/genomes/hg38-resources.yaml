@@ -1,4 +1,4 @@
-version: 34
+version: 35
 
 aliases:
   human: true
@@ -18,6 +18,7 @@ variation:
   esp: ../variation/esp.vcf.gz
   exac: ../variation/exac.vcf.gz
   gnomad_exome: ../variation/gnomad_exome.vcf.gz
+  gnomad_genome: ../variation/gnomad_genome.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
   polyx: ../coverage/problem_regions/repeats/polyx.bed.gz
   gc_profile: ../coverage/gc/GC_profile.1000bp.cnp

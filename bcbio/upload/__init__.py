@@ -3,6 +3,7 @@
 import datetime
 import os
 
+import six
 import toolz as tz
 
 from bcbio import log, utils
@@ -126,7 +127,7 @@ def _add_meta(xs, sample=None, config=None):
     """
     out = []
     for x in xs:
-        if not isinstance(x["path"], basestring) or not os.path.exists(x["path"]):
+        if not isinstance(x["path"], six.string_types) or not os.path.exists(x["path"]):
             raise ValueError("Unexpected path for upload: %s" % x)
         x["mtime"] = shared.get_file_timestamp(x["path"])
         if sample:

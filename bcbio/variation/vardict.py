@@ -16,6 +16,7 @@ import os
 import sys
 from six.moves import zip
 
+import six
 import toolz as tz
 import pybedtools
 
@@ -28,7 +29,7 @@ from bcbio.provenance import do, programs
 from bcbio.variation import bamprep, bedutils, vcfutils
 
 def _is_bed_file(target):
-    return target and isinstance(target, basestring) and os.path.isfile(target)
+    return target and isinstance(target, six.string_types) and os.path.isfile(target)
 
 def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq=False):
     var2vcf_opts = []

@@ -208,7 +208,8 @@ def _run_amber(paired, work_dir, lenient=False):
         with file_transaction(paired.tumor_data, out_file) as tx_out_file:
             key = "germline_het_pon"
             het_bed = tz.get_in(["genome_resources", "variation", key], paired.tumor_data)
-            cmd = ["AMBER", "-threads", dd.get_num_cores(paired.tumor_data),
+            cmd = ["AMBER"] + _get_jvm_opts(tx_out_file, paired.tumor_data) + \
+                  ["-threads", dd.get_num_cores(paired.tumor_data),
                    "-tumor", dd.get_sample_name(paired.tumor_data),
                    "-tumor_bam", dd.get_align_bam(paired.tumor_data),
                    "-reference", dd.get_sample_name(paired.normal_data),

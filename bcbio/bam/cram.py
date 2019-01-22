@@ -21,7 +21,8 @@ def compress(in_bam, data):
 
     Otherwise does `cram-lossless` which only converts to CRAM.
     """
-    out_file = "%s.cram" % os.path.splitext(in_bam)[0]
+    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "archive"))
+    out_file = os.path.join(out_dir, "%s.cram" % os.path.splitext(os.path.basename(in_bam))[0])
     cores = dd.get_num_cores(data)
     ref_file = dd.get_ref_file(data)
     if not utils.file_exists(out_file):

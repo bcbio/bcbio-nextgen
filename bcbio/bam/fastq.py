@@ -1,11 +1,11 @@
 """Utilities for working with fastq files.
 """
 
+import six
 from six.moves import zip
 from itertools import product
 import os
 import random
-import gzip
 import sys
 
 from Bio import SeqIO
@@ -226,7 +226,7 @@ def downsample(f1, f2, data, N, quick=False):
     out_files = (outf1, outf2) if outf2 else (outf1)
 
     with file_transaction(out_files) as tx_out_files:
-        if isinstance(tx_out_files, basestring):
+        if isinstance(tx_out_files, six.string_types):
             tx_out_f1 = tx_out_files
         else:
             tx_out_f1, tx_out_f2 = tx_out_files
@@ -258,11 +258,11 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
     """
 
     in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
-    read = in_handle.next()
+    read = next(in_handle)
     average = len(read.seq)
     for _ in range(nreads):
         try:
-            average = (average + len(in_handle.next().seq)) / 2
+            average = (average + len(next(in_handle).seq)) / 2
         except StopIteration:
             break
     in_handle.close()
@@ -277,7 +277,7 @@ def estimate_maximum_read_length(fastq_file, quality_format="fastq-sanger",
     lengths = []
     for _ in range(nreads):
         try:
-            lengths.append(len(in_handle.next().seq))
+            lengths.append(len(next(in_handle).seq))
         except StopIteration:
             break
     in_handle.close()
@@ -288,10 +288,5 @@ def open_fastq(in_file):
     """
     if objectstore.is_remote(in_file):
         return objectstore.open_file(in_file)
-    _, ext = os.path.splitext(in_file)
-    if ext == ".gz":
-        return gzip.open(in_file, 'rb')
-    if ext in [".fastq", ".fq"]:
-        return open(in_file, 'r')
-    # default to just opening it
-    return open(in_file, "r")
+    else:
+        return utils.open_gzipsafe(in_file)

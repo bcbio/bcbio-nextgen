@@ -34,12 +34,12 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
     """Re-usable subcomponent that annotates BED file genes from another BED
     """
     try:
-        input_rec = iter(pybedtools.BedTool(in_file)).next()
+        input_rec = next(iter(pybedtools.BedTool(in_file)))
     except StopIteration:  # empty file
         utils.copy_plus(in_file, out_file)
         return
     # keep everything after standard chrom/start/end, 1-based
-    extra_fields = range(4, len(input_rec.fields) + 1)
+    extra_fields = list(range(4, len(input_rec.fields) + 1))
     # keep the new gene annotation
     gene_index = len(input_rec.fields) + 4
     extra_fields.append(gene_index)

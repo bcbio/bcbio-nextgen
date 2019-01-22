@@ -10,6 +10,7 @@ import os
 import pprint
 import shutil
 
+import six
 import toolz as tz
 import yaml
 
@@ -53,7 +54,7 @@ def process(args):
     with utils.chdir(work_dir):
         with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
             try:
-                out = fn(fnargs)
+                out = fn(*fnargs)
             except:
                 logger.exception()
                 raise
@@ -127,7 +128,7 @@ def _add_resources(data, runtime):
         data["config"] = {}
     # Convert input resources, which may be a JSON string
     resources = data.get("resources", {}) or {}
-    if isinstance(resources, basestring) and resources.startswith(("{", "[")):
+    if isinstance(resources, six.string_types) and resources.startswith(("{", "[")):
         resources = json.loads(resources)
         data["resources"] = resources
     assert isinstance(resources, dict), (resources, data)
@@ -559,11 +560,11 @@ def _file_and_exists(val, input_files):
 def _to_cwl(val, input_files):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         if _file_and_exists(val, input_files):
             val = {"class": "File", "path": val}
             secondary = []
-            for idx in [".bai", ".tbi", ".gbi", ".fai", ".db"]:
+            for idx in [".bai", ".tbi", ".gbi", ".fai", ".crai", ".db"]:
                 idx_file = val["path"] + idx
                 if _file_and_exists(idx_file, input_files):
                     secondary.append({"class": "File", "path": idx_file})

@@ -7,6 +7,9 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 
+import six
+
+
 def make_bcbiornaseq_object(data):
     """
     load the initial bcb.rda object using bcbioRNASeq
@@ -117,7 +120,7 @@ def _quotestring(string, double=True):
 
 def _list2Rlist(xs):
     """ convert a python list to an R list """
-    if isinstance(xs, basestring):
+    if isinstance(xs, six.string_types):
         xs = [xs]
     rlist = ",".join([_quotestring(x) for x in xs])
     return "c(" + rlist + ")"

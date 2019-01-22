@@ -229,8 +229,8 @@ def _detect_duplicates(bam_file, out_dir, data):
             with open(tx_out_file, "w") as out_handle:
                 out_handle.write("%s\n%s\n" % (dup_count, tot_count))
     with open(out_file) as in_handle:
-        dupes = float(in_handle.next().strip())
-        total = float(in_handle.next().strip())
+        dupes = float(next(in_handle).strip())
+        total = float(next(in_handle).strip())
     if total == 0:
         rate = "NA"
     else:
@@ -380,10 +380,10 @@ def _find_qualimap_secondary_files(results_dir, base_file):
         """Problematic files with characters that make some CWL runners unhappy.
         """
         return x.find("(") >= 0 or x.find(")") >= 0 or x.find(" ") >= 0
-    return filter(lambda x: not is_problem_file(x),
-                  filter(not_dup,
-                         glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
-                         glob.glob(os.path.join(results_dir, '*.txt')) +
-                         glob.glob(os.path.join(results_dir, "css", "*")) +
-                         glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
-                         glob.glob(os.path.join(results_dir, "images_qualimapReport", "*"))))
+    return list(filter(lambda x: not is_problem_file(x),
+                       filter(not_dup,
+                              glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
+                              glob.glob(os.path.join(results_dir, '*.txt')) +
+                              glob.glob(os.path.join(results_dir, "css", "*")) +
+                              glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
+                              glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))))

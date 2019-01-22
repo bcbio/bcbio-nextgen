@@ -16,7 +16,7 @@ def is_autosomal(chrom):
         return True
     except ValueError:
         try:
-            int(str(chrom.replace("chr", "")))
+            int(str(chrom.lower().replace("chr", "").replace("_", "").replace("-", "")))
             return True
         except ValueError:
             return False

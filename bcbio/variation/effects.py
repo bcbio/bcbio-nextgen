@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import string
 
+import six
 import toolz as tz
 import yaml
 
@@ -291,7 +292,7 @@ def get_db(data):
     snpeff_base_dir = None
     if snpeff_db:
         snpeff_base_dir = utils.get_in(data, ("reference", "snpeff"))
-        if not (isinstance(snpeff_base_dir, basestring) and os.path.isdir(snpeff_base_dir)):
+        if not (isinstance(snpeff_base_dir, six.string_types) and os.path.isdir(snpeff_base_dir)):
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
@@ -300,9 +301,9 @@ def get_db(data):
                 snpeff_db = snpeff_db.replace("_", ".")
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
-        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring) and os.path.isfile(snpeff_base_dir)):
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types) and os.path.isfile(snpeff_base_dir)):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
-        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types)
               and snpeff_base_dir.endswith("%s%s" % (os.path.sep, snpeff_db))):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
         if not snpeff_base_dir:
@@ -399,9 +400,13 @@ def _installed_snpeff_genome(base_name, config):
     """
     snpeff_config_file = os.path.join(config_utils.get_program("snpeff", config, "dir"),
                                       "snpEff.config")
-    data_dir = _find_snpeff_datadir(snpeff_config_file)
-    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
-           if os.path.isdir(d)]
+    if os.path.exists(snpeff_config_file):
+        data_dir = _find_snpeff_datadir(snpeff_config_file)
+        dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+               if os.path.isdir(d)]
+    else:
+        data_dir = None
+        dbs = []
     if len(dbs) == 0:
         raise ValueError("No database found in %s for %s" % (data_dir, base_name))
     else:

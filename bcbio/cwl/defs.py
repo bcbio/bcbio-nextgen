@@ -312,6 +312,7 @@ def _variant_checkpoints(samples):
     checkpoints["align_split"] = not all([(dd.get_align_split_size(d) is False or
                                            not dd.get_aligner(d))
                                           for d in samples])
+    checkpoints["archive"] = any([dd.get_archive(d) for d in samples])
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
     checkpoints["ensemble"] = any([dd.get_ensemble(d) for d in samples])
     checkpoints["cancer"] = any(dd.get_phenotype(d) in ["tumor"] for d in samples)
@@ -343,6 +344,7 @@ def _postprocess_alignment(checkpoints):
             disk={"files": 0.5}, cores=1),
           s("postprocess_alignment_to_rec", "multi-combined",
             [["align_bam"],
+             ["config", "algorithm", "archive"],
              ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "exclude_regions"],
              ["config", "algorithm", "variant_regions"],
@@ -397,6 +399,13 @@ def _postprocess_alignment(checkpoints):
             "bcbio-vc", ["bedtools", "htslib", "gatk4"],
             disk={"files": 0.5}, cores=1)]
     out = [["regions", "sample_callable"]]
+    if checkpoints.get("archive"):
+        wf += [s("archive_to_cram", "multi-parallel",
+                 [["postprocess_alignment_rec"]],
+                 [cwlout(["archive_bam"], ["File", "null"], [".crai"])],
+                 "bcbio-vc", ["samtools"],
+                 disk={"files": 3.0})]
+        out += [["archive_bam"]]
     return wf, out
 
 def variant(samples):

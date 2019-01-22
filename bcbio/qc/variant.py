@@ -6,6 +6,7 @@ TODO:
 import os
 import shutil
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -83,7 +84,7 @@ def _add_filename_details(full_f):
     """
     out = {"vrn_file": full_f}
     f = os.path.basename(full_f)
-    for vc in genotype.get_variantcallers().keys() + ["ensemble"]:
+    for vc in list(genotype.get_variantcallers().keys()) + ["ensemble"]:
         if f.find("-%s.vcf" % vc) > 0:
             out["variantcaller"] = vc
     if f.find("-germline-") >= 0:
@@ -101,10 +102,10 @@ def _get_variants(data):
             variants = variants["samples"]
         for v in variants:
             # CWL -- a single variant file
-            if isinstance(v, basestring) and os.path.exists(v):
+            if isinstance(v, six.string_types) and os.path.exists(v):
                 active_vs.append(_add_filename_details(v))
             elif (isinstance(v, (list, tuple)) and len(v) > 0 and
-                  isinstance(v[0], basestring) and os.path.exists(v[0])):
+                  isinstance(v[0], six.string_types) and os.path.exists(v[0])):
                 for subv in v:
                     active_vs.append(_add_filename_details(subv))
             elif isinstance(v, dict) and v.get("vrn_file"):
@@ -116,9 +117,10 @@ def get_active_vcinfo(data, use_ensemble=True):
     """
     active_vs = _get_variants(data)
     if len(active_vs) > 0:
+        e_active_vs = []
         if use_ensemble:
             e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
-        else:
+        if len(e_active_vs) == 0:
             e_active_vs = [v for v in active_vs if v.get("variantcaller") != "ensemble"]
         if len(e_active_vs) > 0:
             return e_active_vs[0]

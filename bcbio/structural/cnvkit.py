@@ -26,6 +26,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import effects, ploidy, population, vcfutils
 from bcbio.structural import annotate, plot, shared
+from functools import reduce
 
 def use_general_sv_bins(data):
     """Check if we should use a general binning approach for a sample.
@@ -74,6 +75,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     """
     assert len(ckouts) == len(items)
     out = []
+    upload_counts = collections.defaultdict(int)
     for ckout, data in zip(ckouts, items):
         ckout = copy.deepcopy(ckout)
         ckout["variantcaller"] = "cnvkit"
@@ -86,9 +88,12 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
                 ckout = _add_plots_to_output(ckout, data)
+            ckout["do_upload"] = upload_counts[ckout.get("vrn_file")] == 0
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
+        if ckout.get("vrn_file"):
+            upload_counts[ckout["vrn_file"]] += 1
         out.append(data)
     return out
 
@@ -360,8 +365,8 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
 
 def _read_metrics_file(in_file):
     with open(in_file) as in_handle:
-        header = in_handle.next().strip().split("\t")[1:]
-        vals = map(float, in_handle.next().strip().split("\t")[1:])
+        header = next(in_handle).strip().split("\t")[1:]
+        vals = map(float, next(in_handle).strip().split("\t")[1:])
     return dict(zip(header, vals))
 
 @utils.map_wrap

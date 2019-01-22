@@ -68,7 +68,7 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     aligner_index = _get_aligner_index(aligner, data)
-    align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
+    align_dir = utils.safe_makedir(os.path.join(*align_dir_parts))
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
         data = _align_from_bam(fastq1, aligner, aligner_index, ref_file,

@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 
+import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -208,7 +209,7 @@ def merge_split_alignments(samples, run_parallel):
             ready.append([data])
     ready_merge = []
     hla_merges = []
-    for mgroup in to_merge.itervalues():
+    for mgroup in to_merge.values():
         cur_data = mgroup[0]
         del cur_data["align_split"]
         for x in mgroup[1:]:
@@ -267,7 +268,7 @@ def _get_grabix_index(in_file):
     gbi_file = in_file + ".gbi"
     if utils.file_exists(gbi_file):
         with open(gbi_file) as in_handle:
-            header = in_handle.next()
+            header = next(in_handle)
             if header.find("Not grabix indexed") == -1:
                 return gbi_file
 
@@ -283,8 +284,8 @@ def total_reads_from_grabix(in_file):
     gbi_file = _get_grabix_index(in_file)
     if gbi_file:
         with open(gbi_file) as in_handle:
-            in_handle.next()  # throw away
-            num_lines = int(in_handle.next().strip())
+            next(in_handle)  # throw away
+            num_lines = int(next(in_handle).strip())
         assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
         return num_lines // 4
     else:
@@ -660,7 +661,7 @@ def _bgzip_file(finput, config, work_dir, needs_bgzip, needs_gunzip, needs_conve
 
     Handles cases where finput might be multiple files and need to be concatenated.
     """
-    if isinstance(finput, basestring):
+    if isinstance(finput, six.string_types):
         in_file = finput
     else:
         assert not needs_convert, "Do not yet handle quality conversion with multiple inputs"
