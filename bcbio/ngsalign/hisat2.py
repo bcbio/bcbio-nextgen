@@ -102,7 +102,7 @@ def _get_stranded_flag(data, paired):
         else:
             return ""
     else:
-        if strandedness == "firstrand":
+        if strandedness == "firststrand":
             return base + "R"
         elif strandedness == "secondstrand":
             return base + "F"
