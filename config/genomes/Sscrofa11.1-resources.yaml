@@ -1,5 +1,5 @@
-version: 2
+version: 3
 
 aliases:
-  ensembl: sus_scrofa_vep_94_Sscrofa11.1
+  ensembl: sus_scrofa_vep_95_Sscrofa11.1
   #snpeff: 
