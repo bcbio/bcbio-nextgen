@@ -95,16 +95,16 @@ def _get_stranded_flag(data, paired):
     strandedness = dd.get_strandedness(data)
     base = "--rna-strandness "
     if paired:
-        if strandedness == "firststrand":
+        if strandedness and strandedness.lower() in ["firstrand", "firststrand"]:
             return base + "RF"
-        elif strandedness == "secondstrand":
+        elif strandedness and strandedness.lower() == "secondstrand":
             return base + "FR"
         else:
             return ""
     else:
-        if strandedness == "firstrand":
+        if strandedness and strandedness.lower() in ["firstrand", "firststrand"]:
             return base + "R"
-        elif strandedness == "secondstrand":
+        elif strandedness and strandedness.lower() == "secondstrand":
             return base + "F"
         else:
             return ""
