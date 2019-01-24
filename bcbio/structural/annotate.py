@@ -1,6 +1,7 @@
 """Annotate structural variant calls with associated genes.
 """
 import os
+import sys
 
 from bcbio import utils
 from bcbio.bam import ref
@@ -58,7 +59,9 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
                                    (utils.splitext_plus(os.path.basename(gene_file))[0]))
     ready_gene_file = bedutils.subset_to_genome(gene_file, ready_gene_file, data)
     exports = "export TMPDIR=%s && %s" % (os.path.dirname(out_file), utils.local_path_export())
+    bcbio_py = sys.executable
     cmd = ("{exports}{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
+           "{bcbio_py} -c 'from bcbio.variation import bedutils; bedutils.remove_bad()' | "
            "gsort - {fai_file} | "
             "bedtools closest -g {fai_file} "
             "-D ref -t first -a - -b <(gsort {ready_gene_file} {fai_file}) | "

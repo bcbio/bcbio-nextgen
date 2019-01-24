@@ -17,7 +17,7 @@
 - RNA-seq variation: fix for over-filtering variants near splice junctions with
   STAR.
 - Structural variant gene annotation: simplify and handle issues with
-  multidirectional comparisons.
+  multidirectional comparisons. Handle issues with out of order start/end from CNVkit.
 - Catch and report unicode characters in templating or YAML descriptions.
 
 ## 1.1.2 (12 December 2018)
