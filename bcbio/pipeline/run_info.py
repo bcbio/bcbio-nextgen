@@ -953,7 +953,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                 valid = "X" + description
                 logger.info("%s is not a valid R name, converting to %s." % (description, valid))
                 item["description"] = valid
-        if "upload" not in item:
+        if "upload" not in item and not is_cwl:
             upload = global_config.get("upload", {})
             # Handle specifying a local directory directly in upload
             if isinstance(upload, six.string_types):
@@ -983,8 +983,6 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
         elif "files" in item:
             del item["files"]
         if item.get("vrn_file") and isinstance(item["vrn_file"], six.string_types):
-            inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
-                                                         item["description"]))
             item["vrn_file"] = genome.abs_file_paths(item["vrn_file"],
                                                      do_download=all(not x for x in integrations.values()))
             if os.path.isfile(item["vrn_file"]):
@@ -994,6 +992,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                                                                 remove_orig=False)
                 # In case of permission errors, fix in inputs directory
                 except IOError:
+                    inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
+                                                                 item["description"]))
                     item["vrn_file"] = vcfutils.bgzip_and_index(item["vrn_file"], config,
                                                                 remove_orig=False, out_dir=inputs_dir)
             if not tz.get_in(("metadata", "batch"), item) and tz.get_in(["algorithm", "validate"], item):
