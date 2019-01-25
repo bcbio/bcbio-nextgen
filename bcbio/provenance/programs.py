@@ -36,13 +36,13 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "preseq", "stdout_flag": "preseq"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
-_manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks",
-                   "cnvkit", "fgbio", "gatk4", "hisat2", "sailfish", "salmon",
-                   "grabix", "htseq", "lumpy-sv", "manta", "break-point-inspector", "metasv", "mirdeep2", "oncofuse",
-                   "picard", "phylowgs", "platypus-variant",
-                   "rna-star", "rtg-tools", "sambamba", "samblaster", "scalpel",
-                   "seqbuster", "snpeff", "vardict",
-                   "vardict-java", "varscan", "variant-effect-predictor", "vt", "wham"]
+_manifest_progs = ['bcbio-variation', 'bioconductor-bubbletree', 'cufflinks',
+    'cnvkit', 'fgbio', 'gatk4', 'hisat2', 'sailfish', 'salmon', 'grabix',
+    'htseq', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv',
+    'mirdeep2', 'oncofuse', 'picard', 'phylowgs', 'platypus-variant', 'rapmap',
+    'rna-star', 'rtg-tools', 'sambamba', 'samblaster', 'scalpel', 'seqbuster',
+    'snpeff', 'vardict', 'vardict-java', 'varscan', 'variant-effect-predictor',
+    'vt', 'wham']
 
 def _broad_versioner(type):
     def get_version(config):
