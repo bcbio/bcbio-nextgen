@@ -581,7 +581,7 @@ def _get_relative_ext(of, sf):
     ext_to_add = sf.replace(prefix, "")
     # Return extensions relative to original
     if not exts_to_remove or exts_to_remove.startswith("."):
-        return "^" * exts_to_remove.count(".") + ext_to_add
+        return str("^" * exts_to_remove.count(".") + ext_to_add)
     else:
         raise ValueError("No cross platform way to reference complex extension: %s %s" % (sf, of))
 
