@@ -24,9 +24,9 @@ def create_cromwell_config(args, work_dir, sample_file):
                 "joblimit": "concurrent-job-limit = %s" % (joblimit) if joblimit > 0 else "",
                 "cwl_attrs": "\n        ".join(cwl_attrs),
                 "filesystem": _get_filesystem_config(file_types),
-                "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir}),
-                "engine": _get_engine_filesystem_config(file_types, args)}
+                "database": run_config.get("database", DATABASE_CONFIG % {"work_dir": work_dir})}
     cl_args, conf_args, scheduler, cloud_type = _args_to_cromwell(args)
+    std_args["engine"] = _get_engine_filesystem_config(file_types, args, conf_args)
     conf_args.update(std_args)
     main_config = {"hpc": (HPC_CONFIGS[scheduler] % conf_args) if scheduler else "",
                    "cloud": (CLOUD_CONFIGS[cloud_type] % conf_args) if cloud_type else "",
@@ -110,10 +110,20 @@ def _args_to_cromwell(args):
     if args.cloud_project:
         if args.cloud_root and args.cloud_root.startswith("gs:"):
             cloud_type = "PAPI"
+            cloud_root = args.cloud_root
+            cloud_region = None
+        elif ((args.cloud_root and args.cloud_root.startswith("s3:")) or
+              (args.cloud_project and args.cloud_project.startswith("arn:"))):
+            cloud_type = "AWSBATCH"
+            cloud_root = args.cloud_root
+            if not cloud_root.startswith("s3://"):
+                cloud_root = "s3://%s" % cloud_root
+            # split region from input Amazon Resource Name, ie arn:aws:batch:us-east-1:
+            cloud_region = args.cloud_project.split(":")[3]
         else:
             raise ValueError("Unexpected inputs for Cromwell Cloud support: %s %s" %
                              (args.cloud_project, args.cloud_root))
-        config = {"cloud_project": args.cloud_project, "cloud_root": args.cloud_root}
+        config = {"cloud_project": args.cloud_project, "cloud_root": cloud_root, "cloud_region": cloud_region}
         cl.append("-Dbackend.default=%s" % cloud_type)
     return cl, config, args.scheduler, cloud_type
 
@@ -126,6 +136,8 @@ def _get_filesystem_types(args, sample_file):
         for f in _get_file_paths(json.load(in_handle)):
             if f.startswith("gs:"):
                 out.add("gcp%s" % ext)
+            elif f.startswith("s3:"):
+                out.add("s3%s" % ext)
             elif f.startswith(("https:", "http:")):
                 out.add("http%s" % ext)
             else:
@@ -137,7 +149,8 @@ def _get_filesystem_config(file_types):
     """
     out = "     filesystems {\n"
     for file_type in sorted(list(file_types)):
-        out += _FILESYSTEM_CONFIG[file_type]
+        if file_type in _FILESYSTEM_CONFIG:
+            out += _FILESYSTEM_CONFIG[file_type]
     out += "      }\n"
     return out
 
@@ -196,14 +209,16 @@ database {
 }
 """
 
-def _get_engine_filesystem_config(file_types, args):
+def _get_engine_filesystem_config(file_types, args, conf_args):
     """Retriever authorization and engine filesystem configuration.
     """
     file_types = [x.replace("_container", "") for x in list(file_types)]
     out = ""
     if "gcp" in file_types:
         out += _AUTH_CONFIG_GOOGLE
-    if "gcp" in file_types or "http" in file_types:
+    if "s3" in file_types:
+        out += _AUTH_CONFIG_AWS % conf_args["cloud_region"]
+    if "gcp" in file_types or "http" in file_types or "s3" in file_types:
         out += "engine {\n"
         out += "  filesystems {\n"
         if "gcp" in file_types:
@@ -214,10 +229,23 @@ def _get_engine_filesystem_config(file_types, args):
             out += '    }\n'
         if "http" in file_types:
             out += '    http {}\n'
+        if "s3" in file_types:
+            out += '    s3 { auth = "default" }'
         out += "  }\n"
         out += "}\n"
+
     return out
 
+_AUTH_CONFIG_AWS = """
+aws {
+  application-name = "cromwell"
+  auths = [{
+      name = "default"
+      scheme = "default"
+  }]
+  region = "%s"
+}
+"""
 
 _AUTH_CONFIG_GOOGLE = """
 google {
@@ -496,5 +524,26 @@ CLOUD_CONFIGS = {
         }
       }
     }
+""",
+"AWSBATCH": """
+    AWSBATCH {
+          actor-factory = "cromwell.backend.impl.aws.AwsBatchBackendLifecycleActorFactory"
+          config {
+            root = "%(cloud_root)s/cromwell-execution"
+            auth = "default"
+
+            numSubmitAttempts = 3
+            numCreateDefinitionAttempts = 3
+
+            default-runtime-attributes {
+              queueArn: "%(cloud_project)s"
+            }
+            filesystems {
+              s3 {
+                auth = "default"
+              }
+            }
+          }
+        }
 """
 }
