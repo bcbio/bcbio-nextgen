@@ -66,7 +66,7 @@ def bootstrap_bcbionextgen(anaconda, args):
     if args.upgrade == "development":
         git_tag = "@%s" % args.revision if args.revision != "master" else ""
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
-                               "git+%s%s#egg=bcbio-nextgen conda<4.6.0" % (REMOTES["gitrepo"], git_tag)])
+                               "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
 def _get_conda_channels(conda_bin):
     """Retrieve default conda channels, checking if they are pre-specified in config.
