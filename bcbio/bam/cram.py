@@ -5,7 +5,7 @@ http://www.ebi.ac.uk/ena/about/cram_toolkit
 import os
 import subprocess
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
@@ -61,4 +61,14 @@ def index(in_cram, config):
             utils.symlink_plus(in_cram, tx_in_file)
             cmd = "samtools index {tx_in_file}"
             do.run(cmd.format(**locals()), "Index CRAM file")
+    return out_file
+
+def to_bam(in_file, out_file, data):
+    """Convert CRAM file into BAM.
+    """
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = ["samtools", "view", "-O", "BAM", "-o", tx_out_file, in_file]
+            do.run(cmd, "Convert CRAM to BAM")
+    bam.index(out_file, data["config"])
     return out_file

@@ -9,6 +9,7 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
+from bcbio.bam import cram
 from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
                             novoalign, snap, star, hisat2)
 from bcbio.pipeline import datadict as dd
@@ -55,7 +56,11 @@ def organize_noalign(data):
     data = utils.to_single_data(data[0])
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
     work_bam = os.path.join(work_dir, "%s-input.bam" % dd.get_sample_name(data))
-    utils.copy_plus(data["files"][0], work_bam)
+    if data["files"][0].endswith(".cram"):
+        work_bam = cram.to_bam(data["files"][0], work_bam, data)
+    else:
+        assert data["files"][0].endswith(".bam"), data["files"][0]
+        utils.copy_plus(data["files"][0], work_bam)
     bam.index(work_bam, data["config"])
     data["align_bam"] = work_bam
     return data
