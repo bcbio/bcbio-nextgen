@@ -66,7 +66,7 @@ def bootstrap_bcbionextgen(anaconda, args):
     if args.upgrade == "development":
         git_tag = "@%s" % args.revision if args.revision != "master" else ""
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
-                               "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
+                               "git+%s%s#egg=bcbio-nextgen conda<4.6.0" % (REMOTES["gitrepo"], git_tag)])
 
 def _get_conda_channels(conda_bin):
     """Retrieve default conda channels, checking if they are pre-specified in config.
@@ -102,7 +102,7 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl", "conda<4.6.0"], env=env)
     channels = _get_conda_channels(anaconda["conda"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
-                          ["--only-deps", "bcbio-nextgen"], env=env)
+                          ["--only-deps", "bcbio-nextgen", "conda<4.6.0"], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
                           ["--file", os.path.basename(REMOTES["requirements"])], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
