@@ -99,7 +99,7 @@ def install_conda_pkgs(anaconda, args):
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
-        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
+        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl", "conda<4.6.0"], env=env)
     channels = _get_conda_channels(anaconda["conda"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
                           ["--only-deps", "bcbio-nextgen"], env=env)
