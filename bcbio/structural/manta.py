@@ -105,6 +105,9 @@ def _prep_config(items, paired, work_dir):
             cmd += ["--exome"]
         for region in _maybe_limit_chromosomes(data):
             cmd += ["--region", region]
+        resources = config_utils.get_resources("manta", data["config"])
+        if resources.get("options"):
+            cmd += [str(x) for x in resources["options"]]
         # If we are removing polyX, avoid calling on small indels which require
         # excessively long runtimes on noisy WGS runs
         if "polyx" in dd.get_exclude_regions(data):
