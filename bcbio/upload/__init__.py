@@ -278,15 +278,23 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "index": True,
                                     "ext": "%s-%s" % (svcall["variantcaller"], caller),
                                     "variantcaller": svcall["variantcaller"]})
-            for extra in ["subclones", "contamination", "hetsummary", "lohsummary"]:
+            for extra in ["subclones", "contamination", "hetsummary", "lohsummary", "read_evidence"]:
                 svfile = svcall.get(extra)
                 if svfile and os.path.exists(svfile):
-                    ext = os.path.splitext(svfile)[-1].replace(".", "")
+                    ftype = os.path.splitext(svfile)[-1].replace(".", "")
                     out.append({"path": svfile,
-                                "sample": batch,
-                                "type": ext,
+                                "sample": dd.get_sample_name(sample) if ftype == "bam" else batch,
+                                "type": ftype,
                                 "ext": "%s-%s" % (svcall["variantcaller"], extra),
                                 "variantcaller": svcall["variantcaller"]})
+                    fext = ".bai" if ftype == "bam" else ""
+                    if fext and os.path.exists(svfile + fext):
+                        out.append({"path": svfile + fext,
+                                    "sample": dd.get_sample_name(sample) if ftype == "bam" else batch,
+                                    "type": ftype + fext,
+                                    "index": True,
+                                    "ext": "%s-%s" % (svcall["variantcaller"], extra),
+                                    "variantcaller": svcall["variantcaller"]})
         if "sv-validate" in sample:
             for vkey in ["csv", "plot", "df"]:
                 vfile = tz.get_in(["sv-validate", vkey], sample)

@@ -3,6 +3,7 @@
 https://github.com/Illumina/manta
 """
 import collections
+import glob
 import os
 import sys
 
@@ -38,9 +39,13 @@ def run(items):
         if "sv" not in data:
             data["sv"] = []
         final_vcf = shared.finalize_sv(variant_file, data, items)
-        data["sv"].append({"variantcaller": "manta",
-                           "do_upload": upload_counts[final_vcf] == 0,  # only upload a single file per batch
-                           "vrn_file": final_vcf})
+        vc = {"variantcaller": "manta",
+              "do_upload": upload_counts[final_vcf] == 0,  # only upload a single file per batch
+              "vrn_file": final_vcf}
+        evidence_bam = _get_evidence_bam(work_dir, data)
+        if evidence_bam:
+            vc["read_evidence"] = evidence_bam
+        data["sv"].append(vc)
         upload_counts[final_vcf] += 1
         out.append(data)
     return out
@@ -74,6 +79,14 @@ def _get_out_file(work_dir, paired):
     else:
         base_file = "diploidSV.vcf.gz"
     return os.path.join(work_dir, "results", "variants", base_file)
+
+def _get_evidence_bam(work_dir, data):
+    """Retrieve evidence BAM for the sample if it exists
+    """
+    evidence_bam = glob.glob(os.path.join(work_dir, "results", "evidence",
+                                            "evidence_*.%s*.bam" % (dd.get_sample_name(data))))
+    if evidence_bam:
+        return evidence_bam[0]
 
 def _run_workflow(items, paired, workflow_file, work_dir):
     """Run manta analysis inside prepared workflow directory.
