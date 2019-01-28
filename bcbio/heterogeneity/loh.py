@@ -28,13 +28,25 @@ _COORDS = {"LOH":
                        "B2M": ("15", 45003675, 45011075)}}}
 
 def get_coords(data):
+    """Retrieve coordinates of genes of interest for prioritization.
+
+    Can read from CIViC input data or a supplied BED file of chrom, start, end
+    and gene information.
+    """
     for category, vtypes in [("LOH", {"LOSS", "HETEROZYGOSITY"}),
                              ("amplification", {"AMPLIFICATION"})]:
         out = tz.get_in([category, dd.get_genome_build(data)], _COORDS, {})
         priority_file = dd.get_svprioritize(data)
-        if priority_file and os.path.basename(priority_file).find("civic") >= 0:
-            for chrom, start, end, gene in _civic_regions(priority_file, vtypes, dd.get_disease(data)):
-                out[gene] = (chrom, start, end)
+        if priority_file:
+            if os.path.basename(priority_file).find("civic") >= 0:
+                for chrom, start, end, gene in _civic_regions(priority_file, vtypes, dd.get_disease(data)):
+                    out[gene] = (chrom, start, end)
+            elif os.path.basename(priority_file).find(".bed") >= 0:
+                for line in utils.open_gzipsafe(priority_file):
+                    parts = line.strip().split("\t")
+                    if len(parts) >= 4:
+                        chrom, start, end, gene = parts[:4]
+                        out[gene] = (chrom, int(start), int(end))
         yield category, out
 
 def _matches(tocheck, target):
