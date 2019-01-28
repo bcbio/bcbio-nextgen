@@ -1,2 +1,1 @@
 bcbio-nextgen=1.1.2
-conda<4.6.0
