@@ -65,6 +65,13 @@ multiple samples using the template workflow command::
   so it's better to avoid this character and use it only as separation
   for the file extension.
 
+  For :ref:`docs-cwl` inputs, the first ``samplename`` column should contain
+  the base filename. For BAM files, this is ``your_file.bam``. For fastqs
+  this is ``your_file_R1.fastq.gz;your_file_R2.fastq.gz``, separating individual
+  files with a semicolon. By putting paths to the actual locations of the inputs
+  in your ``bcbio_system.yaml`` input when generating CWL, you can easily move
+  projects between different filesystems.
+
     The remaining columns can contain:
 
    - ``description`` Changes the sample description, originally

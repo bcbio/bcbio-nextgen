@@ -108,18 +108,19 @@ install of just bcbio-vm. To install using `Miniconda
 <http://conda.pydata.org/miniconda.html>`_ and `bioconda packages
 <https://bioconda.github.io/>`_ on Linux::
 
-    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     export TARGETDIR=~/install/bcbio-vm/anaconda
-    export BINDIR=/usr/local
+    export BINDIR=/usr/local/bin
+    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p $TARGETDIR
     $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
     $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
+    mkdir -p $BINDIR
     ln -s $TARGETDIR/bin/bcbio_vm.py $BINDIR/bcbio_vm.py
     ln -s $TARGETDIR/bin/conda $BINDIR/bcbiovm_conda
     ln -s $TARGETDIR/bin/python $BINDIR/bcbiovm_python
 
 In the above commands, the `bcbio-vm` install goes in ``$TARGETDIR``.
-The example is in your home directory but set to anywhere you have space.
+The example is in your home directory but set it anywhere you have space.
 Also, as an alternative to symbolic linking to a ``$BINDIR``, you can
 add the install bin directory to your PATH::
 

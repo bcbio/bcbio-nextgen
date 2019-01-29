@@ -90,6 +90,12 @@ Create a ``bcbio_system-gcp.yaml`` input file for :ref:`docs-cwl-generate`::
     resources:
       default: {cores: 2, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
 
+Then create a sample input CSV and template YAML file for
+:ref:`automated-sample-config`. The first column of the CSV file should contain
+references to your input files (``your_file.bam`` or
+``your_file_R1.fastq.gz;your_file_R2.fastq.gz``), which avoids needing to specify the
+inputs on the command line.
+
 Generate a Common Workflow Language representation::
 
    bcbio_vm.py template --systemconfig bcbio_system-gcp.yaml ${TEMPLATE}-template.yaml $PNAME.csv
