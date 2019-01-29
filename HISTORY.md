@@ -1,4 +1,4 @@
-## 1.1.3 (in progress)
+## 1.1.3 (29 January 2019)
 
 - CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows
   pre-computed panel of normals for tumor-only or single sample CNV calling.
