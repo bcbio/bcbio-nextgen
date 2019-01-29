@@ -242,7 +242,7 @@ def _variant_vc(checkpoints):
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
-             disk={"files": 0.5}, cores=1)]
+             disk={"files": 2.0}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
 
 def _variant_ensemble(checkpoints):
