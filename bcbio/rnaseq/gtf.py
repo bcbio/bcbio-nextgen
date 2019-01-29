@@ -300,7 +300,6 @@ def _strip_non_alphanumeric(string):
 def tx2genefile(gtf, out_file=None, data=None, tsv=True, keep_version=False):
     """
     write out a file of transcript->gene mappings.
-    use the installed tx2gene.csv if it exists, else write a new one out
     """
     if tsv:
         extension = ".tsv"
@@ -308,15 +307,13 @@ def tx2genefile(gtf, out_file=None, data=None, tsv=True, keep_version=False):
     else:
         extension = ".csv"
         sep = ","
-    installed_tx2gene = os.path.join(os.path.dirname(gtf), "tx2gene" + extension)
-    if file_exists(installed_tx2gene):
-        return installed_tx2gene
     if file_exists(out_file):
         return out_file
     with file_transaction(data, out_file) as tx_out_file:
         with open(tx_out_file, "w") as out_handle:
             for k, v in tx2genedict(gtf, keep_version).items():
                 out_handle.write(sep.join([k, v]) + "\n")
+    logger.info("tx2gene file %s created from %s." % (out_file, gtf))
     return out_file
 
 def is_qualimap_compatible(gtf):
