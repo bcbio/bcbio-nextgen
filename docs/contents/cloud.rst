@@ -55,7 +55,7 @@ which bcbio passes to Cromwell for authentication::
     gcloud iam service-accounts create your-service-account
     gcloud projects add-iam-policy-binding your-project --member \
       "serviceAccount:your-service-account@your-project.iam.gserviceaccount.com" --role "roles/owner"
-    gcloud iam service-accounts keys create ~/.config/glcoud/your-service-account.json \
+    gcloud iam service-accounts keys create ~/.config/gcloud/your-service-account.json \
       --iam-account your-service-account@your-project.iam.gserviceaccount.com
     export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/your-service-account.json
 
@@ -107,7 +107,7 @@ Running
 Run the CWL using Cromwell by specifying the project and root Google Storage
 bucket for intermediates::
 
-    bcbio_vm.py cwlrun cromwell $PNAME --cloud-project your-project \
+    bcbio_vm.py cwlrun cromwell $PNAME-workflow --cloud-project your-project \
         --cloud-root gs://your-project/work_cromwell
 
 Amazon Web Services (old)
