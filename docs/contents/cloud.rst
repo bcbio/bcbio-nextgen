@@ -111,36 +111,115 @@ bucket for intermediates::
     bcbio_vm.py cwlrun cromwell $PNAME-workflow --cloud-project your-project \
         --cloud-root gs://your-project/work_cromwell
 
-Amazon Web Services (old)
-#########################
+Amazon Web Services (AWS Batch)
+###############################
 
-`Amazon Web Services (AWS) <https://aws.amazon.com/>`_ provides a flexible cloud
-based environment for running analyses. Cloud approaches offer the ability to
-perform analyses at scale with no investment in local hardware. They also offer
-full programmatic control over the environment, allowing bcbio to automate the
-entire setup, run and teardown process.
+We're working to support `Amazon Web Services (AWS) <https://aws.amazon.com/>`_
+using AWS Batch and Cromwell, following the `AWS for Genomics documentation
+<https://docs.opendata.aws/genomics-workflows/>`_. This documents the current
+work in progress; it is not yet fully running and needs
+`additional Cromwell development <https://github.com/broadinstitute/cromwell/issues/4586)`_
+for AWS CWL support.
 
-bcbio-vm uses `Elasticluster
-<https://github.com/gc3-uzh-ch/elasticluster>`_ to build a cluster on AWS with
-an encrypted NFS mounted drive and an optional Lustre shared filesystem.
-We're phasing out this approach to cloud support in bcbio and will be actively
-moving to Common Workflow Language based approaches.
+Setup
+=====
+
+0. Optionally, create a bcbio `IAM user <https://aws.amazon.com/iam/>`_ and
+   bcbio keypair for creating AWS Batch specific resources. bcbio-vm can
+   automate this process, although they can also be pre-existing. If you'd like
+   to use bcbio-vm automation, you'll need to have
+   an account at Amazon and your Access Key ID and Secret Key ID from the
+   `AWS security credentials page
+   <https://console.aws.amazon.com/iam/home?#security_credential>`_. These can be
+   `IAM credentials <https://aws.amazon.com/iam/getting-started/>`_ instead of root
+   credentials as long as they have administrator privileges. Make them available
+   to bcbio using the standard environmental variables::
+
+       export AWS_ACCESS_KEY_ID=your_access_key
+       export AWS_SECRET_ACCESS_KEY=your_secret_key
+
+   With this in place, ceate public/private keys and a bcbio IAM user with::
+
+       bcbio_vm.py aws iam --region=us-east-1
+
+1. Use either existing credentials or those created by bcbio, setup `AWS Credentials
+   <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+   for accessing AWS resources from your machine by editing `~/.aws/credentials`::
+
+       [default]
+       aws_access_key_id = YOURACCESSID
+       aws_secret_access_key = yoursecretkey
+       region = us-east-1
+
+2. Automation creation of resources for AWS Batch. This includes creating
+   a `custom Amazon Machine Image (AMI) for AWS Batch
+   <https://docs.opendata.aws/genomics-workflows/aws-batch/create-custom-ami/>`_,
+   which allows automatic allocation of additional disk space during workflow
+   runs. It also sets up an `AWS Batch environment, VPC and IAM for running workflows
+   <https://docs.opendata.aws/genomics-workflows/aws-batch/configure-aws-batch-cfn/>`_.
+   A single bcbio-vm commands runs both CloudFormation scripts::
+
+       bcbio_vm.py aws cromwell --keypair bcbio --bucket bcbio-batch-cromwell-test
+
+   This will output the S3 bucket and job queue for running Cromwell::
+
+      AMI: ami-00bd75374ccaa1fc6
+      Region: us-east-1
+      S3 bucket: s3://your-project
+      Job Queue (Spot instances): arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsDefaultQueue-358a1deb9f4536b
+      High priority Job Queue: arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsHighPriorityQue-3bff21e3c4f44d4
 
 Data preparation
 ================
 
 The easiest way to organize AWS projects is using an analysis folder inside an
 `S3 bucket <http://aws.amazon.com/s3/>`_. Create a bucket and folder for your analysis and
-upload fastq, BAM and, optionally, a region BED file. Bucket names should
+upload input files (fastq or BAM) and other associated files.. Bucket names should
 include only lowercase letters, numbers and hyphens (``-``) to conform to
 `S3 bucket naming restrictions <http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html>`_
 and avoid issues with resolution of SSL keys. You can create buckets and upload
-files using the
-`AWS S3 web console <https://console.aws.amazon.com/s3/>`_,
-`the AWS cli client <http://aws.amazon.com/cli/>`_ or specialized tools
-like `gof3r <https://github.com/rlmcpherson/s3gof3r>`_.
+files using the `the AWS cli client <http://aws.amazon.com/cli/>`_ or
+`AWS S3 web console <https://console.aws.amazon.com/s3/>`_.
 
-You will also need a template file describing the type of run to do and a CSV
+Create a ``bcbio_system-aws.yaml`` input file for :ref:`docs-cwl-generate`::
+
+    s3:
+      ref: s3://bcbiodata/collections
+      inputs:
+        - s3://your-bucket/inputs
+    resources:
+      default: {cores: 8, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
+
+Generate a Common Workflow Language representation::
+
+   CLOUD=aws
+   bcbio_vm.py template --systemconfig bcbio_system-$CLOUD.yaml ${TEMPLATE}-template.yaml $PNAME.csv
+   bcbio_vm.py cwl --systemconfig bcbio_system-$CLOUD.yaml $PNAME/config/$PNAME.yaml
+
+Running
+=======
+
+Run the CWL using Cromwell by specifying the batch job queue
+`Amazon Resource Name (ARN) <https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html>`_
+and bucket from the setup process::
+
+    bcbio_vm.py cwlrun cromwell $PNAME-workflow \
+      -cloud-project arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsDefaultQueue-358a1deb9f4536b \
+      -cloud-root s3://your-project
+
+Amazon Web Services (old)
+#########################
+
+We're phasing out this approach to AWS support in bcbio and are actively
+moving to Common Workflow Language based approaches. This documents the old
+`Elasticluster
+<https://github.com/gc3-uzh-ch/elasticluster>`_ approach to build a cluster on AWS with
+an encrypted NFS mounted drive and an optional Lustre shared filesystem.
+
+Data preparation
+================
+
+You need a template file describing the type of run to do and a CSV
 file mapping samples in the bucket to names and any other metadata. See the
 :ref:`automated-sample-config` docs for more details about these files. Also
 upload both of these files to S3.
