@@ -1,7 +1,7 @@
 .. _docs-cloud:
 
-Cloud providers
----------------
+Cloud
+-----
 
 bcbio has two approaches to running on cloud providers like
 `Amazon Web Services (AWS) <https://aws.amazon.com/>`_,
@@ -118,7 +118,7 @@ We're working to support `Amazon Web Services (AWS) <https://aws.amazon.com/>`_
 using AWS Batch and Cromwell, following the `AWS for Genomics documentation
 <https://docs.opendata.aws/genomics-workflows/>`_. This documents the current
 work in progress; it is not yet fully running and needs
-`additional Cromwell development <https://github.com/broadinstitute/cromwell/issues/4586)`_
+`additional Cromwell development <https://github.com/broadinstitute/cromwell/issues/4586>`_
 for AWS CWL support.
 
 Setup
@@ -179,7 +179,9 @@ include only lowercase letters, numbers and hyphens (``-``) to conform to
 `S3 bucket naming restrictions <http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html>`_
 and avoid issues with resolution of SSL keys. You can create buckets and upload
 files using the `the AWS cli client <http://aws.amazon.com/cli/>`_ or
-`AWS S3 web console <https://console.aws.amazon.com/s3/>`_.
+`AWS S3 web console <https://console.aws.amazon.com/s3/>`_::
+
+    aws s3 sync /local/inputs s3://your-bucket/inputs
 
 Create a ``bcbio_system-aws.yaml`` input file for :ref:`docs-cwl-generate`::
 
@@ -239,28 +241,6 @@ metadata file: ``s3://your-project@eu-central-1/your-analysis/name.csv``
 We currently support human analysis with both the GRCh37 and hg19 genomes. We
 can also add additional genomes as needed by the community and generally welcome
 feedback and comments on reference data support.
-
-Extra software
-~~~~~~~~~~~~~~
-
-We're not able to automatically install some useful tools in pre-built docker
-containers due to licensing restrictions. Variant calling with GATK requires a
-manual download from the `GATK download`_ site for academic users.  Commercial
-users `need a license`_ for GATK and for somatic calling with muTect. To make these jars available,
-upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
-include the correct GATK and muTect directives during your run.  Alternatively,
-you can also manually specify the path to the jars using a global
-``resources`` section of your input sample YAML file::
-
-    resources:
-      gatk:
-        jar: s3://bcbio-syn3-eval/jars/GenomeAnalysisTK.jar
-
-As with sample YAML scripts, specify a different region with an ``@`` in the
-bucket name: ``s3://your-project@us-west-2/jars/GenomeAnalysisTK.jar``
-
-.. _GATK download: http://www.broadinstitute.org/gatk/download
-.. _need a license: https://www.broadinstitute.org/gatk/about/#licensing
 
 AWS setup
 =========
