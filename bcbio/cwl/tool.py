@@ -61,10 +61,15 @@ def _chown_workdir(work_dir):
     """Ensure work directory files owned by original user.
 
     Docker runs can leave root owned files making cleanup difficult.
+    Skips this if it fails, avoiding errors where we run remotely
+    and don't have docker locally.
     """
     cmd = ("""docker run --rm -v %s:%s quay.io/bcbio/bcbio-base /bin/bash -c 'chown -R %s %s'""" %
            (work_dir, work_dir, os.getuid(), work_dir))
-    subprocess.check_call(cmd, shell=True)
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError:
+        pass
 
 def _remove_bcbiovm_path():
     """Avoid referencing minimal bcbio_nextgen in bcbio_vm installation.
