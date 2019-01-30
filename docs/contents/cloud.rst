@@ -1,7 +1,7 @@
 .. _docs-cloud:
 
-bcbio cloud support
--------------------
+Cloud providers
+---------------
 
 bcbio has two approaches to running on cloud providers like
 `Amazon Web Services (AWS) <https://aws.amazon.com/>`_,
@@ -59,10 +59,11 @@ which bcbio passes to Cromwell for authentication::
       --iam-account your-service-account@your-project.iam.gserviceaccount.com
     export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/your-service-account.json
 
-You'll need a project for your run along with a Google Storage bucket for your
-data and run intermediates::
+You'll need a project for your run along, with the Google Genomics API enabled,
+and a Google Storage bucket for your data and run intermediates::
 
     gcloud config set project your-project
+    gcloud services enable genomics.googleapis.com
     gsutil mb gs://your-project
 
 Additional documentation for Cromwell: `Google Pipelines API
@@ -88,7 +89,7 @@ Create a ``bcbio_system-gcp.yaml`` input file for :ref:`docs-cwl-generate`::
       inputs:
         - gs://your-project/inputs
     resources:
-      default: {cores: 2, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
+      default: {cores: 8, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
 
 Then create a sample input CSV and template YAML file for
 :ref:`automated-sample-config`. The first column of the CSV file should contain
