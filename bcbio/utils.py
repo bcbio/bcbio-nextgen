@@ -197,7 +197,18 @@ def chdir(new_dir):
 
     http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
     """
-    cur_dir = os.getcwd()
+    # On busy filesystems can have issues accessing main directory. Allow retries
+    num_tries = 0
+    max_tries = 5
+    cur_dir = None
+    while cur_dir is None:
+        try:
+            cur_dir = os.getcwd()
+        except OSError:
+            if num_tries > max_tries:
+                raise
+            num_tries += 1
+            time.sleep(2)
     safe_makedir(new_dir)
     os.chdir(new_dir)
     try:
@@ -346,8 +357,8 @@ def symlink_plus(orig, new):
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
                 remove_safe(new + ext)
-               # Work around symlink issues on some filesystems. Randomly
-               # fail to symlink.
+                # Work around symlink issues on some filesystems. Randomly
+                # fail to symlink.
                 try:
                     os.symlink(os.path.relpath(orig + ext), os.path.basename(new + ext))
                 except OSError:
