@@ -234,7 +234,7 @@ def _get_G2P(data):
     A VEP plugin that uses G2P allelic requirements to assess variants in genes
     for potential phenotype involvement.
     """
-    G2P_file = tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data)
+    G2P_file = os.path.realpath(tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data))
     args = ["--plugin", "G2P,file:%s" % (G2P_file)]
     if G2P_file:
         return args
