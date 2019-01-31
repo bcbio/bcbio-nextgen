@@ -1,3 +1,8 @@
+## 1.1.4 (in progress)
+
+- tumor-only germline prioritization: provide more useful germline filtering
+  based on prioritization INFO tag (EPR) rather than filter field.
+
 ## 1.1.3 (29 January 2019)
 
 - CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows

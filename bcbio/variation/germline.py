@@ -221,6 +221,9 @@ def _is_somatic(rec):
     if status_flag is not None:
         if str(status_flag).lower() in ["somatic", "likelysomatic", "strongsomatic", "samplespecific"]:
             return True
+    epr = rec.INFO.get("EPR", "").split(",")
+    if epr and all([p == "pass" for p in epr]):
+        return True
     return False
 
 def _has_somatic_flag(rec):
