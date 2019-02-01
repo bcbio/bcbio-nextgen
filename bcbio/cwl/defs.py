@@ -440,7 +440,7 @@ def variant(samples):
     else:
         align = [s("organize_noalign", "multi-parallel",
                    ["files"],
-                   [cwlout(["align_bam"], "File", [".bai"]),
+                   [cwlout(["align_bam"], ["File", "null"], [".bai"]),
                     cwlout(["work_bam_plus", "disc"], ["File", "null"]),
                     cwlout(["work_bam_plus", "sr"], ["File", "null"]),
                     cwlout(["hla", "fastq"], ["File", "null"])],

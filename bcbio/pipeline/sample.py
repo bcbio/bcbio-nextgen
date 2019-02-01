@@ -242,8 +242,8 @@ def postprocess_alignment(data):
     data = cwlutils.normalize_missing(utils.to_single_data(data))
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
+    ref_file = dd.get_ref_file(data)
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
-        ref_file = dd.get_ref_file(data)
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data)))
         bam_file_ready = os.path.join(out_dir, os.path.basename(bam_file))
@@ -262,6 +262,11 @@ def postprocess_alignment(data):
         data = samtools.run_and_save(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
+    elif dd.get_variant_regions(data):
+        callable_region_bed, nblock_bed = \
+            callable.block_regions(dd.get_variant_regions(data), bam_file, ref_file, data)
+        data["regions"] = {"nblock": nblock_bed, "callable": dd.get_variant_regions(data),
+                           "sample_callable": dd.get_variant_regions(data)}
     return [[data]]
 
 def _merge_out_from_infiles(in_files):

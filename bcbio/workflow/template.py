@@ -81,12 +81,21 @@ def _prep_fastq_input(fs, base):
     cur["description"] = fastq.rstrip_extra(d)
     return cur
 
+def _prep_vcf_input(f, base):
+    if not os.path.exists(f) and not objectstore.is_remote(f):
+        raise ValueError("Could not find input file: %s" % f)
+    cur = copy.deepcopy(base)
+    cur["vrn_file"] = f
+    cur["description"] = utils.splitext_plus(os.path.basename(f))[0]
+    return cur
+
 KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq": "fastq", ".txt": "fastq",
               ".fastq.gz": "fastq", ".fq.gz": "fastq",
               ".txt.gz": "fastq", ".gz": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
-              ".txt.bz2": "fastq", ".bz2": "fastq"}
+              ".txt.bz2": "fastq", ".bz2": "fastq",
+              ".vcf": "vcf", ".vcf.gz": "vcf"}
 
 def _prep_items_from_base(base, in_files, metadata, separators, force_single=False):
     """Prepare a set of configuration items for input files.
@@ -109,6 +118,9 @@ def _prep_items_from_base(base, in_files, metadata, separators, force_single=Fal
                 details.append(_prep_fastq_input(fs, base))
             for fs in fastq.combine_pairs(files, force_single, separators=separators):
                 details.append(_prep_fastq_input(fs, base))
+        elif ext in ["vcf"]:
+            for f in files:
+                details.append(_prep_vcf_input(f, base))
         else:
             print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
     return details
@@ -388,6 +400,24 @@ def _add_ped_metadata(name, metadata):
                 break
     return metadata
 
+def _get_file_keys(item):
+    if item.get("files"):
+        return [item["files"][0],
+                os.path.basename(item["files"][0]),
+                tuple([os.path.basename(f) for f in item["files"]]),
+                utils.splitext_plus(os.path.basename(item["files"][0]))[0],
+                os.path.commonprefix([os.path.basename(f) for f in item["files"]])]
+    else:
+        return []
+
+def _get_vrn_keys(item):
+    if item.get("vrn_file"):
+        return [item["vrn_file"],
+                os.path.basename(item["vrn_file"]),
+                utils.splitext_plus(os.path.basename(item["vrn_file"]))[0]]
+    else:
+        return []
+
 def _add_metadata(item, metadata, remotes, only_metadata=False):
     """Add metadata information from CSV file to current item.
 
@@ -398,11 +428,7 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     - Keys matching supported names in the algorithm section map
       to key/value pairs there instead of metadata.
     """
-    for check_key in (item["description"], item["files"][0],
-                      os.path.basename(item["files"][0]),
-                      tuple([os.path.basename(f) for f in item["files"]]),
-                      utils.splitext_plus(os.path.basename(item["files"][0]))[0],
-                      os.path.commonprefix([os.path.basename(f) for f in item["files"]])):
+    for check_key in [item["description"]] + _get_file_keys(item) + _get_vrn_keys(item):
         item_md = metadata.get(check_key)
         if item_md:
             break
@@ -482,12 +508,13 @@ def _check_all_metadata_found(metadata, items):
     for name in metadata:
         seen = False
         for sample in items:
+            check_file = sample["files"][0] if sample.get("files") else sample["vrn_file"]
             if isinstance(name, (tuple, list)):
-                if sample["files"][0].find(name[0]) > -1:
+                if check_file.find(name[0]) > -1:
                     seen = True
-            elif sample['files'][0].find(name) > -1:
+            elif check_file.find(name) > -1:
                 seen = True
-            elif "*" in name and fnmatch.fnmatch(sample["files"][0], "*/%s" % name):
+            elif "*" in name and fnmatch.fnmatch(check_file, "*/%s" % name):
                 seen = True
         if not seen:
             print("WARNING: sample not found %s" % str(name))
