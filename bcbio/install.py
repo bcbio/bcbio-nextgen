@@ -214,21 +214,6 @@ def _get_conda_bin():
     if os.path.exists(conda_bin):
         return conda_bin
 
-def _default_deploy_args(args):
-    """Standard install arguments for CloudBioLinux.
-
-    Avoid using sudo and keep an installation isolated if running as the root user.
-    """
-    return {"flavor": "ngs_pipeline_minimal",
-            "vm_provider": "novm",
-            "hostname": "localhost",
-            "fabricrc_overrides": {"edition": "minimal",
-                                   "use_sudo": False,
-                                   "keep_isolated": args.isolate or os.geteuid() == 0,
-                                   "conda_cmd": _get_conda_bin(),
-                                   "distribution": args.distribution or "__auto__",
-                                   "dist_name": "__auto__"}}
-
 def _check_for_conda_problems():
     """Identify post-install conda problems and fix.
 
@@ -346,29 +331,23 @@ def get_gemini_dir(data=None):
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
-    from fabric.api import env
     if hasattr(args, "datadir") and args.datadir and os.path.exists(args.datadir):
         data_dir = args.datadir
     else:
         data_dir = _get_data_dir()
-    s = _default_deploy_args(args)
-    s["actions"] = ["setup_biodata"]
     tooldir = args.tooldir or get_defaults().get("tooldir")
-    if tooldir:
-        s["fabricrc_overrides"]["system_install"] = tooldir
-    s["fabricrc_overrides"]["data_files"] = data_dir
-    s["fabricrc_overrides"]["galaxy_home"] = os.path.join(data_dir, "galaxy")
+    galaxy_home = os.path.join(data_dir, "galaxy")
     cbl = get_cloudbiolinux(remotes)
-    s["genomes"] = _get_biodata(cbl["biodata"], args)
+    tool_data_table_conf_file = os.path.join(cbl["dir"], "installed_files", "tool_data_table_conf.xml")
+    genome_opts = _get_biodata(cbl["biodata"], args)
     sys.path.insert(0, cbl["dir"])
-    env.cores = args.cores
-    cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
-    cbl_deploy.deploy(s)
-    _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
-                              remotes["genome_resources"])
-    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
+    cbl_genomes = __import__("cloudbio.biodata.genomes", fromlist=["genomes"])
+    cbl_genomes.install_data_local(genome_opts, tooldir, data_dir, galaxy_home, tool_data_table_conf_file,
+                                   args.cores, ["ggd", "s3", "raw"])
+    _upgrade_genome_resources(galaxy_home, remotes["genome_resources"])
+    _upgrade_snpeff_data(galaxy_home, args, remotes)
     if "vep" in args.datatarget:
-        _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
+        _upgrade_vep_data(galaxy_home, tooldir)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
     if args.cwl:
