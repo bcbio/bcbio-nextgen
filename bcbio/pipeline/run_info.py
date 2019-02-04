@@ -35,7 +35,7 @@ ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters)
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "expression_caller", "singlecell_quantifier",
                          "fusion_caller",
-                         "svcaller", "hetcaller", "jointcaller", "tools_off",
+                         "svcaller", "hetcaller", "jointcaller", "tools_off", "tools_on",
                          "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 # these analysis pipelines use R heavily downstream, and need to have samplenames
