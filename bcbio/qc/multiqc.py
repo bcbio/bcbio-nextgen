@@ -93,8 +93,9 @@ def summary(*samples):
                 for indir in ["inputs", "report"]:
                     tarball = os.path.join(out_dir, "multiqc-%s.tar.gz" % (indir))
                     if not utils.file_exists(tarball):
-                        cmd = ["tar", "-czvpf", tarball, os.path.join(out_dir, indir)]
-                        do.run(cmd, "Compress multiqc inputs: %s" % indir)
+                        with utils.chdir(out_dir):
+                            cmd = ["tar", "-czvpf", tarball, indir]
+                            do.run(cmd, "Compress multiqc inputs: %s" % indir)
                     samples[0]["summary"]["multiqc"]["secondary"].append(tarball)
 
     if any([cwlutils.is_cwl_run(d) for d in samples]):
