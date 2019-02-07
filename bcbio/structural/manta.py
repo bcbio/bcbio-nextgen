@@ -5,7 +5,6 @@ https://github.com/Illumina/manta
 import collections
 import glob
 import os
-import sys
 
 from bcbio import utils
 from bcbio.bam import ref
@@ -93,7 +92,7 @@ def _run_workflow(items, paired, workflow_file, work_dir):
     """
     utils.remove_safe(os.path.join(work_dir, "workspace"))
     data = paired.tumor_data if paired else items[0]
-    cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data)]
+    cmd = [utils.get_program_python("configManta.py"), workflow_file, "-m", "local", "-j", dd.get_num_cores(data)]
     do.run(cmd, "Run manta SV analysis")
     utils.remove_safe(os.path.join(work_dir, "workspace"))
 
@@ -104,7 +103,7 @@ def _prep_config(items, paired, work_dir):
     out_file = os.path.join(work_dir, "runWorkflow.py")
     if not utils.file_exists(out_file) or _out_of_date(out_file):
         config_script = os.path.realpath(utils.which("configManta.py"))
-        cmd = [sys.executable, config_script]
+        cmd = [utils.get_program_python("configManta.py"), config_script]
         if paired:
             if paired.normal_bam:
                 cmd += ["--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]

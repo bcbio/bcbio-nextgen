@@ -4,7 +4,6 @@ https://software.broadinstitute.org/gatk/documentation/article?id=11682
 https://gatkforums.broadinstitute.org/dsde/discussion/11683/
 """
 import glob
-import itertools
 import os
 import shutil
 
@@ -247,7 +246,7 @@ def _filter_by_normal(tumor_counts, normal_counts, data):
                     with open(tx_tumor_out, "w") as tumor_out_handle:
                         with open(tx_normal_out, "w") as normal_out_handle:
                             header = None
-                            for t, n in itertools.izip(tumor_handle, normal_handle):
+                            for t, n in zip(tumor_handle, normal_handle):
                                 if header is None:
                                     if not n.startswith("@"):
                                         header = n.strip().split()

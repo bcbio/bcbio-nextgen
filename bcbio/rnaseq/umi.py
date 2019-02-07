@@ -17,6 +17,7 @@ from distutils.version import LooseVersion
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+from bcbio import utils
 from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.bam.fastq import open_fastq
@@ -154,8 +155,8 @@ def umi_transform(data):
         if "UMI_" in read:
             data["files"] = [out_file]
             return [[data]]
-
-    cmd = ("{umis} fastqtransform {split_option} {transform_file} "
+    locale_export = utils.locale_export()
+    cmd = ("{locale_export}{umis} fastqtransform {split_option} {transform_file} "
            "--cores {cores} "
            "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")

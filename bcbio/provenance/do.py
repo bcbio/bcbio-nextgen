@@ -53,7 +53,7 @@ def find_bash():
 
 def find_cmd(cmd):
     try:
-        return subprocess.check_output(["which", cmd]).strip()
+        return subprocess.check_output(["which", cmd]).decode().strip()
     except subprocess.CalledProcessError:
         return None
 

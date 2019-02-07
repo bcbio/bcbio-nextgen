@@ -22,8 +22,8 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
       to match alleles and make compatible with vcf2db
       (https://github.com/quinlan-lab/vcf2db/issues/14)
     """
-    conf_fns.sort(key=lambda x: os.path.basename(x) if x else x)
-    lua_fns.sort(key=lambda x: os.path.basename(x) if x else x)
+    conf_fns.sort(key=lambda x: os.path.basename(x) if x else "")
+    lua_fns.sort(key=lambda x: os.path.basename(x) if x else "")
     ext = "-annotated-%s" % utils.splitext_plus(os.path.basename(conf_fns[0]))[0]
     if vcf.find(ext) > 0:
         out_file = vcf

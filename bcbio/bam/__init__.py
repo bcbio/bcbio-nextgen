@@ -3,7 +3,6 @@
 from __future__ import print_function
 import collections
 import os
-import itertools
 import signal
 import subprocess
 import numpy
@@ -11,6 +10,7 @@ import numpy
 import pybedtools
 import pysam
 import toolz as tz
+from six.moves import zip_longest
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -291,7 +291,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
     extra_rcs = [x for x in ref_contigs if x not in bam_contigs]
     problems = []
     warnings = []
-    for bc, rc in itertools.izip_longest([x for x in bam_contigs if (x not in extra_bcs and
+    for bc, rc in zip_longest([x for x in bam_contigs if (x not in extra_bcs and
                                                                      x not in allowed_outoforder)],
                                          [x for x in ref_contigs if (x not in extra_rcs and
                                                                      x not in allowed_outoforder)]):

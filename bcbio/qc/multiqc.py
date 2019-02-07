@@ -56,13 +56,15 @@ def summary(*samples):
                     _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
-                        export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
+                        export_tmp = "export TMPDIR=%s && " % dd.get_tmp_dir(samples[0])
                     else:
                         export_tmp = ""
+                    locale_export = utils.locale_export()
                     path_export = utils.local_path_export()
                     other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
                     other_opts = " ".join([str(x) for x in other_opts])
-                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}"
+                    cmd = ("{path_export}{export_tmp}{locale_export} "
+                           "{multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}")
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)

@@ -131,7 +131,7 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         simple_vcf = post_prior_fn(simple_vcf, work_dir, data)
     if not utils.file_uptodate(out_file, simple_vcf):
         with file_transaction(data, out_file) as tx_out_file:
-            export = utils.local_path_export()
+            export = utils.local_path_export(env_cmd="vawk")
             cmd = ("{export} zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
                    "print CALLER,SNAME,$1,$2,I$END,"

@@ -807,17 +807,38 @@ def get_program_python(cmd):
     """
     full_cmd = os.path.realpath(which(cmd))
     cmd_python = os.path.join(os.path.dirname(full_cmd), "python")
+    env_python = None
+    if "envs" in cmd_python:
+        parts = cmd_python.split(os.sep)
+        env_python = os.path.join(os.sep.join(parts[:parts.index("envs") + 2]), "bin", "python")
     if os.path.exists(cmd_python):
         return cmd_python
+    elif env_python and os.path.exists(env_python):
+        return env_python
     else:
-        return sys.executable
+        return os.path.realpath(sys.executable)
 
-def local_path_export(at_start=True):
-    path = get_bcbio_bin()
+def local_path_export(at_start=True, env_cmd=None):
+    """Retrieve paths to local install, also including environment paths if env_cmd included.
+    """
+    paths = [get_bcbio_bin()]
+    if env_cmd:
+        env_path = os.path.dirname(get_program_python(env_cmd))
+        if env_path not in paths:
+            paths.insert(0, env_path)
     if at_start:
-        return "export PATH=%s:$PATH && " % (path)
+        return "export PATH=%s:$PATH && " % (":".join(paths))
     else:
-        return "export PATH=$PATH:%s && " % (path)
+        return "export PATH=$PATH:%s && " % (":".join(paths))
+
+def locale_export():
+    """Exports for dealing with Click-based programs and ASCII/Unicode errors.
+
+    RuntimeError: Click will abort further execution because Python 3 was
+    configured to use ASCII as encoding for the environment.
+    Consult https://click.palletsprojects.com/en/7.x/python3/ for mitigation steps.
+    """
+    return "export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && "
 
 def java_freetype_fix():
     """Provide workaround for issues FreeType library symbols.

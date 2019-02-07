@@ -123,7 +123,8 @@ def _get_ploidy(regions, items, base_file):
 
 def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir):
     utils.safe_makedir(tx_work_dir)
-    cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
+    cmd = [utils.get_program_python("configureStrelkaGermlineWorkflow.py"),
+           os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
     cur_bed = get_region_bed(region, items, out_file)
     cmd += ["--referenceFasta=%s" % ref_file,
             "--callRegions=%s" % cur_bed,
@@ -149,7 +150,8 @@ def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file, wo
 
 def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     utils.safe_makedir(tx_work_dir)
-    cmd = [sys.executable, os.path.realpath(utils.which("configureStrelkaSomaticWorkflow.py"))]
+    cmd = [utils.get_program_python("configureStrelkaSomaticWorkflow.py"),
+           os.path.realpath(utils.which("configureStrelkaSomaticWorkflow.py"))]
     cur_bed = get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file)
     cmd += ["--referenceFasta=%s" % ref_file,
             "--callRegions=%s" % cur_bed,
@@ -318,7 +320,8 @@ def _run_workflow(data, workflow_file, work_dir):
     """Run Strelka2 analysis inside prepared workflow directory.
     """
     utils.remove_safe(os.path.join(work_dir, "workspace"))
-    cmd = [sys.executable, workflow_file, "-m", "local", "-j", dd.get_num_cores(data), "--quiet"]
+    cmd = [utils.get_program_python("configureStrelkaGermlineWorkflow.py"),
+           workflow_file, "-m", "local", "-j", dd.get_num_cores(data), "--quiet"]
     do.run(cmd, "Run Strelka2: %s" % dd.get_sample_name(data))
     utils.remove_safe(os.path.join(work_dir, "workspace"))
 

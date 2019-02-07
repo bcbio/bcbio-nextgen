@@ -3,7 +3,6 @@
 https://github.com/hartwigmedical/hmftools/tree/master/purity-ploidy-estimator
 """
 import csv
-import itertools
 import os
 import re
 import shutil
@@ -137,7 +136,7 @@ def _count_files_to_amber(tumor_counts, normal_counts, work_dir, data):
                         writer.writerow(["Chromosome", "Position", "TumorBAF", "TumorModifiedBAF", "TumorDepth",
                                          "NormalBAF", "NormalModifiedBAF", "NormalDepth"])
                         header = None
-                        for t, n in itertools.izip(tumor_handle, normal_handle):
+                        for t, n in zip(tumor_handle, normal_handle):
                             if header is None and t.startswith("CONTIG"):
                                 header = t.strip().split()
                             elif header is not None:
