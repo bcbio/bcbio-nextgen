@@ -59,8 +59,11 @@ def _run_delly(bam_files, chrom, ref_file, work_dir, items):
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
                 except subprocess.CalledProcessError as msg:
+                    # Small input samples, write an empty vcf
+                    if "Sample has not enough data to estimate library parameters" in str(msg):
+                        pass
                     # delly returns an error exit code if there are no variants
-                    if "No structural variants found" not in str(msg):
+                    elif "No structural variants found" not in str(msg):
                         raise
     return [_bgzip_and_clean(out_file, items)]
 
