@@ -4,6 +4,7 @@
   based on prioritization INFO tag (EPR) rather than filter field.
 - Install: do not require fabric for tool and data installs, making full codebase
   compatible with python 3.
+- variant: Filter out variants with missing ALT alleles output by GATK4.
 
 ## 1.1.3 (29 January 2019)
 
