@@ -33,8 +33,9 @@ def run(items):
     out = []
     upload_counts = collections.defaultdict(int)
     for data in items:
-        if paired and paired.normal_bam and "break-point-inspector" in dd.get_tools_on(data):
-            variant_file = _run_break_point_inspector(data, variant_file, paired, work_dir)
+        if "break-point-inspector" in dd.get_tools_on(data):
+            if paired and paired.normal_bam and paired.tumor_name == dd.get_sample_name(data):
+                variant_file = _run_break_point_inspector(data, variant_file, paired, work_dir)
         if "sv" not in data:
             data["sv"] = []
         final_vcf = shared.finalize_sv(variant_file, data, items)
@@ -51,18 +52,19 @@ def run(items):
 
 def _run_break_point_inspector(data, variant_file, paired, work_dir):
     output_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(variant_file)[0], "bpi")
+    stats_file = "%s-%s_stats.txt" % (utils.splitext_plus(variant_file)[0], "bpi")
     if not utils.file_exists(output_vcf):
         with file_transaction(data, output_vcf) as tx_output_vcf:
             cores = dd.get_num_cores(data)
             resources = config_utils.get_resources("break-point-inspector", data["config"])
-            jvm_mem_arg = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms1000m", "-Xmx2000m"]),
-                                                   {"algorithm": {"memory_adjust": {"magnitude": cores,
-                                                                                    "direction": "increase"}}})
+            jvm_mem_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms1000m", "-Xmx2000m"]),
+                                                    {"algorithm": {"memory_adjust": {"magnitude": cores,
+                                                                                     "direction": "increase"}}})
             jvm_tmp_arg = "-Djava.io.tmpdir=" + utils.safe_makedir(os.path.join(work_dir, "bpi_tmp"))
-            cmd = ["break-point-inspector"] + jvm_mem_arg + jvm_tmp_arg + ["-vcf", variant_file]
+            cmd = ["break-point-inspector"] + jvm_mem_opts + [jvm_tmp_arg, "-vcf", variant_file]
             if paired:
                 cmd += ["-ref", paired.normal_bam, "-tumor", paired.tumor_bam]
-            cmd += ["-output_vcf", tx_output_vcf]
+            cmd += ["-output_vcf", tx_output_vcf, ">", stats_file]
             do.run(cmd, "Running Break Point Inspector for Manta SV calls")
     return output_vcf
 
