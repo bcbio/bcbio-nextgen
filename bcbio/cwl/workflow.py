@@ -154,7 +154,7 @@ def is_cwl_record(d):
         if d.get("type") == "record":
             return d
         else:
-            recs = filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()])
+            recs = list(filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()]))
             return recs[0] if recs else None
     else:
         return None
@@ -254,7 +254,7 @@ def _nest_variable(v, check_records=False):
     check_records -- avoid re-nesting a record input if it comes from a previous
     step and is already nested, don't need to re-array.
     """
-    if (check_records and is_cwl_record(v) and v["id"].split("/") > 1 and
+    if (check_records and is_cwl_record(v) and len(v["id"].split("/")) > 1 and
          v.get("type", {}).get("type") == "array"):
         return v
     else:

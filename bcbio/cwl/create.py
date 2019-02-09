@@ -490,7 +490,7 @@ def _flatten_samples(samples, base_file, get_retriever):
                 cur_flat[flat_key] = flat_val
         flat_data.append(cur_flat)
     out = {}
-    for key in sorted(list(set(reduce(operator.add, [d.keys() for d in flat_data])))):
+    for key in sorted(list(set(reduce(operator.add, [list(d.keys()) for d in flat_data])))):
         # Periods in keys cause issues with WDL and some CWL implementations
         clean_key = key.replace(".", "_")
         out[clean_key] = []

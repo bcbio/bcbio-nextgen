@@ -116,7 +116,7 @@ def _get_record_attrs(out_keys):
     """Check for records, a single key plus output attributes.
     """
     if len(out_keys) == 1:
-        attr = out_keys.keys()[0]
+        attr = list(out_keys.keys())[0]
         if out_keys[attr]:
             return attr, out_keys[attr]
     return None, None

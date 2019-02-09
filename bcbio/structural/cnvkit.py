@@ -251,8 +251,8 @@ def _run_cnvkit_shared_orig(inputs, backgrounds):
                        "cns": "%s.cns" % out_base})
     if not utils.file_exists(ckouts[0]["cns"]):
         cov_interval = dd.get_coverage_interval(inputs[0])
-        samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
-                        zip(["evaluate"] * len(inputs), inputs)
+        samples_to_run = list(zip(["background"] * len(backgrounds), backgrounds)) + \
+                         list(zip(["evaluate"] * len(inputs), inputs))
         # New style shared SV bins
         if tz.get_in(["depth", "bins", "target"], inputs[0]):
             target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
