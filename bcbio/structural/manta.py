@@ -54,7 +54,7 @@ def _run_break_point_inspector(data, variant_file, paired, work_dir):
     output_vcf = "%s-%s.vcf.gz" % (utils.splitext_plus(variant_file)[0], "bpi")
     stats_file = "%s-%s_stats.txt" % (utils.splitext_plus(variant_file)[0], "bpi")
     if not utils.file_exists(output_vcf):
-        with file_transaction(data, output_vcf) as tx_output_vcf:
+        with file_transaction(data, output_vcf) as tx_output_vcf, file_transaction(data, stats_file) as tx_stats_file:
             cores = dd.get_num_cores(data)
             resources = config_utils.get_resources("break-point-inspector", data["config"])
             jvm_mem_opts = config_utils.adjust_opts(resources.get("jvm_opts", ["-Xms1000m", "-Xmx2000m"]),
@@ -64,7 +64,7 @@ def _run_break_point_inspector(data, variant_file, paired, work_dir):
             cmd = ["break-point-inspector"] + jvm_mem_opts + [jvm_tmp_arg, "-vcf", variant_file]
             if paired:
                 cmd += ["-ref", paired.normal_bam, "-tumor", paired.tumor_bam]
-            cmd += ["-output_vcf", tx_output_vcf, ">", stats_file]
+            cmd += ["-output_vcf", tx_output_vcf, ">", tx_stats_file]
             do.run(cmd, "Running Break Point Inspector for Manta SV calls")
     return output_vcf
 
