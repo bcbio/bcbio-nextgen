@@ -18,7 +18,7 @@ def run(align_bams, items, ref_file, assoc_files, region=None, out_file=None):
     """Run tumor only smCounter2 calling.
     """
     paired = vcfutils.get_paired_bams(align_bams, items)
-    assert paired and not paired.normal_bam, ("Pisces supports tumor-only variant calling: %s" %
+    assert paired and not paired.normal_bam, ("smCounter2 supports tumor-only variant calling: %s" %
                                               (",".join([dd.get_sample_name(d) for d in items])))
     vrs = bedutils.population_variant_regions(items)
     target = shared.subset_variant_regions(vrs, region,
