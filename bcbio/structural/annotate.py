@@ -10,6 +10,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import regions
 from bcbio.variation import bedutils
+from bcbio.pipeline import config_utils
 
 import pybedtools
 
@@ -60,11 +61,12 @@ def _add_genes_to_bed(in_file, gene_file, fai_file, out_file, data, max_distance
     ready_gene_file = bedutils.subset_to_genome(gene_file, ready_gene_file, data)
     exports = "export TMPDIR=%s && %s" % (os.path.dirname(out_file), utils.local_path_export())
     bcbio_py = sys.executable
+    gsort = config_utils.get_program("gsort", data)
     cmd = ("{exports}{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^# | "
            "{bcbio_py} -c 'from bcbio.variation import bedutils; bedutils.remove_bad()' | "
-           "gsort - {fai_file} | "
+           "{gsort} - {fai_file} | "
             "bedtools closest -g {fai_file} "
-            "-D ref -t first -a - -b <(gsort {ready_gene_file} {fai_file}) | "
+            "-D ref -t first -a - -b <({gsort} {ready_gene_file} {fai_file}) | "
             "{distance_filter} | cut -f 1-{max_column} | "
             "bedtools merge -i - -c {columns} -o {ops} -delim ',' -d -10 > {out_file}")
     do.run(cmd.format(**locals()), "Annotate BED file with gene info")
