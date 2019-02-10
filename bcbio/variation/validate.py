@@ -99,7 +99,7 @@ def _pick_lead_item(items):
     if paired:
         return paired.tumor_data
     else:
-        return items[0]
+        return list(items)[0]
 
 def _normalize_cwl_inputs(items):
     """Extract variation and validation data from CWL input list of batched samples.
@@ -578,7 +578,7 @@ def summarize_grading(samples, vkey="validate"):
             writer.writerow(header)
             plot_data = []
             plot_files = []
-            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x)) or ""):
                 validations = [variant.get(vkey) for variant in data.get("variants", [])
                                if isinstance(variant, dict)]
                 validations = [v for v in validations if v]

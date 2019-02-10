@@ -43,7 +43,7 @@ def batch_for_jointvc(items):
             data = utils.deepish_copy(data)
             data["vrn_file_gvcf"] = data["vrn_file"]
             batch_groups[(b, vc)].append(data)
-    return batch_groups.values()
+    return list(batch_groups.values())
 
 def run_jointvc(items):
     items = [utils.to_single_data(x) for x in items]
