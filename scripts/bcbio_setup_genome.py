@@ -116,7 +116,7 @@ def _is_from_ncbi(gff3_file):
                 return "db_xref"
     return None
 
-def _index_w_command(dir_name, command, ref_file, ext=None):
+def _index_w_command(env, dir_name, command, ref_file, pre=None, post=None, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
     if ext is not None: index_name += ext
     build_path = os.path.join(os.path.dirname(ref_file), os.pardir)
