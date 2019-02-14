@@ -147,6 +147,11 @@ def umi_transform(data):
         split_option = "--separate_cb"
     else:
         split_option = ""
+    if dd.get_demultiplexed(data):
+        demuxed_option = "--demuxed_cb %s" % dd.get_sample_name(data)
+        split_option = ""
+    else:
+        demuxed_option = ""
     umis = config_utils.get_program("umis", data, default="umis")
     cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
@@ -157,7 +162,7 @@ def umi_transform(data):
             return [[data]]
     locale_export = utils.locale_export()
     cmd = ("{locale_export}{umis} fastqtransform {split_option} {transform_file} "
-           "--cores {cores} "
+           "--cores {cores} {demuxed_option} "
            "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
     message = ("Inserting UMI and barcode information into the read name of %s"
@@ -168,6 +173,9 @@ def umi_transform(data):
     return [[data]]
 
 def filter_barcodes(data):
+    # if data was pre-demultiplexed, there is no need to filter the barcodes
+    if dd.get_demultiplexed(data):
+        return [[data]]
     fq1 = dd.get_input_sequence_files(data)[0]
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     correction = dd.get_cellular_barcode_correction(data)
@@ -250,7 +258,10 @@ def tagcount(data):
     cutoff = dd.get_minimum_barcode_depth(data)
     cb_histogram = os.path.join(sample_dir, "cb-histogram.txt")
     positional = "--positional" if dd.get_positional_umi(data, False) else ""
-    gtf_file  = dd.get_transcriptome_gtf(data, None)
+    if use_installed_transcriptome(data):
+        gtf_file = dd.get_gtf_file(data)
+    else:
+        gtf_file  = dd.get_transcriptome_gtf(data, None)
 
     if gtf_file:
         gene_map_file = os.path.join(dd.get_work_dir(data), "annotation",
@@ -462,3 +473,12 @@ def is_transformed(fastq):
             if "UMI_" in line:
                 return True
     return False
+
+def use_installed_transcriptome(data):
+    user_fa = dd.get_transcriptome_fasta(data)
+    user_gtf = dd.get_transcriptome_gtf(data)
+    if not user_fa and not user_gtf:
+        return True
+    else:
+        return False
+

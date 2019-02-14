@@ -550,7 +550,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "disambiguate", "strandedness", "fusion_mode", "fusion_caller",
                       "min_read_length", "coverage_depth_min", "callable_min_size",
                       "min_allele_fraction", "umi_type", "minimum_barcode_depth",
-                      "cellular_barcodes", "vcfanno",
+                      "cellular_barcodes", "vcfanno", "demultiplexed",
                       "sample_barcodes",
                       "exclude_regions", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
@@ -562,7 +562,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # back compatibility
                       ["remove_lcr", "coverage_depth_max", "coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
-                          "clinical_reporting", "transcriptome_align",
+                          "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
                           "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",

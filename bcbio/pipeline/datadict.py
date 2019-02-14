@@ -176,6 +176,7 @@ LOOKUPS = {
     "cellular_barcode_correction": {"keys": ["config", "algorithm",
                                              "cellular_barcode_correction"],
                                     "default": 1},
+    "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
