@@ -108,7 +108,6 @@ def get_sample_barcodes(fn, out_dir):
         logger.error("Sample demultiplexing needs a list of known indexes provided "
                      "with via the sample_barcodes option in the algorithm section.")
         sys.exit(1)
-    # import pdb; pdb.set_trace()
     utils.safe_makedir(out_dir)
     out_fn = os.path.join(out_dir, "barcodes.csv")
     with open(fn) as inh:
@@ -514,4 +513,3 @@ def use_installed_transcriptome(data):
         return True
     else:
         return False
-
