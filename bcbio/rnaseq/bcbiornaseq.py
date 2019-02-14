@@ -1,9 +1,8 @@
 import os
-import shutil
 import toolz as tz
 from string import Template
 from bcbio.utils import file_exists, Rscript_cmd, safe_makedir, chdir
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 

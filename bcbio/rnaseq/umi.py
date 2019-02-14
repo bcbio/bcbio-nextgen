@@ -103,6 +103,20 @@ def get_cellular_barcodes(data):
     else:
         return []
 
+def get_sample_barcodes(fn, out_dir):
+    if not fn:
+        logger.error("Sample demultiplexing needs a list of known indexes provided "
+                     "with via the sample_barcodes option in the algorithm section.")
+        sys.exit(1)
+    # import pdb; pdb.set_trace()
+    utils.safe_makedir(out_dir)
+    out_fn = os.path.join(out_dir, "barcodes.csv")
+    with open(fn) as inh:
+        with open(out_fn, 'w') as outh:
+            for line in inh:
+                outh.write("%s\n" % (line.strip().split(",")[0]))
+    return out_fn
+
 def umi_transform(data):
     """
     transform each read by identifying the barcode and UMI for each read
@@ -242,7 +256,8 @@ def barcode_histogram(data):
             do.run(cmd.format(**locals()), message)
     cutoff = dd.get_minimum_barcode_depth(data)
     filter_barcode_histogram(filtered_out_file, out_file, cutoff)
-    return [[data]]
+    newdata = dd.set_histogram_counts(data, filtered_out_file)
+    return [[newdata]]
 
 def tagcount(data):
     bam = dd.get_transcriptome_bam(data)
@@ -339,6 +354,10 @@ def demultiplex_samples(data):
     """
     demultiplex a fastqtransformed FASTQ file into separate sample barcode files
     """
+    work_dir = os.path.join(dd.get_work_dir(data), "umis")
+    sample_dir = os.path.join(work_dir, dd.get_sample_name(data))
+    demulti_dir = os.path.join(sample_dir, "demultiplexed")
+
     files = data["files"]
     if len(files) == 2:
         logger.error("Sample demultiplexing doesn't handle paired-end reads, but "
@@ -351,14 +370,8 @@ def demultiplex_samples(data):
         read = next(in_handle)
         if "SAMPLE_" not in read:
             return [[data]]
-    bcfile = dd.get_sample_barcodes(data)
-    if not bcfile:
-        logger.error("Sample demultiplexing needs a list of known indexes provided "
-                     "with via the sample_barcodes option in the algorithm section.")
-        sys.exit(1)
-    work_dir = os.path.join(dd.get_work_dir(data), "umis")
-    sample_dir = os.path.join(work_dir, dd.get_sample_name(data))
-    demulti_dir = os.path.join(sample_dir, "demultiplexed")
+
+    bcfile = get_sample_barcodes(dd.get_sample_barcodes(data), sample_dir)
     demultiplexed = glob.glob(os.path.join(demulti_dir, "*.fq*"))
     if demultiplexed:
         return [split_demultiplexed_sampledata(data, demultiplexed)]
@@ -392,6 +405,7 @@ def split_demultiplexed_sampledata(data, demultiplexed):
 def concatenate_sparse_counts(*samples):
     samples = concatenate_sparse_matrices(samples, deduped=True)
     samples = concatenate_sparse_matrices(samples, deduped=False)
+    samples = concatenate_cb_histograms(samples)
     return samples
 
 def concatenate_sparse_matrices(samples, deduped=True):
@@ -433,6 +447,25 @@ def concatenate_sparse_matrices(samples, deduped=True):
             newsamples.append([dd.set_combined_counts(data, out_file)])
         return newsamples
     return samples
+
+def concatenate_cb_histograms(samples):
+    work_dir = dd.get_in_samples(samples, dd.get_work_dir)
+    umi_dir = os.path.join(work_dir, "umis")
+    out_file = os.path.join(umi_dir, "cb-histogram.txt")
+
+    files = [dd.get_histogram_counts(data) for data in
+            dd.sample_data_iterator(samples)
+            if dd.get_histogram_counts(data)]
+    files = " ".join(files)
+    cmd = "cat {files} > {out_file}"
+    if not file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file:
+            message = "Concay cb histograms."
+            do.run(cmd.format(**locals()), message)
+    newsamples = []
+    for data in dd.sample_data_iterator(samples):
+        newsamples.append([dd.set_combined_histogram(data, out_file)])
+    return newsamples
 
 def version(data):
     umis_cmd = config_utils.get_program("umis", data, default="umis")
