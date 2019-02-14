@@ -48,7 +48,7 @@ def is_paired(bam_file):
     """
     bam_file = objectstore.cl_input(bam_file)
     cmd = ("set -o pipefail; "
-           "samtools view -h {bam_file} | head -50000 | "
+           "samtools view -h {bam_file} | head -300000 | "
            "samtools view -S -f 1 /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
