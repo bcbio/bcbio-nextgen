@@ -983,6 +983,9 @@ Single-cell RNA sequencing
   error correction.
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes.
+- ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
+  a collection of cells. Use this if your data has already been broken up into cells or
+  wells.
 
 smallRNA sequencing
 ===================
