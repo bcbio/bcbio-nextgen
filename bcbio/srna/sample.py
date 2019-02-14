@@ -66,7 +66,8 @@ def trim_srna_sample(data):
             adapter_cmd = "-N %s" % adapter_cmd
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
-        atropos = _get_atropos()
+        # atropos = _get_atropos()
+        atropos = config_utils.get_program("atropos", data, default="atropos")
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
         if options.strip() == "-u 4 -u -4":
             options = ""

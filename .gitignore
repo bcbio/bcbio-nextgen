@@ -1,5 +1,7 @@
 *.pyc
 *.idx
+*.swo
+*.swp
 bcbio/pipeline/version.py
 bcbio_nextgen.egg-info/
 build/
