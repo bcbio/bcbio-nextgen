@@ -158,13 +158,33 @@ def _run_wes(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     main_file = _pack_cwl(main_file)
-    opts = ["--no-wait"]
-    if args.host:
-        opts += ["--host", args.host]
-    if args.auth:
-        opts += ["--auth", args.auth]
-    cmd = ["wes-client"] + opts + [main_file, json_file]
-    _run_tool(cmd)
+    if args.host and "stratus" in args.host:
+        _run_wes_stratus(args, main_file, json_file)
+    else:
+        opts = ["--no-wait"]
+        if args.host:
+            opts += ["--host", args.host]
+        if args.auth:
+            opts += ["--auth", args.auth]
+        cmd = ["wes-client"] + opts + [main_file, json_file]
+        _run_tool(cmd)
+
+def _run_wes_stratus(args, main_file, json_file):
+    """Run WES on Illumina stratus endpoint server, which wes-client doesn't support.
+
+    https://stratus-docs.readme.io/docs/quick-start-4
+    """
+    import requests
+    base_url = args.host
+    if not base_url.startswith("http"):
+        base_url = "https://%s" % base_url
+    with open(main_file) as in_handle:
+        r = requests.post("%s/v1/workflows" % base_url,
+                          headers={"Content-Type": "application/json",
+                                   "Authorization": "Bearer %s" % args.auth},
+                          data=in_handle.read())
+    print(r.status_code)
+    print(r.text)
 
 def _run_cromwell(args):
     """Run CWL with Cromwell.
