@@ -1,5 +1,6 @@
 """Helpful utilities for building analysis pipelines.
 """
+import glob
 import gzip
 import os
 import tempfile
@@ -650,7 +651,10 @@ def which(program, env=None):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
+    for path in get_all_conda_bins():
+        exe_file = os.path.join(path, program)
+        if is_exe(exe_file):
+            return exe_file
     return None
 
 def reservoir_sample(stream, num_items, item_parser=lambda x: x):
@@ -798,6 +802,13 @@ def append_path(bin, path, at_start=True):
 
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
+
+def get_all_conda_bins():
+    """Retrieve all possible conda bin directories, including environments.
+    """
+    bcbio_bin = get_bcbio_bin()
+    conda_dir = os.path.dirname(bcbio_bin)
+    return [bcbio_bin] + list(glob.glob(os.path.join(conda_dir, "envs", "*", "bin")))
 
 def get_program_python(cmd):
     """Get the full path to a python version linked to the command.

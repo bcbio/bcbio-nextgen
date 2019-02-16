@@ -267,7 +267,7 @@ def _fill_capture_regions(data):
             if len(installed_vals) == 0:
                 if target not in special_targets or not val.startswith(special_targets[target]):
                     raise ValueError("Configuration problem. BED file not found for %s: %s" %
-                                    (target, val))
+                                     (target, val))
             else:
                 assert len(installed_vals) == 1, installed_vals
                 data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_vals[0])
@@ -288,9 +288,10 @@ def _fill_prioritization_targets(data):
                                                                           val + "*%s" % ext)))
             # Check sv-annotation directory for prioritize gene name lists
             if target == "svprioritize":
-                installed_vals += glob.glob(os.path.join(
-                    os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py"))),
-                    "%s*" % os.path.basename(val)))
+                simple_sv_bin = utils.which("simple_sv_annotation.py")
+                if simple_sv_bin:
+                    installed_vals += glob.glob(os.path.join(os.path.dirname(os.path.realpath(simple_sv_bin)),
+                                                             "%s*" % os.path.basename(val)))
             if len(installed_vals) == 0:
                 # some targets can be filled in later
                 if target not in set(["coverage"]):
