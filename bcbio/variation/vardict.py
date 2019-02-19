@@ -65,7 +65,27 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     if target and _is_bed_file(target):
         target = _enforce_max_region_size(target, items[0])
         opts += [target]  # this must be the last option
+    _add_freq_options(config, opts, var2vcf_opts)
     return " ".join(opts), " ".join(var2vcf_opts)
+
+def _add_freq_options(config, opts, var2vcf_opts):
+    """ Setting -f option for vardict and var2vcf_valid
+        Prioritizing settings in resources/vardict/options, then algorithm/min_allele_fraction:
+    min_allele_fraction   "-f" in opts  var2vcfopts   ->   vardict -f            var2vcf -f
+    yes                           yes   yes                opts                  var2vcfopts
+    yes                           yes   -                  opts                  -
+    yes                           -     yes                min_allele_fraction   var2vcfopts
+    yes                           -     -                  min_allele_fraction   min_allele_fraction
+    default                       yes   yes                opts                  var2vcfopts
+    default                       yes   -                  opts                  -
+    default                       -     yes                min_allele_fraction   var2vcfopts
+    default                       -     -                  min_allele_fraction   min_allele_fraction
+    """
+    if "-f" not in opts:
+        freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
+        opts.extend(["-f", str(freq)])
+        if "-f" not in var2vcf_opts:
+            var2vcf_opts.extend(["-f", str(freq)])
 
 def _enforce_max_region_size(in_file, data):
     """Ensure we don't have any chunks in the region greater than 20kb.
@@ -141,7 +161,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 opts, var2vcf_opts = _vardict_options_from_config(items, config, out_file, target)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
-                freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
@@ -150,10 +169,10 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
                 lowfreq_filter = _lowfreq_linear_filter(0, False)
-                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| teststrandbias.R "
-                       "| var2vcf_valid.pl -A -N {sample} -E -f {freq} {var2vcf_opts} "
+                       "| var2vcf_valid.pl -A -N {sample} -E {var2vcf_opts} "
                        "| {contig_cl} | bcftools filter -i 'QUAL >= 0' | {lowfreq_filter} "
                        "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
@@ -328,10 +347,10 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
-                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| awk 'NF>=48' | testsomatic.R "
-                       "| var2vcf_paired.pl -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
+                       "| var2vcf_paired.pl -P 0.9 -m 4.25 {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "| {contig_cl} {freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
