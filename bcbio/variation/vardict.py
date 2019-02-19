@@ -70,7 +70,7 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
 
 def _add_freq_options(config, opts, var2vcf_opts):
     """ Setting -f option for vardict and var2vcf_valid
-        Prioritizing settings in resources/vardict/options, then algotihm/min_allele_fraction:
+        Prioritizing settings in resources/vardict/options, then algorithm/min_allele_fraction:
     min_allele_fraction   "-f" in opts  var2vcfopts   ->   vardict -f            var2vcf -f
     yes                           yes   yes                opts                  var2vcfopts
     yes                           yes   -                  opts                  -
