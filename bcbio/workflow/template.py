@@ -519,7 +519,7 @@ def _check_all_metadata_found(metadata, items):
         if not seen:
             print("WARNING: sample not found %s" % str(name))
 
-def _copy_to_configdir(items, out_dir):
+def _copy_to_configdir(items, out_dir, args):
     """Copy configuration files like PED inputs to working config directory.
     """
     out = []
@@ -531,6 +531,8 @@ def _copy_to_configdir(items, out_dir):
                 shutil.copy(ped_file, ped_config_file)
             item["metadata"]["ped"] = ped_config_file
         out.append(item)
+    if hasattr(args, "systemconfig") and args.systemconfig:
+        shutil.copy(args.systemconfig, os.path.join(out_dir, "config", os.path.basename(args.systemconfig)))
     return out
 
 def _find_remote_inputs(metadata):
@@ -575,13 +577,13 @@ def setup(args):
     out_config_file = _write_template_config(template_txt, project_name, out_dir)
     if md_file:
         shutil.copyfile(md_file, os.path.join(out_dir, "config", os.path.basename(md_file)))
-    items = _copy_to_configdir(items, out_dir)
+    items = _copy_to_configdir(items, out_dir, args)
     if len(items) == 0:
         print()
         print("Template configuration file created at: %s" % out_config_file)
         print("Edit to finalize custom options, then prepare full sample config with:")
-        print("  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
-            (out_config_file, project_name))
+        print("  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" %
+              (out_config_file, project_name))
     else:
         out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir,
                                              remotes)
