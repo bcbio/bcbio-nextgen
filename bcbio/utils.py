@@ -808,6 +808,8 @@ def get_all_conda_bins():
     """
     bcbio_bin = get_bcbio_bin()
     conda_dir = os.path.dirname(bcbio_bin)
+    if os.path.join("anaconda", "envs") in conda_dir:
+        conda_dir = os.path.join(conda_dir[:conda_dir.rfind(os.path.join("anaconda", "envs"))], "anaconda")
     return [bcbio_bin] + list(glob.glob(os.path.join(conda_dir, "envs", "*", "bin")))
 
 def get_program_python(cmd):
