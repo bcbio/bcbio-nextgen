@@ -282,13 +282,14 @@ def gatk_remove_missingalt(in_file, data):
     out_file = "%s-nomissingalt%s" % (base, '.vcf.gz')
     if utils.file_exists(out_file):
         return out_file
-    with file_transaction(out_file) as tx_out_file:
-        with utils.open_gzipsafe(in_file) as in_handle, gzip.open(out_file, "w") as out_handle:
+    no_gzip_out = out_file.replace(".vcf.gz", ".vcf")
+    with file_transaction(no_gzip_out) as tx_out_file:
+        with utils.open_gzipsafe(in_file) as in_handle, open(tx_out_file, "w") as out_handle:
             for line in in_handle:
                 line = remove_missingalt(line)
                 if line:
                     out_handle.write(line)
-    return out_file
+    return vcfutils.bgzip_and_index(no_gzip_out, data["config"])
 
 def remove_missingalt(line):
     """Remove lines that are missing an alternative allele.

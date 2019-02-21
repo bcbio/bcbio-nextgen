@@ -72,7 +72,7 @@ def _clean_java_out(version_str):
     Java will report information like _JAVA_OPTIONS environmental variables in the output.
     """
     out = []
-    for line in version_str.split("\n"):
+    for line in version_str.decode().split("\n"):
         if line.startswith("Picked up"):
             pass
         if line.find("setlocale") > 0:
@@ -95,15 +95,13 @@ def get_gatk_version(gatk_jar=None, config=None):
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
-        # versions earlier than 2.4 do not have explicit version command,
-        # parse from error output from GATK
-        if out.find("ERROR") >= 0:
-            flag = "The Genome Analysis Toolkit (GATK)"
-            for line in out.split("\n"):
-                if line.startswith(flag):
-                    version = line.split(flag)[-1].split(",")[0].strip()
-        else:
-            version = out
+        # Historical GATK version (2.4) and newer versions (4.1.0.0)
+        # have a flag in front of output version
+        version = out
+        flag = "The Genome Analysis Toolkit (GATK)"
+        for line in out.split("\n"):
+            if line.startswith(flag):
+                version = line.split(flag)[-1].split(",")[0].strip()
     if version.startswith("v"):
         version = version[1:]
     _check_for_bad_version(version, "GATK")
