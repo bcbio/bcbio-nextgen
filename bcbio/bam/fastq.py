@@ -7,6 +7,8 @@ from itertools import product
 import os
 import random
 import sys
+import toolz as tz
+from collections import defaultdict
 
 from Bio import SeqIO
 from bcbio.distributed import objectstore
@@ -115,6 +117,8 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
     Adjusted to allow different input paths or extensions for matching files.
     """
     PAIR_FILE_IDENTIFIERS = set(["1", "2", "3", "4"])
+    if len(input_files) > 1000:
+        return fast_combine_pairs(input_files, force_single, full_name, separators)
 
     pairs = []
     used = set([])
@@ -179,6 +183,25 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
             pairs.append([in_file])
             used.add(in_file)
     return pairs
+
+def fast_combine_pairs(files, force_single, full_name, separators):
+    """
+    assume files that need to be paired are within 10 entries of each other, once the list is sorted
+    """
+    files = sort_filenames(files)
+    chunks = tz.sliding_window(10, files)
+    pairs = [combine_pairs(chunk, force_single, full_name, separators) for chunk in chunks]
+    pairs = [y for x in pairs for y in x]
+    longest = defaultdict(list)
+    # for each file, save the longest pair it is in
+    for pair in pairs:
+        for file in pair:
+            if len(longest[file]) < len(pair):
+                longest[file] = pair
+    # keep only unique pairs
+    longest = {tuple(sort_filenames(x)) for x in longest.values()}
+    # ensure filenames are R1 followed by R2
+    return [sort_filenames(list(x)) for x in longest]
 
 def dif(a, b):
     """ copy from http://stackoverflow.com/a/8545526 """

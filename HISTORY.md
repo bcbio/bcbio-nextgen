@@ -7,6 +7,7 @@
 - variant: Filter out variants with missing ALT alleles output by GATK4.
 - RNA-seq single-cell/DGE: added `demultiplexed` option. If set to True, treat the
   data as if it has already been demultiplexed into cells/wells.
+- Multiple orders of magnitude faster templating with thousands of input files.
 
 ## 1.1.3 (29 January 2019)
 
