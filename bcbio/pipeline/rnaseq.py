@@ -59,7 +59,7 @@ def scrnaseq_concatenate_metadata(samples):
                 if len(cols) == 1:
                     # Assign sample name in case of missing in barcodes
                     cols.append("NaN")
-                barcodes[cols[0]] = cols[1:]
+                barcodes[(dd.get_sample_name(sample), cols[0])] = cols[1:]
 
         counts = dd.get_combined_counts(sample)
         meta = map(str, list(sample["metadata"].values()))
@@ -75,7 +75,7 @@ def scrnaseq_concatenate_metadata(samples):
                 for line in inh:
                     sample = line.split(":")[0]
                     barcode = sample.split("-")[1]
-                    outh.write(",".join(barcodes[barcode] + metadata[sample]) + '\n')
+                    outh.write(",".join(barcodes[(sample, barcode)] + metadata[sample]) + '\n')
     return samples
 
 def rnaseq_variant_calling(samples, run_parallel):

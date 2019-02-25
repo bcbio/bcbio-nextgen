@@ -982,7 +982,13 @@ Single-cell RNA sequencing
   ``cellular_barcodes`` option. Defaults to 1. Set to 0 to turn off
   error correction.
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
-  barcodes.
+  barcodes. If the file contains sample name for each barcode, this will be used to
+  create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
+  associated with the barcode. This is an example of the file::
+ 
+    AATTCCGG,sample1
+    CCTTGGAA,sample2
+
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
   wells.
