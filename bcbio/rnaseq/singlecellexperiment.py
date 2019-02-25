@@ -32,14 +32,12 @@ def make_scrnaseq_object(samples):
                 # do.run([rscript, "--no-environ", rcode],
                 #        "SingleCellExperiment",
                 #        log_error=False)
-                print(rcode)
                 rda_file = rcode
             except subprocess.CalledProcessError as msg:
                 logger.exception()
 
 
 def _find_rRNA_genes(gtf_file, rrna_file):
-    print(gtf_file)
     rrna_features = gtf.get_rRNA(gtf_file)
     transcripts = set([x[0] for x in rrna_features if x])
     with open(rrna_file, 'w') as outh:

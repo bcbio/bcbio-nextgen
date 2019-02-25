@@ -459,7 +459,7 @@ def concatenate_cb_histograms(samples):
     cmd = "cat {files} > {out_file}"
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
-            message = "Concay cb histograms."
+            message = "Concat cellular barcode histograms: %s." % files
             do.run(cmd.format(**locals()), message)
     newsamples = []
     for data in dd.sample_data_iterator(samples):
