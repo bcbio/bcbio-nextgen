@@ -3,6 +3,8 @@ import tempfile
 import os
 import random
 import gzip
+import re
+
 from bcbio import utils
 from bcbio.utils import file_exists, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
@@ -291,11 +293,34 @@ def tx2genedict(gtf, keep_version=False):
                 txversion = line.split("transcript_version")[1].split(" ")[1]
                 txversion = _strip_non_alphanumeric(txversion)
                 txid  += "." + txversion
+            if has_transcript_version(line) and not keep_version:
+                txid = _strip_feature_version(txid)
+                geneid = _strip_feature_version(geneid)
             d[txid] = geneid
     return d
 
+def _strip_feature_version(featureid):
+    """
+    some feature versions are encoded as featureid.version, this strips those off, if they exist
+    """
+    version_detector = re.compile(r"(?P<featureid>.*)(?P<version>\.\d+)")
+    match = version_detector.match(featureid)
+    if match:
+        return match.groupdict()["featureid"]
+    else:
+        return featureid
+
 def _strip_non_alphanumeric(string):
     return string.replace('"', '').replace(';', '')
+
+def has_transcript_version(line):
+    version_detector = re.compile(r".*(?P<version>\.\d+)")
+    if "transcript_version" in line:
+        return True
+    txid = line.split("transcript_id")[1].split(" ")[1]
+    txid = _strip_non_alphanumeric(txid)
+    if version_detector.match(txid):
+        return True
 
 def tx2genefile(gtf, out_file=None, data=None, tsv=True, keep_version=False):
     """
