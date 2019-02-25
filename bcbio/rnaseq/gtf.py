@@ -244,15 +244,19 @@ def get_rRNA(gtf):
     extract rRNA genes and transcripts from a gtf file
     """
     rRNA_biotypes = ["rRNA", "Mt_rRNA", "tRNA", "MT_tRNA"]
-    db = get_gtf_db(gtf)
-    biotype_lookup = _biotype_lookup_fn(gtf)
-    features = []
-    if not biotype_lookup:
-        return None
-    for feature in db.features_of_type("transcript"):
-        biotype = biotype_lookup(feature)
-        if biotype in rRNA_biotypes:
-            features.append((feature['gene_id'][0], feature['transcript_id'][0]))
+    features = set()
+    with open_gzipsafe(gtf) as in_handle:
+        for line in in_handle:
+            if not "gene_id" in line or not "transcript_id" in line:
+                continue
+            if any(x in line for x in rRNA_biotypes):
+                geneid = line.split("gene_id")[1].split(" ")[1]
+                geneid = _strip_non_alphanumeric(geneid)
+                geneid = _strip_feature_version(geneid)
+                txid = line.split("transcript_id")[1].split(" ")[1]
+                txid = _strip_non_alphanumeric(txid)
+                txid = _strip_feature_version(geneid)
+                features.add((geneid, txid))
     return features
 
 def _biotype_lookup_fn(gtf):
