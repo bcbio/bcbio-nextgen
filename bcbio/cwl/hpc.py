@@ -340,7 +340,7 @@ HPC_CONFIGS = {
         Int cpu = 1
         Int memory_mb = 2048
         String queue = "%(queue)s"
-        String pename = "%(pename}s"
+        String pename = "%(pename)s"
         String memtype = "%(memtype)s"
         %(docker_attrs)s
         %(cwl_attrs)s
