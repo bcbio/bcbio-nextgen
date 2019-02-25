@@ -1,5 +1,6 @@
 ## 1.1.4 (in progress)
 
+- Move to R3.5.1, including updates to all CRAN and Bioconductor packages.
 - tumor-only germline prioritization: provide more useful germline filtering
   based on prioritization INFO tag (EPR) rather than filter field.
 - Install: do not require fabric for tool and data installs, making full codebase
