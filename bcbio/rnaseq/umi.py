@@ -279,7 +279,7 @@ def tagcount(data):
 
     if gtf_file:
         gene_map_file = os.path.join(dd.get_work_dir(data), "annotation",
-                                     os.path.splitext(gtf_file)[0] + "-tx2gene.tsv")
+                                     os.path.basename(os.path.splitext(gtf_file)[0]) + "-tx2gene.tsv")
         gene_map_file = gtf.tx2genefile(gtf_file, gene_map_file, tsv=True)
         gene_map_flag = " --genemap {0} ".format(gene_map_file)
     else:
