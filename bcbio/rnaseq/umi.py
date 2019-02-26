@@ -226,9 +226,9 @@ def filter_barcodes(data):
     if bc3:
         cmd += "--bc3 {bc3} "
 
-    fq1_cmd = "{fq1} " if not is_gzipped(fq1) else "<(gzip -cd {fq1}) "
+    fq1_cmd = "{fq1} "
     fq1_cmd = fq1_cmd.format(fq1=fq1)
-    cmd += "{fq1_cmd} | gzip > {tx_out_file}"
+    cmd += "{fq1_cmd} | gzip -c > {tx_out_file}"
 
     sample_dir = os.path.join(umi_dir, dd.get_sample_name(data))
     safe_makedir(sample_dir)
