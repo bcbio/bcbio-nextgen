@@ -348,7 +348,7 @@ HPC_CONFIGS = {
         submit = \"\"\"
         qsub -V -w w -j y -N ${job_name} -wd ${cwd} \
         -o ${out} -e ${err} -q ${queue} \
-        -pe ${pename} ${cpu} ${"-l " + mem_type + "=" + memory_mb + "m"} \
+        -pe ${pename} ${cpu} ${"-l " + memtype + "=" + memory_mb + "m"} \
         /usr/bin/env bash ${script}
         \"\"\"
         kill = "qdel ${job_id}"
