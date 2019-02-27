@@ -42,11 +42,16 @@ def make_quality_report(data):
     quality_rmd = os.path.join(report_dir, "quality_control.Rmd")
     quality_html = os.path.join(report_dir, "quality_control.html")
     quality_rmd = rmarkdown_draft(quality_rmd, "quality_control", "bcbioRNASeq")
+    if not file_exists(quality_html):
+        render_rmarkdown_file(filename)
+    return data
 
 def rmarkdown_draft(filename, template, package):
     """
     create a draft rmarkdown file from an installed template
     """
+    if file_exists(filename):
+        return filename
     draft_template = Template(
         'rmarkdown::draft("$filename", template="$template", package="$package", edit=FALSE)'
     )
@@ -54,10 +59,9 @@ def rmarkdown_draft(filename, template, package):
         filename=filename, template=template, package=package)
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
-    with chdir(report_dir):
+    with chdir(report_dir): 
         do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
-    render_rmarkdown_file(filename)
     return filename
 
 def render_rmarkdown_file(filename):
