@@ -43,7 +43,7 @@ def make_quality_report(data):
     quality_html = os.path.join(report_dir, "quality_control.html")
     quality_rmd = rmarkdown_draft(quality_rmd, "quality_control", "bcbioRNASeq")
     if not file_exists(quality_html):
-        render_rmarkdown_file(filename)
+        render_rmarkdown_file(quality_rmd)
     return data
 
 def rmarkdown_draft(filename, template, package):
@@ -59,7 +59,7 @@ def rmarkdown_draft(filename, template, package):
         filename=filename, template=template, package=package)
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
-    with chdir(report_dir): 
+    with chdir(report_dir):
         do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
     return filename
@@ -103,7 +103,7 @@ def create_load_string(upload_dir, groups=None, organism=None):
             upload_dir=upload_dir, groups=groups, organism=organism)
     else:
         load_bcbio = load_noorganism_template.substitute(upload_dir=upload_dir,
-                                                groups=groups)
+                                                         groups=groups)
     return ";\n".join([libraryline, load_bcbio, flatline, saveline])
 
 def memoize_write_file(string, filename):
