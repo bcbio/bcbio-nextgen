@@ -749,7 +749,7 @@ def _check_jointcaller(data):
     problem = [x for x in cs if x not in allowed]
     if len(problem) > 0:
         raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
-                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                         "Supported options: %s\n" % (problem, sorted(list(allowed), key=lambda x: x or "")))
 
 def _check_indelcaller(data):
     c = data["algorithm"].get("indelcaller")
