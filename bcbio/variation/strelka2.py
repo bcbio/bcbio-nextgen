@@ -254,7 +254,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
                     dp = rec.format('DP')[:,0]
                 elif rec.format("AD") is not None:  # germline?
                     alt_counts = rec.format('AD')[:,1:]  # AD=REF,ALT1,ALT2,...
-                    dp = np.sum(rec.format('AD')[:,0:], axis=1)
+                    dp = np.sum(rec.format('AD')[:,0:], axis=1)[:, None]
                 else: # germline gVCF record
                     alt_counts, dp = (None, None)
                 if dp is not None:
