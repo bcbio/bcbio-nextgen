@@ -347,3 +347,18 @@ def get_keys(lookup):
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
 
+def update_summary_qc(data, key, base=None, secondary=None):
+    """
+    updates summary_qc with a new section, keyed by key.
+    stick files into summary_qc if you want them propagated forward
+    and available for multiqc
+    """
+    summary = get_summary_qc(data, {})
+    if base and secondary:
+        summary[key] = {"base": base, "secondary": secondary}
+    elif base:
+        summary[key] = {"base": base}
+    elif summary:
+        summary[key] = {"secondary": secondary}
+    data = set_summary_qc(data, summary)
+    return data

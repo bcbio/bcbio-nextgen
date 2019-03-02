@@ -1,5 +1,6 @@
 ## 1.1.4 (in progress)
 
+- RNA-seq: Add Salmon to multiqc report.
 - RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
 - RNA-seq: Faster and more flexible rRNA biotype lookup.
 - Move to R3.5.1, including updates to all CRAN and Bioconductor packages.

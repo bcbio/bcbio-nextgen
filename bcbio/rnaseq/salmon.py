@@ -28,6 +28,7 @@ def run_salmon_bam(data):
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
     data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
+    data = dd.update_summary_qc(data, "salmon", secondary=[dd.get_salmon_fraglen_file(data)])
     return [[data]]
 
 def run_salmon_reads(data):
@@ -49,6 +50,7 @@ def run_salmon_reads(data):
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
     data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
+    data = dd.update_summary_qc(data, "salmon", secondary=[dd.get_salmon_fraglen_file(data)])
     return [[data]]
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
