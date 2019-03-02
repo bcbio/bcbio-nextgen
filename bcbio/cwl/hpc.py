@@ -349,7 +349,7 @@ HPC_CONFIGS = {
         qsub -V -w w -j y -N ${job_name} -wd ${cwd} \
         -o ${out} -e ${err} -q ${queue} \
         -pe ${pename} ${cpu} -l ${memtype}=${memory_mb}m \
-        /usr/bin/env bash ${script}
+        ${script}
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
