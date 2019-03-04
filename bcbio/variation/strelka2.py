@@ -5,7 +5,6 @@ import os
 import six
 import sys
 import numpy as np
-from cyvcf2 import VCF, Writer
 
 from bcbio import utils
 from bcbio.log import logger
@@ -15,6 +14,8 @@ from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep, bedutils, joint, ploidy, vcfutils
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run strelka2 variant calling, either paired tumor/normal or germline calling.
@@ -230,7 +231,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:
-            vcf = VCF(in_file)
+            vcf = cyvcf2.VCF(in_file)
             vcf.add_format_to_header({
                 'ID': 'AF',
                 'Description': 'Allele frequency, as calculated in bcbio: AD/DP (germline), <ALT>U/DP (somatic snps), '
@@ -243,7 +244,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
                     '(configured in bcbio as min_allele_fraction)'
                     if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
                     else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
-            w = Writer(tx_out_file, vcf)
+            w = cyvcf2.Writer(tx_out_file, vcf)
             tumor_index = vcf.samples.index(data['description'])
             for rec in vcf:
                 if paired:  # somatic?

@@ -4,7 +4,6 @@ from distutils.version import LooseVersion
 import os
 
 import numpy as np
-from cyvcf2 import VCF, Writer
 
 from bcbio import bam, broad, utils
 from bcbio.log import logger
@@ -14,6 +13,8 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, bedutils, gatk, vcfutils, ploidy
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def _add_tumor_params(paired, items, gatk_type):
     """Add tumor/normal BAM input parameters to command line.
@@ -136,14 +137,14 @@ def _af_filter(data, in_file, out_file):
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:
-            vcf = VCF(in_file)
+            vcf = cyvcf2.VCF(in_file)
             vcf.add_filter_to_header({
                 'ID': 'MinAF',
                 'Description': 'Allele frequency is lower than %s%% ' % (min_freq*100) + (
                     '(configured in bcbio as min_allele_fraction)'
                     if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
                     else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
-            w = Writer(tx_out_file, vcf)
+            w = cyvcf2.Writer(tx_out_file, vcf)
             # GATK 3.x can produce VCFs without sample names for empty VCFs
             try:
                 tumor_index = vcf.samples.index(dd.get_sample_name(data))
