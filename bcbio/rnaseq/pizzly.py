@@ -65,11 +65,12 @@ def pizzly(pizzly_path, gtf, gtf_fa, fraglength, cachefile, pizzlydir, fusions,
         with file_transaction(data, outdir) as tx_out_dir:
             safe_makedir(tx_out_dir)
             tx_out_stem = os.path.join(tx_out_dir, samplename)
-            cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {cachefile} "
-                "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
-                "--output {tx_out_stem} {fusions}")
-            message = ("Running pizzly on %s." % fusions)
-            do.run(cmd.format(**locals()), message)
+            with file_transaction(cachefile) as tx_cache_file:
+                cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {tx_cache_file} "
+                    "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
+                    "--output {tx_out_stem} {fusions}")
+                message = ("Running pizzly on %s." % fusions)
+                do.run(cmd.format(**locals()), message)
     flatfile = out_stem + "-flat.tsv"
     filteredfile = out_stem + "-flat-filtered.tsv"
     flatten_pizzly(pizzlycalls, flatfile, data)

@@ -1,5 +1,6 @@
 ## 1.1.4 (in progress)
 
+- RNA-seq: fix for race condition when creating the pizzly cache
 - RNA-seq: Add Salmon to multiqc report.
 - RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
 - RNA-seq: Faster and more flexible rRNA biotype lookup.
