@@ -222,7 +222,9 @@ def _variant_vc(checkpoints):
         batch_in += [["genome_resources", "variation", "train_hapmap"],
                      ["genome_resources", "variation", "train_indels"]]
     vc = [s("batch_for_variantcall", "multi-batch", batch_in,
-            [cwlout("batch_rec", "record")],
+            [cwlout("batch_rec", "record",
+                    fields=[cwlout(["config", "algorithm", "variantcaller_order"], "int"),
+                            cwlout("inherit")])],
             "bcbio-vc",
             disk={"files": 2.0}, cores=1,
             unlist=[["config", "algorithm", "variantcaller"]], no_files=True),

@@ -42,6 +42,7 @@ def batch(samples):
             batches = set([])
             for d in gsamples:
                 batches |= set(dd.get_batches(d))
+            gsamples.sort(key=dd.get_variantcaller_order)
             cur = copy.deepcopy(gsamples[0])
             cur.update({"batch_id": sorted(list(batches))[0] if batches else "_".join(batch_samples),
                         "batch_samples": batch_samples,

@@ -70,6 +70,7 @@ LOOKUPS = {
     "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "variantcaller_order": {"keys": ['config', 'algorithm', 'variantcaller_order'], "default": 0},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
     "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},

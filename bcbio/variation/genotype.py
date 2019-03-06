@@ -186,8 +186,9 @@ def _dup_samples_by_variantcaller(samples, require_bam=True):
     extras = []
     for data in samples:
         added = False
-        for add in handle_multiple_callers(data, "variantcaller", require_bam=require_bam):
+        for i, add in enumerate(handle_multiple_callers(data, "variantcaller", require_bam=require_bam)):
             added = True
+            add = dd.set_variantcaller_order(add, i)
             to_process.append([add])
         if not added:
             data = _handle_precalled(data)
@@ -265,7 +266,8 @@ def batch_for_variantcall(samples):
         else:
             batches.append(cur_group)
     def by_original_order(xs):
-        return min([sample_order.index(dd.get_sample_name(x)) for x in xs])
+        return (min([sample_order.index(dd.get_sample_name(x)) for x in xs]),
+                min([dd.get_variantcaller_order(x) for x in xs]))
     return sorted(batches + extras, key=by_original_order)
 
 def _handle_precalled(data):
