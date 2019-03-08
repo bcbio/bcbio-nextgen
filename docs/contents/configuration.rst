@@ -217,6 +217,23 @@ The output CSV will look like and is compatible with bcbio::
 
 .. _sample-configuration:
 
+Samples from GEO or SRA
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In case you want to download samples from GEO or SRA repositories, you can use
+``bcbio_prepare_samples.py`` as well.
+
+You need to create your project.csv file like this:
+
+        samplename,description
+        GSMNNNNN,sample1
+        GSMNNNNN,sample2
+        SRRNNNNN,sample3
+
+
+The script will download all the files related to each sample and merge them
+in case of multiple files.
+
 Sample information
 ~~~~~~~~~~~~~~~~~~
 
@@ -985,7 +1002,7 @@ Single-cell RNA sequencing
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
   associated with the barcode. This is an example of the file::
- 
+
     AATTCCGG,sample1
     CCTTGGAA,sample2
 
