@@ -192,6 +192,7 @@ def _dup_samples_by_variantcaller(samples, require_bam=True):
             to_process.append([add])
         if not added:
             data = _handle_precalled(data)
+            data = dd.set_variantcaller_order(data, 0)
             extras.append([data])
     return to_process, extras
 
