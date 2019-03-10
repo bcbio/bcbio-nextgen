@@ -149,7 +149,9 @@ def _sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file):
         cmd += "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_consensus} -o {tx_out_file}"
     # UMIs embedded in read name
     else:
-        cmd += "umis bamtag - | samtools view -b > {tx_out_file}"
+        cmd += ("%s %s bamtag - | samtools view -b > {tx_out_file}" %
+                (utils.get_program_python("umis"),
+                 config_utils.get_program("umis", data["config"])))
     return cmd.format(**locals())
 
 def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
