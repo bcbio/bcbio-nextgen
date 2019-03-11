@@ -230,12 +230,13 @@ def _update_bcbiovm():
     """Update or install a local bcbiovm install with tools and dependencies.
     """
     print("## CWL support with bcbio-vm")
-    conda_bin, env_name = _add_environment("bcbiovm", "python=2")
+    python_env = "python=3"
+    conda_bin, env_name = _add_environment("bcbiovm", python_env)
     channels = _get_conda_channels(conda_bin)
     base_cmd = [conda_bin, "install", "--yes", "--name", env_name] + channels
-    subprocess.check_call(base_cmd + ["bcbio-nextgen"])
+    subprocess.check_call(base_cmd + [python_env, "nomkl", "bcbio-nextgen"])
     extra_uptodate = ["cromwell"]
-    subprocess.check_call(base_cmd + ["bcbio-nextgen-vm"] + extra_uptodate)
+    subprocess.check_call(base_cmd + [python_env, "bcbio-nextgen-vm"] + extra_uptodate)
 
 def _get_envs(conda_bin):
     info = json.loads(subprocess.check_output("{conda_bin} info --envs --json".format(**locals()), shell=True))
