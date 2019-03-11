@@ -150,7 +150,7 @@ def run_vep(in_file, data):
                         config_args += plugin_args
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     if hgvs_compatible:
-                        config_args += ["--hgvs", "--shift_hgvs", "1"]
+                        config_args += ["--hgvsg","--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick_allele"]
