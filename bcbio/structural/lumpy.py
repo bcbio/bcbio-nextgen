@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 
+import six
 import vcf
 
 from bcbio import utils
@@ -60,7 +61,7 @@ def _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items):
                 try:
                     do.run(cmd.format(**locals()), "smoove lumpy calling", items[0])
                 except subprocess.CalledProcessError as msg:
-                    if _allowed_errors(str(msg)):
+                    if _allowed_errors(msg):
                         vcfutils.write_empty_vcf(tx_out_file, config=items[0]["config"],
                                                  samples=[dd.get_sample_name(d) for d in items])
                     else:
@@ -91,6 +92,10 @@ def _prepare_smoove_bams(full_bams, sr_bams, disc_bams, items, tx_work_dir):
     return out
 
 def _allowed_errors(msg):
+    if six.PY3:
+        msg = str(msg)
+    else:
+        msg = unicode(msg).encode("ascii", "replace")
     allowed = ["covmed: not enough reads to sample for bam stats",
                "missing pair end parameters:",
                "mean stdev read_length min_non_overlap"]
