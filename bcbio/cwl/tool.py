@@ -197,7 +197,7 @@ def _estimate_runner_memory(json_file):
     for key in ["config__algorithm__variantcaller", "description"]:
         item_counts = []
         n = 0
-        for val in sinfo.get(key):
+        for val in (sinfo.get(key) or []):
             n += 1
             if val:
                 if isinstance(val, (list, tuple)):
