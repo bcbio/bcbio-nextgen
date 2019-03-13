@@ -186,6 +186,37 @@ def _run_wes_stratus(args, main_file, json_file):
     print(r.status_code)
     print(r.text)
 
+def _estimate_runner_memory(json_file):
+    """Estimate Java memory requirements based on number of samples.
+
+    A rough approach to selecting correct allocated memory for Cromwell.
+    """
+    with open(json_file) as in_handle:
+        sinfo = json.load(in_handle)
+    num_parallel = 1
+    for key in ["config__algorithm__variantcaller", "description"]:
+        item_counts = []
+        n = 0
+        for val in sinfo.get(key):
+            n += 1
+            if val:
+                if isinstance(val, (list, tuple)):
+                    item_counts.append(len(val))
+                else:
+                    item_counts.append(1)
+        print(key, n, item_counts)
+        if n and item_counts:
+            num_parallel = n * max(item_counts)
+            break
+    if num_parallel < 25:
+        return "3g"
+    if num_parallel < 150:
+        return "6g"
+    elif num_parallel < 500:
+        return "12g"
+    else:
+        return "24g"
+
 def _run_cromwell(args):
     """Run CWL with Cromwell.
     """
@@ -202,7 +233,8 @@ def _run_cromwell(args):
     with open(option_file, "w") as out_handle:
         json.dump(cromwell_opts, out_handle)
 
-    cmd = ["cromwell", "-Xms1g", "-Xmx3g", "run", "--type", "CWL",
+    cmd = ["cromwell", "-Xms1g", "-Xmx%s" % _estimate_runner_memory(json_file),
+           "run", "--type", "CWL",
            "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir, json_file)]
     cmd += hpc.args_to_cromwell_cl(args)
     cmd += ["--metadata-output", metadata_file, "--options", option_file,
