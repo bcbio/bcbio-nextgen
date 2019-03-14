@@ -263,8 +263,8 @@ def _detect_rRNA(data, out_dir):
         if not (transcripts and quant and utils.file_exists(quant)):
             return {'rRNA': "NA", "rRNA_rate": "NA"}
         sample_table = pd.read_csv(quant, sep="\t")
-        rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
-        total_exp = map(float, sample_table["NumReads"])
+        rrna_exp = list(map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"]))
+        total_exp = list(map(float, sample_table["NumReads"]))
         rrna = sum(rrna_exp)
         if sum(total_exp) == 0:
             rrna_rate = "NA"
@@ -329,13 +329,12 @@ def run_rnaseq(bam_file, data, out_dir):
     report_file = os.path.join(results_dir, "qualimapReport.html")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
-    single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
     if not utils.file_exists(results_file):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
             bam.index(bam_file, config)
-            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_results_dir, gtf_file, single_end, library)
+            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_results_dir, gtf_file, library)
             do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
             tx_results_file = os.path.join(tx_results_dir, "rnaseq_qc_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
@@ -353,7 +352,7 @@ def run_rnaseq(bam_file, data, out_dir):
             "secondary": _find_qualimap_secondary_files(results_dir, base_results_file),
             "metrics": metrics}
 
-def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
+def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, library="non-strand-specific"):
     """
     Create command lines for qualimap
     """
@@ -364,8 +363,9 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
     export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
+    paired = " --paired" if bam.is_paired(bam_file) else ""
     cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
-           "-a proportional -bam {bam_file} -p {library} "
+           "-a proportional -bam {bam_file} -p {library}{paired} "
            "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
     return cmd
 
