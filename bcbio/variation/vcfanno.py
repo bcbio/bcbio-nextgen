@@ -177,12 +177,12 @@ def is_human(data, builds=None):
         return True
     if not builds or "37" in builds:
         target_builds = ["hg19", "GRCh37"]
-        if dd.get_genome_build(data) in target_builds:
+        if any([dd.get_genome_build(data).startswith(b) for b in target_builds]):
             return True
         elif has_build37_contigs(data):
             return True
     if not builds or "38" in builds:
         target_builds = ["hg38"]
-        if dd.get_genome_build(data) in target_builds:
+        if any([dd.get_genome_build(data).startswith(b) for b in target_builds]):
             return True
     return False
