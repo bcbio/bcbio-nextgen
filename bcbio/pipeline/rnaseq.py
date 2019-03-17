@@ -53,8 +53,10 @@ def scrnaseq_concatenate_metadata(samples):
     barcodes = {}
     counts =  ""
     metadata = {}
+    has_sample_barcodes = False
     for sample in dd.sample_data_iterator(samples):
         if dd.get_sample_barcodes(sample):
+            has_sample_barcodes = True
             with open(dd.get_sample_barcodes(sample)) as inh:
                 for line in inh:
                     cols = line.strip().split(",")
@@ -80,7 +82,7 @@ def scrnaseq_concatenate_metadata(samples):
             with open(counts + ".colnames") as inh:
                 for line in inh:
                     sample = line.split(":")[0]
-                    if dd.get_sample_barcodes(sample):
+                    if has_sample_barcodes:
                         barcode = sample.split("-")[1]
                     else:
                         barcode = "NaN"
