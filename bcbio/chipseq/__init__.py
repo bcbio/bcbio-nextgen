@@ -95,6 +95,11 @@ def _bam_coverage(name, bam_input, data):
     except config_utils.CmdNotFound:
         logger.info("No bamCoverage found, skipping bamCoverage.")
         return None
+    resources = config_utils.get_resources("bamCoverage", data["config"])
+    if resources:
+        options = resources.get("options")
+        if options:
+            cmd += " %s" % " ".join([str(x) for x in options])
     bw_output = os.path.join(os.path.dirname(bam_input), "%s.bw" % name)
     if utils.file_exists(bw_output):
         return bw_output
