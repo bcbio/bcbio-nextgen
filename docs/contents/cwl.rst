@@ -110,10 +110,10 @@ install of just bcbio-vm. To install using `Miniconda
 
     export TARGETDIR=~/install/bcbio-vm/anaconda
     export BINDIR=/usr/local/bin
-    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p $TARGETDIR
-    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
-    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p $TARGETDIR
+    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda python=3 bcbio-nextgen
+    $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda python=3 bcbio-nextgen-vm
     mkdir -p $BINDIR
     ln -s $TARGETDIR/bin/bcbio_vm.py $BINDIR/bcbio_vm.py
     ln -s $TARGETDIR/bin/conda $BINDIR/bcbiovm_conda

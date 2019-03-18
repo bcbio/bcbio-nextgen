@@ -40,9 +40,9 @@ Tools used on your local machine:
 
 Install these into an isolated conda environment and setup with:
 
-    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
-    ./tools/bin/conda install -c conda-forge -c bioconda bcbio-nextgen-vm
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p tools
+    ./tools/bin/conda install -c conda-forge -c bioconda python=3 bcbio-nextgen-vm
     ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
 
