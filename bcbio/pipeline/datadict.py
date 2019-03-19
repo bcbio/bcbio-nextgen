@@ -363,3 +363,12 @@ def update_summary_qc(data, key, base=None, secondary=None):
         summary[key] = {"secondary": secondary}
     data = set_summary_qc(data, summary)
     return data
+
+def has_variantcalls(data):
+    """
+    returns True if the data dictionary is configured for variant calling
+    """
+    analysis = get_analysis(data).lower()
+    variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
+    variantcaller = get_variantcaller(data)
+    return variant_pipeline or variantcaller

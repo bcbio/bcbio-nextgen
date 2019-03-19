@@ -104,7 +104,7 @@ def get_qc_tools(data):
         to_run.append("atropos")
     if "coverage_qc" not in dd.get_tools_off(data):
         to_run.append("samtools")
-    if analysis.startswith(("standard", "variant", "variant2")):
+    if dd.has_variantcalls(data):
         if "coverage_qc" not in dd.get_tools_off(data):
             to_run += ["coverage", "picard"]
         to_run += ["qsignature", "variants"]
