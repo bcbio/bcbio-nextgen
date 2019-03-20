@@ -23,7 +23,7 @@ except ImportError:
 
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
-    "gitrepo": "git://github.com/bcbio/bcbio-nextgen.git",
+    "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda2-latest-%s-x86_64.sh"}
 

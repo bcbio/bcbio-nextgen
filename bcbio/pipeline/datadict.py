@@ -359,7 +359,7 @@ def update_summary_qc(data, key, base=None, secondary=None):
         summary[key] = {"base": base, "secondary": secondary}
     elif base:
         summary[key] = {"base": base}
-    elif summary:
+    elif secondary:
         summary[key] = {"secondary": secondary}
     data = set_summary_qc(data, summary)
     return data
