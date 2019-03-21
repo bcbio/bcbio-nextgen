@@ -198,9 +198,9 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
         return path
     upload_path = None
     for work_path, final_path in upload_path_mapping.items():
-        if os.path.isfile(work_path) and path == work_path:
+        if path == work_path and os.path.isfile(work_path):
             upload_path = final_path
-        elif os.path.isdir(work_path) and path.startswith(work_path):
+        elif path.startswith(work_path) and os.path.isdir(work_path):
             upload_path = path.replace(work_path, final_path)
     if upload_path:
         return os.path.relpath(upload_path, upload_base_dir)
