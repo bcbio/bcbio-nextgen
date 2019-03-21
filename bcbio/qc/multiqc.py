@@ -197,12 +197,24 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     if not path or not isinstance(path, str):
         return path
     upload_path = None
-    for work_path, final_path in upload_path_mapping.items():
-        if path == work_path and os.path.isfile(work_path):
-            upload_path = final_path
-        elif path.startswith(work_path) and os.path.isdir(work_path):
-            upload_path = path.replace(work_path, final_path)
-    if upload_path:
+
+    # First, check in the mapping: if it's there is a direct reference and
+    # it's a file, we immediately return it (saves lots of iterations)
+    if upload_path_mapping.get(path) is not None and os.path.isfile(path):
+        upload_path = upload_path_mapping[path]
+    else:
+        # Not a file: check for elements in the mapping that contain
+        # it
+        paths_to_check = [key for key in upload_path_mapping
+                          if path.startswith(key)]
+
+        if paths_to_check:
+            for work_path in paths_to_check:
+                if os.path.isdir(work_path):
+                    final_path = upload_path_mapping[work_path]
+                    upload_path = path.replace(work_path, final_path)
+
+    if upload_path is not None:
         return os.path.relpath(upload_path, upload_base_dir)
     else:
         return None
