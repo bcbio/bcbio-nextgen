@@ -213,6 +213,7 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
                 if os.path.isdir(work_path):
                     final_path = upload_path_mapping[work_path]
                     upload_path = path.replace(work_path, final_path)
+                    break
 
     if upload_path is not None:
         return os.path.relpath(upload_path, upload_base_dir)
