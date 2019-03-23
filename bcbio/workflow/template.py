@@ -173,7 +173,7 @@ def name_to_config(template):
     """
     if objectstore.is_remote(template):
         with objectstore.open_file(template) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
         with objectstore.open_file(template) as in_handle:
             txt_config = in_handle.read()
     elif os.path.isfile(template):
@@ -182,14 +182,14 @@ def name_to_config(template):
         with open(template) as in_handle:
             txt_config = in_handle.read()
         with open(template) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
     else:
         base_url = "https://raw.github.com/bcbio/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
                 txt_config = in_handle.read().decode()
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
-                config = yaml.load(in_handle)
+                config = yaml.safe_load(in_handle)
         except (urllib.error.HTTPError, urllib.error.URLError):
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)

@@ -191,10 +191,10 @@ def _install_container_bcbio_system(datadir):
     expose_file = os.path.join(datadir, "galaxy", "bcbio_system.yaml")
     expose = set(["memory", "cores", "jvm_opts"])
     with open(base_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     if os.path.exists(expose_file):
         with open(expose_file) as in_handle:
-            expose_config = yaml.load(in_handle)
+            expose_config = yaml.safe_load(in_handle)
     else:
         expose_config = {"resources": {}}
     for pname, vals in config["resources"].items():
@@ -258,7 +258,7 @@ def _get_conda_channels(conda_bin):
     """
     channels = ["bioconda", "conda-forge"]
     out = []
-    config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+    config = yaml.safe_load(subprocess.check_output([conda_bin, "config", "--show"]))
     for c in channels:
         present = False
         for orig_c in config.get("channels") or []:
@@ -384,8 +384,8 @@ def _upgrade_genome_resources(galaxy_dir, base_url):
             local_file = os.path.join(os.path.dirname(ref_file), os.path.basename(remote_url))
             if os.path.exists(local_file):
                 with open(local_file) as in_handle:
-                    local_config = yaml.load(in_handle)
-                remote_config = yaml.load(r.text)
+                    local_config = yaml.safe_load(in_handle)
+                remote_config = yaml.safe_load(r.text)
                 needs_update = remote_config["version"] > local_config.get("version", 0)
                 if needs_update:
                     shutil.move(local_file, local_file + ".old%s" % local_config.get("version", 0))
@@ -410,7 +410,7 @@ def _upgrade_snpeff_data(galaxy_dir, args, remotes):
         resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
         if os.path.exists(resource_file):
             with open(resource_file) as in_handle:
-                resources = yaml.load(in_handle)
+                resources = yaml.safe_load(in_handle)
             snpeff_db, snpeff_base_dir = effects.get_db({"genome_resources": resources,
                                                          "reference": {"fasta": {"base": ref_file}}})
             if snpeff_db:
@@ -452,7 +452,7 @@ def _get_biodata(base_file, args):
     """Retrieve biodata genome targets customized by install parameters.
     """
     with open(base_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     config["install_liftover"] = False
     config["genome_indexes"] = args.aligners
     ann_groups = config.pop("annotation_groups", {})
@@ -544,7 +544,7 @@ def _update_manifest(manifest_file, name, version):
     """
     if os.path.exists(manifest_file):
         with open(manifest_file) as in_handle:
-            manifest = yaml.load(in_handle)
+            manifest = yaml.safe_load(in_handle)
     else:
         manifest = {}
     manifest[name] = {"name": name, "version": version}
@@ -558,7 +558,7 @@ def _update_system_file(system_file, name, new_kvs):
         bak_file = system_file + ".bak%s" % datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         shutil.copyfile(system_file, bak_file)
         with open(system_file) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
     else:
         utils.safe_makedir(os.path.dirname(system_file))
         config = {}
@@ -634,7 +634,7 @@ def save_install_defaults(args):
         return
     if utils.file_exists(install_config):
         with open(install_config) as in_handle:
-            cur_config = yaml.load(in_handle)
+            cur_config = yaml.safe_load(in_handle)
     else:
         cur_config = {}
     if args.tooldir:
@@ -668,7 +668,7 @@ def add_install_defaults(args):
         default_args = {}
     else:
         with open(install_config) as in_handle:
-            default_args = yaml.load(in_handle)
+            default_args = yaml.safe_load(in_handle)
     # if we are upgrading to development, also upgrade the tools
     if args.upgrade in ["development"] and (args.tooldir or "tooldir" in default_args):
         args.tools = True
@@ -733,7 +733,7 @@ def get_defaults():
     if install_config is None or not utils.file_exists(install_config):
         return {}
     with open(install_config) as in_handle:
-        return yaml.load(in_handle)
+        return yaml.safe_load(in_handle)
 
 def _check_toolplus(x):
     """Parse options for adding non-standard/commercial tools like GATK and MuTecT.

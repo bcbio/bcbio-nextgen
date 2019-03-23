@@ -320,7 +320,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     out = []
     if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
-            for s in yaml.load(in_handle).get("samples", []):
+            for s in yaml.safe_load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
                     out.append(s)
     return out

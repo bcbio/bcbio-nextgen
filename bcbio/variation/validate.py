@@ -672,7 +672,7 @@ def _get_validate_plotdata_yaml(grading_file, data):
     """Retrieve validation plot data from grading YAML file (old style).
     """
     with open(grading_file) as in_handle:
-        grade_stats = yaml.load(in_handle)
+        grade_stats = yaml.safe_load(in_handle)
     for sample_stats in grade_stats:
         sample = sample_stats["sample"]
         for vtype, cat, val in _flatten_grading(sample_stats):

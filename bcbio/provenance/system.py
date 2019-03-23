@@ -204,7 +204,7 @@ def get_info(dirs, parallel, resources=None):
         cache_file = _get_cache_file(dirs, parallel)
         if utils.file_exists(cache_file):
             with open(cache_file) as in_handle:
-                minfo = yaml.load(in_handle)
+                minfo = yaml.safe_load(in_handle)
             return _combine_machine_info(minfo)
         else:
             return {}

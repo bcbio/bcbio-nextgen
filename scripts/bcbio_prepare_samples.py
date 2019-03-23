@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     if utils.file_exists(system_config):
         with open(system_config) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
     else:
         print("WARNING: bcbio_system.yaml not found, creating own resources.")
         config = {'resources': {}}

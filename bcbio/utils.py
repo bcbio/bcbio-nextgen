@@ -474,7 +474,7 @@ def merge_config_files(fnames):
     """
     def _load_yaml(fname):
         with open(fname) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
         return config
     out = _load_yaml(fnames[0])
     for fname in fnames[1:]:

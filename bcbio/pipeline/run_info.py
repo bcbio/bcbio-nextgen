@@ -903,7 +903,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
     """
     validate_yaml(run_info_yaml, run_info_yaml)
     with open(run_info_yaml) as in_handle:
-        loaded = yaml.load(in_handle)
+        loaded = yaml.safe_load(in_handle)
     fc_name, fc_date = None, None
     if dirs.get("flowcell"):
         try:

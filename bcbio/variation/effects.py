@@ -78,7 +78,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
     if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
-            resources = yaml.load(in_handle)
+            resources = yaml.safe_load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
         if ensembl_name and ensembl_name.find("_vep_") == -1:
