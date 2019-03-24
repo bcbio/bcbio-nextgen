@@ -198,8 +198,12 @@ def block_regions(callable_bed, in_bam, ref_file, data):
                 if len(ref_regions.subtract(nblock_regions, nonamecheck=True)) > 0:
                     ref_regions.subtract(tx_nblock_bed, nonamecheck=True).merge(d=min_n_size).saveas(tx_callblock_bed)
                 else:
-                    raise ValueError("No callable regions found from BAM file. Alignment regions might "
-                                     "not overlap with regions found in your `variant_regions` BED: %s" % in_bam)
+                    raise ValueError("No callable regions found in %s from BAM file %s. Some causes:\n "
+                                     " - Alignment regions do not overlap with regions found "
+                                     "in your `variant_regions` BED: %s\n"
+                                     " - There are no aligned reads in your BAM file that pass sanity checks "
+                                     " (mapping score > 1, non-duplicates, both ends of paired reads mapped)"
+                                     % (dd.get_sample_name(data), in_bam, dd.get_variant_regions(data)))
     return callblock_bed, nblock_bed
 
 def _write_bed_regions(data, final_regions, out_file, out_file_ref):
