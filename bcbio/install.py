@@ -221,7 +221,7 @@ def _check_for_conda_problems():
     """
     conda_bin = _get_conda_bin()
     channels = _get_conda_channels(conda_bin)
-    lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "iib")
+    lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "lib")
     for l in ["libgomp.so.1", "libquadmath.so"]:
         if not os.path.exists(os.path.join(lib_dir, l)):
             subprocess.check_call([conda_bin, "install", "-f", "--yes"] + channels + ["libgcc-ng"])
