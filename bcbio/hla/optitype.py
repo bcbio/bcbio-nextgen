@@ -33,6 +33,9 @@ def run(data):
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data), "hla",
                                                   "OptiType-HLA-A_B_C"))
+        # When running UMIs and hla typing we want to pick the original fastqs
+        if len(hlas) > len(SUPPORTED_HLAS):
+            hlas = [x for x in hlas if os.path.basename(x[1]).find("-cumi") == -1]
         if len(hlas) == len(SUPPORTED_HLAS):
             hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
             if utils.file_exists(hla_fq):
