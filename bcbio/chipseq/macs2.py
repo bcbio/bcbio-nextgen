@@ -8,12 +8,6 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio import bam
 
-HS = {"hg19": 2.7e9,
-      "GRCh37": 2.7e9,
-      "hg38": 2.7e9,
-      "mm10": 1.87e9,
-      "dm3": 1.2e8}
-
 def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, data):
     """
     Run macs2 for chip and input samples avoiding
@@ -28,7 +22,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
     options = " ".join(resources.get("macs2", {}).get("options", ""))
-    genome_size = HS.get(genome_build, bam.fasta.total_sequence_length(dd.get_ref_file(data)))
+    genome_size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
     paired = "-f BAMPE" if bam.is_paired(chip_bam) else ""
     with utils.chdir(out_dir):
