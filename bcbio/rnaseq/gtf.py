@@ -48,8 +48,10 @@ def get_gtf_db(gtf, in_memory=False):
     db_file = ":memory:" if in_memory else db_file
     if in_memory or not file_exists(db_file):
         infer_extent = guess_infer_extent(gtf)
+        disable_extent = not infer_extent
         db = gffutils.create_db(gtf, dbfn=db_file,
-                                infer_gene_extent=infer_extent)
+                                disable_infer_genes=disable_extent,
+                                disable_infer_transcripts=disable_extent)
     if in_memory:
         return db
     else:
