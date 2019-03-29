@@ -35,10 +35,12 @@ def get_fragment_length(data):
     return(fraglen)
 
 def run_pizzly(data):
+    samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     pizzlydir = os.path.join(work_dir, "pizzly")
-    samplename = dd.get_sample_name(data)
-    gtf = dd.get_gtf_file(data)
+    gtf = dd.get_transcriptome_gtf(data)
+    if not gtf:
+        gtf = dd.get_gtf_file(data)
     if dd.get_transcriptome_fasta(data):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
