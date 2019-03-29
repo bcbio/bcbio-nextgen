@@ -54,10 +54,11 @@ def run(bam_file, data, out_dir):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
 
-            export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
+            export = "%s%s export JAVA_OPTS='-Xms32m -Xmx%s -Djava.io.tmpdir=%s' && " % (
+                utils.java_freetype_fix(), utils.local_path_export(), max_mem, tx_results_dir)
             cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_results_dir} "
                    "--skip-duplicated --skip-dup-mode 0 "
-                   "-nt {num_cores} --java-mem-size={max_mem} {options}")
+                   "-nt {num_cores} {options}")
             species = None
             if (tz.get_in(("genome_resources", "aliases", "human"), data, "")
                   or dd.get_genome_build(data).startswith(("hg", "GRCh"))):
@@ -363,10 +364,12 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, library="non-st
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
     export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
+    export = "%s%s export JAVA_OPTS='-Xms32m -Xmx%s -Djava.io.tmpdir=%s' && " % (
+        utils.java_freetype_fix(), utils.local_path_export(), max_mem, out_dir)
     paired = " --paired" if bam.is_paired(bam_file) else ""
     cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
            "-a proportional -bam {bam_file} -p {library}{paired} "
-           "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
+           "-gtf {gtf_file}").format(**locals())
     return cmd
 
 def _find_qualimap_secondary_files(results_dir, base_file):
