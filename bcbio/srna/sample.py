@@ -245,7 +245,7 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
 
 def _get_env():
     anaconda_bin = os.path.dirname(utils.Rscript_cmd())
-    return "unset JAVA_HOME  && export PATH=%s:$PATH && " % (anaconda_bin)
+    return "unset JAVA_HOME  && export PATH=%s:\"$PATH\" && " % (anaconda_bin)
 
 def _get_atropos():
     anaconda = os.path.dirname(os.path.realpath(sys.executable))

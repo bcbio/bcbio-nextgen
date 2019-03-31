@@ -351,7 +351,7 @@ def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     memory = " ".join(jvm_opts)
     snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    export = "unset JAVA_HOME && export PATH=%s:$PATH && " % (utils.get_java_binpath())
+    export = "unset JAVA_HOME && export PATH=%s:\"$PATH\" && " % (utils.get_java_binpath())
     cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 

@@ -762,10 +762,10 @@ def clear_java_home():
 def get_java_clprep(cmd=None):
     """Correctly prep command line for java commands, setting PATH and unsetting JAVA_HOME.
     """
-    return "%s && export PATH=%s:$PATH" % (clear_java_home(), get_java_binpath(cmd))
+    return "%s && export PATH=%s:\"$PATH\"" % (clear_java_home(), get_java_binpath(cmd))
 
 def get_R_exports():
-    return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
+    return "unset R_HOME && unset R_LIBS && export PATH=%s:\"$PATH\"" % (os.path.dirname(Rscript_cmd()))
 
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
@@ -780,7 +780,7 @@ def get_perl_exports(tmpdir=None):
     """Environmental exports to use conda installed perl.
     """
     perl_path = os.path.dirname(perl_cmd())
-    out = "unset PERL5LIB && export PATH=%s:$PATH" % (perl_path)
+    out = "unset PERL5LIB && export PATH=%s:\"$PATH\"" % (perl_path)
     if tmpdir:
         out += " && export TMPDIR=%s" % (tmpdir)
     return out
@@ -840,9 +840,9 @@ def local_path_export(at_start=True, env_cmd=None):
         if env_path not in paths:
             paths.insert(0, env_path)
     if at_start:
-        return "export PATH=%s:$PATH && " % (":".join(paths))
+        return "export PATH=%s:\"$PATH\" && " % (":".join(paths))
     else:
-        return "export PATH=$PATH:%s && " % (":".join(paths))
+        return "export PATH=\"$PATH\":%s && " % (":".join(paths))
 
 def locale_export():
     """Exports for dealing with Click-based programs and ASCII/Unicode errors.
