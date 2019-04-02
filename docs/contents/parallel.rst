@@ -374,3 +374,15 @@ contribute your tips and thoughts.
 .. _post on scaling bcbio-nextgen: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 .. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
 .. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences
+
+Spark
+=====
+Some GATK tools like recalibration use Apache Spark for parallelization. By default
+bcbio runs these with multicore parallelization on a single node, to fit in standard
+cluster and local compute environments. If you have a custom Spark cluster on your system
+you can use that for GATK by setting up the appropriate configuration in your
+:ref:`sample-resources`::
+
+    resources:
+        gatk-spark:
+            options: [--spark-master, 'spark://your-spark-cluster:6311']

@@ -10,6 +10,8 @@
 - Install: do not require fabric for tool and data installs, making full codebase
   compatible with python 3.
 - variant: Filter out variants with missing ALT alleles output by GATK4.
+- GATK: enable specification of spark specific parameters with `gatk-spark`
+  resources.
 - RNA-seq single-cell/DGE: added `demultiplexed` option. If set to True, treat the
   data as if it has already been demultiplexed into cells/wells.
 - Multiple orders of magnitude faster templating with thousands of input files.
