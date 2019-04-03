@@ -1,5 +1,8 @@
-## 1.1.4 (in progress)
+## 1.1.4 (3 April 2019)
 
+- Move to Python 3.6. A python2 environment in the install runs non python3
+  compatible programs. The codebase is still compatible with python 2.7 but
+  will only get run and tested on python 3 for future releases.
 - RNA-seq: fix for race condition when creating the pizzly cache
 - RNA-seq: Add Salmon to multiqc report.
 - RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
