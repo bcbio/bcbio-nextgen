@@ -1,3 +1,7 @@
+## 1.1.5 (in progress)
+
+- Fixes for Python3 incompatibilities on distributed IPython runs.
+
 ## 1.1.4 (3 April 2019)
 
 - Move to Python 3.6. A python2 environment in the install runs non python3
