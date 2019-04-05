@@ -31,10 +31,10 @@ def _mirbase_stats(data, out_dir):
     return {"base": out_file, "secondary": [out_file_novel]}
 
 def _get_stats_from_miraligner(fn, out_file, name):
-    df = pd.read_csv(fn, sep="\t", dtype={"mism": "string",
-                                          "add": "string",
-                                          "t5": "string",
-                                          "t3": "string"},
+    df = pd.read_csv(fn, sep="\t", dtype={"mism": "str",
+                                          "add": "str",
+                                          "t5": "str",
+                                          "t3": "str"},
                      na_values=["."])
     dfmirs = df[['mir', 'freq']].groupby(['mir']).count()
     df5 = df.loc[df.t5 != "0", ['mir', 't5']].groupby(['mir']).count()
