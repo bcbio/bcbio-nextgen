@@ -103,7 +103,6 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
             #params += _add_assoc_params(assoc_files)
-            params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             resources = config_utils.get_resources("mutect2", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
