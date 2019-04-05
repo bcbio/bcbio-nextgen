@@ -18,6 +18,7 @@ import subprocess
 import sys
 import glob
 
+import six
 from six.moves import urllib
 import toolz as tz
 import yaml
@@ -441,7 +442,7 @@ def _is_old_database(db_dir, args):
         pred_file = os.path.join(db_dir, "snpEffectPredictor.bin")
         if not utils.file_exists(pred_file):
             return True
-        with gzip.open(pred_file) as in_handle:
+        with utils.open_gzipsafe(pred_file, is_gz=True) as in_handle:
             version_info = in_handle.readline().strip().split("\t")
         program, version = version_info[:2]
         if not program.lower() == "snpeff" or LooseVersion(snpeff_version) > LooseVersion(version):

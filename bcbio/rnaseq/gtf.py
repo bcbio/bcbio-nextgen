@@ -2,7 +2,6 @@ import gffutils
 import tempfile
 import os
 import random
-import gzip
 import re
 
 from bcbio import utils
@@ -21,7 +20,7 @@ def guess_infer_extent(gtf_file):
     tmp_out = tempfile.NamedTemporaryFile(suffix=".gtf", delete=False).name
     with open(tmp_out, "w") as out_handle:
         count = 0
-        in_handle = open(gtf_file) if ext != ".gz" else gzip.open(gtf_file)
+        in_handle = utils.open_gzipsafe(gtf_file)
         for line in in_handle:
             if count > 1000:
                 break

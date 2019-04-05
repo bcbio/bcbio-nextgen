@@ -373,8 +373,8 @@ def symlink_plus(orig, new):
             with chdir(os.path.dirname(new_noext)):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
-def open_gzipsafe(f):
-    if f.endswith(".gz"):
+def open_gzipsafe(f, is_gz=False):
+    if f.endswith(".gz") or is_gz:
         if six.PY3:
             return gzip.open(f, "rt")
         else:

@@ -4,7 +4,6 @@ Provides high level summaries of calls in regions of interest.
 """
 import csv
 import collections
-import gzip
 import os
 import decimal
 import uuid
@@ -61,7 +60,7 @@ def _civic_regions(civic_file, variant_types=None, diseases=None, drugs=None):
     """
     if isinstance(diseases, six.string_types):
         diseases = [diseases]
-    with gzip.open(civic_file) as in_handle:
+    with utils.open_gzipsafe(civic_file) as in_handle:
         reader = csv.reader(in_handle, delimiter="\t")
         for chrom, start, end, info_str in reader:
             info = edn_loads(info_str)

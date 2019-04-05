@@ -10,6 +10,7 @@ import gzip
 import os
 from Bio import SeqIO
 import toolz as tz
+
 from bcbio.utils import safe_makedir, file_exists, chdir, is_gzipped
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
