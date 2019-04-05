@@ -856,7 +856,7 @@ def locale_export():
     """
     locale_to_use = "C.UTF-8"
     try:
-        locales = subprocess.check_output(["locale", "-a"]).decode().split("\n")
+        locales = subprocess.check_output(["locale", "-a"]).decode(errors="ignore").split("\n")
     except subprocess.CalledProcessError:
         locales = []
     for locale in locales:
