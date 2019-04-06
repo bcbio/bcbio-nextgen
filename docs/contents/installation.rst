@@ -218,7 +218,7 @@ see :ref:`config-changing-defaults`.
 
 To install GATK3, register with the pre-installed gatk bioconda wrapper::
 
-   gatk-register /path/to/GenomeAnalysisTK.tar.bz2
+   gatk3-register /path/to/GenomeAnalysisTK.tar.bz2
 
 If you're not using the most recent post-3.6 version of GATK, or using a nightly
 build, you can add ``--noversioncheck`` to the command line to skip comparisons
@@ -244,7 +244,7 @@ Note that muTect does not provide an easy way to query for the current version,
 so your input jar needs to include the version in the name.
 
 .. _FreeBayes and GATK comparison: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
-.. _GATK download: http://www.broadinstitute.org/gatk/download
+.. _GATK download: https://software.broadinstitute.org/gatk/download/archive
 
 
 System requirements
