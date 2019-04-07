@@ -1,6 +1,12 @@
 ## 1.1.5 (in progress)
 
 - Fixes for Python3 incompatibilities on distributed IPython runs.
+- Numerous smaller Python3 incompatibilities with strings/unicode and types.
+  Thanks to the community for reporting these.
+- Support latest GATK4 MuTect2 (4.1.1.0) with changes to ploidy and reference
+  parameters.
+- Support latest bedtools (2.28.0) which expects SAM heads for bgzipped BED
+  inputs.
 
 ## 1.1.4 (3 April 2019)
 

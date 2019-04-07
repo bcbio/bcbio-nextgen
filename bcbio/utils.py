@@ -376,11 +376,14 @@ def symlink_plus(orig, new):
 def open_gzipsafe(f, is_gz=False):
     if f.endswith(".gz") or is_gz:
         if six.PY3:
-            return gzip.open(f, "rt")
+            return gzip.open(f, "rt", errors="ignore")
         else:
             return gzip.open(f)
     else:
-        return open(f)
+        if six.PY3:
+            return open(f)
+        else:
+            return open(f, errors="ignore")
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
