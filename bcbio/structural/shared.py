@@ -298,7 +298,7 @@ def insert_size_stats(dists):
     MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
     """
     med = numpy.median(dists)
-    filter_dists = filter(lambda x: x < med + 10 * med, dists)
+    filter_dists = list(filter(lambda x: x < med + 10 * med, dists))
     median = numpy.median(filter_dists)
     return {"mean": float(numpy.mean(filter_dists)), "std": float(numpy.std(filter_dists)),
             "median": float(median),
