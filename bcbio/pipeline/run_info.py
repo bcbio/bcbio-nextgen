@@ -663,8 +663,7 @@ def _check_quality_format(items):
                              "is not supported. Supported values are %s."
                              % (SAMPLE_FORMAT.values()))
 
-        fastq_file = next((file for file in item.get('files') or [] if
-                           any([ext for ext in fastq_extensions if ext in file])), None)
+        fastq_file = next((f for f in item.get("files") or [] if f.endswith(tuple(fastq_extensions))), None)
 
         if fastq_file and specified_format and not objectstore.is_remote(fastq_file):
             fastq_format = _detect_fastq_format(fastq_file)
