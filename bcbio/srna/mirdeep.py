@@ -39,7 +39,7 @@ def run(data):
         return None
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res").format(**locals())
+        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res -g -1").format(**locals())
         if not file_exists(out_file):
             try:
                 do.run(cmd.format(**locals()), "Running mirdeep2.")
