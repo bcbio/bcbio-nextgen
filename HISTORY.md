@@ -6,6 +6,8 @@
 - Fix format detection for bzip2 fastq inputs.
 - Support latest GATK4 MuTect2 (4.1.1.0) with changes to ploidy and reference
   parameters.
+- Support changes to GATK4 for VQSR --resource specification in 4.1.1.0. Thanks
+  to Timothee Cezard.
 - Support latest bedtools (2.28.0) which expects SAM heads for bgzipped BED
   inputs.
 
