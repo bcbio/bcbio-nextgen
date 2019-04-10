@@ -408,10 +408,10 @@ def wgbsseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     with prun.start(_wres(parallel, ["caller"], ensure_mem={"caller": 5}),
                     samples, config, dirs, "multicore2",
                     multiplier=24) as run_parallel:
-            # samples = run_parallel("cpgcalling", samples)
         with profile.report("cpg calling", dirs):
-            import bcbio.wgbsseq.cpg_caller as cpg_caller
-            cpg_caller.parallel_calling(samples, run_parallel)
+            samples = run_parallel("cpg_calling", samples)
+            # import bcbio.wgbsseq.cpg_caller as cpg_caller
+            # cpg_caller.parallel_calling(samples, run_parallel)
 
     with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
                     samples, config, dirs, "qc") as run_parallel:

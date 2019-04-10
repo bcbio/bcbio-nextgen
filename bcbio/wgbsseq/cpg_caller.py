@@ -87,7 +87,10 @@ def calling(data):
         data = _bsmap_calling(data)
     return [[data]]
 
+# All these functions were very specific to a consult. Probably remove is
+# the best option since they are not run for the general pipeline.
 def parallel_calling(data, run_parallel):
+    """This is needed only if running methylated veruss hidroxy-methulated"""
     out = []
     for sample in data:
         work_bam = dd.get_work_bam(sample[0])
@@ -129,7 +132,6 @@ def _sync_pos(handle, tag):
             continue
         pos = int(cols[1])
         ratio = [int(float(cols[5])), int(cols[6])]
-        # print "read another line of 2 file: %s" % line.strip()
         if tag <= pos:
             return [handle, {"pos": pos, "counts": ratio, "info": info, "ratio": float(cols[4])}]
     return [None, None]

@@ -143,7 +143,7 @@ def cpg_processing(*args):
         return ipython.zip_args(apply(cpg_caller.cpg_postprocessing, *args))
 
 @require(cpg_caller)
-def cpg_calling(*args):
+def cpg_stats(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(cpg_caller.cpg_stats, *args))
