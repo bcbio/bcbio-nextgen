@@ -30,9 +30,9 @@ install:
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
   - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
   - df -h
-  # Update to latest bcbio-nextgen code externally and within the container
-  - rm -rf ~/install/bcbio-vm/anaconda/lib/python3.*/site-packages/bcbio
-  - rm -rf ~/install/bcbio-vm/anaconda/lib/python3.*/site-packages/bcbio_nextgen-*
+  # Update to latest bcbio-nextgen code externally
+  - rm -rf ~/install/bcbio-vm/anaconda/lib/python*/site-packages/bcbio
+  - rm -rf ~/install/bcbio-vm/anaconda/lib/python*/site-packages/bcbio_nextgen-*
   - ~/install/bcbio-vm/anaconda/bin/python setup.py install
 
 jobs:
