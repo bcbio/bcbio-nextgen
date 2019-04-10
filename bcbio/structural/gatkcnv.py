@@ -4,7 +4,6 @@ https://software.broadinstitute.org/gatk/documentation/article?id=11682
 https://gatkforums.broadinstitute.org/dsde/discussion/11683/
 """
 import glob
-import itertools
 import os
 import shutil
 
@@ -145,7 +144,24 @@ def create_panel_of_normals(items, group_id, work_dir):
                       "--annotated-intervals", tz.get_in(["regions", "bins", "gcannotated"], items[0])]
             for data in items:
                 params += ["-I", tz.get_in(["depth", "bins", "target"], data)]
-            _run_with_memory_scaling(params, tx_out_file, items[0])
+            _run_with_memory_scaling(params, tx_out_file, items[0], ld_preload=True)
+    return out_file
+
+def pon_to_bed(pon_file, out_dir, data):
+    """Extract BED intervals from a GATK4 hdf5 panel of normal file.
+    """
+    out_file = os.path.join(out_dir, "%s-intervals.bed" % (utils.splitext_plus(os.path.basename(pon_file))[0]))
+    if not utils.file_uptodate(out_file, pon_file):
+        import h5py
+        with file_transaction(data, out_file) as tx_out_file:
+            with h5py.File(pon_file, "r") as f:
+                with open(tx_out_file, "w") as out_handle:
+                    intervals = f["original_data"]["intervals"]
+                    for i in range(len(intervals["transposed_index_start_end"][0])):
+                        chrom = intervals["indexed_contig_names"][intervals["transposed_index_start_end"][0][i]]
+                        start = int(intervals["transposed_index_start_end"][1][i]) - 1
+                        end = int(intervals["transposed_index_start_end"][2][i])
+                        out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
     return out_file
 
 def prepare_intervals(data, region_file, work_dir):
@@ -230,7 +246,7 @@ def _filter_by_normal(tumor_counts, normal_counts, data):
                     with open(tx_tumor_out, "w") as tumor_out_handle:
                         with open(tx_normal_out, "w") as normal_out_handle:
                             header = None
-                            for t, n in itertools.izip(tumor_handle, normal_handle):
+                            for t, n in zip(tumor_handle, normal_handle):
                                 if header is None:
                                     if not n.startswith("@"):
                                         header = n.strip().split()
@@ -280,11 +296,11 @@ def _run_collect_allelic_counts(pos_file, pos_name, work_dir, data):
             _run_with_memory_scaling(params, tx_out_file, data)
     return out_file
 
-def _run_with_memory_scaling(params, tx_out_file, data):
+def _run_with_memory_scaling(params, tx_out_file, data, ld_preload=False):
     num_cores = dd.get_num_cores(data)
     memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
     broad_runner = broad.runner_from_config(data["config"])
-    broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale)
+    broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale, ld_preload=ld_preload)
 
 # ## VCF output
 
@@ -298,13 +314,16 @@ def _seg_to_vcf(vals):
     """Convert GATK CNV calls seg output to a VCF line.
     """
     call_to_cn = {"+": 3, "-": 1}
+    call_to_type = {"+": "DUP", "-": "DEL"}
     if vals["CALL"] not in ["0"]:
         info = ["FOLD_CHANGE_LOG=%s" % vals["MEAN_LOG2_COPY_RATIO"],
                 "PROBES=%s" % vals["NUM_POINTS_COPY_RATIO"],
+                "SVTYPE=%s" % call_to_type[vals["CALL"]],
+                "SVLEN=%s" % (int(vals["END"]) - int(vals["START"])),
                 "END=%s" % vals["END"],
                 "CN=%s" % call_to_cn[vals["CALL"]]]
-        return [vals["CONTIG"], vals["START"], ".", "N", "<CNV>", ".",
-                ";".join(info), "GT", "0/1"]
+        return [vals["CONTIG"], vals["START"], ".", "N", "<%s>" % call_to_type[vals["CALL"]], ".",
+                ".", ";".join(info), "GT", "0/1"]
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",

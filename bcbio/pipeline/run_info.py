@@ -12,6 +12,7 @@ import operator
 import os
 import string
 
+import six
 import toolz as tz
 import yaml
 from bcbio import install, utils, structural
@@ -28,12 +29,13 @@ from bcbio.qc import viral
 from bcbio.variation import annotation, effects, genotype, population, joint, vcfutils, vcfanno
 from bcbio.variation.cortex import get_sample_name
 from bcbio.bam.fastq import open_fastq
+from functools import reduce
 
 ALLOWED_CONTIG_NAME_CHARS = set(list(string.digits) + list(string.ascii_letters) + ["-", "_", "*", ":", "."])
 ALGORITHM_NOPATH_KEYS = ["variantcaller", "realign", "recalibrate", "peakcaller",
                          "expression_caller", "singlecell_quantifier",
                          "fusion_caller",
-                         "svcaller", "hetcaller", "jointcaller", "tools_off",
+                         "svcaller", "hetcaller", "jointcaller", "tools_off", "tools_on",
                          "mixup_check", "qc", "transcript_assembler"]
 ALGORITHM_FILEONLY_KEYS = ["custom_trim", "vcfanno"]
 # these analysis pipelines use R heavily downstream, and need to have samplenames
@@ -67,7 +69,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        elif isinstance(item["name"], basestring):
+        elif isinstance(item["name"], six.string_types):
             description = "%s-%s" % (item["name"], clean_name(item["description"]))
             item["name"] = [item["name"], description]
             item["description"] = description
@@ -77,7 +79,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
         item.pop("algorithm", None)
         item = add_reference_resources(item, remote_retriever)
         item["config"]["algorithm"]["qc"] = qcsummary.get_qc_tools(item)
-        item["config"]["algorithm"]["vcfanno"] = vcfanno.find_annotations(item)
+        item["config"]["algorithm"]["vcfanno"] = vcfanno.find_annotations(item, remote_retriever)
         # Create temporary directories and make absolute, expanding environmental variables
         tmp_dir = tz.get_in(["config", "resources", "tmp", "dir"], item)
         if tmp_dir:
@@ -265,7 +267,7 @@ def _fill_capture_regions(data):
             if len(installed_vals) == 0:
                 if target not in special_targets or not val.startswith(special_targets[target]):
                     raise ValueError("Configuration problem. BED file not found for %s: %s" %
-                                    (target, val))
+                                     (target, val))
             else:
                 assert len(installed_vals) == 1, installed_vals
                 data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_vals[0])
@@ -286,9 +288,10 @@ def _fill_prioritization_targets(data):
                                                                           val + "*%s" % ext)))
             # Check sv-annotation directory for prioritize gene name lists
             if target == "svprioritize":
-                installed_vals += glob.glob(os.path.join(
-                    os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py"))),
-                    "%s*" % os.path.basename(val)))
+                simple_sv_bin = utils.which("simple_sv_annotation.py")
+                if simple_sv_bin:
+                    installed_vals += glob.glob(os.path.join(os.path.dirname(os.path.realpath(simple_sv_bin)),
+                                                             "%s*" % os.path.basename(val)))
             if len(installed_vals) == 0:
                 # some targets can be filled in later
                 if target not in set(["coverage"]):
@@ -319,9 +322,9 @@ def _clean_metadata(data):
     # Ensure batches are strings and have no duplicates
     if batches:
         if isinstance(batches, (list, tuple)):
-            batches = [_clean_characters(str(x)) for x in sorted(list(set(batches)))]
+            batches = [_clean_characters(x) for x in sorted(list(set(batches)))]
         else:
-            batches = _clean_characters(str(batches))
+            batches = _clean_characters(batches)
         data["metadata"]["batch"] = batches
     # If we have jointcalling, add a single batch if not present
     elif tz.get_in(["algorithm", "jointcaller"], data) or "gvcf" in tz.get_in(["algorithm", "tools_on"], data):
@@ -337,11 +340,11 @@ def _clean_algorithm(data):
     for key in ["variantcaller", "jointcaller", "svcaller"]:
         val = tz.get_in(["algorithm", key], data)
         if val:
-            if not isinstance(val, (list, tuple)) and isinstance(val, basestring):
+            if not isinstance(val, (list, tuple)) and isinstance(val, six.string_types):
                 val = [val]
             # check for cases like [false] or [None]
             if isinstance(val, (list, tuple)):
-                if len(val) == 1 and not val[0] or (isinstance(val[0], basestring)
+                if len(val) == 1 and not val[0] or (isinstance(val[0], six.string_types)
                                                     and val[0].lower() in ["none", "false"]):
                     val = False
             data["algorithm"][key] = val
@@ -372,12 +375,18 @@ def _clean_background(data):
     if val:
         out = {}
         # old style specification, single string for variant
-        if isinstance(val, basestring):
+        if isinstance(val, six.string_types):
             out["variant"] = _file_to_abs(val, [os.getcwd()])
         elif isinstance(val, dict):
             for k, v in val.items():
                 if k in allowed_keys:
-                    out[k] = _file_to_abs(v, [os.getcwd()])
+                    if isinstance(v, six.string_types):
+                        out[k] = _file_to_abs(v, [os.getcwd()])
+                    else:
+                        assert isinstance(v, dict)
+                        for ik, iv in v.items():
+                            v[ik] = _file_to_abs(iv, [os.getcwd()])
+                        out[k] = v
                 else:
                     errors.append("Unexpected key: %s" % k)
         else:
@@ -385,12 +394,20 @@ def _clean_background(data):
         if errors:
             raise ValueError("Problematic algorithm background specification for %s:\n %s" %
                              (data["description"], "\n".join(errors)))
+        out["cnv_reference"] = structural.standardize_cnv_reference({"config": data,
+                                                                     "description": data["description"]})
         data["algorithm"]["background"] = out
     return data
 
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
+    if not isinstance(x, six.string_types):
+        x = str(x)
+    else:
+        if not all(ord(char) < 128 for char in x):
+            msg = "Found unicode character in input YAML (%s)" % (x)
+            raise ValueError(repr(msg))
     for problem in [" ", ".", "/", "\\", "[", "]", "&", ";", "#", "+", ":", ")", "("]:
         x = x.replace(problem, "_")
     return x
@@ -534,7 +551,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                       "disambiguate", "strandedness", "fusion_mode", "fusion_caller",
                       "min_read_length", "coverage_depth_min", "callable_min_size",
                       "min_allele_fraction", "umi_type", "minimum_barcode_depth",
-                      "cellular_barcodes", "vcfanno",
+                      "cellular_barcodes", "vcfanno", "demultiplexed",
                       "sample_barcodes",
                       "exclude_regions", "joint_group_size",
                       "archive", "tools_off", "tools_on", "transcript_assembler",
@@ -546,7 +563,7 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # back compatibility
                       ["remove_lcr", "coverage_depth_max", "coverage_depth"])
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
-                          "clinical_reporting", "transcriptome_align",
+                          "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
                           "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
@@ -561,7 +578,7 @@ def _check_algorithm_keys(item):
     Needs to be manually updated when introducing new keys, but avoids silent bugs
     with typos in key names.
     """
-    problem_keys = [k for k in item["algorithm"].iterkeys() if k not in ALGORITHM_KEYS]
+    problem_keys = [k for k in item["algorithm"].keys() if k not in ALGORITHM_KEYS]
     if len(problem_keys) > 0:
         raise ValueError("Unexpected configuration keyword in 'algorithm' section: %s\n"
                          "See configuration documentation for supported options:\n%s\n"
@@ -664,7 +681,7 @@ def _check_quality_format(items):
 def _check_aligner(item):
     """Ensure specified aligner is valid choice.
     """
-    allowed = set(alignment.TOOLS.keys() + [None, False])
+    allowed = set(list(alignment.TOOLS.keys()) + [None, False])
     if item["algorithm"].get("aligner") not in allowed:
         raise ValueError("Unexpected algorithm 'aligner' parameter: %s\n"
                          "Supported options: %s\n" %
@@ -673,7 +690,7 @@ def _check_aligner(item):
 def _check_variantcaller(item):
     """Ensure specified variantcaller is a valid choice.
     """
-    allowed = set(genotype.get_variantcallers().keys() + [None, False])
+    allowed = set(list(genotype.get_variantcallers().keys()) + [None, False])
     vcs = item["algorithm"].get("variantcaller")
     if not isinstance(vcs, dict):
         vcs = {"variantcaller": vcs}
@@ -694,7 +711,7 @@ def _check_variantcaller(item):
 def _check_svcaller(item):
     """Ensure the provide structural variant caller is valid.
     """
-    allowed = set(reduce(operator.add, [d.keys() for d in structural._CALLERS.values()]) + [None, False])
+    allowed = set(reduce(operator.add, [list(d.keys()) for d in structural._CALLERS.values()]) + [None, False])
     svs = item["algorithm"].get("svcaller")
     if not isinstance(svs, (list, tuple)):
         svs = [svs]
@@ -703,6 +720,24 @@ def _check_svcaller(item):
         raise ValueError("Unexpected algorithm 'svcaller' parameters: %s\n"
                          "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
                                                       sorted(list(allowed))))
+
+def _get_as_list(item, k):
+    out = item["algorithm"].get(k)
+    if not out:
+        out = []
+    if not isinstance(out, (list, tuple)):
+        out = [svs]
+    return out
+
+def _check_hetcaller(item):
+    """Ensure upstream SV callers requires to heterogeneity analysis are available.
+    """
+    svs = _get_as_list(item, "svcaller")
+    hets = _get_as_list(item, "hetcaller")
+    if hets or any([x in svs for x in ["titancna", "purecn"]]):
+        if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
+            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk4-cnv` "
+                             "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
 
 def _check_jointcaller(data):
     """Ensure specified jointcaller is valid.
@@ -769,6 +804,7 @@ def _check_sample_config(items, in_file, config):
     [_check_aligner(x) for x in items]
     [_check_variantcaller(x) for x in items]
     [_check_svcaller(x) for x in items]
+    [_check_hetcaller(x) for x in items]
     [_check_indelcaller(x) for x in items]
     [_check_jointcaller(x) for x in items]
     [_check_hlacaller(x) for x in items]
@@ -782,9 +818,9 @@ def _file_to_abs(x, dnames, makedir=False):
     """
     if x is None or os.path.isabs(x):
         return x
-    elif isinstance(x, basestring) and objectstore.is_remote(x):
+    elif isinstance(x, six.string_types) and objectstore.is_remote(x):
         return x
-    elif isinstance(x, basestring) and x.lower() == "none":
+    elif isinstance(x, six.string_types) and x.lower() == "none":
         return None
     else:
         for dname in dnames:
@@ -803,7 +839,7 @@ def _normalize_files(item, fc_dir=None):
     """
     files = item.get("files")
     if files:
-        if isinstance(files, basestring):
+        if isinstance(files, six.string_types):
             files = [files]
         fastq_dir = flowcell.get_fastq_dir(fc_dir) if fc_dir else os.getcwd()
         files = [_file_to_abs(x, [os.getcwd(), fc_dir, fastq_dir]) for x in files]
@@ -904,13 +940,13 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
         item = _normalize_files(item, dirs.get("flowcell"))
         if "lane" not in item:
             item["lane"] = str(i + 1)
-        item["lane"] = _clean_characters(str(item["lane"]))
+        item["lane"] = _clean_characters(item["lane"])
         if "description" not in item:
             if _item_is_bam(item):
                 item["description"] = get_sample_name(item["files"][0])
             else:
                 raise ValueError("No `description` sample name provided for input #%s" % (i + 1))
-        description = _clean_characters(str(item["description"]))
+        description = _clean_characters(item["description"])
         item["description"] = description
         # make names R safe if we are likely to use R downstream
         if item["analysis"].lower() in R_DOWNSTREAM_ANALYSIS:
@@ -918,10 +954,10 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                 valid = "X" + description
                 logger.info("%s is not a valid R name, converting to %s." % (description, valid))
                 item["description"] = valid
-        if "upload" not in item:
+        if "upload" not in item and not is_cwl:
             upload = global_config.get("upload", {})
             # Handle specifying a local directory directly in upload
-            if isinstance(upload, basestring):
+            if isinstance(upload, six.string_types):
                 upload = {"dir": upload}
             if not upload:
                 upload["dir"] = "../final"
@@ -947,9 +983,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                              for f in item["files"]]
         elif "files" in item:
             del item["files"]
-        if item.get("vrn_file") and isinstance(item["vrn_file"], basestring):
-            inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
-                                                         item["description"]))
+        if item.get("vrn_file") and isinstance(item["vrn_file"], six.string_types):
             item["vrn_file"] = genome.abs_file_paths(item["vrn_file"],
                                                      do_download=all(not x for x in integrations.values()))
             if os.path.isfile(item["vrn_file"]):
@@ -959,6 +993,8 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                                                                 remove_orig=False)
                 # In case of permission errors, fix in inputs directory
                 except IOError:
+                    inputs_dir = utils.safe_makedir(os.path.join(dirs.get("work", os.getcwd()), "inputs",
+                                                                 item["description"]))
                     item["vrn_file"] = vcfutils.bgzip_and_index(item["vrn_file"], config,
                                                                 remove_orig=False, out_dir=inputs_dir)
             if not tz.get_in(("metadata", "batch"), item) and tz.get_in(["algorithm", "validate"], item):
@@ -1046,12 +1082,13 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
                 "ensemble": None,
                 "exclude_regions": [],
                 "variant_regions": None,
+                "svcaller": [],
                 "svvalidate": None,
                 "svprioritize": None,
                 "validate": None,
                 "validate_regions": None,
                 "vcfanno": []}
-    convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "qc", "disambiguate",
+    convert_to_list = set(["tools_off", "tools_on", "hetcaller", "variantcaller", "svcaller", "qc", "disambiguate",
                            "vcfanno", "adapters", "custom_trim", "exclude_regions"])
     convert_to_single = set(["hlacaller", "indelcaller", "validate_method"])
     for k, v in defaults.items():
@@ -1072,7 +1109,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
             elif v is None:
                 algorithm[k] = []
         elif k in convert_to_single:
-            if v and not isinstance(v, basestring):
+            if v and not isinstance(v, six.string_types):
                 if isinstance(v, (list, tuple)) and len(v) == 1:
                     algorithm[k] = v[0]
                 else:
@@ -1091,7 +1128,7 @@ def _replace_global_vars(xs, global_vars):
     elif isinstance(xs, dict):
         final = {}
         for k, v in xs.items():
-            if isinstance(v, basestring) and v in global_vars:
+            if isinstance(v, six.string_types) and v in global_vars:
                 v = global_vars[v]
             final[k] = v
         return final

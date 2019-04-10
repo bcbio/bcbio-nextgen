@@ -140,8 +140,9 @@ def _update_data(align_file, out_dir, names, data):
     transcriptome_file = _move_transcriptome_file(out_dir, names)
     data = dd.set_transcriptome_bam(data, transcriptome_file)
     sjfile = get_splicejunction_file(out_dir, data)
-    sjbed = junction2bed(sjfile)
-    data = dd.set_junction_bed(data, sjbed)
+    if sjfile:
+        sjbed = junction2bed(sjfile)
+        data = dd.set_junction_bed(data, sjbed)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -216,6 +217,26 @@ def get_splicejunction_file(out_dir, data):
 
 def junction2bed(junction_file):
     """
-    reformat the STAR junction file to BED3 format
+    reformat the STAR junction file to BED3 format, one end of the splice junction per line
     """
-    return bed.minimize(junction_file).fn
+    base, _ = os.path.splitext(junction_file)
+    out_file = base + "-minimized.bed"
+    if file_exists(out_file):
+        return out_file
+    if not file_exists(junction_file):
+        return None
+    with file_transaction(out_file) as tx_out_file:
+        with open(junction_file) as in_handle:
+            with open(tx_out_file, "w") as out_handle:
+                 for line in in_handle:
+                    tokens = line.split()
+                    chrom, sj1, sj2 = tokens[0:3]
+                    if int(sj1) > int(sj2):
+                        tmp = sj1
+                        sj1 = sj2
+                        sj2 = tmp
+                    out_handle.write("\t".join([chrom, sj1, sj1]) + "\n")
+                    out_handle.write("\t".join([chrom, sj2, sj2]) + "\n")
+        minimize = bed.minimize(tx_out_file)
+        minimize.saveas(tx_out_file)
+    return out_file

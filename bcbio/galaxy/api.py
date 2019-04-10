@@ -56,7 +56,7 @@ class GalaxyApiAccess:
             details = self._get("/nglims/api_run_details", dict(run=run_bc))
         except ValueError:
             raise ValueError("Could not find information in Galaxy for run: %s" % run_bc)
-        if details.has_key("error") and run_date is not None:
+        if "error" in details and run_date is not None:
             try:
                 details = self._get("/nglims/api_run_details", dict(run=run_date))
             except ValueError:

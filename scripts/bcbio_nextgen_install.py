@@ -68,6 +68,28 @@ def bootstrap_bcbionextgen(anaconda, args):
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
+def _get_conda_channels(conda_bin):
+    """Retrieve default conda channels, checking if they are pre-specified in config.
+
+    This allows users to override defaults with specific mirrors in their .condarc
+    """
+    channels = ["bioconda", "conda-forge"]
+    out = []
+    try:
+        import yaml
+        config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+    except ImportError:
+        config = {}
+    for c in channels:
+        present = False
+        for orig_c in config.get("channels") or []:
+            if orig_c.endswith((c, "%s/" % c)):
+                present = True
+                break
+        if not present:
+            out += ["-c", c]
+    return out
+
 def install_conda_pkgs(anaconda, args):
     env = dict(os.environ)
     # Try to avoid user specific pkgs and envs directories
@@ -78,11 +100,11 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
         subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
-    subprocess.check_call([anaconda["conda"], "install", "--yes",
-                           "-c", "conda-forge", "-c", "bioconda", "--only-deps", "bcbio-nextgen"], env=env)
-    subprocess.check_call([anaconda["conda"], "install", "--yes",
-                           "-c", "conda-forge", "-c", "bioconda",
-                           "--file", os.path.basename(REMOTES["requirements"])], env=env)
+    channels = _get_conda_channels(anaconda["conda"])
+    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+                          ["--only-deps", "bcbio-nextgen"], env=env)
+    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+                          ["--file", os.path.basename(REMOTES["requirements"])], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():

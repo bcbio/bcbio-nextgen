@@ -14,6 +14,7 @@ import subprocess
 import time
 
 from pysam import VariantFile
+import six
 import toolz as tz
 import yaml
 
@@ -98,7 +99,7 @@ def _pick_lead_item(items):
     if paired:
         return paired.tumor_data
     else:
-        return items[0]
+        return list(items)[0]
 
 def _normalize_cwl_inputs(items):
     """Extract variation and validation data from CWL input list of batched samples.
@@ -138,7 +139,7 @@ def _checksum(in_file, block_size=65536):
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
-    if isinstance(data, (list, tuple)):
+    if isinstance(data, (list, tuple)) and cwlutils.is_cwl_run(utils.to_single_data(data[0])):
         data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
     toval_data = cwlutils.unpack_tarballs(toval_data, toval_data)
@@ -523,7 +524,7 @@ def _flatten_grading(stats):
         for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).items()):
             for vreason, val in sorted(vitems.items()):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
-            yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
+            yield vtype, "discordant-%s-total" % vclass, sum(vitems.values())
 
 def _has_grading_info(samples, vkey):
     for data in samples:
@@ -547,7 +548,7 @@ def _group_validate_samples(samples, vkey, batch_keys):
         if is_v:
             for batch_key in batch_keys:
                 vname = tz.get_in(batch_key, data)
-                if vname and not (isinstance(vname, basestring) and vname.lower() in ["none", "false"]):
+                if vname and not (isinstance(vname, six.string_types) and vname.lower() in ["none", "false"]):
                     break
             if isinstance(vname, (list, tuple)):
                 vname = vname[0]
@@ -577,7 +578,7 @@ def summarize_grading(samples, vkey="validate"):
             writer.writerow(header)
             plot_data = []
             plot_files = []
-            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x)) or ""):
                 validations = [variant.get(vkey) for variant in data.get("variants", [])
                                if isinstance(variant, dict)]
                 validations = [v for v in validations if v]
@@ -629,7 +630,7 @@ def _summarize_combined(samples, vkey):
                 for validate in validations:
                     with open(validate["summary"]) as in_handle:
                         reader = csv.reader(in_handle)
-                        reader.next()  # header
+                        next(reader)  # header
                         for _, caller, vtype, metric, value in reader:
                             cur_combined[(caller, vtype, metric)] += int(value)
             out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)

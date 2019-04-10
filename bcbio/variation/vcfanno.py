@@ -2,11 +2,13 @@
 """
 import os
 
+import six
 import toolz as tz
 
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.log import logger
+from bcbio.distributed import objectstore
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import config_utils
@@ -20,8 +22,8 @@ def run(vcf, conf_fns, lua_fns, data, basepath=None, decomposed=False):
       to match alleles and make compatible with vcf2db
       (https://github.com/quinlan-lab/vcf2db/issues/14)
     """
-    conf_fns.sort(key=lambda x: os.path.basename(x) if x else x)
-    lua_fns.sort(key=lambda x: os.path.basename(x) if x else x)
+    conf_fns.sort(key=lambda x: os.path.basename(x) if x else "")
+    lua_fns.sort(key=lambda x: os.path.basename(x) if x else "")
     ext = "-annotated-%s" % utils.splitext_plus(os.path.basename(conf_fns[0]))[0]
     if vcf.find(ext) > 0:
         out_file = vcf
@@ -77,7 +79,7 @@ def _fill_file_path(line, data):
                 f = _find_file(x, target)
                 if f:
                     return f
-        elif isinstance(xs, basestring) and os.path.exists(xs) and xs.endswith("/%s" % target):
+        elif isinstance(xs, six.string_types) and os.path.exists(xs) and xs.endswith("/%s" % target):
             return xs
     orig_file = line.split("=")[-1].replace('"', '').strip()
     full_file = _find_file(data, os.path.basename(orig_file))
@@ -86,7 +88,7 @@ def _fill_file_path(line, data):
     assert full_file, "Did not find vcfanno input file %s" % (orig_file)
     return 'file="%s"\n' % full_file
 
-def find_annotations(data):
+def find_annotations(data, retriever=None):
     """Find annotation configuration files for vcfanno, using pre-installed inputs.
 
     Creates absolute paths for user specified inputs and finds locally
@@ -100,57 +102,65 @@ def find_annotations(data):
     conf_files = dd.get_vcfanno(data)
     if not isinstance(conf_files, (list, tuple)):
         conf_files = [conf_files]
-    for c in _default_conf_files(data):
+    for c in _default_conf_files(data, retriever):
         if c not in conf_files:
             conf_files.append(c)
     conf_checkers = {"gemini": annotate_gemini, "somatic": _annotate_somatic}
     out = []
-    annodir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(dd.get_ref_file(data)),
-                                                            os.pardir, "config", "vcfanno")))
+    annodir = os.path.normpath(os.path.join(os.path.dirname(dd.get_ref_file(data)), os.pardir, "config", "vcfanno"))
+    if not retriever:
+        annodir = os.path.abspath(annodir)
     for conf_file in conf_files:
-        if utils.file_exists(conf_file) and os.path.isfile(conf_file):
+        if objectstore.is_remote(conf_file) or (os.path.exists(conf_file) and os.path.isfile(conf_file)):
             conffn = conf_file
-        else:
+        elif not retriever:
             conffn = os.path.join(annodir, conf_file + ".conf")
-        if conf_file in conf_checkers and not conf_checkers[conf_file](data):
+        else:
+            conffn = conf_file + ".conf"
+        luafn = "%s.lua" % utils.splitext_plus(conffn)[0]
+        if retriever:
+            conffn, luafn = [(x if objectstore.is_remote(x) else None)
+                             for x in retriever.add_remotes([conffn, luafn], data["config"])]
+        if not conffn:
+            pass
+        elif conf_file in conf_checkers and not conf_checkers[conf_file](data, retriever):
             logger.warn("Skipping vcfanno configuration: %s. Not all input files found." % conf_file)
-        elif not utils.file_exists(conffn):
+        elif not objectstore.file_exists_or_remote(conffn):
             build = dd.get_genome_build(data)
             CONF_NOT_FOUND = (
                 "The vcfanno configuration {conffn} was not found for {build}, skipping.")
             logger.warn(CONF_NOT_FOUND.format(**locals()))
         else:
             out.append(conffn)
-            luafn = "%s.lua" % utils.splitext_plus(conffn)[0]
-            if os.path.exists(luafn):
+            if luafn and objectstore.file_exists_or_remote(luafn):
                 out.append(luafn)
     return out
 
-def _default_conf_files(data):
+def _default_conf_files(data, retriever):
     conf_files = []
     if dd.get_variantcaller(data) or dd.get_vrn_file(data):
-        if annotate_gemini(data):
+        if annotate_gemini(data, retriever):
             conf_files.append("gemini")
-        if _annotate_somatic(data):
+        if _annotate_somatic(data, retriever):
             conf_files.append("somatic")
         if dd.get_analysis(data).lower().find("rna-seq") >= 0:
             conf_files.append("rnaedit")
     return conf_files
 
-def annotate_gemini(data):
+def annotate_gemini(data, retriever=None):
     """Annotate with population calls if have data installed.
     """
     r = dd.get_variation_resources(data)
-    return all([r.get(k) and os.path.exists(r[k]) for k in ["exac", "gnomad_exome"]])
+    return all([r.get(k) and objectstore.file_exists_or_remote(r[k]) for k in ["exac", "gnomad_exome"]])
 
-def _annotate_somatic(data):
+def _annotate_somatic(data, retriever=None):
     """Annotate somatic calls if we have cosmic data installed.
     """
     if is_human(data):
         paired = vcfutils.get_paired([data])
         if paired:
             r = dd.get_variation_resources(data)
-            if r.get("cosmic") and os.path.exists(r["cosmic"]):
+            if r.get("cosmic") and objectstore.file_exists_or_remote(r["cosmic"]):
                 return True
     return False
 

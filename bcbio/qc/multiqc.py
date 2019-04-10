@@ -13,6 +13,7 @@ import numpy as np
 from collections import OrderedDict
 
 import pybedtools
+import six
 import toolz as tz
 import yaml
 
@@ -55,13 +56,15 @@ def summary(*samples):
                     _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
-                        export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
+                        export_tmp = "export TMPDIR=%s && " % dd.get_tmp_dir(samples[0])
                     else:
                         export_tmp = ""
+                    locale_export = utils.locale_export()
                     path_export = utils.local_path_export()
                     other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
                     other_opts = " ".join([str(x) for x in other_opts])
-                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}"
+                    cmd = ("{path_export}{export_tmp}{locale_export} "
+                           "{multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}")
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -92,8 +95,9 @@ def summary(*samples):
                 for indir in ["inputs", "report"]:
                     tarball = os.path.join(out_dir, "multiqc-%s.tar.gz" % (indir))
                     if not utils.file_exists(tarball):
-                        cmd = ["tar", "-czvpf", tarball, os.path.join(out_dir, indir)]
-                        do.run(cmd, "Compress multiqc inputs: %s" % indir)
+                        with utils.chdir(out_dir):
+                            cmd = ["tar", "-czvpf", tarball, indir]
+                            do.run(cmd, "Compress multiqc inputs: %s" % indir)
                     samples[0]["summary"]["multiqc"]["secondary"].append(tarball)
 
     if any([cwlutils.is_cwl_run(d) for d in samples]):
@@ -191,7 +195,7 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     """ Check if `path` is a work-rooted path, and convert to a relative final-rooted path
     """
     if not path or not isinstance(path, str):
-        return None
+        return path
     upload_path = None
     for work_path, final_path in upload_path_mapping.items():
         if os.path.isfile(work_path) and path == work_path:
@@ -223,7 +227,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
         sum_qc = tz.get_in(["summary", "qc"], data, {})
         if sum_qc in [None, "None"]:
             sum_qc = {}
-        elif isinstance(sum_qc, basestring):
+        elif isinstance(sum_qc, six.string_types):
             sum_qc = {dd.get_algorithm_qc(data)[0]: sum_qc}
         elif not isinstance(sum_qc, dict):
             raise ValueError("Unexpected summary qc: %s" % sum_qc)
@@ -231,7 +235,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles.get("secondary", [])
             # CWL: presents output files as single file plus associated secondary files
-            elif isinstance(pfiles, basestring):
+            elif isinstance(pfiles, six.string_types):
                 if os.path.exists(pfiles):
                     pfiles = [os.path.join(basedir, f) for basedir, subdir, filenames in os.walk(os.path.dirname(pfiles)) for f in filenames]
                 else:
@@ -296,8 +300,9 @@ def _create_config_file(out_dir, samples):
 
         # Setting up thresholds for Qualimap depth cutoff calculations, based on sample avg depths
         avg_depths = [tz.get_in(["summary", "metrics", "Avg_coverage"], s) for s in samples]
+        avg_depths = [x for x in avg_depths if x]
         # Picking all thresholds up to the highest sample average depth
-        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if t <= max(avg_depths)]
+        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if not avg_depths or t <= max(avg_depths)]
         # ...plus one more
         if len(thresholds) < len(coverage.DEPTH_THRESHOLDS):
             thresholds.append(coverage.DEPTH_THRESHOLDS[len(thresholds)])
@@ -442,7 +447,7 @@ def _merge_metrics(samples, out_dir):
     for s in samples:
         s = _add_disambiguate(s)
         m = tz.get_in(['summary', 'metrics'], s)
-        if isinstance(m, basestring):
+        if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
             for me in m.keys():

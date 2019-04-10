@@ -20,7 +20,7 @@ from bcbio.distributed.split import grouped_parallel_split_combine
 from bcbio.pipeline import config_utils, region
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import gatkjoint, genotype, multi
+from bcbio.variation import bamprep, gatkjoint, genotype, multi
 
 SUPPORTED = {"general": ["freebayes", "platypus", "samtools"],
              "gatk": ["gatk-haplotype"],
@@ -43,7 +43,7 @@ def batch_for_jointvc(items):
             data = utils.deepish_copy(data)
             data["vrn_file_gvcf"] = data["vrn_file"]
             batch_groups[(b, vc)].append(data)
-    return batch_groups.values()
+    return list(batch_groups.values())
 
 def run_jointvc(items):
     items = [utils.to_single_data(x) for x in items]

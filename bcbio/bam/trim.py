@@ -18,7 +18,10 @@ SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
     "truseq": ["AGATCGGAAGAG"],
     "polya": ["AAAAAAAAAAAAA"],
-    "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
+    "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"],
+    "truseq2": ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC", "GATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"], # 3'only: first read, second read
+    "nextera2": ["CTGTCTCTTATACACATCT", "AGATGTGTATAAGAGACAG"] # Second read in pair 3', 5
+}
 
 def trim_adapters(data):
     to_trim = [x for x in data["files"] if x is not None and is_fastq(x)]

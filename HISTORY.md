@@ -1,17 +1,62 @@
-## 1.1.2 (in progress)
+## 1.1.4 (in progress)
 
-- RNA-seq variation: filter RNA-seq variants close to splice junctions when using
-  STAR as the aligner.
+- RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
+- RNA-seq: Faster and more flexible rRNA biotype lookup.
+- Move to R3.5.1, including updates to all CRAN and Bioconductor packages.
+- tumor-only germline prioritization: provide more useful germline filtering
+  based on prioritization INFO tag (EPR) rather than filter field.
+- Install: do not require fabric for tool and data installs, making full codebase
+  compatible with python 3.
+- variant: Filter out variants with missing ALT alleles output by GATK4.
+- RNA-seq single-cell/DGE: added `demultiplexed` option. If set to True, treat the
+  data as if it has already been demultiplexed into cells/wells.
+- Multiple orders of magnitude faster templating with thousands of input files.
+
+## 1.1.3 (29 January 2019)
+
+- CNV: support background inputs for CNVkit, GATK4 CNV and seq2c. Allows
+  pre-computed panel of normals for tumor-only or single sample CNV calling.
+- variant: avoid race condition on processing input BED files for variant
+  calling when no pre-specific variant_regions available.
+- structural variation upload: avoid uploading multiple batched calls into
+  sample directories. For lumpy will now have a single output per batch in a
+  sample folder.
+- install: respect pre-specified bioconda and conda-forge in condarc
+  configuration. Allows use of custom package mirrors.
+- seq2c: move specialized pre-call calculation upstream to coverage estimation.
+  Allows use of seq2c in CWL runs.
+- MultiQC upload: fix bug where results from parallel run not moved to final
+  directory.
+- GATK4 CNV: fix for standardize VCF output, correcting number of columns.
+- RNA-seq variation: fix for over-filtering variants near splice junctions with
+  STAR.
+- Structural variant gene annotation: simplify and handle issues with
+  multidirectional comparisons. Handle issues with out of order start/end from CNVkit.
+- Catch and report unicode characters in templating or YAML descriptions.
+
+## 1.1.2 (12 December 2018)
+
 - VarDict low frequency somatic filters: generalize strand and mismatch based
   filter based on cross-validation to avoid over filtering on high depth panels.
 - strelka2 joint calling: switch to improved gvcfgenotyper approach for calling
   from gVCFs.
-- Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
-  Ben Liesfeld and Roland Ewald.
+- Heterogeneity: initial support for PureCN and TitanCNA heterogeneity analysis
+  including reporting on LOH in HLA for human samples. Work in progress validations:
+  https://github.com/bcbio/bcbio_validations/tree/master/TCGA-heterogeneity
+- CNV: initial support for GATK4 CNV calling as alternative to CNVkit for
+  tumor normal analyses
+- VarDict RNA-seq variant calling: avoid structural variants with recent vardict-java.
+- RNA-seq variation: filter RNA-seq variants close to splice junctions,
+  supporting STAR and hisat2.
 - RNA-seq variation: add snpEff effects to output variant calls. Thanks to Manasa Surakala.
 - RNA-seq: gzip/bgzip FASTQ files in `work/fastq` instead of the original directory.
 - use biobambam2 BAM to FASTQ conversion instead of Picard in all cases.
+- Trimming: add built-in support for adapters from the SMARTer Universal Low Input RNA Kit
+(truseq2) and the Illumina NEXTera DNA prep kit from NEB (nextera2).
+- ChIP/ATAC-seq: allow skipping duplicate marking.
 - joint calling: ensure correct upload to final directory when no annotations present
+- Logging: fix logging in parallel runs with new joblib loky backend. Thanks to
+  Ben Liesfeld and Roland Ewald.
 
 ## 1.1.1 (6 November 2018)
 

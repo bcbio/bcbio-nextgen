@@ -1,8 +1,8 @@
 """Functionality to query and extract information from aligned BAM files.
 """
+from __future__ import print_function
 import collections
 import os
-import itertools
 import signal
 import subprocess
 import numpy
@@ -10,6 +10,7 @@ import numpy
 import pybedtools
 import pysam
 import toolz as tz
+from six.moves import zip_longest
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -31,7 +32,8 @@ def is_empty(bam_file):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
-    stderr = stderr.strip()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
         return int(stdout) == 0
@@ -46,13 +48,15 @@ def is_paired(bam_file):
     """
     bam_file = objectstore.cl_input(bam_file)
     cmd = ("set -o pipefail; "
-           "samtools view -h {bam_file} | head -50000 | "
+           "samtools view -h {bam_file} | head -300000 | "
            "samtools view -S -f 1 /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     stderr = stderr.strip()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
@@ -108,7 +112,7 @@ def idxstats(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
     AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
     samtools = config_utils.get_program("samtools", data["config"])
-    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam])
+    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam]).decode()
     out = []
     for line in idxstats_out.split("\n"):
         if line.strip():
@@ -149,13 +153,18 @@ def ref_file_from_bam(bam_file, data):
 
 def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
+
+    Avoids minimal downsample which is not especially useful for
+    improving QC times; 90& or more of reads.
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
     with pysam.Samfile(in_bam, "rb") as work_bam:
         n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
-        return float(rg_target) / float(total)
+        pct = float(rg_target) / float(total)
+        if pct < 0.9:
+            return pct
 
 def get_aligned_reads(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
@@ -282,7 +291,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
     extra_rcs = [x for x in ref_contigs if x not in bam_contigs]
     problems = []
     warnings = []
-    for bc, rc in itertools.izip_longest([x for x in bam_contigs if (x not in extra_bcs and
+    for bc, rc in zip_longest([x for x in bam_contigs if (x not in extra_bcs and
                                                                      x not in allowed_outoforder)],
                                          [x for x in ref_contigs if (x not in extra_rcs and
                                                                      x not in allowed_outoforder)]):

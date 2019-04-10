@@ -3,6 +3,7 @@
 Catalogs the full list of programs used in analysis, enabling reproduction of
 results and tracking of provenance in output files.
 """
+from __future__ import print_function
 import os
 import contextlib
 import subprocess
@@ -16,7 +17,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
 
 _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
-              "args": "--version", "stdout_flag": "This is biobambam version"},
+              "args": "--version", "stdout_flag": "This is biobambam2 version"},
              {"cmd": "bamtools", "args": "--version", "stdout_flag": "bamtools"},
              {"cmd": "bcftools", "stdout_flag": "Version:"},
              {"cmd": "bedtools", "args": "--version", "stdout_flag": "bedtools"},
@@ -35,13 +36,13 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "preseq", "stdout_flag": "preseq"},
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
-_manifest_progs = ["bcbio-variation", "bioconductor-bubbletree", "cufflinks",
-                   "cnvkit", "fgbio", "gatk4", "hisat2", "sailfish", "salmon",
-                   "grabix", "htseq", "lumpy-sv", "manta", "break-point-inspector", "metasv", "mirdeep2", "oncofuse",
-                   "picard", "phylowgs", "platypus-variant",
-                   "rna-star", "rtg-tools", "sambamba", "samblaster", "scalpel",
-                   "seqbuster", "snpeff", "vardict",
-                   "vardict-java", "varscan", "variant-effect-predictor", "vt", "wham"]
+_manifest_progs = ['bcbio-variation', 'bioconductor-bubbletree', 'cufflinks',
+    'cnvkit', 'fgbio', 'gatk4', 'hisat2', 'sailfish', 'salmon', 'grabix',
+    'htseq', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv',
+    'mirdeep2', 'oncofuse', 'picard', 'phylowgs', 'platypus-variant', 'rapmap',
+    'rna-star', 'rtg-tools', 'sambamba', 'samblaster', 'scalpel', 'seqbuster',
+    'snpeff', 'vardict', 'vardict-java', 'varscan', 'variant-effect-predictor',
+    'vt', 'wham']
 
 def _broad_versioner(type):
     def get_version(config):
@@ -55,9 +56,9 @@ def _broad_versioner(type):
         elif type == "mutect":
             try:
                 runner = broad.runner_from_config(config, "mutect")
+                return runner.get_mutect_version()
             except ValueError:
                 return ""
-            return runner.get_mutect_version()
         else:
             raise NotImplementedError(type)
     return get_version
@@ -99,14 +100,14 @@ _alt_progs = [{"name": "gatk", "version_fn": _broad_versioner("gatk")},
                "version_fn": _broad_versioner("mutect")}]
 
 def _parse_from_stdoutflag(stdout, x):
-    for line in stdout:
+    for line in (str(l) for l in stdout):
         if line.find(x) >= 0:
             parts = [p for p in line[line.find(x) + len(x):].split() if p.strip()]
             return parts[0].strip()
     return ""
 
 def _parse_from_parenflag(stdout, x):
-    for line in stdout:
+    for line in (str(l) for l in stdout):
         if line.find(x) >= 0:
             return line.split("(")[-1].split(")")[0]
     return ""
@@ -137,7 +138,7 @@ def _get_cl_version(p, config):
         elif p.get("paren_flag"):
             v = _parse_from_parenflag(stdout, p["paren_flag"])
         else:
-            lines = [l.strip() for l in stdout.read().split("\n") if l.strip()]
+            lines = [l.strip() for l in str(stdout.read()).split("\n") if l.strip()]
             v = lines[-1]
     if v.endswith("."):
         v = v[:-1]
@@ -176,7 +177,7 @@ def _get_versions(config=None):
         bcbio_version = ""
     out = [{"program": "bcbio-nextgen", "version": bcbio_version}]
     manifest_dir = _get_manifest_dir(config)
-    manifest_vs = _get_versions_manifest(manifest_dir)
+    manifest_vs = _get_versions_manifest(manifest_dir) if manifest_dir else []
     if manifest_vs:
         out += manifest_vs
     else:
@@ -193,7 +194,7 @@ def _get_versions(config=None):
     out.sort(key=lambda x: x["program"])
     return out
 
-def _get_manifest_dir(data=None):
+def _get_manifest_dir(data=None, name=None):
     """
     get manifest directory from the data dictionary, falling back on alternatives
     it prefers, in order:
@@ -216,6 +217,8 @@ def _get_manifest_dir(data=None):
                                                          "manifest"))
     if not manifest_dir or not os.path.exists(manifest_dir):
         manifest_dir = os.path.join(config_utils.get_base_installdir(), "manifest")
+        if not os.path.exists(manifest_dir) and name:
+            manifest_dir = os.path.join(config_utils.get_base_installdir(name), "manifest")
     return manifest_dir
 
 def _get_versions_manifest(manifest_dir):
@@ -266,8 +269,8 @@ def write_versions(dirs, config=None, is_wrapper=False):
 def get_version_manifest(name, data=None, required=False):
     """Retrieve a version from the currently installed manifest.
     """
-    manifest_dir = _get_manifest_dir(data)
-    manifest_vs = _get_versions_manifest(manifest_dir)
+    manifest_dir = _get_manifest_dir(data, name)
+    manifest_vs = _get_versions_manifest(manifest_dir) or []
     for x in manifest_vs:
         if x["program"] == name:
             v = x.get("version", "")

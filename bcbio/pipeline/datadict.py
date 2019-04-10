@@ -67,6 +67,7 @@ LOOKUPS = {
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "svclass": {"keys": ["metadata", "svclass"], "default": ""},
     "prep_method": {"keys": ["metadata", "prep_method"], "default": ""},
+    "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
@@ -76,7 +77,6 @@ LOOKUPS = {
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
     "ensemble": {"keys": ["config", "algorithm", "ensemble"], "default": {}},
     "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
-    "background_cnv_reference": {"keys": ["config", "algorithm", "background", "cnv_reference"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
@@ -86,6 +86,7 @@ LOOKUPS = {
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "combined_counts": {"keys": ["combined_counts"]},
+    "combined_histogram": {"keys": ["combined_histogram"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "genome_context_files": {"keys": ["reference", "genome_context"], "default": [], "always_list": True},
     "viral_files": {"keys": ["reference", "viral"], "default": [], "always_list": True},
@@ -96,6 +97,7 @@ LOOKUPS = {
     "express_fpkm": {"keys": ['express_fpkm']},
     "express_tpm": {"keys": ['express_tpm']},
     "express_counts": {"keys": ['express_counts']},
+    "histogram_counts": {"keys": ['histogram_counts']},
     "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "fusion_caller": {"keys": ['config', 'algorithm', 'fusion_caller']},
@@ -176,6 +178,7 @@ LOOKUPS = {
     "cellular_barcode_correction": {"keys": ["config", "algorithm",
                                              "cellular_barcode_correction"],
                                     "default": 1},
+    "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
@@ -202,6 +205,11 @@ LOOKUPS = {
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
 }
+
+def get_background_cnv_reference(data, caller):
+    out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data)
+    if out:
+        return out.get(caller) if isinstance(out, dict) else out
 
 def get_batches(data):
     batches = get_batch(data)

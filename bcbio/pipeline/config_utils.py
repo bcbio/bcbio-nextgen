@@ -10,8 +10,9 @@ import sys
 import yaml
 
 import toolz as tz
-from bcbio import utils
-import bcbio.pipeline.datadict as dd
+
+import six
+
 
 class CmdNotFound(Exception):
     pass
@@ -77,8 +78,8 @@ def load_system_config(config_file=None, work_dir=None, allow_missing=False):
     config["bcbio_system"] = config_file
     return config, config_file
 
-def get_base_installdir():
-    return os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+def get_base_installdir(cmd=sys.executable):
+    return os.path.normpath(os.path.join(os.path.realpath(cmd), os.pardir, os.pardir, os.pardir))
 
 def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
@@ -213,7 +214,7 @@ def _get_check_program_cmd(fn):
         for adir in os.environ['PATH'].split(":"):
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
-        raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
+        raise CmdNotFound(" ".join(map(repr, (fn.__name__ if six.PY3 else fn.func_name, name, pconfig, default))))
     return wrap
 
 @_get_check_program_cmd
@@ -222,7 +223,7 @@ def _get_program_cmd(name, pconfig, config, default):
     """
     if pconfig is None:
         return name
-    elif isinstance(pconfig, basestring):
+    elif isinstance(pconfig, six.string_types):
         return pconfig
     elif "cmd" in pconfig:
         return pconfig["cmd"]
@@ -236,7 +237,7 @@ def _get_program_dir(name, config):
     """
     if config is None:
         raise ValueError("Could not find directory in config for %s" % name)
-    elif isinstance(config, basestring):
+    elif isinstance(config, six.string_types):
         return config
     elif "dir" in config:
         return expand_path(config["dir"])
@@ -425,7 +426,7 @@ def use_vqsr(algs, call_file=None):
     coverage_intervals = set([])
     for alg in algs:
         callers = alg.get("variantcaller")
-        if isinstance(callers, basestring):
+        if isinstance(callers, six.string_types):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
             continue

@@ -3,6 +3,7 @@
 import datetime
 import os
 
+import six
 import toolz as tz
 
 from bcbio import log, utils
@@ -126,7 +127,7 @@ def _add_meta(xs, sample=None, config=None):
     """
     out = []
     for x in xs:
-        if not isinstance(x["path"], basestring) or not os.path.exists(x["path"]):
+        if not isinstance(x["path"], six.string_types) or not os.path.exists(x["path"]):
             raise ValueError("Unexpected path for upload: %s" % x)
         x["mtime"] = shared.get_file_timestamp(x["path"])
         if sample:
@@ -277,15 +278,23 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "index": True,
                                     "ext": "%s-%s" % (svcall["variantcaller"], caller),
                                     "variantcaller": svcall["variantcaller"]})
-            for extra in ["subclones", "contamination", "hetsummary"]:
+            for extra in ["subclones", "contamination", "hetsummary", "lohsummary", "read_evidence"]:
                 svfile = svcall.get(extra)
                 if svfile and os.path.exists(svfile):
-                    ext = os.path.splitext(svfile)[-1].replace(".", "")
+                    ftype = os.path.splitext(svfile)[-1].replace(".", "")
                     out.append({"path": svfile,
-                                "sample": batch,
-                                "type": ext,
+                                "sample": dd.get_sample_name(sample) if ftype == "bam" else batch,
+                                "type": ftype,
                                 "ext": "%s-%s" % (svcall["variantcaller"], extra),
                                 "variantcaller": svcall["variantcaller"]})
+                    fext = ".bai" if ftype == "bam" else ""
+                    if fext and os.path.exists(svfile + fext):
+                        out.append({"path": svfile + fext,
+                                    "sample": dd.get_sample_name(sample) if ftype == "bam" else batch,
+                                    "type": ftype + fext,
+                                    "index": True,
+                                    "ext": "%s-%s" % (svcall["variantcaller"], extra),
+                                    "variantcaller": svcall["variantcaller"]})
         if "sv-validate" in sample:
             for vkey in ["csv", "plot", "df"]:
                 vfile = tz.get_in(["sv-validate", vkey], sample)
@@ -744,6 +753,8 @@ def _get_files_project(sample, upload_config):
                         "type": "rownames"})
             out.append({"path": count_file + ".colnames",
                         "type": "colnames"})
+            out.append({"path": count_file + ".metadata",
+                        "type": "metadata"})
             umi_file = os.path.splitext(count_file)[0] + "-dupes.mtx"
             if utils.file_exists(umi_file):
                 out.append({"path": umi_file,
@@ -752,6 +763,13 @@ def _get_files_project(sample, upload_config):
                             "type": "rownames"})
                 out.append({"path": umi_file + ".colnames",
                             "type": "colnames"})
+            if dd.get_combined_histogram(sample):
+                out.append({"path": dd.get_combined_histogram(sample),
+                            "type": "txt"})
+            rda = os.path.join(os.path.dirname(count_file), "se.rda")
+            if utils.file_exists(rda):
+                out.append({"path": rda,
+                            "type": "rda"})
         else:
             out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_annotated_combined_counts(sample):

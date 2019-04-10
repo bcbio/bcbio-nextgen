@@ -2,9 +2,10 @@
 """
 import collections
 import os
-import StringIO
 import sys
 import uuid
+
+from six import StringIO
 
 import tornado.gen
 import tornado.web
@@ -52,7 +53,7 @@ def get_handler(args):
         @tornado.web.asynchronous
         @tornado.gen.coroutine
         def get(self):
-            rargs = yaml.safe_load(StringIO.StringIO(str(self.get_argument("args", "{}"))))
+            rargs = yaml.safe_load(StringIO(str(self.get_argument("args", "{}"))))
             system_config = args.config or "bcbio_system.yaml"
             if "system_config" in rargs:
                 system_config = os.path.join(rargs["work_dir"], "web-system_config.yaml")

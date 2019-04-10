@@ -3,7 +3,6 @@
 - GATK variant annotation with snpEff predicted effects.
 """
 import glob
-import gzip
 import os
 
 import pybedtools
@@ -119,7 +118,7 @@ def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
     new_header = "%s-sample_header.txt" % utils.splitext_plus(base_file)[0]
     with open(new_header, "w") as out_handle:
         chrom_line = None
-        with gzip.open(orig_vcf) as in_handle:
+        with utils.open_gzipsafe(orig_vcf) as in_handle:
             for line in in_handle:
                 if line.startswith("##"):
                     out_handle.write(line)

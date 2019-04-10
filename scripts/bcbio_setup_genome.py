@@ -5,6 +5,7 @@ Script to set up a custom genome for bcbio-nextgen
 from __future__ import print_function
 
 from argparse import ArgumentParser
+import collections
 import gzip
 import os
 from Bio import SeqIO
@@ -13,12 +14,12 @@ from bcbio.utils import safe_makedir, file_exists, chdir, is_gzipped
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 
-from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_GENOMES, SUPPORTED_INDEXES,
+from bcbio.install import (REMOTES, get_cloudbiolinux, SUPPORTED_INDEXES,
                            _get_data_dir)
 from bcbio.pipeline.run_info import ALLOWED_CONTIG_NAME_CHARS
 from bcbio.galaxy import loc
 from bcbio.log import logger
-from fabric.api import *
+
 import subprocess
 import sys
 import shutil
@@ -115,14 +116,13 @@ def _is_from_ncbi(gff3_file):
                 return "db_xref"
     return None
 
-def _index_w_command(dir_name, command, ref_file, ext=None):
+def _index_w_command(env, dir_name, command, ref_file, pre=None, post=None, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
     if ext is not None: index_name += ext
     build_path = os.path.join(os.path.dirname(ref_file), os.pardir)
     out_dir = os.path.join(build_path, dir_name)
     index_path = os.path.join(out_dir, index_name)
-    if not env.safe_exists(out_dir):
-        env.safe_run("mkdir %s" % out_dir)
+    safe_makedir(out_dir)
     subprocess.check_call(command.format(ref_file=ref_file,
                                          index_name=index_path), shell=True)
     return index_path
@@ -240,8 +240,6 @@ if __name__ == "__main__":
  #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")
 
-    env.hosts = ["localhost"]
-    env.cores = args.cores
     os.environ["PATH"] += os.pathsep + os.path.dirname(sys.executable)
     cbl = get_cloudbiolinux(REMOTES)
     sys.path.insert(0, cbl["dir"])
@@ -249,9 +247,6 @@ if __name__ == "__main__":
     # monkey patch cloudbiolinux to use this indexing command instead
     genomes = getattr(genomemod, 'genomes')
     genomes._index_w_command = _index_w_command
-    fabmod = __import__("cloudbio", fromlist=["fabutils"])
-    fabutils = getattr(fabmod, 'fabutils')
-    fabutils.configure_runsudo(env)
 
     genome_dir = os.path.abspath(os.path.join(_get_data_dir(), "genomes"))
     args.fasta = os.path.abspath(args.fasta)
@@ -274,7 +269,6 @@ if __name__ == "__main__":
     if "seq" not in args.indexes:
         args.indexes.append("seq")
 
-    env.system_install = genome_dir
     prepare_tx = os.path.join(cbl["dir"], "utils", "prepare_tx_gff.py")
 
     print("Creating directories using %s as the base." % (genome_dir))
@@ -296,13 +290,15 @@ if __name__ == "__main__":
         append_ercc(gtf_file, fasta_file)
 
     indexed = {}
+    Env = collections.namedtuple("Env", "system_install, cores")
+    env = Env(genome_dir, args.cores)
     for index in args.indexes:
         print("Creating the %s index." % (index))
         index_fn = genomes.get_index_fn(index)
         if not index_fn:
             print("Do not know how to make the index %s, skipping." % (index))
             continue
-        indexed[index] = index_fn(fasta_file)
+        indexed[index] = index_fn(env, fasta_file)
     indexed["samtools"] = fasta_file
 
     if args.gtf:

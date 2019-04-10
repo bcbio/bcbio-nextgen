@@ -209,8 +209,6 @@ def gatk_snp_cutoff(in_file, data):
         filters += ["QD < 2.0"]
         filters += ["FS > 60.0"]
         filters += _gatk_general()
-    # Additional filter metrics, unless using raw Sentieon gVCFs
-    if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["haplotyper"]):
         filters += ["MQ < 30.0"]
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
                                extra_cmd=r"""| sed 's/\\"//g'""")

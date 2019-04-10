@@ -58,12 +58,12 @@ def _prepare_inputs(ma_fn, bam_file, out_dir):
     with file_transaction(fixed_fa) as out_tx:
         with open(out_tx, 'w') as out_handle:
             with open(ma_fn) as in_handle:
-                h = in_handle.next()
+                h = next(in_handle)
                 for line in in_handle:
                     cols = line.split("\t")
                     name_with_counts = "%s_x%s" % (cols[0], sum(map(int, cols[2:])))
                     count_name[cols[0]] = name_with_counts
-                    print >>out_handle, ">%s\n%s" % (name_with_counts, cols[1])
+                    out_handle.write(">%s\n%s\n" % (name_with_counts, cols[1]))
     fixed_bam = os.path.join(out_dir, "align.bam")
     bam_handle = pysam.AlignmentFile(bam_file, "rb")
     with pysam.AlignmentFile(fixed_bam, "wb", template=bam_handle) as out_handle:
@@ -85,21 +85,21 @@ def _parse_novel(csv_file, sps="new"):
                     break
                 if line.startswith("novel miRNAs predicted"):
                     read = 1
-                    line = in_handle.next()
+                    line = next(in_handle)
                     continue
                 if read and line.strip():
                     cols = line.strip().split("\t")
                     name, start, score = cols[0], cols[16], cols[1]
                     if score < 1:
                         continue
-                    m5p, m3p, pre = cols[13], cols[14], cols[15].replace('u','t').upper()
+                    m5p, m3p, pre = cols[13], cols[14], cols[15].replace('u', 't').upper()
                     m5p_start = cols[15].find(m5p) + 1
                     m3p_start = cols[15].find(m3p) + 1
                     m5p_end = m5p_start + len(m5p) - 1
                     m3p_end = m3p_start + len(m3p) - 1
                     if m5p in seen:
                         continue
-                    print >>fa_handle, (">{sps}-{name} {start}\n{pre}").format(**locals())
-                    print >>str_handle, (">{sps}-{name} ({score}) [{sps}-{name}-5p:{m5p_start}-{m5p_end}] [{sps}-{name}-3p:{m3p_start}-{m3p_end}]").format(**locals())
+                    fa_handle.write(">{sps}-{name} {start}\n{pre}\n".format(**locals()))
+                    str_handle.write(">{sps}-{name} ({score}) [{sps}-{name}-5p:{m5p_start}-{m5p_end}] [{sps}-{name}-3p:{m3p_start}-{m3p_end}]\n".format(**locals()))
                     seen.add(m5p)
     return op.abspath("novel")

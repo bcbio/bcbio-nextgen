@@ -15,6 +15,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.rnaseq import kallisto, sailfish, gtf
 from bcbio.provenance import do
 from bcbio.utils import file_exists, safe_makedir
+from bcbio.bam import fasta
 
 h5py = utils.LazyImport("h5py")
 import numpy as np
@@ -42,6 +43,9 @@ def run_pizzly(data):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data)
+    stripped_fa = os.path.splitext(os.path.basename(gtf_fa))[0] + "-noversions.fa"
+    stripped_fa = os.path.join(pizzlydir, stripped_fa)
+    gtf_fa = fasta.strip_transcript_versions(gtf_fa, stripped_fa)
     fraglength = get_fragment_length(data)
     cachefile = os.path.join(pizzlydir, "pizzly.cache")
     fusions = kallisto.get_kallisto_fusions(data)

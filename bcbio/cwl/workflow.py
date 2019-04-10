@@ -3,6 +3,7 @@
 import copy
 import pprint
 
+import six
 import toolz as tz
 
 from bcbio.pipeline import alignment
@@ -153,7 +154,7 @@ def is_cwl_record(d):
         if d.get("type") == "record":
             return d
         else:
-            recs = filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()])
+            recs = list(filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()]))
             return recs[0] if recs else None
     else:
         return None
@@ -233,7 +234,7 @@ def _flatten_nested_input(v):
         for x in v["type"]:
             if isinstance(x, dict) and x["type"] == "array":
                 new_type = x["items"]
-            elif isinstance(x, basestring) and x == "null":
+            elif isinstance(x, six.string_types) and x == "null":
                 want_null = True
             else:
                 new_type = x
@@ -253,7 +254,7 @@ def _nest_variable(v, check_records=False):
     check_records -- avoid re-nesting a record input if it comes from a previous
     step and is already nested, don't need to re-array.
     """
-    if (check_records and is_cwl_record(v) and v["id"].split("/") > 1 and
+    if (check_records and is_cwl_record(v) and len(v["id"].split("/")) > 1 and
          v.get("type", {}).get("type") == "array"):
         return v
     else:
@@ -271,7 +272,7 @@ def _clean_output(v):
     return out
 
 def _get_string_vid(vid):
-    if isinstance(vid, basestring):
+    if isinstance(vid, six.string_types):
         return vid
     assert isinstance(vid, (list, tuple)), vid
     return "__".join(vid)
@@ -279,7 +280,7 @@ def _get_string_vid(vid):
 def _get_variable(vid, variables):
     """Retrieve an input variable from our existing pool of options.
     """
-    if isinstance(vid, basestring):
+    if isinstance(vid, six.string_types):
         vid = get_base_id(vid)
     else:
         vid = _get_string_vid(vid)
@@ -295,6 +296,7 @@ def _handle_special_inputs(inputs, variables):
 
     XXX Need to better expose this at a top level definition.
     """
+    from bcbio import structural
     optional = [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "sv_regions"],
@@ -316,6 +318,12 @@ def _handle_special_inputs(inputs, variables):
                     out.append(vid)
                     found_indexes = True
             assert found_indexes, "Found no snpEff indexes in %s" % [v["id"] for v in variables]
+        elif input == ["config", "algorithm", "background", "cnv_reference"]:
+            for v in variables:
+                vid = get_base_id(v["id"]).split("__")
+                if (vid[:4] == ["config", "algorithm", "background", "cnv_reference"] and
+                      structural.supports_cnv_reference(vid[4])):
+                    out.append(vid)
         elif input in optional:
             if _get_string_vid(input) in all_vs:
                 out.append(input)
@@ -418,7 +426,7 @@ def _create_variable(orig_v, step, variables):
         v = _get_variable(orig_v["id"], variables)
     except ValueError:
         v = copy.deepcopy(orig_v)
-        if not isinstance(v["id"], basestring):
+        if not isinstance(v["id"], six.string_types):
             v["id"] = _get_string_vid(v["id"])
     for key, val in orig_v.items():
         if key not in ["id", "type"]:

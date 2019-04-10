@@ -1,5 +1,6 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
+from __future__ import print_function
 import collections
 import copy
 import dateutil
@@ -11,6 +12,7 @@ import os
 import tarfile
 
 import requests
+import six
 import toolz as tz
 import yaml
 
@@ -19,6 +21,7 @@ from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
+from functools import reduce
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
                    "dx:": "dnanexus", "gs:": "gs"}
@@ -399,7 +402,7 @@ def _get_cur_remotes(path):
     elif isinstance(path, dict):
         for v in path.values():
             cur_remotes |= _get_cur_remotes(v)
-    elif path and isinstance(path, basestring):
+    elif path and isinstance(path, six.string_types):
         if path.startswith(tuple(INTEGRATION_MAP.keys())):
             cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
     return cur_remotes
@@ -487,7 +490,7 @@ def _flatten_samples(samples, base_file, get_retriever):
                 cur_flat[flat_key] = flat_val
         flat_data.append(cur_flat)
     out = {}
-    for key in sorted(list(set(reduce(operator.add, [d.keys() for d in flat_data])))):
+    for key in sorted(list(set(reduce(operator.add, [list(d.keys()) for d in flat_data])))):
         # Periods in keys cause issues with WDL and some CWL implementations
         clean_key = key.replace(".", "_")
         out[clean_key] = []
@@ -568,9 +571,9 @@ def _get_relative_ext(of, sf):
                 os.path.basename(orig).count(".") == os.path.basename(prefix).count("."))
     # Handle remote files
     if of.find(":") > 0:
-        of = of.split(":")[-1]
+        of = os.path.basename(of.split(":")[-1])
     if sf.find(":") > 0:
-        sf = sf.split(":")[-1]
+        sf = os.path.basename(sf.split(":")[-1])
     prefix = os.path.commonprefix([sf, of])
     while prefix.endswith(".") or (half_finished_trim(sf, prefix) and half_finished_trim(of, prefix)):
         prefix = prefix[:-1]
@@ -578,7 +581,7 @@ def _get_relative_ext(of, sf):
     ext_to_add = sf.replace(prefix, "")
     # Return extensions relative to original
     if not exts_to_remove or exts_to_remove.startswith("."):
-        return "^" * exts_to_remove.count(".") + ext_to_add
+        return str("^" * exts_to_remove.count(".") + ext_to_add)
     else:
         raise ValueError("No cross platform way to reference complex extension: %s %s" % (sf, of))
 
@@ -621,7 +624,7 @@ def _get_avro_type(val):
     elif val is None:
         return ["null"]
     # encode booleans as string True/False and unencode on other side
-    elif isinstance(val, bool) or isinstance(val, basestring) and val.lower() in ["true", "false", "none"]:
+    elif isinstance(val, bool) or isinstance(val, six.string_types) and val.lower() in ["true", "false", "none"]:
         return ["string", "null", "boolean"]
     elif isinstance(val, int):
         return "long"
@@ -700,7 +703,11 @@ def _to_cwldata(key, val, get_retriever):
 def _remove_remote_prefix(f):
     """Remove any remote references to allow object lookups by file paths.
     """
-    return f.split(":")[-1] if objectstore.is_remote(f) else f
+    return f.split(":")[-1].split("/", 1)[1] if objectstore.is_remote(f) else f
+
+def _index_blacklist(xs):
+    blacklist = ["-resources.yaml"]
+    return [x for x in xs if not any([x.find(b) >=0 for b in blacklist])]
 
 def _to_cwlfile_with_indexes(val, get_retriever):
     """Convert reads with ready to go indexes into the right CWL object.
@@ -711,22 +718,20 @@ def _to_cwlfile_with_indexes(val, get_retriever):
     Skips doing this for reference files and standard setups like bwa, which
     take up too much time and space to unpack multiple times.
     """
-    if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
-        return _item_to_cwldata(val["base"], get_retriever)
+    val["indexes"] = _index_blacklist(val["indexes"])
+    tval = {"base": _remove_remote_prefix(val["base"]),
+            "indexes": [_remove_remote_prefix(f) for f in val["indexes"]]}
+    # Standard named set of indices, like bwa
+    # Do not include snpEff, which we need to isolate inside a nested directory
+    # hisat2 indices do also not localize cleanly due to compilicated naming
+    cp_dir, cp_base = os.path.split(os.path.commonprefix([tval["base"]] + tval["indexes"]))
+    if (cp_base and cp_dir == os.path.dirname(tval["base"]) and
+            not ("/snpeff/" in cp_dir or "/hisat2" in cp_dir)):
+        return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
     else:
-        tval = {"base": _remove_remote_prefix(val["base"]),
-                "indexes": [_remove_remote_prefix(f) for f in val["indexes"]]}
-        # Standard named set of indices, like bwa
-        # Do not include snpEff, which we need to isolate inside a nested directory
-        # hisat2 indices do also not localize cleanly due to compilicated naming
-        cp_dir, cp_base = os.path.split(os.path.commonprefix([tval["base"]] + tval["indexes"]))
-        if (cp_base and cp_dir == os.path.dirname(tval["base"]) and
-              not ("/snpeff/" in cp_dir or "/hisat2" in cp_dir)):
-            return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
-        else:
-            dirname = os.path.dirname(tval["base"])
-            assert all([x.startswith(dirname) for x in tval["indexes"]])
-            return {"class": "File", "path": directory_tarball(dirname)}
+        dirname = os.path.dirname(tval["base"])
+        assert all([x.startswith(dirname) for x in tval["indexes"]])
+        return {"class": "File", "path": directory_tarball(dirname)}
 
 def _add_secondary_if_exists(secondary, out, get_retriever):
     """Add secondary files only if present locally or remotely.
@@ -742,7 +747,7 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
     """
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx, get_retriever) for subx in x]
-    elif (x and isinstance(x, basestring) and
+    elif (x and isinstance(x, six.string_types) and
           (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
            objectstore.is_remote(x))):
         if _file_local_or_remote(x, get_retriever):
@@ -751,6 +756,8 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
                 out = _add_secondary_if_exists(indexes, out, get_retriever)
             elif x.endswith(".bam"):
                 out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
+            elif x.endswith(".cram"):
+                out = _add_secondary_if_exists([x + ".crai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):

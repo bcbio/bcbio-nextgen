@@ -127,7 +127,7 @@ def install_test_files(data_dir):
     DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
     download_data = [
         DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-        DlInfo("genomes_automated_test.tar.gz", "genomes", 33),
+        DlInfo("genomes_automated_test.tar.gz", "genomes", 34),
         DlInfo("110907_ERP000591.tar.gz", None, None),
         DlInfo("100326_FC6107FAAXX.tar.gz", None, 12),
         DlInfo("tcga_benchmark.tar.gz", None, 3),

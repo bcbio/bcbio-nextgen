@@ -8,6 +8,7 @@ import csv
 import itertools
 import difflib
 import glob
+import io
 
 import yaml
 
@@ -80,9 +81,9 @@ def _generate_barcode_ids(info_iter):
 def _read_input_csv(in_file):
     """Parse useful details from SampleSheet CSV file.
     """
-    with open(in_file, "rU") as in_handle:
+    with io.open(in_file, newline=None) as in_handle:
         reader = csv.reader(in_handle)
-        reader.next() # header
+        next(reader) # header
         for line in reader:
             if line: # empty lines
                 (fc_id, lane, sample_id, genome, barcode) = line[:5]
@@ -126,7 +127,7 @@ def run_has_samplesheet(fc_dir, config, require_single=True):
     # maximum of 2 mismatches in fcid
 
     potential_fcids = difflib.get_close_matches(fc_name, fcid_sheet.keys(), 1, 0.85)
-    if len(potential_fcids) > 0 and fcid_sheet.has_key(potential_fcids[0]):
+    if len(potential_fcids) > 0 and potential_fcids[0] in fcid_sheet:
         return fcid_sheet[potential_fcids[0]]
     else:
         return None

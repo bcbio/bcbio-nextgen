@@ -2,13 +2,12 @@ import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein, pizzly, ericscript,
-                          kallisto, salmon)
+                          kallisto, salmon, singlecellexperiment)
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import effects, joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data
+from bcbio.utils import filter_missing, flatten, to_single_data, file_exists
 from bcbio.log import logger
-
 
 def fast_rnaseq(samples, run_parallel):
     samples = run_parallel("run_salmon_index", [samples])
@@ -40,6 +39,43 @@ def singlecell_rnaseq(samples, run_parallel):
         logger.error(("%s is not supported for singlecell RNA-seq "
                       "quantification." % quantifier))
         sys.exit(1)
+    samples = scrnaseq_concatenate_metadata(samples)
+    singlecellexperiment.make_scrnaseq_object(samples)
+    return samples
+
+def scrnaseq_concatenate_metadata(samples):
+    """
+    Create file same dimension than mtx.colnames
+    with metadata and sample name to help in the
+    creation of the SC object.
+    """
+    barcodes = {}
+    counts =  ""
+    metadata = {}
+    for sample in dd.sample_data_iterator(samples):
+        with open(dd.get_sample_barcodes(sample)) as inh:
+            for line in inh:
+                cols = line.strip().split(",")
+                if len(cols) == 1:
+                    # Assign sample name in case of missing in barcodes
+                    cols.append("NaN")
+                barcodes[(dd.get_sample_name(sample), cols[0])] = cols[1:]
+
+        counts = dd.get_combined_counts(sample)
+        meta = map(str, list(sample["metadata"].values()))
+        meta_cols = list(sample["metadata"].keys())
+        meta = ["NaN" if not v else v for v in meta]
+        metadata[dd.get_sample_name(sample)] = meta
+
+    metadata_fn = counts + ".metadata"
+    if not file_exists(metadata_fn):
+        with open(metadata_fn, 'w') as outh:
+            outh.write(",".join(["sample"] + meta_cols) + '\n')
+            with open(counts + ".colnames") as inh:
+                for line in inh:
+                    sample = line.split(":")[0]
+                    barcode = sample.split("-")[1]
+                    outh.write(",".join(barcodes[(sample, barcode)] + metadata[sample]) + '\n')
     return samples
 
 def rnaseq_variant_calling(samples, run_parallel):
@@ -255,7 +291,7 @@ def combine_express(samples, combined):
     gtf_file = dd.get_gtf_file(samples[0][0])
     isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
     isoform_to_gene_file = express.isoform_to_gene_name(
-        gtf_file, isoform_to_gene_file, dd.sample_data_iterator(samples).next())
+        gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
     if len(to_combine) > 0:
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
@@ -369,13 +405,13 @@ def combine_files(samples):
 
     # combine Cufflinks files
     fpkm_files = filter_missing([dd.get_fpkm(x[0]) for x in samples])
-    if fpkm_files:
+    if fpkm_files and combined:
         fpkm_combined_file = os.path.splitext(combined)[0] + ".fpkm"
         fpkm_combined = count.combine_count_files(fpkm_files, fpkm_combined_file)
     else:
         fpkm_combined = None
     isoform_files = filter_missing([dd.get_fpkm_isoform(x[0]) for x in samples])
-    if isoform_files:
+    if isoform_files and combined:
         fpkm_isoform_combined_file = os.path.splitext(combined)[0] + ".isoform.fpkm"
         fpkm_isoform_combined = count.combine_count_files(isoform_files,
                                                           fpkm_isoform_combined_file,
@@ -385,11 +421,12 @@ def combine_files(samples):
     # combine DEXseq files
     to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
                                         in samples])
-    if to_combine_dexseq:
+    if to_combine_dexseq and combined:
         dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
                                                     dexseq_combined_file, ".dexseq")
-        dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
+        if dexseq_combined:
+            dexseq.create_dexseq_annotation(dexseq_gff, dexseq_combined)
     else:
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
@@ -414,4 +451,3 @@ def combine_files(samples):
             data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
     return updated_samples
-

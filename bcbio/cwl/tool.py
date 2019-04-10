@@ -13,14 +13,19 @@ import sys
 
 from bcbio import utils
 from bcbio.cwl import hpc
+from bcbio.distributed import objectstore
 
 def _get_main_and_json(directory):
     """Retrieve the main CWL and sample JSON files from a bcbio generated directory.
     """
     directory = os.path.normpath(os.path.abspath(directory))
-    main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
-    main_cwl = [x for x in main_cwl if not x.find("-pack") >= 0]
-    assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
+    checker_main = os.path.normpath(os.path.join(directory, os.path.pardir, "checker-workflow-wrapping-tool.cwl"))
+    if checker_main and os.path.exists(checker_main):
+        main_cwl = [checker_main]
+    else:
+        main_cwl = glob.glob(os.path.join(directory, "main-*.cwl"))
+        main_cwl = [x for x in main_cwl if not x.find("-pack") >= 0]
+        assert len(main_cwl) == 1, "Did not find main CWL in %s" % directory
     main_json = glob.glob(os.path.join(directory, "main-*-samples.json"))
     assert len(main_json) == 1, "Did not find main json in %s" % directory
     project_name = os.path.basename(directory).split("-workflow")[0]
@@ -56,10 +61,15 @@ def _chown_workdir(work_dir):
     """Ensure work directory files owned by original user.
 
     Docker runs can leave root owned files making cleanup difficult.
+    Skips this if it fails, avoiding errors where we run remotely
+    and don't have docker locally.
     """
     cmd = ("""docker run --rm -v %s:%s quay.io/bcbio/bcbio-base /bin/bash -c 'chown -R %s %s'""" %
            (work_dir, work_dir, os.getuid(), work_dir))
-    subprocess.check_call(cmd, shell=True)
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError:
+        pass
 
 def _remove_bcbiovm_path():
     """Avoid referencing minimal bcbio_nextgen in bcbio_vm installation.
@@ -148,13 +158,33 @@ def _run_wes(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     main_file = _pack_cwl(main_file)
-    opts = ["--no-wait"]
-    if args.host:
-        opts += ["--host", args.host]
-    if args.auth:
-        opts += ["--auth", args.auth]
-    cmd = ["wes-client"] + opts + [main_file, json_file]
-    _run_tool(cmd)
+    if args.host and "stratus" in args.host:
+        _run_wes_stratus(args, main_file, json_file)
+    else:
+        opts = ["--no-wait"]
+        if args.host:
+            opts += ["--host", args.host]
+        if args.auth:
+            opts += ["--auth", args.auth]
+        cmd = ["wes-client"] + opts + [main_file, json_file]
+        _run_tool(cmd)
+
+def _run_wes_stratus(args, main_file, json_file):
+    """Run WES on Illumina stratus endpoint server, which wes-client doesn't support.
+
+    https://stratus-docs.readme.io/docs/quick-start-4
+    """
+    import requests
+    base_url = args.host
+    if not base_url.startswith("http"):
+        base_url = "https://%s" % base_url
+    with open(main_file) as in_handle:
+        r = requests.post("%s/v1/workflows" % base_url,
+                          headers={"Content-Type": "application/json",
+                                   "Authorization": "Bearer %s" % args.auth},
+                          data=in_handle.read())
+    print(r.status_code)
+    print(r.text)
 
 def _run_cromwell(args):
     """Run CWL with Cromwell.
@@ -223,9 +253,10 @@ def _cromwell_move_outputs(metadata, final_dir):
     def _copy_with_secondary(f, dirname):
         if len(f["secondaryFiles"]) > 1:
             dirname = utils.safe_makedir(os.path.join(dirname, os.path.basename(os.path.dirname(f["location"]))))
-        finalf = os.path.join(dirname, os.path.basename(f["location"]))
-        if not utils.file_uptodate(finalf, f["location"]):
-            shutil.copy(f["location"], dirname)
+        if not objectstore.is_remote(f["location"]):
+            finalf = os.path.join(dirname, os.path.basename(f["location"]))
+            if not utils.file_uptodate(finalf, f["location"]):
+                shutil.copy(f["location"], dirname)
         [_copy_with_secondary(sf, dirname) for sf in f["secondaryFiles"]]
     def _write_to_dir(val, dirname):
         if isinstance(val, (list, tuple)):
@@ -246,6 +277,15 @@ def _cromwell_move_outputs(metadata, final_dir):
                 _write_to_dir(vals[0], project_dir)
             elif len(vals) > 0:
                 raise ValueError("Unexpected sample and outputs: %s %s %s" % (k, samples, vals))
+
+def _run_sbgenomics(args):
+    """Run CWL on SevenBridges platform and Cancer Genomics Cloud.
+    """
+    assert not args.no_container, "Seven Bridges runs require containers"
+    main_file, json_file, project_name = _get_main_and_json(args.directory)
+    flags = []
+    cmd = ["sbg-cwl-runner"] + flags + args.toolargs + [main_file, json_file]
+    _run_tool(cmd)
 
 def _run_funnel(args):
     """Run funnel TES server with rabix bunny for CWL.
@@ -287,6 +327,7 @@ def _run_funnel(args):
 _TOOLS = {"cwltool": _run_cwltool,
           "cromwell": _run_cromwell,
           "arvados": _run_arvados,
+          "sbg": _run_sbgenomics,
           "toil": _run_toil,
           "bunny": _run_bunny,
           "funnel": _run_funnel,

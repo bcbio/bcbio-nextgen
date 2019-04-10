@@ -99,12 +99,13 @@ def _alignment(checkpoints):
                                cwlout(["config", "algorithm", "quality_format"], ["string", "null"]),
                                cwlout(["align_split"], ["string", "null"])])],
                "bcbio-vc", ["grabix", "htslib", "biobambam", "atropos;env=python3",
-                            "optitype", "razers3=3.5.0", "coincbc"],  # HLA deps for general docker inclusion
+                            "optitype;env=python2", "razers3=3.5.0", "coincbc"],  # HLA deps for general docker inclusion
                disk={"files": 1.5}),
              s("process_alignment", "single-parallel" if checkpoints["align_split"] else "single-single",
                [["alignment_rec"], ["process_alignment_rec"]], process_alignment_out,
                "bcbio-vc", ["bwa", "bwakit", "grabix", "minimap2", "novoalign", "snap-aligner=1.0dev.97",
-                            "sentieon", "samtools", "pysam>=0.13.0", "sambamba", "fgbio", "umis",
+                            "sentieon;env=python2", "samtools", "pysam>=0.13.0", "sambamba", "fgbio",
+                            "umis;env=python2",
                             "biobambam", "seqtk", "samblaster", "variantbam"],
                disk={"files": 2})]
     if checkpoints["align_split"]:
@@ -138,7 +139,7 @@ def _variant_hla(checkpoints):
              [["hla_rec"]],
              [cwlout(["hla", "hlacaller"], ["string", "null"]),
               cwlout(["hla", "call_file"], ["File", "null"])],
-             "bcbio-vc", ["optitype", "razers3=3.5.0", "coincbc"])]
+             "bcbio-vc", ["optitype;env=python2", "razers3=3.5.0", "coincbc"])]
     return hla, [["hla", "call_file"]]
 
 def _variant_vc(checkpoints):
@@ -156,9 +157,9 @@ def _variant_vc(checkpoints):
                [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]),
                 cwlout(["region_block"], {"type": "array", "items": "string"})],
                "bcbio-vc", ["bcftools", "bedtools", "freebayes=1.1.0.46",
-                            "gatk4", "vqsr_cnn", "deepvariant", "sentieon",
-                            "htslib", "octopus", "picard", "platypus-variant", "pythonpy",
-                            "samtools", "pysam>=0.13.0", "strelka", "vardict", "vardict-java",
+                            "gatk4", "vqsr_cnn", "deepvariant;env=dv", "sentieon;env=python2",
+                            "htslib", "octopus", "picard", "platypus-variant;env=python2", "pythonpy",
+                            "samtools", "pysam>=0.13.0", "strelka;env=python2", "vardict", "vardict-java",
                             "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.4.1", "r-base=3.4.1=h4fe35fd_8",
                             "perl"],
                disk={"files": 2.0}),
@@ -184,7 +185,7 @@ def _variant_vc(checkpoints):
                                 cwlout(["validate", "fp"], ["File", "null"], [".tbi"]),
                                 cwlout(["validate", "fn"], ["File", "null"], [".tbi"]),
                                 cwlout("inherit", exclude=vc_rec_exclude)])],
-                "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions",
+                "bcbio-vc", ["bcftools", "bedtools", "pythonpy", "gvcf-regions;env=python2",
                              "htslib", "rtg-tools", "vcfanno"],
                 disk={"files": 1.5})]
     batch_in = [["analysis"], ["genome_build"], ["align_bam"], ["vrn_file"],
@@ -242,7 +243,7 @@ def _variant_vc(checkpoints):
               cwlout(["validate", "grading_summary"], ["File", "null"]),
               cwlout(["validate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
              "bcbio-vc",
-             disk={"files": 0.5}, cores=1)]
+             disk={"files": 2.0}, cores=1)]
     return vc, [["validate", "grading_summary"], ["variants", "calls"], ["variants", "gvcf"]]
 
 def _variant_ensemble(checkpoints):
@@ -273,7 +274,7 @@ def _variant_jointvc():
           s("run_jointvc", "batch-parallel",
             [["jointvc_batch_rec"], ["region"]],
             [cwlout(["vrn_file_region"], ["File", "null"], [".tbi"]), cwlout(["region"], "string")],
-            "bcbio-vc", ["gatk4", "gvcfgenotyper", "sentieon"],
+            "bcbio-vc", ["gatk4", "gvcfgenotyper", "sentieon;env=python2"],
             disk={"files": 1.5}, cores=1),
           s("concat_batch_variantcalls_jointvc", "batch-merge",
             [["jointvc_batch_rec"], ["region"], ["vrn_file_region"]],
@@ -312,6 +313,7 @@ def _variant_checkpoints(samples):
     checkpoints["align_split"] = not all([(dd.get_align_split_size(d) is False or
                                            not dd.get_aligner(d))
                                           for d in samples])
+    checkpoints["archive"] = any([dd.get_archive(d) for d in samples])
     checkpoints["umi"] = any([dd.get_umi_consensus(d) for d in samples])
     checkpoints["ensemble"] = any([dd.get_ensemble(d) for d in samples])
     checkpoints["cancer"] = any(dd.get_phenotype(d) in ["tumor"] for d in samples)
@@ -321,6 +323,9 @@ def _postprocess_alignment(checkpoints):
     wf = [s("prep_samples_to_rec", "multi-combined",
             [["config", "algorithm", "coverage"],
              ["rgnames", "sample"],
+             ["config", "algorithm", "background", "cnv_reference"],
+             ["config", "algorithm", "svcaller"],
+             ["config", "algorithm", "sv_regions"],
              ["config", "algorithm", "variant_regions"],
              ["reference", "fasta", "base"]],
             [cwlout("prep_samples_rec", "record")],
@@ -340,6 +345,7 @@ def _postprocess_alignment(checkpoints):
             disk={"files": 0.5}, cores=1),
           s("postprocess_alignment_to_rec", "multi-combined",
             [["align_bam"],
+             ["config", "algorithm", "archive"],
              ["config", "algorithm", "coverage_interval"],
              ["config", "algorithm", "exclude_regions"],
              ["config", "algorithm", "variant_regions"],
@@ -382,7 +388,7 @@ def _postprocess_alignment(checkpoints):
              cwlout(["depth", "coverage", "dist"], ["File", "null"]),
              cwlout(["depth", "coverage", "thresholds"], ["File", "null"]),
              cwlout(["align_bam"], ["File", "null"])],
-            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4", "mosdepth", "sentieon"],
+            "bcbio-vc", ["sambamba", "goleft", "bedtools", "htslib", "gatk4", "mosdepth", "sentieon;env=python2"],
             disk={"files": 3.0}),
           s("combine_sample_regions", "multi-combined",
             [["regions", "callable"], ["regions", "nblock"], ["metadata", "batch"],
@@ -394,6 +400,13 @@ def _postprocess_alignment(checkpoints):
             "bcbio-vc", ["bedtools", "htslib", "gatk4"],
             disk={"files": 0.5}, cores=1)]
     out = [["regions", "sample_callable"]]
+    if checkpoints.get("archive"):
+        wf += [s("archive_to_cram", "multi-parallel",
+                 [["postprocess_alignment_rec"]],
+                 [cwlout(["archive_bam"], ["File", "null"], [".crai"])],
+                 "bcbio-vc", ["samtools"],
+                 disk={"files": 3.0})]
+        out += [["archive_bam"]]
     return wf, out
 
 def variant(samples):
@@ -428,7 +441,7 @@ def variant(samples):
     else:
         align = [s("organize_noalign", "multi-parallel",
                    ["files"],
-                   [cwlout(["align_bam"], "File", [".bai"]),
+                   [cwlout(["align_bam"], ["File", "null"], [".bai"]),
                     cwlout(["work_bam_plus", "disc"], ["File", "null"]),
                     cwlout(["work_bam_plus", "sr"], ["File", "null"]),
                     cwlout(["hla", "fastq"], ["File", "null"])],
@@ -480,7 +493,7 @@ def _qc_workflow(checkpoints):
                             cwlout(["config", "algorithm", "qc"])])],
             "bcbio-vc", ["bcftools", "bedtools", "fastqc=0.11.7=5", "goleft", "hts-nim-tools", "mosdepth",
                          "picard", "pythonpy", "qsignature", "qualimap", "sambamba",
-                         "samtools", "preseq", "peddy", "verifybamid2"],
+                         "samtools", "preseq", "peddy;env=python2", "verifybamid2"],
             disk={"files": 2.0}),
           s("multiqc_summary", "multi-combined",
             [["qcout_rec"]],
@@ -507,14 +520,16 @@ def _variant_sv(checkpoints):
                             cwlout(["svvalidate", "summary"], ["File", "null"]),
                             cwlout("inherit", exclude=[["align_bam"], ["work_bam_plus"],
                                                        ["reference", "snpeff"]])])],
-            "bcbio-vc", ["bedtools", "cnvkit", "delly", "duphold", "extract-sv-reads",
-                         "lumpy-sv", "manta", "break-point-inspector", "mosdepth", "samtools",
-                         "smoove", "pysam>=0.13.0",
-                         "seq2c", "simple_sv_annotation", "survivor", "svtools", "svtyper",
-                         "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "vawk"],
+            "bcbio-vc", ["bedtools", "cnvkit", "delly", "duphold", "extract-sv-reads", "gsort",
+                         "lumpy-sv;env=python2", "manta;env=python2", "break-point-inspector", "mosdepth", "samtools",
+                         "smoove;env=python2", "pysam>=0.13.0",
+                         "seq2c", "simple_sv_annotation;env=python2", "survivor", "svtools;env=python2",
+                         "svtyper;env=python2",
+                         "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "vawk;env=python2"],
             disk={"files": 2.0})]
     sv_batch_inputs = [["analysis"], ["genome_build"],
                        ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
+                       ["config", "algorithm", "background", "cnv_reference"],
                        ["config", "algorithm", "tools_on"],
                        ["config", "algorithm", "tools_off"],
                        ["config", "algorithm", "svprioritize"],
@@ -528,12 +543,14 @@ def _variant_sv(checkpoints):
     steps = [s("calculate_sv_bins", "multi-combined",
                [["align_bam"], ["reference", "fasta", "base"],
                 ["metadata", "batch"], ["metadata", "phenotype"],
+                ["config", "algorithm", "background", "cnv_reference"],
                 ["config", "algorithm", "callable_regions"],
                 ["config", "algorithm", "coverage_interval"],
                 ["config", "algorithm", "exclude_regions"],
                 ["config", "algorithm", "sv_regions"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "variant_regions_merged"],
+                ["config", "algorithm", "seq2c_bed_ready"],
                 ["config", "algorithm", "svcaller"],
                 ["depth", "variant_regions", "regions"],
                 ["genome_resources", "variation", "lcr"], ["genome_resources", "variation", "polyx"],
@@ -552,8 +569,9 @@ def _variant_sv(checkpoints):
                [cwlout("sv_rawcoverage_rec", "record",
                        fields=[cwlout(["depth", "bins", "target"], ["File", "null"]),
                                cwlout(["depth", "bins", "antitarget"], ["File", "null"]),
+                               cwlout(["depth", "bins", "seq2c"], ["File", "null"]),
                                cwlout("inherit")])],
-               "bcbio-vc", ["mosdepth", "cnvkit"],
+               "bcbio-vc", ["mosdepth", "cnvkit", "seq2c"],
                disk={"files": 1.5}),
              s("normalize_sv_coverage", "multi-combined",
                [["sv_rawcoverage_rec"]],
@@ -576,7 +594,7 @@ def _variant_sv(checkpoints):
                 cwlout(["sv", "prioritize", "raw"], {"type": "array", "items": ["File", "null"]}),
                 cwlout(["svvalidate", "grading_summary"], ["File", "null"]),
                 cwlout(["svvalidate", "grading_plots"], {"type": "array", "items": ["File", "null"]})],
-               "bcbio-vc", disk={"files": 1.0}, cores=1)]
+               "bcbio-vc", ["bcbio-prioritize"], disk={"files": 1.0}, cores=1)]
     final_outputs = [["sv", "calls"], ["svvalidate", "grading_summary"], ["sv", "prioritize", "tsv"],
                      ["sv", "prioritize", "raw"], ["sv", "supplemental"]]
     return steps, final_outputs
@@ -603,7 +621,7 @@ def rnaseq(samples):
     align = [s("process_alignment", "multi-parallel",
                [["trim_rec"]],
                [cwlout(["align_bam"], "File", [".bai"])],
-               "bcbio-rnaseq", ["star", "hisat2", "tophat", "samtools",
+               "bcbio-rnaseq", ["star", "hisat2", "tophat;env=python2", "samtools",
                                 "sambamba", "seqtk"],
                {"files": 1.5})]
     if checkpoints.get("vc"):

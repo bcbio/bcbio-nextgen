@@ -161,7 +161,7 @@ def _get_fraglen_file(salmondir):
 
 def parse_fragment_length_file(filename):
     with open(filename) as in_handle:
-        flens = [float(x) for x in in_handle.next().split("\t")]
+        flens = [float(x) for x in next(in_handle).split("\t")]
     return flens
 
 def estimate_fragment_size(data):

@@ -65,9 +65,9 @@ class TestCWL():
             with utils.chdir(os.path.join(workdir, "somatic")):
                 cl = ["bash", "./run_generate_cwl.sh"]
                 subprocess.check_call(cl)
-                if os.path.exists("toil_work"):
-                    shutil.rmtree("toil_work")
-                cl = ["bash", "./run_toil.sh"]
+                if os.path.exists("cromwell_work"):
+                    shutil.rmtree("cromwell_work")
+                cl = ["bcbio_vm.py", "cwlrun", "cromwell", "somatic-workflow"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl
@@ -93,9 +93,9 @@ class TestCWL():
         with install_cwl_test_files(data_dir) as workdir:
             with utils.chdir(os.path.join(workdir, "rnaseq")):
                 cl = ["bash", "./run_generate_cwl.sh"]
-                if os.path.exists("toil_work"):
-                    shutil.rmtree("toil_work")
-                cl = ["bash", "./run_toil.sh"]
+                if os.path.exists("cromwell_work"):
+                    shutil.rmtree("cromwell_work")
+                cl = ["bcbio_vm.py", "cwlrun", "cromwell", "rnaseq-workflow"]
                 subprocess.check_call(cl)
 
     @pytest.mark.cwl

@@ -35,40 +35,52 @@ install:
   - rm -rf ~/install/bcbio-vm/anaconda/lib/python2.7/site-packages/bcbio_nextgen-*
   - ~/install/bcbio-vm/anaconda/bin/python setup.py install
 
-script:
-  # -- Prepare variant docker image
-  - docker pull quay.io/bcbio/bcbio-vc
-  - docker images
-  - df -h
-  # Update to latest bcbio-nextgen code within the container
-  - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
-  # -- Standard bcbio variant tests
-  - docker run -v `pwd`:`pwd` quay.io/bcbio/bcbio-vc bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test -p no:cacheprovider -p no:stepwise tests/unit --cov=bcbio"
-  - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -m docker_multicore
-  # -- bcbio variant CWL tests
-  # XXX Currently commented out joint test, taking too long and causing Travis timeouts
-  # - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_joint
-  - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_somatic
-  # -- platform integration
-  - sudo mkdir -p /etc/pki/tls/certs && sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
-  # XXX Arvados tests failing with 404 when contacting from Travis
-  #- py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_arvados
-  # -- Cleanup variant docker image
-  - docker ps -a -q | xargs --no-run-if-empty docker rm
-  - docker rmi -f quay.io/bcbio/bcbio-vc
-  - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
-  - docker images
-  # -- bcbio RNA-seq CWL tests
-  - docker pull quay.io/bcbio/bcbio-rnaseq
-  - docker images
-  - df -h
-  - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-rnaseq
-  - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_rnaseq
-  # -- Cleanup RNA-seq docker image
-  - docker ps -a -q | xargs --no-run-if-empty docker rm
-  - docker rmi -f quay.io/bcbio/bcbio-rnaseq
-  - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
-  - docker images
+jobs:
+  include:
+    - stage: test
+      name: "Variant standard"
+      script:
+        # -- Prepare variant docker image
+        - docker pull quay.io/bcbio/bcbio-vc
+        - docker images
+        - df -h
+        # Update to latest bcbio-nextgen code within the container
+        - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
+        # -- Standard bcbio variant tests
+        - docker run -v `pwd`:`pwd` quay.io/bcbio/bcbio-vc bash -c "cd `pwd` && /usr/local/share/bcbio-nextgen/anaconda/bin/py.test -p no:cacheprovider -p no:stepwise tests/unit --cov=bcbio"
+        - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -m docker_multicore
+        # XXX Arvados tests failing with 404 when contacting from Travis
+        # - sudo mkdir -p /etc/pki/tls/certs && sudo ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+        # - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_arvados
+    - stage: test
+      name: "Variant CWL"
+      script:
+        - docker pull quay.io/bcbio/bcbio-vc
+        - docker images
+        - df -h
+        # Update to latest bcbio-nextgen code within the container
+        - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
+        # XXX Currently commented out joint test, taking too long and causing Travis timeouts
+        # - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_joint
+        - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_somatic
+        # -- Cleanup variant docker image
+        - docker ps -a -q | xargs --no-run-if-empty docker rm
+        - docker rmi -f quay.io/bcbio/bcbio-vc
+        - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
+        - docker images
+    - stage: test
+      name: "RNA-seq CWL"
+      script:
+        - docker pull quay.io/bcbio/bcbio-rnaseq
+        - docker images
+        - df -h
+        - bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-rnaseq
+        - py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s -m cwl_docker_rnaseq
+        # -- Cleanup RNA-seq docker image
+        - docker ps -a -q | xargs --no-run-if-empty docker rm
+        - docker rmi -f quay.io/bcbio/bcbio-rnaseq
+        - docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
+        - docker images
 
 after_failure:
   - df -h

@@ -26,6 +26,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import effects, ploidy, population, vcfutils
 from bcbio.structural import annotate, plot, shared
+from functools import reduce
 
 def use_general_sv_bins(data):
     """Check if we should use a general binning approach for a sample.
@@ -74,6 +75,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     """
     assert len(ckouts) == len(items)
     out = []
+    upload_counts = collections.defaultdict(int)
     for ckout, data in zip(ckouts, items):
         ckout = copy.deepcopy(ckout)
         ckout["variantcaller"] = "cnvkit"
@@ -86,9 +88,12 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
                 ckout = _add_plots_to_output(ckout, data)
+            ckout["do_upload"] = upload_counts[ckout.get("vrn_file")] == 0
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
+        if ckout.get("vrn_file"):
+            upload_counts[ckout["vrn_file"]] += 1
         out.append(data)
     return out
 
@@ -246,8 +251,8 @@ def _run_cnvkit_shared_orig(inputs, backgrounds):
                        "cns": "%s.cns" % out_base})
     if not utils.file_exists(ckouts[0]["cns"]):
         cov_interval = dd.get_coverage_interval(inputs[0])
-        samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
-                        zip(["evaluate"] * len(inputs), inputs)
+        samples_to_run = list(zip(["background"] * len(backgrounds), backgrounds)) + \
+                         list(zip(["evaluate"] * len(inputs), inputs))
         # New style shared SV bins
         if tz.get_in(["depth", "bins", "target"], inputs[0]):
             target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
@@ -360,8 +365,8 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
 
 def _read_metrics_file(in_file):
     with open(in_file) as in_handle:
-        header = in_handle.next().strip().split("\t")[1:]
-        vals = map(float, in_handle.next().strip().split("\t")[1:])
+        header = next(in_handle).strip().split("\t")[1:]
+        vals = map(float, next(in_handle).strip().split("\t")[1:])
     return dict(zip(header, vals))
 
 @utils.map_wrap
@@ -459,7 +464,12 @@ def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     if not os.path.exists(anti_file):
         _, anti_bin = target_anti_fn()
         with file_transaction(data, anti_file) as tx_out_file:
-            cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
+            # Create access file without targets to avoid overlap
+            # antitarget in cnvkit is meant to do this but appears to not always happen
+            # after chromosome 1
+            tx_access_file = os.path.join(os.path.dirname(tx_out_file), os.path.basename(access_file))
+            pybedtools.BedTool(access_file).subtract(cnv_file).saveas(tx_access_file)
+            cmd = [_get_cmd(), "antitarget", "-g", tx_access_file, cnv_file, "-o", tx_out_file,
                    "--avg-size", str(anti_bin)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_file, anti_file

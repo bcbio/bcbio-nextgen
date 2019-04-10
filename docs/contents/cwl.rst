@@ -3,25 +3,25 @@
 Common Workflow Language (CWL)
 ------------------------------
 
-bcbio supporting running with `Common Workflow Language (CWL)
+bcbio runs with `Common Workflow Language (CWL)
 <https://github.com/common-workflow-language/common-workflow-language>`_
 compatible parallelization software. bcbio generates a CWL workflow from a
 `standard bcbio sample YAML description file
-<https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_.
-Any tool that supports CWL input can run this workflow. CWL-based tools do the
+<https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_
+and any tool that supports CWL input can run the workflow. CWL-based tools do the
 work of managing files and workflows, and bcbio performs the biological analysis
 using either a Docker container or a local installation.
 
 Current status
 ~~~~~~~~~~~~~~
 
-bcbio currently supports creation of CWL for alignment, small variant calls
-(SNPs and indels), coverage assessment, HLA typing, quality control and
-structural variant calling. It generates a `CWL v1.0.2
-<http://www.commonwl.org/v1.0/>`_ compatible workflow. The actual biological
-code execution during runs works with either a `bcbio docker container
-<https://github.com/bcbio/bcbio_docker>`_  or a
-`local installation of bcbio <https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html>`_.
+bcbio creates CWL for alignment, small variant calls (SNPs and indels), coverage
+assessment, HLA typing, quality control and structural variant calling. It
+generates a `CWL v1.0.2 <http://www.commonwl.org/v1.0/>`_ compatible workflow.
+The actual biological code execution during runs works with either a `bcbio
+docker container <https://github.com/bcbio/bcbio_docker>`_ or a `local
+installation of bcbio
+<https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html>`_.
 
 The implementation includes bcbio's approaches to splitting and batching
 analyses. At the top level workflow, we parallelize by samples. Using
@@ -43,11 +43,6 @@ bcbio supports these CWL-compatible tools:
   distributed runs on HPC systems with shared filesystems and schedulers like
   SLURM, SGE and PBSPro.
 
-- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
-
-- `Toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
-  distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
-
 - `Arvados <https://arvados.org/>`_ -- a hosted platform that runs on top of
   parallel cloud environments. We include an example below of running on the
   `public Curoverse <https://cloud.curoverse.com/>`_ instance running on
@@ -60,6 +55,11 @@ bcbio supports these CWL-compatible tools:
   analyses on the Seven Bridges platform and `Cancer Genomics Cloud
   <http://www.cancergenomicscloud.org/>`_.
 
+- `Toil <https://github.com/BD2KGenomics/toil>`_ -- parallel local and
+  distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
+
+- `rabix bunny <https://github.com/rabix/bunny>`_ -- multicore local runs.
+
 - `cwltool <https://github.com/common-workflow-language/cwltool>`_ -- a single
   core analysis engine, primarily used for testing.
 
@@ -68,6 +68,8 @@ and also need to evaluate the workflow on larger, real life analyses. This
 includes supporting additional CWL runners. We're working on evaluating
 `Galaxy/Planemo <https://github.com/galaxyproject/planemo>`_ for integration
 with the Galaxy community.
+
+.. _docs-cwl-installation:
 
 Installation
 ~~~~~~~~~~~~
@@ -106,18 +108,19 @@ install of just bcbio-vm. To install using `Miniconda
 <http://conda.pydata.org/miniconda.html>`_ and `bioconda packages
 <https://bioconda.github.io/>`_ on Linux::
 
-    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     export TARGETDIR=~/install/bcbio-vm/anaconda
-    export BINDIR=/usr/local
+    export BINDIR=/usr/local/bin
+    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
     bash Miniconda2-latest-Linux-x86_64.sh -b -p $TARGETDIR
     $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen
     $TARGETDIR/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
+    mkdir -p $BINDIR
     ln -s $TARGETDIR/bin/bcbio_vm.py $BINDIR/bcbio_vm.py
     ln -s $TARGETDIR/bin/conda $BINDIR/bcbiovm_conda
     ln -s $TARGETDIR/bin/python $BINDIR/bcbiovm_python
 
 In the above commands, the `bcbio-vm` install goes in ``$TARGETDIR``.
-The example is in your home directory but set to anywhere you have space.
+The example is in your home directory but set it anywhere you have space.
 Also, as an alternative to symbolic linking to a ``$BINDIR``, you can
 add the install bin directory to your PATH::
 
@@ -166,6 +169,8 @@ your machine:
    bcbio
    <https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html>`_
    add ``--no-container`` to the commands in the shell scripts.
+
+.. _docs-cwl-generate:
 
 Generating CWL for input to a tool
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +231,7 @@ You can now run this with any CWL compatible runner and the ``bcbio_vm.py
 cwlrun`` wrappers standardize running across multiple tools in different
 environments.
 
-Running with Cromwell (local, HPC)
+Running with Cromwell (local, HPC, cloud)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The `Cromwell <http://cromwell.readthedocs.io/>`_ workflow management system runs
@@ -254,6 +259,8 @@ heterogeneous and use only cores necessary for that job, the total cores used
 will max out at joblimit times maximum cores for an individual process. Setting
 this helps avoid over-committing jobs to a shared scheduler during highly
 parallel processes like variant calling.
+
+Cromwell can also run directly on cloud resources: :ref:`docs-cloud-gcp`.
 
 Running with Toil (local, HPC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -489,6 +496,62 @@ DNAnexus platform.
               $FOLDER/$PNAME-workflow/main-$PNAME-samples.json \
               --project PROJECT_ID --token $DX_AUTH_TOKEN \
               --rootdir $FOLDER/dx-cwl-run
+
+Running on Seven Bridges (hosted cloud)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bcbio runs on the `Seven Bridges <https://www.sevenbridges.com/>`_
+including the main platform and specialized data sources like the
+`Cancer Genomics Cloud <https://www.cancergenomicscloud.org/>`_ and
+`Cavatica <http://www.cavatica.org/>`_. Seven Bridges uses generated CWL
+directly and bcbio has utilities to query your remote data on the platform and
+prepare CWL for direct submission.
+
+1. Since Seven Bridges is available on multiple platforms and data access
+   points, we authenticate with a configuration file in
+   ``$HOME/.sevenbridges/credentials`` with potentially `multiple profiles defining
+   API access URLs and authentication keys
+   <https://sevenbridges-python.readthedocs.io/en/latest/quickstart/#initialize-the-library-using-a-configuration-file>`_.
+   We reference the `specified credentials
+   <https://docs.sevenbridges.com/docs/store-credentials-to-access-seven-bridges-client-applications-and-libraries#section-unified-configuration-file>`_
+   when setting up a ``bcbio_system-sbg.yaml`` file to ensure correct authentication.
+
+2. Upload your inputs and bcbio reference data using the `Seven Bridges command
+   line uploader
+   <https://docs.sevenbridges.com/docs/upload-via-the-command-line>`_. We plan
+   to host standard bcbio reference data in a public project so you should only
+   need to upload your project specific data::
+
+       sbg-uploader.sh -p chapmanb/bcbio-test --folder inputs --preserve-folder fastq_files regions
+
+3. Create ``bcbio_system-sbg.yaml`` file defining locations of inputs::
+
+       sbgenomics:
+         profile: default
+         project: chapmanb/bcbio-test
+         inputs:
+           - /testdata/100326_FC6107FAAXX
+           - /testdata/automated
+           - /testdata/genomes
+           - /testdata/reference_material
+       resources:
+         default:
+           cores: 2
+           memory: 3G
+           jvm_opts: [-Xms750m, -Xmx3000m]
+
+4. Follow the :ref:`automated-sample-config` workflow to generate a full
+   configuration, and generate a CWL description of the workflow::
+
+       PNAME=somatic
+       bcbio_vm.py template --systemconfig=bcbio_system-sbg.yaml ${PNAME}_template.yaml $PNAME.csv
+       bcbio_vm.py cwl --systemconfig=bcbio_system-sbg.yaml $PNAME/config/$PNAME.yaml
+
+5. Run the job on the Seven Bridges platform::
+
+       PNAME=somatic
+       SBG_PROJECT=bcbio-test
+       bcbio_vm.py cwlrun sbg ${PNAME}-workflow -- --project ${SBG_PROJECT}
 
 Development notes
 ~~~~~~~~~~~~~~~~~

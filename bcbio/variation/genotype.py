@@ -5,6 +5,7 @@ import collections
 import copy
 import pprint
 
+import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -55,6 +56,9 @@ def combine_multiple_callers(samples):
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
         work_bam = tz.get_in(("combine", "work_bam", "out"), data, data.get("align_bam"))
+        # For pre-computed VCF inputs, we don't have BAM files
+        if not work_bam:
+            work_bam = dd.get_sample_name(data)
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         variantcaller = get_variantcaller(data)
         key = (multi.get_batch_for_key(data), work_bam)
@@ -287,7 +291,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
     """Split samples that potentially require multiple variant calling approaches.
     """
     callers = get_variantcaller(data, key, default, require_bam=require_bam)
-    if isinstance(callers, basestring):
+    if isinstance(callers, six.string_types):
         return [data]
     elif not callers:
         return []
@@ -302,7 +306,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             # if splitting by variant caller, also split by jointcaller
             if key == "variantcaller":
                 jcallers = get_variantcaller(data, "jointcaller", [])
-                if isinstance(jcallers, basestring):
+                if isinstance(jcallers, six.string_types):
                     jcallers = [jcallers]
                 if jcallers:
                     base["config"]["algorithm"]["orig_jointcaller"] = jcallers

@@ -52,7 +52,7 @@ def _apply_priority_filter(in_file, priority_file, data):
                 out_handle.write(header)
             if "tumoronly_germline_filter" in dd.get_tools_on(data):
                 filter_cmd = ("bcftools filter -m '+' -s 'LowPriority' "
-                              """-e "EPR[*] != 'pass'" |""")
+                              """-e "EPR[0] != 'pass'" |""")
             else:
                 filter_cmd = ""
             cmd = ("bcftools annotate -a {priority_file} -h {header_file} "

@@ -57,7 +57,7 @@ def _create_sample_file(data, out_dir):
     sample_file = os.path.join(out_dir, "sample_file.txt")
     with open(sample_file, 'w') as outh:
         for sample in data:
-            print >>outh, sample[0]["clean_fastq"]
+            outh.write(sample[0]["clean_fastq"] + "\n")
     return sample_file
 
 def _find_bowtie(data):

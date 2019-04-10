@@ -12,7 +12,7 @@ import pandas as pd
 from bcbio import utils
 from bcbio.bam import ref
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.heterogeneity import chromhacks
+from bcbio.heterogeneity import chromhacks, loh
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -69,6 +69,7 @@ def _finalize_sv(solution_file, data):
         out["subclones"] = "%s.segs.txt" % solution["path"]
         out["hetsummary"] = solution_file
         out["vrn_file"] = to_vcf(out["subclones"], "TitanCNA", _get_header, _seg_to_vcf, data)
+        out["lohsummary"] = loh.summary_status(out, data)
     return out
 
 def _should_run(het_file):
@@ -184,6 +185,7 @@ def _titan_cn_file(cnr_file, work_dir, data):
 _vcf_header = """##fileformat=VCFv4.2
 ##source={caller}
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=FOLD_CHANGE_LOG,Number=1,Type=Float,Description="Log fold change">
 ##INFO=<ID=PROBES,Number=1,Type=Integer,Description="Number of probes in CNV">
@@ -203,6 +205,7 @@ def _get_header(in_handle):
 def _seg_to_vcf(cur):
     svtype = _get_svtype(cur["TITAN_call"])
     info = ["SVTYPE=%s" % svtype, "END=%s" % cur["End_Position.bp."],
+            "SVLEN=%s" % (int(cur["End_Position.bp."]) - int(cur["Start_Position.bp."])),
             "CN=%s" % cur["Copy_Number"], "MajorCN=%s" % cur["MajorCN"],
             "MinorCN=%s" % cur["MinorCN"], "FOLD_CHANGE_LOG=%s" % cur["Median_logR"]]
     return [cur["Chromosome"], cur["Start_Position.bp."], ".", "N", "<%s>" % svtype, ".",

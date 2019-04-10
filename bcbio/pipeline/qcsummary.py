@@ -21,6 +21,9 @@ from bcbio.provenance import do
 from bcbio.rnaseq import gtf
 from bcbio.variation import damage, peddy, vcfutils, vcfanno
 
+import six
+
+
 # ## High level functions to generate summary
 
 def qc_to_rec(samples):
@@ -52,8 +55,7 @@ def generate_parallel(samples, run_parallel):
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
     # MultiQC must be run after all file outputs are set:
-    run_parallel("multiqc_summary", [samples])
-    return out
+    return [[utils.to_single_data(d)] for d in run_parallel("multiqc_summary", [out])]
 
 def pipeline_summary(data):
     """Provide summary information on processing sample.
@@ -173,7 +175,7 @@ def _run_qc_tools(bam_file, data):
             # Check for files only output
             if "base" in out:
                 qc_files = out
-        elif out and isinstance(out, basestring) and os.path.exists(out):
+        elif out and isinstance(out, six.string_types) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
@@ -301,10 +303,10 @@ def _merge_metadata(samples):
     sample_metrics = collections.defaultdict(dict)
     for s in samples:
         m = tz.get_in(['metadata'], s)
-        if isinstance(m, basestring):
+        if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
-            for me in m.keys():
+            for me in list(m.keys()):
                 if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                     m.pop(me, None)
             sample_metrics[dd.get_sample_name(s)].update(m)

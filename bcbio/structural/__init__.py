@@ -16,9 +16,12 @@ from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, gatkcnv, grids
 from bcbio.variation import validate as vcvalidate
 from bcbio.variation import vcfutils
 
+import six
+from functools import reduce
+
+
 # Stratify callers by stage -- see `run` documentation below for definitions
 _CALLERS = {
-  "precall": {"seq2c": seq2c.precall},
   "initial": {"cnvkit": cnvkit.run},
   "standard": {"cn.mops": cn_mops.run, "manta": manta.run, "cnvkit": cnvkit.run,
                "delly": delly.run, "lumpy": lumpy.run, "wham": wham.run,
@@ -29,6 +32,8 @@ _CALLERS = {
                "prioritize": prioritize.run}}
 _NEEDS_BACKGROUND = set(["cn.mops"])
 _GLOBAL_BATCHING = set(["seq2c"])
+# CNV callers that have background references
+_CNV_REFERENCE = set(["seq2c", "cnvkit", "gatk-cnv"])
 
 def _get_callers(items, stage, special_cases=False):
     """Retrieve available callers for the provided stage.
@@ -52,7 +57,7 @@ def get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
     if svs is None:
         svs = []
-    elif isinstance(svs, basestring):
+    elif isinstance(svs, six.string_types):
         svs = [svs]
     return svs
 
@@ -147,8 +152,8 @@ def _batch_split_by_sv(samples, stage):
             for x in ready_data:
                 svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
-                if stage in ["precall", "ensemble"]:  # no batching for precall or ensemble methods
-                    if isinstance(batch, basestring) and batch != dd.get_sample_name(x):
+                if stage in ["ensemble"]:  # no batching for ensemble methods
+                    if isinstance(batch, six.string_types) and batch != dd.get_sample_name(x):
                         batch += "_%s" % dd.get_sample_name(x)
                     else:
                         batch = dd.get_sample_name(x)
@@ -170,7 +175,6 @@ def run(samples, run_parallel, stage):
     """Run structural variation detection.
 
     The stage indicates which level of structural variant calling to run.
-      - precall, perform initial sample based assessment of samples
       - initial, callers that can be used in subsequent structural variation steps (cnvkit -> lumpy)
       - standard, regular batch calling
       - ensemble, post-calling, combine other callers or prioritize results
@@ -316,6 +320,22 @@ def summarize_sv(items):
     return [out]
 
 # ## configuration
+
+def standardize_cnv_reference(data):
+    """Standardize cnv_reference background to support multiple callers.
+    """
+    out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data, {})
+    cur_callers = set(data["config"]["algorithm"].get("svcaller")) & _CNV_REFERENCE
+    if isinstance(out, six.string_types):
+        if not len(cur_callers) == 1:
+            raise ValueError("Multiple CNV callers and single background reference for %s: %s" %
+                                data["description"], list(cur_callers))
+        else:
+            out = {cur_callers.pop(): out}
+    return out
+
+def supports_cnv_reference(c):
+    return c in _CNV_REFERENCE
 
 def parallel_multiplier(items):
     """Use more resources (up to available limits) if we have multiple QC samples/svcallers.

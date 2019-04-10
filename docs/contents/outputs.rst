@@ -86,7 +86,7 @@ Sample directories
 
 - ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
 - ``SAMPLE-ready.counts`` -- featureCounts gene counts output.
-- ``sailfish`` -- Sailfish output.
+- ``salmon`` -- Salmon output.
 
 small RNA-seq
 =============

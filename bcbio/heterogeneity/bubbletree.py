@@ -114,7 +114,7 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                     reader = csv.reader(in_handle, dialect="excel-tab")
                     writer = csv.writer(out_handle)
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
-                    header = reader.next()
+                    header = next(reader)
                     for line in reader:
                         cur = dict(zip(header, line))
                         if chromhacks.is_autosomal(cur["chromosome"]):
@@ -177,7 +177,7 @@ def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, soma
     def _segment_by_cns(target_chrom, freqs, coords):
         with open(seg_file) as in_handle:
             reader = csv.reader(in_handle, dialect="excel-tab")
-            reader.next()  # header
+            next(reader)  # header
             for cur_chrom, start, end in (xs[:3] for xs in reader):
                 if cur_chrom == target_chrom:
                     block_freqs = []

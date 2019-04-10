@@ -71,7 +71,7 @@ def umi_transform(data):
     cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
     with open_fastq(fq1) as in_handle:
-        read = in_handle.next()
+        read = next(in_handle)
         if "UMI_" in read:
             data["files"] = [out_file]
             return data

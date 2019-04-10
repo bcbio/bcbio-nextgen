@@ -22,6 +22,9 @@ from bcbio.provenance import do
 from bcbio import bam
 
 
+import six
+
+
 def split(*items):
     """Split samples into all possible genomes for alignment.
     """
@@ -34,7 +37,7 @@ def split(*items):
                                         "base": True}
             out.append([data])
             # handle the instance where a single organism is disambiguated
-            if isinstance(dis_orgs, basestring):
+            if isinstance(dis_orgs, six.string_types):
                 dis_orgs = [dis_orgs]
             for dis_org in dis_orgs:
                 dis_data = copy.deepcopy(data)
@@ -60,7 +63,7 @@ def resolve(items, run_parallel):
             out.append([data])
     if len(to_process) > 0:
         dis1 = run_parallel("run_disambiguate",
-                            [(xs, xs[0]["config"]) for xs in to_process.itervalues()])
+                            [(xs, xs[0]["config"]) for xs in to_process.values()])
         disambigs_by_name = collections.defaultdict(list)
         print(len(dis1))
         for xs in dis1:
@@ -68,7 +71,7 @@ def resolve(items, run_parallel):
             data = xs[0]
             disambigs_by_name[dd.get_sample_name(data)].append(data)
         dis2 = run_parallel("disambiguate_merge_extras",
-                            [(xs, xs[0]["config"]) for xs in disambigs_by_name.itervalues()])
+                            [(xs, xs[0]["config"]) for xs in disambigs_by_name.values()])
     else:
         dis2 = []
     return out + dis2

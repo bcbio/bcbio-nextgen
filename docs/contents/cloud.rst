@@ -1,64 +1,227 @@
 .. _docs-cloud:
 
-Amazon Web Services
--------------------
+Cloud
+-----
 
-`Amazon Web Services (AWS) <https://aws.amazon.com/>`_ provides a flexible cloud
-based environment for running analyses. Cloud approaches offer the ability to
-perform analyses at scale with no investment in local hardware. They also offer
-full programmatic control over the environment, allowing bcbio to automate the
-entire setup, run and teardown process.
-
-`bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_ provides a wrapper
-around bcbio-nextgen that automates interaction with AWS and `Docker
-<https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans up the command line
-usage to make it more intuitive and provides a superset of functionality
-available in ``bcbio_nextgen.py``. bcbio-vm uses `Elasticluster
-<https://github.com/gc3-uzh-ch/elasticluster>`_ to build a cluster on AWS with
-an encrypted NFS mounted drive and an optional Lustre shared filesystem.
-
-We're phasing out this approach to cloud support in bcbio. Instead of building
-this directly into bcbio, we'll now be using :ref:`docs-cwl` support. Runners
-like Cromwell can directly interface and run with cloud services and we'll
-document these approaches as they're tested and available. To use cloud
-integration immediately, we'd suggest using the `simplified ansible based
+bcbio has two approaches to running on cloud providers like
+`Amazon Web Services (AWS) <https://aws.amazon.com/>`_,
+`Google Cloud (GCP) <https://cloud.google.com/>`_ and
+`Microsoft Azure <https://azure.microsoft.com>`_. For smaller projects
+we use a `simplified ansible based
 approach
 <https://github.com/bcbio/bcbio-nextgen/tree/master/scripts/ansible#simplified-bcbio-cloud-usage>`_
-which spins up single multicore machines for running.
+which automates spinning up single multicore machines for running either
+traditional or :ref:`docs-cwl` bcbio runs.
 
-Local setup
-===========
+For larger distributed projects, we're actively working on using :ref:`docs-cwl`
+support with runners like `Cromwell <http://cromwell.readthedocs.io>`_ that
+directly interface and run on cloud services. We'll document these approaches
+here as they're tested and available.
 
-``bcbio_vm.py`` provides the automation to start up and administer remote bcbio
-runs on AWS. This only requires a local installation of the python wrapper code,
-not any of the Docker containers or biological data, which will all get
-installed on AWS. The easier way to install is using `conda`_ with an isolated
-Python::
+For getting started, the CWL :ref:`docs-cwl-installation` documentation
+describes how to install `bcbio-vm <https://github.com/bcbio/bcbio-nextgen-vm>`_,
+which provides a wrapper around bcbio that automates interaction with cloud
+providers and `Docker <https://www.docker.com/>`_. ``bcbio_vm.py`` also cleans
+up the command line usage to make it more intuitive and provides a superset of
+functionality available in ``bcbio_nextgen.py``.
 
-    wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
-    ~/install/bcbio-vm/anaconda/bin/conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm
-    ln -s ~/install/bcbio-vm/anaconda/bin/bcbio_vm.py /usr/local/bin/bcbio_vm.py
+.. _docs-cloud-gcp:
 
-We support both Linux and Mac OSX as clients for running remote AWS bcbio clusters.
+Google Cloud (GCP)
+##################
 
-.. _conda: http://conda.pydata.org/
+Cromwell runs bcbio CWL pipelines on Google Cloud using the
+`Google Pipelines API <https://cloud.google.com/genomics/reference/rest/>`_.
+
+Setup
+=====
+
+To setup a Google Compute environment, you'll make use of the `Web based console
+<https://console.cloud.google.com>`_ and `gcloud and gsutil from the Google
+Cloud SDK <https://cloud.google.com/sdk/>`_, which provide command line
+interfacts to manage data in Google Storage and Google Compute instances. You
+can install with::
+
+    bcbio_conda install -c conda-forge -c bioconda google-cloud-sdk
+
+For authentication, you want to set up a `Google Cloud Platform service account
+<https://cloud.google.com/docs/authentication/production>`_. The environmental variable
+``GOOGLE_APPLICATION_CREDENTIALS`` identifies a
+`JSON file of credentials <https://cloud.google.com/docs/authentication/getting-started>`_.
+which bcbio passes to Cromwell for authentication::
+
+    gcloud auth login
+    gcloud projects create your-project
+    gcloud iam service-accounts create your-service-account
+    gcloud projects add-iam-policy-binding your-project --member \
+      "serviceAccount:your-service-account@your-project.iam.gserviceaccount.com" --role "roles/owner"
+    gcloud iam service-accounts keys create ~/.config/gcloud/your-service-account.json \
+      --iam-account your-service-account@your-project.iam.gserviceaccount.com
+    export GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/your-service-account.json
+
+You'll need a project for your run along, with the Google Genomics API enabled,
+and a Google Storage bucket for your data and run intermediates::
+
+    gcloud config set project your-project
+    gcloud services enable genomics.googleapis.com
+    gsutil mb gs://your-project
+
+Additional documentation for Cromwell: `Google Pipelines API
+<https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/>`_ and
+`Google authentication <https://github.com/broadinstitute/cromwell/blob/develop/docs/backends/Google.md>`_.
+
+Data preparation
+================
+
+Cromwell can localize data present in Google Storage buckets as part of the run
+process and bcbio will translate the data present in these storage bucket into
+references for the CWL run inputs.
+
+Upload your data with ``gsutil``::
+
+    gsutil cp your_data.bam gs://your-project/inputs/
+
+
+Create a ``bcbio_system-gcp.yaml`` input file for :ref:`docs-cwl-generate`::
+
+    gs:
+      ref: gs://bcbiodata/collections
+      inputs:
+        - gs://your-project/inputs
+    resources:
+      default: {cores: 8, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
+
+Then create a sample input CSV and template YAML file for
+:ref:`automated-sample-config`. The first column of the CSV file should contain
+references to your input files (``your_file.bam`` or
+``your_file_R1.fastq.gz;your_file_R2.fastq.gz``), which avoids needing to specify the
+inputs on the command line.
+
+Generate a Common Workflow Language representation::
+
+   bcbio_vm.py template --systemconfig bcbio_system-gcp.yaml ${TEMPLATE}-template.yaml $PNAME.csv
+   bcbio_vm.py cwl --systemconfig bcbio_system-gcp.yaml $PNAME/config/$PNAME.yaml
+
+Running
+=======
+
+Run the CWL using Cromwell by specifying the project and root Google Storage
+bucket for intermediates::
+
+    bcbio_vm.py cwlrun cromwell $PNAME-workflow --cloud-project your-project \
+        --cloud-root gs://your-project/work_cromwell
+
+Amazon Web Services (AWS Batch)
+###############################
+
+We're working to support `Amazon Web Services (AWS) <https://aws.amazon.com/>`_
+using AWS Batch and Cromwell, following the `AWS for Genomics documentation
+<https://docs.opendata.aws/genomics-workflows/>`_. This documents the current
+work in progress; it is not yet fully running and needs
+`additional Cromwell development <https://github.com/broadinstitute/cromwell/issues/4586>`_
+for AWS CWL support.
+
+Setup
+=====
+
+0. Optionally, create a bcbio `IAM user <https://aws.amazon.com/iam/>`_ and
+   bcbio keypair for creating AWS Batch specific resources. bcbio-vm can
+   automate this process, although they can also be pre-existing. If you'd like
+   to use bcbio-vm automation, you'll need to have
+   an account at Amazon and your Access Key ID and Secret Key ID from the
+   `AWS security credentials page
+   <https://console.aws.amazon.com/iam/home?#security_credential>`_. These can be
+   `IAM credentials <https://aws.amazon.com/iam/getting-started/>`_ instead of root
+   credentials as long as they have administrator privileges. Make them available
+   to bcbio using the standard environmental variables::
+
+       export AWS_ACCESS_KEY_ID=your_access_key
+       export AWS_SECRET_ACCESS_KEY=your_secret_key
+
+   With this in place, ceate public/private keys and a bcbio IAM user with::
+
+       bcbio_vm.py aws iam --region=us-east-1
+
+1. Use either existing credentials or those created by bcbio, setup `AWS Credentials
+   <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+   for accessing AWS resources from your machine by editing `~/.aws/credentials`::
+
+       [default]
+       aws_access_key_id = YOURACCESSID
+       aws_secret_access_key = yoursecretkey
+       region = us-east-1
+
+2. Automation creation of resources for AWS Batch. This includes creating
+   a `custom Amazon Machine Image (AMI) for AWS Batch
+   <https://docs.opendata.aws/genomics-workflows/aws-batch/create-custom-ami/>`_,
+   which allows automatic allocation of additional disk space during workflow
+   runs. It also sets up an `AWS Batch environment, VPC and IAM for running workflows
+   <https://docs.opendata.aws/genomics-workflows/aws-batch/configure-aws-batch-cfn/>`_.
+   A single bcbio-vm commands runs both CloudFormation scripts::
+
+       bcbio_vm.py aws cromwell --keypair bcbio --bucket bcbio-batch-cromwell-test
+
+   This will output the S3 bucket and job queue for running Cromwell::
+
+      AMI: ami-00bd75374ccaa1fc6
+      Region: us-east-1
+      S3 bucket: s3://your-project
+      Job Queue (Spot instances): arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsDefaultQueue-358a1deb9f4536b
+      High priority Job Queue: arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsHighPriorityQue-3bff21e3c4f44d4
 
 Data preparation
 ================
 
 The easiest way to organize AWS projects is using an analysis folder inside an
 `S3 bucket <http://aws.amazon.com/s3/>`_. Create a bucket and folder for your analysis and
-upload fastq, BAM and, optionally, a region BED file. Bucket names should
+upload input files (fastq or BAM) and other associated files.. Bucket names should
 include only lowercase letters, numbers and hyphens (``-``) to conform to
 `S3 bucket naming restrictions <http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html>`_
 and avoid issues with resolution of SSL keys. You can create buckets and upload
-files using the
-`AWS S3 web console <https://console.aws.amazon.com/s3/>`_,
-`the AWS cli client <http://aws.amazon.com/cli/>`_ or specialized tools
-like `gof3r <https://github.com/rlmcpherson/s3gof3r>`_.
+files using the `the AWS cli client <http://aws.amazon.com/cli/>`_ or
+`AWS S3 web console <https://console.aws.amazon.com/s3/>`_::
 
-You will also need a template file describing the type of run to do and a CSV
+    aws s3 sync /local/inputs s3://your-bucket/inputs
+
+Create a ``bcbio_system-aws.yaml`` input file for :ref:`docs-cwl-generate`::
+
+    s3:
+      ref: s3://bcbiodata/collections
+      inputs:
+        - s3://your-bucket/inputs
+    resources:
+      default: {cores: 8, memory: 3G, jvm_opts: [-Xms750m, -Xmx3000m]}
+
+Generate a Common Workflow Language representation::
+
+   CLOUD=aws
+   bcbio_vm.py template --systemconfig bcbio_system-$CLOUD.yaml ${TEMPLATE}-template.yaml $PNAME.csv
+   bcbio_vm.py cwl --systemconfig bcbio_system-$CLOUD.yaml $PNAME/config/$PNAME.yaml
+
+Running
+=======
+
+Run the CWL using Cromwell by specifying the batch job queue
+`Amazon Resource Name (ARN) <https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html>`_
+and bucket from the setup process::
+
+    bcbio_vm.py cwlrun cromwell $PNAME-workflow \
+      -cloud-project arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsDefaultQueue-358a1deb9f4536b \
+      -cloud-root s3://your-project
+
+Amazon Web Services (old)
+#########################
+
+We're phasing out this approach to AWS support in bcbio and are actively
+moving to Common Workflow Language based approaches. This documents the old
+`Elasticluster
+<https://github.com/gc3-uzh-ch/elasticluster>`_ approach to build a cluster on AWS with
+an encrypted NFS mounted drive and an optional Lustre shared filesystem.
+
+Data preparation
+================
+
+You need a template file describing the type of run to do and a CSV
 file mapping samples in the bucket to names and any other metadata. See the
 :ref:`automated-sample-config` docs for more details about these files. Also
 upload both of these files to S3.
@@ -78,28 +241,6 @@ metadata file: ``s3://your-project@eu-central-1/your-analysis/name.csv``
 We currently support human analysis with both the GRCh37 and hg19 genomes. We
 can also add additional genomes as needed by the community and generally welcome
 feedback and comments on reference data support.
-
-Extra software
-~~~~~~~~~~~~~~
-
-We're not able to automatically install some useful tools in pre-built docker
-containers due to licensing restrictions. Variant calling with GATK requires a
-manual download from the `GATK download`_ site for academic users.  Commercial
-users `need a license`_ for GATK and for somatic calling with muTect. To make these jars available,
-upload them to the S3 bucket in a ``jars`` directory. bcbio will automatically
-include the correct GATK and muTect directives during your run.  Alternatively,
-you can also manually specify the path to the jars using a global
-``resources`` section of your input sample YAML file::
-
-    resources:
-      gatk:
-        jar: s3://bcbio-syn3-eval/jars/GenomeAnalysisTK.jar
-
-As with sample YAML scripts, specify a different region with an ``@`` in the
-bucket name: ``s3://your-project@us-west-2/jars/GenomeAnalysisTK.jar``
-
-.. _GATK download: http://www.broadinstitute.org/gatk/download
-.. _need a license: https://www.broadinstitute.org/gatk/about/#licensing
 
 AWS setup
 =========

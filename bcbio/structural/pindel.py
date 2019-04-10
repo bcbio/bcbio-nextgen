@@ -5,6 +5,7 @@ http://gmt.genome.wustl.edu/packages/pindel/
 
 from __future__ import print_function
 import os
+import six
 import time
 import shutil
 from bcbio import bam, utils, broad
@@ -28,7 +29,7 @@ def _pindel_options(items, config, out_file, region, tmp_path):
     target = subset_variant_regions(variant_regions, region, out_file, items)
     opts = ""
     if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
+        if isinstance(target, six.string_types) and os.path.isfile(target):
             target_bed = target
         else:
             target_bed = os.path.join(tmp_path, "tmp.bed")

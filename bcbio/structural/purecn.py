@@ -15,6 +15,7 @@ from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.distributed.transaction import file_transaction
+from bcbio.heterogeneity import loh
 from bcbio.provenance import do
 from bcbio.variation import germline, vcfutils
 from bcbio.structural import cnvkit, gatkcnv
@@ -36,8 +37,9 @@ def run(items):
         purecn_out["variantcaller"] = "purecn"
         if "loh" in purecn_out:
             from bcbio.structural import titancna
-            purecn_out["vcf"] = titancna.to_vcf(purecn_out["loh"], "PureCN", _get_header, _loh_to_vcf,
-                                                paired.tumor_data, sep=",")
+            purecn_out["vrn_file"] = titancna.to_vcf(purecn_out["loh"], "PureCN", _get_header, _loh_to_vcf,
+                                                     paired.tumor_data, sep=",")
+            purecn_out["lohsummary"] = loh.summary_status(purecn_out, paired.tumor_data)
         if "sv" not in paired.tumor_data:
             paired.tumor_data["sv"] = []
         paired.tumor_data["sv"].append(purecn_out)
@@ -96,6 +98,8 @@ def _run_purecn(paired, work_dir):
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             try:
+                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(), utils.get_R_exports(),
+                                                             " ".join([str(x) for x in cmd]))
                 do.run(cmd, "PureCN copy number calling")
             except subprocess.CalledProcessError as msg:
                 if _allowed_errors(str(msg)):
@@ -114,8 +118,10 @@ def _run_purecn(paired, work_dir):
     return out if (out.get("rds") and os.path.exists(out["rds"])) else None
 
 def _allowed_errors(msg):
-    allowed = ["Could not find valid purity and ploidy solution."]
-    return any([len(re.findall(m, msg)) >= 0 for m in allowed])
+    allowed = ["Could not find valid purity and ploidy solution.",
+               "Cannot find valid purity/ploidy solution",
+               "None of the variants in provided VCF passed filtering."]
+    return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 def _segment_normalized_gatk(cnr_file, work_dir, paired):
     """Segmentation of normalized inputs using GATK4, converting into standard input formats.
@@ -225,6 +231,7 @@ def _loh_to_vcf(cur):
         svtype = None
     if svtype:
         info = ["SVTYPE=%s" % svtype, "END=%s" % cur["end"],
+                "SVLEN=%s" % (int(cur["end"]) - int(cur["start"])),
                 "CN=%s" % cn, "MajorCN=%s" % (cn - minor_cn), "MinorCN=%s" % minor_cn]
         return [cur["chr"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
                 ";".join(info), "GT", "0/1"]

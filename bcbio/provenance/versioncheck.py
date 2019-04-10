@@ -17,7 +17,7 @@ def samtools(items):
     output, stderr = p.communicate()
     p.stdout.close()
     p.stderr.close()
-    if output.find("-@") == -1 and stderr.find("-@") == -1:
+    if str(output).find("-@") == -1 and str(stderr).find("-@") == -1:
         return ("Installed version of samtools sort does not have support for "
                 "multithreading (-@ option) "
                 "required to support bwa piped alignment and BAM merging. "

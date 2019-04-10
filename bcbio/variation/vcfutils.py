@@ -3,13 +3,13 @@
 
 from collections import namedtuple, defaultdict
 import copy
-import gzip
 import os
 import shutil
 import subprocess
 
 import toolz as tz
 
+import six
 from six.moves import zip
 
 from bcbio import broad, utils
@@ -201,7 +201,7 @@ def split_snps_indels(orig_file, ref_file, config):
 def get_normal_sample(in_file):
     """Retrieve normal sample if normal/turmor
     """
-    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             if line.startswith("##PEDIGREE"):
                 parts = line.strip().split("Original=")[1][:-1]
@@ -267,7 +267,7 @@ def select_sample(in_file, sample, out_file, config, filters=None):
 
 def vcf_has_variants(in_file):
     if os.path.exists(in_file):
-        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
                     return True
@@ -275,7 +275,7 @@ def vcf_has_variants(in_file):
 
 def vcf_has_nonfiltered_variants(in_file):
     if os.path.exists(in_file):
-        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
                     parts = line.split("\t")
@@ -347,7 +347,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
         if fname not in added_fnames:
             if isinstance(region, (list, tuple)):
                 c, s, e = region
-            elif isinstance(region, basestring) and region.find(":") >= 0:
+            elif isinstance(region, six.string_types) and region.find(":") >= 0:
                 c, coords = region.split(":")
                 s, e = [int(x) for x in coords.split("-")]
             else:
@@ -435,8 +435,12 @@ def _fix_gatk_header(exist_files, out_file, config):
         header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
         do.run("zgrep ^# %s > %s"
                 % (replace_file, header_file), "Prepare header file for merging")
-        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s" %
-               (utils.get_java_clprep(), header_file, base_file, base_fix_file),
+        resources = config_utils.get_resources("picard", config)
+        ropts = []
+        if "options" in resources:
+            ropts += [str(x) for x in resources.get("options", [])]
+        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s %s" %
+               (utils.get_java_clprep(), header_file, base_file, base_fix_file, " ".join(ropts)),
                "Reheader initial VCF file in merge")
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]

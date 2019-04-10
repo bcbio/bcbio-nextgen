@@ -9,6 +9,7 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
+from bcbio.bam import cram
 from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
                             novoalign, snap, star, hisat2, bismark, bsmap)
 from bcbio.pipeline import datadict as dd
@@ -57,8 +58,15 @@ def organize_noalign(data):
     data = utils.to_single_data(data[0])
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
     work_bam = os.path.join(work_dir, "%s-input.bam" % dd.get_sample_name(data))
-    utils.copy_plus(data["files"][0], work_bam)
-    bam.index(work_bam, data["config"])
+    if data.get("files"):
+        if data["files"][0].endswith(".cram"):
+            work_bam = cram.to_bam(data["files"][0], work_bam, data)
+        else:
+            assert data["files"][0].endswith(".bam"), data["files"][0]
+            utils.copy_plus(data["files"][0], work_bam)
+        bam.index(work_bam, data["config"])
+    else:
+        work_bam = None
     data["align_bam"] = work_bam
     return data
 
@@ -70,7 +78,7 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     aligner_index = _get_aligner_index(aligner, data)
-    align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
+    align_dir = utils.safe_makedir(os.path.join(*align_dir_parts))
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
         data = _align_from_bam(fastq1, aligner, aligner_index, ref_file,

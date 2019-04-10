@@ -72,7 +72,7 @@ def _clean_java_out(version_str):
     Java will report information like _JAVA_OPTIONS environmental variables in the output.
     """
     out = []
-    for line in version_str.split("\n"):
+    for line in version_str.decode().split("\n"):
         if line.startswith("Picked up"):
             pass
         if line.find("setlocale") > 0:
@@ -95,15 +95,13 @@ def get_gatk_version(gatk_jar=None, config=None):
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
-        # versions earlier than 2.4 do not have explicit version command,
-        # parse from error output from GATK
-        if out.find("ERROR") >= 0:
-            flag = "The Genome Analysis Toolkit (GATK)"
-            for line in out.split("\n"):
-                if line.startswith(flag):
-                    version = line.split(flag)[-1].split(",")[0].strip()
-        else:
-            version = out
+        # Historical GATK version (2.4) and newer versions (4.1.0.0)
+        # have a flag in front of output version
+        version = out
+        flag = "The Genome Analysis Toolkit (GATK)"
+        for line in out.split("\n"):
+            if line.startswith(flag):
+                version = line.split(flag)[-1].split(",")[0].strip()
     if version.startswith("v"):
         version = version[1:]
     _check_for_bad_version(version, "GATK")
@@ -341,7 +339,12 @@ class BroadRunner:
                ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
-                 data=None, region=None, memscale=None, parallel_gc=False):
+                 data=None, region=None, memscale=None, parallel_gc=False, ld_preload=False):
+        """Top level interface to running a GATK command.
+
+        ld_preload injects required libraries for Java JNI calls:
+        https://gatkforums.broadinstitute.org/gatk/discussion/8810/something-about-create-pon-workflow
+        """
         needs_java7 = LooseVersion(self.get_gatk_version()) < LooseVersion("3.6")
         # For old Java requirements use global java 7
         if needs_java7:
@@ -354,6 +357,8 @@ class BroadRunner:
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
             cl = fix_missing_spark_user(cl, prog, params)
+            if ld_preload:
+                cl = "export LD_PRELOAD=%s/lib/libopenblas.so && %s" % (os.path.dirname(utils.get_bcbio_bin()), cl)
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
         if needs_java7:

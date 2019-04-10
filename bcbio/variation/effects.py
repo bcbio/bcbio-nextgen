@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import string
 
+import six
 import toolz as tz
 import yaml
 
@@ -95,7 +96,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                url = "ftp://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
+                url = "http://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
                 with utils.chdir(tmp_dir):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
@@ -233,7 +234,7 @@ def _get_G2P(data):
     A VEP plugin that uses G2P allelic requirements to assess variants in genes
     for potential phenotype involvement.
     """
-    G2P_file = tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data)
+    G2P_file = os.path.realpath(tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data))
     args = ["--plugin", "G2P,file:%s" % (G2P_file)]
     if G2P_file:
         return args
@@ -291,7 +292,7 @@ def get_db(data):
     snpeff_base_dir = None
     if snpeff_db:
         snpeff_base_dir = utils.get_in(data, ("reference", "snpeff"))
-        if not (isinstance(snpeff_base_dir, basestring) and os.path.isdir(snpeff_base_dir)):
+        if not (isinstance(snpeff_base_dir, six.string_types) and os.path.isdir(snpeff_base_dir)):
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
@@ -300,9 +301,9 @@ def get_db(data):
                 snpeff_db = snpeff_db.replace("_", ".")
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
-        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring) and os.path.isfile(snpeff_base_dir)):
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types) and os.path.isfile(snpeff_base_dir)):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
-        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types)
               and snpeff_base_dir.endswith("%s%s" % (os.path.sep, snpeff_db))):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
         if not snpeff_base_dir:
@@ -399,9 +400,13 @@ def _installed_snpeff_genome(base_name, config):
     """
     snpeff_config_file = os.path.join(config_utils.get_program("snpeff", config, "dir"),
                                       "snpEff.config")
-    data_dir = _find_snpeff_datadir(snpeff_config_file)
-    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
-           if os.path.isdir(d)]
+    if os.path.exists(snpeff_config_file):
+        data_dir = _find_snpeff_datadir(snpeff_config_file)
+        dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+               if os.path.isdir(d)]
+    else:
+        data_dir = None
+        dbs = []
     if len(dbs) == 0:
         raise ValueError("No database found in %s for %s" % (data_dir, base_name))
     else:

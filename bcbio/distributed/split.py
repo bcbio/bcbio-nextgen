@@ -10,7 +10,10 @@ splitting specific code.
 """
 import collections
 
+import six
+
 from bcbio import utils
+
 
 def grouped_parallel_split_combine(args, split_fn, group_fn, parallel_fn,
                                    parallel_name, combine_name,
@@ -57,7 +60,7 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     split_args, combine_map, finished_out, extras = _get_split_tasks(args, split_fn, file_key,
                                                                      split_outfile_i)
     split_output = parallel_fn(parallel_name, split_args)
-    if isinstance(combiner, basestring):
+    if isinstance(combiner, six.string_types):
         combine_args, final_args = _organize_output(split_output, combine_map,
                                                     file_key, combine_arg_keys)
         parallel_fn(combiner, combine_args)
@@ -110,7 +113,7 @@ def _organize_output(output, combine_map, file_key, combine_arg_keys):
                 extras.append([data])
     combine_args = [[v, k] + _get_extra_args(extra_args[k], combine_arg_keys)
                     for (k, v) in out_map.items()]
-    return combine_args, final_args.values() + extras
+    return combine_args, list(final_args.values()) + extras
 
 def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
     """Split up input files and arguments, returning arguments for parallel processing.
@@ -137,4 +140,4 @@ def _get_split_tasks(args, split_fn, file_key, outfile_i=-1):
                     extras.append([data])
             else:
                 extras.append([data])
-    return split_args, combine_map, finished_map.values(), extras
+    return split_args, combine_map, list(finished_map.values()), extras

@@ -1,5 +1,6 @@
 """Helpful utilities for building analysis pipelines.
 """
+import glob
 import gzip
 import os
 import tempfile
@@ -9,13 +10,15 @@ import contextlib
 import itertools
 import functools
 import random
-from six.moves import configparser
 import fnmatch
 import subprocess
 import sys
 import types
+
+import six
 import toolz as tz
 import yaml
+
 from collections import Mapping, OrderedDict
 
 
@@ -49,7 +52,7 @@ def map_wrap(f):
     """
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        return apply(f, *args, **kwargs)
+        return f(*args, **kwargs)
     return wrapper
 
 def transform_to(ext):
@@ -195,7 +198,18 @@ def chdir(new_dir):
 
     http://lucentbeing.com/blog/context-managers-and-the-with-statement-in-python/
     """
-    cur_dir = os.getcwd()
+    # On busy filesystems can have issues accessing main directory. Allow retries
+    num_tries = 0
+    max_tries = 5
+    cur_dir = None
+    while cur_dir is None:
+        try:
+            cur_dir = os.getcwd()
+        except OSError:
+            if num_tries > max_tries:
+                raise
+            num_tries += 1
+            time.sleep(2)
     safe_makedir(new_dir)
     os.chdir(new_dir)
     try:
@@ -266,7 +280,7 @@ def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = configparser.ConfigParser()
+    config = six.moves.configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -344,8 +358,8 @@ def symlink_plus(orig, new):
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):
             with chdir(os.path.dirname(new)):
                 remove_safe(new + ext)
-               # Work around symlink issues on some filesystems. Randomly
-               # fail to symlink.
+                # Work around symlink issues on some filesystems. Randomly
+                # fail to symlink.
                 try:
                     os.symlink(os.path.relpath(orig + ext), os.path.basename(new + ext))
                 except OSError:
@@ -360,7 +374,13 @@ def symlink_plus(orig, new):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
 def open_gzipsafe(f):
-    return gzip.open(f) if f.endswith(".gz") else open(f)
+    if f.endswith(".gz"):
+        if six.PY3:
+            return gzip.open(f, "rt")
+        else:
+            return gzip.open(f)
+    else:
+        return open(f)
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
@@ -429,7 +449,7 @@ def robust_partition_all(n, iterable):
         x = []
         for _ in range(n):
             try:
-                x.append(it.next())
+                x.append(next(it))
             except StopIteration:
                 yield x
                 # Omitting this StopIteration results in a segfault!
@@ -440,8 +460,8 @@ def partition(pred, iterable, tolist=False):
     'Use a predicate to partition entries into false entries and true entries'
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
-    ifalse = itertools.ifilterfalse(pred, t1)
-    itrue = itertools.ifilter(pred, t2)
+    ifalse = six.moves.filterfalse(pred, t1)
+    itrue = six.moves.filter(pred, t2)
     if tolist:
         return list(ifalse), list(itrue)
     else:
@@ -532,9 +552,9 @@ def is_sequence(arg):
     example: arg("lol") -> False
 
     """
-    return (not hasattr(arg, "strip") and
-            hasattr(arg, "__getitem__") or
-            hasattr(arg, "__iter__"))
+    return (not is_string(arg) and
+            (hasattr(arg, "__getitem__") or
+             hasattr(arg, "__iter__")))
 
 
 def is_pair(arg):
@@ -545,7 +565,7 @@ def is_pair(arg):
     return is_sequence(arg) and len(arg) == 2
 
 def is_string(arg):
-    return isinstance(arg, basestring)
+    return isinstance(arg, six.string_types)
 
 
 def locate(pattern, root=os.curdir):
@@ -631,7 +651,10 @@ def which(program, env=None):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
+    for path in get_all_conda_bins():
+        exe_file = os.path.join(path, program)
+        if is_exe(exe_file):
+            return exe_file
     return None
 
 def reservoir_sample(stream, num_items, item_parser=lambda x: x):
@@ -690,7 +713,7 @@ def R_package_path(package):
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
         return None
-    for line in output.split("\n"):
+    for line in output.decode().split("\n"):
         if "[1]" not in line:
             continue
         dirname = line.split("[1]")[1].replace("\"", "").strip()
@@ -780,12 +803,55 @@ def append_path(bin, path, at_start=True):
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
 
-def local_path_export(at_start=True):
-    path = get_bcbio_bin()
-    if at_start:
-        return "export PATH=%s:$PATH && " % (path)
+def get_all_conda_bins():
+    """Retrieve all possible conda bin directories, including environments.
+    """
+    bcbio_bin = get_bcbio_bin()
+    conda_dir = os.path.dirname(bcbio_bin)
+    if os.path.join("anaconda", "envs") in conda_dir:
+        conda_dir = os.path.join(conda_dir[:conda_dir.rfind(os.path.join("anaconda", "envs"))], "anaconda")
+    return [bcbio_bin] + list(glob.glob(os.path.join(conda_dir, "envs", "*", "bin")))
+
+def get_program_python(cmd):
+    """Get the full path to a python version linked to the command.
+
+    Allows finding python based programs in python 2 versus python 3
+    environments.
+    """
+    full_cmd = os.path.realpath(which(cmd))
+    cmd_python = os.path.join(os.path.dirname(full_cmd), "python")
+    env_python = None
+    if "envs" in cmd_python:
+        parts = cmd_python.split(os.sep)
+        env_python = os.path.join(os.sep.join(parts[:parts.index("envs") + 2]), "bin", "python")
+    if os.path.exists(cmd_python):
+        return cmd_python
+    elif env_python and os.path.exists(env_python):
+        return env_python
     else:
-        return "export PATH=$PATH:%s && " % (path)
+        return os.path.realpath(sys.executable)
+
+def local_path_export(at_start=True, env_cmd=None):
+    """Retrieve paths to local install, also including environment paths if env_cmd included.
+    """
+    paths = [get_bcbio_bin()]
+    if env_cmd:
+        env_path = os.path.dirname(get_program_python(env_cmd))
+        if env_path not in paths:
+            paths.insert(0, env_path)
+    if at_start:
+        return "export PATH=%s:$PATH && " % (":".join(paths))
+    else:
+        return "export PATH=$PATH:%s && " % (":".join(paths))
+
+def locale_export():
+    """Exports for dealing with Click-based programs and ASCII/Unicode errors.
+
+    RuntimeError: Click will abort further execution because Python 3 was
+    configured to use ASCII as encoding for the environment.
+    Consult https://click.palletsprojects.com/en/7.x/python3/ for mitigation steps.
+    """
+    return "export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && "
 
 def java_freetype_fix():
     """Provide workaround for issues FreeType library symbols.

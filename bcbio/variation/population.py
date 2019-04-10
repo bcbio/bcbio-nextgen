@@ -11,6 +11,7 @@ import toolz as tz
 
 from bcbio import install, utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -335,6 +336,13 @@ def _get_build_type(fnames, samples, caller):
                     for x in ["gemini", "gemini_orig", "gemini_allvariants", "vcf2db_expand"]]):
                 if vcfanno.annotate_gemini(data):
                     build_type.add("gemini_orig" if "gemini_orig" in dd.get_tools_on(data) else "gemini")
+                else:
+                    logger.info("Not running gemini, input data not found: %s" % dd.get_sample_name(data))
+            else:
+                logger.info("Not running gemini, not configured in tools_on: %s" % dd.get_sample_name(data))
+    else:
+        logger.info("Not running gemini, no samples with variants found: %s" %
+                    (", ".join([dd.get_sample_name(d) for d in samples])))
     return build_type
 
 def get_gemini_files(data):

@@ -1,12 +1,14 @@
 """Utilities for working with fastq files.
 """
 
+import six
 from six.moves import zip
 from itertools import product
 import os
 import random
-import gzip
 import sys
+import toolz as tz
+from collections import defaultdict
 
 from Bio import SeqIO
 from bcbio.distributed import objectstore
@@ -115,6 +117,8 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
     Adjusted to allow different input paths or extensions for matching files.
     """
     PAIR_FILE_IDENTIFIERS = set(["1", "2", "3", "4"])
+    if len(input_files) > 1000:
+        return fast_combine_pairs(input_files, force_single, full_name, separators)
 
     pairs = []
     used = set([])
@@ -180,6 +184,25 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
             used.add(in_file)
     return pairs
 
+def fast_combine_pairs(files, force_single, full_name, separators):
+    """
+    assume files that need to be paired are within 10 entries of each other, once the list is sorted
+    """
+    files = sort_filenames(files)
+    chunks = tz.sliding_window(10, files)
+    pairs = [combine_pairs(chunk, force_single, full_name, separators) for chunk in chunks]
+    pairs = [y for x in pairs for y in x]
+    longest = defaultdict(list)
+    # for each file, save the longest pair it is in
+    for pair in pairs:
+        for file in pair:
+            if len(longest[file]) < len(pair):
+                longest[file] = pair
+    # keep only unique pairs
+    longest = {tuple(sort_filenames(x)) for x in longest.values()}
+    # ensure filenames are R1 followed by R2
+    return [sort_filenames(list(x)) for x in longest]
+
 def dif(a, b):
     """ copy from http://stackoverflow.com/a/8545526 """
     return [i for i in range(len(a)) if a[i] != b[i]]
@@ -226,7 +249,7 @@ def downsample(f1, f2, data, N, quick=False):
     out_files = (outf1, outf2) if outf2 else (outf1)
 
     with file_transaction(out_files) as tx_out_files:
-        if isinstance(tx_out_files, basestring):
+        if isinstance(tx_out_files, six.string_types):
             tx_out_f1 = tx_out_files
         else:
             tx_out_f1, tx_out_f2 = tx_out_files
@@ -258,11 +281,11 @@ def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000)
     """
 
     in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
-    read = in_handle.next()
+    read = next(in_handle)
     average = len(read.seq)
     for _ in range(nreads):
         try:
-            average = (average + len(in_handle.next().seq)) / 2
+            average = (average + len(next(in_handle).seq)) / 2
         except StopIteration:
             break
     in_handle.close()
@@ -277,7 +300,7 @@ def estimate_maximum_read_length(fastq_file, quality_format="fastq-sanger",
     lengths = []
     for _ in range(nreads):
         try:
-            lengths.append(len(in_handle.next().seq))
+            lengths.append(len(next(in_handle).seq))
         except StopIteration:
             break
     in_handle.close()
@@ -288,10 +311,5 @@ def open_fastq(in_file):
     """
     if objectstore.is_remote(in_file):
         return objectstore.open_file(in_file)
-    _, ext = os.path.splitext(in_file)
-    if ext == ".gz":
-        return gzip.open(in_file, 'rb')
-    if ext in [".fastq", ".fq"]:
-        return open(in_file, 'r')
-    # default to just opening it
-    return open(in_file, "r")
+    else:
+        return utils.open_gzipsafe(in_file)

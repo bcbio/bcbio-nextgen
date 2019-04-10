@@ -96,8 +96,8 @@ def _joint_calling(items):
             "Joint calling requires batched samples, %s has no metadata batch." % dd.get_sample_name(items[0])
     return jointcaller
 
-def _use_spark(num_cores, gatk_type):
-    return num_cores > 1 and gatk_type == "gatk4"
+def _use_spark(num_cores, gatk_type, items):
+    return len(items) == 1 and num_cores > 1 and gatk_type == "gatk4"
 
 def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
@@ -115,7 +115,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         assert gatk_type in ["restricted", "gatk4"], \
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
         with file_transaction(items[0], out_file) as tx_out_file:
-            if _use_spark(num_cores, gatk_type):
+            if _use_spark(num_cores, gatk_type, items):
                 params += ["-T", "HaplotypeCallerSpark", "--spark-master", "local[%s]" % num_cores,
                            "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
                            "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
@@ -161,7 +161,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                 params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             if gatk_type == "gatk4":
                 # GATK4 Spark calling does not support bgzipped output, use plain VCFs
-                if is_joint and _use_spark(num_cores, gatk_type):
+                if is_joint and _use_spark(num_cores, gatk_type, items):
                     tx_out_file = tx_out_file.replace(".vcf.gz", ".vcf")
                 params += ["--output", tx_out_file]
             else:
@@ -170,11 +170,11 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
             try:
                 broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
-                                      parallel_gc=_use_spark(num_cores, gatk_type))
+                                      parallel_gc=_use_spark(num_cores, gatk_type, items))
             except subprocess.CalledProcessError as msg:
                 # Spark failing on regions without any reads, write an empty VCF instead
                 # https://github.com/broadinstitute/gatk/issues/4234
-                if (_use_spark(num_cores, gatk_type) and
+                if (_use_spark(num_cores, gatk_type, items) and
                       str(msg).find("java.lang.UnsupportedOperationException: empty collection") >= 0 and
                       str(msg).find("at org.apache.spark.rdd.RDD") >= 0):
                     vcfutils.write_empty_vcf(tx_out_file, samples=[dd.get_sample_name(d) for d in items])

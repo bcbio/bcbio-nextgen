@@ -3,9 +3,10 @@
 https://github.com/hartwigmedical/hmftools/tree/master/purity-ploidy-estimator
 """
 import csv
-import itertools
 import os
+import re
 import shutil
+import subprocess
 
 import toolz as tz
 
@@ -15,8 +16,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.structural import titancna
 from bcbio.variation import vcfutils
-from bcbio.structural import gatkcnv
 
 def run(items):
     paired = vcfutils.get_paired(items)
@@ -26,9 +27,10 @@ def run(items):
         return items
     work_dir = _sv_workdir(paired.tumor_data)
     from bcbio import heterogeneity
-    het_file = _amber_het_file("pon", heterogeneity.get_variants(paired.tumor_data), work_dir, paired)
+    vrn_files = heterogeneity.get_variants(paired.tumor_data, include_germline=False)
+    het_file = _amber_het_file("pon", vrn_files, work_dir, paired)
     depth_file = _run_cobalt(paired, work_dir)
-    purple_out = _run_purple(paired, het_file, depth_file, work_dir)
+    purple_out = _run_purple(paired, het_file, depth_file, vrn_files, work_dir)
     out = []
     if paired.normal_data:
         out.append(paired.normal_data)
@@ -50,10 +52,8 @@ def _get_jvm_opts(out_file, data):
     jvm_opts += broad.get_default_jvm_opts(os.path.dirname(out_file))
     return jvm_opts
 
-def _run_purple(paired, het_file, depth_file, work_dir):
+def _run_purple(paired, het_file, depth_file, vrn_files, work_dir):
     """Run PURPLE with pre-calculated AMBER and COBALT compatible inputs.
-
-    XXX Need to add output conversion into VCF for standard formats
     """
     purple_dir = utils.safe_makedir(os.path.join(work_dir, "purple"))
     out_file = os.path.join(purple_dir, "%s.purple.cnv" % dd.get_sample_name(paired.tumor_data))
@@ -69,6 +69,8 @@ def _run_purple(paired, het_file, depth_file, work_dir):
                    "-threads", dd.get_num_cores(paired.tumor_data),
                    "-tumor_sample", dd.get_sample_name(paired.tumor_data),
                    "-ref_sample", dd.get_sample_name(paired.normal_data)]
+            if vrn_files:
+                cmd += ["-somatic_vcf", vrn_files[0]["vrn_file"]]
             # Avoid X11 display errors when writing plots
             cmd = "unset DISPLAY && %s" % " ".join([str(x) for x in cmd])
             do.run(cmd, "PURPLE: purity and ploidy estimation")
@@ -80,6 +82,8 @@ def _run_purple(paired, het_file, depth_file, work_dir):
     if not utils.file_exists(out_file_export):
         utils.symlink_plus(out_file, out_file_export)
     out = {"variantcaller": "purple", "call_file": out_file_export,
+           "vrn_file": titancna.to_vcf(out_file_export, "PURPLE", _get_header, _export_to_vcf,
+                                       paired.tumor_data),
            "plot": {}, "metrics": {}}
     for name, ext in [("copy_number", "copyNumber"), ("minor_allele", "minor_allele"), ("variant", "variant")]:
         plot_file = os.path.join(purple_dir, "plot", "%s.%s.png" % (dd.get_sample_name(paired.tumor_data), ext))
@@ -132,7 +136,7 @@ def _count_files_to_amber(tumor_counts, normal_counts, work_dir, data):
                         writer.writerow(["Chromosome", "Position", "TumorBAF", "TumorModifiedBAF", "TumorDepth",
                                          "NormalBAF", "NormalModifiedBAF", "NormalDepth"])
                         header = None
-                        for t, n in itertools.izip(tumor_handle, normal_handle):
+                        for t, n in zip(tumor_handle, normal_handle):
                             if header is None and t.startswith("CONTIG"):
                                 header = t.strip().split()
                             elif header is not None:
@@ -169,7 +173,7 @@ def _amber_het_file(method, vrn_files, work_dir, paired):
     https://github.com/hartwigmedical/hmftools/tree/master/amber
     https://github.com/hartwigmedical/hmftools/blob/637e3db1a1a995f4daefe2d0a1511a5bdadbeb05/hmf-common/src/test/resources/amber/new.amber.baf
     """
-    assert vrn_files, "Did not find compatible variant calling files for TitanCNA inputs"
+    assert vrn_files, "Did not find compatible variant calling files for PURPLE inputs"
     from bcbio.heterogeneity import bubbletree
 
     if method == "variants":
@@ -178,20 +182,56 @@ def _amber_het_file(method, vrn_files, work_dir, paired):
         prep_file = bubbletree.prep_vrn_file(vrn_files[0]["vrn_file"], vrn_files[0]["variantcaller"],
                                              work_dir, paired, AmberWriter)
         utils.symlink_plus(prep_file, out_file)
+        pcf_file = out_file + ".pcf"
+        if not utils.file_exists(pcf_file):
+            with file_transaction(paired.tumor_data, pcf_file) as tx_out_file:
+                r_file = os.path.join(os.path.dirname(tx_out_file), "bafSegmentation.R")
+                with open(r_file, "w") as out_handle:
+                    out_handle.write(_amber_seg_script)
+                cmd = "%s && %s --no-environ %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
+                                                          out_file, pcf_file)
+                do.run(cmd, "PURPLE: AMBER baf segmentation")
     else:
         assert method == "pon"
-        tumor_counts, normal_counts = gatkcnv.heterogzygote_counts(paired)
-        out_file = _count_files_to_amber(tumor_counts, normal_counts, work_dir, paired.tumor_data)
-    pcf_file = out_file + ".pcf"
-    if not utils.file_exists(pcf_file):
-        with file_transaction(paired.tumor_data, pcf_file) as tx_out_file:
-            r_file = os.path.join(os.path.dirname(tx_out_file), "bafSegmentation.R")
-            with open(r_file, "w") as out_handle:
-                out_handle.write(_amber_seg_script)
-            cmd = "%s && %s --no-environ %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
-                                                      out_file, pcf_file)
-            do.run(cmd, "PURPLE: AMBER baf segmentation")
+        out_file = _run_amber(paired, work_dir)
     return out_file
+
+def _run_amber(paired, work_dir, lenient=False):
+    """AMBER: calculate allele frequencies at likely heterozygous sites.
+
+    lenient flag allows amber runs on small test sets.
+    """
+    amber_dir = utils.safe_makedir(os.path.join(work_dir, "amber"))
+    out_file = os.path.join(amber_dir, "%s.amber.baf" % dd.get_sample_name(paired.tumor_data))
+    if not utils.file_exists(out_file) or not utils.file_exists(out_file + ".pcf"):
+        with file_transaction(paired.tumor_data, out_file) as tx_out_file:
+            key = "germline_het_pon"
+            het_bed = tz.get_in(["genome_resources", "variation", key], paired.tumor_data)
+            cmd = ["AMBER"] + _get_jvm_opts(tx_out_file, paired.tumor_data) + \
+                  ["-threads", dd.get_num_cores(paired.tumor_data),
+                   "-tumor", dd.get_sample_name(paired.tumor_data),
+                   "-tumor_bam", dd.get_align_bam(paired.tumor_data),
+                   "-reference", dd.get_sample_name(paired.normal_data),
+                   "-reference_bam", dd.get_align_bam(paired.normal_data),
+                   "-ref_genome", dd.get_ref_file(paired.tumor_data),
+                   "-bed", het_bed,
+                   "-output_dir", os.path.dirname(tx_out_file)]
+            if lenient:
+                cmd += ["-max_het_af_percent", "1.0"]
+            try:
+                do.run(cmd, "PURPLE: AMBER baf generation")
+            except subprocess.CalledProcessError as msg:
+                if not lenient and _amber_allowed_errors(str(msg)):
+                    return _run_amber(paired, work_dir, True)
+            for f in os.listdir(os.path.dirname(tx_out_file)):
+                if f != os.path.basename(tx_out_file):
+                    shutil.move(os.path.join(os.path.dirname(tx_out_file), f),
+                                os.path.join(amber_dir, f))
+    return out_file
+
+def _amber_allowed_errors(msg):
+    allowed = ["R execution failed. Unable to complete segmentation."]
+    return any([len(re.findall(m, msg)) > 0 for m in allowed])
 
 # BAF segmentation with copynumber from AMBER
 # https://github.com/hartwigmedical/hmftools/blob/master/amber/src/main/resources/r/bafSegmentation.R
@@ -269,10 +309,29 @@ def _cobalt_ratio_file(paired, work_dir):
                 writer = csv.writer(out_handle, delimiter="\t")
                 writer.writerow(["Chromosome", "Position", "ReferenceReadCount", "TumorReadCount",
                                  "ReferenceGCRatio", "TumorGCRatio", "ReferenceGCDiploidRatio"])
-        print(cnr_file)
         raise NotImplementedError
     return out_file
 
 def _sv_workdir(data):
     return utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                            dd.get_sample_name(data), "purple"))
+
+# ## VCF output
+
+def _get_header(in_handle):
+    return in_handle.readline().replace("#", "").strip().split(), in_handle
+
+def _export_to_vcf(cur):
+    """Convert PURPLE custom output into VCF.
+    """
+    if float(cur["copyNumber"]) > 2.0:
+        svtype = "DUP"
+    elif float(cur["copyNumber"]) < 2.0:
+        svtype = "DEL"
+    else:
+        svtype = None
+    if svtype:
+        info = ["END=%s" % cur["end"], "SVLEN=%s" % (int(cur["end"]) - int(cur["start"])),
+                "SVTYPE=%s" % svtype, "CN=%s" % cur["copyNumber"], "PROBES=%s" % cur["depthWindowCount"]]
+        return [cur["chromosome"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
+                ";".join(info), "GT", "0/1"]

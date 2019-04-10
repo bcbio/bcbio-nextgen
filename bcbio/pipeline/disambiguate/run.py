@@ -43,7 +43,7 @@ def read_next_reads(fileobject, listobject):
     qnamediff = False
     while not qnamediff:
         try:
-            myRead=fileobject.next()
+            myRead=next(fileobject)
         except StopIteration:
             #print("5")
             return None # return None as the name of the new reads (i.e. no more new reads)
@@ -196,8 +196,8 @@ def main(args):
 
     #initialise
     try:
-        nexthumread=myHumanFile.next()
-        nextmouread=myMouseFile.next()
+        nexthumread=next(myHumanFile)
+        nextmouread=next(myMouseFile)
     except StopIteration:
         print("No reads in one or either of the input files")
         sys.exit(2)
@@ -214,7 +214,7 @@ def main(args):
                     nummou+=1 # increment mouse counter for unique only
                 prevMouID = nextmouread.qname
                 try:
-                    nextmouread=myMouseFile.next()
+                    nextmouread=next(myMouseFile)
                 except StopIteration:
                     EOFmouse=True
             while nat_cmp(nexthumread.qname,nextmouread.qname) < 0 and not EOFhuman: # human is "behind" mouse, output to human disambiguous
@@ -223,7 +223,7 @@ def main(args):
                     numhum+=1 # increment human counter for unique only
                 prevHumID = nexthumread.qname
                 try:
-                    nexthumread=myHumanFile.next()
+                    nexthumread=next(myHumanFile)
                 except StopIteration:
                     EOFhuman=True
             if EOFhuman or EOFmouse:
@@ -266,7 +266,7 @@ def main(args):
                     nummou+=1 # increment mouse counter for unique only
                 prevMouID = nextmouread.qname
                 try:
-                    nextmouread=myMouseFile.next()
+                    nextmouread=next(myMouseFile)
                 except StopIteration:
                     #print("3")
                     EOFmouse=True
@@ -278,7 +278,7 @@ def main(args):
                     numhum+=1 # increment human counter for unique only
                 prevHumID = nexthumread.qname
                 try:
-                    nexthumread=myHumanFile.next()
+                    nexthumread=next(myHumanFile)
                 except StopIteration:
                     EOFhuman=True
 

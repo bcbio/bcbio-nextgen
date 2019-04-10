@@ -22,6 +22,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import gatkcnv
 from bcbio.variation import bedutils, multi
+from functools import reduce
 
 def calculate_sv_bins(*items):
     """Determine bin sizes and regions to use for samples.
@@ -60,7 +61,10 @@ def calculate_sv_bins(*items):
 def _calculate_sv_bins_gatk(data, cnv_group, size_calc_fn):
     """Calculate structural variant bins using GATK4 CNV callers region or even intervals approach.
     """
-    target_bed = gatkcnv.prepare_intervals(data, cnv_group.region_file, cnv_group.work_dir)
+    if dd.get_background_cnv_reference(data, "gatk-cnv"):
+        target_bed = gatkcnv.pon_to_bed(dd.get_background_cnv_reference(data, "gatk-cnv"), cnv_group.work_dir, data)
+    else:
+        target_bed = gatkcnv.prepare_intervals(data, cnv_group.region_file, cnv_group.work_dir)
     gc_annotated_tsv = gatkcnv.annotate_intervals(target_bed, data)
     return target_bed, None, gc_annotated_tsv
 
@@ -68,8 +72,8 @@ def _calculate_sv_bins_cnvkit(data, cnv_group, size_calc_fn):
     """Calculate structural variant bins using target/anti-target approach from CNVkit.
     """
     from bcbio.structural import cnvkit
-    if dd.get_background_cnv_reference(data):
-        target_bed, anti_bed = cnvkit.targets_from_background(dd.get_background_cnv_reference(data),
+    if dd.get_background_cnv_reference(data, "cnvkit"):
+        target_bed, anti_bed = cnvkit.targets_from_background(dd.get_background_cnv_reference(data, "cnvkit"),
                                                               cnv_group.work_dir, data)
     else:
         target_bed, anti_bed = cnvkit.targets_w_bins(cnv_group.region_file, cnv_group.access_file,
@@ -168,12 +172,22 @@ def calculate_sv_coverage(data):
     from bcbio.structural import cnvkit
     data = utils.to_single_data(data)
     if not cnvkit.use_general_sv_bins(data):
-        return [[data]]
-    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
-                                               dd.get_sample_name(data), "bins"))
-    out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
-    if os.path.exists(out_target_file):
-        data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file}
+        out_target_file, out_anti_file = (None, None)
+    else:
+        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
+                                                   dd.get_sample_name(data), "bins"))
+        out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
+        if not os.path.exists(out_target_file):
+            out_target_file, out_anti_file = (None, None)
+    if "seq2c" in dd.get_svcaller(data):
+        from bcbio.structural import seq2c
+        seq2c_target = seq2c.precall(data)
+    else:
+        seq2c_target = None
+
+    if not tz.get_in(["depth", "bins"], data):
+        data = tz.update_in(data, ["depth", "bins"], lambda x: {})
+    data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file, "seq2c": seq2c_target}
     return [[data]]
 
 def _calculate_sv_coverage_gatk(data, work_dir):
@@ -208,9 +222,8 @@ def _calculate_sv_coverage_cnvkit(data, work_dir):
         target_cov = coverage.run_mosdepth(data, "target", tz.get_in(["regions", "bins", "target"], data))
         anti_cov = coverage.run_mosdepth(data, "antitarget", tz.get_in(["regions", "bins", "antitarget"], data))
         target_cov_genes = annotate.add_genes(target_cov.regions, data, max_distance=0)
-        anti_cov_genes = annotate.add_genes(anti_cov.regions, data, max_distance=0)
         out_target_file = _add_log2_depth(target_cov_genes, out_target_file, data)
-        out_anti_file = _add_log2_depth(anti_cov_genes, out_anti_file, data)
+        out_anti_file = _add_log2_depth(anti_cov.regions, out_anti_file, data)
     return out_target_file, out_anti_file
 
 def _add_log2_depth(in_file, out_file, data):
@@ -228,7 +241,7 @@ def _add_log2_depth(in_file, out_file, data):
                             # Handle inputs unannotated with gene names
                             if len(parts) == 5:
                                 chrom, start, end, orig_name, depth = parts
-                                gene_name = "."
+                                gene_name = orig_name if (orig_name in ["Antitarget", "Background"]) else "."
                             else:
                                 assert len(parts) == 6, parts
                                 chrom, start, end, orig_name, depth, gene_name = parts
@@ -270,7 +283,15 @@ def normalize_sv_coverage(*items):
 def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, work_dir, back_files, out_files):
     """Normalize CNV coverage using panel of normals with GATK's de-noise approaches.
     """
-    pon = gatkcnv.create_panel_of_normals(backgrounds, group_id, work_dir) if backgrounds else None
+    input_backs = set(filter(lambda x: x is not None,
+                             [dd.get_background_cnv_reference(d, "gatk-cnv") for d in inputs]))
+    if input_backs:
+        assert len(input_backs) == 1, "Multiple backgrounds in group: %s" % list(input_backs)
+        pon = list(input_backs)[0]
+    elif backgrounds:
+        pon = gatkcnv.create_panel_of_normals(backgrounds, group_id, work_dir)
+    else:
+        pon = None
     for data in inputs:
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
                                                    dd.get_sample_name(data), "bins"))
@@ -295,7 +316,7 @@ def _normalize_sv_coverage_cnvkit(group_id, inputs, backgrounds, work_dir, back_
             target_bed = tz.get_in(["depth", "bins", "target"], d)
             antitarget_bed = tz.get_in(["depth", "bins", "antitarget"], d)
     input_backs = set(filter(lambda x: x is not None,
-                                [dd.get_background_cnv_reference(d) for d in inputs]))
+                                [dd.get_background_cnv_reference(d, "cnvkit") for d in inputs]))
     if input_backs:
         assert len(input_backs) == 1, "Multiple backgrounds in group: %s" % list(input_backs)
         back_file = list(input_backs)[0]

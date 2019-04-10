@@ -10,6 +10,7 @@ import os
 import pprint
 import shutil
 
+import six
 import toolz as tz
 import yaml
 
@@ -53,7 +54,7 @@ def process(args):
     with utils.chdir(work_dir):
         with contextlib.closing(log.setup_local_logging(parallel={"wrapper": "runfn"})):
             try:
-                out = fn(fnargs)
+                out = fn(*fnargs)
             except:
                 logger.exception()
                 raise
@@ -115,7 +116,7 @@ def _get_record_attrs(out_keys):
     """Check for records, a single key plus output attributes.
     """
     if len(out_keys) == 1:
-        attr = out_keys.keys()[0]
+        attr = list(out_keys.keys())[0]
         if out_keys[attr]:
             return attr, out_keys[attr]
     return None, None
@@ -127,7 +128,7 @@ def _add_resources(data, runtime):
         data["config"] = {}
     # Convert input resources, which may be a JSON string
     resources = data.get("resources", {}) or {}
-    if isinstance(resources, basestring) and resources.startswith(("{", "[")):
+    if isinstance(resources, six.string_types) and resources.startswith(("{", "[")):
         resources = json.loads(resources)
         data["resources"] = resources
     assert isinstance(resources, dict), (resources, data)
@@ -559,11 +560,11 @@ def _file_and_exists(val, input_files):
 def _to_cwl(val, input_files):
     """Convert a value into CWL formatted JSON, handling files and complex things.
     """
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         if _file_and_exists(val, input_files):
             val = {"class": "File", "path": val}
             secondary = []
-            for idx in [".bai", ".tbi", ".gbi", ".fai", ".db"]:
+            for idx in [".bai", ".tbi", ".gbi", ".fai", ".crai", ".db"]:
                 idx_file = val["path"] + idx
                 if _file_and_exists(idx_file, input_files):
                     secondary.append({"class": "File", "path": idx_file})
@@ -578,11 +579,12 @@ def _to_cwl(val, input_files):
             if cur_file.endswith(cwlutils.DIR_TARGETS):
                 if os.path.exists(cur_dir):
                     for fname in os.listdir(cur_dir):
-                        if fname != cur_file:
+                        if fname != cur_file and not os.path.isdir(os.path.join(cur_dir, fname))\
+                                and fname != 'sbg.worker.log':
                             secondary.append({"class": "File", "path": os.path.join(cur_dir, fname)})
                 else:
                     for f in input_files:
-                        if f.startswith(cur_dir) and f != cur_file:
+                        if f.startswith(cur_dir) and f != cur_file and not os.path.isdir(f):
                             secondary.append({"class": "File", "path": f})
             if secondary:
                 val["secondaryFiles"] = _remove_duplicate_files(secondary)
@@ -592,7 +594,7 @@ def _to_cwl(val, input_files):
         # File representation with secondary files
         if "base" in val and "secondary" in val:
             out = {"class": "File", "path": val["base"]}
-            secondary = [{"class": "File", "path": x} for x in val["secondary"]]
+            secondary = [{"class": "File", "path": x} for x in val["secondary"] if not os.path.isdir(x)]
             if secondary:
                 out["secondaryFiles"] = _remove_duplicate_files(secondary)
             val = out

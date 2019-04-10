@@ -18,7 +18,6 @@ import subprocess
 import sys
 import glob
 
-import requests
 from six.moves import urllib
 import toolz as tz
 import yaml
@@ -145,13 +144,14 @@ def _set_matplotlib_default_backend():
         import matplotlib
         matplotlib.use('Agg', force=True)
         config = matplotlib.matplotlib_fname()
-        with file_transaction(config) as tx_out_file:
-            with open(config) as in_file, open(tx_out_file, "w") as out_file:
-                for line in in_file:
-                    if line.split(":")[0].strip() == "backend":
-                        out_file.write("backend: agg\n")
-                    else:
-                        out_file.write(line)
+        if os.access(config, os.W_OK):
+            with file_transaction(config) as tx_out_file:
+                with open(config) as in_file, open(tx_out_file, "w") as out_file:
+                    for line in in_file:
+                        if line.split(":")[0].strip() == "backend":
+                            out_file.write("backend: agg\n")
+                        else:
+                            out_file.write(line)
 
 def _matplotlib_installed():
     try:
@@ -214,40 +214,25 @@ def _get_conda_bin():
     if os.path.exists(conda_bin):
         return conda_bin
 
-def _default_deploy_args(args):
-    """Standard install arguments for CloudBioLinux.
-
-    Avoid using sudo and keep an installation isolated if running as the root user.
-    """
-    return {"flavor": "ngs_pipeline_minimal",
-            "vm_provider": "novm",
-            "hostname": "localhost",
-            "fabricrc_overrides": {"edition": "minimal",
-                                   "use_sudo": False,
-                                   "keep_isolated": args.isolate or os.geteuid() == 0,
-                                   "conda_cmd": _get_conda_bin(),
-                                   "distribution": args.distribution or "__auto__",
-                                   "dist_name": "__auto__"}}
-
 def _check_for_conda_problems():
     """Identify post-install conda problems and fix.
 
     - libgcc upgrades can remove libquadmath, which moved to libgcc-ng
     """
     conda_bin = _get_conda_bin()
+    channels = _get_conda_channels(conda_bin)
     lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "iib")
     for l in ["libgomp.so.1", "libquadmath.so"]:
         if not os.path.exists(os.path.join(lib_dir, l)):
-            subprocess.check_call([conda_bin, "install", "-f",
-                                   "--yes", "-c", "bioconda", "-c", "conda-forge", "libgcc-ng"])
+            subprocess.check_call([conda_bin, "install", "-f", "--yes"] + channels + ["libgcc-ng"])
 
 def _update_bcbiovm():
     """Update or install a local bcbiovm install with tools and dependencies.
     """
     print("## CWL support with bcbio-vm")
     conda_bin, env_name = _add_environment("bcbiovm", "python=2")
-    base_cmd = [conda_bin, "install", "--yes", "--name", env_name,
-                "-c", "conda-forge", "-c", "bioconda"]
+    channels = _get_conda_channels(conda_bin)
+    base_cmd = [conda_bin, "install", "--yes", "--name", env_name] + channels
     subprocess.check_call(base_cmd + ["bcbio-nextgen"])
     extra_uptodate = ["cromwell"]
     subprocess.check_call(base_cmd + ["bcbio-nextgen-vm"] + extra_uptodate)
@@ -265,18 +250,37 @@ def _add_environment(addenv, deps):
         conda_envs = _get_envs(conda_bin)
     return conda_bin, addenv
 
+def _get_conda_channels(conda_bin):
+    """Retrieve default conda channels, checking if they are pre-specified in config.
+
+    This allows users to override defaults with specific mirrors in their .condarc
+    """
+    channels = ["bioconda", "conda-forge"]
+    out = []
+    config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+    for c in channels:
+        present = False
+        for orig_c in config.get("channels") or []:
+            if orig_c.endswith((c, "%s/" % c)):
+                present = True
+                break
+        if not present:
+            out += ["-c", c]
+    return out
+
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = _get_conda_bin()
+    channels = _get_conda_channels(conda_bin)
     assert conda_bin, ("Could not find anaconda distribution for upgrading bcbio.\n"
                        "Using python at %s but could not find conda." % (os.path.realpath(sys.executable)))
     req_file = "bcbio-update-requirements.txt"
     if os.path.exists(req_file):
         os.remove(req_file)
     subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate", REMOTES["requirements"]])
-    subprocess.check_call([conda_bin, "install", "--quiet", "--yes",
-                           "-c", "bioconda", "-c", "conda-forge", "--file", req_file])
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + channels +
+                          ["--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
     return os.path.dirname(os.path.dirname(conda_bin))
@@ -285,10 +289,10 @@ def _update_conda_devel():
     """Update to the latest development conda package.
     """
     conda_bin = _get_conda_bin()
+    channels = _get_conda_channels(conda_bin)
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
-    subprocess.check_call([conda_bin, "install",
-                           "--quiet", "--yes", "-c", "bioconda", "-c", "conda-forge",
-                           "bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")])
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + channels +
+                           ["bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")])
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def get_genome_dir(gid, galaxy_dir, data):
@@ -327,29 +331,23 @@ def get_gemini_dir(data=None):
 def upgrade_bcbio_data(args, remotes):
     """Upgrade required genome data files in place.
     """
-    from fabric.api import env
     if hasattr(args, "datadir") and args.datadir and os.path.exists(args.datadir):
         data_dir = args.datadir
     else:
         data_dir = _get_data_dir()
-    s = _default_deploy_args(args)
-    s["actions"] = ["setup_biodata"]
     tooldir = args.tooldir or get_defaults().get("tooldir")
-    if tooldir:
-        s["fabricrc_overrides"]["system_install"] = tooldir
-    s["fabricrc_overrides"]["data_files"] = data_dir
-    s["fabricrc_overrides"]["galaxy_home"] = os.path.join(data_dir, "galaxy")
+    galaxy_home = os.path.join(data_dir, "galaxy")
     cbl = get_cloudbiolinux(remotes)
-    s["genomes"] = _get_biodata(cbl["biodata"], args)
+    tool_data_table_conf_file = os.path.join(cbl["dir"], "installed_files", "tool_data_table_conf.xml")
+    genome_opts = _get_biodata(cbl["biodata"], args)
     sys.path.insert(0, cbl["dir"])
-    env.cores = args.cores
-    cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
-    cbl_deploy.deploy(s)
-    _upgrade_genome_resources(s["fabricrc_overrides"]["galaxy_home"],
-                              remotes["genome_resources"])
-    _upgrade_snpeff_data(s["fabricrc_overrides"]["galaxy_home"], args, remotes)
+    cbl_genomes = __import__("cloudbio.biodata.genomes", fromlist=["genomes"])
+    cbl_genomes.install_data_local(genome_opts, tooldir, data_dir, galaxy_home, tool_data_table_conf_file,
+                                   args.cores, ["ggd", "s3", "raw"])
+    _upgrade_genome_resources(galaxy_home, remotes["genome_resources"])
+    _upgrade_snpeff_data(galaxy_home, args, remotes)
     if "vep" in args.datatarget:
-        _upgrade_vep_data(s["fabricrc_overrides"]["galaxy_home"], tooldir)
+        _upgrade_vep_data(galaxy_home, tooldir)
     if "kraken" in args.datatarget:
         _install_kraken_db(_get_data_dir(), args)
     if args.cwl:
@@ -375,6 +373,7 @@ def _prepare_cwl_tarballs(data_dir):
 def _upgrade_genome_resources(galaxy_dir, base_url):
     """Retrieve latest version of genome resource YAML configuration files.
     """
+    import requests
     for dbkey, ref_file in genome.get_builds(galaxy_dir):
         # Check for a remote genome resources file
         remote_url = base_url % dbkey
@@ -483,22 +482,15 @@ def upgrade_thirdparty_tools(args, remotes):
 
     Creates a manifest directory with installed programs on the system.
     """
-    s = {"fabricrc_overrides": {"system_install": args.tooldir,
-                                "local_install": os.path.join(args.tooldir, "local_install"),
-                                "distribution": args.distribution,
-                                "conda_cmd": _get_conda_bin(),
-                                "use_sudo": False,
-                                "edition": "minimal"}}
-    s = _default_deploy_args(args)
-    s["actions"] = ["install_biolinux"]
-    s["fabricrc_overrides"]["system_install"] = args.tooldir
-    s["fabricrc_overrides"]["local_install"] = os.path.join(args.tooldir, "local_install")
-    if args.toolconf and os.path.exists(args.toolconf):
-        s["fabricrc_overrides"]["conda_yaml"] = args.toolconf
     cbl = get_cloudbiolinux(remotes)
+    if args.toolconf and os.path.exists(args.toolconf):
+        package_yaml = args.toolconf
+    else:
+        package_yaml = os.path.join(cbl["dir"], "contrib", "flavor",
+                                    "ngs_pipeline_minimal", "packages-conda.yaml")
     sys.path.insert(0, cbl["dir"])
-    cbl_deploy = __import__("cloudbio.deploy", fromlist=["deploy"])
-    cbl_deploy.deploy(s)
+    cbl_conda = __import__("cloudbio.package.conda", fromlist=["conda"])
+    cbl_conda.install_in(_get_conda_bin(), args.tooldir, package_yaml)
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     print("Creating manifest of installed packages in %s" % manifest_dir)
     cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
@@ -586,6 +578,7 @@ def _update_system_file(system_file, name, new_kvs):
 def _install_kraken_db(datadir, args):
     """Install kraken minimal DB in genome folder.
     """
+    import requests
     kraken = os.path.join(datadir, "genomes/kraken")
     url = "https://ccb.jhu.edu/software/kraken/dl/minikraken.tgz"
     compress = os.path.join(kraken, os.path.basename(url))

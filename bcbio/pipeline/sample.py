@@ -242,8 +242,8 @@ def postprocess_alignment(data):
     data = cwlutils.normalize_missing(utils.to_single_data(data))
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
+    ref_file = dd.get_ref_file(data)
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
-        ref_file = dd.get_ref_file(data)
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data)))
         bam_file_ready = os.path.join(out_dir, os.path.basename(bam_file))
@@ -262,6 +262,11 @@ def postprocess_alignment(data):
         data = samtools.run_and_save(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
+    elif dd.get_variant_regions(data):
+        callable_region_bed, nblock_bed = \
+            callable.block_regions(dd.get_variant_regions(data), bam_file, ref_file, data)
+        data["regions"] = {"nblock": nblock_bed, "callable": dd.get_variant_regions(data),
+                           "sample_callable": dd.get_variant_regions(data)}
     return [[data]]
 
 def _merge_out_from_infiles(in_files):
@@ -286,7 +291,7 @@ def delayed_bam_merge(data):
     """
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
-        file_key = data["combine"].keys()[0]
+        file_key = list(data["combine"].keys())[0]
         extras = []
         for x in data["combine"][file_key].get("extras", []):
             if isinstance(x, (list, tuple)):
@@ -298,7 +303,7 @@ def delayed_bam_merge(data):
         in_files = sorted(list(set(extras)))
         out_file = tz.get_in(["combine", file_key, "out"], data, _merge_out_from_infiles(in_files))
         sup_exts = data.get(file_key + "_plus", {}).keys()
-        for ext in sup_exts + [""]:
+        for ext in list(sup_exts) + [""]:
             merged_file = None
             if os.path.exists(utils.append_stem(out_file, "-" + ext)):
                 cur_out_file, cur_in_files = out_file, []
@@ -362,7 +367,7 @@ def _merge_hla_fastq_inputs(data):
     if hla_sample_files:
         out_files = collections.defaultdict(list)
         for hla_file in utils.flatten(hla_sample_files):
-            rehla = re.search(".hla.(?P<hlatype>[\w-]+).fq", hla_file)
+            rehla = re.search(r".hla.(?P<hlatype>[\w-]+).fq", hla_file)
             if rehla:
                 hlatype = rehla.group("hlatype")
                 out_files[hlatype].append(hla_file)

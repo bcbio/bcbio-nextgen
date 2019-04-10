@@ -72,7 +72,7 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan, octopus, mutect2, smcounter2]
+        somatic: [vardict, freebayes, varscan, octopus, mutect2]
         # somatic: [vardict, freebayes, varscan, octopus, mutect2, smcounter2, pisces]
         germline: gatk-haplotype
       indelcaller: sid

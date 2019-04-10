@@ -65,6 +65,13 @@ multiple samples using the template workflow command::
   so it's better to avoid this character and use it only as separation
   for the file extension.
 
+  For :ref:`docs-cwl` inputs, the first ``samplename`` column should contain
+  the base filename. For BAM files, this is ``your_file.bam``. For fastqs
+  this is ``your_file_R1.fastq.gz;your_file_R2.fastq.gz``, separating individual
+  files with a semicolon. By putting paths to the actual locations of the inputs
+  in your ``bcbio_system.yaml`` input when generating CWL, you can easily move
+  projects between different filesystems.
+
     The remaining columns can contain:
 
    - ``description`` Changes the sample description, originally
@@ -266,6 +273,12 @@ The sample configuration file defines ``details`` of each sample to process::
       case/controls into ``affected`` and ``unaffected``. Also accepts PED style
       specifications (1=unaffected, 2=affected). CNVkit uses case/control
       status to determine how to set background samples for CNV calling.
+
+   - ``disease`` identifies a specific disease name for the sample. Used along
+     with ``svprioritize`` to help identify gene regions for reporting during
+     analysis with heterogeneity callers like PureCN and TitanCNA. This is
+     primarily for cancer studies and you can narrow genes by disease using
+     inputs like `lung`, `breast` or `pancreatic` for different cancer types.
 
    - ``prep_method`` A free text description of the method used in sample
      prep. Used to group together samples during CNV calling for background.
@@ -488,7 +501,11 @@ Read trimming
    and polyA tails. polyg trimming removes high quality G stretches present in
    NovaSeq and NextSeq data. In the small RNA pipeline, bcbio will try to detect
    the adapter using DNApi. If you set up this parameter, then bcbio will use this value instead.
-   Choices: [truseq, illumina, nextera, polya, polyx, polyg].
+   Choices: [truseq, illumina, nextera, polya, polyx, polyg, nextera2, truseq2].
+
+   - nextera2: Illumina NEXTera DNA prep kit from NEB
+   - truseq2: SMARTer Universal Low Input RNA Kit
+
 -  ``custom_trim`` A list of sequences to trim from the end of reads,
    for example: [AAAATTTT, GGGGCCCC]
 - ``min_read_length`` Minimum read length to maintain when
@@ -678,9 +695,19 @@ Variant calling
      - ``variant`` A VCF file with variants to use as a background
        reference during variant calling. For tumor/normal paired calling use this to
        supply a panel of normal individuals.
-     - ``cnv_reference`` `Background reference file
-       <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_
-       for copy number calling.
+     - ``cnv_reference`` Background reference file for copy number calling. This
+       can be either a single file for one CNV method or a dictionary for
+       multiple methods. Supports `CNVkit cnn inputs
+       <http://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn>`_,
+       'GATK4 HDF5 panel of normals <https://software.broadinstitute.org/gatk/documentation/article?id=11682>`_
+       and `seq2c <https://github.com/AstraZeneca-NGS/Seq2C>`_ combined mapping
+       plus coverage files::
+
+           background:
+             cnv_reference:
+               cnvkit: /path/to/background.cnn
+               gatk-cnv: /path/to/background_pon.hdf5
+               seq2c: /path/to/background.tsv
 
 .. _snpEff: http://snpeff.sourceforge.net/
 .. _Ensembl variant effect predictor (VEP): http://www.ensembl.org/info/docs/tools/vep/index.html
@@ -735,7 +762,7 @@ Structural variant calling
 ==========================
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
-  cnvkit, seq2c, delly, battenberg]. LUMPY and Manta require paired end reads.
+  cnvkit, gatk-cnv, seq2c, purecn, titancna, delly, battenberg]. LUMPY and Manta require paired end reads.
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
   structural variant calls to highlight changes in known genes. See the `paper
@@ -955,7 +982,16 @@ Single-cell RNA sequencing
   ``cellular_barcodes`` option. Defaults to 1. Set to 0 to turn off
   error correction.
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
-  barcodes.
+  barcodes. If the file contains sample name for each barcode, this will be used to
+  create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
+  associated with the barcode. This is an example of the file::
+ 
+    AATTCCGG,sample1
+    CCTTGGAA,sample2
+
+- ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
+  a collection of cells. Use this if your data has already been broken up into cells or
+  wells.
 
 smallRNA sequencing
 ===================
@@ -985,9 +1021,19 @@ You can pass different parameters for ``macs2`` adding to :ref:`config-resources
           macs2:
             options: ["--broad"]
 
+.. _docs-config-qc:
+
 Quality control
 ===============
 
+- ``qc`` Allows you to specifically assign quality control modules to run.
+  Generally you want to leave this unset and allow bcbio to run the correct QC
+  metrics for your experiment, or remove specific QC steps you don't want using
+  ``tools_off`` (:ref:`config-changing-defaults`). However, this can allow
+  turning off most of the QC by specifying a single quick running step like
+  ``picard``. Available tools are ``fastqc``, ``samtools``, ``coverage``,
+  ``picard``, ``contamination`` (VerifyBamID), ``peddy``, ``viral``, ``damage``,
+  ``umi``, ``small-rna``, ``atropos``, ``chipqc``.
 - ``mixup_check`` Detect potential sample mixups. Currently supports
   `qSignature <https://sourceforge.net/p/adamajava/wiki/qSignature/>`_.
   ``qsignature_full`` runs a larger analysis while ``qsignature`` runs a smaller
@@ -1063,8 +1109,7 @@ lists with multiple options:
     HaplotypeCaller and VQSR. By default bcbio includes GATK4 and uses it.
   - ``vqsr`` turns off variant quality score recalibration for all samples.
   - ``bwa-mem`` forces use of original ``bwa aln`` alignment. Without this, we
-    use bwa mem with 70bp or longer reads. ``fastqc`` turns off quality control
-    FastQC usage.
+    use bwa mem with 70bp or longer reads.
   - ``lumpy-genotype`` skip genotyping for Lumpy samples, which can be slow in
     the case of many structural variants.
   - ``seqcluster`` turns off use of seqcluster tool in srnaseq pipeline.
@@ -1077,8 +1122,11 @@ lists with multiple options:
     variants is performed but all high quality variants pass.
   - ``upload_alignment`` turns off final upload of large alignment files.
   - ``pbgzip`` turns off use of bgzip with multiple threads.
-  - ``coverage_qc`` turns off calculation of coverage statistics with
-    samtools-stats and picard.
+  - For quality control, you can turn off any specific tool by adding to ``tools_off``.
+    For example, ``fastqc`` turns off quality control FastQC usage.
+    and ``coverage_qc`` turns off calculation of coverage statistics with
+    samtools-stats and picard. See the :ref:`docs-config-qc` docs for
+    details on tools.
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
