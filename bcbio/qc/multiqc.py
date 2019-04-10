@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import io
 import json
 import mimetypes
 import os
@@ -145,13 +146,13 @@ def _save_uploaded_data_json(samples, data_json_work, out_dir):
     if not upload_path_mapping:
         return data_json_work
 
-    with open(data_json_work) as f:
+    with io.open(data_json_work, encoding="utf-8") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
     upload_base = samples[0]["upload"]["dir"]
     data = walk_json(data, lambda s: _work_path_to_rel_final_path(s, upload_path_mapping, upload_base))
 
     data_json_final = os.path.join(out_dir, "multiqc_data_final.json")
-    with open(data_json_final, "w") as f:
+    with io.open(data_json_final, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     return data_json_final
 
