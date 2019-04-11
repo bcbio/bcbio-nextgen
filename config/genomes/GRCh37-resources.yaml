@@ -1,25 +1,36 @@
-version: 38
+version: 49
 
 aliases:
   human: true
   snpeff: GRCh37.75
-  ensembl: homo_sapiens_merged_vep_91_GRCh37
+  ensembl: homo_sapiens_merged_vep_95_GRCh37
 
 variation:
-  dbsnp: ../variation/dbsnp-150.vcf.gz
+  dbsnp: ../variation/dbsnp-151.vcf.gz
   train_hapmap: ../variation/hapmap_3.3.vcf.gz
   train_omni: ../variation/1000G_omni2.5.vcf.gz
   train_1000g: ../variation/1000G_phase1.snps.high_confidence.vcf.gz
   train_indels: ../variation/Mills_and_1000G_gold_standard.indels.vcf.gz
   cosmic: ../variation/cosmic.vcf.gz
+  clinvar: ../variation/clinvar.vcf.gz
+  esp: ../variation/esp.vcf.gz
+  exac: ../variation/exac.vcf.gz
+  gnomad_exome: ../variation/gnomad_exome.vcf.gz
+  gnomad_genome: ../variation/gnomad_genome.vcf.gz
+  1000g: ../variation/1000g.vcf.gz
   lcr: ../coverage/problem_regions/repeats/LCR.bed.gz
+  polyx: ../coverage/problem_regions/repeats/polyx.bed.gz
   sv_repeat: ../coverage/problem_regions/repeats/sv_repeat_telomere_centromere.bed
   encode_blacklist: ../coverage/problem_regions/ENCODE/wgEncodeDacMapabilityConsensusExcludable.bed.gz
+  gc_profile: ../coverage/gc/GC_profile.1000bp.cnp
+  germline_het_pon: ../variation/germline_het_pon.bed.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   dbscsnv: ../variation/dbscSNV.txt.gz
   ancestral: ../variation/human_ancestor.fa.gz
   qsignature: ../variation/qsignature.vcf
   genesplicer: ../variation/genesplicer
+  editing: ../editing/RADAR.bed.gz
+  genotype2phenotype: ../variation/G2P.csv
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

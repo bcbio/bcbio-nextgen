@@ -26,7 +26,7 @@ def get_default_jvm_opts(tmp_dir=None, parallel_gc=False):
     Avoids issues with multiple spun up Java processes running into out of memory errors.
     Parallel GC can use a lot of cores on big machines and primarily helps reduce task latency
     and responsiveness which are not needed for batch jobs.
-    https://github.com/chapmanb/bcbio-nextgen/issues/532#issuecomment-50989027
+    https://github.com/bcbio/bcbio-nextgen/issues/532#issuecomment-50989027
     https://wiki.csiro.au/pages/viewpage.action?pageId=545034311
     http://stackoverflow.com/questions/9738911/javas-serial-garbage-collector-performing-far-better-than-other-garbage-collect
     However, serial GC causes issues with Spark local runs so we use parallel for those cases:
@@ -72,7 +72,7 @@ def _clean_java_out(version_str):
     Java will report information like _JAVA_OPTIONS environmental variables in the output.
     """
     out = []
-    for line in version_str.split("\n"):
+    for line in version_str.decode().split("\n"):
         if line.startswith("Picked up"):
             pass
         if line.find("setlocale") > 0:
@@ -95,15 +95,13 @@ def get_gatk_version(gatk_jar=None, config=None):
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
         out = _clean_java_out(stdout.read().strip())
-        # versions earlier than 2.4 do not have explicit version command,
-        # parse from error output from GATK
-        if out.find("ERROR") >= 0:
-            flag = "The Genome Analysis Toolkit (GATK)"
-            for line in out.split("\n"):
-                if line.startswith(flag):
-                    version = line.split(flag)[-1].split(",")[0].strip()
-        else:
-            version = out
+        # Historical GATK version (2.4) and newer versions (4.1.0.0)
+        # have a flag in front of output version
+        version = out
+        flag = "The Genome Analysis Toolkit (GATK)"
+        for line in out.split("\n"):
+            if line.startswith(flag):
+                version = line.split(flag)[-1].split(",")[0].strip()
     if version.startswith("v"):
         version = version[1:]
     _check_for_bad_version(version, "GATK")
@@ -141,6 +139,7 @@ def fix_missing_spark_user(cl, prog, params):
     https://blog.openshift.com/jupyter-on-openshift-part-6-running-as-an-assigned-user-id/
     """
     if prog.find("Spark") >= 0 or "--spark-master" in params:
+        user = None
         try:
             user = getpass.getuser()
         except KeyError:
@@ -148,8 +147,12 @@ def fix_missing_spark_user(cl, prog, params):
                 with open("/etc/passwd", "a") as out_handle:
                     out_handle.write("sparkanon:x:{uid}:{uid}:sparkanon:/nonexistent:/usr/sbin/nologin\n"
                                         .format(uid=os.getuid()))
-            user = getpass.getuser()
-        cl = "export SPARK_USER=%s && " % (user) + cl
+                try:
+                    user = getpass.getuser()
+                except KeyError:
+                    pass
+        if user:
+            cl = "export SPARK_USER=%s && " % (user) + cl
     return cl
 
 class BroadRunner:
@@ -336,7 +339,12 @@ class BroadRunner:
                ["-jar", gatk_jar] + [str(x) for x in params]
 
     def run_gatk(self, params, tmp_dir=None, log_error=True,
-                 data=None, region=None, memscale=None, parallel_gc=False):
+                 data=None, region=None, memscale=None, parallel_gc=False, ld_preload=False):
+        """Top level interface to running a GATK command.
+
+        ld_preload injects required libraries for Java JNI calls:
+        https://gatkforums.broadinstitute.org/gatk/discussion/8810/something-about-create-pon-workflow
+        """
         needs_java7 = LooseVersion(self.get_gatk_version()) < LooseVersion("3.6")
         # For old Java requirements use global java 7
         if needs_java7:
@@ -349,6 +357,8 @@ class BroadRunner:
                           else params.index("--analysis_type")
             prog = params[atype_index + 1]
             cl = fix_missing_spark_user(cl, prog, params)
+            if ld_preload:
+                cl = "export LD_PRELOAD=%s/lib/libopenblas.so && %s" % (os.path.dirname(utils.get_bcbio_bin()), cl)
             do.run(cl, "GATK: {0}".format(prog), data, region=region,
                    log_error=log_error)
         if needs_java7:
@@ -527,20 +537,22 @@ def gatk_cmd(name, jvm_opts, params, config=None):
             data = config
         if not data or "gatk4" not in dd.get_tools_off(data):
             return _gatk4_cmd(jvm_opts, params, data)
+        else:
+            name = "gatk3"
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), name))
     # if we can't find via the local executable, fallback to being in the path
     if not gatk_cmd:
         gatk_cmd = utils.which(name)
     if gatk_cmd:
-        return "%s && export PATH=%s:$PATH && %s %s %s" % \
+        return "%s && export PATH=%s:\"$PATH\" && %s %s %s" % \
             (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd), gatk_cmd,
              " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
 def _gatk4_cmd(jvm_opts, params, data):
-    """Retrieve unified command for GATK4, using gatk-launch.
+    """Retrieve unified command for GATK4, using 'gatk'. GATK3 is 'gatk3'.
     """
-    gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk-launch"))
-    return "%s && export PATH=%s:$PATH && gatk-launch --java-options '%s' %s" % \
+    gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk"))
+    return "%s && export PATH=%s:\"$PATH\" && gatk --java-options '%s' %s" % \
         (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd),
          " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
@@ -551,7 +563,7 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        cmd = ["export", "PATH=%s:$PATH" % utils.get_java_binpath(), "&&"] + \
+        cmd = ["export", "PATH=%s:\"$PATH\"" % utils.get_java_binpath(), "&&"] + \
               [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
         do.run(utils.clear_java_home() + " && " + " ".join(cmd), "Picard: %s" % subcmd)

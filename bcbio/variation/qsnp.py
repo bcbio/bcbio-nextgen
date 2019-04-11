@@ -16,6 +16,9 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils
 from bcbio.variation.vcfutils import get_paired_bams, bgzip_and_index, combine_variant_files, PairedData
 
+import six
+
+
 def is_installed(config):
     """Check for qsnp installation on machine.
     """
@@ -80,11 +83,11 @@ def _run_qsnp_paired(align_bams, items, ref_file, assoc_files,
 
 def _clean_regions(items, region):
     """Intersect region with target file if it exists"""
-    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+    variant_regions = bedutils.population_variant_regions(items, merged=True)
     with utils.tmpfile() as tx_out_file:
         target = subset_variant_regions(variant_regions, region, tx_out_file, items)
         if target:
-            if isinstance(target, basestring) and os.path.isfile(target):
+            if isinstance(target, six.string_types) and os.path.isfile(target):
                 target = _load_regions(target)
             else:
                 target = [target]

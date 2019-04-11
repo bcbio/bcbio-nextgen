@@ -6,6 +6,7 @@ no-read regions.
 import collections
 import os
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -19,7 +20,7 @@ def get_max_counts(samples):
     for data in (x[0] for x in samples):
         count = tz.get_in(["config", "algorithm", "callable_count"], data, 1)
         vcs = tz.get_in(["config", "algorithm", "variantcaller"], data, [])
-        if isinstance(vcs, basestring):
+        if isinstance(vcs, six.string_types):
             vcs = [vcs]
         if vcs:
             count *= len(vcs)
@@ -134,6 +135,8 @@ def _add_combine_info(output, combine_map, file_key):
         data = samples[0]
         data["region_bams"] = region_bams
         data["region"] = regions
+        data = dd.set_mark_duplicates(data, data["config"]["algorithm"]["orig_markduplicates"])
+        del data["config"]["algorithm"]["orig_markduplicates"]
         out.append([data])
     return out
 
@@ -153,6 +156,9 @@ def parallel_prep_region(samples, run_parallel):
         elif not data.get(file_key):
             extras.append([data])
         else:
+            # Do not want to re-run duplicate marking after realignment
+            data["config"]["algorithm"]["orig_markduplicates"] = dd.get_mark_duplicates(data)
+            data = dd.set_mark_duplicates(data, False)
             torun.append([data])
     return extras + parallel_split_combine(torun, split_fn, run_parallel,
                                            "piped_bamprep", _add_combine_info, file_key, ["config"])
@@ -171,7 +177,7 @@ def clean_sample_data(samples):
     """Clean unnecessary information from sample data, reducing size for message passing.
     """
     out = []
-    for data in (x[0] for x in samples):
+    for data in (utils.to_single_data(x) for x in samples):
         if "dirs" in data:
             data["dirs"] = {"work": data["dirs"]["work"], "galaxy": data["dirs"]["galaxy"],
                             "fastq": data["dirs"].get("fastq")}

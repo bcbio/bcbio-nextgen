@@ -7,7 +7,7 @@ set -eu -o pipefail
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385.yaml
 cd ..
 
 base_url=ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/use_cases/mixtures/UMCUTRECHT_NA12878_NA24385_mixture_10052016

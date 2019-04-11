@@ -1,19 +1,19 @@
 Citations
 ---------
 
-https://github.com/chapmanb/bcbio-nextgen
+https://github.com/bcbio/bcbio-nextgen
 
 small RNA-seq
 =============
 
-Data was analyzed with bcbio-nextgen (https://github.com/chapmanb/bcbio-nextgen)
+Data was analyzed with bcbio-nextgen (https://github.com/bcbio/bcbio-nextgen)
 using piDNA to detect the adapter, cutadapt to remove it, STAR/bowtie to align against
 the genome and seqcluster to detect small RNA transcripts. miRNAs were detected using
 miraligner tool with miRBase as the reference miRNA database. tRNA profiles were
 detected using tdrmapper tool. mirdeep2 was used for discovery of novel miRNAs. FastQC
 was used for QC metrics and multiqc for reporting.
 
-Download BIB format: https://github.com/chapmanb/bcbio-nextgen/tree/master/docs/contents/misc/bcbio-smallrna.bib
+Download BIB format: https://github.com/bcbio/bcbio-nextgen/tree/master/docs/contents/misc/bcbio-smallrna.bib
 
 Tools
 ~~~~~
@@ -65,6 +65,14 @@ If you have in the output novel miRNA discovering, add:
 If you have tRNA mapping output, add:
 
 * Selitsky, S. R., & Sethupathy, P. (2015). tDRmapper: challenges and solutions to mapping, naming, and quantifying tRNA-derived RNAs from human small RNA-sequencing data. BMC Bioinformatics, 16(1), 354. doi:10.1186/s12859-015-0800-0
+
+If you have miRge activated:
+
+* Yin Lu, Alexander S. Baras, Marc K Halushka. miRge2.0: An updated tool to comprehensively analyze microRNA sequencing data. bioRxiv.org.
+
+If you have MINTmap activated:
+
+* Loher, P, Telonis, AG, Rigoutsos, I. MINTmap: fast and exhaustive profiling of nuclear and mitochondrial tRNA fragments from short RNA-seq data. Sci Rep. 2017;7 :41184. doi: 10.1038/srep41184. PubMed PMID:28220888 PubMed Central PMC5318995.
 
 Data
 ~~~~

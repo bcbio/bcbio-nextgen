@@ -1,13 +1,9 @@
 """Provide validation of structural variations against truth sets.
-
-Tests overlaps of the combined ensemble structural variant BED against
-a set of known regions.  Requires any overlap between ensemble set and
-known regions, and removes regions from analysis that overlap with
-exclusion regions.
 """
 import csv
 import os
 
+import six
 import toolz as tz
 import numpy as np
 import pandas as pd
@@ -15,11 +11,13 @@ import pybedtools
 
 from bcbio.log import logger
 from bcbio import utils
+from bcbio.bam import ref
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.structural import convert
-from bcbio.distributed.transaction import file_transaction, tx_tmpdir
-from bcbio.variation import bedutils, vcfutils, ploidy, validateplot
+from bcbio.distributed.transaction import file_transaction
+from bcbio.variation import vcfutils, ploidy, validateplot
+from bcbio.pipeline import config_utils
 
 mpl = utils.LazyImport("matplotlib")
 plt = utils.LazyImport("matplotlib.pyplot")
@@ -36,57 +34,66 @@ def _evaluate_vcf(calls, truth_vcf, work_dir, data):
                 writer.writerow(["sample", "caller", "vtype", "metric", "value"])
                 for call in calls:
                     detail_dir = utils.safe_makedir(os.path.join(work_dir, call["variantcaller"]))
-                    for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_callable_regions(data),
-                                                      call["variantcaller"], detail_dir, data):
+                    if call.get("vrn_file"):
+                        for stats in _validate_caller_vcf(call["vrn_file"], truth_vcf, dd.get_sample_callable(data),
+                                                          call["variantcaller"], detail_dir, data):
 
-                        writer.writerow(stats)
+                            writer.writerow(stats)
     return out_file
 
-def _validate_caller_vcf(call_vcf, truth_vcf, callable_regions, svcaller, detail_dir, data):
-    """Validate a caller VCF against truth within callable regions, returning stratified stats
+def _validate_caller_vcf(call_vcf, truth_vcf, callable_bed, svcaller, work_dir, data):
+    """Validate a caller VCF against truth within callable regions using SURVIVOR.
+
+    Combines files with SURIVOR merge and counts (https://github.com/fritzsedlazeck/SURVIVOR/)
     """
     stats = _calculate_comparison_stats(truth_vcf)
-    callable_regions = bedutils.clean_file(callable_regions, data)
-    callable_bed = pybedtools.BedTool(callable_regions).merge(d=stats["merge_size"]).saveas().fn
+    call_vcf = _prep_vcf(call_vcf, callable_bed, dd.get_sample_name(data), dd.get_sample_name(data),
+                         stats, work_dir, data)
+    truth_vcf = _prep_vcf(truth_vcf, callable_bed, vcfutils.get_samples(truth_vcf)[0],
+                          "%s-truth" % dd.get_sample_name(data), stats, work_dir, data)
+    cmp_vcf = _survivor_merge(call_vcf, truth_vcf, stats, work_dir, data)
+    return _comparison_stats_from_merge(cmp_vcf, stats, svcaller, data)
 
-    match_calls = set([])
+def _comparison_stats_from_merge(in_file, stats, svcaller, data):
+    """Extract true/false positive/negatives from a merged SURIVOR VCF.
+    """
     truth_stats = {"tp": [], "fn": [], "fp": []}
-    detail_handles = {}
-    for stat in ["tp", "tp-baseline", "fn", "fp"]:
-        detail_handles[stat] = open(os.path.join(detail_dir, "%s.vcf" % stat), "w")
-    calls_by_region = {}
-    call_vcf = slim_vcf(call_vcf, data)
-    for call in _callable_intersect(call_vcf, callable_bed, data):
-        calls_by_region[tuple(call[-3:])] = call
 
-    truth = None
-    regions = []
-    for parts in _callable_intersect(truth_vcf, callable_bed, data):
-        cur_region = tuple(parts[-3:])
-        cur_truth = parts
-        if truth is None:
-            truth = cur_truth
-        if _get_key(cur_truth) == _get_key(truth):
-            regions.append(cur_region)
-        else:
-            match_calls, truth_stats = _check_call(truth, regions, calls_by_region, match_calls, truth_stats,
-                                                   detail_handles)
-            truth = cur_truth
-            regions = [cur_region]
-    with utils.open_gzipsafe(call_vcf) as in_handle:
-            for call in (l.split("\t") for l in in_handle if not l.startswith("#")):
-                start, end = _get_start_end(call)
-                if end:
-                    key = _get_key(call)
-                    if key not in match_calls:
-                        call_info = _summarize_call(key)
-                        if _event_passes(call_info, stats):
-                            detail_handles["fp"].write("\t".join(call))
-                            truth_stats["fp"].append(call_info)
+    samples = ["truth" if x.endswith("-truth") else "eval" for x in vcfutils.get_samples(in_file)]
+    with open(in_file) as in_handle:
+        for call in (l.rstrip().split("\t") for l in in_handle if not l.startswith("#")):
+            supp_vec_str = [x for x in call[7].split(";") if x.startswith("SUPP_VEC=")][0]
+            _, supp_vec = supp_vec_str.split("=")
+            calls = dict(zip(samples, [int(x) for x in supp_vec]))
+            if calls["truth"] and calls["eval"]:
+                metric = "tp"
+            elif calls["truth"]:
+                metric = "fn"
+            else:
+                metric = "fp"
+            truth_stats[metric].append(_summarize_call(call))
     return _to_csv(truth_stats, stats, dd.get_sample_name(data), svcaller)
 
-def _get_key(call):
-    return tuple(call[:5] + call[7:8])
+def _survivor_merge(call_vcf, truth_vcf, stats, work_dir, data):
+    """Perform a merge of two callsets using SURVIVOR,
+    """
+    out_file = os.path.join(work_dir, "eval-merge.vcf")
+    if not utils.file_uptodate(out_file, call_vcf):
+        in_call_vcf = call_vcf.replace(".vcf.gz", ".vcf")
+        if not utils.file_exists(in_call_vcf):
+            with file_transaction(data, in_call_vcf) as tx_in_call_vcf:
+                do.run("gunzip -c {call_vcf} > {tx_in_call_vcf}".format(**locals()))
+        in_truth_vcf = truth_vcf.replace(".vcf.gz", ".vcf")
+        if not utils.file_exists(in_truth_vcf):
+            with file_transaction(data, in_truth_vcf) as tx_in_truth_vcf:
+                do.run("gunzip -c {truth_vcf} > {tx_in_truth_vcf}".format(**locals()))
+        in_list_file = os.path.join(work_dir, "eval-inputs.txt")
+        with open(in_list_file, "w") as out_handle:
+            out_handle.write("%s\n%s\n" % (in_call_vcf, in_truth_vcf))
+        with file_transaction(data, out_file) as tx_out_file:
+            cmd = ("SURVIVOR merge {in_list_file} {stats[merge_size]} 1 0 0 0 {stats[min_size]} {tx_out_file}")
+            do.run(cmd.format(**locals()), "Merge SV files for validation: %s" % dd.get_sample_name(data))
+    return out_file
 
 def _to_csv(truth_stats, stats, sample, svcaller):
     out = []
@@ -100,19 +107,19 @@ def _to_csv(truth_stats, stats, sample, svcaller):
                 out.append([sample, svcaller, "%s_%s-%s" % (svtype, start, end), metric, count])
     return out
 
-def _event_passes(call_info, stats):
-    return (call_info["svtype"] in stats["svtypes"] and call_info["size"] > stats["min_size"]
-            and call_info["size"] < stats["max_size"])
-
 def _calculate_comparison_stats(truth_vcf):
     """Identify calls to validate from the input truth VCF.
     """
+    # Avoid very small events for average calculations
+    min_stat_size = 50
+    min_median_size = 250
     sizes = []
     svtypes = set([])
     with utils.open_gzipsafe(truth_vcf) as in_handle:
         for call in (l.rstrip().split("\t") for l in in_handle if not l.startswith("#")):
-            stats = _summarize_call(_get_key(call))
-            sizes.append(stats["size"])
+            stats = _summarize_call(call)
+            if stats["size"] > min_stat_size:
+                sizes.append(stats["size"])
             svtypes.add(stats["svtype"])
     pct10 = int(np.percentile(sizes, 10))
     pct25 = int(np.percentile(sizes, 25))
@@ -122,7 +129,7 @@ def _calculate_comparison_stats(truth_vcf):
                        (pct50, pct75), (pct75, max(sizes))]
     ranges_split = [(int(min(sizes)), pct50), (pct50, max(sizes))]
     return {"min_size": int(min(sizes) * 0.95), "max_size": int(max(sizes) + 1.05),
-            "svtypes": svtypes, "merge_size": int(np.percentile(sizes, 10)),
+            "svtypes": svtypes, "merge_size": int(np.percentile([x for x in sizes if x > min_median_size], 50)),
             "ranges": []}
 
 def _get_start_end(parts, index=7):
@@ -135,88 +142,64 @@ def _get_start_end(parts, index=7):
         return start, end
     return None, None
 
-def _callable_intersect(in_file, callable_bed, data):
-    """Return list of original VCF SVs intersected by callable regions.
-
-    Does not try to handle BNDs. We should resolve these and return where possible.
-    """
-    with tx_tmpdir(data) as tmpdir:
-        in_bed = os.path.join(tmpdir, "%s-convert.bed" % utils.splitext_plus(os.path.basename(in_file))[0])
-        with utils.open_gzipsafe(in_file) as in_handle:
-            with open(in_bed, "w") as out_handle:
-                for parts in (l.split("\t") for l in in_handle if not l.startswith("#")):
-                    start, end = _get_start_end(parts)
-                    if end:
-                        out_handle.write("\t".join([parts[0], start, end] + parts) + "\n")
-        out_file = os.path.join(tmpdir, "%s-subset.tsv" % utils.splitext_plus(os.path.basename(in_file))[0])
-        cmd = "bedtools intersect -a {in_bed} -b {callable_bed} -wa -wb > {out_file}"
-        do.run(cmd.format(**locals()), "Intersect VCF by callable")
-        with open(out_file) as in_handle:
-            for line in in_handle:
-                yield line.rstrip().split("\t")[3:]
-
 def _summarize_call(parts):
     """Provide summary metrics on size and svtype for a SV call.
     """
-    svtype = [x.split("=")[-1] for x in parts[-1].split(";") if x.startswith("SVTYPE=")]
+    svtype = [x.split("=")[1] for x in parts[7].split(";") if x.startswith("SVTYPE=")]
     svtype = svtype[0] if svtype else ""
-    start, end = _get_start_end(parts, index=-1)
+    start, end = _get_start_end(parts)
     return {"svtype": svtype, "size": int(end) - int(start)}
 
-def _is_compatible(call, truth):
-    """Determine if a call and truth set are equivalent matches.
+def _prep_vcf(in_file, region_bed, sample, new_sample, stats, work_dir, data):
+    """Prepare VCF for SV validation:
 
-    Entry point to restrict matches by call type or size.
+    - Subset to passing variants
+    - Subset to genotyped variants -- removes reference and no calls
+    - Selects and names samples
+    - Subset to callable regions
+    - Remove larger annotations which slow down VCF processing
     """
-    call = _summarize_call(_get_key(call))
-    truth = _summarize_call(_get_key(truth))
-    return call["size"] < (truth["size"] * 2)
+    in_file = vcfutils.bgzip_and_index(in_file, data, remove_orig=False)
+    out_file = os.path.join(work_dir, "%s-vprep.vcf.gz" % utils.splitext_plus(os.path.basename(in_file))[0])
+    if not utils.file_uptodate(out_file, in_file):
+        callable_bed = _prep_callable_bed(region_bed, work_dir, stats, data)
+        with file_transaction(data, out_file) as tx_out_file:
+            ann_remove = _get_anns_to_remove(in_file)
+            ann_str = " | bcftools annotate -x {ann_remove}" if ann_remove else ""
+            cmd = ("bcftools view -T {callable_bed} -f 'PASS,.' --min-ac '1:nref' -s {sample} {in_file} "
+                   + ann_str +
+                   r"| sed 's|\t{sample}|\t{new_sample}|' "
+                   "| bgzip -c > {out_file}")
+            do.run(cmd.format(**locals()), "Create SV validation VCF for %s" % new_sample)
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _check_call(truth, regions, calls_by_region, match_calls, truth_stats, out_handles):
-    """Validate if we have a call that matches this given truth set within callable regions.
+def _prep_callable_bed(in_file, work_dir, stats, data):
+    """Sort and merge callable BED regions to prevent SV double counting
     """
-    cur_matches = []
-    for region in regions:
-        cur_match_call = calls_by_region.get(region)
-        if cur_match_call:
-            if _get_key(cur_match_call) not in match_calls and _is_compatible(cur_match_call, truth):
-                cur_matches.append(cur_match_call)
-            match_calls.add(_get_key(cur_match_call))
-    if cur_matches:
-        for cur_match in cur_matches:
-            out_handles["tp"].write("\t".join(cur_match) + "\n")
-        out_handles["tp-baseline"].write("\t".join(truth) + "\n")
-        truth_stats["tp"].append(_summarize_call(_get_key(truth)))
-    else:
-        out_handles["fn"].write("\t".join(truth) + "\n")
-        truth_stats["fn"].append(_summarize_call(_get_key(truth)))
-    return match_calls, truth_stats
+    out_file = os.path.join(work_dir, "%s-merge.bed.gz" % utils.splitext_plus(os.path.basename(in_file))[0])
+    gsort = config_utils.get_program("gsort", data)
+    if not utils.file_uptodate(out_file, in_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            fai_file = ref.fasta_idx(dd.get_ref_file(data))
+            cmd = ("{gsort} {in_file} {fai_file} | bedtools merge -i - -d {stats[merge_size]} | "
+                   "bgzip -c > {tx_out_file}")
+            do.run(cmd.format(**locals()), "Prepare SV callable BED regions")
+    return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def slim_vcf(in_file, data):
-    """Remove larger annotations which slow down VCF processing
+def _get_anns_to_remove(in_file):
+    """Find larger annotations, if present in VCF, that slow down processing.
     """
     to_remove = ["ANN", "LOF"]
     to_remove_str = tuple(["##INFO=<ID=%s" % x for x in to_remove])
-    in_file = vcfutils.bgzip_and_index(in_file, data, remove_orig=False)
-    out_file = "%s-slim.vcf.gz" % utils.splitext_plus(in_file)[0]
-    if not utils.file_uptodate(out_file, in_file):
-        cur_remove = []
-        with utils.open_gzipsafe(in_file) as in_handle:
-            for line in in_handle:
-                if not line.startswith("#"):
-                    break
-                elif line.startswith(to_remove_str):
-                    cur_id = line.split("ID=")[-1].split(",")[0]
-                    cur_remove.append("INFO/%s" % cur_id)
-        with file_transaction(data, out_file) as tx_out_file:
-            if cur_remove:
-                cur_remove = ",".join(cur_remove)
-                cmd = ("bcftools view -f 'PASS,.' {in_file} | "
-                       "bcftools annotate -x {cur_remove} -O z -o {tx_out_file}")
-            else:
-                cmd = ("bcftools view -f 'PASS,.' {in_file} -O z -o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Create slim VCF")
-    return out_file
+    cur_remove = []
+    with utils.open_gzipsafe(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith("#"):
+                break
+            elif line.startswith(to_remove_str):
+                cur_id = line.split("ID=")[-1].split(",")[0]
+                cur_remove.append("INFO/%s" % cur_id)
+    return ",".join(cur_remove)
 
 # -- BED based evaluation
 
@@ -347,16 +330,17 @@ def _plot_evaluation_event(df_csv, svtype):
                 if i == 0:
                     ax.set_title(metric, size=12, y=1.2)
                 vals, labels = _get_plot_val_labels(df, size, metric, callers)
-                ax.barh(np.arange(len(vals)), vals)
+                ax.barh(range(1,len(vals)+1), vals)
                 if j == 0:
                     ax.tick_params(axis='y', which='major', labelsize=8)
-                    ax.locator_params(nbins=len(callers) + 2, axis="y", tight=True)
-                    ax.set_yticklabels(callers, va="bottom")
-                    ax.text(100, len(callers), size_label, fontsize=10)
+                    ax.locator_params(axis="y", tight=True)
+                    ax.set_yticks(range(1,len(callers)+1,1))
+                    ax.set_yticklabels(callers, va="center")
+                    ax.text(100, len(callers)+1, size_label, fontsize=10)
                 else:
                     ax.get_yaxis().set_ticks([])
                 for ai, (val, label) in enumerate(zip(vals, labels)):
-                    ax.annotate(label, (val + 0.75, ai + 0.35), va='center', size=7)
+                    ax.annotate(label, (val + 0.75, ai + 1), va='center', size=7)
         if svtype in titles:
             fig.text(0.025, 0.95, titles[svtype], size=14)
         fig.set_size_inches(7, len(event_sizes) + 1)
@@ -400,11 +384,11 @@ def evaluate(data):
             summary_plots = _plot_evaluation(df_csv)
             data["sv-validate"] = {"csv": val_summary, "plot": summary_plots, "df": df_csv}
         else:
-            assert isinstance(truth_sets, basestring) and utils.file_exists(truth_sets), truth_sets
+            assert isinstance(truth_sets, six.string_types) and utils.file_exists(truth_sets), truth_sets
             val_summary = _evaluate_vcf(data["sv"], truth_sets, work_dir, data)
             title = "%s structural variants" % dd.get_sample_name(data)
             summary_plots = validateplot.classifyplot_from_valfile(val_summary, outtype="png", title=title)
-            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots[0]}
+            data["sv-validate"] = {"csv": val_summary, "plot": summary_plots[0] if len(summary_plots) > 0 else None}
     return data
 
 if __name__ == "__main__":

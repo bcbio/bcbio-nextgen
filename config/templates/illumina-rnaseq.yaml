@@ -4,9 +4,25 @@ details:
   - analysis: RNA-seq
     genome_build: GRCh37
     algorithm:
-      aligner: tophat2
-      trim_reads: read_through
-      adapters: [truseq, polya]
-      strandedness: unstranded
+## for hg38, change the aligner to hisat2
+      aligner: star
+## uncomment below if adapter trimming needs to be performed
+## most samples will not need this
+#      trim_reads: read_through
+#      adapters: [truseq, polya]
+## uncomment below if strandedness needs to be set
+#      strandedness: unstranded
+## uncomment below if fusion calling is necessary
+#      fusion_caller: [pizzly, oncofuse]
+## uncomment below if variant calling is necessary, vardict also supported
+#      variantcaller: [gatk-haplotype, vardict]
+## uncomment below if you want other expression callers, salmon is run by default
+#      expression_caller: [cufflinks, express, stringtie, sailfish, dexseq, kallisto, salmon]
+## uncomment below if you want to provide a custom transcriptome FASTA file
+#      transcriptome_fasta: your-transcriptome.fa
+## uncomment below if you want to provide a custom transcriptome GTF file
+#      transcriptome_gtf: your-transcriptome.gtf
+## uncomment below if you want to want to provide a FASTA file of spikeins to quantify
+#      spikein_fasta: your-spikein.fa
 upload:
   dir: ../final

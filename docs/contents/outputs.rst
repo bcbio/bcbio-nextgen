@@ -27,6 +27,7 @@ Project directory
   run in the pipeline. This enables reproduction of analyses.
 - ``multiqc`` run `MultiQC`_ to gather all QC metrics from different tools, such as,
   cutadapt, featureCounts, samtools, STAR ... into an unique HTML report.
+- ``metadata.csv`` -- CSV with the metadata in the YAML file.
 
 .. _MultiQC: http://multiqc.info
 
@@ -70,8 +71,8 @@ Project directory
   with gene symbol as an extra column.
 - ``combined.counts`` -- featureCounts counts matrix
   with gene symbol as an extra column.
-- ``combined.dexseq`` -- DEXseq counts matrix with 
-  exonID as first column. 
+- ``combined.dexseq`` -- DEXseq counts matrix with
+  exonID as first column.
 - ``combined.gene.sf.tmp`` -- Sailfish gene count
   matrix normalized to TPM.
 - ``combined.isoform.sf.tpm`` -- Sailfish transcript
@@ -86,7 +87,35 @@ Sample directories
 
 - ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
 - ``SAMPLE-ready.counts`` -- featureCounts gene counts output.
-- ``sailfish`` -- Sailfish output.
+- ``salmon`` -- Salmon output.
+
+single cell RNA-seq
+===================
+
+Project directory
+~~~~~~~~~~~~~~~~~
+
+- ``tagcounts.mtx`` -- count matrix compatible with dgCMatrix type in R.
+- ``tagcounts-dupes.mtx`` -- count matrix compatible with dgCMatrix type in R
+  but with the duplicated reads counted.
+- ``tagcounts.mtx.colnames`` -- cell names that would be the columns
+  for the matrix.
+- ``tagcounts.mtx.rownames`` -- gene names that would be the rows
+  for the matrix.
+- ``tagcounts.mtx.metadata`` -- metadata that match the colnames
+  for the matrix. This is coming from the barcode.csv file and
+  the metadata given in the YAML config file.
+  for the matrix.
+- ``cb-histogram.txt`` -- total number of dedup reads assigned to a cell.
+  Comparing colSums(tagcounts.mtx) to this number can tell you how many
+  reads mapped to genes.
+
+Sample directories
+~~~~~~~~~~~~~~~~~~
+
+- ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
+- ``SAMPLE-mtx.*`` -- gene counts as explained in the project directory.
+
 
 small RNA-seq
 =============
@@ -96,19 +125,23 @@ Project directory
 
 - ``counts_mirna.tsv`` -- miRBase miRNA
   count matrix.
-- ``counts.tsv`` -- miRBase isomiRs count matrix.
+- ``counts.tsv`` -- miRBase isomiRs count matrix. The ID is made of 5 tags:
+  miRNA name, SNPs, additions, trimming at 5 and trimming at 3.
+  Here there is detail explanation of the `naming`_ .
 - ``counts_mirna_novel.tsv`` -- miRDeep2 miRNA
   count matrix.
-- ``counts_novel.tsv`` -- miRDeep2 isomiRs
+- ``counts_novel.tsv`` -- miRDeep2 isomiRs. See counts.tsv explanation for more detail.
   count matrix.
 - ``seqcluster`` -- output of `seqcluster`_ tool.
   Inside this folder, counts.tsv has count matrix
   for all clusters found over the genome.
-- ``seqclusterViz`` -- input file for interactive 
+- ``seqclusterViz`` -- input file for interactive
   browser at https://github.com/lpantano/seqclusterViz
 - ``report`` -- Rmd template to help with downstream
   analysis like QC metrics, differential expression, and
   clustering.
+
+.. _naming: http://seqcluster.readthedocs.io/mirna_annotation.html
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
@@ -132,5 +165,5 @@ the documentation.
 - assess the efficiency of targeted enrichment sequencing with `ngscat`_
 
 .. _ngscat: http://www.bioinfomgp.org/ngscat
-.. _Calculate and plot coverage:  https://github.com/chapmanb/bcbio-nextgen/issues/195#issuecomment-39071048
+.. _Calculate and plot coverage:  https://github.com/bcbio/bcbio-nextgen/issues/195#issuecomment-39071048
 .. _Another way: http://gettinggeneticsdone.blogspot.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html

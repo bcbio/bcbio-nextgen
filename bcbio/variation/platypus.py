@@ -13,6 +13,9 @@ from bcbio.pipeline import shared as pshared
 from bcbio.provenance import do
 from bcbio.variation import bamprep, bedutils, vcfutils
 
+import six
+
+
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run platypus variant calling, germline whole genome or exome.
     """
@@ -61,9 +64,9 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
 def _subset_regions(region, base_file, items):
     """Subset to a BED file (or genomic region) for calling.
     """
-    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+    variant_regions = bedutils.population_variant_regions(items, merged=True)
     target = pshared.subset_variant_regions(variant_regions, region, base_file, items)
-    if isinstance(target, basestring) and os.path.isfile(target):
+    if isinstance(target, six.string_types) and os.path.isfile(target):
         return target
     else:
         return bamprep.region_to_gatk(target)

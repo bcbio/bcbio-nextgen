@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import string
 
+import six
 import toolz as tz
 import yaml
 
@@ -18,7 +19,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils, tools
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do, programs
-from bcbio.variation import vcfutils
+from bcbio.variation import vcfutils, vcfanno
 
 # ## High level
 
@@ -45,7 +46,7 @@ def add_to_vcf(in_file, data, effect_todo=None):
 def get_type(data):
     """Retrieve the type of effects calculation to do.
     """
-    if data["analysis"].lower().startswith("var"):
+    if data["analysis"].lower().startswith("var") or dd.get_variantcaller(data):
         return tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
 
 # ## Ensembl VEP
@@ -77,7 +78,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
     if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
-            resources = yaml.load(in_handle)
+            resources = yaml.safe_load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
         if ensembl_name and ensembl_name.find("_vep_") == -1:
@@ -95,13 +96,13 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                url = "ftp://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
+                url = "http://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
                 with utils.chdir(tmp_dir):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
                 perl_exports = utils.get_perl_exports()
                 cmd = ["%svep_install" % vep_path, "-a", "c", "-s", ensembl_name,
-                       "-c", vep_dir, "-u", tmp_dir, "--NO_UPDATE"]
+                       "-c", vep_dir, "-u", tmp_dir, "--NO_UPDATE", "--VERSION", eversion]
                 do.run("%s && %s" % (perl_exports, " ".join(cmd)), "Prepare VEP directory for %s" % ensembl_name)
                 cmd = ["%svep_convert_cache" % vep_path, "--species", species, "--version", vepv,
                        "--dir", vep_dir, "--force_overwrite", "--remove"]
@@ -130,7 +131,6 @@ def run_vep(in_file, data):
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)
                 fork_args = ["--fork", str(cores)] if cores > 1 else []
                 vep = config_utils.get_program("vep", data["config"])
-                is_human = tz.get_in(["genome_resources", "aliases", "human"], data, False)
                 # HGVS requires a bgzip compressed, faidx indexed input file or is unusable slow
                 if dd.get_ref_file_compressed(data):
                     hgvs_compatible = True
@@ -138,10 +138,10 @@ def run_vep(in_file, data):
                 else:
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
-                if is_human:
-                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,
-                                  "genesplicer": _get_genesplicer, "spliceregion": _get_spliceregion}
-                    plugins = ["loftee"]
+                if vcfanno.is_human(data):
+                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,"genesplicer": _get_genesplicer,
+                                  "spliceregion": _get_spliceregion, "G2P": _get_G2P}
+                    plugins = ["loftee", "G2P"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
                         # "genesplicer" too unstable so currently removed
                         plugins += ["maxentscan", "spliceregion"]
@@ -150,7 +150,7 @@ def run_vep(in_file, data):
                         config_args += plugin_args
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     if hgvs_compatible:
-                        config_args += ["--hgvs", "--shift_hgvs", "1"]
+                        config_args += ["--hgvsg","--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
                     config_args += ["--pick_allele"]
@@ -228,6 +228,19 @@ def _get_spliceregion(data):
     """
     return ["--plugin", "SpliceRegion"]
 
+
+def _get_G2P(data):
+    """
+    A VEP plugin that uses G2P allelic requirements to assess variants in genes
+    for potential phenotype involvement.
+    """
+    G2P_file = os.path.realpath(tz.get_in(("genome_resources", "variation", "genotype2phenotype"), data))
+    args = ["--plugin", "G2P,file:%s" % (G2P_file)]
+    if G2P_file:
+        return args
+    else:
+        return []
+
 # ## snpEff variant effects
 
 def snpeff_version(args=None, data=None):
@@ -236,6 +249,8 @@ def snpeff_version(args=None, data=None):
         raw_version = ""
     snpeff_version = "".join([x for x in str(raw_version)
                               if x in set(string.digits + ".")])
+    # Only return major version (4.3 not 4.3.1) which maps to databases
+    snpeff_version = ".".join(snpeff_version.split(".")[:2])
     return snpeff_version
 
 def snpeff_effects(vcf_in, data):
@@ -277,7 +292,7 @@ def get_db(data):
     snpeff_base_dir = None
     if snpeff_db:
         snpeff_base_dir = utils.get_in(data, ("reference", "snpeff"))
-        if not (isinstance(snpeff_base_dir, basestring) and os.path.isdir(snpeff_base_dir)):
+        if not (isinstance(snpeff_base_dir, six.string_types) and os.path.isdir(snpeff_base_dir)):
             snpeff_base_dir = utils.get_in(data, ("reference", "snpeff", snpeff_db))
         if not snpeff_base_dir:
             # We need to mask '.' characters for CWL/WDL processing, check for them here
@@ -286,7 +301,9 @@ def get_db(data):
                 snpeff_db = snpeff_db.replace("_", ".")
         if isinstance(snpeff_base_dir, dict) and snpeff_base_dir.get("base"):
             snpeff_base_dir = snpeff_base_dir["base"]
-        if (snpeff_base_dir and isinstance(snpeff_base_dir, basestring)
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types) and os.path.isfile(snpeff_base_dir)):
+            snpeff_base_dir = os.path.dirname(snpeff_base_dir)
+        if (snpeff_base_dir and isinstance(snpeff_base_dir, six.string_types)
               and snpeff_base_dir.endswith("%s%s" % (os.path.sep, snpeff_db))):
             snpeff_base_dir = os.path.dirname(snpeff_base_dir)
         if not snpeff_base_dir:
@@ -308,8 +325,12 @@ def get_snpeff_files(data):
     if snpeff_db:
         # Clean problem characters for CWL/WDL representation
         clean_snpeff_db = snpeff_db.replace(".", "_")
-        return {clean_snpeff_db: {"base": datadir,
-                                  "indexes": glob.glob(os.path.join(datadir, snpeff_db, "*"))}}
+        snpeff_files = glob.glob(os.path.join(datadir, snpeff_db, "*"))
+        if len(snpeff_files) > 0:
+            base_files = [x for x in snpeff_files if x.endswith("/snpEffectPredictor.bin")]
+            assert len(base_files) == 1, base_files
+            del snpeff_files[snpeff_files.index(base_files[0])]
+            return {"base": base_files[0], "indexes": snpeff_files}
     else:
         return {}
 
@@ -319,14 +340,18 @@ def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     resources = config_utils.get_resources("snpeff", data["config"])
     jvm_opts = resources.get("jvm_opts", ["-Xms750m", "-Xmx3g"])
     # scale by cores, defaulting to 2x base usage to ensure we have enough memory
-    # for single core runs to use with human genomes
+    # for single core runs to use with human genomes.
+    # Sets a maximum amount of memory to avoid core dumps exceeding 32Gb
+    # We shouldn't need that much memory for snpEff, so avoid issues
+    # https://www.elastic.co/guide/en/elasticsearch/guide/current/heap-sizing.html#compressed_oops
     jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
                                                                  {"direction": "increase",
+                                                                  "maximum": "30000M",
                                                                   "magnitude": max(2, dd.get_cores(data))}}})
     memory = " ".join(jvm_opts)
     snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    export = "unset JAVA_HOME && export PATH=%s:$PATH && " % (utils.get_java_binpath())
+    export = "unset JAVA_HOME && export PATH=%s:\"$PATH\" && " % (utils.get_java_binpath())
     cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 
@@ -375,9 +400,13 @@ def _installed_snpeff_genome(base_name, config):
     """
     snpeff_config_file = os.path.join(config_utils.get_program("snpeff", config, "dir"),
                                       "snpEff.config")
-    data_dir = _find_snpeff_datadir(snpeff_config_file)
-    dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
-           if os.path.isdir(d)]
+    if os.path.exists(snpeff_config_file):
+        data_dir = _find_snpeff_datadir(snpeff_config_file)
+        dbs = [d for d in sorted(glob.glob(os.path.join(data_dir, "%s*" % base_name)), reverse=True)
+               if os.path.isdir(d)]
+    else:
+        data_dir = None
+        dbs = []
     if len(dbs) == 0:
         raise ValueError("No database found in %s for %s" % (data_dir, base_name))
     else:

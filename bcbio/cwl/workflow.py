@@ -3,11 +3,14 @@
 import copy
 import pprint
 
+import six
 import toolz as tz
 
 from bcbio.pipeline import alignment
 
 ALWAYS_AVAILABLE = ["description", "resources"]
+STRING_DICT = ["config__algorithm__ensemble"]
+FLAT_DICT = ["config__algorithm__variantcaller"]
 
 def generate(variables, steps, final_outputs):
     """Generate all of the components of a CWL workflow from input steps.
@@ -151,7 +154,7 @@ def is_cwl_record(d):
         if d.get("type") == "record":
             return d
         else:
-            recs = filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()])
+            recs = list(filter(lambda x: x is not None, [is_cwl_record(v) for v in d.values()]))
             return recs[0] if recs else None
     else:
         return None
@@ -231,11 +234,13 @@ def _flatten_nested_input(v):
         for x in v["type"]:
             if isinstance(x, dict) and x["type"] == "array":
                 new_type = x["items"]
-            elif isinstance(x, basestring) and x == "null":
+            elif isinstance(x, six.string_types) and x == "null":
                 want_null = True
+            else:
+                new_type = x
         if want_null:
             if not isinstance(new_type, (list, tuple)):
-                new_type = [new_type]
+                new_type = [new_type] if new_type is not None else []
             for toadd in ["null", "string"]:
                 if toadd not in new_type:
                     new_type.append(toadd)
@@ -249,7 +254,7 @@ def _nest_variable(v, check_records=False):
     check_records -- avoid re-nesting a record input if it comes from a previous
     step and is already nested, don't need to re-array.
     """
-    if (check_records and is_cwl_record(v) and v["id"].split("/") > 1 and
+    if (check_records and is_cwl_record(v) and len(v["id"].split("/")) > 1 and
          v.get("type", {}).get("type") == "array"):
         return v
     else:
@@ -267,7 +272,7 @@ def _clean_output(v):
     return out
 
 def _get_string_vid(vid):
-    if isinstance(vid, basestring):
+    if isinstance(vid, six.string_types):
         return vid
     assert isinstance(vid, (list, tuple)), vid
     return "__".join(vid)
@@ -275,7 +280,7 @@ def _get_string_vid(vid):
 def _get_variable(vid, variables):
     """Retrieve an input variable from our existing pool of options.
     """
-    if isinstance(vid, basestring):
+    if isinstance(vid, six.string_types):
         vid = get_base_id(vid)
     else:
         vid = _get_string_vid(vid)
@@ -291,6 +296,7 @@ def _handle_special_inputs(inputs, variables):
 
     XXX Need to better expose this at a top level definition.
     """
+    from bcbio import structural
     optional = [["config", "algorithm", "coverage"],
                 ["config", "algorithm", "variant_regions"],
                 ["config", "algorithm", "sv_regions"],
@@ -312,6 +318,12 @@ def _handle_special_inputs(inputs, variables):
                     out.append(vid)
                     found_indexes = True
             assert found_indexes, "Found no snpEff indexes in %s" % [v["id"] for v in variables]
+        elif input == ["config", "algorithm", "background", "cnv_reference"]:
+            for v in variables:
+                vid = get_base_id(v["id"]).split("__")
+                if (vid[:4] == ["config", "algorithm", "background", "cnv_reference"] and
+                      structural.supports_cnv_reference(vid[4])):
+                    out.append(vid)
         elif input in optional:
             if _get_string_vid(input) in all_vs:
                 out.append(input)
@@ -343,10 +355,12 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
         fields = []
         inherit = []
         inherit_all = False
+        inherit_exclude = []
         for fdef in field_defs:
             if not fdef.get("type"):
                 if fdef["id"] == "inherit":
                     inherit_all = True
+                    inherit_exclude = fdef.get("exclude", [])
                 else:
                     inherit.append(fdef["id"])
             else:
@@ -354,7 +368,7 @@ def _create_record(name, field_defs, step_name, inputs, unlist, file_vs, std_vs,
                        "type": fdef["type"]}
                 fields.append(_add_secondary_to_rec_field(fdef, cur))
         if inherit_all:
-            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel))
+            fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, exclude=inherit_exclude))
         elif inherit:
             fields.extend(_infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, inherit))
     else:
@@ -373,13 +387,15 @@ def _add_secondary_to_rec_field(orig, cur):
         cur["secondaryFiles"] = orig.get("secondaryFiles")
     return cur
 
-def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None):
+def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=None,
+                          exclude=None):
     """Infer the outputs of a record from the original inputs
     """
     fields = []
     unlist = set([_get_string_vid(x) for x in unlist])
     input_vids = set([_get_string_vid(v) for v in _handle_special_inputs(inputs, file_vs)])
     to_include = set([_get_string_vid(x) for x in to_include]) if to_include else None
+    to_exclude = tuple(set([_get_string_vid(x) for x in exclude])) if exclude else None
     added = set([])
     for raw_v in std_vs + [v for v in file_vs if get_base_id(v["id"]) in input_vids]:
         # unpack record inside this record and un-nested inputs to avoid double nested
@@ -392,13 +408,14 @@ def _infer_record_outputs(inputs, unlist, file_vs, std_vs, parallel, to_include=
         for orig_v in nested_vs:
             if (get_base_id(orig_v["id"]) not in added
                  and (not to_include or get_base_id(orig_v["id"]) in to_include)):
-                cur_v = {}
-                cur_v["name"] = get_base_id(orig_v["id"])
-                cur_v["type"] = orig_v["type"]
-                if cur_v["name"] in unlist:
-                    cur_v = _flatten_nested_input(cur_v)
-                fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
-                added.add(get_base_id(orig_v["id"]))
+                if to_exclude is None or not get_base_id(orig_v["id"]).startswith(to_exclude):
+                    cur_v = {}
+                    cur_v["name"] = get_base_id(orig_v["id"])
+                    cur_v["type"] = orig_v["type"]
+                    if cur_v["name"] in unlist:
+                        cur_v = _flatten_nested_input(cur_v)
+                    fields.append(_add_secondary_to_rec_field(orig_v, cur_v))
+                    added.add(get_base_id(orig_v["id"]))
     return fields
 
 def _create_variable(orig_v, step, variables):
@@ -409,7 +426,7 @@ def _create_variable(orig_v, step, variables):
         v = _get_variable(orig_v["id"], variables)
     except ValueError:
         v = copy.deepcopy(orig_v)
-        if not isinstance(v["id"], basestring):
+        if not isinstance(v["id"], six.string_types):
             v["id"] = _get_string_vid(v["id"])
     for key, val in orig_v.items():
         if key not in ["id", "type"]:

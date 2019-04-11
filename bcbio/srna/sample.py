@@ -1,15 +1,11 @@
 import os
 import sys
-import json
 import glob
+import re
 import os.path as op
 import shutil
-import subprocess
 from collections import Counter
-from contextlib import closing
-from distutils.version import LooseVersion
 
-from seqcluster.libs.fastq import collapse, write_output
 try:
     from dnapilib.apred import iterative_adapter_prediction
     error_dnapi = None
@@ -21,13 +17,13 @@ except ImportError:
 
 from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
 from bcbio.provenance import do
-from bcbio.provenance.versioncheck import java
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
 from bcbio.rnaseq import spikein
+from bcbio.srna.umis import umi_transform
 
 
 def trim_srna_sample(data):
@@ -35,6 +31,7 @@ def trim_srna_sample(data):
     Remove 3' adapter for smallRNA-seq
     Uses cutadapt but with different parameters than for other pipelines.
     """
+    data = umi_transform(data)
     in_file = data["files"][0]
     names = data["rgnames"]['sample']
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed")
@@ -44,6 +41,7 @@ def trim_srna_sample(data):
     out_file = replace_directory(append_stem(in_file, ".clean"), out_dir)
     trim_reads = data["config"]["algorithm"].get("trim_reads", True)
     if utils.file_exists(out_file):
+        data["files"][0] = out_file
         data["clean_fastq"] = out_file
         data["collapse"] = _collapse(data["clean_fastq"])
         data["size_stats"] = _summary(data['collapse'])
@@ -51,6 +49,12 @@ def trim_srna_sample(data):
         return [[data]]
 
     adapter = dd.get_adapters(data)
+    is_4n = any([a == "4N" for a in adapter])
+    adapter = [a for a in adapter if re.compile("^([NATGC]+)$").match(a)]
+    if adapter and not trim_reads:
+        trim_reads = True
+        logger.info("Adapter is set up in config file, but trim_reads is not true."
+                    "If you want to skip trimming, skip adapter option from config.")
     if trim_reads and not adapter and error_dnapi:
         raise ValueError(error_dnapi)
     if trim_reads:
@@ -58,10 +62,16 @@ def trim_srna_sample(data):
     times = "" if not trim_reads or len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
+        if any([a for a in adapters if re.compile("^N+$").match(a)]):
+            adapter_cmd = "-N %s" % adapter_cmd
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
-        atropos = _get_atropos()
+        # atropos = _get_atropos()
+        atropos = config_utils.get_program("atropos", data, default="atropos")
         options = " ".join(data.get('resources', {}).get('atropos', {}).get("options", ""))
+        if options.strip() == "-u 4 -u -4":
+            options = ""
+            is_4n = "4N"
         cores = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
         if " ".join(data.get('resources', {}).get('cutadapt', {}).get("options", "")):
             raise ValueError("Atropos is now used, but cutadapt options found in YAML file."
@@ -73,11 +83,12 @@ def trim_srna_sample(data):
                 if utils.file_exists(log_out):
                     content = open(log_out).read().replace(out_short_file, names)
                     open(log_out, 'w').write(content)
-                if options:
+                if is_4n:
+                    options = "-u 4 -u -4"
                     in_file = append_stem(tx_out_file, ".tmp")
                     utils.move_safe(tx_out_file, in_file)
                     cmd = "{atropos} {cores} {options} -se {in_file} -o {tx_out_file} -m 17"
-                    do.run(cmd.format(**locals()), "cutadapt with this %s for %s" %(options, names))
+                    do.run(cmd.format(**locals()), "atropos with this parameters %s for %s" %(options, names))
         data["log_trimming"] = log_out
     else:
         if not trim_reads:
@@ -86,6 +97,7 @@ def trim_srna_sample(data):
             logger.info("No adapter founds in %s, this is an issue related"
                         " to no small RNA enrichment in your sample." % names)
         symlink_plus(in_file, out_file)
+    data["files"][0] = out_file
     data["clean_fastq"] = out_file
     data["collapse"] = _collapse(data["clean_fastq"])
     data["size_stats"] = _summary(data['collapse'])
@@ -162,18 +174,20 @@ def _cmd_atropos():
     """
     Run cutadapt for smallRNA data that needs some specific values.
     """
-    cmd = "{atropos} {cores} {times} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
+    cmd = "{atropos} {cores} {times} {options} {adapter_cmd} --untrimmed-output={out_noadapter_file} -o {tx_out_file} -m 17 --overlap=8 -se {in_file} --too-short-output {out_short_file} | tee > {log_out}"
     return cmd
 
 def _collapse(in_file):
     """
     Collpase reads into unique sequences with seqcluster
     """
-    out_file = append_stem(in_file, ".trimming").replace(".gz", "")
+    seqcluster = op.join(utils.get_bcbio_bin(), "seqcluster")
+    out_file = "%s.fastq" % utils.splitext_plus(append_stem(in_file, "_trimmed"))[0]
+    out_dir = os.path.dirname(in_file)
     if file_exists(out_file):
         return out_file
-    seqs = collapse(in_file)
-    write_output(out_file, seqs, minimum=1, size=16)
+    cmd = ("{seqcluster} collapse -o {out_dir} -f {in_file} -m 1 --min_size 16")
+    do.run(cmd.format(**locals()), "Running seqcluster collapse in %s." % in_file)
     return out_file
 
 def _summary(in_file):
@@ -187,10 +201,10 @@ def _summary(in_file):
     with open(in_file) as in_handle:
         for line in in_handle:
             counts = int(line.strip().split("_x")[1])
-            line = in_handle.next()
+            line = next(in_handle)
             l = len(line.strip())
-            in_handle.next()
-            in_handle.next()
+            next(in_handle)
+            next(in_handle)
             data[l] += counts
     with file_transaction(out_file) as tx_out_file:
         with open(tx_out_file, 'w') as out_handle:
@@ -221,7 +235,8 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
     if resources and resources.get("jvm_opts"):
         jvm_opts = " ".join(resources.get("jvm_opts"))
     export = _get_env()
-    cmd = ("{export} {miraligner} {jvm_opts} -freq -sub 1 -trim 3 -add 3 -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
+    cmd = ("{export} {miraligner} {jvm_opts} -freq -sub 1 -trim 3 -add 3 -minl 16"
+           " -s {species} -i {fastq_file} -db {db_folder}  -o {tx_out_file}")
     if not file_exists(out_file + ".mirna"):
         with file_transaction(out_file) as tx_out_file:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % fastq_file)
@@ -230,7 +245,7 @@ def _miraligner(fastq_file, out_file, species, db_folder, config):
 
 def _get_env():
     anaconda_bin = os.path.dirname(utils.Rscript_cmd())
-    return "unset JAVA_HOME  && export PATH=%s:$PATH && " % (anaconda_bin)
+    return "unset JAVA_HOME  && export PATH=%s:\"$PATH\" && " % (anaconda_bin)
 
 def _get_atropos():
     anaconda = os.path.dirname(os.path.realpath(sys.executable))
@@ -245,16 +260,25 @@ def _mirtop(input_fn, sps, db, out_dir, config):
     if not file_exists(hairpin) or not file_exists(gtf):
         logger.warning("%s or %s are not installed. Skipping." % (hairpin, gtf))
         return None
-    out_fn = "%s.gff" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    out_gtf_fn = "%s.gtf" % utils.splitext_plus(os.path.basename(input_fn))[0]
+    out_gff_fn = "%s.gff" % utils.splitext_plus(os.path.basename(input_fn))[0]
     export = _get_env()
     cmd = ("{export} mirtop gff  --sps {sps} --hairpin {hairpin} "
            "--gtf {gtf} --format seqbuster -o {out_tx} {input_fn}")
-    if not file_exists(os.path.join(out_dir, out_fn)):
+    if not file_exists(os.path.join(out_dir, out_gtf_fn)) and \
+       not file_exists(os.path.join(out_dir, out_gff_fn)):
         with tx_tmpdir() as out_tx:
             do.run(cmd.format(**locals()), "Do miRNA annotation for %s" % input_fn)
-            shutil.move(os.path.join(out_tx, out_fn),
-                        os.path.join(out_dir, out_fn))
-    return os.path.join(out_dir, out_fn)
+            with utils.chdir(out_tx):
+                out_fn = out_gtf_fn if utils.file_exists(out_gtf_fn) \
+                                    else out_gff_fn
+                if utils.file_exists(out_fn):
+                    shutil.move(os.path.join(out_tx, out_fn),
+                                os.path.join(out_dir, out_fn))
+    out_fn = out_gtf_fn if utils.file_exists(os.path.join(out_dir, out_gtf_fn)) \
+                        else os.path.join(out_dir, out_gff_fn)
+    if utils.file_exists(os.path.join(out_dir, out_fn)):
+        return os.path.join(out_dir, out_fn)
 
 def _trna_annotation(data):
     """

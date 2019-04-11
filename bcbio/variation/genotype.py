@@ -5,6 +5,7 @@ import collections
 import copy
 import pprint
 
+import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -13,6 +14,7 @@ from bcbio.distributed.split import (grouped_parallel_split_combine, parallel_sp
 from bcbio.distributed import multi as dmulti
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import region as pregion
+from bcbio.pipeline import shared as pshared
 from bcbio.variation import (gatk, gatkfilter, germline, multi,
                              ploidy, vcfutils, vfilter)
 
@@ -33,7 +35,11 @@ def variant_filtration(call_file, ref_file, vrn_files, data, items):
     elif caller in ["samtools"]:
         return vfilter.samtools(call_file, data)
     elif caller in ["gatk", "gatk-haplotype", "haplotyper"]:
-        return gatkfilter.run(call_file, ref_file, vrn_files, data)
+        if dd.get_analysis(data).lower().find("rna-seq") >= 0:
+            from bcbio.rnaseq import variation as rnaseq_variation
+            return rnaseq_variation.gatk_filter_rnaseq(call_file, data)
+        else:
+            return gatkfilter.run(call_file, ref_file, vrn_files, data)
     # no additional filtration for callers that filter as part of call process
     else:
         return call_file
@@ -50,6 +56,9 @@ def combine_multiple_callers(samples):
     by_bam = collections.OrderedDict()
     for data in (x[0] for x in samples):
         work_bam = tz.get_in(("combine", "work_bam", "out"), data, data.get("align_bam"))
+        # For pre-computed VCF inputs, we don't have BAM files
+        if not work_bam:
+            work_bam = dd.get_sample_name(data)
         jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
         variantcaller = get_variantcaller(data)
         key = (multi.get_batch_for_key(data), work_bam)
@@ -71,11 +80,14 @@ def combine_multiple_callers(samples):
                     cur["population"] = False
                 ready_calls.append(cur)
             if jointcaller:
-                ready_calls.append({"variantcaller": jointcaller,
-                                    "vrn_file": data.get("vrn_file"),
-                                    "vrn_file_batch": data.get("vrn_file_batch"),
-                                    "validate": data.get("validate"),
-                                    "do_upload": False})
+                cur = {"variantcaller": jointcaller,
+                       "vrn_file": data.get("vrn_file"),
+                       "vrn_file_batch": data.get("vrn_file_batch"),
+                       "validate": data.get("validate"),
+                       "do_upload": False}
+                if not variantcaller:
+                    cur["population"] = {"vcf": data.get("vrn_file")}
+                ready_calls.append(cur)
             if not jointcaller and not variantcaller:
                 ready_calls.append({"variantcaller": "precalled",
                                     "vrn_file": data.get("vrn_file"),
@@ -174,11 +186,13 @@ def _dup_samples_by_variantcaller(samples, require_bam=True):
     extras = []
     for data in samples:
         added = False
-        for add in handle_multiple_callers(data, "variantcaller", require_bam=require_bam):
+        for i, add in enumerate(handle_multiple_callers(data, "variantcaller", require_bam=require_bam)):
             added = True
+            add = dd.set_variantcaller_order(add, i)
             to_process.append([add])
         if not added:
             data = _handle_precalled(data)
+            data = dd.set_variantcaller_order(data, 0)
             extras.append([data])
     return to_process, extras
 
@@ -253,13 +267,17 @@ def batch_for_variantcall(samples):
         else:
             batches.append(cur_group)
     def by_original_order(xs):
-        return min([sample_order.index(dd.get_sample_name(x)) for x in xs])
+        return (min([sample_order.index(dd.get_sample_name(x)) for x in xs]),
+                min([dd.get_variantcaller_order(x) for x in xs]))
     return sorted(batches + extras, key=by_original_order)
 
 def _handle_precalled(data):
     """Copy in external pre-called variants fed into analysis.
+
+    Symlinks for non-CWL runs where we want to ensure VCF present
+    in a local directory.
     """
-    if data.get("vrn_file"):
+    if data.get("vrn_file") and not cwlutils.is_cwl_run(data):
         vrn_file = data["vrn_file"]
         if isinstance(vrn_file, (list, tuple)):
             assert len(vrn_file) == 1
@@ -276,7 +294,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
     """Split samples that potentially require multiple variant calling approaches.
     """
     callers = get_variantcaller(data, key, default, require_bam=require_bam)
-    if isinstance(callers, basestring):
+    if isinstance(callers, six.string_types):
         return [data]
     elif not callers:
         return []
@@ -291,7 +309,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             # if splitting by variant caller, also split by jointcaller
             if key == "variantcaller":
                 jcallers = get_variantcaller(data, "jointcaller", [])
-                if isinstance(jcallers, basestring):
+                if isinstance(jcallers, six.string_types):
                     jcallers = [jcallers]
                 if jcallers:
                     base["config"]["algorithm"]["orig_jointcaller"] = jcallers
@@ -303,12 +321,18 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             out.append(base)
         return out
 
-SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope", "deepvariant", "gatk-haplotype"]
+
+# Avoid use of multicore GATK HaplotypeCallerSpark due to bugs in gVCF output
+# during joint calling Intermittent failures where we don't produce correct headers
+# https://github.com/broadinstitute/gatk/issues/4821
+# "gatk-haplotype"
+SUPPORT_MULTICORE = ["strelka2", "haplotyper", "tnhaplotyper", "tnscope",
+                     "deepvariant", "pisces", "octopus", "smcounter2"]
 
 def get_variantcallers():
-    from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2,
-                                 platypus, scalpel, sentieon, strelka2, vardict, qsnp,
-                                 deepvariant)
+    from bcbio.variation import (freebayes, cortex, samtools, varscan, mutect, mutect2, octopus,
+                                 pisces, platypus, scalpel, sentieon, strelka2, vardict, qsnp,
+                                 deepvariant, smcounter2)
     return {"gatk": gatk.unified_genotyper,
             "gatk-haplotype": gatk.haplotype_caller,
             "mutect2": mutect2.mutect2_caller,
@@ -318,8 +342,11 @@ def get_variantcallers():
             "samtools": samtools.run_samtools,
             "varscan": varscan.run_varscan,
             "mutect": mutect.mutect_caller,
+            "octopus": octopus.run,
+            "pisces": pisces.run,
             "platypus": platypus.run,
             "scalpel": scalpel.run_scalpel,
+            "smcounter2": smcounter2.run,
             "strelka2": strelka2.run,
             "vardict": vardict.run_vardict,
             "vardict-java": vardict.run_vardict,
@@ -397,7 +424,7 @@ def _get_batch_name(items, skip_jointcheck=False):
     return sorted(batch_names.items(), key=lambda x: x[-1], reverse=True)[0][0]
 
 def _get_batch_variantcaller(items):
-    variantcaller = [vc for vc in list(set([get_variantcaller(x) for x in items])) if vc]
+    variantcaller = [vc for vc in list(set([get_variantcaller(x, require_bam=False) for x in items])) if vc]
     if not variantcaller:
         return None
     assert len(variantcaller) == 1, "%s\n%s" % (variantcaller, pprint.pformat(items))
@@ -424,11 +451,12 @@ def variantcall_batch_region(items):
     out_file = os.path.join(dd.get_work_dir(items[0]), variantcaller, chrom,
                             "%s-%s-block.vcf.gz" % (batch_name, region_str))
     utils.safe_makedir(os.path.dirname(out_file))
-    if variantcaller in SUPPORT_MULTICORE:
-        call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
-                              [_region_to_coords(r) for r in region_block], out_file)
-    else:
-        call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
+    with pshared.bedtools_tmpdir(items[0]):
+        if variantcaller in SUPPORT_MULTICORE:
+            call_file = caller_fn(align_bams, items, dd.get_ref_file(items[0]), assoc_files,
+                                  [_region_to_coords(r) for r in region_block], out_file)
+        else:
+            call_file = _run_variantcall_batch_multicore(items, region_block, out_file)
     return {"vrn_file_region": call_file, "region_block": region_block}
 
 def _run_variantcall_batch_multicore(items, regions, final_file):

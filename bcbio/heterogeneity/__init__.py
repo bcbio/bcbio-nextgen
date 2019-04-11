@@ -7,6 +7,7 @@ especially in complex cancer samples.
 """
 from __future__ import print_function
 import collections
+import os
 
 from bcbio import utils
 from bcbio.heterogeneity import bubbletree, phylowgs, theta
@@ -23,13 +24,34 @@ def _get_calls(data, cnv_only=False):
             out[sv["variantcaller"]] = sv
     return out
 
-def get_variants(data):
+def get_variants(data, include_germline=False):
     """Retrieve set of variant calls to use for heterogeneity analysis.
     """
-    supported = ["vardict", "vardict-java", "vardict-perl", "strelka2", "mutect2", "freebayes", "mutect"]
+    data = utils.deepish_copy(data)
+    supported = ["precalled", "vardict", "vardict-java", "vardict-perl",
+                 "freebayes", "octopus", "strelka2"]
+    # Right now mutect2 and mutect do not provide heterozygous germline calls
+    # to be useful https://github.com/bcbio/bcbio-nextgen/issues/2464
+    # supported += ["mutect2", "mutect"]
+    if include_germline:
+        supported.insert(1, "gatk-haplotype")
     out = []
+    # CWL based input
+    if isinstance(data.get("variants"), dict) and "samples" in data["variants"]:
+        cur_vs = []
+        # Unpack single sample list of files
+        if (isinstance(data["variants"]["samples"], (list, tuple)) and
+              len(data["variants"]["samples"]) == 1 and isinstance(data["variants"]["samples"][0], (list, tuple))):
+            data["variants"]["samples"] = data["variants"]["samples"][0]
+        for fname in data["variants"]["samples"]:
+            variantcaller = utils.splitext_plus(os.path.basename(fname))[0]
+            variantcaller = variantcaller.replace(dd.get_sample_name(data) + "-", "")
+            for batch in dd.get_batches(data):
+                variantcaller = variantcaller.replace(batch + "-", "")
+            cur_vs.append({"vrn_file": fname, "variantcaller": variantcaller})
+        data["variants"] = cur_vs
     for v in data.get("variants", []):
-        if v["variantcaller"] in supported:
+        if v["variantcaller"] in supported and v.get("vrn_file"):
             out.append((supported.index(v["variantcaller"]), v))
     out.sort()
     return [xs[1] for xs in out]
@@ -52,7 +74,7 @@ def _get_batches(data):
 
 def _group_by_batches(items):
     out = collections.OrderedDict()
-    for data in (xs[0] for xs in items):
+    for data in (utils.to_single_data(xs) for xs in items):
         for b in _get_batches(data):
             try:
                 out[b].append(data)
@@ -113,9 +135,12 @@ def run(items, run_parallel):
 
 def _group_by_sample_and_batch(samples):
     """Group samples split by heterogeneity method back one per sample-batch.
+
+    Groups potentially multiple shared samples (multi batch normals) into
+    single items per group.
     """
     out = collections.defaultdict(list)
     for data in [utils.to_single_data(x) for x in samples]:
         out[(dd.get_sample_name(data), dd.get_align_bam(data), tuple(_get_batches(data)))].append(data)
-    return [xs for xs in out.values()]
+    return [[xs[0]] for xs in out.values()]
 

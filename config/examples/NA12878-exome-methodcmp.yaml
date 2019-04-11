@@ -18,7 +18,6 @@ details:
       aligner: bwa
       variantcaller: [freebayes, gatk-haplotype, samtools]
       recalibrate: gatk
-      realign: gatk
       validate: giab-NA12878/truth_small_variants.vcf.gz
       validate_regions: giab-NA12878/truth_regions.bed
       variant_regions: capture_regions/Exome-NGv3

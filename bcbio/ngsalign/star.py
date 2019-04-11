@@ -5,6 +5,7 @@ import subprocess
 import contextlib
 from collections import namedtuple
 
+import bcbio.bed as bed
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.utils import (safe_makedir, file_exists, is_gzipped)
@@ -74,18 +75,23 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += _read_group_option(names)
         if dd.get_fusion_caller(data):
-            cmd += (
-                " --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
                 "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                "--chimScoreSeparation 5 "
-                "--chimOutType WithinBAM "
-            )
+                "--chimScoreSeparation 5 ")
+            if "oncofuse" in dd.get_fusion_caller(data):
+                cmd += "--chimOutType Junctions "
+            else:
+                cmd += "--chimOutType WithinBAM "
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:
             cmd += " --outSAMstrandField intronMotif "
         if not srna:
             cmd += " --quantMode TranscriptomeSAM "
+
+        resources = config_utils.get_resources("star", data["config"])
+        if resources.get("options", []):
+            cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
         run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
@@ -133,6 +139,10 @@ def _update_data(align_file, out_dir, names, data):
     data = dd.set_align_bam(data, align_file)
     transcriptome_file = _move_transcriptome_file(out_dir, names)
     data = dd.set_transcriptome_bam(data, transcriptome_file)
+    sjfile = get_splicejunction_file(out_dir, data)
+    if sjfile:
+        sjbed = junction2bed(sjfile)
+        data = dd.set_junction_bed(data, sjbed)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -157,15 +167,6 @@ def _read_group_option(names):
 
     return (" --outSAMattrRGline ID:{rg_id} PL:{rg_library} "
             "PU:{rg_platform_unit} SM:{rg_sample} {rg_lb}").format(**locals())
-
-def _get_quality_format(config):
-    qual_format = config["algorithm"].get("quality_format", None)
-    if qual_format.lower() == "illumina":
-        return "fastq-illumina"
-    elif qual_format.lower() == "solexa":
-        return "fastq-solexa"
-    else:
-        return "fastq-sanger"
 
 def remap_index_fn(ref_file):
     """Map sequence references to equivalent star indexes
@@ -202,3 +203,40 @@ def get_star_version(data):
             if "STAR_" in line:
                 version = line.split("STAR_")[1].strip()
     return version
+
+def get_splicejunction_file(out_dir, data):
+    """
+    locate the splicejunction file starting from the alignment directory
+    """
+    samplename = dd.get_sample_name(data)
+    sjfile = os.path.join(out_dir, os.pardir, "{0}SJ.out.tab").format(samplename)
+    if file_exists(sjfile):
+        return sjfile
+    else:
+        return None
+
+def junction2bed(junction_file):
+    """
+    reformat the STAR junction file to BED3 format, one end of the splice junction per line
+    """
+    base, _ = os.path.splitext(junction_file)
+    out_file = base + "-minimized.bed"
+    if file_exists(out_file):
+        return out_file
+    if not file_exists(junction_file):
+        return None
+    with file_transaction(out_file) as tx_out_file:
+        with open(junction_file) as in_handle:
+            with open(tx_out_file, "w") as out_handle:
+                 for line in in_handle:
+                    tokens = line.split()
+                    chrom, sj1, sj2 = tokens[0:3]
+                    if int(sj1) > int(sj2):
+                        tmp = sj1
+                        sj1 = sj2
+                        sj2 = tmp
+                    out_handle.write("\t".join([chrom, sj1, sj1]) + "\n")
+                    out_handle.write("\t".join([chrom, sj2, sj2]) + "\n")
+        minimize = bed.minimize(tx_out_file)
+        minimize.saveas(tx_out_file)
+    return out_file

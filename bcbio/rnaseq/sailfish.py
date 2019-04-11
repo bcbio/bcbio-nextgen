@@ -11,6 +11,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped,
                          R_package_path, Rscript_cmd)
 from bcbio.pipeline import config_utils, disambiguate
 from bcbio.bam import fastq
+from bcbio import bam
 
 def run_sailfish(data):
     samplename = dd.get_sample_name(data)
@@ -71,7 +72,7 @@ def sleuthify_sailfish(sailfish_dir):
         return None
     else:
         rscript = Rscript_cmd()
-        cmd = """{rscript} -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
+        cmd = """{rscript} --no-environ -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
         do.run(cmd.format(**locals()), "Converting Sailfish to Sleuth format.")
     return os.path.join(sailfish_dir, "abundance.h5")
 
@@ -106,6 +107,31 @@ def create_combined_fasta(data):
         do.run(cmd.format(**locals()), "Combining transcriptome FASTA files.")
     return combined_file
 
+def create_combined_tx2gene(data):
+    out_dir = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome")
+    items = disambiguate.split([data])
+    tx2gene_files = []
+    for i in items:
+        odata = i[0]
+        gtf_file = dd.get_transcriptome_gtf(odata)
+        if not gtf_file:
+            gtf_file = dd.get_gtf_file(odata)
+        out_file = os.path.join(out_dir, dd.get_genome_build(odata) + "-tx2gene.csv")
+        if file_exists(out_file):
+            tx2gene_files.append(out_file)
+        else:
+            out_file = gtf.tx2genefile(gtf_file, out_file, tsv=False)
+            tx2gene_files.append(out_file)
+    combined_file = os.path.join(out_dir, "tx2gene.csv")
+    if file_exists(combined_file):
+        return combined_file
+
+    tx2gene_file_string = " ".join(tx2gene_files)
+    cmd = "cat {tx2gene_file_string} > {tx_out_file}"
+    with file_transaction(data, combined_file) as tx_out_file:
+        do.run(cmd.format(**locals()), "Combining tx2gene CSV files.")
+    return combined_file
+
 def get_build_string(data):
     build_string = dd.get_genome_build(data)
     if dd.get_disambiguate(data):
@@ -122,7 +148,7 @@ def run_sailfish_index(*samples):
     for build in builds:
         indexdirs[build.build] = sailfish_index(build.ref, build.gtf, data,
                                                 build.build)
-    return samples
+    return [[x] for x in samples]
 
 def sailfish_index(gtf_file, ref_file, data, build):
     work_dir = dd.get_work_dir(data)
@@ -167,7 +193,10 @@ def pick_kmersize(fq):
     tl;dr version: pick 31 unless the reads are very small, if not then guess
     that readlength / 2 is about right.
     """
-    readlength = fastq.estimate_read_length(fq)
+    if bam.is_bam(fq):
+        readlength = bam.estimate_read_length(fq)
+    else:
+        readlength = fastq.estimate_read_length(fq)
     halfread = int(round(readlength / 2))
     if halfread >= 31:
         kmersize = 31

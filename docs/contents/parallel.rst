@@ -128,24 +128,35 @@ instance. SLURM and Torque support specification of an account parameter with
 ``-r account=your_name``, which IPython transfers into ``-A``.
 
 SGE supports special parameters passed using resources to help handle the
-heterogeneity of possible setups. Specify the `SGE parallel environment`_ to use
-for submitting multicore jobs with ``-r pename=your_pe``. Since this setup is
-system specific it is hard to write general code for find a suitable
-environment. Specifically, when there are multiple usable parallel environments,
-it will select the first one which may not be correct. Manually specifying it
-with a ``pename=`` flag to resources will ensure correct selection of the right
-environment. To specify an advanced reservation with the ``-ar`` flag, use
-``-r ar=ar_id``. To specify an alternative memory management model instead of
-``mem_free`` use ``-r memtype=approach``. It is further recommended to configure
-``mem_free`` (or any other chosen memory management model) as a consumable, requestable
-resource in SGE to prevent overfilling hosts that do not have sufficient memory per slot.
-This can be done in two steps. First, launch ``qmon`` as an admin,
-select ``Complex Configuration`` in qmon, click on ``mem_free`,
-under the ``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and
-finally click ``Modify`` for the changes to take effect. Secondly, for each host in
-the queue, configure ``mem_free`` as a complex value. If a host called ``myngshost``
-has 128GB of RAM, the corresponding command would be
-``qconf -mattr exechost complex_values mem_free=128G myngshost``
+heterogeneity of possible setups.
+
+Specify an `SGE parallel environment
+<https://docs.oracle.com/cd/E19957-01/820-0698/6ncdvjcmd/index.html>`_
+that supports using multiple cores on a
+single node with ``-r pename=your_pe``. Since this setup is system specific it
+is hard to write general code for find a suitable environment. Specifically,
+when there are multiple usable parallel environments, it will select the first
+one which may not be correct. Manually specifying it with a ``pename=`` flag to
+resources will ensure correct selection of the right environment. If you're
+administering a grid engine cluster and not sure how to set this up you'd
+typically want a ``smp`` queue using ``allocation_rule: $pe_slots`` like in this
+`example pename configuration
+<https://github.com/WGLab/biocluster/blob/431a05f6dfd532205aacfc7477ac740b0e7b2a0a/03%20System%20customization.md#setting-up-parallel-environment>`_
+or `smp template <https://gist.github.com/dan-blanchard/6586533#file-smp_template>`_.
+
+SGE has other specific flags you may want to tune, depending on your setup. To
+specify an advanced reservation with the ``-ar`` flag, use ``-r ar=ar_id``. To
+specify an alternative memory management model instead of ``mem_free`` use ``-r
+memtype=approach``. It is further recommended to configure ``mem_free`` (or any
+other chosen memory management model) as a consumable, requestable resource in
+SGE to prevent overfilling hosts that do not have sufficient memory per slot.
+This can be done in two steps. First, launch ``qmon`` as an admin, select
+``Complex Configuration`` in qmon, click on ``mem_free`, under the
+``Consumable`` dialog select ``JOB`` (instead of ``YES`` or ``NO``) and finally
+click ``Modify`` for the changes to take effect. Secondly, for each host in the
+queue, configure ``mem_free`` as a complex value. If a host called ``myngshost``
+has 128GB of RAM, the corresponding command would be ``qconf -mattr exechost
+complex_values mem_free=128G myngshost``
 
 There are also special ``-r`` resources parameters to support pipeline configuration:
 
@@ -171,7 +182,6 @@ There are also special ``-r`` resources parameters to support pipeline configura
 .. _Gluster: http://www.gluster.org/
 .. _Lustre: http://wiki.lustre.org/index.php/Main_Page
 .. _NFS: https://en.wikipedia.org/wiki/Network_File_System_%28protocol%29
-.. _SGE parallel environment: https://blogs.oracle.com/templedf/entry/configuring_a_new_parallel_environment
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
@@ -364,3 +374,15 @@ contribute your tips and thoughts.
 .. _post on scaling bcbio-nextgen: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 .. _Harvard FAS Research Computing: http://rc.fas.harvard.edu/
 .. _Dell's Active Infrastructure for Life Sciences: http://dell.com/ai-hpc-lifesciences
+
+Spark
+=====
+Some GATK tools like recalibration use Apache Spark for parallelization. By default
+bcbio runs these with multicore parallelization on a single node, to fit in standard
+cluster and local compute environments. If you have a custom Spark cluster on your system
+you can use that for GATK by setting up the appropriate configuration in your
+:ref:`sample-resources`::
+
+    resources:
+        gatk-spark:
+            options: [--spark-master, 'spark://your-spark-cluster:6311']

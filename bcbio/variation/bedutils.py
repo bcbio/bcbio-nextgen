@@ -23,8 +23,8 @@ def get_sort_cmd(tmp_dir=None):
     This also fixes versions of sort, like 8.22 in CentOS 7.1, that have broken
     sorting without version sorting specified.
 
-    https://github.com/chapmanb/bcbio-nextgen/issues/624
-    https://github.com/chapmanb/bcbio-nextgen/issues/1017
+    https://github.com/bcbio/bcbio-nextgen/issues/624
+    https://github.com/bcbio/bcbio-nextgen/issues/1017
     """
     has_versionsort = subprocess.check_output("sort --help | grep version-sort; exit 0", shell=True).strip()
     if has_versionsort:
@@ -43,10 +43,10 @@ def check_bed_contigs(in_file, data):
     contigs = set([])
     with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
-            if not line.startswith(("#", "track", "browser")) and line.strip():
+            if not line.startswith(("#", "track", "browser", "@")) and line.strip():
                 contigs.add(line.split()[0])
     ref_contigs = set([x.name for x in ref.file_contigs(dd.get_ref_file(data))])
-    if len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
+    if contigs and len(contigs - ref_contigs) / float(len(contigs)) > 0.25:
         raise ValueError("Contigs in BED file %s not in reference genome:\n %s\n"
                          % (in_file, list(contigs - ref_contigs)) +
                          "This is typically due to chr1 versus 1 differences in BED file and reference.")
@@ -62,7 +62,7 @@ def check_bed_coords(in_file, data):
             contig_sizes[contig.name] = contig.size
         with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
-                if not line.startswith(("#", "track", "browser")) and line.strip():
+                if not line.startswith(("#", "track", "browser", "@")) and line.strip():
                     parts = line.split()
                     if len(parts) > 3:
                         try:
@@ -89,18 +89,19 @@ def clean_file(in_file, data, prefix="", bedprep_dir=None, simple=None):
         if prefix and os.path.basename(in_file).startswith(prefix):
             return in_file
         out_file = os.path.join(bedprep_dir, "%s%s" % (prefix, os.path.basename(in_file)))
+        out_file = out_file.replace(".interval_list", ".bed")
         if out_file.endswith(".gz"):
             out_file = out_file[:-3]
         if not utils.file_uptodate(out_file, in_file):
             check_bed_contigs(in_file, data)
             check_bed_coords(in_file, data)
             with file_transaction(data, out_file) as tx_out_file:
-                py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                bcbio_py = sys.executable
                 cat_cmd = "zcat" if in_file.endswith(".gz") else "cat"
                 sort_cmd = get_sort_cmd(os.path.dirname(tx_out_file))
-                cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | "
+                cmd = ("{cat_cmd} {in_file} | grep -v ^track | grep -v ^browser | grep -v ^@ | "
                        "grep -v ^# | {simple} "
-                       "{py_cl} -x 'bcbio.variation.bedutils.remove_bad(x)' | "
+                       "{bcbio_py} -c 'from bcbio.variation import bedutils; bedutils.remove_bad()' | "
                        "{sort_cmd} -k1,1 -k2,2n > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Prepare cleaned BED file", data)
         vcfutils.bgzip_and_index(out_file, data.get("config", {}), remove_orig=False)
@@ -118,7 +119,7 @@ def sort_merge(in_file, data, out_dir=None):
         column_opt = ""
         with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
-                if not line.startswith(("#", "track", "browser")):
+                if not line.startswith(("#", "track", "browser", "@")):
                     parts = line.split()
                     if len(parts) >= 4:
                         column_opt = "-c 4 -o distinct"
@@ -130,14 +131,17 @@ def sort_merge(in_file, data, out_dir=None):
             do.run(cmd.format(**locals()), "Sort and merge BED file", data)
     return out_file
 
-def remove_bad(line):
+def remove_bad():
     """Remove non-increasing BED lines which will cause variant callers to choke.
+
+    Also fixes space separated BED inputs.
     """
-    parts = line.strip().split("\t")
-    if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
-        return line
-    else:
-        return None
+    for line in sys.stdin:
+        parts = line.strip().split("\t")
+        if len(parts) == 1 and len(line.strip().split()) > 1:
+            parts = line.strip().split()
+        if line.strip() and len(parts) > 2 and int(parts[2]) > int(parts[1]):
+            sys.stdout.write("\t".join(parts) + "\n")
 
 def merge_overlaps(in_file, data, distance=None, out_dir=None):
     """Merge bed file intervals to avoid overlapping regions. Output is always a 3 column file.
@@ -165,23 +169,33 @@ def merge_overlaps(in_file, data, distance=None, out_dir=None):
         vcfutils.bgzip_and_index(out_file, data["config"], remove_orig=False)
         return out_file
 
-def population_variant_regions(items):
+def population_variant_regions(items, merged=False):
     """Retrieve the variant region BED file from a population of items.
 
     If tumor/normal, return the tumor BED file. If a population, return
     the BED file covering the most bases.
     """
+    def _get_variant_regions(data):
+        out = dd.get_variant_regions(data) or dd.get_sample_callable(data)
+        # Only need to merge for variant region inputs, not callable BED regions which don't overlap
+        if merged and dd.get_variant_regions(data):
+            merged_out = dd.get_variant_regions_merged(data)
+            if merged_out:
+                out = merged_out
+            else:
+                out = merge_overlaps(out, data)
+        return out
     import pybedtools
     if len(items) == 1:
-        return dd.get_variant_regions(items[0])
+        return _get_variant_regions(items[0])
     else:
         paired = vcfutils.get_paired(items)
         if paired:
-            return dd.get_variant_regions(paired.tumor_data)
+            return _get_variant_regions(paired.tumor_data)
         else:
             vrs = []
             for data in items:
-                vr_bed = dd.get_variant_regions(data)
+                vr_bed = _get_variant_regions(data)
                 if vr_bed:
                     vrs.append((pybedtools.BedTool(vr_bed).total_coverage(), vr_bed))
             vrs.sort(reverse=True)

@@ -7,9 +7,10 @@ from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
 from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
+                          bcbiornaseq)
 from bcbio.ngsalign import alignprep
-from bcbio.pipeline import (archive, disambiguate, qcsummary, region, sample,
+from bcbio.pipeline import (archive, alignment, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
 from bcbio.qc import multiqc, qsignature
 from bcbio.structural import regions as svregions
@@ -70,8 +71,16 @@ def run_salmon_index(*args):
     return salmon.run_salmon_index(*args)
 
 @utils.map_wrap
+def run_rapmap_index(*args):
+    return rapmap.run_rapmap_index(*args)
+
+@utils.map_wrap
 def run_counts_spikein(*args):
     return spikein.run_counts_spikein(*args)
+
+@utils.map_wrap
+def run_bcbiornaseqload(*args):
+    return bcbiornaseq.make_bcbiornaseq_object(*args)
 
 @utils.map_wrap
 def run_sailfish(*args):
@@ -121,6 +130,10 @@ def alignment_to_rec(*args):
                     "rgnames__pl", "rgnames__sample", "rgnames__pu",
                     "rgnames__lane", "rgnames__rg", "rgnames__lb"]
     return cwlutils.to_rec_single(*args, default_keys=default_keys)
+
+@utils.map_wrap
+def organize_noalign(*args):
+    return alignment.organize_noalign(args)
 
 @utils.map_wrap
 def postprocess_alignment_to_rec(*args):
@@ -283,6 +296,10 @@ def merge_variant_files(*args):
     return vcfutils.merge_variant_files(*args)
 
 @utils.map_wrap
+def hla_to_rec(*args):
+    return cwlutils.to_rec(*args)
+
+@utils.map_wrap
 def call_hla(*args):
     return hla.call_hla(*args)
 
@@ -325,6 +342,10 @@ def finalize_sv(*args):
 @utils.map_wrap
 def combine_calls(*args):
     return ensemble.combine_calls(*args)
+
+@utils.map_wrap
+def batch_for_ensemble(*args):
+    return ensemble.batch(*args)
 
 @utils.map_wrap
 def prep_gemini_db(*args):

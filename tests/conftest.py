@@ -55,7 +55,7 @@ def get_post_process_yaml(data_dir, workdir):
     # create local config pointing to reduced genomes
     test_system = os.path.join(workdir, "bcbio_system.yaml")
     with open(system) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
         config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
         with open(test_system, "w") as out_handle:
             yaml.dump(config, out_handle)
@@ -127,9 +127,9 @@ def install_test_files(data_dir):
     DlInfo = collections.namedtuple("DlInfo", "fname dirname version")
     download_data = [
         DlInfo("110106_FC70BUKAAXX.tar.gz", None, None),
-        DlInfo("genomes_automated_test.tar.gz", "genomes", 32),
+        DlInfo("genomes_automated_test.tar.gz", "genomes", 34),
         DlInfo("110907_ERP000591.tar.gz", None, None),
-        DlInfo("100326_FC6107FAAXX.tar.gz", None, 11),
+        DlInfo("100326_FC6107FAAXX.tar.gz", None, 12),
         DlInfo("tcga_benchmark.tar.gz", None, 3),
         DlInfo("singlecell-rnaseq-test-data.tar.gz", "Harvard-inDrop", 1)
     ]

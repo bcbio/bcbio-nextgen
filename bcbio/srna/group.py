@@ -1,7 +1,6 @@
 import os
 import string
 import os.path as op
-import sys
 import shutil
 from collections import namedtuple
 
@@ -12,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from bcbio.utils import file_exists, safe_makedir, move_safe, append_stem
+from bcbio.utils import file_exists, safe_makedir, move_safe, append_stem, get_bcbio_bin
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
@@ -20,6 +19,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline.sample import process_alignment
 from bcbio.srna import mirdeep
 from bcbio.rnaseq import spikein
+from bcbio.srna import mirge
 
 def run_prepare(*data):
     """
@@ -47,6 +47,7 @@ def run_prepare(*data):
         with file_transaction(ma_out) as ma_tx:
             with open(ma_tx, 'w') as ma_handle:
                 with open(seq_out, 'w') as seq_handle:
+                    logger.info("Prepare seqs.fastq with -minl 17 -maxl 40 -minc 2 --min_shared 0.1")
                     prepare._create_matrix_uniq_seq(sample_l, seq_l, ma_handle, seq_handle, min_shared)
 
     for sample in data:
@@ -71,8 +72,8 @@ def run_align(*data):
         shutil.move(bam_file + ".bai", new_bam_file + ".bai")
         shutil.rmtree(op.join(bam_dir, sample[0][0]["rgnames"]['sample']))
     for sample in data:
-        sample[0]["align_bam"] = sample[0]["clean_fastq"]
-        sample[0]["work_bam"] = new_bam_file
+        # sample[0]["align_bam"] = sample[0]["clean_fastq"]
+        sample[0]["cluster_bam"] = new_bam_file
 
     if "mirdeep2" in tools:
         novel_db = mirdeep.run(data)
@@ -88,12 +89,16 @@ def run_cluster(*data):
     out_dir = op.join(work_dir, "seqcluster", "cluster")
     out_dir = op.abspath(safe_makedir(out_dir))
     prepare_dir = op.join(work_dir, "seqcluster", "prepare")
-    bam_file = data[0][0]["work_bam"]
+    bam_file = data[0][0]["cluster_bam"]
     if "seqcluster" in tools:
+        gtf_file = dd.get_transcriptome_gtf(sample) if dd.get_transcriptome_gtf(sample) else dd.get_srna_gtf_file(sample)
         sample["seqcluster"] = _cluster(bam_file, data[0][0]["seqcluster_prepare_ma"],
                                         out_dir, dd.get_ref_file(sample),
-                                        dd.get_srna_gtf_file(sample))
+                                        gtf_file)
         sample["report"] = _report(sample, dd.get_ref_file(sample))
+
+    if "mirge" in tools:
+        sample["mirge"] = mirge.run(data)
 
     out_mirna = _make_isomir_counts(data, out_dir=op.join(work_dir, "mirbase"))
     if out_mirna:
@@ -112,7 +117,7 @@ def _cluster(bam_file, ma_file, out_dir, reference, annotation_file=None):
     """
     Connect to seqcluster to run cluster with python directly
     """
-    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(get_bcbio_bin(), "seqcluster")
     # cl = ["cluster", "-o", out_dir, "-m", ma_file, "-a", bam_file, "-r", reference]
     if annotation_file:
         annotation_file = "-g " + annotation_file
@@ -131,7 +136,7 @@ def _report(data, reference):
     """
     Run report of seqcluster to get browser options for results
     """
-    seqcluster = op.join(os.path.dirname(sys.executable), "seqcluster")
+    seqcluster = op.join(get_bcbio_bin(), "seqcluster")
     work_dir = dd.get_work_dir(data)
     out_dir = safe_makedir(os.path.join(work_dir, "seqcluster", "report"))
     out_file = op.join(out_dir, "seqcluster.db")
@@ -149,13 +154,13 @@ def report(data):
     summary_file = op.join(out_dir, "summary.csv")
     with file_transaction(summary_file) as out_tx:
         with open(out_tx, 'w') as out_handle:
-            print >>out_handle, "sample_id,%s" % _guess_header(data[0][0])
+            out_handle.write("sample_id,%s\n" % _guess_header(data[0][0]))
             for sample in data:
                 info = sample[0]
                 group = _guess_group(info)
                 files = info["seqbuster"] if "seqbuster" in info else "None"
-                print >>out_handle, ",".join([dd.get_sample_name(info),
-                                              group])
+                out_handle.write(",".join([dd.get_sample_name(info),
+                                           group]) + "\n")
     _modify_report(work_dir, out_dir)
     return summary_file
 
@@ -183,7 +188,7 @@ def _modify_report(summary_path, out_dir):
     out_content = string.Template(content).safe_substitute({'path_abs': summary_path})
     out_file = op.join(out_dir, "srna_report.rmd")
     with open(out_file, 'w') as out_handle:
-        print >>out_handle, out_content
+        out_handle.write(out_content)
     return out_file
 
 def _make_isomir_counts(data, srna_type="seqbuster", out_dir=None, stem=""):

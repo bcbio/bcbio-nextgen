@@ -9,7 +9,8 @@ from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.genotype import variant_filtration, get_variantcaller
-from bcbio.variation import annotation, damage, effects, genotype, germline, prioritize, validate, vcfutils
+from bcbio.variation import (annotation, damage, effects, genotype, germline, population, prioritize,
+                             validate, vcfutils)
 from bcbio.variation import multi as vmulti
 
 # ## CWL summarization
@@ -17,8 +18,11 @@ from bcbio.variation import multi as vmulti
 def summarize_vc(items):
     """CWL target: summarize variant calls and validation for multiple samples.
     """
-    items = [utils.to_single_data(x) for x in validate.summarize_grading(items)]
-    out = {"validate": _combine_validations(items),
+    items = [utils.to_single_data(x) for x in utils.flatten(items)]
+    items = [_normalize_vc_input(x) for x in items]
+    items = validate.summarize_grading(items)
+    items = [utils.to_single_data(x) for x in items]
+    out = {"validate": validate.combine_validations(items),
            "variants": {"calls": [], "gvcf": [], "samples": []}}
     added = set([])
     variants_by_sample = collections.defaultdict(list)
@@ -29,7 +33,9 @@ def summarize_vc(items):
             if s not in sample_order:
                 sample_order.append(s)
         if data.get("vrn_file"):
-            names = dd.get_batches(data)
+            # Only get batches if we're actually doing variantcalling in bcbio
+            # otherwise we'll be using the original files
+            names = dd.get_batches(data) if dd.get_variantcaller(data) else None
             if not names:
                 names = [dd.get_sample_name(data)]
             batch_name = names[0]
@@ -56,30 +62,17 @@ def summarize_vc(items):
         out["variants"]["samples"].append(variants_by_sample[sample])
     return [out]
 
-def _combine_validations(items):
-    """Combine multiple batch validations into validation outputs.
+def _normalize_vc_input(data):
+    """Normalize different types of variant calling inputs.
+
+    Handles standard and ensemble inputs.
     """
-    csvs = set([])
-    pngs = set([])
-    for v in [x.get("validate") for x in items]:
-        if v and v.get("grading_summary"):
-            csvs.add(v.get("grading_summary"))
-        if v and v.get("grading_plots"):
-            pngs |= set(v.get("grading_plots"))
-    if len(csvs) == 1:
-        grading_summary = csvs.pop()
-    else:
-        grading_summary = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), "validation")),
-                                       "grading-summary-combined.csv")
-        with open(grading_summary, "w") as out_handle:
-            for i, csv in enumerate(sorted(list(csvs))):
-                with open(csv) as in_handle:
-                    h = in_handle.readline()
-                    if i == 0:
-                        out_handle.write(h)
-                    for l in in_handle:
-                        out_handle.write(l)
-    return {"grading_plots": sorted(list(pngs)), "grading_summary": grading_summary}
+    if data.get("ensemble"):
+        for k in ["batch_samples", "validate", "vrn_file"]:
+            data[k] = data["ensemble"][k]
+        data["config"]["algorithm"]["variantcaller"] = "ensemble"
+        data["metadata"] = {"batch": data["ensemble"]["batch_id"]}
+    return data
 
 # ## Genotyping
 
@@ -94,7 +87,7 @@ def postprocess_variants(items):
     data, items = _get_batch_representative(items, vrn_key)
     items = cwlutils.unpack_tarballs(items, data)
     data = cwlutils.unpack_tarballs(data, data)
-    cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data))
+    cur_name = "%s, %s" % (dd.get_sample_name(data), get_variantcaller(data, require_bam=False))
     logger.info("Finalizing variant calls: %s" % cur_name)
     orig_vrn_file = data.get(vrn_key)
     data = _symlink_to_workdir(data, [vrn_key])
@@ -108,11 +101,17 @@ def postprocess_variants(items):
             data["vrn_stats"] = vrn_stats
         orig_items = _get_orig_items(items)
         logger.info("Annotate VCF file: %s" % cur_name)
-        data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data), orig_items)
+        data[vrn_key] = annotation.finalize_vcf(data[vrn_key], get_variantcaller(data, require_bam=False),
+                                                orig_items)
+        if cwlutils.is_cwl_run(data):
+            logger.info("Annotate with population level variation data")
+            ann_file = population.run_vcfanno(data[vrn_key], data)
+            if ann_file:
+                data[vrn_key] = ann_file
         logger.info("Filtering for %s" % cur_name)
         data[vrn_key] = variant_filtration(data[vrn_key], dd.get_ref_file(data),
-                                              tz.get_in(("genome_resources", "variation"), data, {}),
-                                              data, orig_items)
+                                           tz.get_in(("genome_resources", "variation"), data, {}),
+                                           data, orig_items)
         logger.info("Prioritization for %s" % cur_name)
         prio_vrn_file = prioritize.handle_vcf_calls(data[vrn_key], data, orig_items)
         if prio_vrn_file != data[vrn_key]:
@@ -131,7 +130,7 @@ def _get_orig_items(data):
     """Retrieve original items in a batch, handling CWL and standard cases.
     """
     if isinstance(data, dict):
-        if dd.get_align_bam(data) and tz.get_in(["metadata", "batch"], data):
+        if dd.get_align_bam(data) and tz.get_in(["metadata", "batch"], data) and "group_orig" in data:
             return vmulti.get_orig_items(data)
         else:
             return [data]
@@ -143,7 +142,7 @@ def _symlink_to_workdir(data, key):
     """
     orig_file = tz.get_in(key, data)
     if orig_file and not orig_file.startswith(dd.get_work_dir(data)):
-        variantcaller = genotype.get_variantcaller(data)
+        variantcaller = genotype.get_variantcaller(data, require_bam=False)
         if not variantcaller:
             variantcaller = "precalled"
         out_file = os.path.join(dd.get_work_dir(data), variantcaller, os.path.basename(orig_file))

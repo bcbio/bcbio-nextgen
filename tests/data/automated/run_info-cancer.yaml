@@ -20,14 +20,13 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan, strelka2]
+        somatic: [vardict, freebayes, varscan, strelka2, octopus, mutect2]
         germline: gatk-haplotype
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [lumpy, cnvkit, titancna]
+      svcaller: [lumpy, cnvkit]
       #hetcaller: [bubbletree]
-      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed
   - analysis: variant2
@@ -44,20 +43,19 @@ details:
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan, mutect2, strelka2]
+        somatic: [vardict, freebayes, varscan, mutect2, strelka2, octopus]
         germline: gatk-haplotype
       indelcaller: sid
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [lumpy, cnvkit, titancna]
+      svcaller: [lumpy, cnvkit]
       #hetcaller: [bubbletree]
       tools_on: [damage_filter]
-      tools_off: [vardict_somatic_filter, gemini]
-      vcfanno: [gemini]
+      tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed
-      svprioritize: cancer/az-cancer-panel
+      #svprioritize: cancer/az-cancer-panel
   - analysis: variant2
     description: c-tumor2
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]
@@ -68,21 +66,23 @@ details:
       sex: male
     algorithm:
       aligner: bwa
+      background:
+        variant: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       mark_duplicates: True
       recalibrate: false
       realign: false
       variantcaller:
-        somatic: [vardict, freebayes, varscan]
+        somatic: [vardict, freebayes, varscan, octopus, mutect2]
+        # somatic: [vardict, freebayes, varscan, octopus, mutect2, smcounter2, pisces]
         germline: gatk-haplotype
       indelcaller: sid
       ensemble:
         numpass: 2
         use_filtered: true
       min_allele_fraction: 5.0
-      svcaller: [lumpy, cnvkit, titancna]
+      svcaller: [lumpy, cnvkit]
       #hetcaller: [bubbletree]
       #tools_on: [svplots]
-      tools_off: [gemini]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed
       svprioritize: ../data/automated/variant_regions-cancer.bed

@@ -1,14 +1,17 @@
 """Pipeline utilities to retrieve FASTQ formatted files for processing.
 """
 import os
+import shutil
 
 from bcbio import bam, broad, utils
 from bcbio.bam import fastq
 from bcbio.distributed import objectstore
 from bcbio.pipeline import alignment
+from bcbio.pipeline import datadict as dd
 from bcbio.utils import file_exists, safe_makedir, splitext_plus
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
+from bcbio.ngsalign import alignprep
 
 
 def get_fastq_files(data):
@@ -17,6 +20,7 @@ def get_fastq_files(data):
     assert "files" in data, "Did not find `files` in input; nothing to process"
     ready_files = []
     should_gzip = True
+
     # Bowtie does not accept gzipped fastq
     if 'bowtie' in data['reference'].keys():
         should_gzip = False
@@ -29,49 +33,60 @@ def get_fastq_files(data):
                 ready_files = [fname]
         elif objectstore.is_remote(fname):
             ready_files.append(fname)
+        # Trimming does quality conversion, so if not doing that, do an explicit conversion
+        elif not(dd.get_trim_reads(data)) and dd.get_quality_format(data) != "standard":
+            out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "fastq_convert"))
+            ready_files.append(fastq.groom(fname, data, out_dir=out_dir))
         else:
             ready_files.append(fname)
     ready_files = [x for x in ready_files if x is not None]
     if should_gzip:
-        ready_files = [_gzip_fastq(x) for x in ready_files]
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "fastq"))
+        ready_files = [_gzip_fastq(x, out_dir) for x in ready_files]
     for in_file in ready_files:
         if not objectstore.is_remote(in_file):
             assert os.path.exists(in_file), "%s does not exist." % in_file
     return ready_files
 
-def _gzip_fastq(in_file):
+def _gzip_fastq(in_file, out_dir=None):
     """
     gzip a fastq file if it is not already gzipped, handling conversion
     from bzip to gzipped files
     """
     if fastq.is_fastq(in_file) and not objectstore.is_remote(in_file):
         if utils.is_bzipped(in_file):
-            return _bzip_gzip(in_file)
+            return _bzip_gzip(in_file, out_dir)
         elif not utils.is_gzipped(in_file):
-            gzipped_file = in_file + ".gz"
+            if out_dir:
+                gzipped_file = os.path.join(out_dir, os.path.basename(in_file) + ".gz")
+            else:
+                gzipped_file = in_file + ".gz"
             if file_exists(gzipped_file):
                 return gzipped_file
-            message = "gzipping {in_file}.".format(in_file=in_file)
+            message = "gzipping {in_file} to {gzipped_file}.".format(
+                in_file=in_file, gzipped_file=gzipped_file)
             with file_transaction(gzipped_file) as tx_gzipped_file:
                 do.run("gzip -c {in_file} > {tx_gzipped_file}".format(**locals()),
                        message)
             return gzipped_file
     return in_file
 
-def _bzip_gzip(in_file):
+def _bzip_gzip(in_file, out_dir=None):
     """
     convert from bz2 to gz
     """
     if not utils.is_bzipped(in_file):
         return in_file
-    base, first_ext = os.path.splitext(in_file)
-    gzipped_file = base + ".gz"
-    if (fastq.is_fastq(base) and
-        not objectstore.is_remote(in_file)):
-
+    base, _ = os.path.splitext(in_file)
+    if out_dir:
+        gzipped_file = os.path.join(out_dir, os.path.basename(base) + ".gz")
+    else:
+        gzipped_file = base + ".gz"
+    if (fastq.is_fastq(base) and not objectstore.is_remote(in_file)):
         if file_exists(gzipped_file):
             return gzipped_file
-        message = "gzipping {in_file}.".format(in_file=in_file)
+        message = "gzipping {in_file} to {gzipped_file}.".format(
+            in_file=in_file, gzipped_file=gzipped_file)
         with file_transaction(gzipped_file) as tx_gzipped_file:
             do.run("bunzip2 -c {in_file} | gzip > {tx_gzipped_file}".format(**locals()), message)
         return gzipped_file
@@ -84,24 +99,11 @@ def _pipeline_needs_fastq(config, data):
     support_bam = aligner in alignment.metadata.get("support_bam", [])
     return aligner and not support_bam
 
+
 def convert_bam_to_fastq(in_file, work_dir, data, dirs, config):
     """Convert BAM input file into FASTQ files.
     """
-    out_dir = safe_makedir(os.path.join(work_dir, "fastq_convert"))
-    out_files = [os.path.join(out_dir, "{0}_{1}.fastq".format(
-                 os.path.splitext(os.path.basename(in_file))[0], x))
-                 for x in ["1", "2"]]
-    if bam.is_paired(in_file):
-        out1, out2 = out_files
-    else:
-        out1 = out_files[0]
-        out2 = None
-    if not file_exists(out1):
-        broad_runner = broad.runner_from_path("picard", config)
-        broad_runner.run_fn("picard_bam_to_fastq", in_file, out1, out2)
-    if out2 and os.path.getsize(out2) == 0:
-        out2 = None
-    return [out1, out2]
+    return alignprep.prep_fastq_inputs([in_file], data)
 
 def merge(files, out_file, config):
     """merge smartly fastq files. It recognizes paired fastq files."""
@@ -126,7 +128,10 @@ def _merge_list_fastqs(files, out_file, config):
     if not file_exists(out_file):
         files = [_gzip_fastq(fn) for fn in files]
         if len(files) == 1:
-            os.symlink(files[0], out_file)
+            if "remove_source" in config and config["remove_source"]:
+                shutil.move(files[0], out_file)
+            else:
+                os.symlink(files[0], out_file)
             return out_file
         with file_transaction(out_file) as file_txt_out:
             files_str = " ".join(list(files))

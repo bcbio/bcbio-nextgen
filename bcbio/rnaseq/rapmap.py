@@ -13,6 +13,17 @@ from bcbio.provenance import do
 from bcbio.pipeline import config_utils
 from bcbio.ngsalign import postalign
 from bcbio import bam
+import bcbio.bam.fasta as fasta
+
+def run_rapmap_index(*samples):
+    for data in dd.sample_data_iterator(samples):
+        work_dir = dd.get_work_dir(data)
+        rapmap_dir = os.path.join(work_dir, "rapmap")
+        gtf_file = dd.get_gtf_file(data)
+        fasta_file = dd.get_ref_file(data)
+        assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
+        rapmap_index(gtf_file, fasta_file, "quasi", data, rapmap_dir)
+    return samples
 
 def run_rapmap_align(data):
     samplename = dd.get_sample_name(data)
@@ -31,22 +42,23 @@ def run_rapmap_align(data):
     return [[data]]
 
 def rapmap_index(gtf_file, ref_file, algorithm, data, out_dir):
+    out_dir = os.path.join(out_dir, "index")
     valid_indexes = ["pseudoindex", "quasiindex"]
     index_type = algorithm + "index"
     assert index_type in valid_indexes, \
         "RapMap only supports %s indices." % valid_indexes
-    out_dir = os.path.join(out_dir, index_type, dd.get_genome_build(data))
+    out_dir = os.path.join(out_dir, index_type, sailfish.get_build_string(data))
     if dd.get_disambiguate(data):
         out_dir = "-".join([out_dir] + dd.get_disambguate(data))
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
     # use user supplied transcriptome FASTA file if it exists
     if dd.get_transcriptome_fasta(data):
-        out_dir = os.path.join(out_dir, index_type, dd.get_genome_build(data))
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
         gtf_fa = sailfish.create_combined_fasta(data)
+    gtf_fa = fasta.strip_transcript_versions(gtf_fa, os.path.join(out_dir, os.path.basename(gtf_fa)))
     tmpdir = dd.get_tmp_dir(data)
-    if file_exists(out_dir + "rapidx.jfhash"):
+    if file_exists(os.path.join(out_dir, "sa.bin")):
         return out_dir
     files = dd.get_input_sequence_files(data)
     kmersize = sailfish.pick_kmersize(files[0])
@@ -61,13 +73,14 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
     assert algorithm in valid_algorithms, \
         "RapMap algorithm needs to be one of %s." % valid_algorithms
     safe_makedir(rapmap_dir)
+    base_dir = os.path.dirname(rapmap_dir)
     samplename = dd.get_sample_name(data)
     out_file = os.path.join(rapmap_dir, samplename + ".bam")
     if file_exists(out_file):
         bam.index(out_file, dd.get_config(data))
         return out_file
     rapmap_index_loc = rapmap_index(gtf_file, ref_file, algorithm, data,
-                                    rapmap_dir)
+                                    base_dir)
     num_cores = dd.get_num_cores(data)
     algorithm_subcommand = algorithm + "map"
     rapmap = config_utils.get_program("rapmap", dd.get_config(data))
@@ -83,7 +96,7 @@ def rapmap_align(fq1, fq2, rapmap_dir, gtf_file, ref_file, algorithm, data):
     with file_transaction(out_file) as tx_out_file:
         cmd += "| " + postalign.sam_to_sortbam_cl(data, tx_out_file)
         run_message = ("%smapping %s and %s to %s with Rapmap. "
-                       % (algorithm, fq1, fq2, rapmap_index))
+                       % (algorithm, fq1, fq2, rapmap_index_loc))
         do.run(cmd.format(**locals()), run_message, None)
     bam.index(out_file, dd.get_config(data))
     return out_file

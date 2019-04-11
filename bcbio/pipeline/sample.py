@@ -27,11 +27,11 @@ from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
 from bcbio.bam import merge as bam_merge
-from bcbio.pipeline.sra import query_gsm
+from bcbio.pipeline.sra import query_gsm, query_srr
 from bcbio.bam import skewer
 from bcbio.structural.seq2c import prep_seq2c_bed
 from bcbio.variation.bedutils import clean_file, merge_overlaps
-from bcbio.structural import get_svcallers
+from bcbio.structural import get_svcallers, regions
 from bcbio.qc import samtools
 
 def prepare_sample(data):
@@ -41,6 +41,9 @@ def prepare_sample(data):
     data = utils.to_single_data(data)
     logger.debug("Preparing %s" % data["rgnames"]["sample"])
     data["files"] = get_fastq_files(data)
+    # get_fastq_files swaps over quality scores to standard, unless trimming
+    if not(dd.get_trim_reads(data)):
+        data = dd.set_quality_format(data, "standard")
     return [[data]]
 
 def trim_sample(data):
@@ -52,8 +55,8 @@ def trim_sample(data):
     # this block is to maintain legacy configuration files
     if not trim_reads:
         logger.info("Skipping trimming of %s." % dd.get_sample_name(data))
-    elif trim_reads == "read_through":
-        if "skewer" in dd.get_tools_on(data):
+    else:
+        if "skewer" in dd.get_tools_on(data) or trim_reads == "skewer":
             trim_adapters = skewer.trim_adapters
         else:
             trim_adapters = trim.trim_adapters
@@ -68,6 +71,8 @@ def _link_bam_file(in_file, new_dir, data):
     """
     new_dir = utils.safe_makedir(new_dir)
     out_file = os.path.join(new_dir, os.path.basename(in_file))
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(new_dir, "%s-prealign.bam" % dd.get_sample_name(data))
     if data.get("cwl_keys"):
         # Has indexes, we're okay to go with the original file
         if utils.file_exists(in_file + ".bai"):
@@ -124,10 +129,14 @@ def process_alignment(data, alt_input=None):
         if dd.get_umi_consensus(data):
             data["umi_bam"] = dd.get_work_bam(data)
             if fastq2:
-                f1, f2 = postalign.umi_consensus(data)
+                f1, f2, avg_cov = postalign.umi_consensus(data)
+                data["config"]["algorithm"]["rawumi_avg_cov"] = avg_cov
                 del data["config"]["algorithm"]["umi_type"]
                 data["config"]["algorithm"]["mark_duplicates"] = False
                 data = align_to_sort_bam(f1, f2, aligner, data)
+            else:
+                raise ValueError("Single fastq input for UMI processing; fgbio needs paired reads: %s" %
+                                 dd.get_sample_name(data))
         data = _add_supplemental_bams(data)
     elif fastq1 and objectstore.file_exists_or_remote(fastq1) and fastq1.endswith(".bam"):
         sort_method = config["algorithm"].get("bam_sort")
@@ -146,6 +155,10 @@ def process_alignment(data, alt_input=None):
             runner = broad.runner_from_path("picard", config)
             out_file = os.path.join(data["dirs"]["work"], "{}-sort.bam".format(
                 os.path.splitext(os.path.basename(fastq1))[0]))
+            if not utils.file_exists(out_file):
+                work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean",
+                                                           dd.get_sample_name(data)))
+                out_file = os.path.join(work_dir, "{}-sort.bam".format(dd.get_sample_name(data)))
             out_bam = runner.run_fn("picard_sort", fastq1, sort_method, out_file)
         else:
             out_bam = _link_bam_file(fastq1, os.path.join(dd.get_work_dir(data), "prealign",
@@ -218,6 +231,8 @@ def clean_inputs(data):
             logger.warning("Can't run Seq2C without a svregions or variant_regions BED file")
         else:
             data["config"]["algorithm"]["seq2c_bed_ready"] = seq2c_ready_bed
+    elif regions.get_sv_bed(data):
+        dd.set_sv_regions(data, clean_file(regions.get_sv_bed(data), data, prefix="svregions-"))
     return data
 
 def postprocess_alignment(data):
@@ -227,8 +242,8 @@ def postprocess_alignment(data):
     data = cwlutils.normalize_missing(utils.to_single_data(data))
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
+    ref_file = dd.get_ref_file(data)
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
-        ref_file = dd.get_ref_file(data)
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data)))
         bam_file_ready = os.path.join(out_dir, os.path.basename(bam_file))
@@ -236,21 +251,22 @@ def postprocess_alignment(data):
             utils.symlink_plus(bam_file, bam_file_ready)
         bam.index(bam_file_ready, data["config"])
         covinfo = callable.sample_callable_bed(bam_file_ready, ref_file, data)
-        callable_region_bed, nblock_bed, callable_bed = \
+        callable_region_bed, nblock_bed = \
             callable.block_regions(covinfo.raw_callable, bam_file_ready, ref_file, data)
         data["regions"] = {"nblock": nblock_bed,
-                           "callable": callable_bed,
+                           "callable": covinfo.raw_callable,
                            "sample_callable": covinfo.callable,
                            "mapped_stats": readstats.get_cache_file(data)}
         data["depth"] = covinfo.depth_files
         data = coverage.assign_interval(data)
         data = samtools.run_and_save(data)
-        if (os.path.exists(callable_region_bed) and
-                not data["config"]["algorithm"].get("variant_regions")):
-            data["config"]["algorithm"]["variant_regions"] = callable_region_bed
-            data = clean_inputs(data)
         data = recalibrate.prep_recal(data)
         data = recalibrate.apply_recal(data)
+    elif dd.get_variant_regions(data):
+        callable_region_bed, nblock_bed = \
+            callable.block_regions(dd.get_variant_regions(data), bam_file, ref_file, data)
+        data["regions"] = {"nblock": nblock_bed, "callable": dd.get_variant_regions(data),
+                           "sample_callable": dd.get_variant_regions(data)}
     return [[data]]
 
 def _merge_out_from_infiles(in_files):
@@ -275,7 +291,7 @@ def delayed_bam_merge(data):
     """
     if data.get("combine"):
         assert len(data["combine"].keys()) == 1
-        file_key = data["combine"].keys()[0]
+        file_key = list(data["combine"].keys())[0]
         extras = []
         for x in data["combine"][file_key].get("extras", []):
             if isinstance(x, (list, tuple)):
@@ -287,7 +303,7 @@ def delayed_bam_merge(data):
         in_files = sorted(list(set(extras)))
         out_file = tz.get_in(["combine", file_key, "out"], data, _merge_out_from_infiles(in_files))
         sup_exts = data.get(file_key + "_plus", {}).keys()
-        for ext in sup_exts + [""]:
+        for ext in list(sup_exts) + [""]:
             merged_file = None
             if os.path.exists(utils.append_stem(out_file, "-" + ext)):
                 cur_out_file, cur_in_files = out_file, []
@@ -324,7 +340,7 @@ def merge_split_alignments(data):
 def _merge_align_bams(data):
     """Merge multiple alignment BAMs, including split and discordant reads.
     """
-    for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"]):
+    for key in (["work_bam"], ["work_bam_plus", "disc"], ["work_bam_plus", "sr"], ["umi_bam"]):
         in_files = tz.get_in(key, data, [])
         if not isinstance(in_files, (list, tuple)):
             in_files = [in_files]
@@ -350,12 +366,11 @@ def _merge_hla_fastq_inputs(data):
     merged_hlas = None
     if hla_sample_files:
         out_files = collections.defaultdict(list)
-        for hla_files in hla_sample_files:
-            for hla_file in hla_files:
-                rehla = re.search(".hla.(?P<hlatype>[\w-]+).fq", hla_file)
-                if rehla:
-                    hlatype = rehla.group("hlatype")
-                    out_files[hlatype].append(hla_file)
+        for hla_file in utils.flatten(hla_sample_files):
+            rehla = re.search(r".hla.(?P<hlatype>[\w-]+).fq", hla_file)
+            if rehla:
+                hlatype = rehla.group("hlatype")
+                out_files[hlatype].append(hla_file)
         if len(out_files) > 0:
             hla_outdir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                          dd.get_sample_name(data), "hla"))
@@ -378,5 +393,7 @@ def prepare_bcbio_samples(sample):
         out_file = bam_merge(sample['files'], sample['out_file'], sample['config'])
     elif sample['fn'] == "query_gsm":
         out_file = query_gsm(sample['files'], sample['out_file'], sample['config'])
+    elif sample['fn'] == "query_srr":
+        out_file = query_srr(sample['files'], sample['out_file'], sample['config'])
     sample['out_file'] = out_file
     return [sample]

@@ -6,6 +6,7 @@ TODO:
 import os
 import shutil
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -13,6 +14,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
+from bcbio.variation import genotype, germline
 
 def run(_, data, out_dir):
     """Prepare variants QC analysis: bcftools stats and snpEff output.
@@ -20,13 +22,14 @@ def run(_, data, out_dir):
     out = []
     vcinfo = get_active_vcinfo(data)
     if vcinfo:
-        if dd.get_phenotype(data) != "germline":
+        if dd.get_phenotype(data) == "normal" and "germline" in vcinfo:
+            out.append(_bcftools_stats(data, out_dir, "germline", germline=True))
+        elif dd.get_phenotype(data) != "germline":
             out.append(_bcftools_stats(data, out_dir))
             if "germline" in vcinfo:
                 out.append(_bcftools_stats(data, out_dir, "germline", germline=True))
         else:
             out.append(_bcftools_stats(data, out_dir, germline=True))
-
     out.append(_snpeff_stats(data, out_dir))
 
     out = [item for item in out if item]
@@ -51,10 +54,10 @@ def _bcftools_stats(data, out_dir, vcf_file_key=None, germline=False):
     if vcinfo:
         out_dir = utils.safe_makedir(out_dir)
         vcf_file = vcinfo[vcf_file_key or "vrn_file"]
-        if tz.get_in(("config", "algorithm", "jointcaller"), data):
+        if dd.get_jointcaller(data) or "gvcf" in dd.get_tools_on(data):
             opts = ""
         else:
-            opts = "-f PASS"
+            opts = "-f PASS,."
         name = dd.get_sample_name(data)
         out_file = os.path.join(out_dir, "%s_bcftools_stats%s.txt" % (name, ("_germline" if germline else "")))
         bcftools = config_utils.get_program("bcftools", data["config"])
@@ -73,10 +76,22 @@ def _bcftools_stats(data, out_dir, vcf_file_key=None, germline=False):
                             out_handle.write(line)
         return out_file
 
-def get_active_vcinfo(data):
-    """Use first caller if ensemble is not active
+def _add_filename_details(full_f):
+    """Add variant callers and germline information standard CWL filenames.
 
-    Handles both CWL and standard inputs for organizing variants.
+    This is an ugly way of working around not having metadata with calls.
+    """
+    out = {"vrn_file": full_f}
+    f = os.path.basename(full_f)
+    for vc in list(genotype.get_variantcallers().keys()) + ["ensemble"]:
+        if f.find("-%s.vcf" % vc) > 0:
+            out["variantcaller"] = vc
+    if f.find("-germline-") >= 0:
+        out["germline"] = full_f
+    return out
+
+def _get_variants(data):
+    """Retrieve variants from CWL and standard inputs for organizing variants.
     """
     active_vs = []
     if "variants" in data:
@@ -86,14 +101,47 @@ def get_active_vcinfo(data):
             variants = variants["samples"]
         for v in variants:
             # CWL -- a single variant file
-            if isinstance(v, basestring) and os.path.exists(v):
-                active_vs.append({"vrn_file": v})
+            if isinstance(v, six.string_types) and os.path.exists(v):
+                active_vs.append(_add_filename_details(v))
             elif (isinstance(v, (list, tuple)) and len(v) > 0 and
-                  isinstance(v[0], basestring) and os.path.exists(v[0])):
-                active_vs.append({"vrn_file": v[0]})
-            elif isinstance(v, dict) and v.get("variantcaller") == "ensemble":
-                return v
-            elif isinstance(v, dict) and v.get("vrn_file"):
-                active_vs.append(v)
-        if len(active_vs) > 0:
-            return active_vs[0]
+                  isinstance(v[0], six.string_types) and os.path.exists(v[0])):
+                for subv in v:
+                    active_vs.append(_add_filename_details(subv))
+            elif isinstance(v, dict):
+                if v.get("vrn_file"):
+                    active_vs.append(v)
+                elif v.get("population"):
+                    vrnfile = v.get("population").get("vcf")
+                    active_vs.append(_add_filename_details(vrnfile))
+                elif v.get("vcf"):
+                    active_vs.append(_add_filename_details(v.get("vcf")))
+    return active_vs
+
+def get_active_vcinfo(data, use_ensemble=True):
+    """Use first caller if ensemble is not active
+    """
+    active_vs = _get_variants(data)
+    if len(active_vs) > 0:
+        e_active_vs = []
+        if use_ensemble:
+            e_active_vs = [v for v in active_vs if v.get("variantcaller") == "ensemble"]
+        if len(e_active_vs) == 0:
+            e_active_vs = [v for v in active_vs if v.get("variantcaller") != "ensemble"]
+        if len(e_active_vs) > 0:
+            return e_active_vs[0]
+
+def extract_germline_vcinfo(data, out_dir):
+    """Extract germline VCFs from existing tumor inputs.
+    """
+    supported_germline = set(["vardict", "octopus", "freebayes"])
+    if dd.get_phenotype(data) in ["tumor"]:
+        for v in _get_variants(data):
+            if v.get("variantcaller") in supported_germline:
+                if v.get("germline"):
+                    return v
+                else:
+                    d = utils.deepish_copy(data)
+                    d["vrn_file"] = v["vrn_file"]
+                    gd = germline.extract(d, [d], out_dir)
+                    v["germline"] = gd["vrn_file_plus"]["germline"]
+                    return v

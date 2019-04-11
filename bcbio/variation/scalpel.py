@@ -20,11 +20,14 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils, vcfutils
 from bcbio.variation.vcfutils import get_paired_bams, is_paired_analysis, bgzip_and_index
 
+import six
+
+
 def _scalpel_bed_file_opts(items, config, out_file, region, tmp_path):
     variant_regions = bedutils.population_variant_regions(items)
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
+        if isinstance(target, six.string_types) and os.path.isfile(target):
             target_bed = target
         else:
             target_bed = os.path.join(tmp_path, "tmp.bed")

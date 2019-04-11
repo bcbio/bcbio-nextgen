@@ -15,6 +15,7 @@ import yaml
 import toolz as tz
 
 from bcbio import utils
+from bcbio.cwl import cwlutils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -22,30 +23,69 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import population, validate, vcfutils, multi, normalize, effects
 
-def combine_calls(batch_id, samples, data):
+def batch(samples):
+    """CWL: batch together per sample, joint and germline calls for ensemble combination.
+
+    Sets up groups of same sample/batch variant calls for ensemble calling, as
+    long as we have more than one caller per group.
+    """
+    samples = [utils.to_single_data(x) for x in samples]
+    sample_order = [dd.get_sample_name(x) for x in samples]
+    batch_groups = collections.defaultdict(list)
+    for data in samples:
+        batch_samples = tuple(data.get("batch_samples", [dd.get_sample_name(data)]))
+        batch_groups[(batch_samples, dd.get_phenotype(data))].append(data)
+
+    out = []
+    for (batch_samples, phenotype), gsamples in batch_groups.items():
+        if len(gsamples) > 1:
+            batches = set([])
+            for d in gsamples:
+                batches |= set(dd.get_batches(d))
+            gsamples.sort(key=dd.get_variantcaller_order)
+            cur = copy.deepcopy(gsamples[0])
+            cur.update({"batch_id": sorted(list(batches))[0] if batches else "_".join(batch_samples),
+                        "batch_samples": batch_samples,
+                        "variants": {"variantcallers": [dd.get_variantcaller(d) for d in gsamples],
+                                     "calls": [d.get("vrn_file") for d in gsamples]}})
+            out.append(cur)
+
+    def by_original_order(d):
+        return min([sample_order.index(s) for s in d["batch_samples"] if s in sample_order])
+    return sorted(out, key=by_original_order)
+
+def combine_calls(*args):
     """Combine multiple callsets into a final set of merged calls.
     """
+    if len(args) == 3:
+        is_cwl = False
+        batch_id, samples, data = args
+        caller_names, vrn_files = _organize_variants(samples, batch_id)
+    else:
+        is_cwl = True
+        samples = [utils.to_single_data(x) for x in args]
+        samples = [cwlutils.unpack_tarballs(x, x) for x in samples]
+        data = samples[0]
+        batch_id = data["batch_id"]
+        caller_names = data["variants"]["variantcallers"]
+        vrn_files = data["variants"]["calls"]
     logger.info("Ensemble consensus calls for {0}: {1}".format(
-        batch_id, ",".join(x["variantcaller"] for x in samples[0]["variants"])))
+        batch_id, ",".join(caller_names)))
     edata = copy.deepcopy(data)
     base_dir = utils.safe_makedir(os.path.join(edata["dirs"]["work"], "ensemble", batch_id))
-    caller_names, vrn_files, bam_files = _organize_variants(samples, batch_id)
-    exist_variants = False
-    for tmp_vrn_file in vrn_files:
-        if vcfutils.vcf_has_variants(tmp_vrn_file):
-            exist_variants = True
-            break
-    if exist_variants:
+    if any([vcfutils.vcf_has_variants(f) for f in vrn_files]):
         # Decompose multiallelic variants and normalize
         passonly = not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata, False)
-        vrn_files = [normalize.normalize(f, data, passonly=passonly, rerun_effects=False, remove_oldeffects=True)
-                     for f in vrn_files]
-        if "classifiers" not in edata["config"]["algorithm"]["ensemble"]:
+        vrn_files = [normalize.normalize(f, data, passonly=passonly, rerun_effects=False, remove_oldeffects=True,
+                                         nonrefonly=True,
+                                         work_dir=utils.safe_makedir(os.path.join(base_dir, c)))
+                     for c, f in zip(caller_names, vrn_files)]
+        if "classifiers" not in (dd.get_ensemble(edata) or {}):
             callinfo = _run_ensemble_intersection(batch_id, vrn_files, caller_names, base_dir, edata)
         else:
             config_file = _write_config_file(batch_id, caller_names, base_dir, edata)
             callinfo = _run_ensemble(batch_id, vrn_files, config_file, base_dir,
-                                     edata["sam_ref"], edata)
+                                     dd.get_ref_file(edata), edata)
             callinfo["vrn_file"] = vcfutils.bgzip_and_index(callinfo["vrn_file"], data["config"])
         # After decomposing multiallelic variants and normalizing, re-evaluate effects
         ann_ma_file, _ = effects.add_to_vcf(callinfo["vrn_file"], data)
@@ -62,7 +102,12 @@ def combine_calls(batch_id, samples, data):
         callinfo = {"variantcaller": "ensemble",
                     "vrn_file": vcfutils.bgzip_and_index(out_vcf_file, data["config"]),
                     "bed_file": None}
-    return [[batch_id, callinfo]]
+    if is_cwl:
+        callinfo["batch_samples"] = data["batch_samples"]
+        callinfo["batch_id"] = batch_id
+        return [{"ensemble": callinfo}]
+    else:
+        return [[batch_id, callinfo]]
 
 def combine_calls_parallel(samples, run_parallel):
     """Combine calls using batched Ensemble approach.
@@ -83,7 +128,7 @@ def _has_ensemble(data):
     variants_to_process = (len(data["variants"]) > 1
                            and any([x.get('vrn_file', None) is not None or x.get('vrn_file_batch', None) is not None
                                     for x in data["variants"]]))
-    return variants_to_process and "ensemble" in data["config"]["algorithm"]
+    return variants_to_process and dd.get_ensemble(data)
 
 def _group_by_batches(samples, check_fn):
     """Group calls by batches, processing families together during ensemble calling.
@@ -100,12 +145,9 @@ def _group_by_batches(samples, check_fn):
 def _organize_variants(samples, batch_id):
     """Retrieve variant calls for all samples, merging batched samples into single VCF.
     """
-    bam_files = set([])
     caller_names = [x["variantcaller"] for x in samples[0]["variants"]]
     calls = collections.defaultdict(list)
     for data in samples:
-        if "work_bam" in data:
-            bam_files.add(data["work_bam"])
         for vrn in data["variants"]:
             calls[vrn["variantcaller"]].append(vrn["vrn_file"])
     data = samples[0]
@@ -116,7 +158,7 @@ def _organize_variants(samples, batch_id):
             vrn_files.append(fnames[0])
         else:
             vrn_files.append(population.get_multisample_vcf(fnames, batch_id, caller, data))
-    return caller_names, vrn_files, list(bam_files)
+    return caller_names, vrn_files
 
 def _handle_somatic_ensemble(vrn_file, data):
     """For somatic ensemble, discard normal samples and filtered variants from vcfs.

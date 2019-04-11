@@ -18,6 +18,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import shared
 from bcbio.provenance import do
 from bcbio.variation import effects, population, vcfutils
+from functools import reduce
 
 # ## Finalizing samples
 
@@ -37,6 +38,35 @@ def finalize_sv(orig_vcf, data, items):
         effects_vcf = None
     return effects_vcf or sample_vcf
 
+def annotate_with_depth(in_file, items):
+    """Annotate called VCF file with depth using duphold (https://github.com/brentp/duphold)
+
+    Currently annotates single sample and tumor samples in somatic analysis.
+    """
+    bam_file = None
+    if len(items) == 1:
+        bam_file = dd.get_align_bam(items[0])
+    else:
+        paired = vcfutils.get_paired(items)
+        if paired:
+            bam_file = paired.tumor_bam
+    if bam_file:
+        out_file = "%s-duphold.vcf.gz" % utils.splitext_plus(in_file)[0]
+        if not utils.file_exists(out_file):
+            with file_transaction(items[0], out_file) as tx_out_file:
+                if not in_file.endswith(".gz"):
+                    in_file = vcfutils.bgzip_and_index(in_file, remove_orig=False,
+                                                       out_dir=os.path.dirname(tx_out_file))
+                ref_file = dd.get_ref_file(items[0])
+                # cores for BAM reader thread, so max out at 4 based on recommendations
+                cores = min([dd.get_num_cores(items[0]), 4])
+                cmd = ("duphold --threads {cores} --vcf {in_file} --bam {bam_file} --fasta {ref_file} "
+                       "-o {tx_out_file}")
+                do.run(cmd.format(**locals()), "Annotate SV depth with duphold")
+        vcfutils.bgzip_and_index(out_file)
+        return out_file
+    else:
+        return in_file
 # ## Case/control
 
 def find_case_control(items):
@@ -63,10 +93,10 @@ def _get_sv_exclude_file(items):
 def _get_variant_regions(items):
     """Retrieve variant regions defined in any of the input items.
     """
-    return filter(lambda x: x is not None,
-                  [tz.get_in(("config", "algorithm", "variant_regions"), data)
-                   for data in items
-                   if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"])
+    return list(filter(lambda x: x is not None,
+                       [tz.get_in(("config", "algorithm", "variant_regions"), data)
+                        for data in items
+                        if tz.get_in(["config", "algorithm", "coverage_interval"], data) != "genome"]))
 
 def has_variant_regions(items, base_file, chrom=None):
     """Determine if we should process this chromosome: needs variant regions defined.
@@ -85,21 +115,19 @@ def prepare_exclude_file(items, base_file, chrom=None):
     Excludes high depth and centromere regions which contribute to long run times and
     false positive structural variant calls.
     """
+    items = shared.add_highdepth_genome_exclusion(items)
     out_file = "%s-exclude%s.bed" % (utils.splitext_plus(base_file)[0], "-%s" % chrom if chrom else "")
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with shared.bedtools_tmpdir(items[0]):
-            # Get a bedtool for the full region if no variant regions
-            want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
-                                                    items[0]["config"], chrom)
-            if chrom:
-                want_bedtool = pybedtools.BedTool(shared.subset_bed_by_chrom(want_bedtool.saveas().fn,
-                                                                             chrom, items[0]))
-            sv_exclude_bed = _get_sv_exclude_file(items)
-            if sv_exclude_bed and len(want_bedtool) > 0:
-                want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
-            if any(dd.get_coverage_interval(d) == "genome" for d in items):
-                want_bedtool = pybedtools.BedTool(shared.remove_highdepth_regions(want_bedtool.saveas().fn, items))
             with file_transaction(items[0], out_file) as tx_out_file:
+                # Get a bedtool for the full region if no variant regions
+                want_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
+                                                        items[0]["config"], chrom)
+                want_bedtool = pybedtools.BedTool(shared.subset_variant_regions(want_bedtool.saveas().fn,
+                                                                                chrom, tx_out_file, items))
+                sv_exclude_bed = _get_sv_exclude_file(items)
+                if sv_exclude_bed and len(want_bedtool) > 0:
+                    want_bedtool = want_bedtool.subtract(sv_exclude_bed, nonamecheck=True).saveas()
                 full_bedtool = callable.get_ref_bedtool(tz.get_in(["reference", "fasta", "base"], items[0]),
                                                         items[0]["config"])
                 if len(want_bedtool) > 0:
@@ -186,7 +214,7 @@ def get_sv_chroms(items, exclude_file):
         if int(region.start) == 0:
             exclude_regions[region.chrom] = int(region.end)
     out = []
-    with pysam.Samfile(items[0]["work_bam"], "rb") as pysam_work_bam:
+    with pysam.Samfile(dd.get_align_bam(items[0]) or dd.get_work_bam(items[0]))as pysam_work_bam:
         for chrom, length in zip(pysam_work_bam.references, pysam_work_bam.lengths):
             exclude_length = exclude_regions.get(chrom, 0)
             if exclude_length < length:
@@ -212,7 +240,7 @@ def _extract_split_and_discordants(in_bam, work_dir, data):
         bam.index(fname, data["config"])
     return sr_file, disc_file
 
-def _find_existing_inputs(data):
+def find_existing_split_discordants(data):
     """Check for pre-calculated split reads and discordants done as part of alignment streaming.
     """
     in_bam = dd.get_align_bam(data)
@@ -232,7 +260,7 @@ def get_split_discordants(data, work_dir):
     """Retrieve split and discordant reads, potentially calculating with extract_sv_reads as needed.
     """
     align_bam = dd.get_align_bam(data)
-    sr_bam, disc_bam = _find_existing_inputs(data)
+    sr_bam, disc_bam = find_existing_split_discordants(data)
     if not sr_bam:
         work_dir = (work_dir if not os.access(os.path.dirname(align_bam), os.W_OK | os.X_OK)
                     else os.path.dirname(align_bam))
@@ -270,7 +298,7 @@ def insert_size_stats(dists):
     MAD is the Median Absolute Deviation: http://en.wikipedia.org/wiki/Median_absolute_deviation
     """
     med = numpy.median(dists)
-    filter_dists = filter(lambda x: x < med + 10 * med, dists)
+    filter_dists = list(filter(lambda x: x < med + 10 * med, dists))
     median = numpy.median(filter_dists)
     return {"mean": float(numpy.mean(filter_dists)), "std": float(numpy.std(filter_dists)),
             "median": float(median),

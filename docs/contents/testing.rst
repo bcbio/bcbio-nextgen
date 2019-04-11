@@ -27,7 +27,7 @@ Overview
    adjusting both the sample and system configuration files to match
    your experiment and computational setup.
 
-.. _sample configuration file: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
+.. _sample configuration file: https://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 
 Project directory
 =================
@@ -91,9 +91,9 @@ To run the analysis do::
 
   mkdir -p NA12878-trio-eval/config NA12878-trio-eval/input NA12878-trio-eval/work
   cd NA12878-trio-eval/config
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
   cd ../input
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
   bash NA12878-trio-wgs-validate-getdata.sh
   cd ../work
   bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
@@ -113,7 +113,7 @@ data as above but a different input configuration file::
 
   mkdir -p NA12878-trio-eval/work_joint
   cd NA12878-trio-eval/config
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-joint.yaml
+  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-joint.yaml
   cd ../work_joint
   bcbio_nextgen.py ../config/NA12878-trio-wgs-joint.yaml -n 16
 
@@ -136,7 +136,7 @@ First get the input configuration file, fastq reads, reference materials and ana
 
     mkdir -p NA12878-exome-eval
     cd NA12878-exome-eval
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
     bash NA12878-exome-methodcmp-getdata.sh
 
 Finally run the analysis, distributed on 8 local cores, with::
@@ -168,9 +168,9 @@ To get the data::
 
     mkdir -p cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
     cd cancer-dream-syn3/config
-    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
     cd ../input
-    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
     bash cancer-dream-syn3-getdata.sh
 
 Run with::
@@ -199,7 +199,7 @@ frequency mutations.
 
 To get the data::
 
-    wget https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385-getdata.sh
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-giab-na12878-na24385-getdata.sh
     bash cancer-giab-na12878-na24385-getdata.sh
 
 Then run the analysis with::
@@ -219,7 +219,7 @@ To run the analysis do::
 
   mkdir -p NA12878-sv-eval
   cd NA12878-sv-eval
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-sv-getdata.sh
+  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-sv-getdata.sh
   bash NA12878-sv-getdata.sh
   cd work
   bcbio_nextgen.py ../config/NA12878-sv.yaml -n 16
@@ -239,7 +239,7 @@ panel. This will require about 100GB of disk space for these input
 files.  It will also set up a configuration file for the run, using
 the templating system::
 
-  wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
+  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
   bash rnaseq-seqc-getdata.sh
 
 Now go into the work directory and run the analysis::
@@ -270,7 +270,7 @@ To run::
 
     mkdir -p NA12878-hg38-val
     cd NA12878-hg38-val
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-hg38-validate-getdata.sh
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-hg38-validate-getdata.sh
     bash NA12878-hg38-validate-getdata.sh
     mkdir -p work
     cd work
@@ -300,7 +300,7 @@ information about the pipeline. To run the analysis:
 - Retrieve configuration input file::
 
     cd config
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 
 - Run analysis on 16 core machine::
 
@@ -311,7 +311,7 @@ information about the pipeline. To run the analysis:
   from the ``grading-summary.csv`` file in the work directory.
 
 .. _Platinum genomes project: http://www.illumina.com/platinumgenomes/
-.. _NA12878-illumina.yaml: https://raw.github.com/chapmanb/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+.. _NA12878-illumina.yaml: https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
 .. _blog post on whole genome scaling: http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/
 
 
@@ -322,7 +322,7 @@ The test suite exercises the scripts driving the analysis, so are a
 good starting point to ensure correct installation. Tests use the
 `pytest`_ framework. The tests are available in the bcbio source code::
 
-     $ git clone https://github.com/chapmanb/bcbio-nextgen.git
+     $ git clone https://github.com/bcbio/bcbio-nextgen.git
 
 There is a small wrapper script that finds the py.test and other dependencies
 pre-installed with bcbio you can use to run tests::

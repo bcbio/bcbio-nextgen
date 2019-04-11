@@ -8,9 +8,7 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: bwa
-      mark_duplicates: true
       recalibrate: gatk
-      realign: gatk
       variantcaller: gatk-haplotype
       # for targetted projects, set the region
       # variant_regions: /path/to/your.bed

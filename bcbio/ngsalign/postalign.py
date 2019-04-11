@@ -19,6 +19,10 @@ from bcbio.log import logger
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
+from bcbio.variation import coverage
+
+import six
+
 
 pysam = utils.LazyImport("pysam")
 
@@ -118,7 +122,7 @@ def _biobambam_dedup_sort(data, tx_out_file):
     cores, mem = _get_cores_memory(data, downscale=2)
     tmp_file = "%s-sorttmp" % utils.splitext_plus(tx_out_file)[0]
     if data.get("align_split"):
-        sort_opt = "-n" if data.get("align_split") and dd.get_mark_duplicates(data) else ""
+        sort_opt = "-n" if data.get("align_split") and _check_dedup(data) else ""
         cmd = "{samtools} sort %s -@ {cores} -m {mem} -O bam -T {tmp_file}-namesort -o {tx_out_file} -" % sort_opt
     else:
         # scale core usage to avoid memory issues with larger WGS samples
@@ -145,7 +149,9 @@ def _sam_to_grouped_umi_cl(data, umi_consensus, tx_out_file):
         cmd += "fgbio {jvm_opts} AnnotateBamWithUmis -i /dev/stdin -f {umi_consensus} -o {tx_out_file}"
     # UMIs embedded in read name
     else:
-        cmd += "umis bamtag - | samtools view -b > {tx_out_file}"
+        cmd += ("%s %s bamtag - | samtools view -b > {tx_out_file}" %
+                (utils.get_program_python("umis"),
+                 config_utils.get_program("umis", data["config"])))
     return cmd.format(**locals())
 
 def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
@@ -160,6 +166,25 @@ def _get_fgbio_jvm_opts(data, tmpdir, scale_factor=None):
     jvm_opts = " ".join(jvm_opts)
     return jvm_opts + " --tmp-dir %s" % tmpdir
 
+def _estimate_fgbio_defaults(avg_coverage):
+    """Provide fgbio defaults based on input sequence depth and coverage.
+
+    For higher depth/duplication we want to use `--min-reads` to allow
+    consensus calling in the duplicates:
+
+    https://fulcrumgenomics.github.io/fgbio/tools/latest/CallMolecularConsensusReads.html
+
+    If duplicated adjusted depth leaves a coverage of 800x or higher
+    (giving us ~4 reads at 0.5% detection frequency),
+    then we use `--min-reads 2`, otherwise `--min-reads 1`
+    """
+    out = {}
+    if avg_coverage >= 800:
+        out["--min-reads"] = 2
+    else:
+        out["--min-reads"] = 1
+    return out
+
 def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
     """
@@ -167,12 +192,14 @@ def umi_consensus(data):
     umi_method, umi_tag = _check_umi_type(align_bam)
     f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
     f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
+    avg_coverage = coverage.get_average_coverage("rawumi", dd.get_variant_regions(data), data)
     if not utils.file_uptodate(f1_out, align_bam):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
             # Improve speeds by avoiding compression read/write bottlenecks
             io_opts = "--async-io=true --compression=0"
-            group_opts, cons_opts, filter_opts = _get_fgbio_options(data, umi_method)
+            est_options = _estimate_fgbio_defaults(avg_coverage)
+            group_opts, cons_opts, filter_opts = _get_fgbio_options(data, est_options, umi_method)
             cons_method = "CallDuplexConsensusReads" if umi_method == "paired" else "CallMolecularConsensusReads"
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
             ref_file = dd.get_ref_file(data)
@@ -185,7 +212,7 @@ def umi_consensus(data):
                    "-i /dev/stdin -o /dev/stdout | "
                    "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
-    return f1_out, f2_out
+    return f1_out, f2_out, avg_coverage
 
 def _check_umi_type(bam_file):
     """Determine the type of UMI from BAM tags: standard or paired.
@@ -205,23 +232,29 @@ def _check_umi_type(bam_file):
                 else:
                     return "adjacency", tag
 
-def _get_fgbio_options(data, umi_method):
+def _get_fgbio_options(data, estimated_defaults, umi_method):
     """Get adjustable, through resources, or default options for fgbio.
     """
     group_opts = ["--edits", "--min-map-q"]
     cons_opts = ["--min-input-base-quality"]
     if umi_method != "paired":
         cons_opts += ["--min-reads", "--max-reads"]
-    filter_opts = ["--min-reads", "--min-base-quality"]
+    filter_opts = ["--min-reads", "--min-base-quality", "--max-base-error-rate"]
     defaults = {"--min-reads": "1",
                 "--max-reads": "100000",
                 "--min-map-q": "1",
                 "--min-base-quality": "13",
+                "--max-base-error-rate": "0.1",
                 "--min-input-base-quality": "2",
                 "--edits": "1"}
+    defaults.update(estimated_defaults)
     ropts = config_utils.get_resources("fgbio", data["config"]).get("options", [])
     assert len(ropts) % 2 == 0, "Expect even number of options for fgbio" % ropts
-    defaults.update(dict(tz.partition(2, ropts)))
+    ropts = dict(tz.partition(2, ropts))
+    # Back compatibility for older base quality settings
+    if "--min-consensus-base-quality" in ropts:
+        ropts["--min-base-quality"] = ropts.pop("--min-consensus-base-quality")
+    defaults.update(ropts)
     group_out = " ".join(["%s=%s" % (x, defaults[x]) for x in group_opts])
     cons_out = " ".join(["%s=%s" % (x, defaults[x]) for x in cons_opts])
     filter_out = " ".join(["%s=%s" % (x, defaults[x]) for x in filter_opts])
@@ -235,12 +268,13 @@ def _check_dedup(data):
     Defaults to no de-duplication for RNA-seq and small RNA, the
     back compatible default. Allow overwriting with explicit
     `mark_duplicates: true` setting.
+    Also defaults to false for no alignment inputs.
     """
-    if dd.get_analysis(data).lower() in ["rna-seq", "smallrna-seq"]:
+    if dd.get_analysis(data).lower() in ["rna-seq", "smallrna-seq"] or not dd.get_aligner(data):
         dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), False)
     else:
         dup_param = utils.get_in(data, ("config", "algorithm", "mark_duplicates"), True)
-    if dup_param and isinstance(dup_param, basestring):
+    if dup_param and isinstance(dup_param, six.string_types):
         logger.info("Warning: bcbio no longer support explicit setting of mark_duplicate algorithm. "
                     "Using best-practice choice based on input data.")
         dup_param = True

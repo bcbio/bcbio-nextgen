@@ -13,6 +13,9 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.provenance import do, programs
 from bcbio.variation import annotation, bamprep, bedutils, vcfutils
 
+import six
+
+
 def shared_variantcall(call_fn, name, align_bams, ref_file, items,
                        assoc_files, region=None, out_file=None):
     """Provide base functionality for prepping and indexing for variant calling.
@@ -26,9 +29,9 @@ def shared_variantcall(call_fn, name, align_bams, ref_file, items,
     if not file_exists(out_file):
         logger.debug("Genotyping with {name}: {region} {fname}".format(
               name=name, region=region, fname=os.path.basename(align_bams[0])))
-        variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         target_regions = subset_variant_regions(variant_regions, region, out_file, items=items)
-        if (variant_regions is not None and isinstance(target_regions, basestring)
+        if (variant_regions is not None and isinstance(target_regions, six.string_types)
               and not os.path.isfile(target_regions)):
             vcfutils.write_empty_vcf(out_file, config)
         else:
@@ -52,7 +55,7 @@ def prep_mpileup(align_bams, ref_file, config, max_read_depth=None,
     if max_read_depth:
         cl += ["-d", str(max_read_depth), "-L", str(max_read_depth)]
     if want_bcf:
-        cl += ["-t", "DP", "-u", "-g"]
+        cl += ["-t", "DP", "-t", "AD", "-u", "-g"]
     if target_regions:
         str_regions = bamprep.region_to_gatk(target_regions)
         if os.path.isfile(str_regions):

@@ -7,15 +7,15 @@ details:
     vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     genome_build: hg19
     algorithm:
-      tools_off: [gemini]
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     metadata:
       batch: TestBatch1
       validate_batch: b1
+      validate_combine: b2
       validate_sample: test-val
   - algorithm:
       archive: cram-lossless
-      align_split_size: 15000
+      #align_split_size: 15000
       #save_diskspace: true
       aligner: bwa
       #aligner: false
@@ -23,23 +23,25 @@ details:
       #bam_clean: remove_extracontigs
       #disambiguate: [mm9]
       #trim_ends: [5, 0, 10, 0]
-      #trim_reads: read_through
+      trim_reads: atropos
+      adapters: [polyx]
       #bam_sort: coordinate
       # mark_duplicates: false
       #realign: gatk
       recalibrate: gatk
-      variantcaller: [freebayes, gatk-haplotype, strelka2]
-      ensemble:
-        numpass: 2
+      variantcaller: gatk-haplotype
+      #variantcaller: [freebayes, gatk-haplotype, strelka2, deepvariant, samtools]
+      #ensemble:
+      #  numpass: 2
       #effects: vep
       #effects_transcripts: canonical
       #svcaller: [lumpy, manta, metasv, gridss]
-      svcaller: [seq2c, cnvkit, delly, lumpy]
-      #remove_lcr: true
+      svcaller: [seq2c, gatk-cnv, delly, lumpy]
+      #background:
+      #  cnv_reference: ../data/reference_material/background-0-cnvkit.cnn
+      exclude_regions: [lcr, highdepth, polyx, altcontigs]
       coverage_interval: genome
-      tools_on: [qualimap_full, vqsr, svplots]
-      tools_off: [gemini]
-      vcfanno: [gemini]
+      tools_on: [qualimap_full, vqsr, svplots, picard]
       mixup_check: qsignature
       quality_format: standard
       nomap_split_size: 50
@@ -65,6 +67,7 @@ details:
     metadata:
       batch: TestBatch1
       validate_batch: b1
+      validate_combine: b2
       validate_sample: test-val-2
     analysis: variant2
     description: Test1
@@ -74,6 +77,8 @@ details:
     #files: s3://bcbio_test_run1/align/Test1/Test1-sort.bam
     #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    #files: [../data/100326_FC6107FAAXX/7_1.fq.bz2, ../data/100326_FC6107FAAXX/7_2.fq.bz2]
+    #files: [../data/100326_FC6107FAAXX/split/Test1_L000_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L000_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R2_001.fastq.gz]
     #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
 #  - algorithm:
 #      aligner: bwa

@@ -93,7 +93,7 @@ if __name__ == "__main__":
     if args.galaxy:
         system_config = args.galaxy
     with open(system_config) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
 
     parallel = clargs.to_parallel(args)
     parallel.update({'progs': args.progs})
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         sysinfo = {'cores': int(info[0]), 'memory': float(info[1])}
     else:
         if utils.file_exists(args.sys_info):
-            sysinfo = yaml.load(open(args.sys_info))[0]
+            sysinfo = yaml.safe_load(open(args.sys_info))[0]
     print "system info %s" % sysinfo
     samples = []
     pipelines, config = _pair_samples_with_pipelines(args.yaml_file, config)

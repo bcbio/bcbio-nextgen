@@ -23,12 +23,6 @@ SUPPORTED_REMOTES = ("s3://",)
 BIODATA_INFO = {"s3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
 REGIONS_NEWPERMS = {"s3": ["eu-central-1"]}
 
-if six.PY3:
-    BIGNUM = float("inf")
-else:
-    BIGNUM = sys.maxint
-
-
 @six.add_metaclass(abc.ABCMeta)
 class FileHandle(object):
 
@@ -87,7 +81,7 @@ class FileHandle(object):
         pass
 
     @abc.abstractmethod
-    def read(self, size=BIGNUM):
+    def read(self, size=sys.maxsize):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -122,7 +116,7 @@ class S3Handle(FileHandle):
         for chunk in self._key:
             yield self._decompress(chunk)
 
-    def read(self, size=BIGNUM):
+    def read(self, size=sys.maxsize):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -130,7 +124,7 @@ class S3Handle(FileHandle):
 
     def next(self):
         """Return the next item from the container."""
-        return self._iter.next()
+        return next(self._iter)
 
     def close(self):
         """Close the file handle."""
@@ -207,7 +201,7 @@ class BlobHandle(FileHandle):
             blob_name=self._blob_name,
             x_ms_range=range_id)
 
-    def read(self, size=BIGNUM):
+    def read(self, size=sys.maxsize):
         """Read at most size bytes from the file (less if the read hits EOF
         before obtaining size bytes).
         """
@@ -220,7 +214,7 @@ class BlobHandle(FileHandle):
 
     def next(self):
         """Return the next item from the container."""
-        return self._iter.next()
+        return next(self._iter)
 
     def close(self):
         """Close the file handle."""
@@ -580,6 +574,16 @@ class DNAnexus:
     def download(self, filename, input_dir, dl_dir=None):
         return None
 
+class GoogleCloud:
+    """Files stored in Google Cloud Storage. Partial implementation, integration in bcbio-vm.
+    """
+    @classmethod
+    def check_resource(self, resource):
+        return resource.startswith("gs:")
+    @classmethod
+    def download(self, filename, input_dir, dl_dir=None):
+        return None
+
 class RegularServer:
     """Files stored in FTP/http that can be downloaded by wget
     """
@@ -619,7 +623,7 @@ class RegularServer:
 
 def _get_storage_manager(resource):
     """Return a storage manager which can process this resource."""
-    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, RegularServer):
+    for manager in (AmazonS3, ArvadosKeep, SevenBridges, DNAnexus, AzureBlob, GoogleCloud, RegularServer):
         if manager.check_resource(resource):
             return manager()
 

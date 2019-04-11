@@ -19,12 +19,11 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.pipeline import shared
-from bcbio.structural import regions
 from bcbio.variation import bedutils
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
-DEPTH_THRESHOLDS = [1, 5, 10, 20, 50, 100, 250, 500, 1000, 5000, 10000, 50000]
+DEPTH_THRESHOLDS = [1,5] + sorted([k*10**exp10 for k in [1,2,5] for exp10 in range(1,6)])  # 10,20,50,100...
 
 
 def assign_interval(data):
@@ -71,7 +70,7 @@ def _count_offtarget(data, bam_file, bed_file, target_name):
     else:
         return 0.0
 
-def calculate(bam_file, data):
+def calculate(bam_file, data, sv_bed):
     """Calculate coverage in parallel using mosdepth.
 
     Removes duplicates and secondary reads from the counts:
@@ -87,15 +86,19 @@ def calculate(bam_file, data):
                                  "%s-coverage.callable.bed" % (dd.get_sample_name(data)))
     if not utils.file_uptodate(callable_file, bam_file):
         vr_quantize = ("0:1:%s:" % (params["min"]), ["NO_COVERAGE", "LOW_COVERAGE", "CALLABLE"])
-        to_calculate = [("variant_regions", variant_regions, vr_quantize, None),
-                        ("sv_regions", bedutils.clean_file(regions.get_sv_bed(data), data), None, None),
-                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data), None, DEPTH_THRESHOLDS)]
+        to_calculate = [("variant_regions", variant_regions,
+                         vr_quantize, None, "coverage_perbase" in dd.get_tools_on(data)),
+                        ("sv_regions", bedutils.clean_file(sv_bed, data, prefix="svregions-"),
+                         None, None, False),
+                        ("coverage", bedutils.clean_file(dd.get_coverage(data), data, prefix="cov-"),
+                         None, DEPTH_THRESHOLDS, False)]
         depth_files = {}
-        for target_name, region_bed, quantize, thresholds in to_calculate:
+        for target_name, region_bed, quantize, thresholds, per_base in to_calculate:
             if region_bed:
                 cur_depth = {}
-                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize, thresholds=thresholds)
-                for attr in ("dist", "regions", "thresholds"):
+                depth_info = run_mosdepth(data, target_name, region_bed, quantize=quantize, thresholds=thresholds,
+                                          per_base=per_base)
+                for attr in ("dist", "regions", "thresholds", "per_base"):
                     val = getattr(depth_info, attr, None)
                     if val:
                         cur_depth[attr] = val
@@ -126,7 +129,8 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
     out_file = "%s-vrsubset.bed" % utils.splitext_plus(callable_file)[0]
     if not utils.file_uptodate(out_file, callable_file):
         with file_transaction(data, out_file) as tx_out_file:
-            pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
+            with utils.open_gzipsafe(callable_file) as in_handle:
+                pybedtools.BedTool(in_handle).intersect(variant_regions).saveas(tx_out_file)
     return out_file
 
 def _get_cache_file(data, target_name):
@@ -167,12 +171,12 @@ def get_average_coverage(target_name, bed_file, data, bam_file=None):
 def _average_genome_coverage(data, bam_file):
     """Quickly calculate average coverage for whole genome files using indices.
 
-    Includes all reads, with duplicates.
+    Includes all reads, with duplicates. Uses sampling of 10M reads.
     """
     total = sum([c.size for c in ref.file_contigs(dd.get_ref_file(data), data["config"])])
     read_counts = sum(x.aligned for x in bam.idxstats(bam_file, data))
     with pysam.Samfile(bam_file, "rb") as pysam_bam:
-        read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), 1e5)))
+        read_size = np.median(list(itertools.islice((a.query_length for a in pysam_bam.fetch()), int(1e7))))
     avg_cov = float(read_counts * read_size) / total
     return avg_cov
 
@@ -206,7 +210,9 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
     bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "coverage", dd.get_sample_name(data)))
     prefix = os.path.join(work_dir, "%s-%s" % (dd.get_sample_name(data), target_name))
-    out = MosdepthCov("%s.mosdepth.dist.txt" % prefix,
+    old_dist_file = "%s.mosdepth.dist.txt" % (prefix)
+    out = MosdepthCov((old_dist_file if utils.file_uptodate(old_dist_file, bam_file) else
+                       "%s.mosdepth.%s.dist.txt" % (prefix, "region" if bed_file else "global")),
                       ("%s.per-base.bed.gz" % prefix) if per_base else None,
                       ("%s.regions.bed.gz" % prefix) if bed_file else None,
                       ("%s.quantized.bed.gz" % prefix) if quantize else None,

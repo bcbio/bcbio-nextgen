@@ -40,11 +40,18 @@ Tools used on your local machine:
 
 Install these into an isolated conda environment and setup with:
 
-    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
-    ./tools/bin/conda install -c conda-forge -c bioconda bcbio-nextgen-vm
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p tools
+    ./tools/bin/conda install -c conda-forge -c bioconda python=3 bcbio-nextgen-vm
     ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
+
+Provide AWS access for bcbio-vm, ansible and saws using [IAM to create (or find)
+your access keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html):
+
+
+    export AWS_ACCESS_KEY_ID='AK123'
+    export AWS_SECRET_ACCESS_KEY='abc123'
 
 bcbio-vm has an automated script to setup the AWS infrastructure from running:
 
@@ -61,7 +68,7 @@ creates a `project_vars.yaml` file with the following information:
 - The name of a [keypair](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName) 
   to use for ssh access, where you have the private key stored locally. If you
   used the bcbio-vm automated setup, you'll have a private keypair in
-  `aws_keypairs/bcbio`.
+  `~/.bcbio/aws_keypairs/bcbio`.
 - An IAM role that allows access to S3 resources. This makes it
   easier to push/pull data to the instance.
 
@@ -123,14 +130,45 @@ finished you can snapshot this for long term storage.
 
 ### Google Compute
 
+Tools used on your local machine:
+
 - [Ansible](http://docs.ansible.com/ansible/intro_installation.html) with
   [dependencies and environmental variables for Google Compute access](http://docs.ansible.com/ansible/guide_gce.html)
   -- automate starting up instances
 - [gloud from the Google Cloud SDK](https://cloud.google.com/sdk/) -- command
   line interface to access and manage instances. You can install with
-  `bcbio_conda install -c bioconda google-cloud-sdk`
+  `bcbio_conda install -c conda-forge -c bioconda google-cloud-sdk`
+- [Web based console](https://console.cloud.google.com)
 
-[Console](https://console.cloud.google.com)
+Use the console to create a project to hold your analysis
+, then add [ssh key access to your project](https://cloud.google.com/compute/docs/instances/adding-removing-ssh-keys#project-wide).
+Then locally, [log into gcloud](https://cloud.google.com/compute/docs/gcloud-compute/)
+and select your project:
+
+    gcloud init
+
+Create a disk to store bcbio and associated data:
+
+    gcloud compute disks create dv-bcbio-vol --size 250GB --type pd-ssd --zone us-east1-b
+
+Finally [create credentials](http://docs.ansible.com/ansible/latest/scenario_guides/guide_gce.html#credentials)
+for connecting to your instance. These are key pairs used to automatically
+authenticate to created instances. To create, go to "APIs and Services",
+"Credentials", "Create credentials" and finally "Service account key", then
+download the json file with key pairs after creating it.
+You'll need the e-mail associated with the service account, found under "IAM and
+Admin."
+
+Use this information to create a `project_vars.yaml` configuration file:
+
+    instance_type: n1-standard-1
+    image_id: ubuntu-1604-xenial-v20180323
+    zone: us-east1-b
+    service_account_email: 129107966647-compute@developer.gserviceaccount.com
+    credentials_file: /home/chapmanb/.ssh/gce/deepvariant-trustedtester-d4f7663f4adf.json
+    project_id: deepvariant-trustedtester
+    volume: dv-bcbio-vol
+    run_name: dv-bcbio
 
 Launch your instance with:
 
@@ -138,11 +176,11 @@ Launch your instance with:
 
 Then access the machine using your run name:
 
-    gcloud compute ssh ubuntu@giab-val-work
+    gcloud compute ssh ubuntu@dv-bcbio
 
 When finished, you can terminate the instance with:
 
-    gcloud compute instances delete giab-val-work
+    gcloud compute instances delete dv-bcbio
 
 ### Microsoft Azure
 
@@ -194,8 +232,15 @@ On the first run you'll need to create a project directory to work in:
 and [install bcbio](http://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html)
 on the working volume with the genomes and aligner indices you need:
 
-    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
     python bcbio_nextgen_install.py /mnt/work/bcbio --tooldir=/mnt/work/bcbio --genomes GRCh37 --aligners bwa
+
+To run CWL, you'll also want to [install
+bcbio-vm](https://bcbio-nextgen.readthedocs.io/en/latest/contents/cwl.html#getting-started)
+with:
+
+    export TARGETDIR=/mnt/work/bcbio/bcbio-vm
+    export BINDIR=/mnt/work/bcbio/bin
 
 And you're ready to do an analysis in `/mnt/work/your-project`. Add your
 samples, create a

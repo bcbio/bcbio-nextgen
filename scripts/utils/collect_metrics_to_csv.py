@@ -137,7 +137,7 @@ def _generate_metrics(bam_fname, config_file, ref_file,
     """Run Picard commands to generate metrics files when missing.
     """
     with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     broad_runner = broad.runner_from_config(config)
     bam_fname = os.path.abspath(bam_fname)
     path = os.path.dirname(bam_fname)

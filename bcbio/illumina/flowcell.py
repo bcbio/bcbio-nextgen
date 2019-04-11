@@ -13,7 +13,7 @@ def parse_dirname(fc_dir):
     name = None
     date = None
     for p in parts:
-        if p.endswith(("XX", "xx")):
+        if p.endswith(("XX", "xx", "XY", "X2")):
             name = p
         elif len(p) == 6:
             try:
@@ -75,7 +75,7 @@ class GalaxySqnLimsApi:
                 urllib.parse.urlencode(run_data))
         response = urllib.request.urlopen(req)
         info = json.loads(response.read())
-        if info.has_key('error'):
+        if "error" in info:
             raise ValueError("Problem retrieving info: %s" % info["error"])
         else:
             return info["details"]

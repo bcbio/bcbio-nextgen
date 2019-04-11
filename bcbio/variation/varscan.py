@@ -149,7 +149,6 @@ def _varscan_paired(align_bams, ref_file, items, target_regions, out_file):
                            "{fix_ambig_ref} | {fix_ambig_alt} | ifne vcfuniqalleles | "
                            """{py_cl} -x 'bcbio.variation.vcfutils.add_contig_to_header(x, "{ref_file}")' | """
                            """bcftools filter -m + -s REJECT -e "SS != '.' && SS != '2'" 2> /dev/null | """
-                           "{py_cl} -x 'bcbio.variation.varscan.spv_freq_filter(x, 1)' | "
                            "bgzip -c > {tx_fix_file}")
                     do.run(cmd.format(**locals()), "Varscan paired fix")
                 to_combine.append(fix_file)

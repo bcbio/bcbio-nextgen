@@ -13,12 +13,13 @@ import toolz.dicttoolz as dtz
 
 from bcbio.log import logger
 from bcbio import bam, utils
+from bcbio.bam import readstats
 from bcbio.ngsalign import postalign
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.rnaseq import gtf
+from bcbio.rnaseq import gtf, salmon
 from bcbio.variation import bedutils
 
 # ## Standard Qualimap
@@ -53,10 +54,11 @@ def run(bam_file, data, out_dir):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
 
-            export = utils.local_path_export()
+            export = "%s%s export JAVA_OPTS='-Xms32m -Xmx%s -Djava.io.tmpdir=%s' && " % (
+                utils.java_freetype_fix(), utils.local_path_export(), max_mem, tx_results_dir)
             cmd = ("unset DISPLAY && {export} {qualimap} bamqc -bam {bam_file} -outdir {tx_results_dir} "
                    "--skip-duplicated --skip-dup-mode 0 "
-                   "-nt {num_cores} --java-mem-size={max_mem} {options}")
+                   "-nt {num_cores} {options}")
             species = None
             if (tz.get_in(("genome_resources", "aliases", "human"), data, "")
                   or dd.get_genome_build(data).startswith(("hg", "GRCh"))):
@@ -202,7 +204,7 @@ def _parse_metrics(metrics):
     [metrics.update({name: 1.0 * float(metrics[name]) / 100}) for name in
      percentages]
     for name in to_change:
-        if not to_change[name]:
+        if not to_change[name] or metrics[name] is None:
             continue
         try:
             if to_change[name] == 1:
@@ -221,23 +223,20 @@ def _detect_duplicates(bam_file, out_dir, data):
     out_file = os.path.join(out_dir, "dup_metrics.txt")
     if not utils.file_exists(out_file):
         dup_align_bam = postalign.dedup_bam(bam_file, data)
-        num_cores = dd.get_num_cores(data)
+        logger.info("Detecting duplicates in %s." % dup_align_bam)
+        dup_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=False)
+        tot_count = readstats.number_of_mapped_reads(data, dup_align_bam, keep_dups=True)
         with file_transaction(data, out_file) as tx_out_file:
-            sambamba = config_utils.get_program("sambamba", data, default="sambamba")
-            dup_count = ("{sambamba} view --nthreads {num_cores} --count "
-                         "-F 'duplicate and not unmapped' "
-                         "{dup_align_bam} >> {tx_out_file}")
-            message = "Counting duplicates in {bam_file}.".format(bam_file=bam_file)
-            do.run(dup_count.format(**locals()), message)
-            tot_count = ("{sambamba} view --nthreads {num_cores} --count "
-                         "-F 'not unmapped' "
-                         "{dup_align_bam} >> {tx_out_file}")
-            message = "Counting reads in {bam_file}.".format(bam_file=bam_file)
-            do.run(tot_count.format(**locals()), message)
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write("%s\n%s\n" % (dup_count, tot_count))
     with open(out_file) as in_handle:
-        dupes = float(in_handle.next().strip())
-        total = float(in_handle.next().strip())
-    return {"Duplication Rate of Mapped": dupes / total}
+        dupes = float(next(in_handle).strip())
+        total = float(next(in_handle).strip())
+    if total == 0:
+        rate = "NA"
+    else:
+        rate = dupes / total
+    return {"Duplication Rate of Mapped": rate}
 
 def _transform_browser_coor(rRNA_interval, rRNA_coor):
     """
@@ -250,25 +249,41 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
                 if bio.startswith("rRNA"):
                     out_handle.write(("{0}:{1}-{2}\n").format(c, s, e))
 
-def _detect_rRNA(data):
-    gtf_file = dd.get_gtf_file(data)
-    quant = tz.get_in(["quant", "tsv"], data)
-    if not quant:
-        salmon_dir = dd.get_salmon_dir(data)
-        if salmon_dir:
-            quant = os.path.join(salmon_dir, "quant", "quant.sf")
-    rrna_features = gtf.get_rRNA(gtf_file)
-    transcripts = set([x[1] for x in rrna_features if x])
-    if not (transcripts and quant and utils.file_exists(quant)):
-        return {'rRNA': "NA", "rRNA_rate": "NA"}
-    sample_table = pd.read_csv(quant, sep="\t")
-    rrna_exp = map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"])
-    total_exp = map(float, sample_table["NumReads"])
-    rrna = sum(rrna_exp)
-    if sum(total_exp) == 0:
-        return {'rRNA': str(rrna), 'rRNA_rate': "NA"}
-    rrna_rate = float(rrna) / sum(total_exp)
-    return {'rRNA': str(rrna), 'rRNA_rate': str(rrna_rate)}
+def _detect_rRNA(data, out_dir):
+    out_file = os.path.join(out_dir, "rRNA_metrics.txt")
+    if not utils.file_exists(out_file):
+        gtf_file = dd.get_gtf_file(data)
+        quant = tz.get_in(["quant", "tsv"], data)
+        if not quant:
+            salmon_dir = dd.get_salmon_dir(data)
+            if salmon_dir:
+                quant = os.path.join(salmon_dir, "quant", "quant.sf")
+        logger.info("Calculating RNA-seq rRNA metrics for %s." % quant)
+        rrna_features = gtf.get_rRNA(gtf_file)
+        transcripts = set([x[1] for x in rrna_features if x])
+        if not (transcripts and quant and utils.file_exists(quant)):
+            return {'rRNA': "NA", "rRNA_rate": "NA"}
+        sample_table = pd.read_csv(quant, sep="\t")
+        rrna_exp = list(map(float, sample_table[sample_table["Name"].isin(transcripts)]["NumReads"]))
+        total_exp = list(map(float, sample_table["NumReads"]))
+        rrna = sum(rrna_exp)
+        if sum(total_exp) == 0:
+            rrna_rate = "NA"
+        else:
+            rrna_rate = float(rrna) / sum(total_exp)
+        with file_transaction(out_file) as tx_out_file:
+            with open(tx_out_file, "w") as out_handle:
+                out_handle.write(",".join(["rRNA", str(rrna)]) + "\n")
+                out_handle.write(",".join(["rRNA_rate", str(rrna_rate)]) + "\n")
+    return _read_memoized_rrna(out_file)
+
+def _read_memoized_rrna(rrna_file):
+    rrna_dict = {}
+    with open(rrna_file) as in_handle:
+        for line in in_handle:
+            tokens = line.strip().split(",")
+            rrna_dict[tokens[0]] = tokens[1]
+    return rrna_dict
 
 def _parse_qualimap_rnaseq(table):
     """
@@ -315,21 +330,20 @@ def run_rnaseq(bam_file, data, out_dir):
     report_file = os.path.join(results_dir, "qualimapReport.html")
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
-    single_end = not bam.is_paired(bam_file)
     library = strandedness[dd.get_strandedness(data)]
     if not utils.file_exists(results_file):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)
             bam.index(bam_file, config)
-            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_results_dir, gtf_file, single_end, library)
+            cmd = _rnaseq_qualimap_cmd(data, bam_file, tx_results_dir, gtf_file, library)
             do.run(cmd, "Qualimap for {}".format(dd.get_sample_name(data)))
             tx_results_file = os.path.join(tx_results_dir, "rnaseq_qc_results.txt")
             cmd = "sed -i 's/bam file = .*/bam file = %s.bam/' %s" % (dd.get_sample_name(data), tx_results_file)
             do.run(cmd, "Fix Name Qualimap for {}".format(dd.get_sample_name(data)))
     metrics = _parse_rnaseq_qualimap_metrics(report_file)
     metrics.update(_detect_duplicates(bam_file, results_dir, data))
-    metrics.update(_detect_rRNA(data))
-    metrics.update({"Average_insert_size": bam.estimate_fragment_size(bam_file)})
+    metrics.update(_detect_rRNA(data, results_dir))
+    metrics.update({"Average_insert_size": salmon.estimate_fragment_size(data)})
     metrics = _parse_metrics(metrics)
     # Qualimap output folder (results_dir) needs to be named after the sample (see comments above). However, in order
     # to keep its name after upload, we need to put  the base QC file (results_file) into the root directory (out_dir):
@@ -339,7 +353,7 @@ def run_rnaseq(bam_file, data, out_dir):
             "secondary": _find_qualimap_secondary_files(results_dir, base_results_file),
             "metrics": metrics}
 
-def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None, library="non-strand-specific"):
+def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, library="non-strand-specific"):
     """
     Create command lines for qualimap
     """
@@ -349,10 +363,13 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, single_end=None
     num_cores = resources.get("cores", dd.get_num_cores(data))
     max_mem = config_utils.adjust_memory(resources.get("memory", "2G"),
                                          num_cores)
-    export = utils.local_path_export()
+    export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
+    export = "%s%s export JAVA_OPTS='-Xms32m -Xmx%s -Djava.io.tmpdir=%s' && " % (
+        utils.java_freetype_fix(), utils.local_path_export(), max_mem, out_dir)
+    paired = " --paired" if bam.is_paired(bam_file) else ""
     cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
-           "-a proportional -bam {bam_file} -p {library} "
-           "-gtf {gtf_file} --java-mem-size={max_mem}").format(**locals())
+           "-a proportional -bam {bam_file} -p {library}{paired} "
+           "-gtf {gtf_file}").format(**locals())
     return cmd
 
 def _find_qualimap_secondary_files(results_dir, base_file):
@@ -366,10 +383,10 @@ def _find_qualimap_secondary_files(results_dir, base_file):
         """Problematic files with characters that make some CWL runners unhappy.
         """
         return x.find("(") >= 0 or x.find(")") >= 0 or x.find(" ") >= 0
-    return filter(lambda x: not is_problem_file(x),
-                  filter(not_dup,
-                         glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
-                         glob.glob(os.path.join(results_dir, '*.txt')) +
-                         glob.glob(os.path.join(results_dir, "css", "*")) +
-                         glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
-                         glob.glob(os.path.join(results_dir, "images_qualimapReport", "*"))))
+    return list(filter(lambda x: not is_problem_file(x),
+                       filter(not_dup,
+                              glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
+                              glob.glob(os.path.join(results_dir, '*.txt')) +
+                              glob.glob(os.path.join(results_dir, "css", "*")) +
+                              glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
+                              glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))))

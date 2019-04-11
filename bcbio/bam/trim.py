@@ -18,7 +18,10 @@ SUPPORTED_ADAPTERS = {
     "illumina": ["AACACTCTTTCCCT", "AGATCGGAAGAGCG"],
     "truseq": ["AGATCGGAAGAG"],
     "polya": ["AAAAAAAAAAAAA"],
-    "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"]}
+    "nextera": ["AATGATACGGCGA", "CAAGCAGAAGACG"],
+    "truseq2": ["GATCGGAAGAGCACACGTCTGAACTCCAGTCAC", "GATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"], # 3'only: first read, second read
+    "nextera2": ["CTGTCTCTTATACACATCT", "AGATGTGTATAAGAGACAG"] # Second read in pair 3', 5
+}
 
 def trim_adapters(data):
     to_trim = [x for x in data["files"] if x is not None and is_fastq(x)]
@@ -40,7 +43,10 @@ def _trim_adapters(fastq_files, out_dir, data):
     MYSEQUENCEAAAARETPADA -> MYSEQUENCEAAAA (no polyA trim)
     """
     to_trim = _get_sequences_to_trim(data["config"], SUPPORTED_ADAPTERS)
-    out_files, report_file = _atropos_trim(fastq_files, to_trim, out_dir, data)
+    if dd.get_trim_reads(data) == "fastp":
+        out_files, report_file = _fastp_trim(fastq_files, to_trim, out_dir, data)
+    else:
+        out_files, report_file = _atropos_trim(fastq_files, to_trim, out_dir, data)
     # quality_format = _get_quality_format(data["config"])
     # out_files = replace_directory(append_stem(fastq_files, "_%s.trimmed" % name), out_dir)
     # log_file = "%s_log_cutadapt.txt" % splitext_plus(out_files[0])[0]
@@ -51,6 +57,8 @@ def _trim_adapters(fastq_files, out_dir, data):
     #         content = content.replace(fastq_files[1], name)
     #     open(log_file, 'w').write(content)
     return out_files
+
+# ## Atropos trimming
 
 def _atropos_trim(fastq_files, adapters, out_dir, data):
     """Perform multicore trimming with atropos.
@@ -63,16 +71,24 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             tx_report_file, tx_out1 = tx_out[:2]
             if len(tx_out) > 2:
                 tx_out2 = tx_out[2]
-            adapters_args = " ".join(["-a %s" % a for a in adapters])
+            # polyX trimming, anchored to the 3' ends of reads
+            if "polyx" in dd.get_adapters(data):
+                adapters += ["A{200}", "C{200}", "G{200}", "T{200}"]
+            adapters_args = " ".join(["-a '%s'" % a for a in adapters])
+            adapters_args += " --overlap 8"  # Avoid very short internal matches (default is 3)
+            adapters_args += " --no-default-adapters --no-cache-adapters"  # Prevent GitHub queries and saving pickles
             aligner_args = "--aligner adapter"
             if len(fastq_files) == 1:
+                cores = dd.get_num_cores(data)
                 input_args = "-se %s" % objectstore.cl_input(fastq_files[0])
-                output_args = "-o >(bgzip --threads %s -c > {tx_out1})".format(**locals())
+                output_args = "-o >(bgzip --threads {cores} -c > {tx_out1})".format(**locals())
             else:
                 assert len(fastq_files) == 2, fastq_files
-                adapters_args = adapters_args + " " + " ".join(["-A %s" % a for a in adapters])
+                cores = max(1, dd.get_num_cores(data) // 2)
+                adapters_args = adapters_args + " " + " ".join(["-A '%s'" % a for a in adapters])
                 input_args = "-pe1 %s -pe2 %s" % tuple([objectstore.cl_input(x) for x in fastq_files])
-                output_args = "-o >(bgzip -c > {tx_out1}) -p >(bgzip -c > {tx_out2})".format(**locals())
+                output_args = ("-o >(bgzip --threads {cores} -c > {tx_out1}) "
+                               "-p >(bgzip --threads {cores} -c > {tx_out2})").format(**locals())
             quality_base = "64" if dd.get_quality_format(data).lower() == "illumina" else "33"
             sample_name = dd.get_sample_name(data)
             report_args = "--report-file %s --report-formats json --sample-id %s" % (tx_report_file,
@@ -80,15 +96,53 @@ def _atropos_trim(fastq_files, adapters, out_dir, data):
             ropts = " ".join(str(x) for x in
                              config_utils.get_resources("atropos", data["config"]).get("options", []))
             extra_opts = []
-            for k, alt_ks, v in [("--quality-cutoff", ["-q "], "5"),
-                                 ("--minimum-length", ["-m "], str(dd.get_min_read_length(data)))]:
+            for k, alt_ks, v, want in [("--quality-cutoff", ["-q "], "5", True),
+                                       ("--minimum-length", ["-m "], str(dd.get_min_read_length(data)), True),
+                                       ("--nextseq-trim", [], "25", ("polyx" in dd.get_adapters(data) or
+                                                                     "polyg" in dd.get_adapters(data)))]:
                 if k not in ropts and not any(alt_k in ropts for alt_k in alt_ks):
-                    extra_opts.append("%s=%s" % (k, v))
+                    if want:
+                        extra_opts.append("%s=%s" % (k, v))
             extra_opts = " ".join(extra_opts)
-            thread_args = ("--threads %s" % dd.get_num_cores(data) if dd.get_num_cores(data) > 1 else "")
+            thread_args = ("--threads %s" % cores if cores > 1 else "")
             cmd = ("atropos trim {ropts} {thread_args} --quality-base {quality_base} --format fastq "
                    "{adapters_args} {input_args} {output_args} {report_args} {extra_opts}")
             do.run(cmd.format(**locals()), "Trimming with atropos: %s" % dd.get_sample_name(data))
+    return out_files, report_file
+
+# ## fastp trimming
+
+def _fastp_trim(fastq_files, adapters, out_dir, data):
+    """Perform multicore trimming with fastp (https://github.com/OpenGene/fastp)
+    """
+    report_file = os.path.join(out_dir, "%s-report.json" % utils.splitext_plus(os.path.basename(fastq_files[0]))[0])
+    out_files = [os.path.join(out_dir, "%s-trimmed.fq.gz" % utils.splitext_plus(os.path.basename(x))[0])
+                 for x in fastq_files]
+    if not utils.file_exists(out_files[0]):
+        with file_transaction(data, *[report_file] + out_files) as tx_out:
+            tx_report = tx_out[0]
+            tx_out_files = tx_out[1:]
+            cmd = ["fastp", "--thread", dd.get_num_cores(data)]
+            if dd.get_quality_format(data).lower() == "illumina":
+                cmd += ["--phred64"]
+            for i, (inf, outf) in enumerate(zip(fastq_files, tx_out_files)):
+                if i == 0:
+                    cmd += ["-i", inf, "-o", outf]
+                else:
+                    cmd += ["-I", inf, "-O", outf]
+            cmd += ["--cut_by_quality3", "--cut_mean_quality", "5",
+                    "--length_required", str(dd.get_min_read_length(data)),
+                    "--disable_quality_filtering"]
+            if "polyx" in dd.get_adapters(data):
+                cmd += ["--trim_poly_x", "--poly_x_min_len", "8"]
+            if "polyx" in dd.get_adapters(data) or "polyg" in dd.get_adapters(data):
+                cmd += ["--trim_poly_g", "--poly_g_min_len", "8"]
+            for a in adapters:
+                cmd += ["--adapter_sequence", a]
+            if not adapters:
+                cmd += ["--disable_adapter_trimming"]
+            cmd += ["--json", report_file, "--report_title", dd.get_sample_name(data)]
+            do.run(cmd, "Trimming with fastp: %s" % dd.get_sample_name(data))
     return out_files, report_file
 
 def _get_sequences_to_trim(config, builtin):

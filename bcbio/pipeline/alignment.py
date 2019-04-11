@@ -9,7 +9,8 @@ import os
 import toolz as tz
 
 from bcbio import bam, utils
-from bcbio.ngsalign import (bowtie, bwa, tophat, bowtie2, minimap2,
+from bcbio.bam import cram
+from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
                             novoalign, snap, star, hisat2)
 from bcbio.pipeline import datadict as dd
 
@@ -29,6 +30,7 @@ NgsTool = namedtuple("NgsTool", ["align_fn", "bam_align_fn",
 BASE_LOCATION_FILE = "sam_fa_indices.loc"
 
 TOOLS = {
+    "bbmap": NgsTool(bbmap.align, None, None, bbmap.remap_index_fn),
     "bowtie": NgsTool(bowtie.align, None, bowtie.galaxy_location_file, None),
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
@@ -48,6 +50,24 @@ TOOLS = {
 
 metadata = {"support_bam": [k for k, v in TOOLS.items() if v.bam_align_fn is not None]}
 
+def organize_noalign(data):
+    """CWL target to skip alignment and organize input data.
+    """
+    data = utils.to_single_data(data[0])
+    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data)))
+    work_bam = os.path.join(work_dir, "%s-input.bam" % dd.get_sample_name(data))
+    if data.get("files"):
+        if data["files"][0].endswith(".cram"):
+            work_bam = cram.to_bam(data["files"][0], work_bam, data)
+        else:
+            assert data["files"][0].endswith(".bam"), data["files"][0]
+            utils.copy_plus(data["files"][0], work_bam)
+        bam.index(work_bam, data["config"])
+    else:
+        work_bam = None
+    data["align_bam"] = work_bam
+    return data
+
 def align_to_sort_bam(fastq1, fastq2, aligner, data):
     """Align to the named genome build, returning a sorted BAM file.
     """
@@ -56,7 +76,7 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
     aligner_index = _get_aligner_index(aligner, data)
-    align_dir = utils.safe_makedir(apply(os.path.join, align_dir_parts))
+    align_dir = utils.safe_makedir(os.path.join(*align_dir_parts))
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
         data = _align_from_bam(fastq1, aligner, aligner_index, ref_file,
@@ -77,10 +97,16 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
                 bam.index(extra_bam, data["config"])
     return data
 
-def get_aligner_with_aliases(aligner):
+def get_aligner_with_aliases(aligner, data):
     """Retrieve aligner index retriever, including aliases for shared.
+
+    Handles tricky cases like gridss where we need bwa indices even with
+    no aligner specified since they're used internally within GRIDSS.
     """
     aligner_aliases = {"sentieon-bwa": "bwa"}
+    from bcbio import structural
+    if not aligner and "gridss" in structural.get_svcallers(data):
+        aligner = "bwa"
     return aligner_aliases.get(aligner) or aligner
 
 def allow_noindices():
@@ -92,7 +118,7 @@ def _get_aligner_index(aligner, data):
     Original bcbio case -- a list of indices.
     CWL case: a single file with secondaryFiles staged in the same directory.
     """
-    aligner_indexes = tz.get_in(("reference", get_aligner_with_aliases(aligner), "indexes"), data)
+    aligner_indexes = tz.get_in(("reference", get_aligner_with_aliases(aligner, data), "indexes"), data)
     # standard bcbio case
     if aligner_indexes and isinstance(aligner_indexes, (list, tuple)):
         aligner_index = os.path.commonprefix(aligner_indexes)

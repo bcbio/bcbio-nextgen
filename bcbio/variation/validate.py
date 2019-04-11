@@ -14,13 +14,13 @@ import subprocess
 import time
 
 from pysam import VariantFile
+import six
 import toolz as tz
 import yaml
 
 from bcbio import broad, utils
 from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction
-from bcbio.heterogeneity import bubbletree
 from bcbio.pipeline import config_utils, shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
@@ -74,7 +74,12 @@ def _get_caller(data):
     callers = [tz.get_in(["config", "algorithm", "jointcaller"], data),
                tz.get_in(["config", "algorithm", "variantcaller"], data),
                "precalled"]
-    return [c for c in callers if c][0]
+    caller = [c for c in callers if c][0]
+    if isinstance(caller, (list, tuple)):
+        assert len(caller) == 1, caller
+        return caller[0]
+    else:
+        return caller
 
 def _get_caller_supplement(caller, data):
     """Some callers like MuTect incorporate a second caller for indels.
@@ -84,6 +89,17 @@ def _get_caller_supplement(caller, data):
         if icaller:
             caller = "%s/%s" % (caller, icaller)
     return caller
+
+def _pick_lead_item(items):
+    """Choose lead item for a set of samples.
+
+    Picks tumors for tumor/normal pairs and first sample for batch groups.
+    """
+    paired = vcfutils.get_paired(items)
+    if paired:
+        return paired.tumor_data
+    else:
+        return list(items)[0]
 
 def _normalize_cwl_inputs(items):
     """Extract variation and validation data from CWL input list of batched samples.
@@ -100,12 +116,13 @@ def _normalize_cwl_inputs(items):
             vrn_files.append(data["vrn_file"])
         ready_items.append(data)
     if len(with_validate) == 0:
-        ready_items[0]["batch_samples"] = batch_samples
-        return ready_items[0]
+        data = _pick_lead_item(ready_items)
+        data["batch_samples"] = batch_samples
+        return data
     else:
         assert len(with_validate) == 1, len(with_validate)
         assert len(set(vrn_files)) == 1, set(vrn_files)
-        data = with_validate.values()[0]
+        data = _pick_lead_item(with_validate.values())
         data["batch_samples"] = batch_samples
         data["vrn_file"] = vrn_files[0]
         return data
@@ -122,7 +139,7 @@ def _checksum(in_file, block_size=65536):
 def compare_to_rm(data):
     """Compare final variant calls against reference materials of known calls.
     """
-    if isinstance(data, (list, tuple)):
+    if isinstance(data, (list, tuple)) and cwlutils.is_cwl_run(utils.to_single_data(data[0])):
         data = _normalize_cwl_inputs(data)
     toval_data = _get_validate(data)
     toval_data = cwlutils.unpack_tarballs(toval_data, toval_data)
@@ -147,15 +164,16 @@ def compare_to_rm(data):
                                                    data.get("genome_build"), base_dir, data)
                             if rm_interval_file else None)
         vmethod = tz.get_in(["config", "algorithm", "validate_method"], data, "rtg")
+        # RTG can fail on totally empty files. Call everything in truth set as false negatives
         if not vcfutils.vcf_has_variants(vrn_file):
-            # RTG can fail on totally empty files. Skip these since we have nothing.
-            pass
+            eval_files = _setup_call_false(rm_file, rm_interval_file, base_dir, toval_data, "fn")
+            data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         # empty validation file, every call is a false positive
         elif not vcfutils.vcf_has_variants(rm_file):
-            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data)
+            eval_files = _setup_call_fps(vrn_file, rm_interval_file, base_dir, toval_data, "fp")
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
-        elif vmethod == "rtg":
-            eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data)
+        elif vmethod in ["rtg", "rtg-squash-ploidy"]:
+            eval_files = _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, toval_data, vmethod)
             eval_files = _annotate_validations(eval_files, toval_data)
             data["validate"] = _rtg_add_summary_file(eval_files, base_dir, toval_data)
         elif vmethod == "hap.py":
@@ -175,15 +193,17 @@ def _annotate_validations(eval_files, data):
 
 # ## Empty truth sets
 
-def _setup_call_fps(vrn_file, rm_bed, base_dir, data):
-    """Create set of false positives for inputs with empty truth sets.
+def _setup_call_false(vrn_file, rm_bed, base_dir, data, call_type):
+    """Create set of false positives or ngatives for inputs with empty truth sets.
     """
-    out_file = os.path.join(base_dir, "fp.vcf.gz")
+    out_file = os.path.join(base_dir, "%s.vcf.gz" % call_type)
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
+            if not vrn_file.endswith(".gz"):
+                vrn_file = vcfutils.bgzip_and_index(vrn_file, out_dir=os.path.dirname(tx_out_file))
             cmd = ("bcftools view -R {rm_bed} -f 'PASS,.' {vrn_file} -O z -o {tx_out_file}")
-            do.run(cmd.format(**locals()), "Prepare false positives with empty reference", data)
-    return {"fp": out_file}
+            do.run(cmd.format(**locals()), "Prepare %s with empty reference" % call_type, data)
+    return {call_type: out_file}
 
 # ## Real Time Genomics vcfeval
 
@@ -195,7 +215,7 @@ def _rtg_add_summary_file(eval_files, base_dir, data):
     """Parse output TP FP and FN files to generate metrics for plotting.
     """
     out_file = os.path.join(base_dir, "validate-summary.csv")
-    if not utils.file_uptodate(out_file, eval_files.get("tp", eval_files["fp"])):
+    if not utils.file_uptodate(out_file, eval_files.get("tp", eval_files.get("fp", eval_files["fn"]))):
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = csv.writer(out_handle)
@@ -230,7 +250,7 @@ def _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data):
     interval_bed = _get_merged_intervals(rm_interval_file, vrn_file, base_dir, data)
     return vrn_file, rm_file, interval_bed
 
-def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
+def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data, validate_method):
     """Run evaluation of a caller against the truth set using rtg vcfeval.
     """
     out_dir = os.path.join(base_dir, "rtg")
@@ -240,6 +260,8 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         vrn_file, rm_file, interval_bed = _prepare_inputs(vrn_file, rm_file, rm_interval_file, base_dir, data)
 
         rtg_ref = tz.get_in(["reference", "rtg"], data)
+        if isinstance(rtg_ref, dict) and "base" in rtg_ref:
+            rtg_ref = os.path.dirname(rtg_ref["base"])
         assert rtg_ref and os.path.exists(rtg_ref), ("Did not find rtg indexed reference file for validation:\n%s\n"
                                                      "Run bcbio_nextgen.py upgrade --data --aligners rtg" % rtg_ref)
         # handle CWL where we have a reference to a single file in the RTG directory
@@ -259,6 +281,8 @@ def _run_rtg_eval(vrn_file, rm_file, rm_interval_file, base_dir, data):
         cmd = ["rtg", "vcfeval", "--threads", str(threads),
                "-b", rm_file, "--bed-regions", interval_bed,
                "-c", vrn_file, "-t", rtg_ref, "-o", out_dir]
+        if validate_method == "rtg-squash-ploidy":
+            cmd += ["--squash-ploidy"]
         rm_samples = vcfutils.get_samples(rm_file)
         if len(rm_samples) > 1 and dd.get_sample_name(data) in rm_samples:
             cmd += ["--sample=%s" % dd.get_sample_name(data)]
@@ -283,7 +307,7 @@ def _pick_best_quality_score(vrn_file):
 
     Implementation based on discussion:
 
-    https://github.com/chapmanb/bcbio-nextgen/commit/a538cecd86c0000d17d3f9d4f8ac9d2da04f9884#commitcomment-14539249
+    https://github.com/bcbio/bcbio-nextgen/commit/a538cecd86c0000d17d3f9d4f8ac9d2da04f9884#commitcomment-14539249
 
     (RTG=AVR/GATK=VQSLOD/MuTect=t_lod_fstar, otherwise GQ, otherwise QUAL, otherwise DP.)
 
@@ -500,32 +524,31 @@ def _flatten_grading(stats):
         for vclass, vitems in sorted(stats["discordant"].get(vtype, {}).items()):
             for vreason, val in sorted(vitems.items()):
                 yield vtype, "discordant-%s-%s" % (vclass, vreason), val
-            yield vtype, "discordant-%s-total" % vclass, sum(vitems.itervalues())
+            yield vtype, "discordant-%s-total" % vclass, sum(vitems.values())
 
-def _has_grading_info(samples):
+def _has_grading_info(samples, vkey):
     for data in samples:
-        if data.get("validate"):
+        if data.get(vkey):
             return True
         for variant in data.get("variants", []):
-            if variant.get("validate"):
+            if variant.get(vkey):
                 return True
     return False
 
-def _group_validate_samples(samples):
+def _group_validate_samples(samples, vkey, batch_keys):
     extras = []
     validated = collections.defaultdict(list)
     for data in samples:
         is_v = False
-        if data.get("validate"):
+        if data.get(vkey):
             is_v = True
         for variant in data.get("variants", []):
-            if variant.get("validate"):
+            if isinstance(variant, dict) and variant.get(vkey):
                 is_v = True
         if is_v:
-            for batch_key in (["metadata", "validate_batch"], ["metadata", "batch"],
-                              ["description"]):
+            for batch_key in batch_keys:
                 vname = tz.get_in(batch_key, data)
-                if vname and not (isinstance(vname, basestring) and vname.lower() in ["none", "false"]):
+                if vname and not (isinstance(vname, six.string_types) and vname.lower() in ["none", "false"]):
                     break
             if isinstance(vname, (list, tuple)):
                 vname = vname[0]
@@ -534,18 +557,20 @@ def _group_validate_samples(samples):
             extras.append([data])
     return validated, extras
 
-def summarize_grading(samples):
+def summarize_grading(samples, vkey="validate"):
     """Provide summaries of grading results across all samples.
 
     Handles both traditional pipelines (validation part of variants) and CWL
     pipelines (validation at top level)
     """
     samples = list(utils.flatten(samples))
-    if not _has_grading_info(samples):
+    if not _has_grading_info(samples, vkey):
         return [[d] for d in samples]
-    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], "validate"))
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], vkey))
     header = ["sample", "caller", "variant.type", "category", "value"]
-    validated, out = _group_validate_samples(samples)
+    _summarize_combined(samples, vkey)
+    validated, out = _group_validate_samples(samples, vkey,
+                                             (["metadata", "validate_batch"], ["metadata", "batch"], ["description"]))
     for vname, vitems in validated.items():
         out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
         with open(out_csv, "w") as out_handle:
@@ -553,11 +578,12 @@ def summarize_grading(samples):
             writer.writerow(header)
             plot_data = []
             plot_files = []
-            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
-                validations = [variant.get("validate") for variant in data.get("variants", [])]
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x)) or ""):
+                validations = [variant.get(vkey) for variant in data.get("variants", [])
+                               if isinstance(variant, dict)]
                 validations = [v for v in validations if v]
-                if len(validations) == 0 and "validate" in data:
-                    validations = [data.get("validate")]
+                if len(validations) == 0 and vkey in data:
+                    validations = [data.get(vkey)]
                 for validate in validations:
                     if validate:
                         validate["grading_summary"] = out_csv
@@ -578,19 +604,75 @@ def summarize_grading(samples):
         else:
             plots = []
         for data in vitems:
-            if data.get("validate"):
-                data["validate"]["grading_plots"] = plots
+            if data.get(vkey):
+                data[vkey]["grading_plots"] = plots
             for variant in data.get("variants", []):
-                if variant.get("validate"):
-                    variant["validate"]["grading_plots"] = plots
+                if isinstance(variant, dict) and variant.get(vkey):
+                    variant[vkey]["grading_plots"] = plots
             out.append([data])
     return out
+
+def _summarize_combined(samples, vkey):
+    """Prepare summarized CSV and plot files for samples to combine together.
+
+    Helps handle cases where we want to summarize over multiple samples.
+    """
+    validate_dir = utils.safe_makedir(os.path.join(samples[0]["dirs"]["work"], vkey))
+    combined, _ = _group_validate_samples(samples, vkey, [["metadata", "validate_combine"]])
+    for vname, vitems in combined.items():
+        if vname:
+            cur_combined = collections.defaultdict(int)
+            for data in sorted(vitems, key=lambda x: x.get("lane", dd.get_sample_name(x))):
+                validations = [variant.get(vkey) for variant in data.get("variants", [])]
+                validations = [v for v in validations if v]
+                if len(validations) == 0 and vkey in data:
+                    validations = [data.get(vkey)]
+                for validate in validations:
+                    with open(validate["summary"]) as in_handle:
+                        reader = csv.reader(in_handle)
+                        next(reader)  # header
+                        for _, caller, vtype, metric, value in reader:
+                            cur_combined[(caller, vtype, metric)] += int(value)
+            out_csv = os.path.join(validate_dir, "grading-summary-%s.csv" % vname)
+            with open(out_csv, "w") as out_handle:
+                writer = csv.writer(out_handle)
+                header = ["sample", "caller", "vtype", "metric", "value"]
+                writer.writerow(header)
+                for (caller, variant_type, category), val in cur_combined.items():
+                    writer.writerow(["combined-%s" % vname, caller, variant_type, category, val])
+            plots = validateplot.classifyplot_from_valfile(out_csv)
+
+def combine_validations(items, vkey="validate"):
+    """Combine multiple batch validations into validation outputs.
+    """
+    csvs = set([])
+    pngs = set([])
+    for v in [x.get(vkey) for x in items]:
+        if v and v.get("grading_summary"):
+            csvs.add(v.get("grading_summary"))
+        if v and v.get("grading_plots"):
+            pngs |= set(v.get("grading_plots"))
+    if len(csvs) == 1:
+        grading_summary = csvs.pop()
+    else:
+        grading_summary = os.path.join(utils.safe_makedir(os.path.join(dd.get_work_dir(items[0]), vkey)),
+                                       "grading-summary-combined.csv")
+        with open(grading_summary, "w") as out_handle:
+            for i, csv in enumerate(sorted(list(csvs))):
+                with open(csv) as in_handle:
+                    h = in_handle.readline()
+                    if i == 0:
+                        out_handle.write(h)
+                    for l in in_handle:
+                        out_handle.write(l)
+    return {"grading_plots": sorted(list(pngs)), "grading_summary": grading_summary}
+
 
 def _get_validate_plotdata_yaml(grading_file, data):
     """Retrieve validation plot data from grading YAML file (old style).
     """
     with open(grading_file) as in_handle:
-        grade_stats = yaml.load(in_handle)
+        grade_stats = yaml.safe_load(in_handle)
     for sample_stats in grade_stats:
         sample = sample_stats["sample"]
         for vtype, cat, val in _flatten_grading(sample_stats):
@@ -639,6 +721,7 @@ def _get_validation_status(rec):
 def _read_call_freqs(in_file, sample_name):
     """Identify frequencies for calls in the input file.
     """
+    from bcbio.heterogeneity import bubbletree
     out = {}
     with VariantFile(in_file) as call_in:
         for rec in call_in:

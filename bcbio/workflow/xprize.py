@@ -34,7 +34,7 @@ def get_fc_date(out_config_file):
     """
     if os.path.exists(out_config_file):
         with open(out_config_file) as in_handle:
-            old_config = yaml.load(in_handle)
+            old_config = yaml.safe_load(in_handle)
             fc_date = old_config["fc_date"]
     else:
         fc_date = datetime.datetime.now().strftime("%y%m%d")

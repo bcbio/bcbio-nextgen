@@ -14,9 +14,8 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bedutils, vcfutils
-from bcbio.structural import lumpy
 
-POST_PRIOR_FNS = {"lumpy": lumpy.run_svtyper_prioritize}
+POST_PRIOR_FNS = {}
 
 def run(items):
     assert len(items) == 1, ("Expect one input to biological prioritization: %s" %
@@ -32,15 +31,21 @@ def run(items):
             inputs.append((call["variantcaller"], vcf_file, pp_fn))
     if len(inputs) > 0:
         prioritize_by = tz.get_in(["config", "algorithm", "svprioritize"], data)
-        if not prioritize_by:
-            raise ValueError("Missing structural variant prioritization with `svprioritize`")
-        work_dir = _sv_workdir(data)
-        priority_files = [_prioritize_vcf(vcaller, vfile, prioritize_by, post_prior_fn, work_dir, data)
-                          for vcaller, vfile, post_prior_fn in inputs]
-        priority_tsv = _combine_files([xs[0] for xs in priority_files], work_dir, data)
-        data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv,
-                           "raw_files": dict(zip([xs[0] for xs in inputs], [xs[1] for xs in priority_files]))})
-    data = _cnv_prioritize(data)
+        if prioritize_by:
+            work_dir = _sv_workdir(data)
+            priority_files = [_prioritize_vcf(vcaller, vfile, prioritize_by, post_prior_fn, work_dir, data)
+                              for vcaller, vfile, post_prior_fn in inputs]
+            priority_tsv = _combine_files([xs[0] for xs in priority_files], work_dir, data)
+            raw_files = {}
+            for svcaller, fname in zip([xs[0] for xs in inputs], [xs[1] for xs in priority_files]):
+                clean_fname = os.path.join(os.path.dirname(fname), "%s-%s-prioritized%s" %
+                                           (dd.get_sample_name(data), svcaller, utils.splitext_plus(fname)[-1]))
+                utils.symlink_plus(fname, clean_fname)
+                raw_files[svcaller] = clean_fname
+            data["sv"].append({"variantcaller": "sv-prioritize", "vrn_file": priority_tsv,
+                               "raw_files": raw_files})
+    # Disabled on move to CWL, not used and tested with CNVkit changes
+    # data = _cnv_prioritize(data)
     return [data]
 
 def is_gene_list(bed_file):
@@ -64,10 +69,11 @@ def _find_gene_list_from_bed(bed_file, base_file, data):
     if not os.path.exists(out_file):
         genes = set([])
         import pybedtools
-        for r in pybedtools.BedTool(bed_file):
-            if r.name:
-                if not r.name.startswith("{"):
-                    genes.add(r.name)
+        with utils.open_gzipsafe(bed_file) as in_handle:
+            for r in pybedtools.BedTool(in_handle):
+                if r.name:
+                    if not r.name.startswith("{"):
+                        genes.add(r.name)
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 if len(genes) > 0:
@@ -98,7 +104,12 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
             if not utils.file_exists(priority_vcf):
                 with file_transaction(data, priority_vcf) as tx_out_file:
                     resources = config_utils.get_resources("bcbio_prioritize", data["config"])
-                    jvm_opts = " ".join(resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"]))
+                    jvm_opts = resources.get("jvm_opts", ["-Xms1g", "-Xmx4g"])
+                    jvm_opts = config_utils.adjust_opts(jvm_opts, {"algorithm": {"memory_adjust":
+                                                                                 {"direction": "increase",
+                                                                                  "maximum": "30000M",
+                                                                                  "magnitude": dd.get_cores(data)}}})
+                    jvm_opts = " ".join(jvm_opts)
                     export = utils.local_path_export()
                     cmd = ("{export} bcbio-prioritize {jvm_opts} known -i {vcf_file} -o {tx_out_file} "
                            " -k {prioritize_by}")
@@ -121,7 +132,7 @@ def _prioritize_vcf(caller, vcf_file, prioritize_by, post_prior_fn, work_dir, da
         simple_vcf = post_prior_fn(simple_vcf, work_dir, data)
     if not utils.file_uptodate(out_file, simple_vcf):
         with file_transaction(data, out_file) as tx_out_file:
-            export = utils.local_path_export()
+            export = utils.local_path_export(env_cmd="vawk")
             cmd = ("{export} zcat {simple_vcf} | vawk -v SNAME={sample} -v CALLER={caller} "
                    """'{{if (($7 == "PASS" || $7 == ".") && (S${sample}$GT != "0/0")) """
                    "print CALLER,SNAME,$1,$2,I$END,"

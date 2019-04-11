@@ -24,7 +24,7 @@ class TestSampleSheet(object):
         out_file = samplesheet.csv2yaml(self.ss_file)
         assert os.path.exists(out_file)
         with open(out_file) as in_handle:
-            info = yaml.load(in_handle)
+            info = yaml.safe_load(in_handle)
         assert info[0]['lane'] == '1'
         assert info[0]['multiplex'][0]['barcode_id'] == 5
         os.remove(out_file)

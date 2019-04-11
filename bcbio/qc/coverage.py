@@ -22,7 +22,7 @@ def run(bam_file, data, out_dir):
         merged_bed_file = bedutils.clean_file(dd.get_coverage_merged(data), data, prefix="cov-", simple=True)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
-        merged_bed_file = dd.get_variant_regions_merged(data)
+        merged_bed_file = dd.get_variant_regions_merged(data) or dd.get_sample_callable(data)
         target_name = "variant_regions"
     else:
         merged_bed_file = None
@@ -38,7 +38,7 @@ def run(bam_file, data, out_dir):
 
     samtools_stats_dir = os.path.join(out_dir, os.path.pardir, 'samtools')
     from bcbio.qc import samtools
-    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)["metrics"]
 
     out["Total_reads"] = total_reads = int(samtools_stats["Total_reads"])
     out["Mapped_reads"] = mapped = int(samtools_stats["Mapped_reads"])

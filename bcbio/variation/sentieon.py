@@ -19,6 +19,9 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep, bedutils, joint, vcfutils
 
+import six
+
+
 def license_export(data):
     """Retrieve export statement for sentieon license server.
     """
@@ -31,7 +34,7 @@ def license_export(data):
                          "environmental variables to export \n"
                          "http://bcbio-nextgen.readthedocs.io/en/latest/contents/configuration.html#resources\n"
                          "Configuration: %s" % pprint.pformat(data))
-    if isinstance(server, basestring):
+    if isinstance(server, six.string_types):
         return "export SENTIEON_LICENSE=%s && " % server
     else:
         assert isinstance(server, dict), server
@@ -47,7 +50,7 @@ def _get_interval(variant_regions, region, out_file, items):
     """
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
+        if isinstance(target, six.string_types) and os.path.isfile(target):
             return "--interval %s" % target
         else:
             return "--interval %s" % bamprep.region_to_gatk(target)
@@ -61,7 +64,7 @@ def run_tnscope(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(items[0]), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -84,7 +87,7 @@ def run_tnhaplotyper(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(items[0]), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             paired = vcfutils.get_paired_bams(align_bams, items)
@@ -118,7 +121,7 @@ def run_haplotyper(align_bams, items, ref_file, assoc_files,
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        variant_regions = bedutils.merge_overlaps(dd.get_variant_regions(items[0]), items[0])
+        variant_regions = bedutils.population_variant_regions(items, merged=True)
         interval = _get_interval(variant_regions, region, out_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             dbsnp = "--dbsnp %s" % (assoc_files.get("dbsnp")) if "dbsnp" in assoc_files else ""

@@ -15,11 +15,11 @@ import collections
 import csv
 import re
 
-from bcbio import install, utils
+from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import population, vcfanno, vcfutils
+from bcbio.variation import population, vcfutils
 
 geneimpacts = utils.LazyImport("geneimpacts")
 cyvcf2 = utils.LazyImport("cyvcf2")
@@ -30,14 +30,13 @@ def handle_vcf_calls(vcf_file, data, orig_items):
     if not _do_prioritize(orig_items):
         return vcf_file
     else:
-        if population.has_gemini_data(data):
-            data_basepath = install.get_gemini_dir(data) if population.support_gemini_orig(data) else None
-            ann_vcf = vcfanno.run_vcfanno(vcf_file, ["gemini"], data, data_basepath)
-            if ann_vcf:
-                priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
-                return _apply_priority_filter(vcf_file, priority_file, data)
-        # No GEMINI database for filtering, return original file
-        return vcf_file
+        ann_vcf = population.run_vcfanno(vcf_file, data)
+        if ann_vcf:
+            priority_file = _prep_priority_filter_vcfanno(ann_vcf, data)
+            return _apply_priority_filter(ann_vcf, priority_file, data)
+        # No data available for filtering, return original file
+        else:
+            return vcf_file
 
 def _apply_priority_filter(in_file, priority_file, data):
     """Annotate variants with priority information and use to apply filters.
@@ -46,14 +45,19 @@ def _apply_priority_filter(in_file, priority_file, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             header = ('##INFO=<ID=EPR,Number=.,Type=String,'
-                      'Description="Prioritization based on external annotations">')
+                      'Description="Somatic prioritization based on external annotations, '
+                      'identify as likely germline">')
             header_file = "%s-repeatheader.txt" % utils.splitext_plus(tx_out_file)[0]
             with open(header_file, "w") as out_handle:
                 out_handle.write(header)
+            if "tumoronly_germline_filter" in dd.get_tools_on(data):
+                filter_cmd = ("bcftools filter -m '+' -s 'LowPriority' "
+                              """-e "EPR[0] != 'pass'" |""")
+            else:
+                filter_cmd = ""
             cmd = ("bcftools annotate -a {priority_file} -h {header_file} "
                    "-c CHROM,FROM,TO,REF,ALT,INFO/EPR {in_file} | "
-                   "bcftools filter -m '+' -s 'LowPriority' "
-                   """-e "EPR[*] != 'pass'" | bgzip -c > {tx_out_file}""")
+                   "{filter_cmd} bgzip -c > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run external annotation based prioritization filtering")
     vcfutils.bgzip_and_index(out_file, data["config"])
     return out_file
@@ -66,7 +70,7 @@ def _prep_priority_filter_vcfanno(in_vcf, data):
             'af_exac_all', 'max_aaf_all',
             "af_esp_ea", "af_esp_aa", "af_esp_all", "af_1kg_amr", "af_1kg_eas",
             "af_1kg_sas", "af_1kg_afr", "af_1kg_eur", "af_1kg_all"]
-    known = ["cosmic_ids", "clinvar_sig"]
+    known = ["cosmic_ids", "cosmic_id", "clinvar_sig"]
     out_file = "%s-priority.tsv" % utils.splitext_plus(in_vcf)[0]
     if not utils.file_exists(out_file) and not utils.file_exists(out_file + ".gz"):
         with file_transaction(data, out_file) as tx_out_file:
@@ -146,12 +150,10 @@ def _calc_priority_filter(row, pops):
 
     - Pass high/medium impact variants not found in population databases
     - Pass variants found in COSMIC or Clinvar provided they don't have two
-      additional reasons to filter (low severity or found in multiple external populations)
+      additional reasons to filter (found in multiple external populations)
     """
     filters = []
     passes = []
-    if row["impact_severity"] in ["LOW"]:
-        filters.append("lowseverity")
     passes.extend(_find_known(row))
     filters.extend(_known_populations(row, pops))
     if len(filters) == 0 or (len(passes) > 0 and len(filters) < 2):
@@ -175,17 +177,20 @@ def _find_known(row):
     """Find variant present in known pathogenic databases.
     """
     out = []
-    clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic"])
-    if row["cosmic_ids"]:
+    clinvar_no = set(["unknown", "untested", "non-pathogenic", "probable-non-pathogenic",
+                      "uncertain_significance", "uncertain_significance", "not_provided",
+                      "benign", "likely_benign"])
+    if row["cosmic_ids"] or row["cosmic_id"]:
         out.append("cosmic")
-    if (row["clinvar_sig"] and not row["clinvar_sig"] in clinvar_no):
+    if row["clinvar_sig"] and not row["clinvar_sig"].lower() in clinvar_no:
         out.append("clinvar")
     return out
 
 def _do_prioritize(items):
     """Determine if we should perform prioritization.
 
-    Currently done on tumor-only input samples.
+    Currently done on tumor-only input samples and feeding into PureCN
+    which needs the germline annotations.
     """
     if not any("tumoronly-prioritization" in dd.get_tools_off(d) for d in items):
         if vcfutils.get_paired_phenotype(items[0]):

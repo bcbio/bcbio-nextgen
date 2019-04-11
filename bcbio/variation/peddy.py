@@ -15,7 +15,7 @@ from bcbio.utils import safe_makedir, file_exists
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
-from bcbio.variation import vcfutils
+from bcbio.variation import vcfutils, vcfanno
 from bcbio.variation.population import create_ped_file
 from bcbio.qc import variant
 from bcbio.provenance import do
@@ -42,63 +42,88 @@ def run_qc(_, data, out_dir):
         if tz.get_in(["summary", "qc", "peddy"], qc_data):
             return tz.get_in(["summary", "qc", "peddy"], qc_data)
 
-def is_human(data):
-    return (tz.get_in(["genome_resources", "aliases", "human"], data, False) or
-            dd.get_genome_build(data) in ["hg19", "GRCh37", "hg38"])
-
 def run_peddy(samples, out_dir=None):
-    vcf_file = None
-    for d in samples:
-        vcinfo = variant.get_active_vcinfo(d)
-        if vcinfo and vcinfo.get("vrn_file") and utils.file_exists(vcinfo["vrn_file"]):
-            if vcinfo["vrn_file"] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo["vrn_file"]):
-                vcf_file = vcinfo["vrn_file"]
-                break
     data = samples[0]
-    peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
-    if not peddy or not vcf_file or not is_human(data):
-        logger.info("peddy is not installed, not human or sample VCFs don't match, skipping correspondence checking "
-                    "for %s." % vcf_file)
-        return samples
     batch = dd.get_batch(data) or dd.get_sample_name(data)
+    if isinstance(batch, (list, tuple)):
+        batch = batch[0]
     if out_dir:
         peddy_dir = safe_makedir(out_dir)
     else:
         peddy_dir = safe_makedir(os.path.join(dd.get_work_dir(data), "qc", batch, "peddy"))
-    ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
     peddy_prefix = os.path.join(peddy_dir, batch)
     peddy_report = peddy_prefix + ".html"
-    peddyfiles = expected_peddy_files(peddy_report, batch)
-    if file_exists(peddy_report):
-        return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
+
+    vcf_file = None
+    for d in samples:
+        vcinfo = None
+        if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor"]:
+            vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
+        if not vcinfo and dd.get_phenotype(d) in ["tumor"]:
+            vcinfo = variant.extract_germline_vcinfo(d, peddy_dir)
+        if vcinfo:
+            for key in ["germline", "vrn_file"]:
+                if vcinfo and vcinfo.get(key) and utils.file_exists(vcinfo[key]):
+                    if vcinfo[key] and dd.get_sample_name(d) in vcfutils.get_samples(vcinfo[key]):
+                        if vcinfo[key] and vcfutils.vcf_has_nonfiltered_variants(vcinfo[key]):
+                            vcf_file = vcinfo[key]
+                            break
+    peddy = config_utils.get_program("peddy", data) if config_utils.program_installed("peddy", data) else None
+    config_skips = any(["peddy" in dd.get_tools_off(d) for d in samples])
+    if not peddy or not vcf_file or not vcfanno.is_human(data) or config_skips:
+        if not peddy:
+            reason = "peddy executable not found"
+        elif config_skips:
+            reason = "peddy in tools_off configuration"
+        elif not vcfanno.is_human(data):
+            reason = "sample is not human"
+        else:
+            assert not vcf_file
+            reason = "no suitable VCF files found with the sample and non-filtered variants"
+        msg = "Skipping peddy QC, %s: %s" % (reason, [dd.get_sample_name(d) for d in samples])
+        with open(peddy_prefix + "-failed.log", "w") as out_handle:
+            out_handle.write(msg)
+        logger.info(msg)
+        return samples
     if file_exists(peddy_prefix + "-failed.log"):
         return samples
-    num_cores = dd.get_num_cores(data)
-
-    with tx_tmpdir(data) as tx_dir:
-        peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
-        # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
-        stderr_log = os.path.join(tx_dir, "run-stderr.log")
-        cmd = "{peddy} -p {num_cores} --plot --prefix {peddy_prefix_tx} {vcf_file} {ped_file} 2> {stderr_log}"
-        message = "Running peddy on {vcf_file} against {ped_file}."
-        try:
-            do.run(cmd.format(**locals()), message.format(**locals()))
-        except:
-            to_show = collections.deque(maxlen=100)
-            with open(stderr_log) as in_handle:
-                for line in in_handle:
-                    to_show.append(line)
-            if to_show[-1].find("IndexError") >=0 and to_show[-1].find("is out of bounds for axis") >= 0:
-                logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
-                with open(peddy_prefix + "-failed.log", "w") as out_handle:
-                    out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
-                return samples
-            else:
-                logger.warning("".join(to_show))
-                raise
-        for ext in PEDDY_OUT_EXTENSIONS:
-            if os.path.exists(peddy_prefix_tx + ext):
-                shutil.move(peddy_prefix_tx + ext, peddy_prefix + ext)
+    if not file_exists(peddy_report):
+        ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
+        num_cores = dd.get_num_cores(data)
+        with tx_tmpdir(data) as tx_dir:
+            peddy_prefix_tx = os.path.join(tx_dir, os.path.basename(peddy_prefix))
+            # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
+            stderr_log = os.path.join(tx_dir, "run-stderr.log")
+            sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
+            cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
+                   "{vcf_file} {ped_file} 2> {stderr_log}")
+            message = "Running peddy on {vcf_file} against {ped_file}."
+            try:
+                do.run(cmd.format(**locals()), message.format(**locals()))
+            except:
+                to_show = collections.deque(maxlen=100)
+                with open(stderr_log) as in_handle:
+                    for line in in_handle:
+                        to_show.append(line)
+                def allowed_errors(l):
+                    return ((l.find("IndexError") >= 0 and l.find("is out of bounds for axis") >= 0) or
+                            (l.find("n_components=") >= 0 and l.find("must be between 1 and n_features=") >= 0) or
+                            (l.find("n_components=") >= 0 and l.find("must be between 1 and min") >= 0) or
+                            (l.find("Input contains NaN, infinity or a value too large for dtype") >= 0))
+                def all_line_errors(l):
+                    return (l.find("no intervals found for") >= 0)
+                if any([allowed_errors(l) for l in to_show]) or all([all_line_errors(l) for l in to_show]):
+                    logger.info("Skipping peddy because no variants overlap with checks: %s" % batch)
+                    with open(peddy_prefix + "-failed.log", "w") as out_handle:
+                        out_handle.write("peddy did not find overlaps with 1kg sites in VCF, skipping")
+                    return samples
+                else:
+                    logger.warning("".join(to_show))
+                    raise
+            for ext in PEDDY_OUT_EXTENSIONS:
+                if os.path.exists(peddy_prefix_tx + ext):
+                    shutil.move(peddy_prefix_tx + ext, peddy_prefix + ext)
+    peddyfiles = expected_peddy_files(peddy_report, batch)
     return dd.set_in_samples(samples, dd.set_summary_qc, peddyfiles)
 
 def get_samples_by_batch(samples):

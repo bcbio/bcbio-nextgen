@@ -22,10 +22,11 @@ except ImportError:
     import urllib.request as urllib_request
 
 REMOTES = {
-    "requirements": "https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/requirements-conda.txt",
-    "gitrepo": "git://github.com/chapmanb/bcbio-nextgen.git",
-    "system_config": "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/bcbio_system.yaml",
-    "anaconda": "https://repo.continuum.io/miniconda/Miniconda2-latest-%s-x86_64.sh"}
+    "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
+    "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
+    "system_config": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
+    "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"}
+TARGETPY = "python=3.6"
 
 def main(args, sys_argv):
     check_arguments(args)
@@ -68,14 +69,43 @@ def bootstrap_bcbionextgen(anaconda, args):
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
+def _get_conda_channels(conda_bin):
+    """Retrieve default conda channels, checking if they are pre-specified in config.
+
+    This allows users to override defaults with specific mirrors in their .condarc
+    """
+    channels = ["bioconda", "conda-forge"]
+    out = []
+    try:
+        import yaml
+        config = yaml.safe_load(subprocess.check_output([conda_bin, "config", "--show"]))
+    except ImportError:
+        config = {}
+    for c in channels:
+        present = False
+        for orig_c in config.get("channels") or []:
+            if orig_c.endswith((c, "%s/" % c)):
+                present = True
+                break
+        if not present:
+            out += ["-c", c]
+    return out
+
 def install_conda_pkgs(anaconda, args):
+    env = dict(os.environ)
+    # Try to avoid user specific pkgs and envs directories
+    # https://github.com/conda/conda/issues/6748
+    env["CONDA_PKGS_DIRS"] = os.path.join(anaconda["dir"], "pkgs")
+    env["CONDA_ENVS_DIRS"] = os.path.join(anaconda["dir"], "envs")
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
-        subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes", "nomkl"])
-    subprocess.check_call([anaconda["conda"], "install", "--quiet", "--yes",
-                           "-c", "bioconda", "-c", "conda-forge",
-                           "--file", os.path.basename(REMOTES["requirements"])])
+        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
+    channels = _get_conda_channels(anaconda["conda"])
+    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+                          ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
+    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+                          ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():
@@ -234,10 +264,11 @@ if __name__ == "__main__":
                         action="append", default=[],
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",
                                  "canFam3", "dm3", "galGal4", "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
-                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10"])
+                                 "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10", "GRCz11",
+                                 "Sscrofa11.1", "BDGP6"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
-                        choices=["bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",
+                        choices=["bbmap", "bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",
                                  "star", "ucsc", "hisat2"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)

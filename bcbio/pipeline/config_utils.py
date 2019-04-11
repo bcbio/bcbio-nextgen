@@ -10,8 +10,9 @@ import sys
 import yaml
 
 import toolz as tz
-from bcbio import utils
-import bcbio.pipeline.datadict as dd
+
+import six
+
 
 class CmdNotFound(Exception):
     pass
@@ -77,8 +78,8 @@ def load_system_config(config_file=None, work_dir=None, allow_missing=False):
     config["bcbio_system"] = config_file
     return config, config_file
 
-def get_base_installdir():
-    return os.path.normpath(os.path.join(os.path.realpath(sys.executable), os.pardir, os.pardir, os.pardir))
+def get_base_installdir(cmd=sys.executable):
+    return os.path.normpath(os.path.join(os.path.realpath(cmd), os.pardir, os.pardir, os.pardir))
 
 def _merge_system_configs(host_config, container_config, out_file=None):
     """Create a merged system configuration from external and internal specification.
@@ -133,7 +134,7 @@ def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
     """
     with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     config = _expand_paths(config)
     if 'resources' not in config:
         config['resources'] = {}
@@ -213,7 +214,7 @@ def _get_check_program_cmd(fn):
         for adir in os.environ['PATH'].split(":"):
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
-        raise CmdNotFound(" ".join(map(repr, (fn.func_name, name, pconfig, default))))
+        raise CmdNotFound(" ".join(map(repr, (fn.__name__ if six.PY3 else fn.func_name, name, pconfig, default))))
     return wrap
 
 @_get_check_program_cmd
@@ -222,7 +223,7 @@ def _get_program_cmd(name, pconfig, config, default):
     """
     if pconfig is None:
         return name
-    elif isinstance(pconfig, basestring):
+    elif isinstance(pconfig, six.string_types):
         return pconfig
     elif "cmd" in pconfig:
         return pconfig["cmd"]
@@ -236,7 +237,7 @@ def _get_program_dir(name, config):
     """
     if config is None:
         raise ValueError("Could not find directory in config for %s" % name)
-    elif isinstance(config, basestring):
+    elif isinstance(config, six.string_types):
         return config
     elif "dir" in config:
         return expand_path(config["dir"])
@@ -357,7 +358,7 @@ def adjust_cores_to_mb_target(target_mb, mem_str, cores):
     else:
         return max(1, int(math.ceil(scale * cores)))
 
-def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
+def adjust_memory(val, magnitude, direction="increase", out_modifier="", maximum=None):
     """Adjust memory based on number of cores utilized.
     """
     modifier = val[-1:]
@@ -384,6 +385,14 @@ def adjust_memory(val, magnitude, direction="increase", out_modifier=""):
     if out_modifier.upper().startswith("M") and modifier.upper().startswith("G"):
         modifier = out_modifier
         modifier = int(amount * 1024)
+    if maximum:
+        max_modifier = maximum[-1]
+        max_amount = float(maximum[:-1])
+        if modifier.upper() == "G" and max_modifier.upper() == "M":
+            max_amount = max_amount / 1024.0
+        elif modifier.upper() == "M" and max_modifier.upper() == "G":
+            max_amount = max_amount * 1024.0
+        amount = min([amount, max_amount])
     return "{amount}{modifier}".format(amount=int(math.floor(amount)), modifier=modifier)
 
 def adjust_opts(in_opts, config):
@@ -400,34 +409,40 @@ def adjust_opts(in_opts, config):
             opt = "{arg}{val}".format(arg=arg,
                                       val=adjust_memory(opt[4:],
                                                         memory_adjust.get("magnitude", 1),
-                                                        memory_adjust.get("direction")))
+                                                        memory_adjust.get("direction"),
+                                                        maximum=memory_adjust.get("maximum")))
         out_opts.append(opt)
     return out_opts
 
 # specific program usage
 
-def use_vqsr(algs):
+def use_vqsr(algs, call_file=None):
     """Processing uses GATK's Variant Quality Score Recalibration.
     """
+    from bcbio.variation import vcfutils
     vqsr_callers = set(["gatk", "gatk-haplotype"])
     vqsr_sample_thresh = 50
     vqsr_supported = collections.defaultdict(int)
     coverage_intervals = set([])
     for alg in algs:
         callers = alg.get("variantcaller")
-        if isinstance(callers, basestring):
+        if isinstance(callers, six.string_types):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
             continue
-        if "vqsr" in alg.get("tools_off", []):  # VQSR turned off
+        if "vqsr" in (alg.get("tools_off") or []):  # VQSR turned off
             continue
         for c in callers:
             if c in vqsr_callers:
-                vqsr_supported[c] += 1
-                if "vqsr" in alg.get("tools_on", []):  # VQSR turned on:
+                if "vqsr" in (alg.get("tools_on") or []):  # VQSR turned on:
+                    vqsr_supported[c] += 1
                     coverage_intervals.add("genome")
+                # Do not try VQSR for gVCF inputs
+                elif call_file and vcfutils.is_gvcf_file(call_file):
+                    pass
                 else:
                     coverage_intervals.add(alg.get("coverage_interval", "exome").lower())
+                    vqsr_supported[c] += 1
     if len(vqsr_supported) > 0:
         num_samples = max(vqsr_supported.values())
         if "genome" in coverage_intervals or num_samples >= vqsr_sample_thresh:

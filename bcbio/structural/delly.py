@@ -2,6 +2,7 @@
 
 https://github.com/tobiasrausch/delly
 """
+import collections
 import copy
 import os
 import subprocess
@@ -16,8 +17,8 @@ from bcbio.provenance import do
 from bcbio.structural import shared as sshared
 from bcbio.variation import vcfutils
 
-def _get_full_exclude_file(items, work_dir):
-    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(items[0]["work_bam"]))[0]))
+def _get_full_exclude_file(items, work_bams, work_dir):
+    base_file = os.path.join(work_dir, "%s-svs" % (os.path.splitext(os.path.basename(work_bams[0]))[0]))
     return sshared.prepare_exclude_file(items, base_file)
 
 def _delly_exclude_file(items, base_file, chrom):
@@ -53,15 +54,16 @@ def _run_delly(bam_files, chrom, ref_file, work_dir, items):
         with file_transaction(items[0], out_file) as tx_out_file:
             if sshared.has_variant_regions(items, out_file, chrom):
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
-                # uses -n to skip small indel detection for speed, not yet optimized:
-                # https://github.com/dellytools/delly/issues/36
-                cmd = ["delly", "call", "--noindels", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
+                cmd = ["delly", "call", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
                 multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
                 except subprocess.CalledProcessError as msg:
+                    # Small input samples, write an empty vcf
+                    if "Sample has not enough data to estimate library parameters" in str(msg):
+                        pass
                     # delly returns an error exit code if there are no variants
-                    if "No structural variants found" not in str(msg):
+                    elif "No structural variants found" not in str(msg):
                         raise
     return [_bgzip_and_clean(out_file, items)]
 
@@ -149,7 +151,7 @@ def run(items):
     high quality reference pairs (DR).
     """
     work_dir = utils.safe_makedir(os.path.join(items[0]["dirs"]["work"], "structural",
-                                               items[0]["name"][-1], "delly"))
+                                               dd.get_sample_name(items[0]), "delly"))
     # Add core request for delly
     config = copy.deepcopy(items[0]["config"])
     delly_config = utils.get_in(config, ("resources", "delly"), {})
@@ -159,7 +161,7 @@ def run(items):
                 "progs": ["delly"]}
     work_bams = [dd.get_align_bam(d) for d in items]
     ref_file = dd.get_ref_file(items[0])
-    exclude_file = _get_full_exclude_file(items, work_dir)
+    exclude_file = _get_full_exclude_file(items, work_bams, work_dir)
     bytype_vcfs = run_multicore(_run_delly,
                                 [(work_bams, chrom, ref_file, work_dir, items)
                                  for chrom in sshared.get_sv_chroms(items, exclude_file)],
@@ -167,6 +169,7 @@ def run(items):
     out_file = "%s.vcf.gz" % sshared.outname_from_inputs(bytype_vcfs)
     combo_vcf = vcfutils.combine_variant_files(bytype_vcfs, out_file, ref_file, config)
     out = []
+    upload_counts = collections.defaultdict(int)
     for data in items:
         if "sv" not in data:
             data["sv"] = []
@@ -175,6 +178,8 @@ def run(items):
         if final_vcf:
             delly_vcf = _delly_count_evidence_filter(final_vcf, data)
             data["sv"].append({"variantcaller": "delly", "vrn_file": delly_vcf,
+                               "do_upload": upload_counts[final_vcf] == 0,  # only upload a single file per batch
                                "exclude": exclude_file})
+            upload_counts[final_vcf] += 1
         out.append(data)
     return out

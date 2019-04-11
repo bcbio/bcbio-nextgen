@@ -27,6 +27,9 @@ def _gatk_extract_reads_cl(data, region, prep_params, tmp_dir):
             "-L", region_to_gatk(region),
             "-R", dd.get_ref_file(data),
             "-I", data["work_bam"]]
+    # GATK3 back compatibility, need to specify analysis type
+    if "gatk4" in dd.get_tools_off(data):
+        args = ["--analysis_type"] + args
     runner = broad.runner_from_config(data["config"])
     return runner.cl_gatk(args, tmp_dir)
 

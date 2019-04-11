@@ -70,6 +70,6 @@ details:
   <help>
 SNP and indel variant calling using `bcbio-nextgen`_.
 
-.. _bcbio-nextgen: https://github.com/chapmanb/bcbio-nextgen
+.. _bcbio-nextgen: https://github.com/bcbio/bcbio-nextgen
   </help>
 </tool>

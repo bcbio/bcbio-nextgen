@@ -22,6 +22,8 @@ def run(_, data, out_dir):
     # ratio = bam.get_aligned_reads(bam_file, data)
     out = out_stats = None
     db = tz.get_in(["config", "algorithm", "kraken"], data)
+    if db and isinstance(db, (list, tuple)):
+        db = db[0]
     kraken_cmd = config_utils.get_program("kraken", data["config"])
     if db == "minikraken":
         db = os.path.join(install._get_data_dir(), "genomes", "kraken", "minikraken")
@@ -46,7 +48,7 @@ def run(_, data, out_dir):
                 cl = ("{cat} {fn_file} | {kraken_cmd} --db {db} --quick "
                       "--preload --min-hits 2 "
                       "--threads {num_cores} "
-                      "--out {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
+                      "--output {out} --fastq-input /dev/stdin  2> {out_stats}").format(**locals())
                 do.run(cl, "kraken: %s" % dd.get_sample_name(data))
                 if os.path.exists(out_dir):
                     shutil.rmtree(out_dir)

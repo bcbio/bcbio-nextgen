@@ -12,6 +12,6 @@ details:
       adapters: [truseq, polya]
       expression_caller: [sailfish]
     description: Test1
-    files: [1_110907_ERP000591_1_fastq.txt, 1_110907_ERP000591_2_fastq.txt]
+    files: [../data/110907_ERP000591/1_110907_ERP000591_1_fastq.txt, ../data/110907_ERP000591/1_110907_ERP000591_2_fastq.txt]
     genome_build: mm9
     lane: 1

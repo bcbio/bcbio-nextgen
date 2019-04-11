@@ -45,9 +45,12 @@ def classifyplot_from_valfile(val_file, outtype="png", title=None, size=None,
     grouped = df.groupby(["sample", "caller", "vtype"])
     df = grouped.apply(_calculate_fnr_fdr)
     df = df.reset_index()
-    out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
-    _do_classifyplot(df, out_file, title, size, samples, callers)
-    return [out_file]
+    if len(df) == 0:
+        return []
+    else:
+        out_file = "%s.%s" % (os.path.splitext(val_file)[0], outtype)
+        _do_classifyplot(df, out_file, title, size, samples, callers)
+        return [out_file]
 
 def _calculate_fnr_fdr(group):
     """Calculate the false negative rate (1 - sensitivity) and false discovery rate (1 - precision).

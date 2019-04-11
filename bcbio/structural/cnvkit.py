@@ -8,6 +8,7 @@ import glob
 import math
 import operator
 import os
+import shutil
 import sys
 import tempfile
 
@@ -25,16 +26,29 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import effects, ploidy, population, vcfutils
 from bcbio.structural import annotate, plot, shared
+from functools import reduce
 
 def use_general_sv_bins(data):
     """Check if we should use a general binning approach for a sample.
 
     Checks if CNVkit is enabled and we haven't already run CNVkit.
     """
-    if "cnvkit" in dd.get_svcaller(data) or "titancna" in dd.get_svcaller(data):
+    if any([c in dd.get_svcaller(data) for c in ["cnvkit", "titancna", "purecn", "gatk-cnv"]]):
         if not _get_original_coverage(data):
             return True
     return False
+
+def bin_approach(data):
+    """Check for binning approach from configuration or normalized file.
+    """
+    for approach in ["cnvkit", "gatk-cnv"]:
+        if approach in dd.get_svcaller(data):
+            return approach
+    norm_file = tz.get_in(["depth", "bins", "normalized"], data)
+    if norm_file.endswith(("-crstandardized.tsv", "-crdenoised.tsv")):
+        return "gatk-cnv"
+    if norm_file.endswith(".cnr"):
+        return "cnvkit"
 
 def run(items, background=None):
     """Detect copy number variations from batched set of samples using CNVkit.
@@ -61,6 +75,7 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
     """
     assert len(ckouts) == len(items)
     out = []
+    upload_counts = collections.defaultdict(int)
     for ckout, data in zip(ckouts, items):
         ckout = copy.deepcopy(ckout)
         ckout["variantcaller"] = "cnvkit"
@@ -73,9 +88,12 @@ def _associate_cnvkit_out(ckouts, items, is_somatic=False):
             ckout = _add_cnr_bedgraph_and_bed_to_output(ckout, data)
             if "svplots" in dd.get_tools_on(data):
                 ckout = _add_plots_to_output(ckout, data)
+            ckout["do_upload"] = upload_counts[ckout.get("vrn_file")] == 0
         if "sv" not in data:
             data["sv"] = []
         data["sv"].append(ckout)
+        if ckout.get("vrn_file"):
+            upload_counts[ckout["vrn_file"]] += 1
         out.append(data)
     return out
 
@@ -193,7 +211,8 @@ def _run_cnvkit_shared(inputs, backgrounds):
             cns_file = os.path.join(_sv_workdir(data), "%s.cns" % dd.get_sample_name(data))
             cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data), data,
                                        inputs + backgrounds, cns_file)
-            ckouts.append({"cnr": cnr_file, "cns": cns_file})
+            ckouts.append({"cnr": cnr_file, "cns": cns_file,
+                           "background": tz.get_in(["depth", "bins", "background"], data)})
         return ckouts
     else:
         return _run_cnvkit_shared_orig(inputs, backgrounds)
@@ -232,8 +251,8 @@ def _run_cnvkit_shared_orig(inputs, backgrounds):
                        "cns": "%s.cns" % out_base})
     if not utils.file_exists(ckouts[0]["cns"]):
         cov_interval = dd.get_coverage_interval(inputs[0])
-        samples_to_run = zip(["background"] * len(backgrounds), backgrounds) + \
-                        zip(["evaluate"] * len(inputs), inputs)
+        samples_to_run = list(zip(["background"] * len(backgrounds), backgrounds)) + \
+                         list(zip(["evaluate"] * len(inputs), inputs))
         # New style shared SV bins
         if tz.get_in(["depth", "bins", "target"], inputs[0]):
             target_bed = tz.get_in(["depth", "bins", "target"], inputs[0])
@@ -275,7 +294,7 @@ def _cna_has_values(fname):
                 return True
     return False
 
-def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
+def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None, detailed=False):
     """Perform segmentation and copy number calling on normalized inputs
     """
     if not out_file:
@@ -286,20 +305,32 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None):
                 with open(tx_out_file, "w") as out_handle:
                     out_handle.write("chromosome\tstart\tend\tgene\tlog2\tprobes\tCN1\tCN2\tbaf\tweight\n")
             else:
-                cmd = [_get_cmd(), "segment", "-p", str(dd.get_cores(data)),
-                       "-o", tx_out_file, cnr_file]
+                # Scale cores to avoid memory issues with segmentation
+                # https://github.com/etal/cnvkit/issues/346
+                if cov_interval == "genome":
+                    cores = max(1, dd.get_cores(data) // 2)
+                else:
+                    cores = dd.get_cores(data)
+                cmd = [_get_cmd(), "segment", "-p", str(cores), "-o", tx_out_file, cnr_file]
                 small_vrn_files = _compatible_small_variants(data, items)
                 if len(small_vrn_files) > 0 and _cna_has_values(cnr_file) and cov_interval != "genome":
                     cmd += ["--vcf", small_vrn_files[0].name, "--sample-id", small_vrn_files[0].sample]
                     if small_vrn_files[0].normal:
                         cmd += ["--normal-id", small_vrn_files[0].normal]
-                if cov_interval == "genome":
+                resources = config_utils.get_resources("cnvkit_segment", data["config"])
+                user_options = resources.get("options", [])
+                cmd += [str(x) for x in user_options]
+                if cov_interval == "genome" and "--threshold" not in user_options:
                     cmd += ["--threshold", "0.00001"]
                 # For tumors, remove very low normalized regions, avoiding upcaptured noise
-                # https://github.com/chapmanb/bcbio-nextgen/issues/2171#issuecomment-348333650
+                # https://github.com/bcbio/bcbio-nextgen/issues/2171#issuecomment-348333650
+                # unless we want detailed segmentation for downstream tools
                 paired = vcfutils.get_paired(items)
                 if paired:
-                    cmd += ["--drop-low-coverage"]
+                    #if detailed:
+                    #    cmd += ["-m", "hmm-tumor"]
+                    if "--drop-low-coverage" not in user_options:
+                        cmd += ["--drop-low-coverage"]
                 # preferentially use conda installed Rscript
                 export_cmd = ("%s && export TMPDIR=%s && "
                               % (utils.get_R_exports(), os.path.dirname(tx_out_file)))
@@ -334,8 +365,8 @@ def _cnvkit_metrics(cnns, target_bed, antitarget_bed, cov_interval, items):
 
 def _read_metrics_file(in_file):
     with open(in_file) as in_handle:
-        header = in_handle.next().strip().split("\t")[1:]
-        vals = map(float, in_handle.next().strip().split("\t")[1:])
+        header = next(in_handle).strip().split("\t")[1:]
+        vals = map(float, next(in_handle).strip().split("\t")[1:])
     return dict(zip(header, vals))
 
 @utils.map_wrap
@@ -352,6 +383,11 @@ def _cnvkit_fix_base(cnns, background_cnn, items, ckouts, ext=""):
     dindex, data = [(i, x) for (i, x) in enumerate(items) if dd.get_sample_name(x) == cnns[0]["sample"]][0]
     out_file = ckouts[dindex]["cnr"]
     return (run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data), data)
+
+@utils.map_wrap
+@zeromq_aware_logging
+def run_fix_parallel(target_cnn, antitarget_cnn, background_cnn, out_file, data):
+    return [run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data)]
 
 def run_fix(target_cnn, antitarget_cnn, background_cnn, out_file, data):
     if not utils.file_exists(out_file):
@@ -406,7 +442,7 @@ def _get_batch_gender(items):
 
     Better not to specify for mixed populations, CNVkit will work
     it out
-    https://github.com/chapmanb/bcbio-nextgen/commit/1a0e217c8a4d3cee10fa890fb3cfd4db5034281d#r26279752
+    https://github.com/bcbio/bcbio-nextgen/commit/1a0e217c8a4d3cee10fa890fb3cfd4db5034281d#r26279752
     """
     genders = set([population.get_gender(x) for x in items])
     if len(genders) == 1:
@@ -428,33 +464,54 @@ def targets_w_bins(cnv_file, access_file, target_anti_fn, work_dir, data):
     if not os.path.exists(anti_file):
         _, anti_bin = target_anti_fn()
         with file_transaction(data, anti_file) as tx_out_file:
-            cmd = [_get_cmd(), "antitarget", "-g", access_file, cnv_file, "-o", tx_out_file,
+            # Create access file without targets to avoid overlap
+            # antitarget in cnvkit is meant to do this but appears to not always happen
+            # after chromosome 1
+            tx_access_file = os.path.join(os.path.dirname(tx_out_file), os.path.basename(access_file))
+            pybedtools.BedTool(access_file).subtract(cnv_file).saveas(tx_access_file)
+            cmd = [_get_cmd(), "antitarget", "-g", tx_access_file, cnv_file, "-o", tx_out_file,
                    "--avg-size", str(anti_bin)]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit antitarget")
     return target_file, anti_file
 
-def _add_seg_to_output(out, data):
+def targets_from_background(back_cnn, work_dir, data):
+    """Retrieve target and antitarget BEDs from background CNN file.
+    """
+    target_file = os.path.join(work_dir, "%s.target.bed" % dd.get_sample_name(data))
+    anti_file = os.path.join(work_dir, "%s.antitarget.bed" % dd.get_sample_name(data))
+    if not utils.file_exists(target_file):
+        with file_transaction(data, target_file) as tx_out_file:
+            out_base = tx_out_file.replace(".target.bed", "")
+            cmd = [_get_cmd("reference2targets.py"), "-o", out_base, back_cnn]
+            do.run(_prep_cmd(cmd, tx_out_file), "CNVkit targets from background")
+            shutil.copy(out_base + ".antitarget.bed", anti_file)
+    return target_file, anti_file
+
+def _add_seg_to_output(out, data, enumerate_chroms=False):
     """Export outputs to 'seg' format compatible with IGV and GenePattern.
     """
     out_file = "%s.seg" % os.path.splitext(out["cns"])[0]
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "export",
-                   "seg", "-o", tx_out_file, out["cns"]]
+                   "seg"]
+            if enumerate_chroms:
+                cmd += ["--enumerate-chroms"]
+            cmd += ["-o", tx_out_file, out["cns"]]
             do.run(cmd, "CNVkit export seg")
     out["seg"] = out_file
     return out
 
 def _add_cnr_bedgraph_and_bed_to_output(out, data):
     cnr_file = out["cnr"]
-    bedgraph_file = cnr_file + ".bedgraph"
+    bedgraph_file = os.path.join(_sv_workdir(data), os.path.basename(cnr_file) + ".bedgraph")
     if not utils.file_exists(bedgraph_file):
         with file_transaction(data, bedgraph_file) as tx_out_file:
             cmd = "sed 1d {cnr_file} | cut -f1,2,3,5 > {tx_out_file}"
             do.run(cmd.format(**locals()), "Converting cnr to bedgraph format")
     out["cnr_bedgraph"] = bedgraph_file
 
-    bed_file = cnr_file + ".bed"
+    bed_file = os.path.join(_sv_workdir(data), os.path.basename(cnr_file) + ".bed")
     if not utils.file_exists(bed_file):
         with file_transaction(data, bed_file) as tx_out_file:
             cmd = "sed 1d {cnr_file} | cut -f1,2,3,4,5 > {tx_out_file}"
@@ -465,18 +522,17 @@ def _add_cnr_bedgraph_and_bed_to_output(out, data):
 def _compatible_small_variants(data, items):
     """Retrieve small variant (SNP, indel) VCFs compatible with CNVkit.
     """
+    from bcbio import heterogeneity
     VarFile = collections.namedtuple("VarFile", ["name", "sample", "normal"])
-    supported = set(["vardict", "freebayes", "gatk-haplotype", "strelka2", "vardict"])
     out = []
-    for v in data.get("variants", []):
-        vrn_file = v.get("vrn_file")
-        if vrn_file and v.get("variantcaller") in supported:
-            base, ext = utils.splitext_plus(os.path.basename(vrn_file))
-            paired = vcfutils.get_paired(items)
-            if paired:
-                out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
-            else:
-                out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
+    paired = vcfutils.get_paired(items)
+    for v in heterogeneity.get_variants(data, include_germline=not paired):
+        vrn_file = v["vrn_file"]
+        base, ext = utils.splitext_plus(os.path.basename(vrn_file))
+        if paired:
+            out.append(VarFile(vrn_file, paired.tumor_name, paired.normal_name))
+        else:
+            out.append(VarFile(vrn_file, dd.get_sample_name(data), None))
     return out
 
 def _add_variantcalls_to_output(out, data, items, is_somatic=False):
@@ -516,6 +572,7 @@ def _add_variantcalls_to_output(out, data, items, is_somatic=False):
     out["vrn_bed"] = annotate.add_genes(calls["bed"], data)
     effects_vcf, _ = effects.add_to_vcf(calls["vcf"], data, "snpeff")
     out["vrn_file"] = effects_vcf or calls["vcf"]
+    out["vrn_file"] = shared.annotate_with_depth(out["vrn_file"], items)
     return out
 
 def _add_segmetrics_to_output(out, data):
@@ -544,6 +601,9 @@ def _add_gainloss_to_output(out, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [os.path.join(os.path.dirname(sys.executable), "cnvkit.py"), "gainloss",
                    "-s", out["cns"], "-o", tx_out_file, out["cnr"]]
+            gender = _get_batch_gender([data])
+            if gender:
+                cmd += ["--sample-sex", gender]
             do.run(cmd, "CNVkit gainloss")
     out["gainloss"] = out_file
     return out
@@ -618,7 +678,7 @@ def _remove_haplotype_chroms(in_file, data):
     """Remove shorter haplotype chromosomes from cns/cnr files for plotting.
     """
     larger_chroms = set(_get_larger_chroms(dd.get_ref_file(data)))
-    out_file = "%s-chromfilter%s" % utils.splitext_plus(in_file)
+    out_file = os.path.join(_sv_workdir(data), "%s-chromfilter%s" % utils.splitext_plus(os.path.basename(in_file)))
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
@@ -630,7 +690,8 @@ def _remove_haplotype_chroms(in_file, data):
     return out_file
 
 def _add_global_scatter_plot(out, data):
-    out_file = "%s-scatter_global.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-scatter_global.pdf")
     if utils.file_exists(out_file):
         return out_file
     cnr = _remove_haplotype_chroms(out["cnr"], data)
@@ -641,7 +702,8 @@ def _add_global_scatter_plot(out, data):
     return out_file
 
 def _add_scatter_plot(out, data):
-    out_file = "%s-scatter.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-scatter.pdf")
     priority_bed = dd.get_svprioritize(data)
     if not priority_bed:
         return None
@@ -666,7 +728,8 @@ def _cnx_is_empty(in_file):
     return True
 
 def _add_diagram_plot(out, data):
-    out_file = "%s-diagram.pdf" % os.path.splitext(out["cnr"])[0]
+    out_file = os.path.join(_sv_workdir(data),
+                            os.path.splitext(os.path.basename(out["cnr"]))[0] + "-diagram.pdf")
     cnr = _remove_haplotype_chroms(out["cnr"], data)
     cns = _remove_haplotype_chroms(out["cns"], data)
     if _cnx_is_empty(cnr) or _cnx_is_empty(cns):
@@ -675,11 +738,19 @@ def _add_diagram_plot(out, data):
         with file_transaction(data, out_file) as tx_out_file:
             cmd = [_get_cmd(), "diagram", "-s", cns,
                    "-o", tx_out_file, cnr]
-            gender = population.get_gender(data)
-            if gender and gender.lower() == "male":
-                cmd += ["--male-reference"]
+            gender = _get_batch_gender([data])
+            if gender:
+                cmd += ["--sample-sex", gender]
             do.run(_prep_cmd(cmd, tx_out_file), "CNVkit diagram plot")
     return out_file
+
+def segment_from_cnr(cnr_file, data, out_base):
+    """Provide segmentation on a cnr file, used in external PureCN integration.
+    """
+    cns_file = _cnvkit_segment(cnr_file, dd.get_coverage_interval(data),
+                               data, [data], out_file="%s.cns" % out_base, detailed=True)
+    out = _add_seg_to_output({"cns": cns_file}, data, enumerate_chroms=False)
+    return out["seg"]
 
 # ## Theta support
 

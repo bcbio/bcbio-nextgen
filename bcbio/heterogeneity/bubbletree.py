@@ -24,6 +24,12 @@ from bcbio.structural import shared
 from bcbio.variation import bedutils
 
 population_keys = ['AC_AFR', 'AC_AMR', 'AC_EAS', 'AC_FIN', 'AC_NFE', 'AC_OTH', 'AC_SAS']
+PARAMS = {"min_freq": 0.2,
+          "max_freq": 0.8,
+          "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
+          "min_depth": 15,
+          "hetblock": {"min_alleles": 25,
+                       "allowed_misses": 2}}
 
 def run(vrn_info, calls_by_name, somatic_info, do_plots=True, handle_failures=True):
     """Run BubbleTree given variant calls, CNVs and somatic
@@ -72,7 +78,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
     with open(r_file, "w") as out_handle:
         out_handle.write(_script.format(**locals()))
     if not utils.file_exists(freqs_out):
-        cmd = "%s && %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file)
+        cmd = "%s && %s --no-environ %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file)
         try:
             do.run(cmd, "Assess heterogeneity with BubbleTree")
         except subprocess.CalledProcessError as msg:
@@ -84,7 +90,7 @@ def _run_bubbletree(vcf_csv, cnv_csv, data, wide_lrr=False, do_plots=True,
                 raise
     return {"caller": "bubbletree",
             "report": freqs_out,
-            "plots": {"bubble": bubbleplot_out, "track": trackplot_out}}
+            "plot": {"bubble": bubbleplot_out, "track": trackplot_out}}
 
 def _allowed_bubbletree_errorstates(msg):
     allowed = ["Error in p[i, ] : subscript out of bounds",
@@ -108,7 +114,7 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                     reader = csv.reader(in_handle, dialect="excel-tab")
                     writer = csv.writer(out_handle)
                     writer.writerow(["chrom", "start", "end", "num.mark", "seg.mean"])
-                    header = reader.next()
+                    header = next(reader)
                     for line in reader:
                         cur = dict(zip(header, line))
                         if chromhacks.is_autosomal(cur["chromosome"]):
@@ -116,38 +122,54 @@ def _prep_cnv_file(cns_file, svcaller, work_dir, data):
                                              cur["end"], cur["probes"], cur["log2"]])
     return out_file
 
-def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None):
+def prep_vrn_file(in_file, vcaller, work_dir, somatic_info, writer_class, seg_file=None, params=None):
     """Select heterozygous variants in the normal sample with sufficient depth.
 
     writer_class implements write_header and write_row to write VCF outputs
     from a record and extracted tumor/normal statistics.
     """
     data = somatic_info.tumor_data
-    params = {"min_freq": 0.4,
-              "max_freq": 0.6,
-              "tumor_only": {"min_freq": 0.10, "max_freq": 0.90},
-              "min_depth": 20,
-              "hetblock": {"min_alleles": 25,
-                           "allowed_misses": 2}}
+    if not params:
+        params = PARAMS
     out_file = os.path.join(work_dir, "%s-%s-prep.csv" % (utils.splitext_plus(os.path.basename(in_file))[0],
                                                           vcaller))
     if not utils.file_uptodate(out_file, in_file):
-        #ready_bed = _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info)
+        # ready_bed = _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info)
         ready_bed = None
         if ready_bed and utils.file_exists(ready_bed):
             sub_file = _create_subset_file(in_file, ready_bed, work_dir, data)
         else:
             sub_file = in_file
+        max_depth = max_normal_germline_depth(sub_file, params, somatic_info)
         with file_transaction(data, out_file) as tx_out_file:
             with open(tx_out_file, "w") as out_handle:
                 writer = writer_class(out_handle)
                 writer.write_header()
                 bcf_in = pysam.VariantFile(sub_file)
                 for rec in bcf_in:
-                    stats = _is_possible_loh(rec, bcf_in, params, somatic_info)
+                    stats = _is_possible_loh(rec, bcf_in, params, somatic_info, max_normal_depth=max_depth)
                     if chromhacks.is_autosomal(rec.chrom) and stats is not None:
                         writer.write_row(rec, stats)
     return out_file
+
+
+# thresholds for filtering normal samples based on depth
+# matches those used in PURPLE AMBER caller
+# https://github.com/hartwigmedical/hmftools/blob/a8c5dd2487c8c294c457eb8961c78e08c61a604a/amber/src/main/java/com/hartwig/hmftools/amber/AmberApplication.java#L41
+NORMAL_FILTER_PARAMS = {"min_depth_percent": 0.5, "max_depth_percent": 1.5,
+                        "min_freq_narrow": 0.4, "max_freq_narrow": 0.65}
+
+def max_normal_germline_depth(in_file, params, somatic_info):
+    """Calculate threshold for excluding potential heterozygotes based on normal depth.
+    """
+    bcf_in = pysam.VariantFile(in_file)
+    depths = []
+    for rec in bcf_in:
+        stats = _is_possible_loh(rec, bcf_in, params, somatic_info)
+        if tz.get_in(["normal", "depth"], stats):
+            depths.append(tz.get_in(["normal", "depth"], stats))
+    if depths:
+        return np.median(depths) * NORMAL_FILTER_PARAMS["max_depth_percent"]
 
 def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, somatic_info):
     """Identify heterogeneity blocks corresponding to segmentation from CNV input file.
@@ -155,7 +177,7 @@ def _identify_heterogeneity_blocks_seg(in_file, seg_file, params, work_dir, soma
     def _segment_by_cns(target_chrom, freqs, coords):
         with open(seg_file) as in_handle:
             reader = csv.reader(in_handle, dialect="excel-tab")
-            reader.next()  # header
+            next(reader)  # header
             for cur_chrom, start, end in (xs[:3] for xs in reader):
                 if cur_chrom == target_chrom:
                     block_freqs = []
@@ -265,26 +287,59 @@ def _to_ucsc_style(chrom):
     """
     return "chr%s" % chrom if not str(chrom).startswith("chr") else chrom
 
-def _passes_plus_germline(rec):
+def is_info_germline(rec):
+    """Check if a variant record is germline based on INFO attributes.
+
+    Works with VarDict's annotation of STATUS.
+    """
+    if hasattr(rec, "INFO"):
+        status = rec.INFO.get("STATUS", "").lower()
+    else:
+        status = rec.info.get("STATUS", "").lower()
+    return status == "germline" or status.find("loh") >= 0
+
+def _passes_plus_germline(rec, use_status=False):
     """Check if a record passes filters (but might be germline -- labelled with REJECT).
     """
-    allowed = set(["PASS", "REJECT"])
-    filters = [x for x in rec.filter.keys() if x in allowed]
-    return len(filters) > 0
+    if use_status and is_info_germline(rec):
+        return True
+    allowed = set(["PASS", "REJECT", "."])
+    if hasattr(rec, "FILTER"):
+        if not rec.FILTER:
+            filters = []
+        else:
+            filters = [x for x in rec.FILTER.split(";") if x not in allowed]
+    else:
+        filters = [x for x in rec.filter.keys() if x not in allowed]
+    return len(filters) == 0
 
 def _is_biallelic_snp(rec):
-    return _is_snp(rec) and len(rec.alts) == 1
+    if hasattr(rec, "ALT"):
+        return _is_snp(rec) and len(rec.ALT) == 1
+    else:
+        return _is_snp(rec) and len(rec.alts) == 1
 
 def _is_snp(rec):
-    return max([len(x) for x in rec.alleles]) == 1
+    if hasattr(rec, "ALT"):
+        return max([len(x) for x in rec.ALT + [rec.REF]]) == 1
+    else:
+        return max([len(x) for x in rec.alleles]) == 1
 
-def _tumor_normal_stats(rec, somatic_info):
+def _tumor_normal_stats(rec, somatic_info, vcf_rec):
     """Retrieve depth and frequency of tumor and normal samples.
     """
     out = {"normal": {"alt": None, "depth": None, "freq": None},
            "tumor": {"alt": 0, "depth": 0, "freq": None}}
+    if hasattr(vcf_rec, "samples"):
+        samples = [(s, {}) for s in vcf_rec.samples]
+        for fkey in ["AD", "AO", "RO", "AF", "DP"]:
+            try:
+                for i, v in enumerate(rec.format(fkey)):
+                    samples[i][1][fkey] = v
+            except KeyError:
+                pass
     # Handle INFO only inputs
-    if len(rec.samples) == 0:
+    elif len(rec.samples) == 0:
         samples = [(somatic_info.tumor_name, None)]
     else:
         samples = rec.samples.items()
@@ -300,24 +355,26 @@ def _tumor_normal_stats(rec, somatic_info):
             out[key]["alt"] = alt
     return out
 
-def _is_possible_loh(rec, vcf_rec, params, somatic_info):
+def _is_possible_loh(rec, vcf_rec, params, somatic_info, use_status=False, max_normal_depth=None):
     """Check if the VCF record is a het in the normal with sufficient support.
 
     Only returns SNPs, since indels tend to have less precise frequency measurements.
     """
-    if _is_biallelic_snp(rec) and _passes_plus_germline(rec):
-        stats = _tumor_normal_stats(rec, somatic_info)
+    if _is_biallelic_snp(rec) and _passes_plus_germline(rec, use_status=use_status):
+        stats = _tumor_normal_stats(rec, somatic_info, vcf_rec)
         depths = [tz.get_in([x, "depth"], stats) for x in ["normal", "tumor"]]
         depths = [d for d in depths if d is not None]
         normal_freq = tz.get_in(["normal", "freq"], stats)
         tumor_freq = tz.get_in(["tumor", "freq"], stats)
         if all([d > params["min_depth"] for d in depths]):
+            if max_normal_depth and tz.get_in(["normal", "depth"], stats, 0) > max_normal_depth:
+                return None
             if normal_freq is not None:
                 if normal_freq >= params["min_freq"] and normal_freq <= params["max_freq"]:
                     return stats
             elif (tumor_freq >= params["tumor_only"]["min_freq"] and
                     tumor_freq <= params["tumor_only"]["max_freq"]):
-                if not _has_population_germline(vcf_rec) or is_population_germline(rec):
+                if (vcf_rec and not _has_population_germline(vcf_rec)) or is_population_germline(rec):
                     return stats
 
 def _has_population_germline(rec):

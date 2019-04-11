@@ -1,0 +1,12 @@
+upload:
+  dir: upload
+details:
+  - description: c-tumor2
+    analysis: variant2
+    vrn_file: ../data/variants/TumorOnly.vcf.gz
+    genome_build: hg19
+    metadata:
+      phenotype: tumor
+    algorithm:
+      aligner: false
+      tools_on: [tumoronly_germline_filter]

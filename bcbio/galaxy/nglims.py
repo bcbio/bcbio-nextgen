@@ -4,12 +4,12 @@ from __future__ import print_function
 import collections
 import copy
 import glob
-import gzip
 import operator
 import os
 import subprocess
 
 import joblib
+import six
 import yaml
 
 from bcbio import utils
@@ -18,6 +18,7 @@ from bcbio.galaxy.api import GalaxyApiAccess
 from bcbio.illumina import flowcell
 from bcbio.pipeline.run_info import clean_name
 from bcbio.workflow import template
+from functools import reduce
 
 def prep_samples_and_config(run_folder, ldetails, fastq_dir, config):
     """Prepare sample fastq files and provide global sample configuration for the flowcell.
@@ -51,7 +52,7 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
             return out
 
 def _non_empty(f):
-    with gzip.open(f) as in_handle:
+    with utils.open_gzipsafe(f) as in_handle:
         for line in in_handle:
             return True
     return False
@@ -105,7 +106,7 @@ def _select_default_algorithm(analysis):
 def _relative_paths(xs, base_path):
     """Adjust paths to be relative to the provided base path.
     """
-    if isinstance(xs, basestring):
+    if isinstance(xs, six.string_types):
         if xs.startswith(base_path):
             return xs.replace(base_path + "/", "", 1)
         else:

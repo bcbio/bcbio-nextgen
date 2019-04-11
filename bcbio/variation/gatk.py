@@ -44,13 +44,9 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     gatk_type = broad_runner.gatk_type()
     for x in align_bams:
         bam.index(x, config)
-    if _use_spark(num_cores, gatk_type):
-        # GATK4 spark runs use 2bit reference index
-        params = ["--reference", dd.get_ref_twobit(items[0])]
-    else:
-        picard_runner = broad.runner_from_path("picard", config)
-        picard_runner.run_fn("picard_index_ref", ref_file)
-        params = ["-R", ref_file]
+    picard_runner = broad.runner_from_path("picard", config)
+    picard_runner.run_fn("picard_index_ref", ref_file)
+    params = ["-R", ref_file]
     coverage_depth_min = tz.get_in(["algorithm", "coverage_depth_min"], config)
     if coverage_depth_min and coverage_depth_min < 4:
         confidence = "4.0"
@@ -100,8 +96,9 @@ def _joint_calling(items):
             "Joint calling requires batched samples, %s has no metadata batch." % dd.get_sample_name(items[0])
     return jointcaller
 
-def _use_spark(num_cores, gatk_type):
-    return num_cores > 1 and gatk_type == "gatk4"
+def _use_spark(num_cores, gatk_type, items, opts):
+    return ((len(items) == 1 and num_cores > 1 and gatk_type == "gatk4") or
+            "--spark-master" in opts)
 
 def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
@@ -119,44 +116,59 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
         assert gatk_type in ["restricted", "gatk4"], \
             "Require full version of GATK 2.4+, or GATK4 for haplotype calling"
         with file_transaction(items[0], out_file) as tx_out_file:
-            if _use_spark(num_cores, gatk_type):
-                params += ["-T", "HaplotypeCallerSpark", "--spark-master", "local[%s]" % num_cores,
-                           "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+            resources = config_utils.get_resources("gatk-spark", items[0]["config"])
+            spark_opts = [str(x) for x in resources.get("options", [])]
+            if _use_spark(num_cores, gatk_type, items, spark_opts):
+                params += ["-T", "HaplotypeCallerSpark"]
+                if spark_opts:
+                    params += spark_opts
+                else:
+                    params += ["--spark-master", "local[%s]" % num_cores,
+                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
+                               "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
+                               "--conf", "spark.executor.heartbeatInterval=100"]
             else:
                 params += ["-T", "HaplotypeCaller"]
             params += ["--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             # Enable hardware based optimizations in GATK 3.1+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
-                # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
-                if not gatk_type == "gatk4" and _supports_avx():
-                    params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
+                if _supports_avx():
+                    # Scale down HMM thread default to avoid overuse of cores
+                    # https://github.com/bcbio/bcbio-nextgen/issues/2442
+                    if gatk_type == "gatk4":
+                        params += ["--native-pair-hmm-threads", "1"]
+                    # GATK4 selects the right HMM optimization automatically with FASTEST_AVAILABLE
+                    # GATK3 needs to be explicitly set
+                    else:
+                        params += ["--pair_hmm_implementation", "VECTOR_LOGLESS_CACHING"]
+            resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
+            if "options" in resources:
+                params += [str(x) for x in resources.get("options", [])]
             # Prepare gVCFs if doing joint calling
             is_joint = False
             if _joint_calling(items) or any("gvcf" in dd.get_tools_on(d) for d in items):
                 is_joint = True
-                if gatk_type == "gatk4":
-                    params += ["--emit-ref-confidence", "GVCF"]
-                else:
-                    params += ["--emitRefConfidence", "GVCF"]
-                    params += ["--variant_index_type", "LINEAR", "--variant_index_parameter", "128000"]
+                # If joint calling parameters not set in user options
+                if not any([x in ["--emit-ref-confidence", "-ERC", "--emitRefConfidence"] for x in params]):
+                    if gatk_type == "gatk4":
+                        params += ["--emit-ref-confidence", "GVCF"]
+                    else:
+                        params += ["--emitRefConfidence", "GVCF"]
+                        params += ["--variant_index_type", "LINEAR", "--variant_index_parameter", "128000"]
                 # Set GQ banding to not be single GQ resolution
                 # No recommended default but try to balance resolution and size
                 # http://gatkforums.broadinstitute.org/gatk/discussion/7051/recommendation-best-practices-gvcf-gq-bands
-                for boundary in [10, 20, 30, 40, 60, 80]:
-                    params += ["-GQB", str(boundary)]
+
+                if not any([x in ["-GQB"] for x in params]):
+                    for boundary in [10, 20, 30, 40, 60, 80]:
+                        params += ["-GQB", str(boundary)]
             # Enable non-diploid calling in GATK 3.3+
             if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
-                # GenomicsDB does not support non-diploid samples in GATK4 joint calling
-                # https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimport-to-prepare-gvcfs-for-input-to-genotypegvcfs-in-gatk4
-                if not is_joint and gatk_type == "gatk4":
-                    params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
-            resources = config_utils.get_resources("gatk-haplotype", items[0]["config"])
-            if "options" in resources:
-                params += [str(x) for x in resources.get("options", [])]
+                params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             if gatk_type == "gatk4":
                 # GATK4 Spark calling does not support bgzipped output, use plain VCFs
-                if is_joint and _use_spark(num_cores, gatk_type):
+                if is_joint and _use_spark(num_cores, gatk_type, items, spark_opts):
                     tx_out_file = tx_out_file.replace(".vcf.gz", ".vcf")
                 params += ["--output", tx_out_file]
             else:
@@ -165,11 +177,11 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
             try:
                 broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,
-                                      parallel_gc=_use_spark(num_cores, gatk_type))
-            except subprocess.CalledProcessError, msg:
+                                      parallel_gc=_use_spark(num_cores, gatk_type, items, spark_opts))
+            except subprocess.CalledProcessError as msg:
                 # Spark failing on regions without any reads, write an empty VCF instead
                 # https://github.com/broadinstitute/gatk/issues/4234
-                if (_use_spark(num_cores, gatk_type) and
+                if (_use_spark(num_cores, gatk_type, items, spark_opts) and
                       str(msg).find("java.lang.UnsupportedOperationException: empty collection") >= 0 and
                       str(msg).find("at org.apache.spark.rdd.RDD") >= 0):
                     vcfutils.write_empty_vcf(tx_out_file, samples=[dd.get_sample_name(d) for d in items])

@@ -1,0 +1,5 @@
+version: 3
+
+aliases:
+  ensembl: danio_rerio_vep_95_GRCz11
+  #snpeff: 

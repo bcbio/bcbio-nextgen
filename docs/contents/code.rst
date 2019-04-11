@@ -89,11 +89,13 @@ pull requests. GitHub makes it easy to establish custom forks of the
 code and contribute those back. The Biopython documentation has great
 information on `using git and GitHub`_ for a community developed
 project. In short, make a fork of the `bcbio code
-<https://github.com/chapmanb/bcbio-nextgen>`_ by clicking the ``Fork`` button in
+<https://github.com/bcbio/bcbio-nextgen>`_ by clicking the ``Fork`` button in
 the upper right corner of the GitHub page, commit your changes to this custom
-fork and keep it up to date with the main bcbio repository as you develop, then
-click ``New Pull Request`` from your fork when you'd like to submit your changes
-for integration in bcbio.
+fork and keep it up to date with the main bcbio repository as you develop. The 
+github help pages have detailed information on keeping your fork updated with 
+the main github repository (e.g. https://help.github.com/articles/syncing-a-fork/).
+After commiting changes, click ``New Pull Request`` from your fork when you'd like 
+to submit your changes for integration in bcbio.
 
 For developing and testing changes locally, you can install directly into a
 bcbio-nextgen installation. The automated bcbio-nextgen
@@ -184,7 +186,7 @@ Other required implementation details include:
   useful for tools which aren't supported by a Galaxy .loc file but
   you can locate them relative to another index.
 
-.. _bwa.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/ngsalign/bwa.py
+.. _bwa.py: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bwa.py
 .. _Galaxy loc file: http://wiki.galaxyproject.org/Admin/Data%20Integration
 
 Once implemented, plug the aligner into the pipeline by defining it as
@@ -192,7 +194,7 @@ a ``_tool`` in `bcbio/pipeline/alignment.py`_. You can then use it as
 normal by specifying the name of the aligner in the `aligner` section
 of your configuration input.
 
-.. _bcbio/pipeline/alignment.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/alignment.py
+.. _bcbio/pipeline/alignment.py: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/alignment.py
 
 Variant caller
 ~~~~~~~~~~~~~~
@@ -226,9 +228,9 @@ Once implemented, add the variant caller into the pipeline by updating
 `bcbio/variation/genotype.py`_. You can use it by specifying it in the
 ``variantcaller`` parameter of your sample configuration.
 
-.. _freebayes.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/freebayes.py
-.. _bcbio/variation/genotype.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548
-.. _bcbio/pipeline/shared.py: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176
+.. _freebayes.py: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/freebayes.py
+.. _bcbio/variation/genotype.py: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548
+.. _bcbio/pipeline/shared.py: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176
 
 Adding new organisms
 ====================
@@ -275,15 +277,20 @@ happily integrate the new genome.
 This will provide basic integration with bcbio and allow running a minimal
 pipeline with alignment and quality control. We also have utility scripts in
 CloudBioLinux to help with preparing dbSNP (`utils/prepare_dbsnp.py`_)
-and RNA-seq (`utils/prepare_tx_gff.py`_) resources. We are still working on ways
-to best include these as part of the standard build and install since they
-either require additional tools to run locally, or require preparing copies in
-S3 buckets.
+and RNA-seq (`utils/prepare_tx_gff.py`_) resources for some genomes. For
+instance, to prepare RNA-seq transcripts for mm9::
+
+     bcbio_python prepare_tx_gff.py --genome-dir /path/to/bcbio/genomes Mmusculus mm9
+
+
+We are still working on ways to best include these as part of the standard build
+and install since they either require additional tools to run locally, or
+require preparing copies in S3 buckets.
 
 .. _config/biodata.yaml: https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml
 .. _cloudbio/biodata/genomes.py: https://github.com/chapmanb/cloudbiolinux/blob/7a2161a415d3dcd76f41095cd8f16bec84d4b1f3/cloudbio/biodata/genomes.py#L267
-.. _scripts/bcbio_nextgen_install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/scripts/bcbio_nextgen_install.py#L236
-.. _bcbio/install.py: https://github.com/chapmanb/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/bcbio/install.py#L523
+.. _scripts/bcbio_nextgen_install.py: https://github.com/bcbio/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/scripts/bcbio_nextgen_install.py#L236
+.. _bcbio/install.py: https://github.com/bcbio/bcbio-nextgen/blob/8c93fe2dc4d2966e106a4b3edf5aa23550703481/bcbio/install.py#L523
 .. _utils/prepare_dbsnp.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_dbsnp.py
 .. _utils/prepare_tx_gff.py: https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_tx_gff.py
 
@@ -512,8 +519,8 @@ to distribute jobs and return results. The `multicore wrapper`_ and
 `ipython wrapper`_ are useful starting points for understanding the current
 implementations.
 
-.. _prun (parallel run): https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/prun.py
-.. _pipeline.main: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/pipeline/main.py
-.. _ipython wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/ipython.py
-.. _multicore wrapper: https://github.com/chapmanb/bcbio-nextgen/blob/master/bcbio/distributed/multi.py
-.. _Travis-CI: https://travis-ci.org/chapmanb/bcbio-nextgen
+.. _prun (parallel run): https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/distributed/prun.py
+.. _pipeline.main: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/main.py
+.. _ipython wrapper: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/distributed/ipython.py
+.. _multicore wrapper: https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/distributed/multi.py
+.. _Travis-CI: https://travis-ci.org/bcbio/bcbio-nextgen

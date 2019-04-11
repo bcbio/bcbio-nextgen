@@ -13,6 +13,7 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation import sentieon
@@ -29,7 +30,9 @@ def prep_recal(data):
         broad_runner = broad.runner_from_config(data["config"])
         data["prep_recal"] = _gatk_base_recalibrator(broad_runner, dd.get_align_bam(data),
                                                      dd.get_ref_file(data), dd.get_platform(data),
-                                                     dbsnp_file, dd.get_variant_regions(data), data)
+                                                     dbsnp_file,
+                                                     dd.get_variant_regions(data) or dd.get_sample_callable(data),
+                                                     data)
     elif dd.get_recalibrate(data) == "sentieon":
         logger.info("Prepare BQSR tables with sentieon: %s " % str(dd.get_sample_name(data)))
         data["prep_recal"] = sentieon.bqsr_table(data)
@@ -75,6 +78,9 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
     http://gatkforums.broadinstitute.org/discussion/44/base-quality-score-recalibrator#latest
 
     This identifies large files and calculates the fraction to downsample to.
+
+    spark host and timeout settings help deal with runs on restricted systems
+    where we encounter network and timeout errors
     """
     target_counts = 1e8  # 100 million reads per read group, 20x the plotted max
     out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
@@ -88,10 +94,17 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 params = ["-I", dup_align_bam]
                 cores = dd.get_num_cores(data)
                 if gatk_type == "gatk4":
+                    resources = config_utils.get_resources("gatk-spark", data["config"])
+                    spark_opts = [str(x) for x in resources.get("options", [])]
                     params += ["-T", "BaseRecalibratorSpark",
-                               "--spark-master", "local[%s]" % cores,
-                               "--output", tx_out_file, "--reference", dd.get_ref_twobit(data),
-                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                               "--output", tx_out_file, "--reference", dd.get_ref_file(data)]
+                    if spark_opts:
+                        params += spark_opts
+                    else:
+                        params += ["--spark-master", "local[%s]" % cores,
+                                   "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
+                                   "--conf", "spark.executor.heartbeatInterval=100",
+                                   "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
                     if dbsnp_file:
                         params += ["--known-sites", dbsnp_file]
                     if intervals:
@@ -120,6 +133,14 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
 
 def _gatk_apply_bqsr(data):
     """Parallel BQSR support for GATK4.
+
+    Normalized qualities to 3 bin outputs at 10, 20 and 30 based on pipeline standard
+    recommendations, which will help with output file sizes:
+    https://github.com/CCDG/Pipeline-Standardization/blob/master/PipelineStandard.md#base-quality-score-binning-scheme
+    https://github.com/gatk-workflows/broad-prod-wgs-germline-snps-indels/blob/5585cdf7877104f2c61b2720ddfe7235f2fad577/PairedEndSingleSampleWf.gatk4.0.wdl#L1081
+
+    spark host and timeout settings help deal with runs on restricted systems
+    where we encounter network and timeout errors
     """
     in_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     out_file = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data),
@@ -130,14 +151,23 @@ def _gatk_apply_bqsr(data):
             gatk_type = broad_runner.gatk_type()
             cores = dd.get_num_cores(data)
             if gatk_type == "gatk4":
-                params = ["-T", "ApplyBQSRSpark", "--spark-master", "local[%s]" % cores,
+                resources = config_utils.get_resources("gatk-spark", data["config"])
+                spark_opts = [str(x) for x in resources.get("options", [])]
+                params = ["-T", "ApplyBQSRSpark",
                           "--input", in_file, "--output", tx_out_file, "--bqsr-recal-file", data["prep_recal"],
-                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                          "--static-quantized-quals", "10", "--static-quantized-quals", "20",
+                          "--static-quantized-quals", "30"]
+                if spark_opts:
+                    params += spark_opts
+                else:
+                    params += ["--spark-master", "local[%s]" % cores,
+                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
+                               "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
             # Avoid problems with intel deflater for GATK 3.8 and GATK4
-            # https://github.com/chapmanb/bcbio-nextgen/issues/2145#issuecomment-343095357
+            # https://github.com/bcbio/bcbio-nextgen/issues/2145#issuecomment-343095357
             if gatk_type == "gatk4":
                 params += ["--jdk-deflater", "--jdk-inflater"]
             elif LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):

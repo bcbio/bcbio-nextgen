@@ -10,7 +10,8 @@ except ImportError:
 
 from bcbio import heterogeneity, hla, chipseq, structural, upload
 from bcbio.bam import callable
-from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein)
+from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
+                          bcbiornaseq)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
@@ -67,7 +68,18 @@ def _pack_n_log(f):
             return ipython.zip_args(fn(*args))
     return wrapper
 
-@require(sample)
+def apply(object, args=None, kwargs=None):
+    """Python3 apply replacement for double unpacking of inputs during apply.
+
+    Thanks to: https://github.com/stefanholek/apply
+    """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+    return object(*args, **kwargs)
+
+require(sample)
 def prepare_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
@@ -222,6 +234,12 @@ def run_salmon_index(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(salmon.run_salmon_index, *args))
+    
+@require(rapmap)
+def run_rapmap_index(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(rapmap.run_rapmap_index, *args))
 
 @require(sample)
 def process_alignment(*args):
@@ -539,3 +557,9 @@ def upload_samples_project(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(upload.project_from_sample, *args))
+
+@require(bcbiornaseq)
+def run_bcbiornaseqload(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(bcbiornaseq.make_bcbiornaseq_object, *args))

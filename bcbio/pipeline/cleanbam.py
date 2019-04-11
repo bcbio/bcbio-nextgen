@@ -25,14 +25,17 @@ def fixrg(in_bam, names, ref_file, dirs, data):
     """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-fixrg.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(work_dir, "%s-fixrg.bam" % dd.get_sample_name(data))
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
             rg_info = novoalign.get_rg_info(names)
             new_header = "%s-header.txt" % os.path.splitext(out_file)[0]
+            cores = dd.get_cores(data)
             do.run("samtools view -H {in_bam} | grep -v ^@RG > {new_header}".format(**locals()),
                    "Create empty RG header: %s" % dd.get_sample_name(data))
             cmd = ("samtools reheader {new_header} {in_bam} | "
-                   "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} -")
+                   "samtools addreplacerg -@ {cores} -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} -")
             do.run(cmd.format(**locals()), "Fix read groups: %s" % dd.get_sample_name(data))
     return out_file
 
@@ -48,6 +51,8 @@ def remove_extracontigs(in_bam, data):
     """
     work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "bamclean", dd.get_sample_name(data)))
     out_file = os.path.join(work_dir, "%s-noextras.bam" % utils.splitext_plus(os.path.basename(in_bam))[0])
+    if not utils.file_exists(out_file):
+        out_file = os.path.join(work_dir, "%s-noextras.bam" % dd.get_sample_name(data))
     if not utils.file_uptodate(out_file, in_bam):
         with file_transaction(data, out_file) as tx_out_file:
             target_chroms = _target_chroms_and_header(in_bam, data)
@@ -56,13 +61,14 @@ def remove_extracontigs(in_bam, data):
             bcbio_py = sys.executable
             ref_file = dd.get_ref_file(data)
             local_bam = os.path.join(os.path.dirname(tx_out_file), os.path.basename(in_bam))
+            cores = dd.get_cores(data)
             utils.symlink_plus(in_bam, local_bam)
             bam.index(local_bam, data["config"])
-            cmd = ("samtools view -h {local_bam} {str_chroms} | "
+            cmd = ("samtools view -@ {cores} -h {local_bam} {str_chroms} | "
                    """{bcbio_py} -c 'from bcbio.pipeline import cleanbam; """
                    """cleanbam.fix_header("{ref_file}")' | """
-                   "samtools view -u - | "
-                   "samtools addreplacerg -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
+                   "samtools view -@ {cores} -u - | "
+                   "samtools addreplacerg -@ {cores} -r '{rg_info}' -m overwrite_all -O bam -o {tx_out_file} - ")
             do.run(cmd.format(**locals()), "bamprep, remove extra contigs: %s" % dd.get_sample_name(data))
     return out_file
 
@@ -126,6 +132,8 @@ def picard_prep(in_bam, names, ref_file, dirs, data):
     runner.run_fn("picard_index_ref", ref_file)
     reorder_bam = os.path.join(work_dir, "%s-reorder.bam" %
                                os.path.splitext(os.path.basename(in_bam))[0])
+    if not utils.file_exists(reorder_bam):
+        reorder_bam = os.path.join(work_dir, "%s-reorder.bam" % dd.get_sample_name(data))
     reorder_bam = runner.run_fn("picard_reorder", in_bam, ref_file, reorder_bam)
     rg_bam = runner.run_fn("picard_fix_rgs", reorder_bam, names)
     return _filter_bad_reads(rg_bam, ref_file, data)

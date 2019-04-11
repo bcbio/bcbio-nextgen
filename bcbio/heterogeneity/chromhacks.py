@@ -3,6 +3,8 @@
 This puts ugly chromosome naming assumptions that restrict heterogeneity estimations
 to autosomal chromosomes in a single place.
 """
+import os
+
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 
@@ -14,7 +16,7 @@ def is_autosomal(chrom):
         return True
     except ValueError:
         try:
-            int(str(chrom.replace("chr", "")))
+            int(str(chrom.lower().replace("chr", "").replace("_", "").replace("-", "")))
             return True
         except ValueError:
             return False
@@ -36,13 +38,16 @@ def is_nonalt(chrom):
     """
     return is_autosomal_or_sex(chrom) or is_mitochondrial(chrom)
 
-def bed_to_standardonly(in_file, data, headers=None):
+def bed_to_standardonly(in_file, data, headers=None, include_sex_chroms=False, out_dir=None):
     out_file = "%s-stdchrs%s" % utils.splitext_plus(in_file)
+    if out_dir:
+        out_file = os.path.join(out_dir, os.path.basename(out_file))
+    checkfn = is_autosomal_or_sex if include_sex_chroms else is_autosomal
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
                 with open(tx_out_file, "w") as out_handle:
                     for line in in_handle:
-                        if is_autosomal(line.split()[0]) or (headers and line.startswith(headers)):
+                        if checkfn(line.split()[0]) or (headers and line.startswith(headers)):
                             out_handle.write(line)
     return out_file

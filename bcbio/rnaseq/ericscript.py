@@ -47,17 +47,18 @@ def prepare_input_data(config):
     return fq_files
 
 def run_ericscript(data, input_files):
-    db_location = dd.get_ericscript_db(data, None)
-    if not db_location:
+    es_config = EricScriptConfig(data)
+    if not es_config.has_ericscript_db():
         logger.info("Skipping ericscript because ericscript database not found.")
         return None
+    db_location = es_config._db_location
     work_dir = dd.get_work_dir(data)
     sample_name = dd.get_sample_name(data)
     out_dir = os.path.join(work_dir, "ericscript", sample_name)
     ericscript = config_utils.get_program("ericscript.pl", data)
     ericscript_path = os.path.dirname(os.path.realpath(ericscript))
     samtools_path = os.path.join(ericscript_path, "..", "..", "bin")
-    pathprepend = "export PATH=%s:$PATH; " % samtools_path
+    pathprepend = "export PATH=%s:\"$PATH\"; " % samtools_path
     files = " ".join(input_files)
     num_cores = dd.get_num_cores(data)
     cmd = ("{pathprepend} {ericscript} -db {db_location} -name {sample_name} -o {tx_out_dir} "
@@ -119,7 +120,7 @@ class EricScriptConfig(object):
             '-name', self._sample_name,
             '-o', tx_output_dir,
         ] + list(input_files)
-        return "export PATH=%s:%s:$PATH; %s;" % (self._get_samtools0_path(), self._get_ericscript_path(), " ".join(cmd))
+        return "export PATH=%s:%s:\"$PATH\"; %s;" % (self._get_samtools0_path(), self._get_ericscript_path(), " ".join(cmd))
 
     def _get_ericscript_path(self):
         """Retrieve PATH to the isolated eriscript anaconda environment.

@@ -364,7 +364,7 @@ class PicardMetrics(object):
                                 ("INPUT", dup_bam),
                                 ("OUTPUT", tx_metrics)]
                         try:
-                            self._picard.run("CalculateHsMetrics", opts)
+                            self._picard.run("CollectHsMetrics", opts)
                         # HsMetrics fails regularly with memory errors
                         # so we catch and skip instead of aborting the
                         # full process
@@ -451,12 +451,17 @@ def bed_to_interval(orig_bed, bam_file):
             with open(tmp_bed, "w") as out_handle:
                 out_handle.write(header)
                 with open(orig_bed) as in_handle:
-                    for line in in_handle:
+                    for i, line in enumerate(in_handle):
                         parts = line.rstrip().split("\t")
-                        if len(parts) == 3:
-                            parts.append("+")
-                            parts.append("a")
-                        out_handle.write("\t".join(parts) + "\n")
+                        if len(parts) == 4:
+                            chrom, start, end, name = parts
+                            strand = "+"
+                        elif len(parts) >= 3:
+                            chrom, start, end = parts[:3]
+                            strand = "+"
+                            name = "r%s" % i
+                        out = [chrom, start, end, strand, name]
+                        out_handle.write("\t".join(out) + "\n")
             yield tmp_bed
 
 

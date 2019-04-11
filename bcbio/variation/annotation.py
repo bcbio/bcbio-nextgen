@@ -3,7 +3,6 @@
 - GATK variant annotation with snpEff predicted effects.
 """
 import glob
-import gzip
 import os
 
 import pybedtools
@@ -116,10 +115,10 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
 def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
     """Fix header with additional lines and remapping of generic sample names.
     """
-    new_header = "%s-header.txt" % utils.splitext_plus(base_file)[0]
+    new_header = "%s-sample_header.txt" % utils.splitext_plus(base_file)[0]
     with open(new_header, "w") as out_handle:
         chrom_line = None
-        with gzip.open(orig_vcf) as in_handle:
+        with utils.open_gzipsafe(orig_vcf) as in_handle:
             for line in in_handle:
                 if line.startswith("##"):
                     out_handle.write(line)
@@ -154,6 +153,9 @@ op="delete"
 
 def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
     """Annotate a VCF file with dbSNP.
+
+    vcfanno has flexible matching for NON_REF gVCF positions, matching
+    at position and REF allele, matching ALT NON_REF as a wildcard.
     """
     orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
     if out_file is None:
@@ -176,9 +178,9 @@ def get_context_files(data):
     ref_file = dd.get_ref_file(data)
     all_files = []
     for ext in [".bed.gz"]:
-        all_files += glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
-                                                             "coverage", "problem_regions", "*",
-                                                             "*%s" % ext)))
+        all_files += sorted(glob.glob(os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir,
+                                                                    "coverage", "problem_regions", "*",
+                                                                    "*%s" % ext))))
     return sorted(all_files)
 
 def add_genome_context(orig_file, data):

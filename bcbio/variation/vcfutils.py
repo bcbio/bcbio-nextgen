@@ -3,13 +3,13 @@
 
 from collections import namedtuple, defaultdict
 import copy
-import gzip
 import os
 import shutil
 import subprocess
 
 import toolz as tz
 
+import six
 from six.moves import zip
 
 from bcbio import broad, utils
@@ -73,7 +73,7 @@ def get_paired_bams(align_bams, items):
             tumor_name = dd.get_sample_name(item)
             tumor_data = item
             tumor_config = item["config"]
-            normal_panel = item["config"]["algorithm"].get("background")
+            normal_panel = dd.get_background_variant(item)
     if tumor_bam or tumor_name:
         return PairedData(tumor_bam, tumor_name, normal_bam,
                           normal_name, normal_panel, tumor_config,
@@ -201,7 +201,7 @@ def split_snps_indels(orig_file, ref_file, config):
 def get_normal_sample(in_file):
     """Retrieve normal sample if normal/turmor
     """
-    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             if line.startswith("##PEDIGREE"):
                 parts = line.strip().split("Original=")[1][:-1]
@@ -210,7 +210,7 @@ def get_normal_sample(in_file):
 def get_samples(in_file):
     """Retrieve samples present in a VCF file
     """
-    with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+    with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
             if line.startswith("#CHROM"):
                 parts = line.strip().split("\t")
@@ -267,10 +267,20 @@ def select_sample(in_file, sample, out_file, config, filters=None):
 
 def vcf_has_variants(in_file):
     if os.path.exists(in_file):
-        with (gzip.open(in_file) if in_file.endswith(".gz") else open(in_file)) as in_handle:
+        with utils.open_gzipsafe(in_file) as in_handle:
             for line in in_handle:
                 if line.strip() and not line.startswith("#"):
                     return True
+    return False
+
+def vcf_has_nonfiltered_variants(in_file):
+    if os.path.exists(in_file):
+        with utils.open_gzipsafe(in_file) as in_handle:
+            for line in in_handle:
+                if line.strip() and not line.startswith("#"):
+                    parts = line.split("\t")
+                    if parts[6] in set(["PASS", "."]):
+                        return True
     return False
 
 # ## Merging of variant files
@@ -337,6 +347,9 @@ def _sort_by_region(fnames, regions, ref_file, config):
         if fname not in added_fnames:
             if isinstance(region, (list, tuple)):
                 c, s, e = region
+            elif isinstance(region, six.string_types) and region.find(":") >= 0:
+                c, coords = region.split(":")
+                s, e = [int(x) for x in coords.split("-")]
             else:
                 c = region
                 s, e = 0, 0
@@ -375,8 +388,13 @@ def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
             params = ["-T", "GatherVcfs", "-I", input_file_list, "-O", tx_out_file]
             # Use GATK4 for merging, tools_off: [gatk4] applies to variant calling
             config = utils.deepish_copy(config)
-            if "gatk4" in tz.get_in(["algorithm", "tools_off"], config):
+            if "gatk4" in dd.get_tools_off({"config": config}):
                 config["algorithm"]["tools_off"].remove("gatk4")
+            # Allow specification of verbosity in the unique style this tool uses
+            resources = config_utils.get_resources("gatk", config)
+            opts = [str(x) for x in resources.get("options", [])]
+            if "--verbosity" in opts:
+                params += ["--VERBOSITY:%s" % opts[opts.index("--verbosity") + 1]]
             broad_runner = broad.runner_from_config(config)
             broad_runner.run_gatk(params)
     return out_file
@@ -422,8 +440,12 @@ def _fix_gatk_header(exist_files, out_file, config):
         header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
         do.run("zgrep ^# %s > %s"
                 % (replace_file, header_file), "Prepare header file for merging")
-        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s" %
-               (utils.get_java_clprep(), header_file, base_file, base_fix_file),
+        resources = config_utils.get_resources("picard", config)
+        ropts = []
+        if "options" in resources:
+            ropts += [str(x) for x in resources.get("options", [])]
+        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s %s" %
+               (utils.get_java_clprep(), header_file, base_file, base_fix_file, " ".join(ropts)),
                "Reheader initial VCF file in merge")
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]
@@ -508,7 +530,7 @@ def sort_by_ref(vcf_file, data):
 def add_contig_to_header_cl(ref_file, out_file):
     """Add update ##contig lines to VCF header, required for bcftools/GATK compatibility.
     """
-    header_file = "%s-header.txt" % utils.splitext_plus(out_file)[0]
+    header_file = "%s-contig_header.txt" % utils.splitext_plus(out_file)[0]
     with open(header_file, "w") as out_handle:
         for region in ref.file_contigs(ref_file, {}):
             out_handle.write("##contig=<ID=%s,length=%s>\n" % (region.name, region.size))
@@ -640,6 +662,7 @@ def is_gvcf_file(in_file):
             if not line.startswith("##"):
                 if n > to_check:
                     break
+                n += 1
                 parts = line.split("\t")
                 # GATK
                 if parts[4] == "<NON_REF>":
@@ -653,3 +676,28 @@ def is_gvcf_file(in_file):
                 # platypue
                 if parts[4] == "N" and parts[6] == "REFCALL":
                     return True
+
+def cyvcf_add_filter(rec, name):
+    """Add a FILTER value to a cyvcf2 record
+    """
+    if rec.FILTER:
+        filters = rec.FILTER.split(";")
+    else:
+        filters = []
+    if name not in filters:
+        filters.append(name)
+        rec.FILTER = filters
+    return rec
+
+def cyvcf_remove_filter(rec, name):
+    """Remove filter with the given name from a cyvcf2 record
+    """
+    if rec.FILTER:
+        filters = rec.FILTER.split(";")
+    else:
+        filters = []
+    new_filters = [x for x in filters if not str(x) == name]
+    if len(new_filters) == 0:
+        new_filters = ["PASS"]
+    rec.FILTER = new_filters
+    return rec

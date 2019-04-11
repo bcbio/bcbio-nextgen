@@ -3,7 +3,7 @@
 from distutils.version import LooseVersion
 import subprocess
 
-from bcbio import broad, setpath, utils
+from bcbio import setpath, utils
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.log import logger
@@ -17,7 +17,7 @@ def samtools(items):
     output, stderr = p.communicate()
     p.stdout.close()
     p.stderr.close()
-    if output.find("-@") == -1 and stderr.find("-@") == -1:
+    if str(output).find("-@") == -1 and str(stderr).find("-@") == -1:
         return ("Installed version of samtools sort does not have support for "
                 "multithreading (-@ option) "
                 "required to support bwa piped alignment and BAM merging. "
@@ -30,7 +30,10 @@ def _has_pipeline(items):
     return any(item.get("analysis", "") != "" for item in items)
 
 def _needs_java(data):
-    """Check if a caller needs external java for MuTect or older GATK 3.6.
+    """Check if a caller needs external java for MuTect.
+
+    No longer check for older GATK (<3.6) versions because of time cost; this
+    won't be relevant to most runs so we skip the sanity check.
     """
     vc = dd.get_variantcaller(data)
     if isinstance(vc, dict):
@@ -45,10 +48,11 @@ def _needs_java(data):
     if "mutect" in vc or ("somatic" in vc and "mutect" in vc["somatic"]):
         return True
     if "gatk" in vc or "gatk-haplotype" in vc or ("germline" in vc and "gatk-haplotype" in vc["germline"]):
-        runner = broad.runner_from_config(data["config"])
-        version = runner.get_gatk_version()
-        if LooseVersion(version) < LooseVersion("3.6"):
-            return True
+        pass
+        # runner = broad.runner_from_config(data["config"])
+        # version = runner.get_gatk_version()
+        # if LooseVersion(version) < LooseVersion("3.6"):
+        #     return True
     return False
 
 def java(items):

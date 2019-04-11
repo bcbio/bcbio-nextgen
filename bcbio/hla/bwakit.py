@@ -83,7 +83,7 @@ def get_hla_truthset(data):
     if val_csv and utils.file_exists(val_csv):
         with open(val_csv) as in_handle:
             reader = csv.reader(in_handle)
-            reader.next() # header
+            next(reader) # header
             for sample, locus, alleles in (l for l in reader if l):
                 out = tz.update_in(out, [sample, locus], lambda x: [x.strip() for x in alleles.split(";")])
     return out

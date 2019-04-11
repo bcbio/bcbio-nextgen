@@ -6,6 +6,7 @@ https://github.com/ekg/freebayes
 import os
 import sys
 
+import six
 import toolz as tz
 
 from bcbio import utils
@@ -43,20 +44,18 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     if (isinstance(region, (list, tuple)) and chromhacks.is_mitochondrial(region[0])
           and cur_ploidy >= base_ploidy and "--min-alternate-fraction" not in opts and "-F" not in opts):
         opts += ["--min-alternate-fraction", "0.01"]
-    variant_regions = bedutils.merge_overlaps(bedutils.population_variant_regions(items), items[0])
+    variant_regions = bedutils.population_variant_regions(items, merged=True)
     # Produce gVCF output
     if any("gvcf" in dd.get_tools_on(d) for d in items):
         opts += ["--gvcf", "--gvcf-chunk", "50000"]
     no_target_regions = False
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
-        if isinstance(target, basestring) and os.path.isfile(target):
-            if any(tz.get_in(["config", "algorithm", "coverage_interval"], x, "").lower() == "genome"
-                   for x in items):
-                target = shared.remove_highdepth_regions(target, items)
-                if os.path.getsize(target) == 0:
-                    no_target_regions = True
-            opts += ["--targets", target]
+        if isinstance(target, six.string_types) and os.path.isfile(target):
+            if os.path.getsize(target) == 0:
+                no_target_regions = True
+            else:
+                opts += ["--targets", target]
         else:
             opts += ["--region", region_to_freebayes(target)]
     resources = config_utils.get_resources("freebayes", config)
@@ -83,6 +82,7 @@ def run_freebayes(align_bams, items, ref_file, assoc_files, region=None,
                   out_file=None):
     """Run FreeBayes variant calling, either paired tumor/normal or germline calling.
     """
+    items = shared.add_highdepth_genome_exclusion(items)
     if is_paired_analysis(align_bams, items):
         paired = get_paired_bams(align_bams, items)
         if not paired.normal_bam:
@@ -132,7 +132,7 @@ def _run_freebayes_caller(align_bams, items, ref_file, assoc_files,
                     # For multi-sample outputs, ensure consistent order
                     samples = ("-s" + ",".join([dd.get_sample_name(d) for d in items])) if len(items) > 1 else ""
                     fix_ambig = vcfutils.fix_ambiguous_cl()
-                    py_cl = os.path.join(os.path.dirname(sys.executable), "py")
+                    py_cl = config_utils.get_program("py", config)
                     cmd = ("{freebayes} -f {ref_file} {opts} {input_bams} "
                            """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """
                            "| {fix_ambig} | bcftools view {samples} -a - | "

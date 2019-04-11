@@ -10,10 +10,12 @@ import os
 import pprint
 import tarfile
 
+import six
 import toolz as tz
 
-from bcbio import utils
+from bcbio import bam, utils
 from bcbio.pipeline import datadict as dd
+from bcbio.variation import vcfutils
 
 def to_rec(samples, default_keys=None):
     """Convert inputs into CWL records, useful for single item parallelization.
@@ -32,7 +34,7 @@ def to_rec_single(samples, default_keys=None):
     return out
 
 def is_cwl_run(data):
-    return data.get("is_cwl") or data.get("cwl_keys")
+    return data.get("is_cwl") or data.get("cwl_keys") or data.get("output_cwl_keys")
 
 def handle_combined_input(args):
     """Check for cases where we have a combined input nested list.
@@ -56,7 +58,7 @@ def normalize_missing(xs):
             xs[k] = normalize_missing(v)
     elif isinstance(xs, (list, tuple)):
         xs = [normalize_missing(x) for x in xs]
-    elif isinstance(xs, basestring):
+    elif isinstance(xs, six.string_types):
         if xs.lower() in ["none", "null"]:
             xs = None
         elif xs.lower() == "true":
@@ -79,7 +81,7 @@ def unpack_tarballs(xs, data, use_subdir=True):
             xs[k] = unpack_tarballs(v, data, use_subdir)
     elif isinstance(xs, (list, tuple)):
         xs = [unpack_tarballs(x, data, use_subdir) for x in xs]
-    elif isinstance(xs, basestring):
+    elif isinstance(xs, six.string_types):
         if os.path.isfile(xs.encode("utf-8", "ignore")) and xs.endswith("-wf.tar.gz"):
             if use_subdir:
                 tarball_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "wf-inputs"))
@@ -122,6 +124,7 @@ def _get_all_cwlkeys(items, default_keys=None):
                             "validate__tp", "validate__fp", "validate__fn",
                             "config__algorithm__coverage", "config__algorithm__coverage_merged",
                             "genome_resources__variation__cosmic", "genome_resources__variation__dbsnp",
+                            "genome_resources__variation__clinvar"
         ])
     all_keys = set([])
     for data in items:
@@ -190,3 +193,74 @@ def samples_to_records(samples, default_keys=None):
         data["metadata"] = run_info.add_metadata_defaults(data.get("metadata", {}))
         out.append(data)
     return out
+
+def assign_complex_to_samples(items):
+    """Assign complex inputs like variants and align outputs to samples.
+
+    Handles list inputs to record conversion where we have inputs from multiple
+    locations and need to ensure they are properly assigned to samples in many
+    environments.
+
+    The unpleasant approach here is to use standard file naming to match
+    with samples so this can work in environments where we don't download/stream
+    the input files (for space/time savings).
+    """
+    extract_fns = {("variants", "samples"): _get_vcf_samples,
+                   ("align_bam",): _get_bam_samples}
+    complex = {k: {} for k in extract_fns.keys()}
+    for data in items:
+        for k in complex:
+            v = tz.get_in(k, data)
+            if v is not None:
+                for s in extract_fns[k](v, items):
+                    if s:
+                        complex[k][s] = v
+    out = []
+    for data in items:
+        for k in complex:
+            newv = tz.get_in([k, dd.get_sample_name(data)], complex)
+            if newv:
+                data = tz.update_in(data, k, lambda x: newv)
+        out.append(data)
+    return out
+
+def _get_vcf_samples(calls, items):
+    have_full_file = False
+    all_samples = set([])
+    sample_matches = False
+    for f in utils.flatten(calls):
+        if have_full_file:
+            cur = set(vcfutils.get_samples(f))
+            if cur:
+                if not all_samples:
+                    all_samples = cur
+                else:
+                    all_samples &= set(cur)
+        else:
+            for data in items:
+                for i, test_name in enumerate([dd.get_sample_name(data)] + dd.get_batches(data)):
+                    # For tumor/normal batches, want to attach germline VCFs to normals
+                    # Standard somatics go to tumors
+                    if dd.get_phenotype(data) == "normal":
+                        test_name += "-germline"
+                    if os.path.basename(f).startswith(("%s-" % test_name,
+                                                       "%s." % test_name)):
+                        # Prefer matches to single samples (gVCF) over joint batches
+                        if i == 0:
+                            sample_matches = True
+                        if sample_matches and i > 0:
+                            continue
+                        else:
+                            all_samples.add(dd.get_sample_name(data))
+    return list(all_samples)
+
+def _get_bam_samples(f, items):
+    have_full_file = False
+    if have_full_file:
+        return [bam.sample_name(f)]
+    else:
+        for data in items:
+            if os.path.basename(f).startswith(("%s-" % dd.get_sample_name(data),
+                                               "%s." % dd.get_sample_name(data))):
+                return [dd.get_sample_name(data)]
+        return []

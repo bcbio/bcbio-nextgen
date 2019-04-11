@@ -9,7 +9,7 @@ set -eu -o pipefail
 
 mkdir -p config
 cd config
-wget -c https://raw.githubusercontent.com/chapmanb/bcbio-nextgen/master/config/examples/giab-validate.yaml
+wget -c https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/giab-validate.yaml
 cd ..
 
 mkdir -p input

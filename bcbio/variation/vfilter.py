@@ -105,10 +105,10 @@ def _freebayes_cutoff(in_file, data):
         if stats["avg_depth"] > 0:
             depth_thresh = int(math.ceil(stats["avg_depth"] + 3 * math.pow(stats["avg_depth"], 0.5)))
             qual_thresh = depth_thresh * 2.0  # Multiplier from default GATK QD cutoff filter
-    filters = ('(AF[0] <= 0.5 && (DP < 4 || (DP < 13 && %QUAL < 10))) || '
-               '(AF[0] > 0.5 && (DP < 4 && %QUAL < 50))')
+    filters = ('(AF[0] <= 0.5 && (max(FORMAT/DP) < 4 || (max(FORMAT/DP) < 13 && %QUAL < 10))) || '
+               '(AF[0] > 0.5 && (max(FORMAT/DP) < 4 && %QUAL < 50))')
     if depth_thresh:
-        filters += ' || (%QUAL < {qual_thresh} && DP > {depth_thresh} && AF[0] <= 0.5)'.format(**locals())
+        filters += ' || (%QUAL < {qual_thresh} && max(FORMAT/DP) > {depth_thresh} && AF[0] <= 0.5)'.format(**locals())
     return cutoff_w_expression(in_file, filters, data, name="FBQualDepth")
 
 def _do_high_depth_filter(data):
@@ -165,9 +165,9 @@ def platypus(in_file, data):
 def samtools(in_file, data):
     """Filter samtools calls based on depth and quality, using similar approaches to FreeBayes.
     """
-    filters = ('((AC[0] / AN) <= 0.5 && DP < 4 && %QUAL < 20) || '
-               '(DP < 13 && %QUAL < 10) || '
-               '((AC[0] / AN) > 0.5 && DP < 4 && %QUAL < 50)')
+    filters = ('((AC[0] / AN) <= 0.5 && max(FORMAT/DP) < 4 && %QUAL < 20) || '
+               '(max(FORMAT/DP) < 13 && %QUAL < 10) || '
+               '((AC[0] / AN) > 0.5 && max(format/DP) < 4 && %QUAL < 50)')
     return cutoff_w_expression(in_file, filters, data, name="stQualDepth")
 
 def _gatk_general():
@@ -178,7 +178,7 @@ def _gatk_general():
     https://community.10xgenomics.com/t5/Genome-Exome-Forum/Best-practices-for-trimming-adapters-when-variant-calling/m-p/473
     https://github.com/bcbio/bcbio_validations/tree/master/gatk4#10x-adapter-trimming--low-frequency-allele-filter
     """
-    return ["(QD < 10.0 && AD[1] / (AD[1] + AD[0]) < 0.25 && ReadPosRankSum < 0.0)"]
+    return ["(QD < 10.0 && AD[0:1] / (AD[0:1] + AD[0:0]) < 0.25 && ReadPosRankSum < 0.0)"]
 
 def gatk_snp_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK SNPs using best-practice recommendations.
@@ -209,8 +209,6 @@ def gatk_snp_cutoff(in_file, data):
         filters += ["QD < 2.0"]
         filters += ["FS > 60.0"]
         filters += _gatk_general()
-    # Additional filter metrics, unless using raw Sentieon gVCFs
-    if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["haplotyper"]):
         filters += ["MQ < 30.0"]
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
                                extra_cmd=r"""| sed 's/\\"//g'""")

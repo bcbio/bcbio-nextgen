@@ -3,14 +3,18 @@
 Handles conversion to CRAM format.
 """
 
+from bcbio import utils
 from bcbio.bam import cram
+from bcbio.cwl import cwlutils
 from bcbio.pipeline import datadict as dd
 
 def to_cram(data):
     """Convert BAM archive files into indexed CRAM.
     """
-    cram_file = cram.compress(data["work_bam"], data)
-    data["work_bam"] = cram_file
+    data = utils.to_single_data(data)
+    cram_file = cram.compress(dd.get_work_bam(data) or dd.get_align_bam(data), data)
+    out_key = "archive_bam" if cwlutils.is_cwl_run(data) else "work_bam"
+    data[out_key] = cram_file
     return [[data]]
 
 def compress(samples, run_parallel):

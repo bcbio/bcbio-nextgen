@@ -3,8 +3,6 @@
 import os
 import collections
 
-import pysam
-
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 
@@ -288,7 +286,7 @@ def bed2interval(align_file, bed, out_file=None):
     http://genome.ucsc.edu/FAQ/FAQformat.html#format1.5
 
     """
-
+    import pysam
     base, ext = os.path.splitext(align_file)
     if out_file is None:
         out_file = base + ".interval"

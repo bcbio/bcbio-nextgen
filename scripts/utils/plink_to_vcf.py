@@ -2,7 +2,7 @@
 """Convert Plink ped/map files into VCF format using plink and Plink/SEQ.
 
 Latest version available as part of bcbio-nextgen:
-https://github.com/chapmanb/bcbio-nextgen/blob/master/scripts/plink_to_vcf.py
+https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/plink_to_vcf.py
 
 Requires:
 

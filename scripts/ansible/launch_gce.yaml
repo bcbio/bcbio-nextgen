@@ -16,16 +16,12 @@
         image: "{{ image_id }}"
         name: "{{ run_name }}"
         zone: "{{ zone }}"
+        disk_size: 30
+        persistent_boot_disk: true
         service_account_email: "{{ service_account_email }}"
         credentials_file: "{{ credentials_file }}"
         project_id: "{{ project_id }}"
         state: present
-    - name: Add new instance to host group
-      local_action: add_host hostname={{ item.public_ip }} groupname=launched
-      with_items: "{{ gce.instance_data }}"
-    - name: Wait for SSH
-      local_action: wait_for host={{ item.public_ip }} port=22 state=started
-      with_items: "{{ gce.instance_data }}"
     - name: Attach working volume
       local_action:
         module: gce_pd
@@ -38,8 +34,16 @@
         project_id: "{{ project_id }}"
         state: present
       with_items: "{{ gce.instance_data }}"
-    - name: Get rid of SSH "Are you sure you want to continue connecting (yes/no)?" query
-      shell: ssh-keyscan {{ item.public_ip }} >> $HOME/.ssh/known_hosts
+    - name: Wait for SSH
+      local_action: wait_for host={{ item.public_ip }} port=22 state=started delay=30 timeout=900 search_regex=Ubuntu
+      with_items: "{{ gce.instance_data }}"
+    - name: Add new instance to host group
+      local_action:
+        module: add_host
+        hostname: "{{ item.public_ip }}"
+        groupname: launched
+        # Get rid of SSH "Are you sure you want to continue connecting (yes/no)?" query
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       with_items: "{{ gce.instance_data }}"
 
 - hosts: launched
@@ -47,11 +51,67 @@
   gather_facts: true
   tasks:
     - include_vars: project_vars.yaml
+    - name: Create ext4 filesystem if not present
+      filesystem: fstype=ext4 dev=/dev/disk/by-id/google-{{ volume }}
+      become: true
     - name: Mount work volume
       become: true
       mount: name=/mnt/work src=/dev/disk/by-id/google-{{ volume }} fstype=ext4 state=mounted
+    - name: Create bcbio directory if missing
+      file: path=/mnt/work/bcbio state=directory owner=ubuntu
+      become: true
     - name: Add bcbio to path
       lineinfile: line="export PATH=/mnt/work/bcbio/bin:$PATH" dest=~/.bashrc
+    - apt: update_cache=yes
+      become: true
     - apt: name="{{ item }}" update_cache=yes
       become: true
       with_items: [git, unzip, wget, tar, gzip, bzip2]
+    - name: Download docker
+      get_url:
+        url: https://get.docker.com
+        dest: /tmp/docker-install.sh
+    - name: Install docker
+      become: true
+      shell: bash /tmp/docker-install.sh
+    - name: Add to docker group
+      become: true
+      shell: usermod -aG docker ubuntu
+    - name: htcondor | Set up deb configuration for unattended install
+      become: true
+      shell: "{{ item }}"
+      with_items:
+        - echo "htcondor condor/wantdebconf boolean true" | debconf-set-selections
+        - echo "htcondor condor/personal boolean true" | debconf-set-selections
+    - name: htcondor | install
+      become: true
+      apt: name="htcondor"
+    - name: htcondor | paritionable configuration
+      become: true
+      lineinfile:
+        path: /etc/condor/condor_config.local
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - { regexp: '^MAX_SLOTS_TYPE =', line: 'MAX_SLOTS_TYPE = 1' }
+        - { regexp: '^SLOT_TYPE_1 =', line: 'SLOT_TYPE_1 = cpus=100%, ram=100%, disk=100%, swap=100%' }
+        - { regexp: '^SLOT_TYPE_1_PARTITIONABLE =', line: 'SLOT_TYPE_1_PARTITIONABLE = True' }
+        - { regexp: '^NUM_SLOTS_TYPE_1 =', line: 'NUM_SLOTS_TYPE_1 = 1' }
+    - name: htcondor | Restart condor
+      become: yes
+      command: service condor restart
+    - name: Install Microsoft key and register product repository
+      become: true
+      apt:
+        deb: https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+    - name: Install apt-transport-https
+      become: true
+      apt:
+        name: apt-transport-https
+        state: latest
+    - name: Install dotnet core
+      become: true
+      apt:
+        name: dotnet-runtime-2.0.7
+        state: latest
+        update_cache: yes

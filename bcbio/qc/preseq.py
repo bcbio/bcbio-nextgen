@@ -120,7 +120,7 @@ def _prep_real_counts(bam_file, data, samtools_stats):
         bed = dd.get_coverage_merged(data)
         target_name = "coverage"
     elif dd.get_coverage_interval(data) != "genome":
-        bed = dd.get_variant_regions_merged(data)
+        bed = dd.get_variant_regions_merged(data) or dd.get_sample_callable(data)
         target_name = "variant_regions"
     else:
         bed = None

@@ -12,7 +12,7 @@ details:
       coverage: ../data/automated/coverage_transcripts-bam.bed
     resources:
       fgbio:
-        options: [--edits, 2, --min-reads, 2]
+        options: [--edits, 2, --min-input-base-quality, 10]
     analysis: variant2
     description: Test1
     genome_build: hg19

@@ -1,6 +1,21 @@
 Presentations
 =============
 
+- Variant calling and bcbio training for the `Harvard Chan Bioinformatics Core
+  In Depth NGS Data Analysis Course
+  <https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/>`_
+  (10 October 2018): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2018_teaching/ngscourse2018_teaching.pdf>`_
+
+- Building a diverse set of validations; lightning talk at `the GCCBOSC2018 Bioinformatics Community Conference
+  <https://gccbosc2018.sched.com/>`_: `slides <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2018_bcbio_validate/chapman_bcbio_validate.pdf>`_
+
+- bcbio training at `the GCCBOSC2018 Bioinformatics Community Conference
+  <https://gccbosc2018.sched.com/>`_, focusing on bcbio CWL integration with
+  examples of variant calling analyses on Personal Genome Project examples (26
+  June 2018): `slides
+  <https://github.com/chapmanb/bcbb/blob/master/talks/bosc2018_bcbio_training/bosc2018_bcbio_training.pdf>`_;;
+  `video <https://www.youtube.com/watch?v=ukWhAetvNKE>`_
+
 - Description of bcbio and Common Workflow integration with a focus on
   parallelization strategies. From a bcbio discussion with `Peter Park's lab at Harvard Medical School
   <https://compbio.hms.harvard.edu/index>`_ (26 January 2018): `slides <https://github.com/chapmanb/bcbb/blob/master/talks/park2018_bcbio/park2018_bcbio.pdf>`_

@@ -1,5 +1,6 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
+from __future__ import print_function
 import collections
 import copy
 import dateutil
@@ -11,16 +12,19 @@ import os
 import tarfile
 
 import requests
+import six
 import toolz as tz
 import yaml
 
 from bcbio import utils
 from bcbio.cwl import defs, workflow
 from bcbio.distributed import objectstore, resources
+from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import alignment
+from functools import reduce
 
 INTEGRATION_MAP = {"keep:": "arvados", "s3:": "s3", "sbg:": "sbgenomics",
-                   "dx:": "dnanexus"}
+                   "dx:": "dnanexus", "gs:": "gs"}
 
 def from_world(world, run_info_file, integrations=None, add_container_tag=None):
     base = utils.splitext_plus(os.path.basename(run_info_file))[0]
@@ -91,7 +95,7 @@ def _get_disk_estimates(name, parallel, inputs, file_estimates, samples, disk,
         tmp_disk = int(math.ceil(out_disk * 0.5))
         out_disk = int(math.ceil(out_disk))
 
-    bcbio_docker_disk = 1 * 1024  # Minimum requirements for bcbio Docker image
+    bcbio_docker_disk = (10 if cur_remotes else 1) * 1024  # Minimum requirements for bcbio Docker image
     disk_hint = {"outdirMin": bcbio_docker_disk + out_disk, "tmpdirMin": tmp_disk}
     # Skip input disk for steps which require only transformation (and thus no staging)
     if no_files:
@@ -169,7 +173,7 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
         if any(p.startswith(("gatk", "sentieon")) for p in programs):
             out["hints"] += [{"class": "arv:APIRequirement"}]
     # Multi-process methods that read heavily from BAM files need extra keep cache for Arvados
-    if name in ["pipeline_summary", "variantcall_batch_region"]:
+    if name in ["pipeline_summary", "variantcall_batch_region", "detect_sv"]:
         out["hints"] += [{"class": "arv:RuntimeConstraints", "keep_cache": 4096}]
     def add_to_namespaces(k, v, out):
         if "$namespaces" not in out:
@@ -194,7 +198,8 @@ def _write_tool(step_dir, name, inputs, outputs, parallel, image, programs,
                          "sentinel_inputs=%s" % ",".join(["%s:%s" %
                                                           (workflow.get_base_id(v["id"]),
                                                            "record" if workflow.is_cwl_record(v) else "var")
-                                                          for v in inputs])]
+                                                          for v in inputs]),
+                         "run_number=0"]
     out = _add_inputs_to_tool(inputs, out, parallel, use_commandline_args)
     out = _add_outputs_to_tool(outputs, out)
     _tool_to_file(out, out_file)
@@ -324,7 +329,7 @@ def _place_secondary_files(inp_tool, inp_binding=None):
     """
     def _is_file(val):
         return (val == "File" or (isinstance(val, (list, tuple)) and
-                                  ("File" in val or any(isinstance(x, dict) and x["items"] == "File") for x in val)))
+                                  ("File" in val or any(isinstance(x, dict) and _is_file(val)) for x in val)))
     secondary_files = inp_tool.pop("secondaryFiles", None)
     if secondary_files:
         key = []
@@ -397,7 +402,7 @@ def _get_cur_remotes(path):
     elif isinstance(path, dict):
         for v in path.values():
             cur_remotes |= _get_cur_remotes(v)
-    elif path and isinstance(path, basestring):
+    elif path and isinstance(path, six.string_types):
         if path.startswith(tuple(INTEGRATION_MAP.keys())):
             cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
     return cur_remotes
@@ -440,6 +445,9 @@ def prep_cwl(samples, workflow_fn, out_dir, out_file, integrations=None,
                 if "outputSource" not in wf_output:
                     wf_output["outputSource"] = wf_output.pop("source")
                 wf_output = _clean_record(wf_output)
+                # Avoid input/output naming clashes
+                if wf_output["id"] in used_inputs:
+                    wf_output["id"] = "%s_out" % wf_output["id"]
                 out["outputs"].append(wf_output)
         elif cur[0] == "wf_start":
             parent_wfs.append(out)
@@ -482,7 +490,7 @@ def _flatten_samples(samples, base_file, get_retriever):
                 cur_flat[flat_key] = flat_val
         flat_data.append(cur_flat)
     out = {}
-    for key in sorted(list(set(reduce(operator.add, [d.keys() for d in flat_data])))):
+    for key in sorted(list(set(reduce(operator.add, [list(d.keys()) for d in flat_data])))):
         # Periods in keys cause issues with WDL and some CWL implementations
         clean_key = key.replace(".", "_")
         out[clean_key] = []
@@ -504,7 +512,7 @@ def _indexes_to_secondary_files(gresources, genome_build):
         if isinstance(val, dict) and "indexes" in val:
             # list of indexes -- aligners
             if len(val.keys()) == 1:
-                indexes = val["indexes"]
+                indexes = sorted(val["indexes"])
                 if len(indexes) == 0:
                     if refname not in alignment.allow_noindices():
                         raise ValueError("Did not find indexes for %s: %s" % (refname, val))
@@ -545,7 +553,7 @@ def _get_secondary_files(val):
             for s in _get_secondary_files(x):
                 s_counts[s] += 1
         for s, count in s_counts.items():
-            if s and s not in out and count == len(val):
+            if s and s not in out and count == len([x for x in val if x]):
                 out.append(s)
     elif isinstance(val, dict) and (val.get("class") == "File" or "File" in val.get("class")):
         if "secondaryFiles" in val:
@@ -563,9 +571,9 @@ def _get_relative_ext(of, sf):
                 os.path.basename(orig).count(".") == os.path.basename(prefix).count("."))
     # Handle remote files
     if of.find(":") > 0:
-        of = of.split(":")[-1]
+        of = os.path.basename(of.split(":")[-1])
     if sf.find(":") > 0:
-        sf = sf.split(":")[-1]
+        sf = os.path.basename(sf.split(":")[-1])
     prefix = os.path.commonprefix([sf, of])
     while prefix.endswith(".") or (half_finished_trim(sf, prefix) and half_finished_trim(of, prefix)):
         prefix = prefix[:-1]
@@ -573,7 +581,7 @@ def _get_relative_ext(of, sf):
     ext_to_add = sf.replace(prefix, "")
     # Return extensions relative to original
     if not exts_to_remove or exts_to_remove.startswith("."):
-        return "^" * exts_to_remove.count(".") + ext_to_add
+        return str("^" * exts_to_remove.count(".") + ext_to_add)
     else:
         raise ValueError("No cross platform way to reference complex extension: %s %s" % (sf, of))
 
@@ -602,18 +610,21 @@ def _get_avro_type(val):
                         types.append(x)
             elif ctype not in types:
                 types.append(ctype)
-        # handle empty types, allow null or a string "null" sentinel
+        # handle empty types, allow null
         if len(types) == 0:
-            types = ["null", "string"]
+            types = ["null"]
             # empty lists
             if isinstance(val, (list, tuple)) and len(val) == 0:
-                types.append({"type": "array", "items": ["null", "string"]})
+                types.append({"type": "array", "items": ["null"]})
         types = _avoid_duplicate_arrays(types)
+        # Avoid empty null only arrays which confuse some runners
+        if len(types) == 1 and types[0] == "null":
+            types.append("string")
         return {"type": "array", "items": (types[0] if len(types) == 1 else types)}
     elif val is None:
-        return ["null", "string"]
+        return ["null"]
     # encode booleans as string True/False and unencode on other side
-    elif isinstance(val, bool) or isinstance(val, basestring) and val.lower() in ["true", "false", "none"]:
+    elif isinstance(val, bool) or isinstance(val, six.string_types) and val.lower() in ["true", "false", "none"]:
         return ["string", "null", "boolean"]
     elif isinstance(val, int):
         return "long"
@@ -662,8 +673,16 @@ def _to_cwldata(key, val, get_retriever):
             else:
                 out.append((key, _to_cwlfile_with_indexes(val, get_retriever)))
         # Dump shared nested keys like resources as a JSON string
-        elif key in workflow.ALWAYS_AVAILABLE:
+        elif key in workflow.ALWAYS_AVAILABLE or key in workflow.STRING_DICT:
             out.append((key, _item_to_cwldata(json.dumps(val), get_retriever)))
+        elif key in workflow.FLAT_DICT:
+            flat = []
+            for k, vs in val.items():
+                if not isinstance(vs, (list, tuple)):
+                    vs = [vs]
+                for v in vs:
+                    flat.append("%s:%s" % (k, v))
+            out.append((key, _item_to_cwldata(flat, get_retriever)))
         else:
             remain_val = {}
             for nkey, nval in val.items():
@@ -681,21 +700,38 @@ def _to_cwldata(key, val, get_retriever):
         out.append((key, _item_to_cwldata(val, get_retriever)))
     return out
 
+def _remove_remote_prefix(f):
+    """Remove any remote references to allow object lookups by file paths.
+    """
+    return f.split(":")[-1].split("/", 1)[1] if objectstore.is_remote(f) else f
+
+def _index_blacklist(xs):
+    blacklist = ["-resources.yaml"]
+    return [x for x in xs if not any([x.find(b) >=0 for b in blacklist])]
+
 def _to_cwlfile_with_indexes(val, get_retriever):
     """Convert reads with ready to go indexes into the right CWL object.
 
     Identifies the top level directory and creates a tarball, avoiding
     trying to handle complex secondary setups which are not cross platform.
 
-    Skips doing this for reference files, which take up too much time and
-    space to unpack multiple times.
+    Skips doing this for reference files and standard setups like bwa, which
+    take up too much time and space to unpack multiple times.
     """
-    if val["base"].endswith(".fa") and any([x.endswith(".fa.fai") for x in val["indexes"]]):
-        return _item_to_cwldata(val["base"], get_retriever)
+    val["indexes"] = _index_blacklist(val["indexes"])
+    tval = {"base": _remove_remote_prefix(val["base"]),
+            "indexes": [_remove_remote_prefix(f) for f in val["indexes"]]}
+    # Standard named set of indices, like bwa
+    # Do not include snpEff, which we need to isolate inside a nested directory
+    # hisat2 indices do also not localize cleanly due to compilicated naming
+    cp_dir, cp_base = os.path.split(os.path.commonprefix([tval["base"]] + tval["indexes"]))
+    if (cp_base and cp_dir == os.path.dirname(tval["base"]) and
+            not ("/snpeff/" in cp_dir or "/hisat2" in cp_dir)):
+        return _item_to_cwldata(val["base"], get_retriever, val["indexes"])
     else:
-        dirname = os.path.dirname(val["base"])
-        assert all([x.startswith(dirname) for x in val["indexes"]])
-        return {"class": "File", "path": _directory_tarball(dirname)}
+        dirname = os.path.dirname(tval["base"])
+        assert all([x.startswith(dirname) for x in tval["indexes"]])
+        return {"class": "File", "path": directory_tarball(dirname)}
 
 def _add_secondary_if_exists(secondary, out, get_retriever):
     """Add secondary files only if present locally or remotely.
@@ -706,18 +742,22 @@ def _add_secondary_if_exists(secondary, out, get_retriever):
         out["secondaryFiles"] = [{"class": "File", "path": f} for f in secondary]
     return out
 
-def _item_to_cwldata(x, get_retriever):
+def _item_to_cwldata(x, get_retriever, indexes=None):
     """"Markup an item with CWL specific metadata.
     """
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx, get_retriever) for subx in x]
-    elif (x and isinstance(x, basestring) and
+    elif (x and isinstance(x, six.string_types) and
           (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
            objectstore.is_remote(x))):
         if _file_local_or_remote(x, get_retriever):
             out = {"class": "File", "path": x}
-            if x.endswith(".bam"):
+            if indexes:
+                out = _add_secondary_if_exists(indexes, out, get_retriever)
+            elif x.endswith(".bam"):
                 out = _add_secondary_if_exists([x + ".bai"], out, get_retriever)
+            elif x.endswith(".cram"):
+                out = _add_secondary_if_exists([x + ".crai"], out, get_retriever)
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):
@@ -730,7 +770,7 @@ def _item_to_cwldata(x, get_retriever):
             elif x.endswith(".gtf"):
                 out = _add_secondary_if_exists([x + ".db"], out, get_retriever)
         else:
-            out = {"class": "File", "path": _directory_tarball(x)}
+            out = {"class": "File", "path": directory_tarball(x)}
         return out
     elif isinstance(x, bool):
         return str(x)
@@ -746,38 +786,35 @@ def _file_local_or_remote(f, get_retriever):
     if integration:
         return integration.file_exists(f, config)
 
-def _directory_tarball(dirname):
+def directory_tarball(dirname):
     """Create a tarball of a complex directory, avoiding complex secondaryFiles.
 
     Complex secondary files do not work on multiple platforms and are not portable
     to WDL, so for now we create a tarball that workers will unpack.
     """
-    assert os.path.isdir(dirname)
+    assert os.path.isdir(dirname), dirname
     base_dir, tarball_dir = os.path.split(dirname)
-    while base_dir and not os.path.exists(os.path.join(base_dir, "seq")):
+    while not os.path.exists(os.path.join(base_dir, "seq")) and base_dir and base_dir != "/":
         base_dir, extra_tarball = os.path.split(base_dir)
         tarball_dir = os.path.join(extra_tarball, tarball_dir)
+    if base_dir == "/" and not os.path.exists(os.path.join(base_dir, "seq")):
+        raise ValueError("Did not find relative directory to create tarball for %s" % dirname)
     tarball = os.path.join(base_dir, "%s-wf.tar.gz" % (tarball_dir.replace(os.path.sep, "--")))
     if not utils.file_exists(tarball):
-        with utils.chdir(base_dir):
-            with tarfile.open(tarball, "w:gz") as tar:
-                tar.add(tarball_dir)
+        print("Preparing CWL input tarball: %s" % tarball)
+        with file_transaction({}, tarball) as tx_tarball:
+            with utils.chdir(base_dir):
+                with tarfile.open(tx_tarball, "w:gz") as tar:
+                    tar.add(tarball_dir)
     return tarball
 
 def _clean_final_outputs(keyvals, get_retriever):
     def clean_path(get_retriever, x):
         integration, config = get_retriever.integration_and_config(x)
         if integration:
-            return integration.clean_file(x)
+            return integration.clean_file(x, config)
         else:
             return x
-    def null_to_string(x):
-        """Convert None values into the string 'null'
-
-        Required for platforms like SevenBridges without null support from inputs.
-        """
-        return "null" if x is None else x
-    keyvals = _adjust_items(keyvals, null_to_string)
     keyvals = _adjust_files(keyvals, functools.partial(clean_path, get_retriever))
     return keyvals
 

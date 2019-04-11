@@ -18,7 +18,6 @@ details:
       mark_duplicates: true
       recalibrate: false
       realign: false
-      remove_lcr: true
       save_diskspace: true
       # --- Variant calling
       nomap_split_size: 250

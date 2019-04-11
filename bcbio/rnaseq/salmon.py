@@ -5,6 +5,7 @@ http://biorxiv.org/content/early/2015/06/27/021592
 """
 
 import os
+import numpy as np
 
 from bcbio.rnaseq import sailfish
 import bcbio.pipeline.datadict as dd
@@ -12,7 +13,7 @@ from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
 import bcbio.utils as utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
-from bcbio.pipeline import config_utils
+from bcbio.pipeline import config_utils, fastq
 from bcbio import bam
 from bcbio.log import logger
 
@@ -22,31 +23,34 @@ def run_salmon_bam(data):
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
     gtf_file = dd.get_gtf_file(data)
     bam_file = dd.get_transcriptome_bam(data)
-    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
-    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = salmon_quant_bam(bam_file, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
+    data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
+    data = dd.update_summary_qc(data, "salmon", base=dd.get_salmon_fraglen_file(data))
     return [[data]]
 
 def run_salmon_reads(data):
     data = utils.to_single_data(data)
+    files = dd.get_input_sequence_files(data)
+    if bam.is_bam(files[0]):
+        files = fastq.convert_bam_to_fastq(files[0], data["dirs"]["work"],
+                                           data, data["dirs"], data["config"])
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
     gtf_file = dd.get_gtf_file(data)
-    files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
     else:
         fq1, fq2 = files[0], None
-    assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
-    assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
     out_file = salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, fasta_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
+    data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
+    data = dd.update_summary_qc(data, "salmon", base=dd.get_salmon_fraglen_file(data))
     return [[data]]
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
@@ -67,13 +71,14 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, ref_file, data):
     if resources.get("options") is not None:
         params = " ".join([str(x) for x in resources.get("options", [])])
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
-           "--gcBias "
+           " --seqBias "
            "-o {tx_out_dir} {params} ")
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
         cmd += " -r {fq1_cmd} "
     else:
+        cmd += " --gcBias "
         fq2_cmd = "<(cat {fq2})" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
@@ -93,7 +98,10 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, ref_file, data):
     out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
         return out_file
-    gtf_fa = sailfish.create_combined_fasta(data, salmon_dir)
+    if dd.get_transcriptome_fasta(data):
+        gtf_fa = dd.get_transcriptome_fasta(data)
+    else:
+        gtf_fa = sailfish.create_combined_fasta(data)
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     salmon = config_utils.get_program("salmon", dd.get_config(data))
@@ -117,7 +125,6 @@ def run_salmon_index(*samples):
         work_dir = dd.get_work_dir(data)
         salmon_dir = os.path.join(work_dir, "salmon")
         gtf_file = dd.get_gtf_file(data)
-        assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
         fasta_file = dd.get_ref_file(data)
         assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
         salmon_index(gtf_file, fasta_file, data, salmon_dir)
@@ -146,3 +153,22 @@ def salmon_index(gtf_file, ref_file, data, out_dir):
         message = "Creating Salmon index for {gtf_fa} with {kmersize} bp kmers."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir
+
+def _get_fraglen_file(salmondir):
+    flenfile = os.path.join(salmondir, "quant", "libParams", "flenDist.txt")
+    if not file_exists(flenfile):
+        return None
+    else:
+        return flenfile
+
+def parse_fragment_length_file(filename):
+    with open(filename) as in_handle:
+        flens = [float(x) for x in next(in_handle).split("\t")]
+    return flens
+
+def estimate_fragment_size(data):
+    filename = dd.get_salmon_fraglen_file(data)
+    if not file_exists(filename):
+        return None
+    flen = parse_fragment_length_file(filename)
+    return float(np.sum(np.multiply(flen, range(len(flen)))))

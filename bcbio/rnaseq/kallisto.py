@@ -5,6 +5,7 @@ https://github.com/pachterlab/kallisto
 """
 import os
 import pandas as pd
+import toolz as tz
 
 import bcbio.pipeline.datadict as dd
 from bcbio.rnaseq import sailfish
@@ -28,9 +29,8 @@ def run_kallisto_rnaseq(data):
     assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
     fasta_file = dd.get_ref_file(data)
     assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
-    assert fq2, ("bcbio doesn't support kallisto for single-end reads, we can "
-                 "add support for this if you open up an issue about it here: "
-                 "https://github.com/chapmanb/bcbio-nextgen/issues")
+    assert fq2, ("We don't support kallisto for single-end reads and fusion "
+                 "calling with pizzly does not accept single end reads.")
     out_file = kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data)
     data = dd.set_kallisto_quant(data, out_file)
     return [[data]]
@@ -39,6 +39,9 @@ def kallisto_rnaseq(fq1, fq2, kallisto_dir, gtf_file, fasta_file, data):
     samplename = dd.get_sample_name(data)
     quant_dir = os.path.join(kallisto_dir, "quant")
     safe_makedir(kallisto_dir)
+    sentinel_file = os.path.join(quant_dir, "abundance.h5")
+    if os.path.exists(sentinel_file):
+        return quant_dir
     num_cores = dd.get_num_cores(data)
     strandedness = dd.get_strandedness(data).lower()
     kallisto = config_utils.get_program("kallisto", dd.get_config(data))
@@ -164,16 +167,24 @@ def get_cell_names(cellsfile):
         return [x.strip() for x in in_handle]
 
 def get_kallisto_h5(data):
-    samplename = dd.get_sample_name(data)
-    work_dir = dd.get_work_dir(data)
-    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
-    return os.path.join(kallisto_dir, "abundance.h5")
+    out_file = tz.get_in(["quant", "hdf5"], data)
+    if out_file:
+        return out_file
+    else:
+        samplename = dd.get_sample_name(data)
+        work_dir = dd.get_work_dir(data)
+        kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+        return os.path.join(kallisto_dir, "abundance.h5")
 
 def get_kallisto_fusions(data):
-    samplename = dd.get_sample_name(data)
-    work_dir = dd.get_work_dir(data)
-    kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
-    return os.path.join(kallisto_dir, "fusion.txt")
+    out_file = tz.get_in(["quant", "fusion"], data)
+    if out_file:
+        return out_file
+    else:
+        samplename = dd.get_sample_name(data)
+        work_dir = dd.get_work_dir(data)
+        kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "quant")
+        return os.path.join(kallisto_dir, "fusion.txt")
 
 def run_kallisto_index(*samples):
     for data in dd.sample_data_iterator(samples):

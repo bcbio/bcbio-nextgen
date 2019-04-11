@@ -18,7 +18,7 @@ def count(data):
     count reads mapping to genes using featureCounts
     http://subread.sourceforge.net
     """
-    in_bam = dd.get_work_bam(data)
+    in_bam = dd.get_work_bam(data) or dd.get_align_bam(data)
     out_dir = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))
     if dd.get_aligner(data) == "star":
         out_dir = os.path.join(out_dir, "%s_%s" % (dd.get_sample_name(data), dd.get_aligner(data)))
@@ -65,7 +65,7 @@ def _change_sample_name(in_file, sample_name, data=None):
                 for line in in_handle:
                     if line.startswith("Status"):
                         line = "Status\t%s.bam" % sample_name
-                    print >>out_handle, line.strip()
+                    out_handle.write("%s\n" % line.strip())
     return out_file
 
 def _format_count_file(count_file, data):

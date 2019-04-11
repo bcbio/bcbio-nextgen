@@ -9,6 +9,7 @@ import operator
 
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
+from functools import reduce
 
 def _get_resource_programs(progs, algs):
     """Retrieve programs used in analysis based on algorithm configurations.

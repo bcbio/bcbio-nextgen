@@ -77,7 +77,7 @@ securely login between machines without passwords using `ssh public key`_
 authentication. For shared filesystem setups, rsync will transfer the files to a
 local directory for processing.
 
-.. _transfer_info.yaml: https://github.com/chapmanb/bcbio-nextgen/blob/master/config/transfer_info.yaml
+.. _transfer_info.yaml: https://github.com/bcbio/bcbio-nextgen/blob/master/config/transfer_info.yaml
 .. _bcl2fastq: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.ilmn
 .. _ssh public key: http://macnugget.org/projects/publickeys/
 

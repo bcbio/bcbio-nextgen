@@ -7,6 +7,7 @@ import subprocess
 
 from bcbio import utils
 from bcbio.log import logger
+from functools import reduce
 
 def copy_flowcell(dname, fastq_dir, sample_cfile, config):
     """Copy required files for processing using rsync, potentially to a remote server.

@@ -15,7 +15,7 @@ def run(_, data, out_dir=None):
     """
     stats_file, idxstats_file = _get_stats_files(data, out_dir)
     samtools = config_utils.get_program("samtools", data["config"])
-    bam_file = dd.get_work_bam(data) or dd.get_align_bam(data)
+    bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
     if not utils.file_exists(stats_file):
         utils.safe_makedir(out_dir)
         with file_transaction(data, stats_file) as tx_out_file:
@@ -29,7 +29,8 @@ def run(_, data, out_dir=None):
             cmd = "{samtools} idxstats {bam_file}"
             cmd += " > {tx_out_file}"
             do.run(cmd.format(**locals()), "samtools index stats", data)
-    out = _parse_samtools_stats(stats_file)
+    out = {"base": idxstats_file, "secondary": [stats_file]}
+    out["metrics"] = _parse_samtools_stats(stats_file)
     return out
 
 def run_and_save(data):

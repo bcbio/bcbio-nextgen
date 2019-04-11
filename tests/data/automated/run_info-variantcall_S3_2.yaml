@@ -19,7 +19,6 @@ details:
       recalibrate: false
       realign: false
       merge_bamprep: true
-      remove_lcr: true
       save_diskspace: true
       # --- Variant calling
       nomap_split_size: 250

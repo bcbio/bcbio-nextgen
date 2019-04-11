@@ -7,6 +7,8 @@ import os
 
 import yaml
 from datetime import datetime
+import pandas as pd
+import glob
 
 import toolz as tz
 
@@ -17,14 +19,19 @@ from bcbio.pipeline import config_utils, run_info
 import bcbio.pipeline.datadict as dd
 from bcbio.provenance import do
 from bcbio.rnaseq import gtf
-from bcbio.variation import damage, peddy, vcfutils
+from bcbio.variation import damage, peddy, vcfutils, vcfanno
+
+import six
+
 
 # ## High level functions to generate summary
 
 def qc_to_rec(samples):
     """CWL: Convert a set of input samples into records for parallelization.
     """
-    to_analyze, extras = _split_samples_by_qc([utils.to_single_data(x) for x in samples])
+    samples = [utils.to_single_data(x) for x in samples]
+    samples = cwlutils.assign_complex_to_samples(samples)
+    to_analyze, extras = _split_samples_by_qc(samples)
     recs = cwlutils.samples_to_records([utils.to_single_data(x) for x in to_analyze + extras])
     return [[x] for x in recs]
 
@@ -35,18 +42,20 @@ def generate_parallel(samples, run_parallel):
     qced = run_parallel("pipeline_summary", to_analyze)
     samples = _combine_qc_samples(qced) + extras
     qsign_info = run_parallel("qsignature_summary", [samples])
-    samples = run_parallel("multiqc_summary", [samples])
+    metadata_file = _merge_metadata([samples])
     summary_file = write_project_summary(samples, qsign_info)
     out = []
     for data in samples:
         if "summary" not in data[0]:
             data[0]["summary"] = {}
         data[0]["summary"]["project"] = summary_file
+        data[0]["summary"]["metadata"] = metadata_file
         if qsign_info:
             data[0]["summary"]["mixup_check"] = qsign_info[0]["out_dir"]
         out.append(data)
     out = _add_researcher_summary(out, summary_file)
-    return out
+    # MultiQC must be run after all file outputs are set:
+    return [[utils.to_single_data(d)] for d in run_parallel("multiqc_summary", [out])]
 
 def pipeline_summary(data):
     """Provide summary information on processing sample.
@@ -55,11 +64,7 @@ def pipeline_summary(data):
     """
     data = utils.to_single_data(data)
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
-    if data["analysis"].lower().startswith("smallrna-seq"):
-        work_bam = data["clean_fastq"]
-    elif data["analysis"].lower().startswith("chip-seq"):
-        work_bam = data["raw_bam"]
-    elif not work_bam or not work_bam.endswith(".bam"):
+    if not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
     if dd.get_ref_file(data):
         if work_bam or (tz.get_in(["config", "algorithm", "kraken"], data)):  # kraken doesn't need bam
@@ -79,29 +84,33 @@ def get_qc_tools(data):
         return dd.get_algorithm_qc(data)
     analysis = data["analysis"].lower()
     to_run = []
+    if tz.get_in(["config", "algorithm", "kraken"], data):
+        to_run.append("kraken")
     if "fastqc" not in dd.get_tools_off(data):
         to_run.append("fastqc")
     if any([tool in dd.get_tools_on(data)
             for tool in ["qualimap", "qualimap_full"]]):
         to_run.append("qualimap")
-    if analysis.startswith("rna-seq"):
+    if analysis.startswith("rna-seq") or analysis == "smallrna-seq":
         if "qualimap" not in dd.get_tools_off(data):
             if gtf.is_qualimap_compatible(dd.get_gtf_file(data)):
                 to_run.append("qualimap_rnaseq")
             else:
                 logger.debug("GTF not compatible with Qualimap, skipping.")
+    if analysis.startswith("chip-seq"):
+        to_run.append("chipqc")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
-    if not analysis.startswith("smallrna-seq"):
+    if "coverage_qc" not in dd.get_tools_off(data):
         to_run.append("samtools")
-        if tz.get_in(["config", "algorithm", "kraken"], data):
-            to_run.append("kraken")
-    if analysis.startswith(("standard", "variant", "variant2")):
-        to_run += ["qsignature", "coverage", "variants", "picard"]
-        if peddy.is_human(data):
-            to_run += ["peddy"]
-        if vcfutils.get_paired([data]):
+    if dd.has_variantcalls(data):
+        if "coverage_qc" not in dd.get_tools_off(data):
+            to_run += ["coverage", "picard"]
+        to_run += ["qsignature", "variants"]
+        if vcfanno.is_human(data):
+            to_run += ["contamination", "peddy"]
+        if vcfutils.get_paired_phenotype(data):
             to_run += ["viral"]
         if damage.should_filter([data]):
             to_run += ["damage"]
@@ -109,6 +118,8 @@ def get_qc_tools(data):
         to_run += ["umi"]
     if tz.get_in(["config", "algorithm", "preseq"], data):
         to_run.append("preseq")
+    to_run = [tool for tool in to_run if tool not in dd.get_tools_off(data)]
+    to_run.sort()
     return to_run
 
 def _run_qc_tools(bam_file, data):
@@ -119,8 +130,9 @@ def _run_qc_tools(bam_file, data):
 
         :returns: dict with output of different tools
     """
-    from bcbio.qc import (atropos, coverage, damage, fastqc, kraken, qsignature, qualimap,
-                          samtools, picard, srna, umi, variant, viral, preseq)
+    from bcbio.qc import (atropos, contamination, coverage, damage, fastqc, kraken,
+                          qsignature, qualimap, samtools, picard, srna, umi, variant,
+                          viral, preseq, chipseq)
     tools = {"fastqc": fastqc.run,
              "atropos": atropos.run,
              "small-rna": srna.run,
@@ -128,6 +140,7 @@ def _run_qc_tools(bam_file, data):
              "qualimap": qualimap.run,
              "qualimap_rnaseq": qualimap.run_rnaseq,
              "qsignature": qsignature.run,
+             "contamination": contamination.run,
              "coverage": coverage.run,
              "damage": damage.run,
              "variants": variant.run,
@@ -137,6 +150,7 @@ def _run_qc_tools(bam_file, data):
              "umi": umi.run,
              "viral": viral.run,
              "preseq": preseq.run,
+             "chipqc": chipseq.run
              }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
@@ -161,7 +175,7 @@ def _run_qc_tools(bam_file, data):
             # Check for files only output
             if "base" in out:
                 qc_files = out
-        elif out and isinstance(out, basestring) and os.path.exists(out):
+        elif out and isinstance(out, six.string_types) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
@@ -183,11 +197,13 @@ def _organize_qc_files(program, qc_dir):
     if os.path.exists(qc_dir):
         out_files = []
         for fname in [os.path.join(qc_dir, x) for x in os.listdir(qc_dir)]:
-            if os.path.isfile(fname):
+            if os.path.isfile(fname) and not fname.endswith(".bcbiotmp"):
                 out_files.append(fname)
             elif os.path.isdir(fname) and not fname.endswith("tx"):
                 for root, dirs, files in os.walk(fname):
-                    out_files.extend([os.path.join(root, x) for x in files])
+                    for f in files:
+                        if not f.endswith(".bcbiotmp"):
+                            out_files.append(os.path.join(root, f))
         if len(out_files) > 0 and all([not f.endswith("-failed.log") for f in out_files]):
             if len(out_files) == 1:
                 base = out_files[0]
@@ -278,6 +294,25 @@ def write_project_summary(samples, qsign_info=None):
                        default_flow_style=False, allow_unicode=False)
     return out_file
 
+def _merge_metadata(samples):
+    """Merge all metadata into CSV file"""
+    samples = list(utils.flatten(samples))
+    out_dir = dd.get_work_dir(samples[0])
+    logger.info("summarize metadata")
+    out_file = os.path.join(out_dir, "metadata.csv")
+    sample_metrics = collections.defaultdict(dict)
+    for s in samples:
+        m = tz.get_in(['metadata'], s)
+        if isinstance(m, six.string_types):
+            m = json.loads(m)
+        if m:
+            for me in list(m.keys()):
+                if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
+                    m.pop(me, None)
+            sample_metrics[dd.get_sample_name(s)].update(m)
+    pd.DataFrame(sample_metrics).transpose().to_csv(out_file)
+    return out_file
+
 def _other_pipeline_samples(summary_file, cur_samples):
     """Retrieve samples produced previously by another pipeline in the summary output.
     """
@@ -285,7 +320,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     out = []
     if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
-            for s in yaml.load(in_handle).get("samples", []):
+            for s in yaml.safe_load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
                     out.append(s)
     return out

@@ -1,0 +1,3 @@
+{
+  "read1": "(?P<name>@.*) .*\\n(?P<seq>.*AACTGTAGGCACCATCAAT(?P<MB>.{12})AGATCGGAA(.*))\\n\\+(.*)\\n(?P<qual>.*)\\n"
+}

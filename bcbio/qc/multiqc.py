@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import io
 import json
 import mimetypes
 import os
@@ -13,6 +14,7 @@ import numpy as np
 from collections import OrderedDict
 
 import pybedtools
+import six
 import toolz as tz
 import yaml
 
@@ -20,15 +22,18 @@ from bcbio import utils
 from bcbio.cwl import cwlutils
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio.log import logger
-from bcbio.provenance import do
+from bcbio.provenance import do, programs
+from bcbio.provenance import data as provenancedata
 from bcbio.pipeline import datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.bam import ref
+from bcbio.qc.qsignature import get_qsig_multiqc_files
 from bcbio.structural import annotate
 from bcbio.utils import walk_json
 from bcbio.variation import bedutils
 from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
+from bcbio.variation import coverage
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -41,8 +46,8 @@ def summary(*samples):
     out_data = os.path.join(out_dir, "multiqc_data")
     out_file = os.path.join(out_dir, "multiqc_report.html")
     file_list = os.path.join(out_dir, "list_files.txt")
-    work_samples = [cwlutils.unpack_tarballs(utils.deepish_copy(x), x) for x in samples]
-    work_samples = _report_summary(work_samples, os.path.join(out_dir, "report"))
+    work_samples = cwlutils.unpack_tarballs([utils.deepish_copy(x) for x in samples], samples[0])
+    work_samples = _summarize_inputs(work_samples, out_dir)
     if not utils.file_exists(out_file):
         with tx_tmpdir(samples[0], work_dir) as tx_out:
             in_files = _get_input_files(work_samples, out_dir, tx_out)
@@ -52,13 +57,15 @@ def summary(*samples):
                     _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
-                        export_tmp = "export TMPDIR=%s &&" % dd.get_tmp_dir(samples[0])
+                        export_tmp = "export TMPDIR=%s && " % dd.get_tmp_dir(samples[0])
                     else:
                         export_tmp = ""
+                    locale_export = utils.locale_export()
                     path_export = utils.local_path_export()
                     other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
                     other_opts = " ".join([str(x) for x in other_opts])
-                    cmd = "{path_export}{export_tmp} {multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}"
+                    cmd = ("{path_export}{export_tmp}{locale_export} "
+                           "{multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}")
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -70,6 +77,7 @@ def summary(*samples):
             data_files.add(os.path.join(out_dir, "report", "metrics", dd.get_sample_name(data) + "_bcbio.txt"))
         data_files.add(os.path.join(out_dir, "report", "metrics", "target_info.yaml"))
         data_files.add(os.path.join(out_dir, "multiqc_config.yaml"))
+        [data_files.add(f) for f in glob.glob(os.path.join(out_dir, "multiqc_data", "*"))]
         data_files = [f for f in data_files if f and utils.file_exists(f)]
         if "summary" not in samples[0]:
             samples[0]["summary"] = {}
@@ -80,11 +88,51 @@ def summary(*samples):
         if data_json_final:
             samples[0]["summary"]["multiqc"]["secondary"].append(data_json_final)
 
+        # Prepare final file list and inputs for downstream usage
         file_list_final = _save_uploaded_file_list(samples, file_list, out_dir)
         if file_list_final:
             samples[0]["summary"]["multiqc"]["secondary"].append(file_list_final)
+            if any([cwlutils.is_cwl_run(d) for d in samples]):
+                for indir in ["inputs", "report"]:
+                    tarball = os.path.join(out_dir, "multiqc-%s.tar.gz" % (indir))
+                    if not utils.file_exists(tarball):
+                        with utils.chdir(out_dir):
+                            cmd = ["tar", "-czvpf", tarball, indir]
+                            do.run(cmd, "Compress multiqc inputs: %s" % indir)
+                    samples[0]["summary"]["multiqc"]["secondary"].append(tarball)
+
+    if any([cwlutils.is_cwl_run(d) for d in samples]):
+        samples = _add_versions(samples)
 
     return [[data] for data in samples]
+
+def _add_versions(samples):
+    """Add tool and data versions to the summary.
+    """
+    samples[0]["versions"] = {"tools": programs.write_versions(samples[0]["dirs"], samples[0]["config"]),
+                              "data": provenancedata.write_versions(samples[0]["dirs"], samples)}
+    return samples
+
+def _summarize_inputs(samples, out_dir):
+    """Summarize inputs for MultiQC reporting in display.
+    """
+    logger.info("summarize target information")
+    if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
+        metrics_dir = utils.safe_makedir(os.path.join(out_dir, "report", "metrics"))
+        samples = _merge_target_information(samples, metrics_dir)
+
+    logger.info("summarize fastqc")
+    out_dir = utils.safe_makedir(os.path.join(out_dir, "report", "fastqc"))
+    with utils.chdir(out_dir):
+        _merge_fastqc(samples)
+
+    preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
+    if preseq_samples:
+        logger.info("summarize preseq")
+        out_dir = utils.safe_makedir(os.path.join(out_dir, "report", "preseq"))
+        with utils.chdir(out_dir):
+            _merge_preseq(preseq_samples)
+    return samples
 
 def _save_uploaded_data_json(samples, data_json_work, out_dir):
     """ Fixes all absolute work-rooted paths to relative final-rooted paths
@@ -98,36 +146,45 @@ def _save_uploaded_data_json(samples, data_json_work, out_dir):
     if not upload_path_mapping:
         return data_json_work
 
-    with open(data_json_work) as f:
+    with io.open(data_json_work, encoding="utf-8") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
     upload_base = samples[0]["upload"]["dir"]
     data = walk_json(data, lambda s: _work_path_to_rel_final_path(s, upload_path_mapping, upload_base))
 
     data_json_final = os.path.join(out_dir, "multiqc_data_final.json")
-    with open(data_json_final, "w") as f:
+    with io.open(data_json_final, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     return data_json_final
 
 def _save_uploaded_file_list(samples, file_list_work, out_dir):
     """ Fixes all absolute work-rooted paths to relative final-rooted paths
+
+    For CWL, prepare paths relative to output directory.
     """
     if not utils.file_exists(file_list_work):
         return None
 
-    upload_path_mapping = dict()
-    for sample in samples:
-        upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
-    if not upload_path_mapping:
-        return None
+    if any([cwlutils.is_cwl_run(d) for d in samples]):
+        upload_paths = []
+        with open(file_list_work) as f:
+            for p in (l.strip() for l in f.readlines() if os.path.exists(l.strip())):
+                if p.startswith(out_dir):
+                    upload_paths.append(p.replace(out_dir + "/", ""))
+    else:
+        upload_path_mapping = dict()
+        for sample in samples:
+            upload_path_mapping.update(get_all_upload_paths_from_sample(sample))
+        if not upload_path_mapping:
+            return None
 
-    with open(file_list_work) as f:
-        paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
-    upload_paths = [p for p in [
-        _work_path_to_rel_final_path(path, upload_path_mapping, samples[0]["upload"]["dir"])
-        for path in paths
-    ] if p]
-    if not upload_paths:
-        return None
+        with open(file_list_work) as f:
+            paths = [l.strip() for l in f.readlines() if os.path.exists(l.strip())]
+        upload_paths = [p for p in [
+            _work_path_to_rel_final_path(path, upload_path_mapping, samples[0]["upload"]["dir"])
+            for path in paths
+        ] if p]
+        if not upload_paths:
+            return None
 
     file_list_final = os.path.join(out_dir, "list_files_final.txt")
     with open(file_list_final, "w") as f:
@@ -138,10 +195,31 @@ def _save_uploaded_file_list(samples, file_list_work, out_dir):
 def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     """ Check if `path` is a work-rooted path, and convert to a relative final-rooted path
     """
-    if path in upload_path_mapping:
+    if not path or not isinstance(path, str):
+        return path
+    upload_path = None
+
+    # First, check in the mapping: if it's there is a direct reference and
+    # it's a file, we immediately return it (saves lots of iterations)
+    if upload_path_mapping.get(path) is not None and os.path.isfile(path):
         upload_path = upload_path_mapping[path]
+    else:
+        # Not a file: check for elements in the mapping that contain
+        # it
+        paths_to_check = [key for key in upload_path_mapping
+                          if path.startswith(key)]
+
+        if paths_to_check:
+            for work_path in paths_to_check:
+                if os.path.isdir(work_path):
+                    final_path = upload_path_mapping[work_path]
+                    upload_path = path.replace(work_path, final_path)
+                    break
+
+    if upload_path is not None:
         return os.path.relpath(upload_path, upload_base_dir)
-    return path
+    else:
+        return None
 
 def _one_exists(input_files):
     """
@@ -163,7 +241,7 @@ def _get_input_files(samples, base_dir, tx_out_dir):
         sum_qc = tz.get_in(["summary", "qc"], data, {})
         if sum_qc in [None, "None"]:
             sum_qc = {}
-        elif isinstance(sum_qc, basestring):
+        elif isinstance(sum_qc, six.string_types):
             sum_qc = {dd.get_algorithm_qc(data)[0]: sum_qc}
         elif not isinstance(sum_qc, dict):
             raise ValueError("Unexpected summary qc: %s" % sum_qc)
@@ -171,28 +249,30 @@ def _get_input_files(samples, base_dir, tx_out_dir):
             if isinstance(pfiles, dict):
                 pfiles = [pfiles["base"]] + pfiles.get("secondary", [])
             # CWL: presents output files as single file plus associated secondary files
-            elif isinstance(pfiles, basestring):
+            elif isinstance(pfiles, six.string_types):
                 if os.path.exists(pfiles):
-                    pfiles = [os.path.join(os.path.dirname(pfiles), x) for x in os.listdir(os.path.dirname(pfiles))]
+                    pfiles = [os.path.join(basedir, f) for basedir, subdir, filenames in os.walk(os.path.dirname(pfiles)) for f in filenames]
                 else:
                     pfiles = []
             in_files[(dd.get_sample_name(data), program)].extend(pfiles)
     staged_files = []
     for (sample, program), files in in_files.items():
-        cur_dir = utils.safe_makedir(os.path.join(tx_out_dir, sample, program))
+        cur_dir = utils.safe_makedir(os.path.join(base_dir, "inputs", sample, program))
         for f in files:
             if _check_multiqc_input(f) and _is_good_file_for_multiqc(f):
-                if _in_temp_directory(f):
+                if _in_temp_directory(f) or any([cwlutils.is_cwl_run(d) for d in samples]):
                     staged_f = os.path.join(cur_dir, os.path.basename(f))
                     shutil.copy(f, staged_f)
                     staged_files.append(staged_f)
                 else:
                     staged_files.append(f)
+    staged_files.extend(get_qsig_multiqc_files(samples))
     # Back compatible -- to migrate to explicit specifications in input YAML
-    staged_files += ["trimmed", "htseq-count/*summary"]
-    # Add in created target_info file
-    if os.path.isfile(os.path.join(base_dir, "report", "metrics", "target_info.yaml")):
-        staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
+    if not any([cwlutils.is_cwl_run(d) for d in samples]):
+        staged_files += ["trimmed", "htseq-count/*summary"]
+        # Add in created target_info file
+        if os.path.isfile(os.path.join(base_dir, "report", "metrics", "target_info.yaml")):
+            staged_files += [os.path.join(base_dir, "report", "metrics", "target_info.yaml")]
     return sorted(list(set(staged_files)))
 
 def _in_temp_directory(f):
@@ -228,21 +308,55 @@ def _create_config_file(out_dir, samples):
 
     # Avoid duplicated bcbio columns with qualimap
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
+        # Hiding metrics duplicated by Qualimap
         out["table_columns_visible"]["bcbio"] = {"Average_insert_size": False}
         out["table_columns_visible"]["FastQC"] = {"percent_gc": False}
+
+        # Setting up thresholds for Qualimap depth cutoff calculations, based on sample avg depths
+        avg_depths = [tz.get_in(["summary", "metrics", "Avg_coverage"], s) for s in samples]
+        avg_depths = [x for x in avg_depths if x]
+        # Picking all thresholds up to the highest sample average depth
+        thresholds = [t for t in coverage.DEPTH_THRESHOLDS if not avg_depths or t <= max(avg_depths)]
+        # ...plus one more
+        if len(thresholds) < len(coverage.DEPTH_THRESHOLDS):
+            thresholds.append(coverage.DEPTH_THRESHOLDS[len(thresholds)])
+
+        # Showing only thresholds surrounding any of average depths
+        thresholds_hidden = []
+        for i, t in enumerate(thresholds):
+            if t > 20:  # Not hiding anything below 20x
+                if any(thresholds[i-1] <= c < thresholds[i] for c in avg_depths if c and i-1 >= 0) or \
+                   any(thresholds[i] <= c < thresholds[i+1] for c in avg_depths if c and i+1 < len(thresholds)):
+                    pass
+                else:
+                    thresholds_hidden.append(t)
+
+        # Hide coverage unless running full qualimap, downsampled inputs are confusing
+        if not any(("qualimap_full" in dd.get_tools_on(d)) for d in samples):
+            thresholds_hidden = thresholds + thresholds_hidden
+            thresholds_hidden.sort()
+            thresholds = []
+        out['qualimap_config'] = {
+            'general_stats_coverage': [str(t) for t in thresholds],
+            'general_stats_coverage_hidden': [str(t) for t in thresholds_hidden]}
+
+    # Avoid confusing peddy outputs, sticking to ancestry and sex prediction
+    out["table_columns_visible"]["Peddy"] = {"family_id": False, "sex_het_ratio": False,
+                                             "error_sex_check": False}
 
     # Setting the module order
     module_order = []
     module_order.extend([
         "bcbio",
         "samtools",
-        "goleft_indexcov"
+        "goleft_indexcov",
         "peddy"
     ])
     out['bcftools'] = {'write_separate_table': True}
     # if germline calling was performed:
-    if any("germline" in (get_active_vcinfo(s) or {})  # tumor-only somatic with germline extraction
-           or dd.get_phenotype(s) == "germline"        # or paired somatic with germline calling for normal
+    if any("germline" in (get_active_vcinfo(s) or {}) or  # tumor-only somatic with germline extraction
+           dd.get_phenotype(s) == "germline" or           # or paired somatic with germline calling for normal
+           _has_bcftools_germline_stats(s)                # CWL organized statistics
            for s in samples):
         # Split somatic and germline variant stats into separate multiqc submodules,
         # with somatic going into General Stats, and germline going into a separate table:
@@ -263,6 +377,7 @@ def _create_config_file(out_dir, samples):
     else:
         module_order.append("bcftools")
     module_order.extend([
+        "salmon",
         "picard",
         "qualimap",
         "snpeff",
@@ -278,6 +393,16 @@ def _create_config_file(out_dir, samples):
     with open(out_file, "w") as out_handle:
         yaml.safe_dump(out, out_handle, default_flow_style=False, allow_unicode=False)
     return out_file
+
+def _has_bcftools_germline_stats(data):
+    """Check for the presence of a germline stats file, CWL compatible.
+    """
+    stats_file = tz.get_in(["summary", "qc"], data)
+    if isinstance(stats_file, dict):
+        stats_file = tz.get_in(["variants", "base"], stats_file)
+    if not stats_file:
+        stats_file = ""
+    return stats_file.find("bcftools_stats_germline") > 0
 
 def _check_multiqc_input(path):
     """Check if file exists, and return empty if it doesn't"""
@@ -295,81 +420,6 @@ def _is_good_file_for_multiqc(fpath):
     if ftype is not None and ftype.startswith('image'):
         return False
     return True
-
-def _report_summary(samples, out_dir):
-    """
-    Run coverage report with bcbiocov package
-    """
-    try:
-        import bcbreport.prepare as bcbreport
-    except ImportError:
-        logger.info("skipping report. No bcbreport installed.")
-        return samples
-    work_dir = dd.get_work_dir(samples[0])
-    parent_dir = utils.safe_makedir(out_dir)
-    with utils.chdir(parent_dir):
-        logger.info("copy qsignature")
-        qsignature_fn = os.path.join(work_dir, "qc", "qsignature", "qsignature.ma")
-        if qsignature_fn:  # this need to be inside summary/qc dict
-            if utils.file_exists(qsignature_fn) and not utils.file_exists("qsignature.ma"):
-                shutil.copy(qsignature_fn, "bcbio_qsignature.ma")
-
-        out_dir = utils.safe_makedir("fastqc")
-        logger.info("summarize fastqc")
-        with utils.chdir(out_dir):
-            _merge_fastqc(samples)
-
-        logger.info("summarize target information")
-        if samples[0].get("analysis", "").lower() in ["variant", "variant2"]:
-            samples = _merge_target_information(samples)
-
-        preseq_samples = [s for s in samples if tz.get_in(["config", "algorithm", "preseq"], s)]
-        if preseq_samples:
-            out_dir = utils.safe_makedir("preseq")
-            logger.info("summarize preseq")
-            with utils.chdir(out_dir):
-                _merge_preseq(preseq_samples)
-
-        out_dir = utils.safe_makedir("coverage")
-        logger.info("summarize coverage")
-        for data in samples:
-            pfiles = tz.get_in(["summary", "qc", "coverage"], data, [])
-            if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
-            elif pfiles:
-                pfiles = [pfiles]
-            for fn in pfiles:
-                if os.path.basename(fn).find("coverage_fixed") > -1:
-                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
-
-        out_dir = utils.safe_makedir("variants")
-        logger.info("summarize variants")
-        for data in samples:
-            pfiles = tz.get_in(["summary", "qc", "variants"], data, [])
-            if isinstance(pfiles, dict):
-                pfiles = [pfiles["base"]] + pfiles["secondary"]
-            elif pfiles:
-                pfiles = [pfiles]
-            for fn in pfiles:
-                if os.path.basename(fn).find("gc-depth-parse.tsv") > -1:
-                    utils.copy_plus(fn, os.path.join(out_dir, os.path.basename(fn)))
-        bcbreport.report(parent_dir)
-        out_report = os.path.join(parent_dir, "qc-coverage-report.html")
-        if not utils.file_exists(out_report):
-            rmd_file = os.path.join(parent_dir, "report-ready.Rmd")
-            run_file = "%s-run.R" % (os.path.splitext(out_report)[0])
-            with open(run_file, "w") as out_handle:
-                out_handle.write("""library(rmarkdown)\nrender("%s")\n""" % rmd_file)
-            # cmd = "%s %s" % (utils.Rscript_cmd(), run_file)
-            # Skip automated generation of coverage report to avoid error
-            # messages. We need to generalize coverage reporting and re-include.
-            # try:
-            #     do.run(cmd, "Prepare coverage summary", log_error=False)
-            # except subprocess.CalledProcessError as msg:
-            #     logger.info("Skipping generation of coverage report: %s" % (str(msg)))
-            if utils.file_exists("report-ready.html"):
-                shutil.move("report-ready.html", out_report)
-    return samples
 
 def _parse_disambiguate(disambiguatestatsfilename):
     """Parse disambiguation stats from given file.
@@ -412,7 +462,7 @@ def _merge_metrics(samples, out_dir):
     for s in samples:
         s = _add_disambiguate(s)
         m = tz.get_in(['summary', 'metrics'], s)
-        if isinstance(m, basestring):
+        if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
             for me in m.keys():
@@ -427,6 +477,7 @@ def _merge_metrics(samples, out_dir):
             dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
             dt['sample'] = sample_name
             dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
+            dt['RiP_pct'] = "%.3f" % (int(m.get("RiP", 0)) / float(m.get("Total_reads", 1)) * 100)
             dt = _fix_duplicated_rate(dt)
             dt.transpose().to_csv(tx_out_file, sep="\t", header=False)
         out.append(sample_file)
@@ -482,8 +533,7 @@ def _make_preseq_multiqc_config(samples):
 
     return out
 
-def _merge_target_information(samples):
-    metrics_dir = utils.safe_makedir("metrics")
+def _merge_target_information(samples, metrics_dir):
     out_file = os.path.abspath(os.path.join(metrics_dir, "target_info.yaml"))
     if utils.file_exists(out_file):
         return samples

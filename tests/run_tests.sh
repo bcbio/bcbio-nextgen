@@ -30,4 +30,4 @@ export PYTHONNOUSERSITE=1
 if [ -d "../bcbio/pipeline" ]; then
 	[ -f ../bcbio/pipeline/version.py ] || touch ../bcbio/pipeline/version.py
 fi
-"$BCBIO_DIR/py.test" -v -s -m ${MARK} "$@"
+"$BCBIO_DIR/py.test" -p no:cacheprovider -p no:stepwise -v -s -m ${MARK} "$@"

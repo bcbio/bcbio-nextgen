@@ -357,7 +357,7 @@ class HydraConvertTest(unittest.TestCase):
     def test_1_input_parser(self):
         """Parse input file as BEDPE.
         """
-        breakend = hydra_parser(self.in_file).next()
+        breakend = next(hydra_parser(self.in_file))
         assert breakend.chrom1 == "chr22"
         assert breakend.start1 == 9763 
         assert breakend.strand2 == "+"
@@ -369,17 +369,17 @@ class HydraConvertTest(unittest.TestCase):
         """
         genome_2bit = twobit.TwoBitFile(open(self.genome_file))
         breakends = hydra_parser(self.in_file)
-        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        brend1, brend2 = build_vcf_parts(next(breakends), genome_2bit)
         assert brend1.alt == "G]chr22:10112]"
         assert brend2.alt == "C]chr22:9764]"
         assert brend2.info == "SVTYPE=BND;MATEID=hydra1a;IMPRECISE;CIPOS=0,102", brend2.info
-        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        brend1, brend2 = build_vcf_parts(next(breakends), genome_2bit)
         assert brend1.alt == "A[chr22:12112["
         assert brend2.alt == "]chr22:7764]G"
-        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        brend1, brend2 = build_vcf_parts(next(breakends), genome_2bit)
         assert brend1.alt == "[chr22:11112[A"
         assert brend2.alt == "[chr22:8764[T"
-        brend1, brend2 = build_vcf_parts(breakends.next(), genome_2bit)
+        brend1, brend2 = build_vcf_parts(next(breakends), genome_2bit)
         assert brend1.alt == "]chr22:13112]G", brend1.alt
         assert brend2.alt == "A[chr22:9764[", brend2.alt
 
@@ -388,6 +388,6 @@ class HydraConvertTest(unittest.TestCase):
         """
         genome_2bit = twobit.TwoBitFile(open(self.genome_file))
         parts = _get_vcf_breakends(self.in_file, genome_2bit, {"max_single_size": 5000})
-        deletion = parts.next()
+        deletion = next(parts)
         assert deletion.alt == "<DEL>", deletion
         assert "SVLEN=-4348" in deletion.info

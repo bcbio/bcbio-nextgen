@@ -11,11 +11,13 @@ import copy
 import csv
 import datetime
 import glob
+import fnmatch
 import itertools
 import os
 import shutil
 from six.moves import urllib
 
+import six
 import toolz as tz
 import yaml
 import sys
@@ -56,7 +58,7 @@ def setup_args(parser):
 
 # ## Prepare sequence data inputs
 
-def _prep_bam_input(f, i, base):
+def _prep_bam_input(f, base):
     if not os.path.exists(f) and not objectstore.is_remote(f):
         raise ValueError("Could not find input file: %s" % f)
     cur = copy.deepcopy(base)
@@ -65,8 +67,8 @@ def _prep_bam_input(f, i, base):
         cur["description"] = os.path.splitext(os.path.basename(f))[0]
     else:
         cur["files"] = [os.path.abspath(f)]
-        cur["description"] = ((sample_name(f) if f.endswith(".bam") else None)
-                              or os.path.splitext(os.path.basename(f))[0])
+        cur["description"] = ((sample_name(f) if f.endswith(".bam") else None) or
+                              os.path.splitext(os.path.basename(f))[0])
     return cur
 
 def _prep_fastq_input(fs, base):
@@ -79,32 +81,64 @@ def _prep_fastq_input(fs, base):
     cur["description"] = fastq.rstrip_extra(d)
     return cur
 
+def _prep_vcf_input(f, base):
+    if not os.path.exists(f) and not objectstore.is_remote(f):
+        raise ValueError("Could not find input file: %s" % f)
+    cur = copy.deepcopy(base)
+    cur["vrn_file"] = f
+    cur["description"] = utils.splitext_plus(os.path.basename(f))[0]
+    return cur
+
 KNOWN_EXTS = {".bam": "bam", ".cram": "bam", ".fq": "fastq",
               ".fastq": "fastq", ".txt": "fastq",
               ".fastq.gz": "fastq", ".fq.gz": "fastq",
               ".txt.gz": "fastq", ".gz": "fastq",
               ".fastq.bz2": "fastq", ".fq.bz2": "fastq",
-              ".txt.bz2": "fastq", ".bz2": "fastq"}
+              ".txt.bz2": "fastq", ".bz2": "fastq",
+              ".vcf": "vcf", ".vcf.gz": "vcf"}
 
-def _prep_items_from_base(base, in_files, separators, force_single=False):
+def _prep_items_from_base(base, in_files, metadata, separators, force_single=False):
     """Prepare a set of configuration items for input files.
     """
     details = []
     in_files = _expand_dirs(in_files, KNOWN_EXTS)
     in_files = _expand_wildcards(in_files)
 
-    for i, (ext, files) in enumerate(itertools.groupby(
-            in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower()))):
+    ext_groups = collections.defaultdict(list)
+    for ext, files in itertools.groupby(
+            in_files, lambda x: KNOWN_EXTS.get(utils.splitext_plus(x)[-1].lower())):
+        ext_groups[ext].extend(list(files))
+    for ext, files in ext_groups.items():
         if ext == "bam":
             for f in files:
-                details.append(_prep_bam_input(f, i, base))
+                details.append(_prep_bam_input(f, base))
         elif ext in ["fastq", "fq", "fasta"]:
-            files = list(files)
-            for fs in fastq.combine_pairs(files, force_single, separators = separators):
+            files, glob_files = _find_glob_matches(files, metadata)
+            for fs in glob_files:
                 details.append(_prep_fastq_input(fs, base))
+            for fs in fastq.combine_pairs(files, force_single, separators=separators):
+                details.append(_prep_fastq_input(fs, base))
+        elif ext in ["vcf"]:
+            for f in files:
+                details.append(_prep_vcf_input(f, base))
         else:
             print("Ignoring unexpected input file types %s: %s" % (ext, list(files)))
     return details
+
+def _find_glob_matches(in_files, metadata):
+    """Group files that match by globs for merging, rather than by explicit pairs.
+    """
+    reg_files = copy.deepcopy(in_files)
+    glob_files = []
+    for glob_search in [x for x in metadata.keys() if "*" in x]:
+        cur = []
+        for fname in in_files:
+            if fnmatch.fnmatch(fname, "*/%s" % glob_search):
+                cur.append(fname)
+                reg_files.remove(fname)
+        assert cur, "Did not find file matches for %s" % glob_search
+        glob_files.append(cur)
+    return reg_files, glob_files
 
 def _expand_file(x):
     return os.path.abspath(os.path.normpath(os.path.expanduser(os.path.expandvars(x))))
@@ -139,7 +173,7 @@ def name_to_config(template):
     """
     if objectstore.is_remote(template):
         with objectstore.open_file(template) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
         with objectstore.open_file(template) as in_handle:
             txt_config = in_handle.read()
     elif os.path.isfile(template):
@@ -148,14 +182,14 @@ def name_to_config(template):
         with open(template) as in_handle:
             txt_config = in_handle.read()
         with open(template) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
     else:
-        base_url = "https://raw.github.com/chapmanb/bcbio-nextgen/master/config/templates/%s.yaml"
+        base_url = "https://raw.github.com/bcbio/bcbio-nextgen/master/config/templates/%s.yaml"
         try:
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
-                txt_config = in_handle.read()
+                txt_config = in_handle.read().decode()
             with contextlib.closing(urllib.request.urlopen(base_url % template)) as in_handle:
-                config = yaml.load(in_handle)
+                config = yaml.safe_load(in_handle)
         except (urllib.error.HTTPError, urllib.error.URLError):
             raise ValueError("Could not find template '%s' locally or in standard templates on GitHub"
                              % template)
@@ -207,7 +241,7 @@ def _set_global_vars(metadata):
     fnames = collections.defaultdict(list)
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
-            if isinstance(v, basestring) and os.path.isfile(v):
+            if isinstance(v, six.string_types) and os.path.isfile(v):
                 v = _expand_file(v)
                 metadata[sample][k] = v
                 fnames[v].append(k)
@@ -223,9 +257,24 @@ def _set_global_vars(metadata):
     #         global_vars[name] = fname
     # for sample in metadata.keys():
     #     for k, v in metadata[sample].items():
-    #         if isinstance(v, basestring) and v in global_var_sub:
+    #         if isinstance(v, six.string_types) and v in global_var_sub:
     #             metadata[sample][k] = global_var_sub[v]
     return metadata, global_vars
+
+def _clean_string(v, sinfo):
+    """Test for and clean unicode present in template CSVs.
+    """
+    if isinstance(v, (list, tuple)):
+        return [_clean_string(x, sinfo) for x in v]
+    else:
+        assert isinstance(v, six.string_types), v
+        try:
+            if hasattr(v, "decode"):
+                return str(v.decode("ascii"))
+            else:
+                return str(v.encode("ascii").decode("ascii"))
+        except UnicodeDecodeError as msg:
+            raise ValueError("Found unicode character in template CSV line %s:\n%s" % (sinfo, str(msg)))
 
 def _parse_metadata(in_handle):
     """Reads metadata from a simple CSV structured input file.
@@ -236,7 +285,7 @@ def _parse_metadata(in_handle):
     metadata = {}
     reader = csv.reader(in_handle)
     while 1:
-        header = reader.next()
+        header = next(reader)
         if not header[0].startswith("#"):
             break
     keys = [x.strip() for x in header[1:]]
@@ -253,7 +302,8 @@ def _parse_metadata(in_handle):
                              "https://bcbio-nextgen.readthedocs.org/en/latest/"
                              "contents/configuration.html#automated-sample-configuration\n"
                              "Duplicate line is %s" % (sample, sinfo))
-        metadata[sample] = dict(zip(keys, sinfo[1:]))
+        vals = [_clean_string(v, sinfo) for v in sinfo[1:]]
+        metadata[sample] = dict(zip(keys, vals))
     metadata, global_vars = _set_global_vars(metadata)
     return metadata, global_vars
 
@@ -350,6 +400,24 @@ def _add_ped_metadata(name, metadata):
                 break
     return metadata
 
+def _get_file_keys(item):
+    if item.get("files"):
+        return [item["files"][0],
+                os.path.basename(item["files"][0]),
+                tuple([os.path.basename(f) for f in item["files"]]),
+                utils.splitext_plus(os.path.basename(item["files"][0]))[0],
+                os.path.commonprefix([os.path.basename(f) for f in item["files"]])]
+    else:
+        return []
+
+def _get_vrn_keys(item):
+    if item.get("vrn_file"):
+        return [item["vrn_file"],
+                os.path.basename(item["vrn_file"]),
+                utils.splitext_plus(os.path.basename(item["vrn_file"]))[0]]
+    else:
+        return []
+
 def _add_metadata(item, metadata, remotes, only_metadata=False):
     """Add metadata information from CSV file to current item.
 
@@ -360,17 +428,15 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     - Keys matching supported names in the algorithm section map
       to key/value pairs there instead of metadata.
     """
-    for check_key in (item["description"], item["files"][0],
-                      os.path.basename(item["files"][0]),
-                      tuple([os.path.basename(f) for f in item["files"]]),
-                      utils.splitext_plus(os.path.basename(item["files"][0]))[0],
-                      os.path.commonprefix([os.path.basename(f) for f in item["files"]])):
+    for check_key in [item["description"]] + _get_file_keys(item) + _get_vrn_keys(item):
         item_md = metadata.get(check_key)
         if item_md:
             break
+    if not item_md:
+        item_md = _find_glob_metadata(item["files"], metadata)
     if remotes.get("region"):
         item["algorithm"]["variant_regions"] = remotes["region"]
-    TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_files", "files", "analysis"])
+    TOP_LEVEL = set(["description", "genome_build", "lane", "vrn_file", "files", "analysis"])
     keep_sample = True
     if item_md and len(item_md) > 0:
         if "metadata" not in item:
@@ -393,6 +459,20 @@ def _add_metadata(item, metadata, remotes, only_metadata=False):
     if tz.get_in(["metadata", "ped"], item):
         item["metadata"] = _add_ped_metadata(item["description"], item["metadata"])
     return item if keep_sample else None
+
+def _find_glob_metadata(cur_files, metadata):
+    md_key = None
+    for check_key in metadata.keys():
+        matches = 0
+        if "*" in check_key:
+            for fname in cur_files:
+                if fnmatch.fnmatch(fname, "*/%s" % check_key):
+                    matches += 1
+        if matches == len(cur_files):
+            md_key = check_key
+            break
+    if md_key:
+        return metadata[md_key]
 
 def _retrieve_remote(fnames):
     """Retrieve remote inputs found in the same bucket as the template or metadata files.
@@ -419,7 +499,7 @@ def _convert_to_relpaths(data, work_dir):
     data["files"] = [os.path.relpath(f, work_dir) for f in data["files"]]
     for topk in ["metadata", "algorithm"]:
         for k, v in data[topk].items():
-            if isinstance(v, basestring) and os.path.isfile(v) and os.path.isabs(v):
+            if isinstance(v, six.string_types) and os.path.isfile(v) and os.path.isabs(v):
                 data[topk][k] = os.path.relpath(v, work_dir)
     return data
 
@@ -428,15 +508,18 @@ def _check_all_metadata_found(metadata, items):
     for name in metadata:
         seen = False
         for sample in items:
+            check_file = sample["files"][0] if sample.get("files") else sample["vrn_file"]
             if isinstance(name, (tuple, list)):
-                if sample["files"][0].find(name[0]) > -1:
+                if check_file.find(name[0]) > -1:
                     seen = True
-            elif sample['files'][0].find(name) > -1:
+            elif check_file.find(name) > -1:
+                seen = True
+            elif "*" in name and fnmatch.fnmatch(check_file, "*/%s" % name):
                 seen = True
         if not seen:
             print("WARNING: sample not found %s" % str(name))
 
-def _copy_to_configdir(items, out_dir):
+def _copy_to_configdir(items, out_dir, args):
     """Copy configuration files like PED inputs to working config directory.
     """
     out = []
@@ -448,6 +531,8 @@ def _copy_to_configdir(items, out_dir):
                 shutil.copy(ped_file, ped_config_file)
             item["metadata"]["ped"] = ped_config_file
         out.append(item)
+    if hasattr(args, "systemconfig") and args.systemconfig:
+        shutil.copy(args.systemconfig, os.path.join(out_dir, "config", os.path.basename(args.systemconfig)))
     return out
 
 def _find_remote_inputs(metadata):
@@ -479,7 +564,8 @@ def setup(args):
                 remote_config = remote_retriever.set_cache(config[iname])
                 inputs += remote_retriever.get_files(metadata, remote_config)
     raw_items = [_add_metadata(item, metadata, remotes, args.only_metadata)
-                 for item in _prep_items_from_base(base_item, inputs, args.separators.split(","), args.force_single)]
+                 for item in _prep_items_from_base(base_item, inputs, metadata,
+                                                   args.separators.split(","), args.force_single)]
     items = [x for x in raw_items if x]
     _check_all_metadata_found(metadata, items)
     if remote_retriever and remote_config:
@@ -491,13 +577,13 @@ def setup(args):
     out_config_file = _write_template_config(template_txt, project_name, out_dir)
     if md_file:
         shutil.copyfile(md_file, os.path.join(out_dir, "config", os.path.basename(md_file)))
-    items = _copy_to_configdir(items, out_dir)
+    items = _copy_to_configdir(items, out_dir, args)
     if len(items) == 0:
         print()
         print("Template configuration file created at: %s" % out_config_file)
         print("Edit to finalize custom options, then prepare full sample config with:")
-        print("  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" % \
-            (out_config_file, project_name))
+        print("  bcbio_nextgen.py -w template %s %s sample1.bam sample2.fq" %
+              (out_config_file, project_name))
     else:
         out_config_file = _write_config_file(items, global_vars, template, project_name, out_dir,
                                              remotes)

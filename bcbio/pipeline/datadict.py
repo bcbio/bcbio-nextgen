@@ -29,7 +29,6 @@ LOOKUPS = {
     "tx2gene": {"keys": ["tx2gene"]},
     "ref_file": {"keys": ["reference", "fasta", "base"]},
     "ref_file_compressed": {"keys": ["reference", "fastagz", "base"]},
-    "ref_twobit": {"keys": ["reference", "twobit"]},
     "srna_gtf_file": {"keys": ['genome_resources', 'srnaseq', 'srna_transcripts'],
                       "checker": file_exists},
     "srna_trna_file": {"keys": ['genome_resources', 'srnaseq', 'trna_fasta'],
@@ -57,23 +56,28 @@ LOOKUPS = {
     "sample_name": {"keys": ['rgnames', 'sample']},
     "strandedness": {"keys": ['config', 'algorithm', 'strandedness'],
                      "default": "unstranded"},
-    "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno'], "default": []},
+    "vcfanno": {"keys": ['config', 'algorithm', 'vcfanno'], "default": [], "always_list": True},
     "analysis": {"keys": ["analysis"], "default": ""},
     "square_vcf": {"keys": ['square_vcf']},
     "ploidy": {"keys": ['config', 'algorithm', 'ploidy'], "default": 2},
     "gender": {"keys": ["metadata", "sex"], "default": ""},
     "batch": {"keys": ["metadata", "batch"]},
+    "bcbiornaseq": {"keys": ["config", "algorithm", "bcbiornaseq"], "default": {}},
     "mark_duplicates": {"keys": ["config", "algorithm", "mark_duplicates"], "default": True},
     "phenotype": {"keys": ["metadata", "phenotype"], "default": ""},
     "svclass": {"keys": ["metadata", "svclass"], "default": ""},
     "prep_method": {"keys": ["metadata", "prep_method"], "default": ""},
+    "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "variantcaller_order": {"keys": ['config', 'algorithm', 'variantcaller_order'], "default": 0},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
     "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
     "recalibrate": {"keys": ['config', 'algorithm', 'recalibrate'], "default": False},
     "realign": {"keys": ['config', 'algorithm', 'realign'], "default": False},
+    "ensemble": {"keys": ["config", "algorithm", "ensemble"], "default": {}},
+    "background_variant": {"keys": ["config", "algorithm", "background", "variant"]},
     "peakcaller": {"keys": ['config', 'algorithm', 'peakcaller'], "default": []},
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
@@ -83,6 +87,7 @@ LOOKUPS = {
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "combined_counts": {"keys": ["combined_counts"]},
+    "combined_histogram": {"keys": ["combined_histogram"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "genome_context_files": {"keys": ["reference", "genome_context"], "default": [], "always_list": True},
     "viral_files": {"keys": ["reference", "viral"], "default": [], "always_list": True},
@@ -93,6 +98,7 @@ LOOKUPS = {
     "express_fpkm": {"keys": ['express_fpkm']},
     "express_tpm": {"keys": ['express_tpm']},
     "express_counts": {"keys": ['express_counts']},
+    "histogram_counts": {"keys": ['histogram_counts']},
     "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "fusion_caller": {"keys": ['config', 'algorithm', 'fusion_caller']},
@@ -108,8 +114,7 @@ LOOKUPS = {
     "algorithm_qc": {"keys": ['config', 'algorithm', 'qc'], "default": [], "always_list": True},
     "summary_qc": {"keys": ['summary', 'qc'], "default": {}},
     "summary_metrics": {"keys": ['summary', 'metrics'], "default": {}},
-    "adapters": {"keys": ['config', 'algorithm', 'adapters'],
-                 "default": []},
+    "adapters": {"keys": ['config', 'algorithm', 'adapters'], "default": [], "always_list": True},
     "custom_trim": {"keys": ['config', 'algorithm', 'custom_trim'],
                  "default": []},
     "species": {"keys": ['config', 'algorithm', 'species'],
@@ -131,11 +136,11 @@ LOOKUPS = {
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
-                          "default": []},
-    "ericscript_db": {"keys": ["config", "algorithm", "ericscript_db"], "default": None},
+                          "default": [], "always_list": True},
     "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},
     "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
+    "junction_bed": {"keys": ["junction_bed"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},
     "galaxy_dir": {"keys": ["dirs", "galaxy"]},
@@ -147,9 +152,12 @@ LOOKUPS = {
     "pizzly_dir": {"keys": ["pizzly_dir"]},
     "split_bam": {"keys": ["split_bam"]},
     "vrn_file": {"keys": ["vrn_file"]},
+    "exclude_regions": {"keys": ["config", "algorithm", "exclude_regions"], "default": [],
+                        "always_list": True},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
     "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
+    "sv_regions": {"keys": ["config", "algorithm", "sv_regions"]},
     "coverage": {"keys": ["config", "algorithm", "coverage"]},
     "coverage_merged": {"keys": ["config", "algorithm", "coverage_merged"]},
     "coverage_orig": {"keys": ["config", "algorithm", "coverage_orig"]},
@@ -157,7 +165,7 @@ LOOKUPS = {
     "avg_coverage": {"keys": ["regions", "avg_coverage"]},
     "callable_min_size": {"keys": ["config", "algorithm", "callable_min_size"],
                           "default": 1000000},
-    "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"]},
+    "min_allele_fraction": {"keys": ["config", "algorithm", "min_allele_fraction"], "default": 10},
     "normalized_depth": {"keys": ["depth", "bins", "normalized"]},
 
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
@@ -171,8 +179,10 @@ LOOKUPS = {
     "cellular_barcode_correction": {"keys": ["config", "algorithm",
                                              "cellular_barcode_correction"],
                                     "default": 1},
+    "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
     "salmon_dir": {"keys": ["salmon_dir"]},
+    "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},
     "sailfish_dir": {"keys": ["sailfish_dir"]},
     "sailfish_transcript_tpm": {"keys": ["sailfish_transcript_tpm"]},
@@ -197,12 +207,18 @@ LOOKUPS = {
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
 }
 
+def get_background_cnv_reference(data, caller):
+    out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data)
+    if out:
+        return out.get(caller) if isinstance(out, dict) else out
+
 def get_batches(data):
     batches = get_batch(data)
     if batches:
         if not isinstance(batches, (list, tuple)):
             batches = [batches]
         return batches
+    return []
 
 def get_input_sequence_files(data, default=None):
     """
@@ -226,6 +242,9 @@ def get_umi_consensus(data):
     """
     consensus_choices = (["fastq_name"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
+    # don't run consensus UMI calling for scrna-seq
+    if tz.get_in(["analysis"], data, "").lower() == "scrna-seq":
+        return False
     if umi and (umi in consensus_choices or os.path.exists(umi)):
         assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
             "Using consensus UMI inputs requires marking duplicates"
@@ -329,3 +348,27 @@ def get_keys(lookup):
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
 
+def update_summary_qc(data, key, base=None, secondary=None):
+    """
+    updates summary_qc with a new section, keyed by key.
+    stick files into summary_qc if you want them propagated forward
+    and available for multiqc
+    """
+    summary = get_summary_qc(data, {})
+    if base and secondary:
+        summary[key] = {"base": base, "secondary": secondary}
+    elif base:
+        summary[key] = {"base": base}
+    elif secondary:
+        summary[key] = {"secondary": secondary}
+    data = set_summary_qc(data, summary)
+    return data
+
+def has_variantcalls(data):
+    """
+    returns True if the data dictionary is configured for variant calling
+    """
+    analysis = get_analysis(data).lower()
+    variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
+    variantcaller = get_variantcaller(data)
+    return variant_pipeline or variantcaller

@@ -1,8 +1,8 @@
 """Functionality to query and extract information from aligned BAM files.
 """
+from __future__ import print_function
 import collections
 import os
-import itertools
 import signal
 import subprocess
 import numpy
@@ -10,6 +10,7 @@ import numpy
 import pybedtools
 import pysam
 import toolz as tz
+from six.moves import zip_longest
 
 from bcbio import broad, utils
 from bcbio.bam import ref
@@ -24,15 +25,15 @@ def is_empty(bam_file):
     """Determine if a BAM file is empty
     """
     bam_file = objectstore.cl_input(bam_file)
-    sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "{sambamba} view {bam_file} | head -1 | wc -l")
+           "samtools view {bam_file} | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
-    stderr = stderr.strip()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
         return int(stdout) == 0
@@ -46,15 +47,16 @@ def is_paired(bam_file):
     http://stackoverflow.com/a/12451083/252589
     """
     bam_file = objectstore.cl_input(bam_file)
-    sambamba = config_utils.get_program("sambamba", {})
     cmd = ("set -o pipefail; "
-           "{sambamba} view {bam_file} | head -50000 | "
-           "{sambamba} view -S -F paired /dev/stdin  | head -1 | wc -l")
+           "samtools view -h {bam_file} | head -300000 | "
+           "samtools view -S -f 1 /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL))
     stdout, stderr = p.communicate()
+    stdout = stdout.decode()
+    stderr = stderr.decode()
     stderr = stderr.strip()
     if ((p.returncode == 0 or p.returncode == 141) and
          (stderr == "" or (stderr.startswith("gof3r") and stderr.endswith("broken pipe")))):
@@ -110,7 +112,7 @@ def idxstats(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
     AlignInfo = collections.namedtuple("AlignInfo", ["contig", "length", "aligned", "unaligned"])
     samtools = config_utils.get_program("samtools", data["config"])
-    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam])
+    idxstats_out = subprocess.check_output([samtools, "idxstats", in_bam]).decode()
     out = []
     for line in idxstats_out.split("\n"):
         if line.strip():
@@ -151,13 +153,18 @@ def ref_file_from_bam(bam_file, data):
 
 def get_downsample_pct(in_bam, target_counts, data):
     """Retrieve percentage of file to downsample to get to target counts.
+
+    Avoids minimal downsample which is not especially useful for
+    improving QC times; 90& or more of reads.
     """
     total = sum(x.aligned for x in idxstats(in_bam, data))
     with pysam.Samfile(in_bam, "rb") as work_bam:
         n_rgs = max(1, len(work_bam.header.get("RG", [])))
     rg_target = n_rgs * target_counts
     if total > rg_target:
-        return float(rg_target) / float(total)
+        pct = float(rg_target) / float(total)
+        if pct < 0.9:
+            return pct
 
 def get_aligned_reads(in_bam, data):
     index(in_bam, data["config"], check_timestamp=False)
@@ -266,7 +273,7 @@ def _check_sample(in_bam, rgnames):
     if len(msgs) > 0:
         raise ValueError("Problems with pre-aligned input BAM file: %s\n" % (in_bam)
                          + "\n".join(msgs) +
-                         "\nSetting `bam_clean: picard` or `bam_clean: fixrg`\n"
+                         "\nSetting `bam_clean: fixrg`\n"
                          "in the configuration can often fix this issue.")
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
@@ -284,7 +291,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
     extra_rcs = [x for x in ref_contigs if x not in bam_contigs]
     problems = []
     warnings = []
-    for bc, rc in itertools.izip_longest([x for x in bam_contigs if (x not in extra_bcs and
+    for bc, rc in zip_longest([x for x in bam_contigs if (x not in extra_bcs and
                                                                      x not in allowed_outoforder)],
                                          [x for x in ref_contigs if (x not in extra_rcs and
                                                                      x not in allowed_outoforder)]):
@@ -301,7 +308,7 @@ def _check_bam_contigs(in_bam, ref_file, config):
         warnings.append("Extra reference chromosomes: %s" % rc)
     if problems:
         raise ValueError("Unexpected order, name or contig mismatches between input BAM and reference file:\n%s\n"
-                         "Setting `bam_clean: picard` in the configuration can often fix this issue."
+                         "Setting `bam_clean: remove_extracontigs` in the configuration can often fix this issue."
                          % "\n".join(problems))
     if warnings:
         print("*** Potential problems in input BAM compared to reference:\n%s\n" %
@@ -445,6 +452,16 @@ def _get_sort_stem(in_bam, order, out_dir):
         sort_base = sort_base.split(suffix)[0]
     return sort_base + SUFFIXES[order]
 
+def aligner_from_header(in_bam):
+    """Identify aligner from the BAM header; handling pre-aligned inputs.
+    """
+    from bcbio.pipeline.alignment import TOOLS
+    with pysam.Samfile(in_bam, "rb") as bamfile:
+        for pg in bamfile.header.get("PG", []):
+            for ka in TOOLS.keys():
+                if pg.get("PN", "").lower().find(ka) >= 0:
+                    return ka
+
 def sample_name(in_bam):
     """Get sample name from BAM file.
     """
@@ -476,29 +493,21 @@ def estimate_fragment_size(bam_file, nreads=5000):
         return 0
     return int(numpy.median(lengths))
 
-def filter_stream_cmd(bam_file, data, filter_flag):
-    """
-    return a command to keep only alignments matching the filter flag
-    see https://github.com/lomereiter/sambamba/wiki/%5Bsambamba-view%5D-Filter-expression-syntax for examples
-    """
-    sambamba = config_utils.get_program("sambamba", data["config"])
-    num_cores = dd.get_num_cores(data)
-    cmd = ('{sambamba} view -t {num_cores} -f bam -F "{filter_flag}" {bam_file}')
-    return cmd.format(**locals())
-
-def filter_primary_stream_cmd(bam_file, data):
-    return filter_stream_cmd(bam_file, data, "not secondary_alignment")
-
 def filter_primary(bam_file, data):
+    """Filter reads to primary only BAM.
+
+    Removes:
+      - not primary alignment (0x100) 256
+      - supplementary alignment (0x800) 2048
+    """
     stem, ext = os.path.splitext(bam_file)
     out_file = stem + ".primary" + ext
-    if utils.file_exists(out_file):
-        return out_file
-    with file_transaction(data, out_file) as tx_out_file:
-        cmd = filter_primary_stream_cmd(bam_file, data)
-        cmd += "> {tx_out_file}"
-        do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %
-                                        os.path.basename(bam_file)))
+    if not utils.file_exists(out_file):
+        with file_transaction(data, out_file) as tx_out_file:
+            cores = dd.get_num_cores(data)
+            cmd = ("samtools view -@ {cores} -F 2304 -b {bam_file} > {tx_out_file}")
+            do.run(cmd.format(**locals()), ("Filtering primary alignments in %s." %
+                                            os.path.basename(bam_file)))
     return out_file
 
 def estimate_max_mapq(in_bam, nreads=1e6):
