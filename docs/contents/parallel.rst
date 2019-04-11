@@ -206,7 +206,7 @@ underlying issue.
 No parallelization where expected
 =================================
 
-This may occure if the current execution is a re-run of a previous project:
+This may occur if the current execution is a re-run of a previous project:
 
 - Files in ``checkpoints_parallel/*.done`` tell bcbio not to parallelize already
   executed pipeline tasks. This makes restarts faster by avoiding re-starting a

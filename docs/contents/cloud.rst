@@ -271,7 +271,7 @@ run ``bcbio_vm.py graph bcbio-nextgen.log --cluster local`` instead.
 
 For convenience, there's a "serialize" flag ('-s') that saves the dataframe used
 for plotting. In order to explore the data and extract specific datapoints
-or zoom, one could just deserialize the ouput like a python pickle file:
+or zoom, one could just deserialize the output like a python pickle file:
 
 ```
     import cPickle as pickle

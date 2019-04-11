@@ -899,7 +899,7 @@ ChIP sequencing
 - ``peakcaller`` bcbio only accepts ``[macs2]``
 - ``aligner`` Currently ``bowtie2`` is the only one tested
 - The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
-- ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Paramters will change depending on the option to get the best possible results. Only macs2 supported for now.
+- ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Parameters will change depending on the option to get the best possible results. Only macs2 supported for now.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 

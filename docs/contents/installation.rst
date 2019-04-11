@@ -207,7 +207,7 @@ GATK and MuTect/MuTect2
 bcbio includes an installation of GATK4, which is freely available for all uses.
 This is the default runner for HaplotypeCaller or MuTect2. If you want to use an
 older version of GATK, it requires manual installation. This is freely available
-for academic users, but requires a `license for commerical use
+for academic users, but requires a `license for commercial use
 <https://www.broadinstitute.org/gatk/about/#licensing>`_. It is not freely
 redistributable so requires a manual download from the `GATK download`_ site.
 You also need to include ``tools_off: [gatk4]`` in your configuration for runs:
@@ -231,7 +231,7 @@ the GATK distribution. Then make this jar available to bcbio-nextgen with::
 This will copy the jar and update your bcbio_system.yaml and manifest files to
 reflect the new version.
 
-MuTect also has similar licensing terms and requires a license for commerical
+MuTect also has similar licensing terms and requires a license for commercial
 use. After `downloading the MuTect jar
 <https://www.broadinstitute.org/gatk/download/>`_, make it available to bcbio::
 
