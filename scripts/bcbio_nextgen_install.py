@@ -26,6 +26,7 @@ REMOTES = {
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"}
+TARGETPY = "python=3.6"
 
 def main(args, sys_argv):
     check_arguments(args)
@@ -102,9 +103,9 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
     channels = _get_conda_channels(anaconda["conda"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
-                          ["--only-deps", "bcbio-nextgen"], env=env)
+                          ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
-                          ["--file", os.path.basename(REMOTES["requirements"])], env=env)
+                          ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():
