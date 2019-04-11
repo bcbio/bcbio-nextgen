@@ -3,6 +3,8 @@
 - Fixes for Python3 incompatibilities on distributed IPython runs.
 - Numerous smaller Python3 incompatibilities with strings/unicode and types.
   Thanks to the community for reporting these.
+- GATK HaplotypeCaller: correctly apply skipping of marked duplicates only
+  for amplicon runs. Thanks to Ben Liesfeld.
 - Fix format detection for bzip2 fastq inputs.
 - Support latest GATK4 MuTect2 (4.1.1.0) with changes to ploidy and reference
   parameters.

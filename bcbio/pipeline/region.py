@@ -135,6 +135,8 @@ def _add_combine_info(output, combine_map, file_key):
         data = samples[0]
         data["region_bams"] = region_bams
         data["region"] = regions
+        data = dd.set_mark_duplicates(data, data["config"]["algorithm"]["orig_markduplicates"])
+        del data["config"]["algorithm"]["orig_markduplicates"]
         out.append([data])
     return out
 
@@ -155,6 +157,7 @@ def parallel_prep_region(samples, run_parallel):
             extras.append([data])
         else:
             # Do not want to re-run duplicate marking after realignment
+            data["config"]["algorithm"]["orig_markduplicates"] = dd.get_mark_duplicates(data)
             data = dd.set_mark_duplicates(data, False)
             torun.append([data])
     return extras + parallel_split_combine(torun, split_fn, run_parallel,
