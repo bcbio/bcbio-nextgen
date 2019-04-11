@@ -504,6 +504,7 @@ Alignment postprocessing
 
 Coverage information
 ====================
+
 - ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
   automatically from alignment coverage information, so you only need to
   specify it in the input configuration if you have specific needs or bcbio

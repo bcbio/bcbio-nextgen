@@ -34,12 +34,11 @@ with the biological data installed in ``/usr/local/share/bcbio``. The run is in
 a ``~/run/cancer-syn3-chr6``.
 
 Input configuration file
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 To run bcbio, you prepare a small configuration file describing your analysis.
-You can `prepare it manually or use an automated configuration method
-<https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_.
+You can `prepare it manually or use an automated configuration method <https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_.
 The example has a pre-written configuration file with tumor/normal data located
-in the ``config` directory and this section walks through the settings.
+in the ``config`` directory and this section walks through the settings.
 
 You define the type of analysis (variant calling) along with the input files and
 genome build::

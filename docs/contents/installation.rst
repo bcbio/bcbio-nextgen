@@ -280,7 +280,7 @@ use ``https://`` globally instead of ``git://``::
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
 GATK or Java Errors
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 Most software tools used by bcbio require Java 1.8. bcbio distributes an OpenJDK
 Java build and uses it so you don't need to install anything. Older versions of
 GATK (< 3.6) and MuTect require a locally installed Java 1.7. If you
