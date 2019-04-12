@@ -77,7 +77,7 @@ class EricScriptConfig(object):
 
     Private constants:
         _OUTPUT_DIR_NAME: name of the dir created in working directory for
-    ericscript ouput
+    ericscript output
     """
     info_message = 'Detect gene fusions with EricScript'
     EXECUTABLE = 'ericscript.pl'
