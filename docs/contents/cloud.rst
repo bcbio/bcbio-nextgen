@@ -461,6 +461,5 @@ can edit the configuration files themselves. bcbio provides a small wrapper
 that automatically reads and writes these configurations to avoid users needing
 to understand elasticluster internals, but all functionality is fully available.
 Edit your ``~/.bcbio/elasticluster/config`` file to change parameters. You can
-also see the `latest example configuration
-<https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+also see the `latest example configuration <https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
 in the bcbio-vm GitHub repository for more details on the other available options.
