@@ -1,4 +1,4 @@
-## 1.1.5 (in progress)
+## 1.1.5 (12 April 2019)
 
 - Fixes for Python3 incompatibilities on distributed IPython runs.
 - Numerous smaller Python3 incompatibilities with strings/unicode and types.
