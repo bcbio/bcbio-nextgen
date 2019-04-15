@@ -256,7 +256,7 @@ def get_rRNA(gtf):
                 geneid = _strip_feature_version(geneid)
                 txid = line.split("transcript_id")[1].split(" ")[1]
                 txid = _strip_non_alphanumeric(txid)
-                txid = _strip_feature_version(geneid)
+                txid = _strip_feature_version(txid)
                 features.add((geneid, txid))
     return features
 
