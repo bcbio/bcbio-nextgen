@@ -1,5 +1,6 @@
 """Test individual components of the analysis pipeline.
 """
+from __future__ import print_function
 import os
 import sys
 import shutil

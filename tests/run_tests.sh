@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Simple command to run tests using installed bcbio_nextgen python/nose
-# Can pass an optional argument with the type of tests to run
-# ./run_tests.sh rnaseq
-# ./run_tests.sh speed=1
-# ./run_tests.sh devel
-# ./run_tests.sh docker
-# ./run_tests.sh docker_ipython
-
 # Portable resolution of symlinks http://stackoverflow.com/a/24572274/252589
 # readlink -f does not work on Macs
 readlinkf(){ perl -MCwd -e 'print Cwd::abs_path shift' $1;}
@@ -17,17 +9,59 @@ if [ -n "$1" ]; then
 	shift
 fi
 
+if [ "--help" = "$MARK" -o "-h" = "$MARK" ]; then
+	cat <<EOHELP
+
+USAGE
+
+   run_tests.sh -h|--help
+   run_tests.sh <selection>
+
+DESCRIPTION
+
+  Simple command to run tests using installed bcbio_nextgen python/nose. Pass optional argument to select type of tests to run:
+
+    ./run_tests.sh rnaseq
+    ./run_tests.sh speed=1
+    ./run_tests.sh devel
+    ./run_tests.sh docker
+    ./run_tests.sh docker_ipython
+
+ENVIRONMENT
+
+  The script unsets values for PYTHONHOME and PYTHONPATH.
+
+  Use PYTEST to specify an alternative path to the py.test executable.
+
+EOHELP
+	exit 1
+fi
+
 if [[ ${MARK} == docker* && "`which bcbio_vm.py`" != "" ]]; then
-    BCBIO_DIR=$(dirname "$(readlinkf `which bcbio_vm.py`)")
+	BCBIO_DIR=$(dirname "$(readlinkf `which bcbio_vm.py`)")
 else
-    BCBIO_DIR=$(dirname "$(readlinkf `which bcbio_nextgen.py`)")
+	BCBIO_DIR=$(dirname "$(readlinkf `which bcbio_nextgen.py`)")
 fi
 
 unset PYTHONHOME
 unset PYTHONPATH
 export PYTHONNOUSERSITE=1
+
 # Ensure version.py exists in raw cloned bcbio directory
 if [ -d "../bcbio/pipeline" ]; then
 	[ -f ../bcbio/pipeline/version.py ] || touch ../bcbio/pipeline/version.py
 fi
-"$BCBIO_DIR/py.test" -p no:cacheprovider -p no:stepwise -v -s -m ${MARK} "$@"
+
+if [ -z "$PYTEST" ]; then
+	for p in "$BCBIO_DIR/py.test" /usr/bin/py.test-3 /usr/bin/py.test
+	do
+		if [ -x "$p" ]; then
+			PYTEST="$p"
+			break
+		fi
+	done
+	if [ -z "$PYTEST" ]; then
+		echo "E: Could not identify py.test to execute."
+	fi
+fi
+"$PYTEST" -p no:cacheprovider -p no:stepwise -v -s -m ${MARK} "$@"
