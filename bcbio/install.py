@@ -588,7 +588,7 @@ def _install_kraken_db(datadir, args):
     db = os.path.join(kraken, base)
     tooldir = args.tooldir or get_defaults()["tooldir"]
     requests.packages.urllib3.disable_warnings()
-    last_mod = urllib.request.urlopen(url).info().getheader('Last-Modified')
+    last_mod = urllib.request.urlopen(url).info().get('Last-Modified')
     last_mod = dateutil.parser.parse(last_mod).astimezone(dateutil.tz.tzutc())
     if os.path.exists(os.path.join(tooldir, "bin", "kraken")):
         if not os.path.exists(db):
