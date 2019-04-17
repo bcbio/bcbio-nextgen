@@ -53,15 +53,10 @@ if [ -d "../bcbio/pipeline" ]; then
 fi
 
 if [ -z "$PYTEST" ]; then
-	for p in "$BCBIO_DIR/py.test" /usr/bin/py.test-3 /usr/bin/py.test
-	do
-		if [ -x "$p" ]; then
-			PYTEST="$p"
-			break
-		fi
-	done
-	if [ -z "$PYTEST" ]; then
-		echo "E: Could not identify py.test to execute."
-	fi
+	PYTEST="$BCBIO_DIR/py.test"
+fi
+if [ ! -x "$PYTEST" ]; then
+	echo "E: py.test (at '$PYTEST') not found or not executable."
+	exit 1
 fi
 "$PYTEST" -p no:cacheprovider -p no:stepwise -v -s -m ${MARK} "$@"
