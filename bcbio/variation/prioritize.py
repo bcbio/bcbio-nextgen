@@ -97,7 +97,7 @@ def _get_impact_info(vcf_reader):
         'BCSQ': geneimpacts.BCFT}
     for l in (x.strip() for x in _from_bytes(vcf_reader.raw_header).split("\n")):
         if l.startswith("##INFO"):
-            patt = re.compile("(\w+)=(\"[^\"]+\"|[^,]+)")
+            patt = re.compile(r"(\w+)=(\"[^\"]+\"|[^,]+)")
             stub = l.split("=<")[1].rstrip(">")
             d = dict(patt.findall(_from_bytes(stub)))
             if d["ID"] in KEY_2_CLASS:
@@ -118,13 +118,13 @@ def _parse_impact_header(hdr_dict):
     """
     desc = hdr_dict["Description"]
     if hdr_dict["ID"] == "ANN":
-        parts = [x.strip("\"'") for x in re.split("\s*\|\s*", desc.split(":", 1)[1].strip('" '))]
+        parts = [x.strip("\"'") for x in re.split(r"\s*\|\s*", desc.split(":", 1)[1].strip('" '))]
     elif hdr_dict["ID"] == "EFF":
-        parts = [x.strip(" [])'(\"") for x in re.split("\||\(", desc.split(":", 1)[1].strip())]
+        parts = [x.strip(" [])'(\"") for x in re.split(r"\||\(", desc.split(":", 1)[1].strip())]
     elif hdr_dict["ID"] == "CSQ":
-        parts = [x.strip(" [])'(\"") for x in re.split("\||\(", desc.split(":", 1)[1].strip())]
+        parts = [x.strip(" [])'(\"") for x in re.split(r"\||\(", desc.split(":", 1)[1].strip())]
     elif hdr_dict["ID"] == "BCSQ":
-        parts = desc.split(']', 1)[1].split(']')[0].replace('[','').split("|")
+        parts = desc.split(r']', 1)[1].split(r']')[0].replace(r'[','').split("|")
     else:
         raise Exception("don't know how to use %s as annotation" % hdr_dict["ID"])
     return parts

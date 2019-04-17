@@ -37,7 +37,7 @@ def query_gsm(gsm, out_file, config = {}):
     gsm = gsm[0]
     out_dir = os.path.dirname(os.path.abspath(out_file))
     name = utils.splitext_plus(os.path.basename(out_file))[0]
-    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra\&term={0}\&retmode=json".format(gsm)
+    url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra\\&term={0}\\&retmode=json".format(gsm)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out = process.stdout.read()

@@ -61,7 +61,7 @@ def rmarkdown_draft(filename, template, package):
     rcmd = Rscript_cmd()
     with chdir(report_dir):
         do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
-        do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
+        do.run(["sed", "-i", "s%YYYY-MM-DD/%%g", filename], "Editing bcbioRNAseq quality control template.")
     return filename
 
 def render_rmarkdown_file(filename):
