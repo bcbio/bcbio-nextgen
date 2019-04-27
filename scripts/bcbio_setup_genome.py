@@ -59,7 +59,7 @@ def gff3_to_gtf(gff3_file):
     if file_exists(out_file):
         return out_file
 
-    logger.info("Converting %s to %s." %(gff3_file, out_file))
+    logger.info("Converting %s to %s." % (gff3_file, out_file))
 
     if _is_from_ncbi(gff3_file):
         logger.info("NCBI format detected by the presence of the %s key."
@@ -211,6 +211,7 @@ class MyParser(ArgumentParser):
         print(open(loc.get_loc_file(galaxy_base, "samtools")).read())
         sys.exit(0)
 
+
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
                    "place the genome under name/build in the genomes "
@@ -305,7 +306,8 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --cores {args.cores} --genome-dir {genome_dir} --gtf {gtf_file} {args.name} {args.build}")
+            cmd = ("{sys.executable} {prepare_tx} --cores {args.cores} --genome-dir {genome_dir} "
+                   "--gtf {gtf_file} {args.name} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     if args.mirbase:
         "Preparing smallRNA data."
@@ -351,6 +353,7 @@ if __name__ == "__main__":
     print("Updating Galaxy .loc files.")
     galaxy_base = os.path.join(_get_data_dir(), "galaxy")
     for index, index_file in indexed.items():
-        loc.update_loc_file(galaxy_base, index, args.build, index_file)
+        if index_file:
+            loc.update_loc_file(galaxy_base, index, args.build, index_file)
 
     print("Genome installation complete.")
