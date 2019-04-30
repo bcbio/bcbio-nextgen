@@ -189,7 +189,7 @@ def split_gtf(gtf, sample_size=None, out_dir=None):
     if not sample_size or (sample_size and sample_size > len(gene_ids)):
         sample_size = len(gene_ids)
     gene_ids = set(random.sample(gene_ids, sample_size))
-    part1_ids = set(random.sample(gene_ids, sample_size / 2))
+    part1_ids = set(random.sample(gene_ids, sample_size // 2))
     part2_ids = gene_ids.difference(part1_ids)
     with open(part1, "w") as part1_handle:
         for gene in part1_ids:

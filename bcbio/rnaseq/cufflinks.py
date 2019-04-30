@@ -30,7 +30,7 @@ def run(align_file, ref_file, data):
             safe_makedir(tmp_out_dir)
             cmd.extend(["--output-dir", tmp_out_dir])
             cmd.extend([align_file])
-            cmd = map(str, cmd)
+            cmd = list(map(str, cmd))
             do.run(cmd, "Cufflinks on %s." % (align_file))
         fpkm_file = gene_tracking_to_fpkm(tracking_file, fpkm_file)
         fpkm_file_isoform = gene_tracking_to_fpkm(tracking_file_isoform, fpkm_file_isoform)
