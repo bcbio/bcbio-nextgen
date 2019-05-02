@@ -25,7 +25,6 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")
-
     if file_exists(out_file):
         return out_file
     logger.info("Combining count files into %s." % out_file)
@@ -42,7 +41,11 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
         else:
             with open(f) as in_handle:
                 for line in in_handle:
-                    _, val = line.strip().split("\t")
+                    try:
+                        _, val = line.strip().split("\t")
+                    except ValueError:
+                        print(f, line)
+                        raise
                     vals.append(val)
         col_vals[col_names[i]] = vals
 
