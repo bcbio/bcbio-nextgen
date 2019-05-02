@@ -4,6 +4,7 @@
 from collections import namedtuple, defaultdict
 import copy
 import os
+import pprint
 import shutil
 import subprocess
 
@@ -370,11 +371,16 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
         try:
             out_file = _run_concat_variant_files_gatk4(input_file_list, out_file, config)
         except subprocess.CalledProcessError as msg:
-            if ("We require all VCFs to have complete VCF headers" in str(msg) or
-                  "Features added out of order" in str(msg) or
-                  "The reference allele cannot be missing" in str(msg)):
+            if ("We require all VCFs to have complete VCF headers" in str(msg)
+                  or "Features added out of order" in str(msg)
+                  or "The reference allele cannot be missing" in str(msg)):
                 out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
             else:
+                print("## Original contigs")
+                pprint.pprint(zip(regions, orig_files))
+                print("## Ordered file list")
+                with open(input_file_list) as in_handle:
+                    print(in_handle.read())
                 raise
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
