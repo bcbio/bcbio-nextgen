@@ -35,18 +35,20 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
         if i == 0:
             with open(f) as in_handle:
                 for line in in_handle:
-                    rname, val = line.strip().split("\t")
-                    row_names.append(rname)
-                    vals.append(val)
+                    if not line.strip().startswith("#"):
+                        rname, val = line.strip().split("\t")
+                        row_names.append(rname)
+                        vals.append(val)
         else:
             with open(f) as in_handle:
                 for line in in_handle:
-                    try:
-                        _, val = line.strip().split("\t")
-                    except ValueError:
-                        print(f, line)
-                        raise
-                    vals.append(val)
+                    if not line.strip().startswith("#"):
+                        try:
+                            _, val = line.strip().split("\t")
+                        except ValueError:
+                            print(f, line)
+                            raise
+                        vals.append(val)
         col_vals[col_names[i]] = vals
 
     df = pd.DataFrame(col_vals, index=row_names)
