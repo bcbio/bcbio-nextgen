@@ -29,7 +29,7 @@ def count(data):
     safe_makedir(out_dir)
     count_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts"
     summary_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts.summary"
-    if file_exists(count_file):
+    if file_exists(count_file) and _is_fixed_count_file(count_file):
         return count_file
 
     featureCounts = config_utils.get_program("featureCounts", dd.get_config(data))
@@ -68,6 +68,12 @@ def _change_sample_name(in_file, sample_name, data=None):
                     out_handle.write("%s\n" % line.strip())
     return out_file
 
+def _is_fixed_count_file(count_file):
+    if os.path.exists(count_file):
+        with open(count_file) as in_handle:
+            line = in_handle.readline().split("\t")
+            return len(line) == 2
+
 def _format_count_file(count_file, data):
     """
     this cuts the count file produced from featureCounts down to
@@ -76,7 +82,7 @@ def _format_count_file(count_file, data):
     """
     COUNT_COLUMN = 5
     out_file = os.path.splitext(count_file)[0] + ".fixed.counts"
-    if file_exists(out_file):
+    if file_exists(out_file) and _is_fixed_count_file(out_file):
         return out_file
 
     df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=1)
