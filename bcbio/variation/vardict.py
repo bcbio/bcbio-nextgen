@@ -11,7 +11,7 @@ https://github.com/AstraZeneca-NGS/VarDict
 
 specify 'vardict-perl'.
 """
-from distutils.version import LooseVersion
+from packaging.version import Version
 import os
 import sys
 from six.moves import zip
@@ -45,11 +45,11 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     vardict_cl = get_vardict_command(items[0])
     version = programs.get_version_manifest(vardict_cl)
     if (vardict_cl and version and
-        ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
-         (vardict_cl == "vardict" and LooseVersion(version) >= LooseVersion("2018.07.25")))):
+        ((vardict_cl == "vardict-java" and Version(version) >= Version("1.5.5")) or
+         (vardict_cl == "vardict" and Version(version) >= Version("2018.07.25")))):
         opts += ["--nosv"]
     if (vardict_cl and version and
-         (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
+         (vardict_cl == "vardict-java" and Version(version) >= Version("1.5.6"))):
         opts += ["--deldupvar"]
     # remove low mapping quality reads
     if not is_rnaseq:

@@ -3,7 +3,7 @@
 http://www.htslib.org/workflow/#mapping_to_variant
 """
 import os
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from bcbio.utils import file_exists
 from bcbio.distributed.transaction import file_transaction
@@ -76,7 +76,7 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
                            target_regions=target_regions, want_bcf=True)
     bcftools = config_utils.get_program("bcftools", config)
     samtools_version = programs.get_version("samtools", config=config)
-    if samtools_version and LooseVersion(samtools_version) <= LooseVersion("0.1.19"):
+    if samtools_version and Version(samtools_version) <= Version("0.1.19"):
         raise ValueError("samtools calling not supported with pre-1.0 samtools")
     bcftools_opts = "call -v -m"
     compress_cmd = "| bgzip -c" if tx_out_file.endswith(".gz") else ""

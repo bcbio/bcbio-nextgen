@@ -9,7 +9,7 @@ import collections
 import contextlib
 import datetime
 import dateutil
-from distutils.version import LooseVersion
+from packaging.version import Version
 import gzip
 import json
 import os
@@ -438,14 +438,14 @@ def _is_old_database(db_dir, args):
     """Check for old database versions, supported in snpEff 4.1.
     """
     snpeff_version = effects.snpeff_version(args)
-    if LooseVersion(snpeff_version) >= LooseVersion("4.1"):
+    if Version(snpeff_version) >= Version("4.1"):
         pred_file = os.path.join(db_dir, "snpEffectPredictor.bin")
         if not utils.file_exists(pred_file):
             return True
         with utils.open_gzipsafe(pred_file, is_gz=True) as in_handle:
             version_info = in_handle.readline().strip().split("\t")
         program, version = version_info[:2]
-        if not program.lower() == "snpeff" or LooseVersion(snpeff_version) > LooseVersion(version):
+        if not program.lower() == "snpeff" or Version(snpeff_version) > Version(version):
             return True
     return False
 

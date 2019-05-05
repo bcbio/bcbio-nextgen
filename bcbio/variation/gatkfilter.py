@@ -2,7 +2,7 @@
 """
 import os
 import gzip
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -269,8 +269,8 @@ def includes_missingalt(data):
     As of GATK 4.1.0.0, variants with missing alts are generated
     (see https://github.com/broadinstitute/gatk/issues/5650)
     """
-    MISSINGALT_VERSION = LooseVersion("4.1.0.0")
-    version = LooseVersion(broad.get_gatk_version(config=dd.get_config(data)))
+    MISSINGALT_VERSION = Version("4.1.0.0")
+    version = Version(broad.get_gatk_version(config=dd.get_config(data)))
     return version >= MISSINGALT_VERSION
 
 def gatk_remove_missingalt(in_file, data):

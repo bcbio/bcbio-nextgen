@@ -1,6 +1,6 @@
 """GATK variant calling -- MuTect2.
 """
-from distutils.version import LooseVersion
+from packaging.version import Version
 import os
 
 import numpy as np
@@ -109,7 +109,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             resources = config_utils.get_resources("mutect2", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
-            assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
+            assert Version(broad_runner.gatk_major_version()) >= Version("3.5"), \
                 "Require full version of GATK 3.5+ for mutect2 calling"
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))

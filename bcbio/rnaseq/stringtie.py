@@ -10,7 +10,7 @@ import os
 import pandas as pd
 import subprocess
 import contextlib
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from bcbio.provenance import do
 from bcbio.utils import file_exists
@@ -109,7 +109,7 @@ def version(data):
     with contextlib.closing(subp.stdout) as stdout:
         for line in stdout:
             version = line.decode().strip()
-    return LooseVersion(version)
+    return Version(version)
 
 def supports_merge(data):
     """
@@ -118,4 +118,4 @@ def supports_merge(data):
     which will remove the need for cufflinks merge
     """
     gffcompare_installed = config_utils.program_installed("gffcompare", data)
-    return version(data) >= LooseVersion("1.2.0") and gffcompare_installed
+    return version(data) >= Version("1.2.0") and gffcompare_installed

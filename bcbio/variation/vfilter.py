@@ -1,6 +1,6 @@
 """Cutoff-based soft filtering of genomic variants.
 """
-from distutils.version import LooseVersion
+from packaging.version import Version
 import math
 import os
 import shutil
@@ -62,7 +62,7 @@ def _freebayes_custom(in_file, ref_file, data):
         return None
     config = data["config"]
     bv_ver = programs.get_version("bcbio_variation", config=config)
-    if LooseVersion(bv_ver) < LooseVersion("0.1.1"):
+    if Version(bv_ver) < Version("0.1.1"):
         return None
     out_file = "%s-filter%s" % os.path.splitext(in_file)
     if not utils.file_exists(out_file):

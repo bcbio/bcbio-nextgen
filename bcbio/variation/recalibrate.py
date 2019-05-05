@@ -6,7 +6,7 @@ error rates based on alignments to the reference genome.
 http://www.broadinstitute.org/gsa/wiki/index.php/Base_quality_score_recalibration
 """
 import os
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 import toolz as tz
 
@@ -170,7 +170,7 @@ def _gatk_apply_bqsr(data):
             # https://github.com/bcbio/bcbio-nextgen/issues/2145#issuecomment-343095357
             if gatk_type == "gatk4":
                 params += ["--jdk-deflater", "--jdk-inflater"]
-            elif LooseVersion(broad_runner.gatk_major_version()) > LooseVersion("3.7"):
+            elif Version(broad_runner.gatk_major_version()) > Version("3.7"):
                 params += ["-jdk_deflater", "-jdk_inflater"]
             memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
             broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale,

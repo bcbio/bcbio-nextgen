@@ -1,6 +1,6 @@
 """Provide support for MuTect and other paired analysis tools."""
 
-from distutils.version import LooseVersion
+from packaging.version import Version
 import os
 
 import toolz as tz
@@ -35,7 +35,7 @@ def _check_mutect_version(broad_runner):
         logger.warn("Proceeding but assuming correct version 1.1.5.")
     else:
         try:
-            assert LooseVersion(mutect_version) >= LooseVersion("1.1.5")
+            assert Version(mutect_version) >= Version("1.1.5")
         except AssertionError:
             message = ("MuTect 1.1.4 and lower is known to have incompatibilities "
                        "with Java < 7, and this may lead to problems in analyses. "

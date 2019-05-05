@@ -1,6 +1,6 @@
 """Check specific required program versions required during the pipeline.
 """
-from distutils.version import LooseVersion
+from packaging.version import Version
 import subprocess
 
 from bcbio import setpath, utils
@@ -51,7 +51,7 @@ def _needs_java(data):
         pass
         # runner = broad.runner_from_config(data["config"])
         # version = runner.get_gatk_version()
-        # if LooseVersion(version) < LooseVersion("3.6"):
+        # if Version(version) < Version("3.6"):
         #     return True
     return False
 
@@ -77,8 +77,8 @@ def java(items):
                     version = version[1:]
                 if version.endswith('"'):
                     version = version[:-1]
-        if (not version or LooseVersion(version) >= LooseVersion(max_version) or
-            LooseVersion(version) < LooseVersion(min_version)):
+        if (not version or Version(version) >= Version(max_version) or
+            Version(version) < Version(min_version)):
             return ("java version %s required for running MuTect and GATK < 3.6.\n"
                     "It needs to be first on your PATH so running 'java -version' give the correct version.\n"
                     "Found version %s at %s" % (min_version, version, java))

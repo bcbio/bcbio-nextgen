@@ -12,7 +12,7 @@ import glob
 import sys
 import subprocess
 from itertools import repeat, islice
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
@@ -486,7 +486,7 @@ def has_umi_matrix(data):
     umis_version = version(data)
     if not version:
         return False
-    return LooseVersion(umis_version) >= "1.0.0"
+    return Version(umis_version) >= "1.0.0"
 
 def filter_barcode_histogram(filtered_out_file, out_file, cutoff):
     if file_exists(filtered_out_file):

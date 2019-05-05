@@ -1,7 +1,7 @@
 """GATK variant calling -- HaplotypeCaller and UnifiedGenotyper.
 """
 import os
-from distutils.version import LooseVersion
+from packaging.version import Version
 import shutil
 import subprocess
 
@@ -31,7 +31,7 @@ def standard_cl_params(items):
         gatk_type = broad_runner.gatk_type()
         if gatk_type == "gatk4":
             out += ["--disable-read-filter", "NotDuplicateReadFilter"]
-        elif LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"):
+        elif Version(broad_runner.gatk_major_version()) >= Version("3.5"):
             out += ["-drf", "DuplicateRead"]
     return out
 
@@ -132,7 +132,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
             params += ["--annotation", "ClippingRankSumTest",
                        "--annotation", "DepthPerSampleHC"]
             # Enable hardware based optimizations in GATK 3.1+
-            if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.1"):
+            if Version(broad_runner.gatk_major_version()) >= Version("3.1"):
                 if _supports_avx():
                     # Scale down HMM thread default to avoid overuse of cores
                     # https://github.com/bcbio/bcbio-nextgen/issues/2442
@@ -164,7 +164,7 @@ def haplotype_caller(align_bams, items, ref_file, assoc_files,
                     for boundary in [10, 20, 30, 40, 60, 80]:
                         params += ["-GQB", str(boundary)]
             # Enable non-diploid calling in GATK 3.3+
-            if LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.3"):
+            if Version(broad_runner.gatk_major_version()) >= Version("3.3"):
                 params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             if gatk_type == "gatk4":
                 # GATK4 Spark calling does not support bgzipped output, use plain VCFs

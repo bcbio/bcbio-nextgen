@@ -4,7 +4,7 @@
   GATK -- Next-generation sequence processing.
 """
 from contextlib import closing
-from distutils.version import LooseVersion
+from packaging.version import Version
 import getpass
 import re
 import sys
@@ -301,7 +301,7 @@ class BroadRunner:
                 memscale = config["algorithm"]["memory_adjust"] = {"direction": "increase",
                                                                    "magnitude": max(1, int(cores) // 2)}
         # Filters and unsafe specifications not in GATK4
-        if LooseVersion(self.gatk_major_version()) > LooseVersion("1.9") and not is_gatk4:
+        if Version(self.gatk_major_version()) > Version("1.9") and not is_gatk4:
             if len([x for x in params if x.startswith(("-U", "--unsafe"))]) == 0:
                 params.extend(["-U", "LENIENT_VCF_PROCESSING"])
             params.extend(["--read_filter", "BadCigar", "--read_filter", "NotPrimaryAlignment"])
@@ -345,7 +345,7 @@ class BroadRunner:
         ld_preload injects required libraries for Java JNI calls:
         https://gatkforums.broadinstitute.org/gatk/discussion/8810/something-about-create-pon-workflow
         """
-        needs_java7 = LooseVersion(self.get_gatk_version()) < LooseVersion("3.6")
+        needs_java7 = Version(self.get_gatk_version()) < Version("3.6")
         # For old Java requirements use global java 7
         if needs_java7:
             setpath.remove_bcbiopath()
@@ -410,9 +410,9 @@ class BroadRunner:
         Returns either `lite` (targeting GATK-lite 2.3.9) or `restricted`,
         the latest 2.4+ restricted version of GATK.
         """
-        if LooseVersion(self.gatk_major_version()) > LooseVersion("3.9"):
+        if Version(self.gatk_major_version()) > Version("3.9"):
             return "gatk4"
-        elif LooseVersion(self.gatk_major_version()) > LooseVersion("2.3"):
+        elif Version(self.gatk_major_version()) > Version("2.3"):
             return "restricted"
         else:
             return "lite"
