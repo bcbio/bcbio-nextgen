@@ -85,7 +85,7 @@ def _format_count_file(count_file, data):
     if file_exists(out_file) and _is_fixed_count_file(out_file):
         return out_file
 
-    df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=1)
+    df = pd.io.parsers.read_csv(count_file, sep="\t", index_col=0, header=1)
     df_sub = df.ix[:, COUNT_COLUMN]
     with file_transaction(data, out_file) as tx_out_file:
         df_sub.to_csv(tx_out_file, sep="\t", index_label="id", header=False)

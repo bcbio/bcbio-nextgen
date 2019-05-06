@@ -139,7 +139,7 @@ def kallisto_table(kallisto_dir, index):
     fastafile = os.path.splitext(index)[0] + ".fa"
     fasta_names = fasta.sequence_names(fastafile)
     ec_names = get_ec_names(ecfile, fasta_names)
-    df = pd.read_table(tsvfile, header=None, names=["ec", "cell", "count"])
+    df = pd.read_csv(tsvfile, header=None, names=["ec", "cell", "count"], sep="\t")
     df["ec"] = [ec_names[x] for x in df["ec"]]
     df = df.pivot(index='ec', columns='cell', values='count')
     cellnames = get_cell_names(cellsfile)
@@ -152,7 +152,7 @@ def get_ec_names(ecfile, fasta_names):
     """
     convert equivalence classes to their set of transcripts
     """
-    df = pd.read_table(ecfile, header=None, names=["ec", "transcripts"])
+    df = pd.read_csv(ecfile, header=None, names=["ec", "transcripts"], sep="\t")
     transcript_groups = [x.split(",") for x in df["transcripts"]]
     transcripts = []
     for group in transcript_groups:

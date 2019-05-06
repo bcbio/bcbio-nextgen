@@ -46,7 +46,7 @@ def gene_tracking_to_fpkm(tracking_file, out_file):
     """
     if file_exists(out_file):
         return out_file
-    df = pd.io.parsers.read_table(tracking_file, sep="\t", header=0)
+    df = pd.io.parsers.read_csv(tracking_file, sep="\t", header=0)
     df = df[['tracking_id', 'FPKM']]
     df = df.groupby(['tracking_id']).sum()
     df.to_csv(out_file, sep="\t", header=False, index_label=False)

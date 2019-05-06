@@ -167,12 +167,12 @@ def _sv_workdir(data):
 def _cnvkit_prioritize(sample, genes, allele_file, metrics_file):
     """Summarize non-diploid calls with copy numbers and confidence intervals.
     """
-    mdf = pd.read_table(metrics_file)
+    mdf = pd.read_csv(metrics_file, sep="\t")
     mdf.columns = [x.lower() for x in mdf.columns]
     if len(genes) > 0:
         mdf = mdf[mdf["gene"].str.contains("|".join(genes))]
     mdf = mdf[["chromosome", "start", "end", "gene", "log2", "ci_hi", "ci_lo"]]
-    adf = pd.read_table(allele_file)
+    adf = pd.read_csv(allele_file, sep="\t")
     if len(genes) > 0:
         adf = adf[adf["gene"].str.contains("|".join(genes))]
     if "cn1" in adf.columns and "cn2" in adf.columns:

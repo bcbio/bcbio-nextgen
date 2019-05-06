@@ -78,7 +78,7 @@ def annotate_combined_count_file(count_file, gtf_file, out_file=None):
     except KeyError:
         return None
 
-    df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=0)
+    df = pd.io.parsers.read_csv(count_file, sep="\t", index_col=0, header=0)
 
     df['symbol'] = df.apply(lambda x: symbol_lookup.get(x.name, ""), axis=1)
     df.to_csv(out_file, sep="\t", index_label="id")
