@@ -163,6 +163,9 @@ def _gatk_apply_bqsr(data):
                     params += ["--spark-master", "local[%s]" % cores,
                                "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
                                "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800"]
+                # Avoid problems with StreamClosedErrors on GATK 4.1+
+                # https://github.com/bcbio/bcbio-nextgen/issues/2806#issuecomment-492504497
+                params += ["--create-output-bam-index", "false"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]
