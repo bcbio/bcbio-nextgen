@@ -258,7 +258,7 @@ class BroadRunner:
                 return True
             else:
                 try:
-                    stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                    stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, encoding="UTF-8")
                     return stdout.find("GATK jar file not found") == -1
                 except subprocess.CalledProcessError:
                     return False
