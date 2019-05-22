@@ -318,8 +318,8 @@ def run_rnaseq(bam_file, data, out_dir):
     """
     Run qualimap for a rnaseq bam file and parse results
     """
-    strandedness = {"firststrand": "strand-specific-reverse",
-                    "secondstrand": "strand-specific-forward",
+    strandedness = {"firststrand": "strand-specific-forward",
+                    "secondstrand": "strand-specific-reverse",
                     "unstranded": "non-strand-specific"}
 
     # Qualimap results should be saved to a directory named after sample.
