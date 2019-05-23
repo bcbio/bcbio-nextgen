@@ -5,9 +5,9 @@ wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/vm/bootstrap.sh
 vagrant up
 
 echo "Your VM is all set up. You can connect to the VM by typing 'vagrant ssh'."
-echo "You can complete the setup by doing the following:\n
+echo "You can complete the setup by doing the following:
 vagrant ssh
 cd tmp
-python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local --genomes GRCh37 --aligners bwa --sudo\n"
-echo "You might have to answer a few questions during the install process, but other\n"
+python bcbio_nextgen_install.py ~/local/share/bcbio-nextgen --tooldir=~/local --nodata"
+echo "You might have to answer a few questions during the install process, but other"
 echo "than that it should be all set!"
