@@ -55,7 +55,7 @@ def get_post_process_yaml(data_dir, workdir):
     # create local config pointing to reduced genomes
     test_system = os.path.join(workdir, "bcbio_system.yaml")
     with open(system) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
         config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
         with open(test_system, "w") as out_handle:
             yaml.dump(config, out_handle)

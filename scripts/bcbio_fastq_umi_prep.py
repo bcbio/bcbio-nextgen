@@ -76,7 +76,7 @@ def add_umis_to_fastq_parallel(out_base, read1_fq, read2_fq, umi_fq, tags, cores
     add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags, cores)
 
 def add_umis_to_fastq(out_base, read1_fq, read2_fq, umi_fq, tags=None, cores=1):
-    print("Adding UMIs from", umi_fq, "to read headers in", " ".join([x for x in read1_fq, read2_fq if x]))
+    print("Adding UMIs from", umi_fq, "to read headers in", " ".join([x for x in [read1_fq, read2_fq] if x]))
     out1_fq = out_base + "_R1.fq.gz"
     out2_fq = out_base + "_R2.fq.gz"
     if umi_fq and not tags:
@@ -158,8 +158,7 @@ def run_autopair(args):
         else:
             r3 = None
             for test_r3 in extras:
-                if (_commonprefix([r1, test_r3]) == target and
-                      _commonprefix([r2, test_r3]) == target):
+                if (_commonprefix([r1, test_r3]) == target and _commonprefix([r2, test_r3]) == target):
                     r3 = test_r3
                     break
             assert r3, (r1, r2, extras)
@@ -181,10 +180,12 @@ def _find_umi(files):
     R1/R2/I1 => R1/R2 with I1 UMI
     """
     base = os.path.basename(_commonprefix(files))
+
     def _file_ext(f):
         exts = utils.splitext_plus(os.path.basename(f).replace(base, ""))[0].split("_")
         exts = [x for x in exts if x]
         return exts[0]
+
     exts = dict([(_file_ext(f), f) for f in files])
     if "I1" in exts:
         return exts["R1"], exts["R2"], exts["I1"]
@@ -202,6 +203,7 @@ def _commonprefix(files):
     out = out.rstrip("_I")
     out = out.rstrip("_")
     return out
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Add UMIs to fastq read names")

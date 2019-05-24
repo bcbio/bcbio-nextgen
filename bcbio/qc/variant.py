@@ -30,7 +30,6 @@ def run(_, data, out_dir):
                 out.append(_bcftools_stats(data, out_dir, "germline", germline=True))
         else:
             out.append(_bcftools_stats(data, out_dir, germline=True))
-
     out.append(_snpeff_stats(data, out_dir))
 
     out = [item for item in out if item]
@@ -108,8 +107,14 @@ def _get_variants(data):
                   isinstance(v[0], six.string_types) and os.path.exists(v[0])):
                 for subv in v:
                     active_vs.append(_add_filename_details(subv))
-            elif isinstance(v, dict) and v.get("vrn_file"):
-                active_vs.append(v)
+            elif isinstance(v, dict):
+                if v.get("vrn_file"):
+                    active_vs.append(v)
+                elif v.get("population"):
+                    vrnfile = v.get("population").get("vcf")
+                    active_vs.append(_add_filename_details(vrnfile))
+                elif v.get("vcf"):
+                    active_vs.append(_add_filename_details(v.get("vcf")))
     return active_vs
 
 def get_active_vcinfo(data, use_ensemble=True):

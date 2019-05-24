@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import io
 import json
 import mimetypes
 import os
@@ -145,13 +146,13 @@ def _save_uploaded_data_json(samples, data_json_work, out_dir):
     if not upload_path_mapping:
         return data_json_work
 
-    with open(data_json_work) as f:
+    with io.open(data_json_work, encoding="utf-8") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
     upload_base = samples[0]["upload"]["dir"]
     data = walk_json(data, lambda s: _work_path_to_rel_final_path(s, upload_path_mapping, upload_base))
 
     data_json_final = os.path.join(out_dir, "multiqc_data_final.json")
-    with open(data_json_final, "w") as f:
+    with io.open(data_json_final, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     return data_json_final
 
@@ -197,12 +198,25 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     if not path or not isinstance(path, str):
         return path
     upload_path = None
-    for work_path, final_path in upload_path_mapping.items():
-        if os.path.isfile(work_path) and path == work_path:
-            upload_path = final_path
-        elif os.path.isdir(work_path) and path.startswith(work_path):
-            upload_path = path.replace(work_path, final_path)
-    if upload_path:
+
+    # First, check in the mapping: if it's there is a direct reference and
+    # it's a file, we immediately return it (saves lots of iterations)
+    if upload_path_mapping.get(path) is not None and os.path.isfile(path):
+        upload_path = upload_path_mapping[path]
+    else:
+        # Not a file: check for elements in the mapping that contain
+        # it
+        paths_to_check = [key for key in upload_path_mapping
+                          if path.startswith(key)]
+
+        if paths_to_check:
+            for work_path in paths_to_check:
+                if os.path.isdir(work_path):
+                    final_path = upload_path_mapping[work_path]
+                    upload_path = path.replace(work_path, final_path)
+                    break
+
+    if upload_path is not None:
         return os.path.relpath(upload_path, upload_base_dir)
     else:
         return None
@@ -363,6 +377,7 @@ def _create_config_file(out_dir, samples):
     else:
         module_order.append("bcftools")
     module_order.extend([
+        "salmon",
         "picard",
         "qualimap",
         "snpeff",

@@ -39,7 +39,7 @@ def run(data):
         return None
     with chdir(out_dir):
         collapsed, bam_file = _prepare_inputs(collapsed, bam_file, out_dir)
-        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res").format(**locals())
+        cmd = ("{perl_exports} && perl {mirdeep2} {collapsed} {genome} {bam_file} {mature} none {hairpin} -f {rfam_file} -r simple -c -P -t {species} -z res -g -1").format(**locals())
         if not file_exists(out_file):
             try:
                 do.run(cmd.format(**locals()), "Running mirdeep2.")
@@ -90,7 +90,7 @@ def _parse_novel(csv_file, sps="new"):
                 if read and line.strip():
                     cols = line.strip().split("\t")
                     name, start, score = cols[0], cols[16], cols[1]
-                    if score < 1:
+                    if float(score) < 1:
                         continue
                     m5p, m3p, pre = cols[13], cols[14], cols[15].replace('u', 't').upper()
                     m5p_start = cols[15].find(m5p) + 1

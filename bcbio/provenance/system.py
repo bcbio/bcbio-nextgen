@@ -62,7 +62,7 @@ def _slurm_info(queue):
     """Returns machine information for a slurm job scheduler.
     """
     cl = "sinfo -h -p {} --format '%c %m %D'".format(queue)
-    num_cpus, mem, num_nodes = subprocess.check_output(shlex.split(cl)).split()
+    num_cpus, mem, num_nodes = subprocess.check_output(shlex.split(cl)).decode().split()
     # if the queue contains multiple memory configurations, the minimum value is printed with a trailing '+'
     mem = float(mem.replace('+', ''))
     num_cpus = int(num_cpus.replace('+', ''))
@@ -83,7 +83,7 @@ def _torque_info(queue):
     hosts are available, it uses the first host found from pbsnodes.
     """
     nodes = _torque_queue_nodes(queue)
-    pbs_out = subprocess.check_output(["pbsnodes"])
+    pbs_out = subprocess.check_output(["pbsnodes"]).decode()
     info = {}
     for i, line in enumerate(pbs_out.split("\n")):
         if i == 0 and len(nodes) == 0:
@@ -104,7 +104,7 @@ def _torque_queue_nodes(queue):
     Parses out nodes from `acl_hosts` in qstat -Qf and extracts the
     initial names of nodes used in pbsnodes.
     """
-    qstat_out = subprocess.check_output(["qstat", "-Qf", queue])
+    qstat_out = subprocess.check_output(["qstat", "-Qf", queue]).decode()
     hosts = []
     in_hosts = False
     for line in qstat_out.split("\n"):
@@ -128,9 +128,9 @@ def median_left(x):
 def _sge_info(queue):
     """Returns machine information for an sge job scheduler.
     """
-    qhost_out = subprocess.check_output(["qhost", "-q", "-xml"])
+    qhost_out = subprocess.check_output(["qhost", "-q", "-xml"]).decode()
     qstat_queue = ["-q", queue] if queue and "," not in queue else []
-    qstat_out = subprocess.check_output(["qstat", "-f", "-xml"] + qstat_queue)
+    qstat_out = subprocess.check_output(["qstat", "-f", "-xml"] + qstat_queue).decode()
     slot_info = _sge_get_slots(qstat_out)
     mem_info = _sge_get_mem(qhost_out, queue)
     machine_keys = slot_info.keys()
@@ -204,7 +204,7 @@ def get_info(dirs, parallel, resources=None):
         cache_file = _get_cache_file(dirs, parallel)
         if utils.file_exists(cache_file):
             with open(cache_file) as in_handle:
-                minfo = yaml.load(in_handle)
+                minfo = yaml.safe_load(in_handle)
             return _combine_machine_info(minfo)
         else:
             return {}

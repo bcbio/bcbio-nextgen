@@ -40,7 +40,7 @@ Presentations
   <https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2017_teaching/ngscourse2017_teaching.pdf>`_
 
 - Training course for the `Cancer Genomics Cloud
-  <http://www.cancergenomicscloud.org/>`_, decribing how bcbio uses the Common
+  <http://www.cancergenomicscloud.org/>`_, describing how bcbio uses the Common
   Workflow Language to run in multiple infrastructures (1 May 2017): `slides
   <https://github.com/chapmanb/bcbb/blob/master/talks/cgc2017_bcbio_cwl/cgc2017_bcbiocwl.pdf>`_
 

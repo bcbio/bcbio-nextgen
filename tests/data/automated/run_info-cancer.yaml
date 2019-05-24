@@ -25,7 +25,7 @@ details:
       indelcaller: sid
       ensemble:
         numpass: 2
-      svcaller: [lumpy, cnvkit, titancna]
+      svcaller: [lumpy, cnvkit]
       #hetcaller: [bubbletree]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed
@@ -49,13 +49,13 @@ details:
       ensemble:
         numpass: 2
       min_allele_fraction: 10
-      svcaller: [lumpy, cnvkit, titancna]
+      svcaller: [lumpy, cnvkit]
       #hetcaller: [bubbletree]
       tools_on: [damage_filter]
       tools_off: [vardict_somatic_filter]
       variant_regions: ../data/automated/variant_regions-cancer.bed
       sv_regions: ../data/automated/variant_regions-cancer.bed
-      svprioritize: cancer/az-cancer-panel
+      #svprioritize: cancer/az-cancer-panel
   - analysis: variant2
     description: c-tumor2
     files: [../data/tcga_benchmark/icgc_syn3_tumor.fq.gz]

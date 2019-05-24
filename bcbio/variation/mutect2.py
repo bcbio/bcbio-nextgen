@@ -4,7 +4,6 @@ from distutils.version import LooseVersion
 import os
 
 import numpy as np
-from cyvcf2 import VCF, Writer
 
 from bcbio import bam, broad, utils
 from bcbio.log import logger
@@ -14,6 +13,8 @@ from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import annotation, bamprep, bedutils, gatk, vcfutils, ploidy
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def _add_tumor_params(paired, items, gatk_type):
     """Add tumor/normal BAM input parameters to command line.
@@ -89,9 +90,12 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
         _prep_inputs(align_bams, ref_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             params = ["-T", "Mutect2" if gatk_type == "gatk4" else "MuTect2",
-                      "-R", ref_file,
                       "--annotation", "ClippingRankSumTest",
                       "--annotation", "DepthPerSampleHC"]
+            if gatk_type == "gatk4":
+                params += ["--reference", ref_file]
+            else:
+                params += ["-R", ref_file]
             for a in annotation.get_gatk_annotations(items[0]["config"], include_baseqranksum=False):
                 params += ["--annotation", a]
             # Avoid issues with BAM CIGAR reads that GATK doesn't like
@@ -102,7 +106,6 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
             #params += _add_assoc_params(assoc_files)
-            params += ["-ploidy", str(ploidy.get_ploidy(items, region))]
             resources = config_utils.get_resources("mutect2", items[0]["config"])
             if "options" in resources:
                 params += [str(x) for x in resources.get("options", [])]
@@ -113,7 +116,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             if gatk_type == "gatk4":
                 tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
                 tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
-                filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file, tx_raw_file)
+                filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file, tx_raw_file, ref_file)
                 cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
             else:
                 tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
@@ -122,10 +125,10 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
-def _mutect2_filter(broad_runner, in_file, out_file):
+def _mutect2_filter(broad_runner, in_file, out_file, ref_file):
     """Filter of MuTect2 calls, a separate step in GATK4.
     """
-    params = ["-T", "FilterMutectCalls", "--variant", in_file, "--output", out_file]
+    params = ["-T", "FilterMutectCalls", "--reference", ref_file, "--variant", in_file, "--output", out_file]
     return broad_runner.cl_gatk(params, os.path.dirname(out_file))
 
 def _af_filter(data, in_file, out_file):
@@ -136,14 +139,14 @@ def _af_filter(data, in_file, out_file):
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:
-            vcf = VCF(in_file)
+            vcf = cyvcf2.VCF(in_file)
             vcf.add_filter_to_header({
                 'ID': 'MinAF',
                 'Description': 'Allele frequency is lower than %s%% ' % (min_freq*100) + (
                     '(configured in bcbio as min_allele_fraction)'
                     if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
                     else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
-            w = Writer(tx_out_file, vcf)
+            w = cyvcf2.Writer(tx_out_file, vcf)
             # GATK 3.x can produce VCFs without sample names for empty VCFs
             try:
                 tumor_index = vcf.samples.index(dd.get_sample_name(data))

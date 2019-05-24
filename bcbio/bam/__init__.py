@@ -514,7 +514,7 @@ def estimate_max_mapq(in_bam, nreads=1e6):
     """Guess maximum MAPQ in a BAM file of reads with alignments
     """
     with pysam.Samfile(in_bam, "rb") as work_bam:
-        reads = tz.take(nreads, work_bam)
+        reads = tz.take(int(nreads), work_bam)
         return max([x.mapq for x in reads if not x.is_unmapped])
 
 def convert_cufflinks_mapq(in_bam, out_bam=None):

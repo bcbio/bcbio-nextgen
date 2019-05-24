@@ -70,7 +70,18 @@ def _pack_n_log(f):
             return ipython.zip_args(fn(*args))
     return wrapper
 
-@require(sample)
+def apply(object, args=None, kwargs=None):
+    """Python3 apply replacement for double unpacking of inputs during apply.
+
+    Thanks to: https://github.com/stefanholek/apply
+    """
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+    return object(*args, **kwargs)
+
+require(sample)
 def prepare_sample(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:

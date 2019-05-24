@@ -18,7 +18,7 @@ import bcbio.pipeline.datadict as dd
 from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio import utils
-from bcbio.utils import (file_exists, safe_makedir, is_gzipped)
+from bcbio.utils import (file_exists, safe_makedir)
 from bcbio.distributed.transaction import file_transaction
 from bcbio.bam.fastq import open_fastq
 from bcbio.log import logger
@@ -116,6 +116,13 @@ def get_sample_barcodes(fn, out_dir):
                 outh.write("%s\n" % (line.strip().split(",")[0]))
     return out_fn
 
+def _umis_cmd(data):
+    """Return umis command line argument, with correct python and locale.
+    """
+    return "%s %s %s" % (utils.locale_export(),
+                         utils.get_program_python("umis"),
+                         config_utils.get_program("umis", data["config"], default="umis"))
+
 def umi_transform(data):
     """
     transform each read by identifying the barcode and UMI for each read
@@ -165,7 +172,6 @@ def umi_transform(data):
         split_option = ""
     else:
         demuxed_option = ""
-    umis = config_utils.get_program("umis", data, default="umis")
     cores = dd.get_num_cores(data)
     # skip transformation if the file already looks transformed
     with open_fastq(fq1) as in_handle:
@@ -174,7 +180,8 @@ def umi_transform(data):
             data["files"] = [out_file]
             return [[data]]
     locale_export = utils.locale_export()
-    cmd = ("{locale_export}{umis} fastqtransform {split_option} {transform_file} "
+    umis = _umis_cmd(data)
+    cmd = ("{umis} fastqtransform {split_option} {transform_file} "
            "--cores {cores} {demuxed_option} "
            "{fq1} {fq2} {fq3} {fq4}"
            "| seqtk seq -L 20 - | gzip > {tx_out_file}")
@@ -216,6 +223,7 @@ def filter_barcodes(data):
         return [[data]]
 
     ncores = dd.get_num_cores(data)
+    umis = _umis_cmd(data)
     cmd = "{umis} cb_filter --cores {ncores} "
     if bc1:
         cmd += "--bc1 {bc1} "
@@ -232,7 +240,6 @@ def filter_barcodes(data):
 
     sample_dir = os.path.join(umi_dir, dd.get_sample_name(data))
     safe_makedir(sample_dir)
-    umis = config_utils.get_program("umis", data, default="umis")
     with file_transaction(out_file) as tx_out_file:
         message = "Filtering by cellular barcode."
         do.run(cmd.format(**locals()), message)
@@ -243,11 +250,11 @@ def barcode_histogram(data):
     fq1 = dd.get_input_sequence_files(data)[0]
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
     sample_dir = os.path.join(umi_dir, dd.get_sample_name(data))
-    umis = config_utils.get_program("umis", data, default="umis")
     safe_makedir(sample_dir)
     out_file = os.path.join(sample_dir, "cb-histogram.txt")
     filtered_out_file = os.path.join(sample_dir, "cb-histogram-filtered.txt")
     fq1_cmd = fq1
+    umis = _umis_cmd(data)
     cmd = "{umis} cb_histogram {fq1_cmd} > {tx_out_file}"
     if not file_exists(out_file):
         with file_transaction(out_file) as tx_out_file:
@@ -267,7 +274,6 @@ def tagcount(data):
     if file_exists(out_file):
         data = dd.set_count_file(data, out_file)
         return [[data]]
-    umis = config_utils.get_program("umis", data, default="umis")
     safe_makedir(sample_dir)
     cutoff = dd.get_minimum_barcode_depth(data)
     cb_histogram = os.path.join(sample_dir, "cb-histogram.txt")
@@ -286,6 +292,7 @@ def tagcount(data):
         gene_map_flag = ""
 
     message = "Counting alignments of transcripts in %s." % bam
+    umis = _umis_cmd(data)
     cmd = ("{umis} fasttagcount --cb_cutoff {cutoff} "
            "{gene_map_flag} "
            "{positional} "
@@ -331,7 +338,7 @@ def convert_to_kallisto(data):
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename, "fastq")
     out_file = os.path.join(kallisto_dir, "barcodes.batch")
-    umis = config_utils.get_program("umis", dd.get_config(data))
+    umis = _umis_cmd(data)
     if file_exists(out_file):
         return out_file
     if dd.get_minimum_barcode_depth(data):
@@ -374,7 +381,7 @@ def demultiplex_samples(data):
     demultiplexed = glob.glob(os.path.join(demulti_dir, "*.fq*"))
     if demultiplexed:
         return [split_demultiplexed_sampledata(data, demultiplexed)]
-    umis = config_utils.get_program("umis", data, default="umis")
+    umis = _umis_cmd(data)
     cmd = ("{umis} demultiplex_samples --nedit 1 --barcodes {bcfile} "
            "--out_dir {tx_dir} {fq1}")
     msg = "Demultiplexing {fq1}."
@@ -467,10 +474,10 @@ def concatenate_cb_histograms(samples):
     return newsamples
 
 def version(data):
-    umis_cmd = config_utils.get_program("umis", data, default="umis")
-    version_cmd = [umis_cmd, "version"]
+    umis = _umis_cmd(data)
+    version_cmd = "%s version" % umis
     try:
-        output = subprocess.check_output(version_cmd).decode().strip()
+        output = subprocess.check_output(version_cmd, shell=True).decode().strip()
     except:
         output = None
     return output

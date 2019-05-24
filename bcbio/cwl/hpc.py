@@ -78,7 +78,7 @@ def _args_to_cromwell(args):
     """Convert input arguments into cromwell inputs for config and command line.
     """
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
-                      "sge": {"memtype": "mem_type", "pename": "smp"},
+                      "sge": {"memtype": "mem_free", "pename": "smp"},
                       "lsf": {"walltime": "24:00", "account": ""},
                       "htcondor": {},
                       "torque": {"walltime": "24:00:00", "account": ""},
@@ -349,7 +349,7 @@ HPC_CONFIGS = {
         qsub -V -w w -j y -N ${job_name} -wd ${cwd} \
         -o ${out} -e ${err} -q ${queue} \
         -pe ${pename} ${cpu} -l ${memtype}=${memory_mb}m \
-        /usr/bin/env bash ${script}
+        ${script}
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"

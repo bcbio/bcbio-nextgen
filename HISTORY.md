@@ -1,5 +1,30 @@
-## 1.1.4 (in progress)
+## 1.1.6 (in progress)
 
+- GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
+- RNA-seq: fixes for cufflinks preparation due to python3 transition.
+
+## 1.1.5 (12 April 2019)
+
+- Fixes for Python3 incompatibilities on distributed IPython runs.
+- Numerous smaller Python3 incompatibilities with strings/unicode and types.
+  Thanks to the community for reporting these.
+- GATK HaplotypeCaller: correctly apply skipping of marked duplicates only
+  for amplicon runs. Thanks to Ben Liesfeld.
+- Fix format detection for bzip2 fastq inputs.
+- Support latest GATK4 MuTect2 (4.1.1.0) with changes to ploidy and reference
+  parameters.
+- Support changes to GATK4 for VQSR --resource specification in 4.1.1.0. Thanks
+  to Timothee Cezard.
+- Support latest bedtools (2.28.0) which expects SAM heads for bgzipped BED
+  inputs.
+
+## 1.1.4 (3 April 2019)
+
+- Move to Python 3.6. A python2 environment in the install runs non python3
+  compatible programs. The codebase is still compatible with python 2.7 but
+  will only get run and tested on python 3 for future releases.
+- RNA-seq: fix for race condition when creating the pizzly cache
+- RNA-seq: Add Salmon to multiqc report.
 - RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
 - RNA-seq: Faster and more flexible rRNA biotype lookup.
 - Move to R3.5.1, including updates to all CRAN and Bioconductor packages.
@@ -8,6 +33,8 @@
 - Install: do not require fabric for tool and data installs, making full codebase
   compatible with python 3.
 - variant: Filter out variants with missing ALT alleles output by GATK4.
+- GATK: enable specification of spark specific parameters with `gatk-spark`
+  resources.
 - RNA-seq single-cell/DGE: added `demultiplexed` option. If set to True, treat the
   data as if it has already been demultiplexed into cells/wells.
 - Multiple orders of magnitude faster templating with thousands of input files.

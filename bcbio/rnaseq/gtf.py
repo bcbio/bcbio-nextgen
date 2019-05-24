@@ -2,7 +2,6 @@ import gffutils
 import tempfile
 import os
 import random
-import gzip
 import re
 
 from bcbio import utils
@@ -21,7 +20,7 @@ def guess_infer_extent(gtf_file):
     tmp_out = tempfile.NamedTemporaryFile(suffix=".gtf", delete=False).name
     with open(tmp_out, "w") as out_handle:
         count = 0
-        in_handle = open(gtf_file) if ext != ".gz" else gzip.open(gtf_file)
+        in_handle = utils.open_gzipsafe(gtf_file)
         for line in in_handle:
             if count > 1000:
                 break
@@ -48,8 +47,10 @@ def get_gtf_db(gtf, in_memory=False):
     db_file = ":memory:" if in_memory else db_file
     if in_memory or not file_exists(db_file):
         infer_extent = guess_infer_extent(gtf)
+        disable_extent = not infer_extent
         db = gffutils.create_db(gtf, dbfn=db_file,
-                                infer_gene_extent=infer_extent)
+                                disable_infer_genes=disable_extent,
+                                disable_infer_transcripts=disable_extent)
     if in_memory:
         return db
     else:
@@ -188,7 +189,7 @@ def split_gtf(gtf, sample_size=None, out_dir=None):
     if not sample_size or (sample_size and sample_size > len(gene_ids)):
         sample_size = len(gene_ids)
     gene_ids = set(random.sample(gene_ids, sample_size))
-    part1_ids = set(random.sample(gene_ids, sample_size / 2))
+    part1_ids = set(random.sample(gene_ids, sample_size // 2))
     part2_ids = gene_ids.difference(part1_ids)
     with open(part1, "w") as part1_handle:
         for gene in part1_ids:
@@ -255,7 +256,7 @@ def get_rRNA(gtf):
                 geneid = _strip_feature_version(geneid)
                 txid = line.split("transcript_id")[1].split(" ")[1]
                 txid = _strip_non_alphanumeric(txid)
-                txid = _strip_feature_version(geneid)
+                txid = _strip_feature_version(txid)
                 features.add((geneid, txid))
     return features
 

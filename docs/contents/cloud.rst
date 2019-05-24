@@ -421,7 +421,7 @@ run ``bcbio_vm.py graph bcbio-nextgen.log --cluster local`` instead.
 
 For convenience, there's a "serialize" flag ('-s') that saves the dataframe used
 for plotting. In order to explore the data and extract specific datapoints
-or zoom, one could just deserialize the ouput like a python pickle file:
+or zoom, one could just deserialize the output like a python pickle file:
 
 ```
     import cPickle as pickle
@@ -461,6 +461,5 @@ can edit the configuration files themselves. bcbio provides a small wrapper
 that automatically reads and writes these configurations to avoid users needing
 to understand elasticluster internals, but all functionality is fully available.
 Edit your ``~/.bcbio/elasticluster/config`` file to change parameters. You can
-also see the `latest example configuration
-<https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
+also see the `latest example configuration <https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config>`_.
 in the bcbio-vm GitHub repository for more details on the other available options.

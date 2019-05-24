@@ -134,7 +134,7 @@ def load_config(config_file):
     """Load YAML config file, replacing environmental variables.
     """
     with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     config = _expand_paths(config)
     if 'resources' not in config:
         config['resources'] = {}

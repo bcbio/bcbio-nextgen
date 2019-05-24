@@ -210,7 +210,7 @@ GATK and MuTect/MuTect2
 bcbio includes an installation of GATK4, which is freely available for all uses.
 This is the default runner for HaplotypeCaller or MuTect2. If you want to use an
 older version of GATK, it requires manual installation. This is freely available
-for academic users, but requires a `license for commerical use
+for academic users, but requires a `license for commercial use
 <https://www.broadinstitute.org/gatk/about/#licensing>`_. It is not freely
 redistributable so requires a manual download from the `GATK download`_ site.
 You also need to include ``tools_off: [gatk4]`` in your configuration for runs:
@@ -218,7 +218,7 @@ see :ref:`config-changing-defaults`.
 
 To install GATK3, register with the pre-installed gatk bioconda wrapper::
 
-   gatk-register /path/to/GenomeAnalysisTK.tar.bz2
+   gatk3-register /path/to/GenomeAnalysisTK.tar.bz2
 
 If you're not using the most recent post-3.6 version of GATK, or using a nightly
 build, you can add ``--noversioncheck`` to the command line to skip comparisons
@@ -234,7 +234,7 @@ the GATK distribution. Then make this jar available to bcbio-nextgen with::
 This will copy the jar and update your bcbio_system.yaml and manifest files to
 reflect the new version.
 
-MuTect also has similar licensing terms and requires a license for commerical
+MuTect also has similar licensing terms and requires a license for commercial
 use. After `downloading the MuTect jar
 <https://www.broadinstitute.org/gatk/download/>`_, make it available to bcbio::
 
@@ -244,7 +244,7 @@ Note that muTect does not provide an easy way to query for the current version,
 so your input jar needs to include the version in the name.
 
 .. _FreeBayes and GATK comparison: http://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/
-.. _GATK download: http://www.broadinstitute.org/gatk/download
+.. _GATK download: https://software.broadinstitute.org/gatk/download/archive
 
 
 System requirements
@@ -283,7 +283,7 @@ use ``https://`` globally instead of ``git://``::
     $ git config --global url.https://github.com/.insteadOf git://github.com/
 
 GATK or Java Errors
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 Most software tools used by bcbio require Java 1.8. bcbio distributes an OpenJDK
 Java build and uses it so you don't need to install anything. Older versions of
 GATK (< 3.6) and MuTect require a locally installed Java 1.7. If you

@@ -240,7 +240,7 @@ def _fill_validation_targets(data):
     sv_truth = tz.get_in(["config", "algorithm", "svvalidate"], data, {})
     sv_targets = (zip(itertools.repeat("svvalidate"), sv_truth.keys()) if isinstance(sv_truth, dict)
                   else [["svvalidate"]])
-    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"], ["variant_regions"]] + sv_targets]:
+    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"], ["variant_regions"]] + list(sv_targets)]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
@@ -663,8 +663,7 @@ def _check_quality_format(items):
                              "is not supported. Supported values are %s."
                              % (SAMPLE_FORMAT.values()))
 
-        fastq_file = next((file for file in item.get('files') or [] if
-                           any([ext for ext in fastq_extensions if ext in file])), None)
+        fastq_file = next((f for f in item.get("files") or [] if f.endswith(tuple(fastq_extensions))), None)
 
         if fastq_file and specified_format and not objectstore.is_remote(fastq_file):
             fastq_format = _detect_fastq_format(fastq_file)
@@ -749,7 +748,7 @@ def _check_jointcaller(data):
     problem = [x for x in cs if x not in allowed]
     if len(problem) > 0:
         raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
-                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                         "Supported options: %s\n" % (problem, sorted(list(allowed), key=lambda x: x or "")))
 
 def _check_indelcaller(data):
     c = data["algorithm"].get("indelcaller")
@@ -903,7 +902,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
     """
     validate_yaml(run_info_yaml, run_info_yaml)
     with open(run_info_yaml) as in_handle:
-        loaded = yaml.load(in_handle)
+        loaded = yaml.safe_load(in_handle)
     fc_name, fc_date = None, None
     if dirs.get("flowcell"):
         try:

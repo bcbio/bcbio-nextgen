@@ -78,7 +78,7 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
     if os.path.exists(resource_file):
         with open(resource_file) as in_handle:
-            resources = yaml.load(in_handle)
+            resources = yaml.safe_load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
         if ensembl_name and ensembl_name.find("_vep_") == -1:
@@ -139,7 +139,8 @@ def run_vep(in_file, data):
                     hgvs_compatible = False
                     config_args = ["--fasta", dd.get_ref_file(data)]
                 if vcfanno.is_human(data):
-                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,"genesplicer": _get_genesplicer,
+                    plugin_fns = {"loftee": _get_loftee, "maxentscan": _get_maxentscan,
+                                  "genesplicer": _get_genesplicer,
                                   "spliceregion": _get_spliceregion, "G2P": _get_G2P}
                     plugins = ["loftee", "G2P"]
                     if "vep_splicesite_annotations" in dd.get_tools_on(data):
@@ -150,10 +151,15 @@ def run_vep(in_file, data):
                         config_args += plugin_args
                     config_args += ["--sift", "b", "--polyphen", "b"]
                     if hgvs_compatible:
-                        config_args += ["--hgvs", "--shift_hgvs", "1"]
+                        config_args += ["--hgvsg", "--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
                       or tz.get_in(("config", "algorithm", "clinical_reporting"), data)):
-                    config_args += ["--pick_allele"]
+                    config_args += ["--most_severe"]
+                else:
+                    config_args += ["--flag_pick_allele_gene",
+                                    "--appris", "--biotype", "--canonical",
+                                    "--ccds", "--domains", "--numbers", "--protein",
+                                    "--symbol", "--tsl", "--uniprot"]
                 if ensembl_name.endswith("_merged"):
                     config_args += ["--merged"]
                     ensembl_name = ensembl_name.replace("_merged", "")
@@ -163,9 +169,8 @@ def run_vep(in_file, data):
                       ["--species", ensembl_name,
                        "--no_stats", "--cache",
                         "--offline", "--dir", vep_dir,
-                       "--symbol", "--numbers", "--biotype", "--total_length", "--canonical",
-                       "--gene_phenotype", "--ccds", "--uniprot", "--domains", "--regulatory",
-                       "--protein", "--tsl", "--appris", "--af", "--max_af", "--af_1kg", "--af_esp", "--af_gnomad",
+                       "--total_length", "--gene_phenotype", "--regulatory",
+                        "--af", "--max_af", "--af_1kg", "--af_esp", "--af_gnomad",
                        "--pubmed", "--variant_class", "--allele_number"] + config_args
                 perl_exports = utils.get_perl_exports()
                 # Remove empty fields (';;') which can cause parsing errors downstream
@@ -211,8 +216,9 @@ def _get_genesplicer(data):
 
     genesplicer_exec = os.path.realpath(config_utils.get_program("genesplicer", data["config"]))
     genesplicer_training = tz.get_in(("genome_resources", "variation", "genesplicer"), data)
-    if genesplicer_exec and os.path.exists(genesplicer_exec) and genesplicer_training and os.path.exists(genesplicer_training) :
-        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_exec,genesplicer_training)]
+    if (genesplicer_exec and os.path.exists(genesplicer_exec) and genesplicer_training
+            and os.path.exists(genesplicer_training)):
+        return ["--plugin", "GeneSplicer,%s,%s" % (genesplicer_exec, genesplicer_training)]
     else:
         return []
 
@@ -351,7 +357,7 @@ def _get_snpeff_cmd(cmd_name, datadir, data, out_file):
     memory = " ".join(jvm_opts)
     snpeff = config_utils.get_program("snpEff", data["config"])
     java_args = "-Djava.io.tmpdir=%s" % utils.safe_makedir(os.path.join(os.path.dirname(out_file), "tmp"))
-    export = "unset JAVA_HOME && export PATH=%s:$PATH && " % (utils.get_java_binpath())
+    export = "unset JAVA_HOME && export PATH=%s:\"$PATH\" && " % (utils.get_java_binpath())
     cmd = "{export} {snpeff} {memory} {java_args} {cmd_name} -dataDir {datadir}"
     return cmd.format(**locals())
 

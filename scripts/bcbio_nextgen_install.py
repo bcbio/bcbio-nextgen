@@ -23,9 +23,10 @@ except ImportError:
 
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
-    "gitrepo": "git://github.com/bcbio/bcbio-nextgen.git",
+    "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
-    "anaconda": "https://repo.continuum.io/miniconda/Miniconda2-latest-%s-x86_64.sh"}
+    "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"}
+TARGETPY = "python=3.6"
 
 def main(args, sys_argv):
     check_arguments(args)
@@ -77,7 +78,7 @@ def _get_conda_channels(conda_bin):
     out = []
     try:
         import yaml
-        config = yaml.load(subprocess.check_output([conda_bin, "config", "--show"]))
+        config = yaml.safe_load(subprocess.check_output([conda_bin, "config", "--show"]))
     except ImportError:
         config = {}
     for c in channels:
@@ -102,9 +103,9 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
     channels = _get_conda_channels(anaconda["conda"])
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
-                          ["--only-deps", "bcbio-nextgen"], env=env)
+                          ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
     subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
-                          ["--file", os.path.basename(REMOTES["requirements"])], env=env)
+                          ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 def _guess_distribution():
@@ -264,7 +265,7 @@ if __name__ == "__main__":
                         choices=["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9", "rn6", "rn5",
                                  "canFam3", "dm3", "galGal4", "phix", "pseudomonas_aeruginosa_ucbpp_pa14",
                                  "sacCer3", "TAIR10", "WBcel235", "xenTro3", "GRCz10", "GRCz11",
-                                 "Sscrofa11.1"])
+                                 "Sscrofa11.1", "BDGP6"])
     parser.add_argument("--aligners", help="Aligner indexes to download",
                         action="append", default=[],
                         choices=["bbmap", "bowtie", "bowtie2", "bwa", "minimap2", "novoalign", "rtg", "snap",

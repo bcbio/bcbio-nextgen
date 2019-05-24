@@ -373,14 +373,17 @@ def symlink_plus(orig, new):
             with chdir(os.path.dirname(new_noext)):
                 os.symlink(os.path.relpath(orig_noext + sub_ext), os.path.basename(new_noext + sub_ext))
 
-def open_gzipsafe(f):
-    if f.endswith(".gz"):
+def open_gzipsafe(f, is_gz=False):
+    if f.endswith(".gz") or is_gz:
         if six.PY3:
-            return gzip.open(f, "rt")
+            return gzip.open(f, "rt", encoding="utf-8", errors="ignore")
         else:
             return gzip.open(f)
     else:
-        return open(f)
+        if six.PY3:
+            return open(f, encoding="utf-8", errors="ignore")
+        else:
+            return open(f)
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
@@ -474,7 +477,7 @@ def merge_config_files(fnames):
     """
     def _load_yaml(fname):
         with open(fname) as in_handle:
-            config = yaml.load(in_handle)
+            config = yaml.safe_load(in_handle)
         return config
     out = _load_yaml(fnames[0])
     for fname in fnames[1:]:
@@ -762,10 +765,10 @@ def clear_java_home():
 def get_java_clprep(cmd=None):
     """Correctly prep command line for java commands, setting PATH and unsetting JAVA_HOME.
     """
-    return "%s && export PATH=%s:$PATH" % (clear_java_home(), get_java_binpath(cmd))
+    return "%s && export PATH=%s:\"$PATH\"" % (clear_java_home(), get_java_binpath(cmd))
 
 def get_R_exports():
-    return "unset R_HOME && unset R_LIBS && export PATH=%s:$PATH" % (os.path.dirname(Rscript_cmd()))
+    return "unset R_HOME && unset R_LIBS && export PATH=%s:\"$PATH\"" % (os.path.dirname(Rscript_cmd()))
 
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
@@ -780,7 +783,7 @@ def get_perl_exports(tmpdir=None):
     """Environmental exports to use conda installed perl.
     """
     perl_path = os.path.dirname(perl_cmd())
-    out = "unset PERL5LIB && export PATH=%s:$PATH" % (perl_path)
+    out = "unset PERL5LIB && export PATH=%s:\"$PATH\"" % (perl_path)
     if tmpdir:
         out += " && export TMPDIR=%s" % (tmpdir)
     return out
@@ -840,9 +843,9 @@ def local_path_export(at_start=True, env_cmd=None):
         if env_path not in paths:
             paths.insert(0, env_path)
     if at_start:
-        return "export PATH=%s:$PATH && " % (":".join(paths))
+        return "export PATH=%s:\"$PATH\" && " % (":".join(paths))
     else:
-        return "export PATH=$PATH:%s && " % (":".join(paths))
+        return "export PATH=\"$PATH\":%s && " % (":".join(paths))
 
 def locale_export():
     """Exports for dealing with Click-based programs and ASCII/Unicode errors.
@@ -850,8 +853,20 @@ def locale_export():
     RuntimeError: Click will abort further execution because Python 3 was
     configured to use ASCII as encoding for the environment.
     Consult https://click.palletsprojects.com/en/7.x/python3/ for mitigation steps.
+
+    Looks up available locales on the system to find an appropriate one to pick,
+    defaulting to C.UTF-8 which is globally available on newer systems.
     """
-    return "export LC_ALL=C.UTF-8 && export LANG=C.UTF-8 && "
+    locale_to_use = "C.UTF-8"
+    try:
+        locales = subprocess.check_output(["locale", "-a"]).decode(errors="ignore").split("\n")
+    except subprocess.CalledProcessError:
+        locales = []
+    for locale in locales:
+        if locale.lower().endswith(("utf-8", "utf8")):
+            locale_to_use = locale
+            break
+    return "export LC_ALL=%s && export LANG=%s && " % (locale_to_use, locale_to_use)
 
 def java_freetype_fix():
     """Provide workaround for issues FreeType library symbols.

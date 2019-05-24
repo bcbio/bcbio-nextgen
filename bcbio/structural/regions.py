@@ -109,12 +109,14 @@ class MemoizedSizes:
         for data in items:
             region_bed = tz.get_in(["depth", "variant_regions", "regions"], data)
             if region_bed and region_bed not in checked_beds:
-                for r in pybedtools.BedTool(region_bed).intersect(cnv_file):
-                    if r.stop - r.start > range_map["target"][0]:
-                        target_bps.append(float(r.name))
-                for r in pybedtools.BedTool(region_bed).intersect(cnv_file, v=True):
-                    if r.stop - r.start > range_map["target"][1]:
-                        anti_bps.append(float(r.name))
+                with utils.open_gzipsafe(region_bed) as in_handle:
+                    for r in pybedtools.BedTool(in_handle).intersect(cnv_file):
+                        if r.stop - r.start > range_map["target"][0]:
+                            target_bps.append(float(r.name))
+                with utils.open_gzipsafe(region_bed) as in_handle:
+                    for r in pybedtools.BedTool(in_handle).intersect(cnv_file, v=True):
+                        if r.stop - r.start > range_map["target"][1]:
+                            anti_bps.append(float(r.name))
                 checked_beds.add(region_bed)
         def scale_in_boundary(raw, round_interval, range_targets):
             min_val, max_val = range_targets

@@ -129,7 +129,8 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
     out_file = "%s-vrsubset.bed" % utils.splitext_plus(callable_file)[0]
     if not utils.file_uptodate(out_file, callable_file):
         with file_transaction(data, out_file) as tx_out_file:
-            pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
+            with utils.open_gzipsafe(callable_file) as in_handle:
+                pybedtools.BedTool(in_handle).intersect(variant_regions).saveas(tx_out_file)
     return out_file
 
 def _get_cache_file(data, target_name):

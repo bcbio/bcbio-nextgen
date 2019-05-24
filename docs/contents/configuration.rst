@@ -217,6 +217,23 @@ The output CSV will look like and is compatible with bcbio::
 
 .. _sample-configuration:
 
+Samples from GEO or SRA
+~~~~~~~~~~~~~~~~~~~~~~~
+
+In case you want to download samples from GEO or SRA repositories, you can use
+``bcbio_prepare_samples.py`` as well.
+
+You need to create your project.csv file like this:
+
+        samplename,description
+        GSMNNNNN,sample1
+        GSMNNNNN,sample2
+        SRRNNNNN,sample3
+
+
+The script will download all the files related to each sample and merge them
+in case of multiple files.
+
 Sample information
 ~~~~~~~~~~~~~~~~~~
 
@@ -541,6 +558,7 @@ Alignment postprocessing
 
 Coverage information
 ====================
+
 - ``coverage_interval`` Regions covered by sequencing. bcbio calculates this
   automatically from alignment coverage information, so you only need to
   specify it in the input configuration if you have specific needs or bcbio
@@ -985,7 +1003,7 @@ Single-cell RNA sequencing
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
   associated with the barcode. This is an example of the file::
- 
+
     AATTCCGG,sample1
     CCTTGGAA,sample2
 
@@ -1012,7 +1030,7 @@ ChIP sequencing
 - ``peakcaller`` bcbio only accepts ``[macs2]``
 - ``aligner`` Currently ``bowtie2`` is the only one tested
 - The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
-- ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Paramters will change depending on the option to get the best possible results. Only macs2 supported for now.
+- ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Parameters will change depending on the option to get the best possible results. Only macs2 supported for now.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 

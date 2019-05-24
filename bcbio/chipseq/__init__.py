@@ -69,32 +69,23 @@ def _prepare_bam(bam_file, bed_file, config):
             do.run(cmd.format(**locals()), "Remove blacklist regions from %s" % bam_file)
     return out_file
 
-def get_genome(data):
-    """
-    get the effective length of the genome, falling back to the length of the genome
-    if the effective length is not precomputed
-    """
-    from bcbio.chipseq import macs2
-    from bcbio.bam import fasta
-    genome = dd.get_genome_build(data)
-    loaded = macs2.HS
-    if genome in loaded:
-        return loaded[genome]
-    else:
-        return sum([x for x in fasta.sequence_length(dd.get_ref_file(data)).values()])
-
 def _bam_coverage(name, bam_input, data):
     """Run bamCoverage from deeptools"""
     cmd = ("{bam_coverage} -b {bam_input} -o {bw_output} "
           "--binSize 20 --effectiveGenomeSize {size} "
           "--smoothLength 60 --extendReads 150 --centerReads -p {cores}")
-    size = int(get_genome(data))
+    size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     cores = dd.get_num_cores(data)
     try:
         bam_coverage = config_utils.get_program("bamCoverage", data)
     except config_utils.CmdNotFound:
         logger.info("No bamCoverage found, skipping bamCoverage.")
         return None
+    resources = config_utils.get_resources("bamCoverage", data["config"])
+    if resources:
+        options = resources.get("options")
+        if options:
+            cmd += " %s" % " ".join([str(x) for x in options])
     bw_output = os.path.join(os.path.dirname(bam_input), "%s.bw" % name)
     if utils.file_exists(bw_output):
         return bw_output

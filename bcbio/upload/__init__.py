@@ -640,7 +640,7 @@ def _add_batch(x, sample):
     """
     added = False
     for batch in sorted(dd.get_batches(sample) or [], key=len, reverse=True):
-        if batch and os.path.basename(x["path"]).startswith("%s-" % batch):
+        if batch and os.path.basename(x["path"]).startswith(("%s-" % batch, "%s.vcf" % batch)):
             x["batch"] = batch
             added = True
             break

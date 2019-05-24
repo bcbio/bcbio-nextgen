@@ -18,7 +18,7 @@ from bcbio import broad
 
 def main(config_file, in_file, space, start, end):
     with open(config_file) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
     runner = broad.runner_from_config(config)
     target_region = (space, int(start), int(end))
     for pair in [1, 2]:

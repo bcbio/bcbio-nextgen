@@ -7,6 +7,7 @@ from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import effects, joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
 from bcbio.utils import filter_missing, flatten, to_single_data, file_exists
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
 def fast_rnaseq(samples, run_parallel):
@@ -52,14 +53,19 @@ def scrnaseq_concatenate_metadata(samples):
     barcodes = {}
     counts =  ""
     metadata = {}
+    has_sample_barcodes = False
     for sample in dd.sample_data_iterator(samples):
-        with open(dd.get_sample_barcodes(sample)) as inh:
-            for line in inh:
-                cols = line.strip().split(",")
-                if len(cols) == 1:
-                    # Assign sample name in case of missing in barcodes
-                    cols.append("NaN")
-                barcodes[(dd.get_sample_name(sample), cols[0])] = cols[1:]
+        if dd.get_sample_barcodes(sample):
+            has_sample_barcodes = True
+            with open(dd.get_sample_barcodes(sample)) as inh:
+                for line in inh:
+                    cols = line.strip().split(",")
+                    if len(cols) == 1:
+                        # Assign sample name in case of missing in barcodes
+                        cols.append("NaN")
+                    barcodes[(dd.get_sample_name(sample), cols[0])] = cols[1:]
+        else:
+            barcodes[(dd.get_sample_name(sample), "NaN")] = [dd.get_sample_name(sample), "NaN"]
 
         counts = dd.get_combined_counts(sample)
         meta = map(str, list(sample["metadata"].values()))
@@ -68,13 +74,18 @@ def scrnaseq_concatenate_metadata(samples):
         metadata[dd.get_sample_name(sample)] = meta
 
     metadata_fn = counts + ".metadata"
-    if not file_exists(metadata_fn):
-        with open(metadata_fn, 'w') as outh:
+    if file_exists(metadata_fn):
+        return samples
+    with file_transaction(metadata_fn) as tx_metadata_fn:
+        with open(tx_metadata_fn, 'w') as outh:
             outh.write(",".join(["sample"] + meta_cols) + '\n')
             with open(counts + ".colnames") as inh:
                 for line in inh:
                     sample = line.split(":")[0]
-                    barcode = sample.split("-")[1]
+                    if has_sample_barcodes:
+                        barcode = sample.split("-")[1]
+                    else:
+                        barcode = "NaN"
                     outh.write(",".join(barcodes[(sample, barcode)] + metadata[sample]) + '\n')
     return samples
 

@@ -77,6 +77,7 @@ details:
     #files: s3://bcbio_test_run1/align/Test1/Test1-sort.bam
     #files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt, ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_2_fastq.txt]
     files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.bam
+    #files: [../data/100326_FC6107FAAXX/7_1.fq.bz2, ../data/100326_FC6107FAAXX/7_2.fq.bz2]
     #files: [../data/100326_FC6107FAAXX/split/Test1_L000_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L000_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L001_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L002_R2_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R1_001.fastq.gz, ../data/100326_FC6107FAAXX/split/Test1_L003_R2_001.fastq.gz]
     #files: ../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX.cram
 #  - algorithm:

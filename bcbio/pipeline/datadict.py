@@ -70,6 +70,7 @@ LOOKUPS = {
     "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "variantcaller_order": {"keys": ['config', 'algorithm', 'variantcaller_order'], "default": 0},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
     "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
@@ -347,3 +348,27 @@ def get_keys(lookup):
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
 
+def update_summary_qc(data, key, base=None, secondary=None):
+    """
+    updates summary_qc with a new section, keyed by key.
+    stick files into summary_qc if you want them propagated forward
+    and available for multiqc
+    """
+    summary = get_summary_qc(data, {})
+    if base and secondary:
+        summary[key] = {"base": base, "secondary": secondary}
+    elif base:
+        summary[key] = {"base": base}
+    elif secondary:
+        summary[key] = {"secondary": secondary}
+    data = set_summary_qc(data, summary)
+    return data
+
+def has_variantcalls(data):
+    """
+    returns True if the data dictionary is configured for variant calling
+    """
+    analysis = get_analysis(data).lower()
+    variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
+    variantcaller = get_variantcaller(data)
+    return variant_pipeline or variantcaller

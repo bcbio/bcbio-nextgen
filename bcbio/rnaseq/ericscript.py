@@ -58,7 +58,7 @@ def run_ericscript(data, input_files):
     ericscript = config_utils.get_program("ericscript.pl", data)
     ericscript_path = os.path.dirname(os.path.realpath(ericscript))
     samtools_path = os.path.join(ericscript_path, "..", "..", "bin")
-    pathprepend = "export PATH=%s:$PATH; " % samtools_path
+    pathprepend = "export PATH=%s:\"$PATH\"; " % samtools_path
     files = " ".join(input_files)
     num_cores = dd.get_num_cores(data)
     cmd = ("{pathprepend} {ericscript} -db {db_location} -name {sample_name} -o {tx_out_dir} "
@@ -77,7 +77,7 @@ class EricScriptConfig(object):
 
     Private constants:
         _OUTPUT_DIR_NAME: name of the dir created in working directory for
-    ericscript ouput
+    ericscript output
     """
     info_message = 'Detect gene fusions with EricScript'
     EXECUTABLE = 'ericscript.pl'
@@ -120,7 +120,7 @@ class EricScriptConfig(object):
             '-name', self._sample_name,
             '-o', tx_output_dir,
         ] + list(input_files)
-        return "export PATH=%s:%s:$PATH; %s;" % (self._get_samtools0_path(), self._get_ericscript_path(), " ".join(cmd))
+        return "export PATH=%s:%s:\"$PATH\"; %s;" % (self._get_samtools0_path(), self._get_ericscript_path(), " ".join(cmd))
 
     def _get_ericscript_path(self):
         """Retrieve PATH to the isolated eriscript anaconda environment.
