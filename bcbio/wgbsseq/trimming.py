@@ -10,7 +10,7 @@ from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
-from bcbio.pipeline.qcsummary import _run_fastqc
+from bcbio.qc import fastqc
 from bcbio.bam import fastq
 from bcbio.pipeline import config_utils
 from bcbio.log import logger
@@ -69,7 +69,7 @@ def _run_qc_fastqc(in_files, data, out_dir):
     in_files = fastq.downsample_seqtk(in_files, data, 5000000)
     for fastq_file in in_files:
             if fastq_file:
-                _run_fastqc(fastq_file, data, op.join(out_dir, utils.splitext_plus(op.basename(fastq_file))[0]), rename=False)
+                fastqc.run(fastq_file, data, op.join(out_dir, utils.splitext_plus(op.basename(fastq_file))[0]), rename=False)
 
 def _fix_output(in_file, stem, out_dir):
     out_file = utils.splitext_plus(replace_directory(append_stem(in_file, stem), out_dir))
