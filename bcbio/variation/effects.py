@@ -47,7 +47,14 @@ def get_type(data):
     """Retrieve the type of effects calculation to do.
     """
     if data["analysis"].lower().startswith("var") or dd.get_variantcaller(data):
-        return tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
+        etype = tz.get_in(("config", "algorithm", "effects"), data, "snpeff")
+        if isinstance(etype, (list, tuple)):
+            if len(etype) == 1:
+                return etype[0]
+            else:
+                raise ValueError("Unexpected variant effect type for %s: %s" % (dd.get_sample_name(data), etype))
+        else:
+            return etype
 
 # ## Ensembl VEP
 
