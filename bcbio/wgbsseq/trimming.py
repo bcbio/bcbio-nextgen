@@ -66,10 +66,10 @@ def trimming(data):
     return [[data]]
 
 def _run_qc_fastqc(in_files, data, out_dir):
-    in_files = fastq.downsample(in_files, None, data=data, N=5000000)
+    in_files = fastq.downsample(in_files[0], in_files[1], N=5000000)
     for fastq_file in in_files:
             if fastq_file:
-                fastqc.run(fastq_file, data, op.join(out_dir, utils.splitext_plus(op.basename(fastq_file))[0]), rename=False)
+                fastqc.run(fastq_file, data, op.join(out_dir, utils.splitext_plus(op.basename(fastq_file))[0]))
 
 def _fix_output(in_file, stem, out_dir):
     out_file = utils.splitext_plus(replace_directory(append_stem(in_file, stem), out_dir))
