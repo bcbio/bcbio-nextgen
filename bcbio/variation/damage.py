@@ -11,6 +11,7 @@ import shutil
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
@@ -28,7 +29,8 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
         if not utils.file_uptodate(raw_file, vrn_file) and not utils.file_uptodate(raw_file + ".gz", vrn_file):
             with file_transaction(items[0], raw_file) as tx_out_file:
                 # Does not apply --qcSummary plotting due to slow runtimes
-                cmd = ["dkfzbiasfilter.py", "--filterCycles", "1", "--passOnly",
+                dkfzbiasfilter = config_utils.get_program("dkfzbiasfilter.py", data)
+                cmd = [dkfzbiasfilter, "--filterCycles", "1", "--passOnly",
                        "--tempFolder", os.path.dirname(tx_out_file),
                        vrn_file, align_bam, ref_file, tx_out_file]
                 do.run(cmd, "Filter low frequency variants for DNA damage and strand bias")
