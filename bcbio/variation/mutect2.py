@@ -114,7 +114,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             if gatk_type == "gatk4":
-                tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+                tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(out_file)
                 tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
                 filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file, tx_raw_file, ref_file)
                 cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
@@ -127,9 +127,14 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
 
 def _mutect2_filter(broad_runner, in_file, out_file, ref_file):
     """Filter of MuTect2 calls, a separate step in GATK4.
+
+    Includes a pre-step to avoid stats information with zero callable reads, which
+    cause MuTect2 filter errors when there are calls. The sed file increases this
+    to 1 read, which matches with actually having a call in the output file.
     """
     params = ["-T", "FilterMutectCalls", "--reference", ref_file, "--variant", in_file, "--output", out_file]
-    return broad_runner.cl_gatk(params, os.path.dirname(out_file))
+    avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t1.0/' %s.stats" % in_file
+    return "%s && %s" % (avoid_zero_callable, broad_runner.cl_gatk(params, os.path.dirname(out_file)))
 
 def _af_filter(data, in_file, out_file):
     """Soft-filter variants with AF below min_allele_fraction (appends "MinAF" to FILTER)
