@@ -5,6 +5,7 @@ INFO level annotations of low frequency variants:
 
 https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2017-01-31-damage-filters.md
 """
+import io
 import os
 import shutil
 
@@ -54,7 +55,7 @@ def _filter_to_info(in_file, data):
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             with utils.open_gzipsafe(in_file) as in_handle:
-                with open(tx_out_file, "w") as out_handle:
+                with io.open(tx_out_file, "w", encoding="utf-8") as out_handle:
                     for line in in_handle:
                         if line.startswith("#CHROM"):
                             out_handle.write(header + line)
