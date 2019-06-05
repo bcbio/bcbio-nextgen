@@ -30,7 +30,7 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
         if not utils.file_uptodate(raw_file, vrn_file) and not utils.file_uptodate(raw_file + ".gz", vrn_file):
             with file_transaction(items[0], raw_file) as tx_out_file:
                 # Does not apply --qcSummary plotting due to slow runtimes
-                dkfzbiasfilter = config_utils.get_program("dkfzbiasfilter.py", data)
+                dkfzbiasfilter = utils.which(config_utils.get_program("dkfzbiasfilter.py", data))
                 cmd = [dkfzbiasfilter, "--filterCycles", "1", "--passOnly",
                        "--tempFolder", os.path.dirname(tx_out_file),
                        vrn_file, align_bam, ref_file, tx_out_file]
