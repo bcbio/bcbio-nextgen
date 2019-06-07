@@ -79,6 +79,8 @@ def filter_multimappers(align_file, data):
     there are some options that are close but don't do the same thing. Bowtie2
     sets the XS flag for reads mapping in more than one place, so we can just
     filter on that. This will not work for other aligners.
+    
+    CPI: We removed the `[XS] == null` multi-mapping check, for ChIP-seq. 
     """
     config = dd.get_config(data)
     type_flag = "" if bam.is_bam(align_file) else "S"
@@ -88,7 +90,7 @@ def filter_multimappers(align_file, data):
     bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
     if utils.file_exists(out_file):
         return out_file
-    base_filter = '-F "[XS] == null and not unmapped {paired_filter} and not duplicate" '
+    base_filter = '-F "not unmapped {paired_filter} and not duplicate" '
     if bam.is_paired(align_file):
         paired_filter = "and paired and proper_pair"
     else:
