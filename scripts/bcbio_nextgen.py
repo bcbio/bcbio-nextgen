@@ -117,7 +117,7 @@ def parse_cl_args(in_args):
         parser.add_argument("--only-metadata", help=argparse.SUPPRESS, action="store_true", default=False)
         parser.add_argument("--force-single", help="Treat all files as single reads",
                             action="store_true", default=False)
-        parser.add_argument("--separators", help="semicolon separated list of separators that indicates paired files.",
+        parser.add_argument("--separators", help="comma separated list of separators that indicates paired files.",
                             default="R,_,-,.")
     args = parser.parse_args(in_args)
     if hasattr(args, "workdir") and args.workdir:
