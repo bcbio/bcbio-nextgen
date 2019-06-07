@@ -1,11 +1,6 @@
 import os
-import sys
-import glob
-import os.path as op
-import shutil
-from collections import Counter
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
+from bcbio.utils import file_exists, append_stem, replace_directory, symlink_plus
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
@@ -17,59 +12,50 @@ from bcbio.log import logger
 
 
 def trimming(data):
-    """
-    Remove adapter for bisulphite conversion sequencing data
-    """
-    in_file = data["files"]
+    """Remove adapter for bisulphite conversion sequencing data"""
+    in_files = data["files"]
     names = dd.get_sample_name(data)
-    paired = is_rrbs = is_directional = ""
-    if is_rrbs:
-        is_rrbs = "--rrbs"
-    if not is_directional and is_rrbs:
-        is_directional = "--non_directional"
 
     work_dir = os.path.join(dd.get_work_dir(data), "trimmed", names)
     out_dir = utils.safe_makedir(work_dir)
 
-    _run_qc_fastqc(in_file, data, op.join(out_dir, "before"))
+    out_files = [
+        os.path.join(out_dir, os.path.basename(in_files[0])),
+        os.path.join(out_dir, os.path.basename(in_files[1]))
+    ]
 
-    if len(in_file) == 1:
-        out_files = [op.join(out_dir, names + "_1.fastq.gz"), None]
-        tmp_files = [op.join(out_dir, names + "_tmp_1.fastq.gz"), None]
-    else:
-        out_files = [op.join(out_dir, names + "_1.fastq.gz"),
-                     op.join(out_dir, names + "_2.fastq.gz")]
-        tmp_files = [op.join(out_dir, names + "_tmp_1.fastq.gz"),
-                     op.join(out_dir, names + "_tmp_2.fastq.gz")]
+    # if len(in_file) == 1:
+    #     out_files = [op.join(out_dir, names + "_1.fastq.gz"), None]
+    #     tmp_files = [op.join(out_dir, names + "_tmp_1.fastq.gz"), None]
+    # else:
+    #     out_files = [op.join(out_dir, names + "_1.fastq.gz"),
+    #                  op.join(out_dir, names + "_2.fastq.gz")]
+    #     tmp_files = [op.join(out_dir, names + "_tmp_1.fastq.gz"),
+    #                  op.join(out_dir, names + "_tmp_2.fastq.gz")]
     if utils.file_exists(out_files[0]):
         data["files"] = out_files
         return [[data]]
     trim_galore = config_utils.get_program("trim_galore", data["config"])
-    cmd = "{trim_galore} {is_directional} {is_rrbs} --length 30 --quality 30 {paired} -o {tx_dir} {files}"
-    log_file = op.join(out_dir, names + "_cutadapt_log.txt")
-    # cutadapt = config_utils.get_program("cutadapt", data["config"])
-    # cmd = "{cutadapt} -q 30 -m 25 -a AGATCGGAAGAGC -A AGATCGGAAGAGC -o {first_tmp} -p {second_tmp} {files} | tee > {log_file}"
-    if not utils.file_exists(out_files[0]):
-        with file_transaction(out_files) as txs:
-            files = "%s %s" % (in_file[0], in_file[1])
-            do.run(cmd.format(**locals()), "remove adapters with trimgalore.")
+    cmd = "{trim_galore} --clip_r1 8 --clip_r2 8 --three_prime_clip_r1 8 --three_prime_clip_r2 8 --length 30 --quality 30 --fastqc --paired -o {tx_out_dir} {files}"
+    log_file = os.path.join(out_dir, names + "_cutadapt_log.txt")
 
-    # cmd = "{cutadapt} -m 25 -u -6 -u 8 -U 10 -o {first_out} -p {second_out} {files}"
-    # if not utils.file_exists(out_files[0]):
-    #     with file_transaction(out_files) as txs:
-    #         files = "%s %s" % (tmp_files[0], tmp_files[1])
-    #         first_out, second_out = txs
-    #         do.run(cmd.format(**locals()), "remove 6 nts, 2 step")
-    #     [utils.remove_safe(tmp_file) for tmp_file in tmp_files]
+    if not utils.file_exists(out_files[0]):
+        with file_transaction(out_dir) as tx_out_dir:
+        # with tx_tmpdir(data, work_dir) as tx_tmp_dir:
+            files = "%s %s" % (in_files[0], in_files[1])
+            do.run(cmd.format(**locals()), "remove adapters with trimgalore")
+
     data["files"] = out_files
-    _run_qc_fastqc(out_files, data, op.join(out_dir, "after"))
+
     return [[data]]
+
 
 def _run_qc_fastqc(in_files, data, out_dir):
     in_files = fastq.downsample(in_files[0], in_files[1], N=5000000)
     for fastq_file in in_files:
             if fastq_file:
-                fastqc.run(fastq_file, data, op.join(out_dir, utils.splitext_plus(op.basename(fastq_file))[0]))
+                fastqc.run(fastq_file, data, os.path.join(out_dir, utils.splitext_plus(os.path.basename(fastq_file))[0]))
+
 
 def _fix_output(in_file, stem, out_dir):
     out_file = utils.splitext_plus(replace_directory(append_stem(in_file, stem), out_dir))
