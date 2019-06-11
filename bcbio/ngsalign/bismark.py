@@ -39,13 +39,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     num_cores = dd.get_num_cores(data)
     n = 1 if num_cores < 5 else 2
-    if num_cores > 1:
-        num_cores = int(num_cores / 2) if n > 1 else num_cores
-        num_cores = "-p %d" % num_cores
-    else:
-        num_cores = ""
     safe_makedir(align_dir)
-    cmd = "{bismark} --bowtie2 {num_cores} --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
+    cmd = "{bismark} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
     raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
@@ -60,6 +55,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     data = dd.set_work_bam(data, final_out)
     data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
     return data
+
 
 def _process_bam(bam_file, in_fastq, sample, reference, config):
         broad_runner = broad.runner_from_config(config)
