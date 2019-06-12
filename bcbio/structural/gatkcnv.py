@@ -299,7 +299,11 @@ def _run_collect_allelic_counts(pos_file, pos_name, work_dir, data):
 def _run_with_memory_scaling(params, tx_out_file, data, ld_preload=False):
     num_cores = dd.get_num_cores(data)
     memscale = {"magnitude": 0.9 * num_cores, "direction": "increase"} if num_cores > 1 else None
-    broad_runner = broad.runner_from_config(data["config"])
+    # Ignore tools_off: [gatk4], since it doesn't apply to GATK CNV calling
+    config = utils.deepish_copy(data["config"])
+    if "gatk4" in dd.get_tools_off({"config": config}):
+        config["algorithm"]["tools_off"].remove("gatk4")
+    broad_runner = broad.runner_from_config(config)
     broad_runner.run_gatk(params, os.path.dirname(tx_out_file), memscale=memscale, ld_preload=ld_preload)
 
 # ## VCF output

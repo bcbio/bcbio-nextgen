@@ -60,6 +60,7 @@ Project directory
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 - ``SAMPLE-caller.vcf`` -- Variants calls for an individual sample.
+- ``SAMPLE-gdc-viral-completeness.txt`` -- Optional viral contamination estimates. File is of the format **depth, 1x, 5x, 25x**. **depth** is the number of reads aligning to the virus. **1x, 5x, 25x** are percentage of the viral sequence covered by reads of 1x, 5x, 25x depth. Real viral contamination will have broad coverage across the entire genome, so high numbers for these values, depending on sequencing depth. High depth and low viral sequence coverage means a likely false positive.
 
 RNA-seq
 =======

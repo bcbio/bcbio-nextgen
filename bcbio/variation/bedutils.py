@@ -51,6 +51,13 @@ def check_bed_contigs(in_file, data):
                          % (in_file, list(contigs - ref_contigs)) +
                          "This is typically due to chr1 versus 1 differences in BED file and reference.")
 
+def has_regions(in_file):
+    with utils.open_gzipsafe(in_file) as in_handle:
+        for line in in_handle:
+            if not line.startswith(("#", "track", "browser", "@")) and line.strip():
+                return True
+    return False
+
 def check_bed_coords(in_file, data):
     """Ensure BED file coordinates match reference genome.
 
