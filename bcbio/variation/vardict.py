@@ -217,7 +217,7 @@ def _lowfreq_linear_filter(tumor_index, is_paired):
         sbf = "INFO/SBF"
         nm = "INFO/NM"
     cmd = ("""bcftools filter --soft-filter 'LowFreqBias' --mode '+' """
-           """-e  'FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30 """
+           """-e  'FORMAT/AF[{tumor_index}:0] < 0.02 && FORMAT/VD[{tumor_index}] < 30 """
            """&& {sbf} < 0.1 && {nm} >= 2.0'""")
     return cmd.format(**locals())
 
