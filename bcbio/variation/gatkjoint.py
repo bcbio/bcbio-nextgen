@@ -57,6 +57,10 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                 for vrn_file in vrn_files:
                     vcfutils.bgzip_and_index(vrn_file, data["config"])
                     params += ["--variant", vrn_file]
+                # For large inputs, reduce memory usage by batching
+                # https://github.com/bcbio/bcbio-nextgen/issues/2852
+                if len(vrn_files) > 200:
+                    params += ["--batch-size", "50"]
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
                 broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
