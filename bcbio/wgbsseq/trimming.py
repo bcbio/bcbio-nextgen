@@ -10,7 +10,7 @@ from bcbio.bam import fastq
 from bcbio.pipeline import config_utils
 
 
-def trimming(data):
+def trim(data):
     """Remove adapter for bisulphite conversion sequencing data"""
     in_files = data["files"]
     names = dd.get_sample_name(data)

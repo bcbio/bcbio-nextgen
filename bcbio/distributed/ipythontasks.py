@@ -17,8 +17,7 @@ from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
-from bcbio.wgbsseq import trimming as wgbs_prepare
-from bcbio.wgbsseq import cpg_caller
+from bcbio.wgbsseq import cpg_caller, deduplication, trimming
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -105,17 +104,21 @@ def trim_srna_sample(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(srna.trim_srna_sample, *args))
 
-@require(wgbs_prepare)
+
+@require(trimming)
 def trim_bs_sample(*args):
     args = ipython.unzip_args(args)
-    with _setup_logging(args) as config:
-        return ipython.zip_args(apply(wgbs_prepare.trimming, *args))
+    with _setup_logging(args):
+        return ipython.zip_args(apply(trimming.trim, *args))
 
+
+@require(trimming)
 @require(srna)
 def srna_annotation(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(srna.sample_annotation, *args))
+
 
 @require(seqcluster)
 def seqcluster_prepare(*args):
@@ -141,11 +144,13 @@ def peakcalling(* args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(peaks.calling, *args))
 
+
 @require(cpg_caller)
 def cpg_calling(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(cpg_caller.calling, *args))
+
 
 @require(cpg_caller)
 def cpg_processing(*args):
@@ -153,11 +158,20 @@ def cpg_processing(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(cpg_caller.cpg_postprocessing, *args))
 
+
 @require(cpg_caller)
 def cpg_stats(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(cpg_caller.cpg_stats, *args))
+
+
+@require(deduplication)
+def deduplicate_bismark(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(deduplication.dedup_bismark, *args))
+
 
 @require(sailfish)
 def run_sailfish(*args):

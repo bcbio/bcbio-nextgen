@@ -390,6 +390,7 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     logger.info("Timing: finished")
     return samples
 
+
 def wgbsseqpipeline(config, run_info_yaml, parallel, dirs, samples):
     with prun.start(_wres(parallel, ["fastqc", "picard"], ensure_mem={"fastqc" : 4}),
                     samples, config, dirs, "trimming") as run_parallel:
@@ -399,25 +400,29 @@ def wgbsseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = run_parallel("prepare_sample", samples)
             samples = run_parallel("trim_bs_sample", samples)
 
-    with prun.start(_wres(parallel, ["aligner", "picard", "samtools"]),
+    with prun.start(_wres(parallel, ["aligner", "bismark", "picard", "samtools"]),
                     samples, config, dirs, "multicore",
                     multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
         with profile.report("alignment", dirs):
             samples = run_parallel("process_alignment", samples)
+
+    with prun.start(_wres(parallel, ['samtools']), samples, config, dirs,
+                    'deduplication') as run_parallel:
+        with profile.report('deduplicate', dirs):
+            samples = run_parallel('deduplicate_bismark', samples)
 
     with prun.start(_wres(parallel, ["caller"], ensure_mem={"caller": 5}),
                     samples, config, dirs, "multicore2",
                     multiplier=24) as run_parallel:
         with profile.report("cpg calling", dirs):
             samples = run_parallel("cpg_calling", samples)
-            # import bcbio.wgbsseq.cpg_caller as cpg_caller
-            # cpg_caller.parallel_calling(samples, run_parallel)
 
-    with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
-                    samples, config, dirs, "qc") as run_parallel:
-        with profile.report("quality control", dirs):
-            samples = qcsummary.generate_parallel(samples, run_parallel)
+    # with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
+    #                 samples, config, dirs, "qc") as run_parallel:
+    #     with profile.report("quality control", dirs):
+    #         samples = qcsummary.generate_parallel(samples, run_parallel)
     return samples
+
 
 def rnaseq_prep_samples(config, run_info_yaml, parallel, dirs, samples):
     """
