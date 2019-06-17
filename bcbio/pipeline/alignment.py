@@ -77,7 +77,7 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
     align_dir_parts = [data["dirs"]["work"], "align", names["sample"]]
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
-    aligner_index = _get_aligner_index(aligner, data)
+    aligner_index = get_aligner_index(aligner, data)
     align_dir = utils.safe_makedir(os.path.join(*align_dir_parts))
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
@@ -114,7 +114,7 @@ def get_aligner_with_aliases(aligner, data):
 def allow_noindices():
     return set(["minimap2"])
 
-def _get_aligner_index(aligner, data):
+def get_aligner_index(aligner, data):
     """Handle multiple specifications of aligner indexes, returning value to pass to aligner.
 
     Original bcbio case -- a list of indices.
