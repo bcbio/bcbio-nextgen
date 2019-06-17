@@ -20,16 +20,16 @@ from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import bam
 from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline.alignment import get_aligner_index
 
-def _run_meth_extractor(bam_in, sample, workdir, config):
-    """
-    Run bismark_methylation_extractor command
-    """
+
+def _run_meth_extractor(bam_in, sample, workdir, index_dir, config):
+    """Run bismark_methylation_extractor command"""
     bismark = config_utils.get_program("bismark_methylation_extractor", config)
     cores = config["algorithm"].get('cores', 1)
     memory = config["algorithm"].get('mem', 5)
     bam_in = bam.sort(bam_in, config, order="queryname")
-    cmd = "{bismark}  --no_overlap --comprehensive --multicore {cores} --buffer_size {memory}G --bedGraph --counts --gzip {bam_in}"
+    cmd = "{bismark} --no_overlap --comprehensive --cytosine_report --genome_folder {index_dir} --merge_non_CpG --multicore {cores} --buffer_size {memory}G --bedGraph --gzip {bam_in}"
     out_dir = os.path.join(workdir, sample)
     mbias_file = os.path.join(out_dir, os.path.basename(splitext_plus(bam_in)[0]) + '.M-bias.txt')
     if not file_exists(mbias_file):
@@ -39,6 +39,7 @@ def _run_meth_extractor(bam_in, sample, workdir, config):
                 shutil.move(tx_dir, out_dir)
     assert os.path.exists(mbias_file), "mbias report doesn't exists:%s" % mbias_file
     return mbias_file
+
 
 def _run_report(bam_in, bam_report, sample, biasm_file, workdir, config):
     """
@@ -58,7 +59,8 @@ def _bismark_calling(data):
     workdir = safe_makedir(os.path.join(dd.get_work_dir(data), "cpg"))
     config = data["config"]
     sample = dd.get_sample_name(data)
-    biasm_file = _run_meth_extractor(data["work_bam"], sample, workdir, config)
+    index_dir = get_aligner_index('bismark', data)
+    biasm_file = _run_meth_extractor(data["work_bam"], sample, workdir, index_dir, config)
     data['bismark_report'] = _run_report(data["work_bam"], data["bam_report"], sample, biasm_file, workdir, config)
     return data
 
