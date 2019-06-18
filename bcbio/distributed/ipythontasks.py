@@ -112,7 +112,6 @@ def trim_bs_sample(*args):
         return ipython.zip_args(apply(trimming.trim, *args))
 
 
-@require(trimming)
 @require(srna)
 def srna_annotation(*args):
     args = ipython.unzip_args(args)

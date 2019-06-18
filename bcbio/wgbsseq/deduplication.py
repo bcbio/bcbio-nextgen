@@ -14,16 +14,17 @@ def dedup_bismark(data):
     sample_name = datadict.get_sample_name(data)
     output_dir = os.path.join(datadict.get_work_dir(data), 'dedup',
                               sample_name)
-    utils.safe_makedir(output_dir)
+    output_dir = utils.safe_makedir(output_dir)
 
     input_file_name, input_file_extension = os.path.splitext(os.path.basename(
-        input_file))
+        input_file
+    ))
     output_file = os.path.join(
-        output_dir, input_file_name + '.deduplicated' + input_file_extension
+        output_dir, f'{input_file_name}.deduplicated{input_file_extension}'
     )
 
     if utils.file_exists(output_file):
-        datadict.set_work_bam(data, output_file)
+        data = datadict.set_work_bam(data, output_file)
         return [[data]]
 
     deduplicate_bismark = config_utils.get_program('deduplicate_bismark',
@@ -32,5 +33,5 @@ def dedup_bismark(data):
     with transaction.file_transaction(output_dir):
         do.run(command, 'remove deduplicate alignments')
 
-    datadict.set_work_bam(data, output_file)
+    data = datadict.set_work_bam(data, output_file)
     return [[data]]
