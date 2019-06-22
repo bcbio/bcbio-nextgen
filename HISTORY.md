@@ -2,6 +2,9 @@
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
 - RNA-seq: fixes for cufflinks preparation due to python3 transition.
+- RNA-seq: output count tables from tximport for genes and transcripts. These
+are in `bcbioRNASeq/results/date/genes/counts` and 
+`bcbioRNASeq/results/data/transcripts/counts`.
 
 ## 1.1.5 (12 April 2019)
 
