@@ -4,6 +4,7 @@ from bcbio import utils
 from bcbio.distributed import transaction
 from bcbio.pipeline import datadict, config_utils
 from bcbio.provenance import do
+from bcbio import bam
 
 
 def dedup_bismark(data):
@@ -11,6 +12,7 @@ def dedup_bismark(data):
     mapping output using deduplicate_bismark
     """
     input_file = datadict.get_work_bam(data)
+    input_file = bam.sort(input_file, datadict.get_config(data), order="queryname")
     sample_name = datadict.get_sample_name(data)
     output_dir = os.path.join(datadict.get_work_dir(data), 'dedup',
                               sample_name)
