@@ -1001,10 +1001,15 @@ Single-cell RNA sequencing
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
-  associated with the barcode. This is an example of the file::
+  associated with the barcode. The actual barcodes may be reverse complements of the 
+  sequences provided with the samples. It worth to check before running bcbio.
+  For inDrops procol samples barcodes are in the fastq file for read3.
+  This is an example of the file::
 
     AATTCCGG,sample1
     CCTTGGAA,sample2
+
+- 
 
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
