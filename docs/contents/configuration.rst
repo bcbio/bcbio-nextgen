@@ -1004,12 +1004,10 @@ Single-cell RNA sequencing
   associated with the barcode. The actual barcodes may be reverse complements of the 
   sequences provided with the samples. It worth to check before running bcbio.
   For inDrops procol samples barcodes are in the fastq file for read3.
-  This is an example of the file::
+  This is an example of the ``sample_barcodes`` file::
 
     AATTCCGG,sample1
     CCTTGGAA,sample2
-
-- 
 
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
