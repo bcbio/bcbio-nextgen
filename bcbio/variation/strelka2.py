@@ -144,14 +144,17 @@ def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file, wo
         with file_transaction(items[0], work_dir) as tx_work_dir:
             workflow_file = _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir)
             if workflow_file:
+                has_variants = True
                 _run_workflow(items[0], workflow_file, tx_work_dir)
             else:
+                has_variants = False
                 vcfutils.write_empty_vcf(out_file, items[0]["config"], [dd.get_sample_name(d) for d in items])
-        raw_file = os.path.join(work_dir, "results", "variants",
-                                "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
-        utils.copy_plus(raw_file, out_file)
-        # Remove files with relative symlinks
-        utils.remove_plus(os.path.join(work_dir, "results", "variants", "genome.vcf.gz"))
+        if has_variants:
+            raw_file = os.path.join(work_dir, "results", "variants",
+                                    "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
+            utils.copy_plus(raw_file, out_file)
+            # Remove files with relative symlinks
+            utils.remove_plus(os.path.join(work_dir, "results", "variants", "genome.vcf.gz"))
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
@@ -317,14 +320,17 @@ def _run_somatic(paired, ref_file, assoc_files, region, out_file, work_dir):
         with file_transaction(paired.tumor_data, work_dir) as tx_work_dir:
             workflow_file = _configure_somatic(paired, ref_file, region, out_file, tx_work_dir)
             if workflow_file:
+                has_variants = True
                 _run_workflow(paired.tumor_data, workflow_file, tx_work_dir)
             else:
+                has_variants = False
                 vcfutils.write_empty_vcf(out_file, paired.tumor_data["config"],
                                          [dd.get_sample_name(d) for d in [paired.tumor_data, paired.normal_data]])
-        var_dir = os.path.join(work_dir, "results", "variants")
-        vcfutils.combine_variant_files([_postprocess_somatic(os.path.join(var_dir, f), paired)
-                                        for f in ["somatic.snvs.vcf.gz", "somatic.indels.vcf.gz"]],
-                                       out_file, ref_file, paired.tumor_data["config"], region=region)
+        if has_variants:
+            var_dir = os.path.join(work_dir, "results", "variants")
+            vcfutils.combine_variant_files([_postprocess_somatic(os.path.join(var_dir, f), paired)
+                                            for f in ["somatic.snvs.vcf.gz", "somatic.indels.vcf.gz"]],
+                                           out_file, ref_file, paired.tumor_data["config"], region=region)
     return out_file
 
 def _run_workflow(data, workflow_file, work_dir):
