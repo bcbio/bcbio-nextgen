@@ -6,6 +6,7 @@ import os
 import numpy as np
 
 from bcbio import bam, broad, utils
+from bcbio.bam import is_paired
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -105,8 +106,12 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items, gatk_type)
 
-            #FIXME: How to detect paired vs single end?
-            if gatk_type == "gatk4":
+            if is_paired(align_bams[0]):
+                orientation_filter = True
+            else:
+                orientation_filter = False
+
+            if gatk_type == "gatk4" and orientation_filter:
                 f1r2_file = "{}.tar.gz".format(
                     utils.splitext_plus(align_bams[0])[0])
                 params += ["--f1r2-tar-gz", f1r2_file]
@@ -122,17 +127,30 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             if gatk_type == "gatk4":
-                tx_f1r2_file = "{}-read-orientation-model.tar.gz"
-                tx_f1r2_file = tx_f1r2_file.format(
-                    utils.splitext_plus(f1r2_file)[0])
-                tx_read_orient_cmd = _mutect2_read_filter(broad_runner,
-                                                          f1r2_file,
-                                                          tx_f1r2_file)
+
                 tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(out_file)
                 tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
-                filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file,
-                                             tx_raw_file, ref_file, tx_f1r2_file)
-                cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {tx_read_orient_cmd} && {filter_cmd}"
+
+                if orientation_filter:
+                    tx_f1r2_file = "{}-read-orientation-model.tar.gz"
+                    tx_f1r2_file = tx_f1r2_file.format(
+                        utils.splitext_plus(f1r2_file)[0])
+                    tx_read_orient_cmd = _mutect2_read_filter(broad_runner,
+                                                              f1r2_file,
+                                                              tx_f1r2_file)
+
+                    filter_cmd = _mutect2_filter(broad_runner,
+                                                 tx_raw_prefilt_file,
+                                                 tx_raw_file, ref_file,
+                                                 tx_f1r2_file)
+                else:
+                    filter_cmd = _mutect2_filter(broad_runner,
+                                                 tx_raw_prefilt_file,
+                                                 tx_raw_file, ref_file)
+                if orientation_filter:
+                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {tx_read_orient_cmd} && {filter_cmd}"
+                else:
+                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
             else:
                 tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
                 cmd = "{gatk_cmd} > {tx_raw_file}"
