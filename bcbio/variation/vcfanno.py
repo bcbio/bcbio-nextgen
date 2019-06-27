@@ -125,6 +125,10 @@ def find_annotations(data, retriever=None):
             pass
         elif conf_file in conf_checkers and not conf_checkers[conf_file](data, retriever):
             logger.warn("Skipping vcfanno configuration: %s. Not all input files found." % conf_file)
+            if dd.get_genome_build(data) == "hg38" and conf_file == "somatic":
+                logger.warn("COSMIC needs to be installed manually for somatic annotation with hg38. "
+                        "See https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#customizing-data-installation "
+                        "for instructions.")
         elif not objectstore.file_exists_or_remote(conffn):
             build = dd.get_genome_build(data)
             CONF_NOT_FOUND = (
