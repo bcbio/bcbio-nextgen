@@ -102,7 +102,7 @@ def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
     load_noorganism_template = Template(
         ('bcb <- bcbioRNASeq(uploadDir="$upload_dir",'
          'interestingGroups=$groups,'
-         'level=$"level",'
+         'level="$level",'
          'organism=NULL)'))
     flatline = 'flat <- flatFiles(bcb)'
     if level == "gene":
@@ -119,7 +119,7 @@ def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
             upload_dir=upload_dir, groups=groups, organism=organism, level=level)
     else:
         load_bcbio = load_noorganism_template.substitute(upload_dir=upload_dir,
-                                                         groups=groups)
+                                                         groups=groups, level=level)
     return ";\n".join([libraryline, load_bcbio, flatline, saveline])
 
 def write_counts(bcb, level="gene"):
