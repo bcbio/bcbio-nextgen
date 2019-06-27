@@ -530,36 +530,12 @@ def _check_for_degenerate_interesting_groups(items):
 
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
-ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
-                      "trim_reads", "trim_ends", "adapters", "custom_trim", "species", "kraken",
-                      "align_split_size", "save_diskspace",
-                      "transcriptome_align", "bcbiornaseq",
-                      "quality_format", "write_summary", "merge_bamprep",
-                      "coverage", "coverage_interval", "maxcov_downsample",
-                      "ploidy", "indelcaller",
-                      "variantcaller", "jointcaller", "variant_regions",
-                      "peakcaller", "chip_method",
-                      "effects", "effects_transcripts", "mark_duplicates",
-                      "svcaller", "svvalidate", "svprioritize",
-                      "hlacaller", "hlavalidate",
-                      "sv_regions", "hetcaller", "recalibrate", "realign",
-                      "phasing", "validate",
+ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
+                      "merge_bamprep", "indelcaller", "effects", 
+                      "svvalidate", "hlavalidate", "phasing", "validate",
                       "validate_regions", "validate_genome_build", "validate_method",
-                      "clinical_reporting", "nomap_split_size", "transcriptome_fasta",
-                      "transcriptome_gtf",
-                      "nomap_split_targets", "ensemble", "background",
-                      "disambiguate", "strandedness", "fusion_mode", "fusion_caller",
-                      "min_read_length", "coverage_depth_min", "callable_min_size",
-                      "min_allele_fraction", "umi_type", "minimum_barcode_depth",
-                      "cellular_barcodes", "vcfanno", "demultiplexed",
-                      "sample_barcodes",
-                      "exclude_regions", "joint_group_size",
-                      "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "expression_caller", "qc", "positional_umi",
-                      "cellular_barcode_correction",
-                      "singlecell_quantifier", "spikein_fasta", "preseq",] +
-                     # development
-                     ["cwl_reporting"] +
+                      "clinical_reporting", "nomap_split_size", 
+                      "nomap_split_targets", "background", "qc", "preseq",] +
                      # back compatibility
                      ["remove_lcr", "coverage_depth_max", "coverage_depth"] +
                      # from datadict.LOOKUPS
