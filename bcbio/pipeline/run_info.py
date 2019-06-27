@@ -561,7 +561,9 @@ ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
                      # development
                      ["cwl_reporting"] +
                      # back compatibility
-                      ["remove_lcr", "coverage_depth_max", "coverage_depth"])
+                     ["remove_lcr", "coverage_depth_max", "coverage_depth"] +
+                     # from datadict.LOOKUPS
+                     dd.get_algorithm_keys())
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
