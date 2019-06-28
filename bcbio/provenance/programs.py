@@ -38,7 +38,7 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "featurecounts", "args": "-v", "stdout_flag": "featureCounts"}]
 _manifest_progs = ['bcbio-variation', 'bioconductor-bubbletree', 'cufflinks',
     'cnvkit', 'fgbio', 'gatk4', 'hisat2', 'sailfish', 'salmon', 'grabix',
-    'htseq', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv',
+    'htseq', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv', 'seq2c',
     'mirdeep2', 'oncofuse', 'picard', 'phylowgs', 'platypus-variant', 'rapmap',
     'rna-star', 'rtg-tools', 'sambamba', 'samblaster', 'scalpel', 'seqbuster',
     'snpeff', 'vardict', 'vardict-java', 'varscan', 'variant-effect-predictor',

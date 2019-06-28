@@ -5,6 +5,7 @@ from bcbio.utils import file_exists, Rscript_cmd, safe_makedir, chdir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
+from datetime import datetime as dt
 
 import six
 
@@ -20,13 +21,22 @@ def make_bcbiornaseq_object(data):
     safe_makedir(report_dir)
     organism = dd.get_bcbiornaseq(data).get("organism", None)
     groups = dd.get_bcbiornaseq(data).get("interesting_groups", None)
-    loadstring = create_load_string(upload_dir, groups, organism)
+    loadstring = create_load_string(upload_dir, groups, organism, "gene")
     r_file = os.path.join(report_dir, "load_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
         do.run([rcmd, "--no-environ", r_file], "Loading bcbioRNASeq object.")
+        write_counts(os.path.join(report_dir, "data", "bcb.rda"), "gene")
+    loadstring = create_load_string(upload_dir, groups, organism, "transcript")
+    r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
+    with file_transaction(r_file) as tmp_file:
+        memoize_write_file(loadstring, tmp_file)
+    rcmd = Rscript_cmd()
+    with chdir(report_dir):
+        do.run([rcmd, "--no-environ", r_file], "Loading transcript-level bcbioRNASeq object.")
+        write_counts(os.path.join(report_dir, "data-transcript", "bcb.rda"), "transcript")
     make_quality_report(data)
     return data
 
@@ -79,7 +89,7 @@ def render_rmarkdown_file(filename):
         do.run([rcmd, "--no-environ", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
     return filename
 
-def create_load_string(upload_dir, groups=None, organism=None):
+def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
     """
     create the code necessary to load the bcbioRNAseq object
     """
@@ -87,24 +97,56 @@ def create_load_string(upload_dir, groups=None, organism=None):
     load_template = Template(
         ('bcb <- bcbioRNASeq(uploadDir="$upload_dir",'
          'interestingGroups=$groups,'
+         'level="$level",'
          'organism="$organism")'))
     load_noorganism_template = Template(
         ('bcb <- bcbioRNASeq(uploadDir="$upload_dir",'
          'interestingGroups=$groups,'
+         'level="$level",'
          'organism=NULL)'))
     flatline = 'flat <- flatFiles(bcb)'
-    saveline = 'saveData(bcb, flat, dir="data")'
+    if level == "gene":
+        out_dir = '"data"'
+    else:
+        out_dir = '"data-transcript"'
+    saveline = f'saveData(bcb, flat, dir={out_dir})'
     if groups:
         groups = _list2Rlist(groups)
     else:
         groups = _quotestring("sampleName")
     if organism:
         load_bcbio = load_template.substitute(
-            upload_dir=upload_dir, groups=groups, organism=organism)
+            upload_dir=upload_dir, groups=groups, organism=organism, level=level)
     else:
         load_bcbio = load_noorganism_template.substitute(upload_dir=upload_dir,
-                                                         groups=groups)
+                                                         groups=groups, level=level)
     return ";\n".join([libraryline, load_bcbio, flatline, saveline])
+
+def write_counts(bcb, level="gene"):
+    """
+    pull counts and metadata out of the bcbioRNASeq object
+    """
+    date = dt.strftime(dt.now(), "%Y-%m-%d")
+    out_dir = os.path.join(os.path.dirname(bcb), "..", "results", date, level, "counts")
+    out_dir_string = _quotestring(out_dir)
+    out_file = os.path.join(out_dir, "counts.csv.gz")
+    safe_makedir(out_dir)
+    if file_exists(out_file):
+        return out_file
+    bcb_string = _quotestring(bcb)
+    rcmd = Rscript_cmd()
+    render_string = (
+            f'load({bcb_string});'
+            f'date=format(Sys.time(), "%Y-%m-%d");'
+            f'dir={out_dir_string};'
+            f'library(tidyverse);'
+            f'library(bcbioRNASeq);'
+            f'counts = bcbioRNASeq::counts(bcb) %>% as.data.frame() %>% round() %>% tibble::rownames_to_column("gene");'
+            f'metadata = colData(bcb) %>% as.data.frame() %>% tibble::rownames_to_column("sample");'
+            f'readr::write_csv(counts, file.path(dir, "counts.csv.gz"));'
+            f'readr::write_csv(metadata, file.path(dir, "metadata.csv.gz"));')
+    do.run([rcmd, "--no-environ", "-e", render_string], f"Writing counts table to {out_file}.")
+    return out_file
 
 def memoize_write_file(string, filename):
     if file_exists(filename):

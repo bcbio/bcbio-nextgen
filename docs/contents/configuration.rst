@@ -749,8 +749,7 @@ Variant annotation
 
 - ``effects`` Method used to calculate expected variant effects; defaults to
   `snpEff`_. `Ensembl variant effect predictor (VEP)`_ is also available
-  with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
-  :ref:`datatarget-install`. [snpeff, vep, false]
+  when downloaded using :ref:`datatarget-install`. [snpeff, vep, false]
 - ``effects_transcripts`` Define the transcripts to use for effect prediction
   annotation. Options ``all``: Standard Ensembl transcript list (the default);
   ``canonical``: Report single canonical transcripts (``-canon`` in snpEff,
@@ -1002,7 +1001,10 @@ Single-cell RNA sequencing
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
-  associated with the barcode. This is an example of the file::
+  associated with the barcode. The actual barcodes may be reverse complements of the 
+  sequences provided with the samples. It worth to check before running bcbio.
+  For inDrops procol samples barcodes are in the fastq file for read3.
+  This is an example of the ``sample_barcodes`` file::
 
     AATTCCGG,sample1
     CCTTGGAA,sample2
