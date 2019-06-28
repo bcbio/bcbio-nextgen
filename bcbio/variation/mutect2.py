@@ -113,7 +113,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
 
             if gatk_type == "gatk4" and orientation_filter:
                 f1r2_file = "{}-f1r2.tar.gz".format(
-                    utils.splitext_plus(tx_out_file))
+                    utils.splitext_plus(out_file)[0])
                 params += ["--f1r2-tar-gz", f1r2_file]
 
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
