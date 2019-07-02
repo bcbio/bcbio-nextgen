@@ -191,7 +191,9 @@ that downloads, sorts and merges the VCFs, then copies into your bcbio installat
 
     export COSMIC_USER="your@registered.email.edu"
     export COSMIC_PASS="cosmic_password"
-    bcbio_python prepare_cosmic.py 83 /path/to/bcbio
+    bcbio_python prepare_cosmic.py 89 /path/to/bcbio
+
+``/path/to/bcbio/`` here is the directory one up from the ``genomes`` directory.
 
 .. _toolplus-install:
 
