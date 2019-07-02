@@ -106,7 +106,10 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items, gatk_type)
 
-            if all(is_paired(bam) for bam in align_bams):
+
+            if all(is_paired(bam) for bam in align_bams) and (
+                    "mutect2_readmodel" in utils.get_in(items[0], "config",
+                                                        "tools_on")):
                 orientation_filter = True
             else:
                 orientation_filter = False
