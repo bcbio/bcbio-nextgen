@@ -780,6 +780,8 @@ Structural variant calling
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
   cnvkit, gatk-cnv, seq2c, purecn, titancna, delly, battenberg]. LUMPY and Manta require paired end reads.
+  cnvkit and gatk-cnv should not be used on the same sample due to
+  incompatible normalization approaches, please pick one or the other for CNV calling.
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
   structural variant calls to highlight changes in known genes. See the `paper
@@ -1001,7 +1003,10 @@ Single-cell RNA sequencing
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
-  associated with the barcode. This is an example of the file::
+  associated with the barcode. The actual barcodes may be reverse complements of the 
+  sequences provided with the samples. It worth to check before running bcbio.
+  For inDrops procol samples barcodes are in the fastq file for read3.
+  This is an example of the ``sample_barcodes`` file::
 
     AATTCCGG,sample1
     CCTTGGAA,sample2

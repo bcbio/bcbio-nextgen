@@ -372,3 +372,15 @@ def has_variantcalls(data):
     variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
     variantcaller = get_variantcaller(data)
     return variant_pipeline or variantcaller
+
+def get_algorithm_keys():
+    """
+    returns a list of all defined keys under the algorithm section
+    """
+    keys = []
+    for k, v in LOOKUPS.items():
+        if not "algorithm" in v["keys"]:
+            continue
+        if k == v["keys"][2]:
+            keys.append(k)
+    return keys
