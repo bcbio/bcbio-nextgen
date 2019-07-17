@@ -8,6 +8,9 @@ are in `bcbioRNASeq/results/date/genes/counts` and
 - qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
 results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 gives reasonable results.
+- Add `quantify_genome_alignments` option to use genome alignments to quantify
+  with Salmon.
+- Add `--validateMappings` flag to Salmon read quantification mode.
 
 ## 1.1.5 (12 April 2019)
 
