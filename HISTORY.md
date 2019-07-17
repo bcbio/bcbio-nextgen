@@ -8,6 +8,7 @@ are in `bcbioRNASeq/results/date/genes/counts` and
 - qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
 results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 gives reasonable results.
+- VEP cache is not installing anymore from bcbio run
 
 ## 1.1.5 (12 April 2019)
 
