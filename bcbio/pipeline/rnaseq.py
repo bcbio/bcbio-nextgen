@@ -178,7 +178,17 @@ def quantitate(data):
     else:
         data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
-        data = to_single_data(salmon.run_salmon_reads(data)[0])
+        if dd.get_quantify_genome_alignments(data): 
+            if dd.get_aligner(data).lower() != "star":
+                logger.warning(
+                        "Whole genome alignment-based Salmon quantification is "
+                        "only supported for the STAR aligner. Falling back to the "
+                        "transcriptome-only method.")
+                data = to_single_data(salmon.run_salmon_reads(data)[0])
+            else:
+                data = to_single_data(salmon.run_salmon_bam(data)[0])
+        else:
+            data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
         data["quant"]["hdf5"] = os.path.join(os.path.dirname(data["salmon"]), "abundance.h5")
     return [[data]]
@@ -203,8 +213,19 @@ def quantitate_expression_parallel(samples, run_parallel):
         samples = run_parallel("run_sailfish_index", [samples])
         samples = run_parallel("run_sailfish", samples)
     # always run salmon
-    samples = run_parallel("run_salmon_index", [samples])
-    samples = run_parallel("run_salmon_reads", samples)
+    if dd.get_quantify_genome_alignments(data):
+        if dd.get_aligner(data).lower() != "star":
+            logger.warning(
+                  "Whole genome alignment-based Salmon quantification is "
+                  "only supported for the STAR aligner. Falling back to the "
+                  "transcriptome-only method.")
+            samples = run_parallel("run_salmon_index", [samples])
+            samples = run_parallel("run_salmon_reads", samples)
+        else:
+            samples = run_parallel("run_salmon_bam", samples)
+    else:
+        samples = run_parallel("run_salmon_index", [samples])
+        samples = run_parallel("run_salmon_reads", samples)
 
     samples = run_parallel("detect_fusions", samples)
     return samples
