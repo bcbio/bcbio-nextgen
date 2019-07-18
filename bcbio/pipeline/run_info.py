@@ -698,6 +698,9 @@ def _check_svcaller(item):
         raise ValueError("Unexpected algorithm 'svcaller' parameters: %s\n"
                          "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
                                                       sorted(list(allowed))))
+    if "gatk-cnv" in svs and "cnvkit" in svs:
+        raise ValueError("%s uses `gatk-cnv' and 'cnvkit', please use on one of these CNV callers" %
+                         dd.get_sample_name(item))
 
 def _get_as_list(item, k):
     out = item["algorithm"].get(k)
