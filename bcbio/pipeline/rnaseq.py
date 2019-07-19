@@ -180,11 +180,17 @@ def quantitate(data):
     if "salmon" in dd.get_expression_caller(data):
         if dd.get_quantify_genome_alignments(data): 
             if dd.get_aligner(data).lower() != "star":
-                logger.warning(
-                        "Whole genome alignment-based Salmon quantification is "
-                        "only supported for the STAR aligner. Falling back to the "
-                        "transcriptome-only method.")
-                data = to_single_data(salmon.run_salmon_reads(data)[0])
+                if dd.get_genome_build(data) == "hg38":
+                    logger.warning("Whole genome alignment-based Salmon quantification is "
+                         "only supported for the STAR aligner. Since this is hg38 we will fall "
+                         "back to the decoy method")
+                    data = to_single_data(salmon.run_salmon_decoy(data)[0])
+                else:
+                    logger.warning(
+                         "Whole genome alignment-based Salmon quantification is "
+                         "only supported for the STAR aligner. Falling back to the "
+                         "transcriptome-only method.")
+                    data = to_single_data(salmon.run_salmon_reads(data)[0])
             else:
                 data = to_single_data(salmon.run_salmon_bam(data)[0])
         else:
@@ -212,19 +218,24 @@ def quantitate_expression_parallel(samples, run_parallel):
     if "sailfish" in dd.get_expression_caller(data):
         samples = run_parallel("run_sailfish_index", [samples])
         samples = run_parallel("run_sailfish", samples)
+
     # always run salmon
     if dd.get_quantify_genome_alignments(data):
         if dd.get_aligner(data).lower() != "star":
-            logger.warning(
-                  "Whole genome alignment-based Salmon quantification is "
-                  "only supported for the STAR aligner. Falling back to the "
-                  "transcriptome-only method.")
-            samples = run_parallel("run_salmon_index", [samples])
-            samples = run_parallel("run_salmon_reads", samples)
+            if dd.get_genome_build(data) == "hg38":
+                logger.warning("Whole genome alignment-based Salmon quantification is "
+                   "only supported for the STAR aligner. Since this is hg38 we will fall "
+                   "back to the decoy method")
+                samples = run_parallel("run_salmon_decoy", samples)
+            else:
+                logger.warning(
+                   "Whole genome alignment-based Salmon quantification is "
+                   "only supported for the STAR aligner. Falling back to the "
+                   "transcriptome-only method.")
+                samples = run_parallel("run_salmon_reads", samples)
         else:
             samples = run_parallel("run_salmon_bam", samples)
     else:
-        samples = run_parallel("run_salmon_index", [samples])
         samples = run_parallel("run_salmon_reads", samples)
 
     samples = run_parallel("detect_fusions", samples)

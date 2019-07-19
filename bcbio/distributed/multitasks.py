@@ -59,6 +59,10 @@ def run_kallisto_rnaseq(*args):
     return kallisto.run_kallisto_rnaseq(*args)
 
 @utils.map_wrap
+def run_salmon_decoy(*args):
+    return salmon.run_salmon_decoy(*args)
+
+@utils.map_wrap
 def run_salmon_reads(*args):
     return salmon.run_salmon_reads(*args)
 
