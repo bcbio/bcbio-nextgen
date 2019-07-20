@@ -103,7 +103,11 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                url = "http://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
+                if eversion >= 97:
+                    vep_url_string = "vep"
+                else:
+                    vep_url_string = "VEP"
+                url = "http://ftp.ensembl.org/pub/release-%s/variation/%s/%s.tar.gz" % (eversion, vep_url_string, ensembl_name)
                 with utils.chdir(tmp_dir):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
