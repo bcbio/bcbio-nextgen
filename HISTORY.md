@@ -13,7 +13,11 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 - VEP cache is not installing anymore from bcbio run
 - Add support for Salmon SA method when STAR alignments are not available 
   (for hg38).
-  
+- Add support for the new read model for filtering in Mutect2. This is
+  experimental, and a little flaky, so it can optionally be turned on via:
+  `tools_on: mutect2_readmodel`. Thanks to @lbeltrame for implementing this
+  feature and doing a ton of work debugging.
+
 ## 1.1.5 (12 April 2019)
 
 - Fixes for Python3 incompatibilities on distributed IPython runs.
