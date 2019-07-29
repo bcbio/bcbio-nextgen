@@ -1168,7 +1168,8 @@ lists with multiple options:
   - ``bwa-mem`` forces use of bwa mem even for samples with less than 70bp
     reads.
   - ``gvcf`` forces gVCF output for callers that support it (GATK
-    HaplotypeCaller, FreeBayes, Platypus).
+    HaplotypeCaller, FreeBayes, Platypus). For joint calling using a population of samples,
+    please use `jointcaller` (:ref:`population-calling`).
   - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
     SpliceRegion plugin for VEP. Both optional plugins add extra splice site
     annotations.

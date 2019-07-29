@@ -292,6 +292,8 @@ def tx2genedict(gtf, keep_version=False):
                 continue
             geneid = line.split("gene_id")[1].split(" ")[1]
             geneid = _strip_non_alphanumeric(geneid)
+            if not geneid:
+                continue
             txid = line.split("transcript_id")[1].split(" ")[1]
             txid = _strip_non_alphanumeric(txid)
             if keep_version and "transcript_version" in line:

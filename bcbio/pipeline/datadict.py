@@ -135,6 +135,8 @@ LOOKUPS = {
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
+    "quantify_genome_alignments": {"keys": ["config", "algorithm", "quantify_genome_alignments"],
+                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": [], "always_list": True},
     "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},

@@ -7,8 +7,16 @@ are in `bcbioRNASeq/results/date/genes/counts` and
 `bcbioRNASeq/results/data/transcripts/counts`.
 - qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
 results with the hisat2 aligner and for RNA-seq just setting it to unstranded
-gives reasonable results.
+- Add `quantify_genome_alignments` option to use genome alignments to quantify
+  with Salmon.
+- Add `--validateMappings` flag to Salmon read quantification mode.
 - VEP cache is not installing anymore from bcbio run
+- Add support for Salmon SA method when STAR alignments are not available 
+  (for hg38).
+- Add support for the new read model for filtering in Mutect2. This is
+  experimental, and a little flaky, so it can optionally be turned on via:
+  `tools_on: mutect2_readmodel`. Thanks to @lbeltrame for implementing this
+  feature and doing a ton of work debugging.
 
 ## 1.1.5 (12 April 2019)
 

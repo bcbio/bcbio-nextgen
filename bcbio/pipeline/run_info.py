@@ -543,6 +543,7 @@ ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
+                          "quantify_genome_alignments", 
                           "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",

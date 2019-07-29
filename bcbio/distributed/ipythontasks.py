@@ -224,6 +224,12 @@ def run_salmon_bam(*args):
         return ipython.zip_args(apply(salmon.run_salmon_bam, *args))
 
 @require(salmon)
+def run_salmon_decoy(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(salmon.run_salmon_decoy, *args))
+
+@require(salmon)
 def run_salmon_reads(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):

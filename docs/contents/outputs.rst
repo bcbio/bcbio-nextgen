@@ -111,6 +111,25 @@ Project directory
   Comparing colSums(tagcounts.mtx) to this number can tell you how many
   reads mapped to genes.
 
+To create Seurat object:
+in bash:
+
+  mkdir data
+  cd data
+  result_dir=bcbio_project/final/project_dir
+  cp $result_dir/tagcounts.mtx matrix.mtx
+  cp $result_dir/tagcounts.mtx.colnames barcodes.tsv
+  cp $result_dir/tagcounts.mtx.rownames features.tsv
+  for f in *;do gzip $f;done;
+  cd ..
+
+in R:
+
+  library(Seurat)
+  counts <- Read10X(data.dir = "data", gene.column = 1)
+  seurat_object <- CreateSeuratObject(counts = counts, min.features = 100)
+  saveRDS(seurat_object, "seurat.bcbio.RDS")
+
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 
