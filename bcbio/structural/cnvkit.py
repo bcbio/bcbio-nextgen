@@ -317,8 +317,8 @@ def _cnvkit_segment(cnr_file, cov_interval, data, items, out_file=None, detailed
                     cmd += ["--vcf", small_vrn_files[0].name, "--sample-id", small_vrn_files[0].sample]
                     if small_vrn_files[0].normal:
                         cmd += ["--normal-id", small_vrn_files[0].normal]
-                resources = config_utils.get_resources("cnvkit_segment", data["config"])
-                user_options = resources.get("options", [])
+                resources = config_utils.get_resources("options", data["config"])
+                user_options = resources.get("cnvkit_segment", [])
                 cmd += [str(x) for x in user_options]
                 if cov_interval == "genome" and "--threshold" not in user_options:
                     cmd += ["--threshold", "0.00001"]
