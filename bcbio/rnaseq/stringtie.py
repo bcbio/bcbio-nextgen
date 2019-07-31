@@ -86,7 +86,7 @@ def _write_fpkms(df, out_dir, sample_name):
     return transcript_file, gene_file
 
 def _parse_ballgown(in_file):
-    return(pd.DataFrame.from_csv(in_file, header=0, sep="\t"))
+    return(pd.read_csv(in_file, header=0, sep="\t"))
 
 def merge(to_merge, ref_file, gtf_file, num_cores, data):
     stringtie = config_utils.get_program("stringtie", data, default="stringtie")
