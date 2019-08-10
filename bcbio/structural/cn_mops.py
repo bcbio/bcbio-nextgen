@@ -105,7 +105,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
                                                 local_sitelib=local_sitelib))
             rscript = utils.Rscript_cmd()
             try:
-                do.run([rscript, "--no-environ", rcode], "cn.mops CNV detection", items[0], log_error=False)
+                do.run([rscript, "--vanilla", rcode], "cn.mops CNV detection", items[0], log_error=False)
             except subprocess.CalledProcessError as msg:
                 # cn.mops errors out if no CNVs found. Just write an empty file.
                 if _allowed_cnmops_errorstates(str(msg)):

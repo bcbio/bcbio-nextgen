@@ -42,7 +42,7 @@ def chipqc(bam_file, sample, out_dir):
         if rcode:
             # local_sitelib = utils.R_sitelib()
             rscript = utils.Rscript_cmd()
-            do.run([rscript, "--no-environ", rcode], "ChIPQC in %s" % sample_name, log_error=False)
+            do.run([rscript, "--vanilla", rcode], "ChIPQC in %s" % sample_name, log_error=False)
             shutil.move(tmp_dir, out_dir)
     return _get_output(out_dir)
 

@@ -711,7 +711,7 @@ def R_package_path(package):
     """
     local_sitelib = R_sitelib()
     rscript = Rscript_cmd()
-    cmd = """{rscript} --no-environ -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
+    cmd = """{rscript} --vanilla -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
