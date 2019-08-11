@@ -19,6 +19,9 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   feature and doing a ton of work debugging.
 - Swap pandas `from_csv` call to `read_csv`.
 - Make STAR respect the `transcriptome_gtf` option.
+- Prefix regular expression with r. Thanks to @smoe for finding all of these.
+- Add informative logging messages at beginning of bcbio run. Includes the version
+  and the configuration files being used.
 
 ## 1.1.5 (12 April 2019)
 
