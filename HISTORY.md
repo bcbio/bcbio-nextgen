@@ -22,6 +22,8 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 - Prefix regular expression with r. Thanks to @smoe for finding all of these.
 - Add informative logging messages at beginning of bcbio run. Includes the version
   and the configuration files being used.
+- Swap samtools mpileup to use bcftools mpileup as samtools mpileup is being 
+  deprecated (https://github.com/samtools/samtools/releases/tag/1.9).
 
 ## 1.1.5 (12 April 2019)
 
