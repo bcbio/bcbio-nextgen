@@ -18,6 +18,7 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   `tools_on: mutect2_readmodel`. Thanks to @lbeltrame for implementing this
   feature and doing a ton of work debugging.
 - Swap pandas `from_csv` call to `read_csv`.
+- Make STAR respect the `transcriptome_gtf` option.
 
 ## 1.1.5 (12 April 2019)
 
