@@ -12,12 +12,12 @@ from bcbio.bam.fastq import combine_pairs
 from bcbio.pipeline import fastq
 
 def is_gsm(fn):
-    p = re.compile("^GSM[0-9]+$")
+    p = re.compile(r"^GSM[0-9]+$")
     if p.match(fn) and not utils.file_exists(fn):
         return True
 
 def is_srr(fn):
-    p = re.compile("^SRR[0-9]+$")
+    p = re.compile(r"^SRR[0-9]+$")
     if p.match(fn) and not utils.file_exists(fn):
         return True
 
