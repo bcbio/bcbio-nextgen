@@ -116,7 +116,7 @@ def find_annotations(data, retriever=None):
         elif not retriever:
             conffn = os.path.join(annodir, conf_file + ".conf")
         else:
-            conffn = conf_file + ".conf"
+            conffn = os.path.join(dd.get_genome_build(data), "config", "vcfanno", conf_file + ".conf")
         luafn = "%s.lua" % utils.splitext_plus(conffn)[0]
         if retriever:
             conffn, luafn = [(x if objectstore.is_remote(x) else None)
