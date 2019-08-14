@@ -1014,6 +1014,9 @@ Single-cell RNA sequencing
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
   wells.
+- ``quantify_genome_alignments`` If set to True, run Salmon quantification using the genome
+  alignments from STAR, when available. If STAR alignments are not available, use Salmon's
+  SA mode with decoys.
 
 smallRNA sequencing
 ===================

@@ -55,7 +55,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     fastq_files = (" ".join([_unpack_fastq(fastq_file), _unpack_fastq(pair_file)])
                    if pair_file else _unpack_fastq(fastq_file))
     num_cores = dd.get_num_cores(data)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data)
+    if not gtf_file:
+        gtf_file = dd.get_gtf_file(data)
     if ref_file.endswith("chrLength"):
         ref_file = os.path.dirname(ref_file)
 
@@ -75,13 +77,21 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += _read_group_option(names)
         if dd.get_fusion_caller(data):
-            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                "--chimScoreSeparation 5 ")
-            if "oncofuse" in dd.get_fusion_caller(data):
-                cmd += "--chimOutType Junctions "
-            else:
-                cmd += "--chimOutType WithinBAM "
+            if "arriba" in dd.get_fusion_caller(data):
+                cmd += (
+                    "--chimSegmentMin 10 --chimOutType WithinBAM SoftClip Junctions "
+                    "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
+                    "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
+                    "--alignSJstitchMismatchNmax 5 -1 5 5 "
+                    "--chimSegmentReadGapMax 3 ")
+            else: 
+                cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                    "--chimScoreSeparation 5 ")
+                if "oncofuse" in dd.get_fusion_caller(data):
+                    cmd += "--chimOutType Junctions "
+                else:
+                    cmd += "--chimOutType WithinBAM "
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:

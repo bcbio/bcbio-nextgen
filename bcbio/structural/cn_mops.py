@@ -72,7 +72,7 @@ def _prep_sample_cnvs(cnv_file, data):
     import pybedtools
     sample_name = tz.get_in(["rgnames", "sample"], data)
     def make_names(name):
-        return re.sub("[^\w.]", '.', name)
+        return re.sub(r"[^\w.]", '.', name)
     def matches_sample_name(feat):
         return (feat.name == sample_name or feat.name == "X%s" % sample_name or
                 feat.name == make_names(sample_name))
@@ -105,7 +105,7 @@ def _run_on_chrom(chrom, work_bams, names, work_dir, items):
                                                 local_sitelib=local_sitelib))
             rscript = utils.Rscript_cmd()
             try:
-                do.run([rscript, "--no-environ", rcode], "cn.mops CNV detection", items[0], log_error=False)
+                do.run([rscript, "--vanilla", rcode], "cn.mops CNV detection", items[0], log_error=False)
             except subprocess.CalledProcessError as msg:
                 # cn.mops errors out if no CNVs found. Just write an empty file.
                 if _allowed_cnmops_errorstates(str(msg)):

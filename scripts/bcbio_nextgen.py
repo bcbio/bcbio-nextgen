@@ -213,6 +213,13 @@ def _add_inputs_to_kwargs(args, kwargs, parser):
     kwargs["config_file"] = global_config
     kwargs["fc_dir"] = fc_dir
     kwargs["run_info_yaml"] = run_info_yaml
+    print(f"Running bcbio version: {version.__version__}")
+    if global_config:
+        print(f"global config: {os.path.abspath(global_config)}")
+    if fc_dir:
+        print(f"flowcell directory: {os.path.abspath(fc_dir)}")
+    if run_info_yaml:
+        print(f"run info config: {os.path.abspath(run_info_yaml)}")
     return kwargs
 
 if __name__ == "__main__":

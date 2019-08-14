@@ -65,6 +65,23 @@ def prep_mpileup(align_bams, ref_file, config, max_read_depth=None,
     cl += align_bams
     return " ".join(cl)
 
+def prep_bcftools_mpileup(align_bams, ref_file, config, max_read_depth=None,
+                    target_regions=None, want_bcf=True):
+    cl = [config_utils.get_program("bcftools", config), "mpileup", "-f", ref_file]
+    # samtools default max read depth was 8000 as opposed to 250 in bcftools
+    max_read_depth = 8000 if not max_read_depth else max_read_depth
+    cl += ["-d", str(max_read_depth)]
+    if want_bcf:
+        cl += ["-a", "DP", "-a", "AD"]
+    if target_regions:
+        str_regions = bamprep.region_to_gatk(target_regions)
+        if os.path.isfile(str_regions):
+            cl += ["-R", str_regions]
+        else:
+            cl += ["-r", str_regions]
+    cl += align_bams
+    return " ".join(cl)
+
 def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_file):
     """Call variants with samtools in target_regions.
 
@@ -72,7 +89,7 @@ def _call_variants_samtools(align_bams, ref_file, items, target_regions, tx_out_
     by removing addition 4.2-only isms from VCF header lines.
     """
     config = items[0]["config"]
-    mpileup = prep_mpileup(align_bams, ref_file, config,
+    mpileup = prep_bcftools_mpileup(align_bams, ref_file, config,
                            target_regions=target_regions, want_bcf=True)
     bcftools = config_utils.get_program("bcftools", config)
     samtools_version = programs.get_version("samtools", config=config)

@@ -2,7 +2,7 @@ import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein, pizzly, ericscript,
-                          kallisto, salmon, singlecellexperiment)
+                          kallisto, salmon, singlecellexperiment, arriba)
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import effects, joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
@@ -263,6 +263,8 @@ def detect_fusions(data):
                               "json": os.path.join(pizzly_dir, "%s.json" % dd.get_sample_name(data))}
     if "ericscript" in fusion_caller:
         ericscript_dir = ericscript.run(data)
+    if "arriba" in fusion_caller:
+        data = arriba.run_arriba(data)
     return [[data]]
 
 def quantitate_expression_noparallel(samples, run_parallel):

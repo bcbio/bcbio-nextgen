@@ -27,7 +27,7 @@ def make_bcbiornaseq_object(data):
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", r_file], "Loading bcbioRNASeq object.")
+        do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data", "bcb.rda"), "gene")
     loadstring = create_load_string(upload_dir, groups, organism, "transcript")
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
@@ -35,7 +35,7 @@ def make_bcbiornaseq_object(data):
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", r_file], "Loading transcript-level bcbioRNASeq object.")
+        do.run([rcmd, "--vanilla", r_file], "Loading transcript-level bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data-transcript", "bcb.rda"), "transcript")
     make_quality_report(data)
     return data
@@ -70,7 +70,7 @@ def rmarkdown_draft(filename, template, package):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
+        do.run([rcmd, "--vanilla", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
     return filename
 
@@ -86,7 +86,7 @@ def render_rmarkdown_file(filename):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
+        do.run([rcmd, "--vanilla", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
     return filename
 
 def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
@@ -145,7 +145,7 @@ def write_counts(bcb, level="gene"):
             f'metadata = colData(bcb) %>% as.data.frame() %>% tibble::rownames_to_column("sample");'
             f'readr::write_csv(counts, file.path(dir, "counts.csv.gz"));'
             f'readr::write_csv(metadata, file.path(dir, "metadata.csv.gz"));')
-    do.run([rcmd, "--no-environ", "-e", render_string], f"Writing counts table to {out_file}.")
+    do.run([rcmd, "--vanilla", "-e", render_string], f"Writing counts table to {out_file}.")
     return out_file
 
 def memoize_write_file(string, filename):
