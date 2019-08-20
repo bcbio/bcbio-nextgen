@@ -1,6 +1,11 @@
 .. _teaching:
 
-Teaching
+Single cell RNA-seq analysis
+========
+`Setting up bcbio single cell RNA-seq analysis<https://github.com/hbc/tutorials/blob/master/scRNAseq/scRNAseq_analysis_tutorial/lessons/01_bcbio_run.md>`_ 
+tutorial outlines the steps needed to run bcbio in that use case.
+
+Cancer tumor-normal variant calling
 ========
 This is a teaching orientated example of using bcbio from the Cold Spring Harbor
 Laboratory's `Advanced Sequencing Technology and Applications course
@@ -17,6 +22,7 @@ chromosome 6 to reduce runtimes. It demonstrates:
   `CIViC <https://civic.genome.wustl.edu/#/home>`_.
 - HLA typing.
 - Validation of both small and structural variants against truth sets.
+
 
 Loading pre-run analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~
