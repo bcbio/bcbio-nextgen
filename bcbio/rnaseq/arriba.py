@@ -26,7 +26,7 @@ def run_arriba(data):
     discarded_fusion_file = os.path.join(arriba_dir, "fusions.discarded.tsv")
     blacklist_file = get_arriba_blacklist_file(data)
     contigs = get_contigs(data)
-    contig_list = " ".join(contigs)
+    contig_list = ",".join(contigs)
     if utils.file_exists(fusion_file):
         data["arriba"] = {"fusions": fusion_file, "discarded": discarded_fusion_file}
         return(data)
