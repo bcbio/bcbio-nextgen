@@ -2,7 +2,7 @@
 
 Single cell RNA-seq analysis
 ========
-`Setting up bcbio single cell RNA-seq analysis<https://github.com/hbc/tutorials/blob/master/scRNAseq/scRNAseq_analysis_tutorial/lessons/01_bcbio_run.md>`_
+`Setting up bcbio single cell RNA-seq analysis <https://github.com/hbc/tutorials/blob/master/scRNAseq/scRNAseq_analysis_tutorial/lessons/01_bcbio_run.md>`_
 tutorial outlines the steps needed to run bcbio in that use case.
 
 Cancer tumor-normal variant calling
