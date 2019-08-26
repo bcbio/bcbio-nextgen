@@ -308,11 +308,14 @@ def _mint_trna_annotation(data):
     """
     use MINTmap to quantify tRNAs
     """
+    name = dd.get_sample_name(data)
+    work_dir = os.path.join(dd.get_work_dir(data), "trna_mint", name)
+    if not dd.get_srna_mint_lookup(data):
+        logger.info("There is no tRNA annotation to run MINTmap.")
+        return work_dir
     trna_lookup = op.join(dd.get_srna_mint_lookup(data))
     trna_space = op.join(dd.get_srna_mint_space(data))
     trna_other = op.join(dd.get_srna_mint_other(data))
-    name = dd.get_sample_name(data)
-    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna_mint", name))
     in_file = op.basename(data["clean_fastq"])
     mintmap = os.path.realpath(os.path.join(os.path.dirname(sys.executable), "MINTmap.pl"))
     perl_export = utils.get_perl_exports()

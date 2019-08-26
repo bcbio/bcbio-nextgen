@@ -146,7 +146,6 @@ def run_salmon_index(*samples):
         work_dir = dd.get_work_dir(data)
         salmon_dir = os.path.join(work_dir, "salmon")
         gtf_file = dd.get_gtf_file(data)
-        assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file
         salmon_index(gtf_file, data, salmon_dir)
     return samples
 
