@@ -112,7 +112,8 @@ Project directory
   reads mapped to genes.
 
 To create Seurat object:
-in bash:
+
+in bash::
 
   mkdir data
   cd data
@@ -123,7 +124,7 @@ in bash:
   for f in *;do gzip $f;done;
   cd ..
 
-in R:
+in R::
 
   library(Seurat)
   counts <- Read10X(data.dir = "data", gene.column = 1)
