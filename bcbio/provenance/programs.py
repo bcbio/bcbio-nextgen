@@ -229,6 +229,7 @@ def _get_versions_manifest(manifest_dir):
         for plist in ["toolplus", "python", "r", "debian", "custom"]:
             pkg_file = os.path.join(manifest_dir, "%s-packages.yaml" % plist)
             if os.path.exists(pkg_file):
+                logger.info(f"Retreiving program versions from {pkg_file}.")
                 with open(pkg_file) as in_handle:
                     pkg_info = yaml.safe_load(in_handle)
                 if not pkg_info:
