@@ -8,7 +8,7 @@ try:
 except ImportError:
     from IPython.parallel import require
 
-from bcbio import heterogeneity, hla, chipseq, structural, upload
+from bcbio import heterogeneity, hla, chipseq, structural, upload, utils
 from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
                           bcbiornaseq)
@@ -29,9 +29,10 @@ from bcbio.log import logger, setup_local_logging
 @contextlib.contextmanager
 def _setup_logging(args):
     # Set environment to standard to use periods for decimals and avoid localization
-    os.environ["LC_ALL"] = "C"
-    os.environ["LC"] = "C"
-    os.environ["LANG"] = "C"
+    locale_to_use = utils.get_locale()
+    os.environ["LC_ALL"] = locale_to_use
+    os.environ["LC"] = locale_to_use
+    os.environ["LANG"] = locale_to_use
     config = None
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         args = args[0]
