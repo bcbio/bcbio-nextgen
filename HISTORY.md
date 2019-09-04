@@ -24,6 +24,13 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   and the configuration files being used.
 - Swap samtools mpileup to use bcftools mpileup as samtools mpileup is being 
   deprecated (https://github.com/samtools/samtools/releases/tag/1.9).
+- Ensure locale is set to one supporting UTF-8 bcbio-wide. This may need to get
+  reverted if it introduces issues.
+- Added hg38 support for STAR. We did this by taking hg38 and removing the alts,
+  decoys and HLA sequences.
+- Added support for the arriba fusion caller.
+- Added back missing programs from the version provenance file. Fixed formatting
+  problems introduced by switch to python3.
 
 ## 1.1.5 (12 April 2019)
 
