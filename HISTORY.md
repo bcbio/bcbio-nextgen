@@ -31,6 +31,11 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 - Added support for the arriba fusion caller.
 - Added back missing programs from the version provenance file. Fixed formatting
   problems introduced by switch to python3.
+- Added initial support for whole genome bisulfite sequencing using bismark. Thanks to
+  @hackdna for implementing this and @jnhutchinson for drafting the initial
+  pipeline. This is a work in progress in collaboration with @gcampanella, who
+  has a similar implementation with some extra features that we will be merging
+  in soon.
 
 ## 1.1.5 (12 April 2019)
 
