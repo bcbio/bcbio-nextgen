@@ -29,7 +29,7 @@ def make_scrnaseq_object(samples):
                 out_handle.write(_script.format(**locals()))
             rscript = Rscript_cmd()
             try:
-                # do.run([rscript, "--no-environ", rcode],
+                # do.run([rscript, "--vanilla", rcode],
                 #        "SingleCellExperiment",
                 #        log_error=False)
                 rda_file = rcode

@@ -135,6 +135,8 @@ LOOKUPS = {
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
+    "quantify_genome_alignments": {"keys": ["config", "algorithm", "quantify_genome_alignments"],
+                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": [], "always_list": True},
     "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},
@@ -372,3 +374,15 @@ def has_variantcalls(data):
     variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
     variantcaller = get_variantcaller(data)
     return variant_pipeline or variantcaller
+
+def get_algorithm_keys():
+    """
+    returns a list of all defined keys under the algorithm section
+    """
+    keys = []
+    for k, v in LOOKUPS.items():
+        if not "algorithm" in v["keys"]:
+            continue
+        if k == v["keys"][2]:
+            keys.append(k)
+    return keys

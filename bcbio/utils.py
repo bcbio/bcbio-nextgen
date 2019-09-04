@@ -711,7 +711,7 @@ def R_package_path(package):
     """
     local_sitelib = R_sitelib()
     rscript = Rscript_cmd()
-    cmd = """{rscript} --no-environ -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
+    cmd = """{rscript} --vanilla -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
@@ -853,20 +853,38 @@ def locale_export():
     RuntimeError: Click will abort further execution because Python 3 was
     configured to use ASCII as encoding for the environment.
     Consult https://click.palletsprojects.com/en/7.x/python3/ for mitigation steps.
-
-    Looks up available locales on the system to find an appropriate one to pick,
-    defaulting to C.UTF-8 which is globally available on newer systems.
     """
-    locale_to_use = "C.UTF-8"
+    locale_to_use = get_locale()
+    return "export LC_ALL=%s && export LANG=%s && " % (locale_to_use, locale_to_use)
+
+def get_locale():
+    """
+    Looks up available locales on the system to find an appropriate one to pick,
+    defaulting to C.UTF-8 which is globally available on newer systems. Prefers
+    C.UTF-8 and en_US encodings, if available
+    """
+    default_locale = "C.UTF-8"
+    preferred_locales = {"c.utf-8", "c.utf8", "en_us.utf-8", "en_us.utf8"}
+    locale_to_use = None
     try:
         locales = subprocess.check_output(["locale", "-a"]).decode(errors="ignore").split("\n")
     except subprocess.CalledProcessError:
         locales = []
+    # check for preferred locale
     for locale in locales:
-        if locale.lower().endswith(("utf-8", "utf8")):
+        if locale.lower() in preferred_locales:
             locale_to_use = locale
             break
-    return "export LC_ALL=%s && export LANG=%s && " % (locale_to_use, locale_to_use)
+    # if preferred locale not available take first UTF-8 locale
+    if not locale_to_use:
+        for locale in locales:
+            if locale.lower().endswith(("utf-8", "utf8")):
+                locale_to_use = locale
+                break
+    # if locale listing not available, try using the default locale
+    if not locale_to_use:
+        locale_to_use = default_locale
+    return locale_to_use
 
 def java_freetype_fix():
     """Provide workaround for issues FreeType library symbols.

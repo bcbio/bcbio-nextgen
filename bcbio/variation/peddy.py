@@ -95,7 +95,8 @@ def run_peddy(samples, out_dir=None):
             # Redirects stderr because incredibly noisy with no intervals found messages from cyvcf2
             stderr_log = os.path.join(tx_dir, "run-stderr.log")
             sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
-            cmd = ("{peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
+            locale = utils.locale_export()
+            cmd = ("{locale} {peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
                    "{vcf_file} {ped_file} 2> {stderr_log}")
             message = "Running peddy on {vcf_file} against {ped_file}."
             try:

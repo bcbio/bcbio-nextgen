@@ -79,7 +79,7 @@ def _special_dbkey_maps(dbkey, ref_file):
 
 
 def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
-    """Ensure correct installation of VEP cache file.
+    """VEP cache installation. Called from bcbio/install.py
     """
     if config is None: config = {}
     resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
@@ -103,7 +103,11 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                url = "http://ftp.ensembl.org/pub/release-%s/variation/VEP/%s.tar.gz" % (eversion, ensembl_name)
+                if int(eversion) >= 97:
+                    vep_url_string = "vep"
+                else:
+                    vep_url_string = "VEP"
+                url = "http://ftp.ensembl.org/pub/release-%s/variation/%s/%s.tar.gz" % (eversion, vep_url_string, ensembl_name)
                 with utils.chdir(tmp_dir):
                     subprocess.check_call(["wget", "--no-check-certificate", "-c", url])
                 vep_path = "%s/bin/" % tooldir if tooldir else ""
@@ -123,6 +127,25 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             return vep_dir, species
     return None, None
 
+def get_vep_cache(dbkey, ref_file, tooldir=None, config=None):
+    """ don't install VEP cache when running bcbio, just return its location
+    """
+    if config is None: config = {}
+    resource_file = os.path.join(os.path.dirname(ref_file), "%s-resources.yaml" % dbkey)
+    if os.path.exists(resource_file):
+        with open(resource_file) as in_handle:
+            resources = yaml.safe_load(in_handle)
+        ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
+        symlink_dir = _special_dbkey_maps(dbkey, ref_file)
+        if ensembl_name and ensembl_name.find("_vep_") == -1:
+            raise ValueError("%s has ensembl an incorrect value."
+                             "It should have _vep_ in the name."
+                             "Remove line or fix the name to avoid error.")
+        if symlink_dir and ensembl_name:
+            species, vepv = ensembl_name.split("_vep_")
+            return symlink_dir, species
+    return None, None
+
 def run_vep(in_file, data):
     """Annotate input VCF file with Ensembl variant effect predictor.
     """
@@ -132,7 +155,7 @@ def run_vep(in_file, data):
     assert in_file.endswith(".gz") and out_file.endswith(".gz")
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
-            vep_dir, ensembl_name = prep_vep_cache(data["genome_build"],
+            vep_dir, ensembl_name = get_vep_cache(data["genome_build"],
                                                    tz.get_in(["reference", "fasta", "base"], data))
             if vep_dir:
                 cores = tz.get_in(("config", "algorithm", "num_cores"), data, 1)

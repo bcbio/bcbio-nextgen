@@ -749,8 +749,7 @@ Variant annotation
 
 - ``effects`` Method used to calculate expected variant effects; defaults to
   `snpEff`_. `Ensembl variant effect predictor (VEP)`_ is also available
-  with support for `dbNSFP`_  and `dbscSNV`_ annotation, when downloaded using
-  :ref:`datatarget-install`. [snpeff, vep, false]
+  when downloaded using :ref:`datatarget-install`. [snpeff, vep, false]
 - ``effects_transcripts`` Define the transcripts to use for effect prediction
   annotation. Options ``all``: Standard Ensembl transcript list (the default);
   ``canonical``: Report single canonical transcripts (``-canon`` in snpEff,
@@ -781,6 +780,8 @@ Structural variant calling
 
 - ``svcaller`` -- List of structural variant callers to use. [lumpy, manta,
   cnvkit, gatk-cnv, seq2c, purecn, titancna, delly, battenberg]. LUMPY and Manta require paired end reads.
+  cnvkit and gatk-cnv should not be used on the same sample due to
+  incompatible normalization approaches, please pick one or the other for CNV calling.
 - ``svprioritize`` --  Produce a tab separated summary file of structural
   variants in regions of interest. This complements the full VCF files of
   structural variant calls to highlight changes in known genes. See the `paper
@@ -1002,7 +1003,10 @@ Single-cell RNA sequencing
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
-  associated with the barcode. This is an example of the file::
+  associated with the barcode. The actual barcodes may be reverse complements of the 
+  sequences provided with the samples. It worth to check before running bcbio.
+  For inDrops procol samples barcodes are in the fastq file for read3.
+  This is an example of the ``sample_barcodes`` file::
 
     AATTCCGG,sample1
     CCTTGGAA,sample2
@@ -1010,6 +1014,9 @@ Single-cell RNA sequencing
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
   wells.
+- ``quantify_genome_alignments`` If set to True, run Salmon quantification using the genome
+  alignments from STAR, when available. If STAR alignments are not available, use Salmon's
+  SA mode with decoys.
 
 smallRNA sequencing
 ===================
@@ -1164,7 +1171,8 @@ lists with multiple options:
   - ``bwa-mem`` forces use of bwa mem even for samples with less than 70bp
     reads.
   - ``gvcf`` forces gVCF output for callers that support it (GATK
-    HaplotypeCaller, FreeBayes, Platypus).
+    HaplotypeCaller, FreeBayes, Platypus). For joint calling using a population of samples,
+    please use `jointcaller` (:ref:`population-calling`).
   - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
     SpliceRegion plugin for VEP. Both optional plugins add extra splice site
     annotations.

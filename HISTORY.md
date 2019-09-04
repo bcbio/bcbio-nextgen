@@ -2,6 +2,35 @@
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
 - RNA-seq: fixes for cufflinks preparation due to python3 transition.
+- RNA-seq: output count tables from tximport for genes and transcripts. These
+are in `bcbioRNASeq/results/date/genes/counts` and 
+`bcbioRNASeq/results/data/transcripts/counts`.
+- qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
+results with the hisat2 aligner and for RNA-seq just setting it to unstranded
+- Add `quantify_genome_alignments` option to use genome alignments to quantify
+  with Salmon.
+- Add `--validateMappings` flag to Salmon read quantification mode.
+- VEP cache is not installing anymore from bcbio run
+- Add support for Salmon SA method when STAR alignments are not available 
+  (for hg38).
+- Add support for the new read model for filtering in Mutect2. This is
+  experimental, and a little flaky, so it can optionally be turned on via:
+  `tools_on: mutect2_readmodel`. Thanks to @lbeltrame for implementing this
+  feature and doing a ton of work debugging.
+- Swap pandas `from_csv` call to `read_csv`.
+- Make STAR respect the `transcriptome_gtf` option.
+- Prefix regular expression with r. Thanks to @smoe for finding all of these.
+- Add informative logging messages at beginning of bcbio run. Includes the version
+  and the configuration files being used.
+- Swap samtools mpileup to use bcftools mpileup as samtools mpileup is being 
+  deprecated (https://github.com/samtools/samtools/releases/tag/1.9).
+- Ensure locale is set to one supporting UTF-8 bcbio-wide. This may need to get
+  reverted if it introduces issues.
+- Added hg38 support for STAR. We did this by taking hg38 and removing the alts,
+  decoys and HLA sequences.
+- Added support for the arriba fusion caller.
+- Added back missing programs from the version provenance file. Fixed formatting
+  problems introduced by switch to python3.
 
 ## 1.1.5 (12 April 2019)
 

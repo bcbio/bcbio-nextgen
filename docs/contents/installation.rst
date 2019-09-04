@@ -169,13 +169,11 @@ other analyses. The available targets are:
 - ``dbnsfp`` Like CADD, `dbNSFP <https://sites.google.com/site/jpopgen/dbNSFP>`_
   provides integrated and generalized metrics from multiple sources to help with
   prioritizing variations for follow up. The files are large: dbNSFP is 10Gb,
-  expanding to 100Gb during preparation. VEP will use dbNSFP for annotation of
-  VCFs if included.
+  expanding to 100Gb during preparation.
 - ``dbscsnv`` `dbscSNV <https://sites.google.com/site/jpopgen/dbNSFP>`_
   includes all potential human SNVs within splicing consensus regions
   (−3 to +8 at the 5’ splice site and −12 to +2 at the 3’ splice site), i.e. scSNVs,
   related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
-  VEP will use dbscSNV for annotation of VCFs if included.
 - ``battenberg`` Data files for `Battenberg
   <https://github.com/cancerit/cgpBattenberg>`_, which detects subclonality and
   copy number changes in whole genome cancer samples.
@@ -193,7 +191,9 @@ that downloads, sorts and merges the VCFs, then copies into your bcbio installat
 
     export COSMIC_USER="your@registered.email.edu"
     export COSMIC_PASS="cosmic_password"
-    bcbio_python prepare_cosmic.py 83 /path/to/bcbio
+    bcbio_python prepare_cosmic.py 89 /path/to/bcbio
+
+``/path/to/bcbio/`` here is the directory one up from the ``genomes`` directory.
 
 .. _toolplus-install:
 

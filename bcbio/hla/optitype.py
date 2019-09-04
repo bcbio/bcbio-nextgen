@@ -25,7 +25,7 @@ def run(data):
     """
     hlas = []
     for hla_fq in tz.get_in(["hla", "fastq"], data, []):
-        hla_type = re.search("[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
+        hla_type = re.search(r"[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
         if hla_type in SUPPORTED_HLAS:
             if utils.file_exists(hla_fq):
                 hlas.append((hla_type, hla_fq))

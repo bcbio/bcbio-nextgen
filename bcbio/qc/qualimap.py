@@ -366,6 +366,9 @@ def _rnaseq_qualimap_cmd(data, bam_file, out_dir, gtf_file=None, library="non-st
     export = "%s%s" % (utils.java_freetype_fix(), utils.local_path_export())
     export = "%s%s export JAVA_OPTS='-Xms32m -Xmx%s -Djava.io.tmpdir=%s' && " % (
         utils.java_freetype_fix(), utils.local_path_export(), max_mem, out_dir)
+    if library != "non-strand-specific":
+        logger.info("Qualimap can get the orientation wrong for stranded reads, so we run it in unstranded mode. This gives comparable results to unstranded for RNA-seq data (see https://groups.google.com/forum/#!topic/qualimap/ZGo-k8LGmHQ) for a further explanation.")
+        library = "non-strand-specific"
     paired = " --paired" if bam.is_paired(bam_file) else ""
     cmd = ("unset DISPLAY && {export} {qualimap} rnaseq -outdir {out_dir} "
            "-a proportional -bam {bam_file} -p {library}{paired} "

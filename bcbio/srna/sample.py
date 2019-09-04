@@ -50,7 +50,7 @@ def trim_srna_sample(data):
 
     adapter = dd.get_adapters(data)
     is_4n = any([a == "4N" for a in adapter])
-    adapter = [a for a in adapter if re.compile("^([NATGC]+)$").match(a)]
+    adapter = [a for a in adapter if re.compile(r"^([NATGC]+)$").match(a)]
     if adapter and not trim_reads:
         trim_reads = True
         logger.info("Adapter is set up in config file, but trim_reads is not true."
@@ -62,7 +62,7 @@ def trim_srna_sample(data):
     times = "" if not trim_reads or len(adapters) == 1 else "--times %s" % len(adapters)
     if trim_reads and adapters:
         adapter_cmd = " ".join(map(lambda x: "-a " + x, adapters))
-        if any([a for a in adapters if re.compile("^N+$").match(a)]):
+        if any([a for a in adapters if re.compile(r"^N+$").match(a)]):
             adapter_cmd = "-N %s" % adapter_cmd
         out_noadapter_file = replace_directory(append_stem(in_file, ".fragments"), out_dir)
         out_short_file = replace_directory(append_stem(in_file, ".short"), out_dir)
@@ -308,11 +308,14 @@ def _mint_trna_annotation(data):
     """
     use MINTmap to quantify tRNAs
     """
+    name = dd.get_sample_name(data)
+    work_dir = os.path.join(dd.get_work_dir(data), "trna_mint", name)
+    if not dd.get_srna_mint_lookup(data):
+        logger.info("There is no tRNA annotation to run MINTmap.")
+        return work_dir
     trna_lookup = op.join(dd.get_srna_mint_lookup(data))
     trna_space = op.join(dd.get_srna_mint_space(data))
     trna_other = op.join(dd.get_srna_mint_other(data))
-    name = dd.get_sample_name(data)
-    work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "trna_mint", name))
     in_file = op.basename(data["clean_fastq"])
     mintmap = os.path.realpath(os.path.join(os.path.dirname(sys.executable), "MINTmap.pl"))
     perl_export = utils.get_perl_exports()

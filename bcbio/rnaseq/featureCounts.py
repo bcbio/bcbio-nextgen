@@ -86,7 +86,7 @@ def _format_count_file(count_file, data):
         return out_file
 
     df = pd.io.parsers.read_csv(count_file, sep="\t", index_col=0, header=1)
-    df_sub = df.ix[:, COUNT_COLUMN]
+    df_sub = df.iloc[:, COUNT_COLUMN]
     with file_transaction(data, out_file) as tx_out_file:
         df_sub.to_csv(tx_out_file, sep="\t", index_label="id", header=False)
     return out_file

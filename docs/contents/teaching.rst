@@ -1,7 +1,15 @@
 .. _teaching:
 
-Teaching
-========
+Teaching 
+--------
+
+Single cell RNA-seq analysis
+~~~~~~~~~~~~~~~~~~~~~~~~
+`Setting up bcbio single cell RNA-seq analysis <https://github.com/hbc/tutorials/blob/master/scRNAseq/scRNAseq_analysis_tutorial/lessons/01_bcbio_run.md>`_
+tutorial outlines the steps needed to run bcbio in that use case.
+
+Cancer tumor-normal variant calling
+~~~~~~~~~~~~~~~~~~~~~~~~
 This is a teaching orientated example of using bcbio from the Cold Spring Harbor
 Laboratory's `Advanced Sequencing Technology and Applications course
 <http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15>`_. This uses
@@ -19,7 +27,8 @@ chromosome 6 to reduce runtimes. It demonstrates:
 - Validation of both small and structural variants against truth sets.
 
 Loading pre-run analysis
-~~~~~~~~~~~~~~~~~~~~~~~~
+========================
+
 To save downloading the genome data and running the analysis, we have a
 pre-prepared AMI with the data and analysis run. Use the `AWS Console
 <https://console.aws.amazon.com/ec2>`_ to launch the pre-built AMI -- search
@@ -34,7 +43,8 @@ with the biological data installed in ``/usr/local/share/bcbio``. The run is in
 a ``~/run/cancer-syn3-chr6``.
 
 Input configuration file
-~~~~~~~~~~~~~~~~~~~~~~~~
+========================
+
 To run bcbio, you prepare a small configuration file describing your analysis.
 You can `prepare it manually or use an automated configuration method <https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html>`_.
 The example has a pre-written configuration file with tumor/normal data located
@@ -90,7 +100,7 @@ Call HLA types with OptiType::
 
 Finally, we validate both the small variants and structural variants. These use
 pre-installed validation sets that come with bcbio. We limit validation regions
-to avoid low complexity regions, which cause bias in ``validating indels
+to avoid low complexity regions, which cause bias in `validating indels
 <http://bcb.io/2014/05/12/wgs-trio-variant-evaluation/>`_::
 
       exclude_regions: [lcr]
@@ -102,7 +112,8 @@ to avoid low complexity regions, which cause bias in ``validating indels
         INV: dream-syn3-crossmap/truth_INV.bed
 
 Output files
-~~~~~~~~~~~~
+============
+
 Output files are in ``~/run/cancer-syn3-chr6/final``, extracted from the full
 work directory in ``~/run/cancer-syn3-chr6/work``.
 
@@ -169,7 +180,7 @@ is useful downstream::
     project-summary.yaml
 
 Preparing and Running
-~~~~~~~~~~~~~~~~~~~~~
+=====================
 The steps to prepare an AMI from a bare machine and run the analysis. These are
 pre-done on the teaching AMI to save time:
 

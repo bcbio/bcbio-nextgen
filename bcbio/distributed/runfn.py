@@ -14,7 +14,7 @@ import six
 import toolz as tz
 import yaml
 
-from bcbio import log, utils, setpath
+from bcbio import log, utils, setpath, utils
 from bcbio.log import logger
 from bcbio.cwl import cwlutils
 from bcbio.distributed import multitasks
@@ -24,9 +24,10 @@ def process(args):
     """Run the function in args.name given arguments in args.argfile.
     """
     # Set environment to standard to use periods for decimals and avoid localization
-    os.environ["LC_ALL"] = "C"
-    os.environ["LC"] = "C"
-    os.environ["LANG"] = "C"
+    locale_to_use = utils.get_locale()
+    os.environ["LC_ALL"] = locale_to_use
+    os.environ["LC"] = locale_to_use
+    os.environ["LANG"] = locale_to_use
     setpath.prepend_bcbiopath()
     try:
         fn = getattr(multitasks, args.name)

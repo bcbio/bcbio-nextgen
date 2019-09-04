@@ -249,6 +249,7 @@ def _maybe_add_sv(algorithm, sample, out):
         for svcall in sample["sv"]:
             if svcall.get("variantcaller") == "seq2c":
                 out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
+                out.extend(_get_variant_file(svcall, ("gender_predicted",), sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,), sample=batch))
