@@ -12,7 +12,7 @@ from bcbio.qc import variant
 
 def run(bam_file, data, out_dir):
     out = {}
-    vcinfo = variant.get_active_vcinfo(data)
+    vcinfo = variant.get_active_vcinfo(data, use_ensemble=False)
     dkfzbiasfilter = config_utils.get_program("dkfzbiasfilter_summarize.py", data)
     if vcinfo and vcfutils.vcf_has_variants(vcinfo["vrn_file"]):
         out_file = os.path.join(utils.safe_makedir(out_dir),
