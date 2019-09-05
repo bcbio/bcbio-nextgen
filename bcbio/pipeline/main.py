@@ -38,6 +38,7 @@ def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
     workdir = utils.safe_makedir(os.path.abspath(workdir))
     os.chdir(workdir)
     config, config_file = config_utils.load_system_config(config_file, workdir)
+    parallel = log.create_base_logger(config, parallel)
     log.setup_local_logging(config, parallel)
     logger.info(f"System YAML configuration: {os.path.abspath(config_file)}.")
     logger.info(f"Locale set to {locale_to_use}.")
@@ -80,7 +81,6 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
-    parallel = log.create_base_logger(config, parallel)
     dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     pipelines, config = _pair_samples_with_pipelines(run_info_yaml, config)
