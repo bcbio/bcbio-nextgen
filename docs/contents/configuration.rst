@@ -1113,7 +1113,10 @@ Post-processing
 - ``archive`` Specify targets for long term archival. ``cram`` removes fastq
   names and does 8-bin compression of BAM files into `CRAM format`_.
   ``cram-lossless`` generates CRAM files without changes to quality scores or
-  fastq name. Default: [] -- no archiving.
+  fastq name. Default: [] -- no archiving. Lossy cram has some issues, 
+  lossless cram provides pretty good compression relative to BAM, and many
+  machines output binned values now, so ``cram-lossless`` is what we
+  recommend you use.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 
