@@ -1,0 +1,7 @@
+details:
+  - analysis: wgbs-seq
+    algorithm:
+      aligner: bismark  # this option will set up the same tool for calling and alignment
+    description: test
+    genome_build: hg19
+    # files: [../../raw/test_R1.fastq, ../../raw/test_R2.fastq]

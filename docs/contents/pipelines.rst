@@ -490,8 +490,8 @@ inside ``tdrmapper`` or final project folder.
 .. _miRge2: https://github.com/mhalushka/miRge
 .. _isomiRs: https://github.com/lpantano/isomiRs
 
-ChIP-seq
-~~~~~~~~
+ChIP/ATAC-seq
+~~~~~~~~~~~~~
 The bcbio-nextgen implementation of ChIP-seq aligns, removes multimapping reads,
 calls peaks with a paired input file using MACS2 and outputs a set of greylist
 regions for filtering possible false peaks in regions of high depth in the input
@@ -514,6 +514,13 @@ file.
 
 .. _macs2: https://github.com/taoliu/MACS
 .. _chipseq-greylist: https://github.com/roryk/chipseq-greylist
+
+Methylation
+~~~~~~~~~~~
+Whole genome bisulfite sequencing is supported using the `bismark2`_ pipeline.
+It can be turned on by setting `analysis` to `wgbs-seq`.
+
+.. _bismark2: https://www.bioinformatics.babraham.ac.uk/projects/bismark/
 
 Standard
 ~~~~~~~~

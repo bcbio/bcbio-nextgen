@@ -175,12 +175,12 @@ def _mutect2_filter(broad_runner, in_file, out_file, ref_file, orient_file=None)
 
     Includes a pre-step to avoid stats information with zero callable reads, which
     cause MuTect2 filter errors when there are calls. The sed file increases this
-    to 4 reads, which matches with actually having a call in the output file.
+    to 10 reads, which matches with actually having a call in the output file.
     """
     params = ["-T", "FilterMutectCalls", "--reference", ref_file, "--variant", in_file, "--output", out_file]
     if orient_file is not None:
         params += ["--ob-priors", orient_file]
-    avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t4.0/' %s.stats" % in_file
+    avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t10.0/' %s.stats" % in_file
     return "%s && %s" % (avoid_zero_callable, broad_runner.cl_gatk(params, os.path.dirname(out_file)))
 
 def _af_filter(data, in_file, out_file):

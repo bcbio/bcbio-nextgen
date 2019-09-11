@@ -967,6 +967,9 @@ RNA sequencing
   [oncofuse, pizzly].
 -  ``variantcaller`` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
+- ``quantify_genome_alignments`` If set to True, run Salmon quantification using the genome
+  alignments from STAR, when available. If STAR alignments are not available, use Salmon's
+  SA mode with decoys.
 - ``bcbiornaseq`` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports `organism` as a key and takes the latin name of the genome used (`mus musculus`, `homo sapiens`, etc) and `interesting_groups` which will be used to color quality control plots.::
 
     bcbiornaseq:
@@ -1014,9 +1017,6 @@ Single-cell RNA sequencing
 - ``demultiplexed`` If set to True, each file will be treated as a cell or well and not
   a collection of cells. Use this if your data has already been broken up into cells or
   wells.
-- ``quantify_genome_alignments`` If set to True, run Salmon quantification using the genome
-  alignments from STAR, when available. If STAR alignments are not available, use Salmon's
-  SA mode with decoys.
 
 smallRNA sequencing
 ===================
@@ -1035,7 +1035,7 @@ ChIP sequencing
 ===============
 
 - ``peakcaller`` bcbio only accepts ``[macs2]``
-- ``aligner`` Currently ``bowtie2`` is the only one tested
+- ``aligner`` Currently ``bowtie2`` is the only one tested. ``bwa`` is also available.
 - The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
 - ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Parameters will change depending on the option to get the best possible results. Only macs2 supported for now.
 
@@ -1047,6 +1047,11 @@ You can pass different parameters for ``macs2`` adding to :ref:`config-resources
             options: ["--broad"]
 
 .. _docs-config-qc:
+
+Methylation
+===========
+- ``aligner`` supports ``bismark``
+
 
 Quality control
 ===============
@@ -1113,7 +1118,10 @@ Post-processing
 - ``archive`` Specify targets for long term archival. ``cram`` removes fastq
   names and does 8-bin compression of BAM files into `CRAM format`_.
   ``cram-lossless`` generates CRAM files without changes to quality scores or
-  fastq name. Default: [] -- no archiving.
+  fastq name. Default: [] -- no archiving. Lossy cram has some issues, 
+  lossless cram provides pretty good compression relative to BAM, and many
+  machines output binned values now, so ``cram-lossless`` is what we
+  recommend you use.
 
 .. _CRAM format: http://www.ebi.ac.uk/ena/about/cram_toolkit
 

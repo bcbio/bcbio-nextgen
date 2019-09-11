@@ -24,6 +24,18 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   and the configuration files being used.
 - Swap samtools mpileup to use bcftools mpileup as samtools mpileup is being 
   deprecated (https://github.com/samtools/samtools/releases/tag/1.9).
+- Ensure locale is set to one supporting UTF-8 bcbio-wide. This may need to get
+  reverted if it introduces issues.
+- Added hg38 support for STAR. We did this by taking hg38 and removing the alts,
+  decoys and HLA sequences.
+- Added support for the arriba fusion caller.
+- Added back missing programs from the version provenance file. Fixed formatting
+  problems introduced by switch to python3.
+- Added initial support for whole genome bisulfite sequencing using bismark. Thanks to
+  @hackdna for implementing this and @jnhutchinson for drafting the initial
+  pipeline. This is a work in progress in collaboration with @gcampanella, who
+  has a similar implementation with some extra features that we will be merging
+  in soon.
 
 ## 1.1.5 (12 April 2019)
 
