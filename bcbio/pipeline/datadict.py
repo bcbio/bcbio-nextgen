@@ -197,6 +197,7 @@ LOOKUPS = {
                           "default": False},
     "joint_group_size": {"keys": ["config", "algorithm", "joint_group_size"],
                          "default": 200},
+    "arriba": {"keys": ["arriba"], "default": {}},
     "report": {"keys": ["config", "algorithm", "report"]},
     "work_bam": {"keys": ["work_bam"]},
     "deduped_bam": {"keys": ["deduped_bam"]},

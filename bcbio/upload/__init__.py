@@ -90,6 +90,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_salmon_files(algorithm, sample, out)
     out = _maybe_add_kallisto_files(algorithm, sample, out)
     out = _maybe_add_ericscript_files(algorithm, sample, out)
+    out = _maybe_add_arriba_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -552,6 +553,18 @@ def _maybe_add_pizzly(algorithm, sample, out):
         out.append({"path": pizzly_dir,
                     "type": "directory",
                     "ext": "pizzly"})
+    return out
+
+def _maybe_add_arriba_files(algorithm, sample, out):
+    pizzly_dir = dd.get_pizzly_dir(sample)
+    arriba = dd.get_arriba(sample)
+    if arriba:
+        out.append({"path": arriba["fusions"],
+                    "type": "tsv",
+                    "ext": "arriba-fusions"})
+        out.append({"path": arriba["discarded"],
+                    "type": "tsv",
+                    "ext": "arriba-discarded-fusions"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
