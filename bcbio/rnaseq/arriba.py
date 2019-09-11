@@ -37,7 +37,7 @@ def run_arriba(data):
                f"-O {tx_discarded_fusion_file} "
                f"-i {contig_list} ")
         if blacklist_file:
-            logger.info("arriba blacklist file found, running blacklisting with {blacklist_file}.")
+            logger.info(f"arriba blacklist file found, running blacklisting with {blacklist_file}.")
             cmd += (f"-b {blacklist_file} ")
         else:
             logger.info("arriba blacklist file not found, disabling blacklist filtering.")
