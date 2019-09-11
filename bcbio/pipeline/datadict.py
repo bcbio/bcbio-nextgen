@@ -253,6 +253,14 @@ def get_umi_consensus(data):
             "Using consensus UMI inputs requires marking duplicates"
         return umi
 
+#SN
+def get_correct_umis(data):
+    """
+    Do we need to correct UMIs with a whitelist?
+    """
+    umi = if tz.get_in(["config", "algorithm", "correct_umis"], data)
+    return umi
+
 def get_dexseq_gff(config, default=None):
     """
     some older versions of the genomes have the DEXseq gff file as
