@@ -106,6 +106,11 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items, gatk_type)
 
+            # Add a germline resource (gnomAD exomes) if available to improve
+            # runtime and reduce artifacts(GH#2873)
+            gnomad = dd.get_gnomad_exome_file(items[0])
+            if gnomad is not None:
+                params += ["--germline-resource", gnomad]
 
             if all(is_paired(bam) for bam in align_bams) and (
                     "mutect2_readmodel" in utils.get_in(items[0], "config",
