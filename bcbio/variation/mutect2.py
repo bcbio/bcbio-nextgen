@@ -109,7 +109,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             # Add a germline resource (gnomAD exomes) if available to improve
             # runtime and reduce artifacts(GH#2873)
             gnomad = dd.get_gnomad_exome_file(items[0])
-            if gnomad is not None:
+            if gatk_type == "gatk4" and gnomad is not None:
                 params += ["--germline-resource", gnomad]
 
             if all(is_paired(bam) for bam in align_bams) and (
