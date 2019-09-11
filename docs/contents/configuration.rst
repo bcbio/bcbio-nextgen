@@ -1031,7 +1031,7 @@ smallRNA sequencing
 - ``spikein_fasta`` A FASTA file of spike in sequences to quantitate.
 - ``umi_type: 'qiagen_smallRNA_umi'`` Support of Qiagen UMI small RNAseq protocol.
 
-ChIP sequencing
+ChIP/ATAC sequencing
 ===============
 
 - ``peakcaller`` bcbio only accepts ``[macs2]``
