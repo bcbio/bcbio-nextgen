@@ -194,7 +194,7 @@ def correct_umis(data):
     output_bam = os.path.join(utils.safe_makedir(os.path.join(os.getcwd(),
                               "align", dd.get_sample_name(data))),
                               "%s-umis_corrected%s" % utils.splitext_plus(os.path.basename(input_bam)))
-    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
+    jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(output_bam), 2)
     # Improve speeds by avoiding compression read/write bottlenecks
     io_opts = "--async-io=true --compression=0"
     umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis_file"], data)
