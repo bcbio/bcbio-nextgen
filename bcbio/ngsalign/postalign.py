@@ -194,16 +194,20 @@ def correct_umis(data):
     output_bam = os.path.join(utils.safe_makedir(os.path.join(os.getcwd(),
                               "align", dd.get_sample_name(data))),
                               "%s-umis_corrected%s" % utils.splitext_plus(os.path.basename(input_bam)))
-    print(output_bam)
     jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
     # Improve speeds by avoiding compression read/write bottlenecks
     io_opts = "--async-io=true --compression=0"
     umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis_file"], data)
+
+    print(output_bam)
+    print(umis_whitelist)
+    
     cmd = ("unset JAVA_HOME && "
            "fgbio {jvm_opts} {io_opts} CorrectUmis {group_opts} -t {umi_tag} -s {umi_method} -m 3 -d 1 -x"
-           "-U umis.txt"
+           "-U {umis_whitelist}"
            "-i {input_bam} -o {output_bam}")
     do.run(cmd.format(**locals()), "Correcting UMIs")
+    return output_bam
 
 def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
