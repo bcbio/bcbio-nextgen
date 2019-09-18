@@ -202,7 +202,7 @@ def correct_umis(data):
     cmd = ("unset JAVA_HOME && "
            "fgbio {jvm_opts} {io_opts} CorrectUmis {group_opts} -t {umi_tag} -s {umi_method} -m 3 -d 1 -x"
            "-U umis.txt"
-           "-i {align_bam} -o {output_bam}")
+           "-i {input_bam} -o {output_bam}")
     do.run(cmd.format(**locals()), "Correcting UMIs")
 
 def umi_consensus(data):
