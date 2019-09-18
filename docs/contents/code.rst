@@ -118,7 +118,7 @@ Make soft links to the data from your production bcbio instance (your installati
 path could be different from /n/app/bcbio)::
 
     ln -s /n/app/bcbio/biodata/genomes/ ${HOME}/local/share/genomes
-    ln -s /n/app/bcbio/biodata/galaxy/tool-data ${HOME}/local/share/galaxy/tool-data
+    ln -s /n/app/bcbio/biodata/galaxy/tool-data ${HOME}/local/share/bcbio/galaxy/tool-data
 
 Add this directory to your ``PATH`` (note that it is better to clear you PATH from
 the path of the production bcbio instance and its tools)::
@@ -135,8 +135,10 @@ Injecting bcbio code into bcbio installation
 
 To install from your bcbio-nextgen source tree for testing do::
 
-    #make sure you are using the development bcbio instance
+    # make sure you are using the development bcbio instance
     which bcbio_python
+    # local git folder
+    cd ~/code/bcbio-nextgen
     bcbio_python setup.py install
 
 One tricky part that we don't yet know how to work around is that pip and
