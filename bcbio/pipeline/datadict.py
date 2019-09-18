@@ -259,8 +259,8 @@ def get_correct_umis(data):
     """
     Do we need to correct UMIs with a whitelist?
     """
-    umi = if tz.get_in(["config", "algorithm", "correct_umis"], data):
-    return umi
+    umi_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
+    return umi_whitelist
 
 def get_dexseq_gff(config, default=None):
     """
