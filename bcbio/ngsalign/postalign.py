@@ -198,7 +198,7 @@ def correct_umis(data):
     # Improve speeds by avoiding compression read/write bottlenecks
     io_opts = "--async-io=true --compression=0"
     umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis_file"], data)
-    umi_method, umi_tag = _check_umi_type(align_bam)
+    umi_method, umi_tag = _check_umi_type(input_bam)
 
     print(output_bam)
     print(umis_whitelist)
