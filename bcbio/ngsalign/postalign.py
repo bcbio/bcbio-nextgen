@@ -197,7 +197,7 @@ def correct_umis(data):
     jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(output_bam), 2)
     # Improve speeds by avoiding compression read/write bottlenecks
     io_opts = "--async-io=true --compression=0"
-    umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis_file"], data)
+    umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
     umi_method, umi_tag = _check_umi_type(input_bam)
 
     print(output_bam)
