@@ -254,13 +254,16 @@ def get_umi_consensus(data):
             "Using consensus UMI inputs requires marking duplicates"
         return umi
 
-#SN
 def get_correct_umis(data):
     """
     Do we need to correct UMIs with a whitelist?
     """
     umi_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
-    return umi_whitelist
+    print(umi_whitelist)
+    if umi_whitelist:
+        return True
+    else:
+        return False
 
 def get_dexseq_gff(config, default=None):
     """
