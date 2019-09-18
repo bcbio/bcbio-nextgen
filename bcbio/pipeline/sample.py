@@ -1,5 +1,5 @@
 """High level entry point for processing a sample.
-c
+
 Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
