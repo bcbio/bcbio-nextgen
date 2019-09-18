@@ -204,7 +204,7 @@ def correct_umis(data):
     print(umis_whitelist)
 
     cmd = ("unset JAVA_HOME && "
-           "fgbio {jvm_opts} {io_opts} CorrectUmis {group_opts} "
+           "fgbio {jvm_opts} {io_opts} CorrectUmis "
            "-t {umi_tag} -m 3 -d 1 -x "
            "-U {umis_whitelist} "
            "-i {input_bam} -o {output_bam}")
