@@ -259,7 +259,6 @@ def get_correct_umis(data):
     Do we need to correct UMIs with a whitelist?
     """
     umi_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
-    print(umi_whitelist)
     if umi_whitelist:
         return True
     else:

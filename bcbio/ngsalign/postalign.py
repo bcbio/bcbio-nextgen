@@ -200,9 +200,6 @@ def correct_umis(data):
     umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
     umi_method, umi_tag = _check_umi_type(input_bam)
 
-    print(output_bam)
-    print(umis_whitelist)
-
     cmd = ("unset JAVA_HOME && "
            "fgbio {jvm_opts} {io_opts} CorrectUmis "
            "-t {umi_tag} -m 3 -d 1 -x "
