@@ -738,9 +738,10 @@ Somatic variant calling
 =======================
 
 - ``min_allele_fraction`` Minimum allele fraction to detect variants in
-  heterogeneous tumor samples, set as the float or integer percentage to
+  heterogeneous tumor samples, set as the float or integer **percentage** to
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
-  in the tumor sample of a tumor/normal pair.
+  in the tumor sample of a tumor/normal pair. It is percentage, not ratio,
+  it is divided /100.0 when calling vardict!
 
 .. _config-variant-annotation:
 
