@@ -561,10 +561,12 @@ def _maybe_add_arriba_files(algorithm, sample, out):
     if arriba:
         out.append({"path": arriba["fusions"],
                     "type": "tsv",
-                    "ext": "arriba-fusions"})
+                    "ext": "arriba-fusions",
+                    "dir": "arriba"})
         out.append({"path": arriba["discarded"],
                     "type": "tsv",
-                    "ext": "arriba-discarded-fusions"})
+                    "ext": "arriba-discarded-fusions",
+                    "dir": "arriba"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
