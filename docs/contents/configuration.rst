@@ -738,9 +738,10 @@ Somatic variant calling
 =======================
 
 - ``min_allele_fraction`` Minimum allele fraction to detect variants in
-  heterogeneous tumor samples, set as the float or integer percentage to
+  heterogeneous tumor samples, set as the float or integer **percentage** to
   resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this
-  in the tumor sample of a tumor/normal pair.
+  in the tumor sample of a tumor/normal pair. It is percentage, not ratio,
+  it is divided /100.0 when calling vardict!
 
 .. _config-variant-annotation:
 
@@ -942,6 +943,11 @@ Configuration options for UMIs:
   ``fastq_name`` with UMIs in read names or the path to a fastq file with
   UMIs for each aligned read.
 
+- ``correct_umis: [path/to/whitelist_umi.txt]``. For a restricted set of UMIs specify a
+  text file (one UMI per line). UMIs will be corrected with
+  http://fulcrumgenomics.github.io/fgbio/tools/latest/CorrectUmis.html
+
+
 You can adjust the `fgbio default options
 <https://github.com/bcbio/bcbio-nextgen/blob/8a76c9e546cb79621707082fd763bd643e0e9652/bcbio/ngsalign/postalign.py#L208>`_
 by adjusting :ref:`config-resources`. The most common change is modifying the
@@ -1006,7 +1012,7 @@ Single-cell RNA sequencing
 - ``sample_barcodes`` A text file with one barcode per line of expected sample
   barcodes. If the file contains sample name for each barcode, this will be used to
   create a ``tagcounts.mtx.metadata`` that match each cell with the sample name
-  associated with the barcode. The actual barcodes may be reverse complements of the 
+  associated with the barcode. The actual barcodes may be reverse complements of the
   sequences provided with the samples. It worth to check before running bcbio.
   For inDrops procol samples barcodes are in the fastq file for read3.
   This is an example of the ``sample_barcodes`` file::
@@ -1118,7 +1124,7 @@ Post-processing
 - ``archive`` Specify targets for long term archival. ``cram`` removes fastq
   names and does 8-bin compression of BAM files into `CRAM format`_.
   ``cram-lossless`` generates CRAM files without changes to quality scores or
-  fastq name. Default: [] -- no archiving. Lossy cram has some issues, 
+  fastq name. Default: [] -- no archiving. Lossy cram has some issues,
   lossless cram provides pretty good compression relative to BAM, and many
   machines output binned values now, so ``cram-lossless`` is what we
   recommend you use.

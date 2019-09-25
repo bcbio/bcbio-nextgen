@@ -173,6 +173,7 @@ LOOKUPS = {
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
+    "correct_umis": {"keys": ["config", "algorithm", "correct_umis"]},
     "sample_barcodes": {"keys": ["config", "algorithm", "sample_barcodes"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
                           "default": []},
@@ -252,6 +253,16 @@ def get_umi_consensus(data):
         assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
             "Using consensus UMI inputs requires marking duplicates"
         return umi
+
+def get_correct_umis(data):
+    """
+    Do we need to correct UMIs with a whitelist?
+    """
+    umi_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
+    if umi_whitelist:
+        return True
+    else:
+        return False
 
 def get_dexseq_gff(config, default=None):
     """
