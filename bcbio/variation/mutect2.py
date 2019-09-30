@@ -142,12 +142,12 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                                                               f1r2_file,
                                                               tx_f1r2_file)
 
-                    filter_cmd = _mutect2_filter(broad_runner,
+                    filter_cmd = _mutect2_filter(broad_runner, items,
                                                  tx_raw_prefilt_file,
                                                  tx_raw_file, ref_file,
                                                  tx_f1r2_file)
                 else:
-                    filter_cmd = _mutect2_filter(broad_runner,
+                    filter_cmd = _mutect2_filter(broad_runner, items,
                                                  tx_raw_prefilt_file,
                                                  tx_raw_file, ref_file)
                 if orientation_filter:
@@ -170,7 +170,7 @@ def _mutect2_read_filter(broad_runner, in_file, out_file):
               out_file]
     return "{}".format(broad_runner.cl_gatk(params, os.path.dirname(out_file)))
 
-def _mutect2_filter(broad_runner, in_file, out_file, ref_file, orient_file=None):
+def _mutect2_filter(broad_runner, items, in_file, out_file, ref_file, orient_file=None):
     """Filter of MuTect2 calls, a separate step in GATK4.
 
     Includes a pre-step to avoid stats information with zero callable reads, which
@@ -178,6 +178,9 @@ def _mutect2_filter(broad_runner, in_file, out_file, ref_file, orient_file=None)
     to 10 reads, which matches with actually having a call in the output file.
     """
     params = ["-T", "FilterMutectCalls", "--reference", ref_file, "--variant", in_file, "--output", out_file]
+    resources = config_utils.get_resources("mutect2_filter", items[0]["config"])
+    if "options" in resources:
+        params += [str(x) for x in resources.get("options", [])]
     if orient_file is not None:
         params += ["--ob-priors", orient_file]
     avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t10.0/' %s.stats" % in_file

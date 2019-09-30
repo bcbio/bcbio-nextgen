@@ -1,5 +1,5 @@
 """High level entry point for processing a sample.
-c
+
 Samples may include multiple lanes, or barcoded subsections of lanes,
 processed together.
 """
@@ -126,6 +126,8 @@ def process_alignment(data, alt_input=None):
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
         logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
         data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        if dd.get_correct_umis(data):
+            data["work_bam"] = postalign.correct_umis(data)
         if dd.get_umi_consensus(data):
             data["umi_bam"] = dd.get_work_bam(data)
             if fastq2:

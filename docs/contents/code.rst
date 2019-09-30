@@ -84,6 +84,9 @@ The most useful modules inside ``bcbio``, ordered by likely interest:
 Development infrastructure
 ==========================
 
+GitHub
+~~~~~~
+
 bcbio-nextgen uses GitHub for code development, and we welcome
 pull requests. GitHub makes it easy to establish custom forks of the
 code and contribute those back. The Biopython documentation has great
@@ -91,22 +94,51 @@ information on `using git and GitHub`_ for a community developed
 project. In short, make a fork of the `bcbio code
 <https://github.com/bcbio/bcbio-nextgen>`_ by clicking the ``Fork`` button in
 the upper right corner of the GitHub page, commit your changes to this custom
-fork and keep it up to date with the main bcbio repository as you develop. The 
-github help pages have detailed information on keeping your fork updated with 
+fork and keep it up to date with the main bcbio repository as you develop. The
+github help pages have detailed information on keeping your fork updated with
 the main github repository (e.g. https://help.github.com/articles/syncing-a-fork/).
-After commiting changes, click ``New Pull Request`` from your fork when you'd like 
+After commiting changes, click ``New Pull Request`` from your fork when you'd like
 to submit your changes for integration in bcbio.
 
-For developing and testing changes locally, you can install directly into a
-bcbio-nextgen installation. The automated bcbio-nextgen
-installer creates an isolated Python environment using `Anaconda`_. This will be
-a subdirectory of your installation root, like
-``/usr/local/share/bcbio-nextgen/anaconda``. The installer also includes a
-``bcbio_python`` executable target which is the python in this isolated anaconda
-directory. You generally will want to make changes to your local copy of the
-bcbio-nextgen code and then install these into the code directory.
+Creating a separate bcbio installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When developing, you'd like to avoid breaking your production bcbio instance.
+Use the installer to create a separate bcbio instance without downloading any data.
+Before installing the second bcbio instance, investigate your PATH and PYTHONPATH
+variables. It is better to avoid mixing bcbio instances in the PATH. Also watch
+``~/.conda/environments.txt``.
+
+To install in ${HOME}/local/share/bcbio (your location might be different)::
+
+    wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    python bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata --isolate
+
+Make soft links to the data from your production bcbio instance (your installation
+path could be different from /n/app/bcbio)::
+
+    ln -s /n/app/bcbio/biodata/genomes/ ${HOME}/local/share/genomes
+    ln -s /n/app/bcbio/biodata/galaxy/tool-data ${HOME}/local/share/bcbio/galaxy/tool-data
+
+Add this directory to your ``PATH`` (note that it is better to clear you PATH from
+the path of the production bcbio instance and its tools)::
+
+    echo $PATH
+    # use everything you need except of production bcbio
+    export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:
+    export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:$PATH
+
+Or directly call the testing bcbio: ``${HOME}/local/share/bcbio/anaconda/bin/bcbio_nextgen.py``.
+
+Injecting bcbio code into bcbio installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 To install from your bcbio-nextgen source tree for testing do::
 
+    # make sure you are using the development bcbio instance
+    which bcbio_python
+    # local git folder
+    cd ~/code/bcbio-nextgen
     bcbio_python setup.py install
 
 One tricky part that we don't yet know how to work around is that pip and
@@ -120,15 +152,6 @@ is to manually remove the current pip installed bcbio-nextgen code (``rm -rf
 manually with ``bcbio_python setup.py install``. We'd welcome tips about ways to
 force consistent installation across methods.
 
-If you want to test with bcbio_nextgen code in a separate environment from your
-work directory, we recommend using the installer to install only
-the bcbio code into a separate directory::
-
-    python bcbio_nextgen_install.py /path/to/testbcbio --nodata --isolate
-
-Then add this directory to your ``PATH`` before your bcbio installation with the
-tools: ``export PATH=/path/to/testbcbio/anaconda/bin:$PATH``, or directly
-calling the testing bcbio ``/path/to/testbcbio/anaconda/bin/bcbio_nextgen.py``.
 
 .. _using git and GitHub: http://biopython.org/wiki/GitUsage
 .. _Anaconda: http://docs.continuum.io/anaconda/index.html

@@ -11,6 +11,8 @@ https://github.com/AstraZeneca-NGS/VarDict
 
 specify 'vardict-perl'.
 """
+from decimal import *
+
 from distutils.version import LooseVersion
 import os
 import sys
@@ -82,7 +84,7 @@ def _add_freq_options(config, opts, var2vcf_opts):
     default                       -     -                  min_allele_fraction   min_allele_fraction
     """
     if "-f" not in opts:
-        freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
+        freq = Decimal(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / Decimal(100.0)
         opts.extend(["-f", str(freq)])
         if "-f" not in var2vcf_opts:
             var2vcf_opts.extend(["-f", str(freq)])
