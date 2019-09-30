@@ -1298,6 +1298,8 @@ and memory and compute resources to devote to them::
         memory: 2G
       gatk:
         jvm_opts: ["-Xms2g", "-Xmx4g"]
+      mutect2_filter:
+        options: ["--max-events-in-region", "2"]
 
 - ``cmd`` Location of an executable. By default, we assume executables
   are on the path.
@@ -1331,6 +1333,10 @@ and memory and compute resources to devote to them::
             SENTIEON_LICENSE_SERVER: 100.100.100.100:8888
             SENTIEON_AUTH_MECH: XXX
             SENTIEON_AUTH_DATA: signature
+- ``options`` Adjust specific command line options for a program. This can be hard
+  to support for many tools due to conflicts with other existing options but is
+  available for some tools:
+    - ``mutect2``, ``mutect2_filter``: Adjust for Mutect2 calls and filtering.
 
 Temporary directory
 ===================

@@ -1,6 +1,8 @@
 resources:
   bcbio_prioritize:
     jvm_opts: [-Xms1g, -Xmx3g]
+    #   mutect2_filter:
+    #     options: ["--max-events-in-region", "10"]
 upload:
   dir: upload
 fc_date: '130728'
