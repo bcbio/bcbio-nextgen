@@ -284,12 +284,12 @@ and template YAML::
       - analysis: variant2
         genome_build: hg38
         algorithm:
-          svcaller: [gatk4-cnv, seq2c]
+          svcaller: [gatk-cnv, seq2c]
           variant_regions: your_regions.bed
 
 After running, collect the panel of normal files from each calling method:
 
-- gatk4-cnv: `work/structural/testsample/bins/background1-pon_build-pon.hdf5`
+- gatk-cnv: `work/structural/testsample/bins/background1-pon_build-pon.hdf5`
 - seq2c: This doesn't have a default panel of normals file format so we create a
   bcbio specific one as a concatenation of the read mapping file
   (`final/date_project/seq2c-read_mapping.txt`) and coverage file

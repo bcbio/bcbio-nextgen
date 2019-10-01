@@ -717,7 +717,7 @@ def _check_hetcaller(item):
     hets = _get_as_list(item, "hetcaller")
     if hets or any([x in svs for x in ["titancna", "purecn"]]):
         if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
-            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk4-cnv` "
+            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk-cnv` "
                              "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
 
 def _check_jointcaller(data):
