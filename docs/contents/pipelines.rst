@@ -298,6 +298,9 @@ After running, collect the panel of normal files from each calling method:
   as background.
 - CNVkit: `final/testsample/testsample-cnvkit-background.cnn`
 
+CNVkit and gatk-cnv cannot be run together, because they require different,
+incompatible normalization schemes.
+
 Once you have the panel of normals, use them as background in any tumor only project
 with the same sequencing and capture process in your :ref: `variant-config` configuration::
 
