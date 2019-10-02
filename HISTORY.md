@@ -36,7 +36,9 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   pipeline. This is a work in progress in collaboration with @gcampanella, who
   has a similar implementation with some extra features that we will be merging
   in soon.
-
+- qualimap for RNA-seq runs on the downsampled BAM files by default. Set 
+  `tools_on: [qualimap_full]` to run on the full BAM files.
+  
 ## 1.1.5 (12 April 2019)
 
 - Fixes for Python3 incompatibilities on distributed IPython runs.
