@@ -153,6 +153,8 @@ def _update_data(align_file, out_dir, names, data):
     if sjfile:
         sjbed = junction2bed(sjfile)
         data = dd.set_junction_bed(data, sjbed)
+    sjchimfile = get_chimericjunction_file(out_dir, data)
+    data = dd.set_chimericjunction(data, sjchimfile)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -214,12 +216,23 @@ def get_star_version(data):
                 version = line.split("STAR_")[1].strip()
     return version
 
+def get_chimericjunction_file(out_dir, data):
+    """
+    locate the chimeric splice junction file starting from the alignment directory
+    """
+    samplename = dd.get_sample_name(data)
+    sjfile = os.path.join(out_dir, os.pardir, f"{samplename}Chimeric.out.junction")
+    if file_exists(sjfile):
+        return sjfile
+    else:
+        return None
+
 def get_splicejunction_file(out_dir, data):
     """
     locate the splicejunction file starting from the alignment directory
     """
     samplename = dd.get_sample_name(data)
-    sjfile = os.path.join(out_dir, os.pardir, "{0}SJ.out.tab").format(samplename)
+    sjfile = os.path.join(out_dir, os.pardir, f"{samplename}SJ.out.tab")
     if file_exists(sjfile):
         return sjfile
     else:

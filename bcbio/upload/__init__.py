@@ -91,6 +91,7 @@ def _get_files_rnaseq(sample):
     out = _maybe_add_kallisto_files(algorithm, sample, out)
     out = _maybe_add_ericscript_files(algorithm, sample, out)
     out = _maybe_add_arriba_files(algorithm, sample, out)
+    out = _maybe_add_junction_files(algorithm, sample, out)
     return _add_meta(out, sample)
 
 def _get_files_srnaseq(sample):
@@ -567,6 +568,24 @@ def _maybe_add_arriba_files(algorithm, sample, out):
                     "type": "tsv",
                     "ext": "arriba-discarded-fusions",
                     "dir": "arriba"})
+    return out
+
+def _maybe_add_junction_files(algorithm, sample, out):
+    """
+    add splice junction files from STAR, if available
+    """
+    junction_bed = dd.get_junction_bed(sample)
+    if junction_bed:
+        out.append({"path": junction_bed,
+                    "type": "bed",
+                    "ext": "SJ",
+                    "dir": "STAR"})
+    chimeric_file = dd.get_chimericjunction(sample)
+    if chimeric_file:
+        out.append({"path": chimeric_file,
+                    "type": "tsv",
+                    "ext": "chimericSJ",
+                    "dir": "STAR"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
