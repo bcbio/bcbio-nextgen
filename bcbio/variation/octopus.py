@@ -28,7 +28,7 @@ def run(align_bams, items, ref_file, assoc_files, region, out_file):
             return _run_germline(align_bams, items, ref_file, target, out_file)
     return out_file
 
-def _produce_compatible_vcf(out_file, data, is_somatic):
+def _produce_compatible_vcf(out_file, data, is_somatic=False):
     """Create a compatible VCF that downstream tools can deal with.
 
     - htsjdk and thus GATK and Picard do not support VCF4.3:
