@@ -38,6 +38,7 @@ results with the hisat2 aligner and for RNA-seq just setting it to unstranded
   in soon.
 - qualimap for RNA-seq runs on the downsampled BAM files by default. Set 
   `tools_on: [qualimap_full]` to run on the full BAM files.
+- Add STAR junction files to the files captured at the end of a run.
   
 ## 1.1.5 (12 April 2019)
 
