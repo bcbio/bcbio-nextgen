@@ -151,6 +151,7 @@ def _update_data(align_file, out_dir, names, data):
     data = dd.set_transcriptome_bam(data, transcriptome_file)
     sjfile = get_splicejunction_file(out_dir, data)
     if sjfile:
+        data = dd.set_starjunction(data, sjfile)
         sjbed = junction2bed(sjfile)
         data = dd.set_junction_bed(data, sjbed)
     sjchimfile = get_chimericjunction_file(out_dir, data)

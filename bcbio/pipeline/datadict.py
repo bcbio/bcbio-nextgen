@@ -143,6 +143,7 @@ LOOKUPS = {
     "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "junction_bed": {"keys": ["junction_bed"]},
+    "starjunction": {"keys": ["starjunction"]},
     "chimericjunction": {"keys": ["chimericjunction"]},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},

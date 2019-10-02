@@ -587,6 +587,12 @@ def _maybe_add_junction_files(algorithm, sample, out):
                     "type": "tsv",
                     "ext": "chimericSJ",
                     "dir": "STAR"})
+    sj_file = dd.get_starjunction(sample)
+    if sj_file:
+        out.append({"path": sj_file,
+                    "type": "tab",
+                    "ext": "SJ",
+                    "dir": "STAR"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
