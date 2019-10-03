@@ -6,27 +6,39 @@ import os
 import subprocess
 
 import pysam
+import six
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
-from bcbio.variation import bedutils, vcfutils
+from bcbio.variation import bamprep, bedutils, vcfutils
 
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run octopus variant calling, handling both somatic and germline calling.
     """
     if not utils.file_exists(out_file):
         paired = vcfutils.get_paired_bams(align_bams, items)
-        vrs = bedutils.population_variant_regions(items)
-        target = shared.subset_variant_regions(vrs, region,
-                                               out_file, items=items, do_merge=True)
+        regions = _get_regions(region, out_file, items)
         if paired:
-            return _run_somatic(paired, ref_file, target, out_file)
+            return _run_somatic(paired, ref_file, regions, out_file)
         else:
-            return _run_germline(align_bams, items, ref_file, target, out_file)
+            return _run_germline(align_bams, items, ref_file, regions, out_file)
     return out_file
+
+def _get_regions(region, out_file, items):
+    """Retrieve region to run analysis in. Handles no targets, BED and regions.
+    """
+    vrs = bedutils.population_variant_regions(items)
+    target = shared.subset_variant_regions(vrs, region, out_file, items=items, do_merge=True)
+    if target:
+        if isinstance(target, six.string_types) and os.path.isfile(target):
+            return "--regions-file %s" % target
+        else:
+            return "--regions %s" % bamprep.region_to_gatk(target)
+    else:
+        return ""
 
 def _produce_compatible_vcf(out_file, data, is_somatic=False):
     """Create a compatible VCF that downstream tools can deal with.
@@ -80,7 +92,7 @@ def _covert_to_diploid(in_file, data):
     out_vcf.close()
     return vcfutils.bgzip_and_index(out_file, data["config"])
 
-def _run_germline(align_bams, items, ref_file, target, out_file):
+def _run_germline(align_bams, items, ref_file, regions, out_file):
     """Run germline calling, handling populations.
 
     TODO:
@@ -90,7 +102,7 @@ def _run_germline(align_bams, items, ref_file, target, out_file):
     align_bams = " ".join(align_bams)
     cores = dd.get_num_cores(items[0])
     cmd = ("octopus --threads {cores} --reference {ref_file} --reads {align_bams} "
-           "--regions-file {target} "
+           "{regions} "
            "--working-directory {tmp_dir} "
            "-o {tx_out_file} --legacy")
     with file_transaction(items[0], out_file) as tx_out_file:
@@ -99,7 +111,7 @@ def _run_germline(align_bams, items, ref_file, target, out_file):
         _produce_compatible_vcf(tx_out_file, items[0])
     return out_file
 
-def _run_somatic(paired, ref_file, target, out_file):
+def _run_somatic(paired, ref_file, regions, out_file):
     """Run somatic calling with octopus, handling both paired and tumor-only cases.
 
     Tweaks for low frequency, tumor only and UMI calling documented in:
@@ -114,7 +126,7 @@ def _run_somatic(paired, ref_file, target, out_file):
     min_af = max([float(dd.get_min_allele_fraction(paired.tumor_data)) / 100.0, 0.004])
     min_af_floor = min_af / 4.0
     cmd = ("octopus --threads {cores} --reference {ref_file} --reads {align_bams} "
-           "--regions-file {target} "
+           "{regions} "
            "--min-credible-somatic-frequency {min_af_floor} --min-expected-somatic-frequency {min_af} "
            "--downsample-above 4000 --downsample-target 4000 --min-kmer-prune 5 --min-bubble-score 20 "
            "--max-haplotypes 200 --somatic-snv-mutation-rate '5e-4' --somatic-indel-mutation-rate '1e-05' "
