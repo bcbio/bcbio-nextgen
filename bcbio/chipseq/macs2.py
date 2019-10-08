@@ -8,6 +8,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio import bam
 
+
 def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, data):
     """
     Run macs2 for chip and input samples avoiding
@@ -61,10 +62,10 @@ def _macs2_cmd(method="chip"):
     """Main command for macs2 tool."""
     if method.lower() == "chip":
         cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam} {paired} "
-                " {genome_size} -n {name} -B {options}")
+                " {genome_size} -n {name} --bdg {options}")
     elif method.lower() == "atac":
         cmd = ("{macs2} callpeak -t {chip_bam} --nomodel "
-               " {paired} {genome_size} -n {name} -B {options}"
+               " {paired} {genome_size} -n {name} --bdg {options}"
                " --nolambda --keep-dup all")
     else:
         raise ValueError("chip_method should be chip or atac.")
