@@ -109,7 +109,8 @@ Before installing the second bcbio instance, investigate your PATH and PYTHONPAT
 variables. It is better to avoid mixing bcbio instances in the PATH. Also watch
 ``~/.conda/environments.txt``.
 
-To install in ${HOME}/local/share/bcbio (your location might be different)::
+To install in ${HOME}/local/share/bcbio (your location might be different, 
+make sure you have ~30G of disk quota there)::
 
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
     python bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata --isolate

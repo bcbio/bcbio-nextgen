@@ -158,10 +158,6 @@ other analyses. The available targets are:
   collection of genome variants, expanding on ExAC to include whole genome and
   more exome inputs. This is a large 25Gb download, available for human genome
   builds GRCh37, hg19 and hg38.
-- ``cadd`` -- `CADD <http://cadd.gs.washington.edu/home>`_ evaluates the
-  potential impact of variations. It is freely available for non-commercial
-  research, but requires licensing for commercial usage. The download is 30Gb and
-  GEMINI will include CADD annotations if present.
 - ``vep`` -- Data files for the `Variant Effects Predictor (VEP)
   <http://www.ensembl.org/info/docs/tools/vep/index.html>`_. To use VEP as an
   alternative to the default installed snpEff, set ``vep`` in the
