@@ -1,4 +1,4 @@
-## 1.1.6 (in progress)
+## 1.1.6 
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
 - RNA-seq: fixes for cufflinks preparation due to python3 transition.
