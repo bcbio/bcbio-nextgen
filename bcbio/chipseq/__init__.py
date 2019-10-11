@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import toolz as tz
 from bcbio import utils
@@ -9,6 +10,7 @@ from bcbio.ngsalign import bowtie2, bwa
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
+from bcbio.heterogeneity.chromhacks import get_mitochondrial_chroms
 
 def clean_chipseq_alignment(data):
     aligner = dd.get_aligner(data)
@@ -34,7 +36,13 @@ def clean_chipseq_alignment(data):
     if encode_bed:
         data["work_bam"] = _prepare_bam(dd.get_work_bam(data), encode_bed, data['config'])
         bam.index(data["work_bam"], data['config'])
-    data["bigwig"] = _bam_coverage(dd.get_sample_name(data), dd.get_work_bam(data), data)
+    try:
+        data["bigwig"] = _normalized_bam_coverage(dd.get_sample_name(data),
+                                                  dd.get_work_bam(data), data)
+    except subprocess.CalledProcessError:
+        logger.warning(f"{dd.get_work_bam(data)} was too sparse to normalize, falling back to non-normalized coverage.")
+        data["bigwig"] = _bam_coverage(dd.get_sample_name(data),
+                                       dd.get_work_bam(data), data)
     return [[data]]
 
 def _keep_assembled_chrom(bam_file, genome, config):
@@ -71,9 +79,9 @@ def _prepare_bam(bam_file, bed_file, config):
 
 def _bam_coverage(name, bam_input, data):
     """Run bamCoverage from deeptools"""
-    cmd = ("{bam_coverage} -b {bam_input} -o {bw_output} "
+    cmd = ("{bam_coverage} --bam {bam_input} --outFileName {bw_output} "
           "--binSize 20 --effectiveGenomeSize {size} "
-          "--smoothLength 60 --extendReads 150 --centerReads -p {cores}")
+          "--smoothLength 60 --extendReads 150 --centerReads -p {cores} ")
     size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     cores = dd.get_num_cores(data)
     try:
@@ -81,6 +89,36 @@ def _bam_coverage(name, bam_input, data):
     except config_utils.CmdNotFound:
         logger.info("No bamCoverage found, skipping bamCoverage.")
         return None
+    resources = config_utils.get_resources("bamCoverage", data["config"])
+    if resources:
+        options = resources.get("options")
+        if options:
+            cmd += " %s" % " ".join([str(x) for x in options])
+    bw_output = os.path.join(os.path.dirname(bam_input), "%s.bw" % name)
+    if utils.file_exists(bw_output):
+        return bw_output
+    with file_transaction(bw_output) as out_tx:
+        do.run(cmd.format(**locals()), "Run bamCoverage in %s" % name)
+    return bw_output
+
+def _normalized_bam_coverage(name, bam_input, data):
+    """Run bamCoverage from deeptools but produce normalized bigWig files"""
+    cmd = ("{bam_coverage} --bam {bam_input} --outFileName {bw_output} "
+          "--binSize 20 --effectiveGenomeSize {size} "
+          "--smoothLength 60 --extendReads 150 --centerReads -p {cores} ")
+    size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
+    cores = dd.get_num_cores(data)
+    try:
+        bam_coverage = config_utils.get_program("bamCoverage", data)
+    except config_utils.CmdNotFound:
+        logger.info("No bamCoverage found, skipping bamCoverage.")
+        return None
+    method = dd.get_chip_method(data)
+    cmd += "--normalizeUsing CPM "
+    toignore = get_mitochondrial_chroms(data)
+    if toignore:
+        ignorenormflag = f"--ignoreForNormalization {' '.join(toignore)} "
+        cmd += ignorenormflag
     resources = config_utils.get_resources("bamCoverage", data["config"])
     if resources:
         options = resources.get("options")
