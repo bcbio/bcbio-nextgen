@@ -1050,6 +1050,9 @@ ChIP/ATAC sequencing
 - ``aligner`` Currently ``bowtie2`` is the only one tested. ``bwa`` is also available.
 - The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
 - ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Parameters will change depending on the option to get the best possible results. Only macs2 supported for now.
+- ``antibody``: automatically sets peakcalling options tailored for the specific anitbody. Supports
+`h3f3a`, `h3k27me3`, `h3k36me3`, `h3k4me1`, `h3k79me2`, `h3k9me3`, `h3k9me1`, `h3k9me2`, `h4k20me1`,
+`h2afz`, `h3ac`, `h3k27ac`, `h3k4me2`, `h3k4me3`, `h3k9ac`, `h3k9me3`.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 

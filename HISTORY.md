@@ -1,3 +1,7 @@
+## 1.1.8 (in progress)
+- Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
+settings for that antibody. See the documentation for supported antibodies.
+
 ## 1.1.7 (10 October 2019)
 - hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
 
