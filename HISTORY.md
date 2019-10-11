@@ -1,3 +1,6 @@
+## 1.1.7
+- hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
+
 ## 1.1.6 
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
