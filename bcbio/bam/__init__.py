@@ -561,3 +561,21 @@ def convert_invalid_mapq(in_bam, out_bam=None):
                     read.mapq = VALIDMAPQ
                 out_bam_fh.write(read)
     return out_bam
+
+def remove_duplicates(in_bam, data):
+    """
+    remove duplicates from a duplicate marked BAM file
+    """
+    base, ext = os.path.splitext(in_bam)
+    out_bam = base + "-noduplicates" + ext
+    if utils.file_exists(out_bam):
+        return out_bam
+    num_cores = dd.get_num_cores(data)
+    sambamba = config_utils.get_program("sambamba", data)
+    with file_transaction(out_bam) as tx_out_bam:
+        cmd = (f'{sambamba} view -h --nthreads {num_cores} -f bam -F "not duplicate" '
+               f'{in_bam} > {tx_out_bam}')
+        message = f"Removing duplicates from {in_bam}, saving as {out_bam}."
+        do.run(cmd, message)
+    index(out_bam, dd.get_config(data))
+    return out_bam

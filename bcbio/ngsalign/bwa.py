@@ -277,7 +277,7 @@ def filter_multimappers(align_file, data):
     bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
     if utils.file_exists(out_file):
         return out_file
-    base_filter = '-F "not unmapped {paired_filter} and not duplicate and [XA] == null and [SA] == null and not supplementary " '
+    base_filter = '-F "not unmapped {paired_filter} and [XA] == null and [SA] == null and not supplementary " '
     if bam.is_paired(align_file):
         paired_filter = "and paired and proper_pair"
     else:

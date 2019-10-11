@@ -311,7 +311,7 @@ def _check_dedup(data):
     return dup_param
 
 def dedup_bam(in_bam, data):
-    """Perform non-stream based deduplication of BAM input files using biobambam.
+    """Perform non-stream based duplicate marking of BAM input files using biobambam.
     """
     if _check_dedup(data):
         out_file = os.path.join(utils.safe_makedir(os.path.join(os.getcwd(), "align", dd.get_sample_name(data))),
@@ -324,7 +324,7 @@ def dedup_bam(in_bam, data):
                     cores, mem = _get_cores_memory(data, downscale=2)
                     cmd = ("{bammarkduplicates} tmpfile={base_tmp}-markdup "
                            "markthreads={cores} I={in_bam} O={tx_out_file}")
-                    do.run(cmd.format(**locals()), "De-duplication with biobambam")
+                    do.run(cmd.format(**locals()), f"Mark duplication of {in_bam} with biobambam.")
         bam.index(out_file, data["config"])
         return out_file
     else:

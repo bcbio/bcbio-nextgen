@@ -71,6 +71,8 @@ LOOKUPS = {
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
     "variantcaller_order": {"keys": ['config', 'algorithm', 'variantcaller_order'], "default": 0},
+    "keep_duplicates": {"keys": ['config', 'algorithm', "keep_duplicates"], "default": False},
+    "keep_multimapped": {"keys": ['config', 'algorithm', "keep_multimapped"], "default": False},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
     "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
