@@ -6,7 +6,7 @@ aliases:
   ensembl: homo_sapiens_merged_vep_98_GRCh38
 
 variation:
-  dbsnp: ../variation/dbsnp-152.vcf.gz
+  dbsnp: ../variation/dbsnp-151.vcf.gz
   dbnsfp: ../variation/dbNSFP.txt.gz
   dbscsnv: ../variation/dbscSNV.txt.gz
   genesplicer: ../variation/genesplicer
