@@ -176,6 +176,7 @@ LOOKUPS = {
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
     "correct_umis": {"keys": ["config", "algorithm", "correct_umis"]},
+    "use_lowfreq_filter": {"keys": ["config", "algorithm", "use_lowfreq_filter"]},
     "sample_barcodes": {"keys": ["config", "algorithm", "sample_barcodes"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
                           "default": []},
