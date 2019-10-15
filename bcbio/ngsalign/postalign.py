@@ -198,14 +198,19 @@ def correct_umis(data):
     # Improve speeds by avoiding compression read/write bottlenecks
     io_opts = "--async-io=true --compression=0"
     umis_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
-    umi_method, umi_tag = _check_umi_type(input_bam)
 
-    cmd = ("unset JAVA_HOME && "
-           "fgbio {jvm_opts} {io_opts} CorrectUmis "
-           "-t {umi_tag} -m 3 -d 1 -x "
-           "-U {umis_whitelist} "
-           "-i {input_bam} -o {output_bam}")
-    do.run(cmd.format(**locals()), "Correcting UMIs")
+    fgbio = config_utils.get_program("fgbio", data["config"])
+    samtools = config_utils.get_program("samtools", data["config"])
+
+    if not utils.file_exists(output_bam):
+        umi_method, umi_tag = _check_umi_type(input_bam)
+        cmd = ("unset JAVA_HOME && "
+               "{fgbio} {jvm_opts} {io_opts} CorrectUmis "
+               "-t {umi_tag} -m 3 -d 1 -x "
+               "-U {umis_whitelist} "
+               "-i {input_bam} -o /dev/stdout | {samtools} view -bh > {output_bam}")
+        do.run(cmd.format(**locals()), "Correcting UMIs")
+        bam.index(output_bam, data["config"])
     return output_bam
 
 def umi_consensus(data):
@@ -216,6 +221,8 @@ def umi_consensus(data):
     f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
     f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
     avg_coverage = coverage.get_average_coverage("rawumi", dd.get_variant_regions(data), data)
+    fgbio = config_utils.get_program("fgbio", data["config"])
+    bamtofastq = config_utils.get_program("bamtofastq", data["config"])
     if not utils.file_uptodate(f1_out, align_bam):
         with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
@@ -227,13 +234,13 @@ def umi_consensus(data):
             tempfile = "%s-bamtofastq-tmp" % utils.splitext_plus(f1_out)[0]
             ref_file = dd.get_ref_file(data)
             cmd = ("unset JAVA_HOME && "
-                   "fgbio {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -t {umi_tag} -s {umi_method} "
+                   "{fgbio} {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -t {umi_tag} -s {umi_method} "
                    "-i {align_bam} | "
-                   "fgbio {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=:none: "
+                   "{fgbio} {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=:none: "
                    "-i /dev/stdin -o /dev/stdout | "
-                   "fgbio {jvm_opts} {io_opts} FilterConsensusReads {filter_opts} -r {ref_file} "
+                   "{fgbio} {jvm_opts} {io_opts} FilterConsensusReads {filter_opts} -r {ref_file} "
                    "-i /dev/stdin -o /dev/stdout | "
-                   "bamtofastq collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
+                   "{bamtofastq} collate=1 T={tempfile} F={tx_f1_out} F2={tx_f2_out} tags=cD,cM,cE gz=1")
             do.run(cmd.format(**locals()), "UMI consensus fastq generation")
     return f1_out, f2_out, avg_coverage
 

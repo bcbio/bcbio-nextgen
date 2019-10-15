@@ -170,13 +170,19 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
-                lowfreq_filter = _lowfreq_linear_filter(0, False)
+                use_lowfreq_filter = config["algorithm"].get("use_lowfreq_filter")
+                if use_lowfreq_filter is False:
+                    lowfreq_filter = " | "
+                else:
+                    lowfreq_filter = " | " + _lowfreq_linear_filter(0, False) + " | "
+                teststrandbias = config_utils.get_program("teststrandbias.R", config)
+                var2vcf_valid = config_utils.get_program("var2vcf_valid.pl", config)
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {sample} -b {bamfile} {opts} "
-                       "| teststrandbias.R "
-                       "| var2vcf_valid.pl -A -N {sample} -E {var2vcf_opts} "
-                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' | {lowfreq_filter} "
-                       "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                       "| {teststrandbias} "
+                       "| {var2vcf_valid} -A -N {sample} -E {var2vcf_opts} "
+                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' {lowfreq_filter} "
+                       "{fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
