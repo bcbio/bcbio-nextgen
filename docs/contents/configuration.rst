@@ -743,6 +743,12 @@ Somatic variant calling
   in the tumor sample of a tumor/normal pair. It is percentage, not ratio,
   it is divided /100.0 when calling vardict!
 
+- ``use_lowfreq_filter: false``. When set, forces vardict to report variants
+  with low allelec frequency, useful to call variants in panels with high coverage
+  (>1000x). The default (option is not set to false in the config) is to use
+  low frequency filter, i.e. variants could be underreported (variant VAF is above
+  min_allele_fraction but rejected by the filter).
+
 .. _config-variant-annotation:
 
 Variant annotation
