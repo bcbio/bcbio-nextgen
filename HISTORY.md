@@ -1,7 +1,7 @@
-## 1.1.7
+## 1.1.7 (10 October 2019)
 - hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
 
-## 1.1.6 
+## 1.1.6 (10 October 2019)
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
 - RNA-seq: fixes for cufflinks preparation due to python3 transition.
