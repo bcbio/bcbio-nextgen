@@ -235,8 +235,7 @@ def get_ped_info(data, samples):
         "family_id": family_id,
         "maternal_id": tz.get_in(["metadata", "maternal_id"], data, -9),
         "paternal_id": tz.get_in(["metadata", "paternal_id"], data, -9),
-        "affected": get_affected_status(data),
-        "ethnicity": tz.get_in(["metadata", "ethnicity"], data, -9)
+        "affected": get_affected_status(data)
     }
 
 def create_ped_file(samples, base_vcf, out_dir=None):
@@ -249,7 +248,8 @@ def create_ped_file(samples, base_vcf, out_dir=None):
     if out_dir:
         out_file = os.path.join(out_dir, os.path.basename(out_file))
     sample_ped_lines = {}
-    header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID", "Sex", "Phenotype", "Ethnicity"]
+    header = ["#Family_ID", "Individual_ID", "Paternal_ID", "Maternal_ID",
+              "Sex", "Phenotype"]
     for md_ped in list(set([x for x in [tz.get_in(["metadata", "ped"], data)
                                         for data in samples] if x is not None])):
         with open(md_ped) as in_handle:
@@ -275,8 +275,7 @@ def create_ped_file(samples, base_vcf, out_dir=None):
                         else:
                             writer.writerow([ped_info["family_id"], ped_info["individual_id"],
                                             ped_info["paternal_id"], ped_info["maternal_id"],
-                                            ped_info["gender"], ped_info["affected"],
-                                            ped_info["ethnicity"]])
+                                            ped_info["gender"], ped_info["affected"]])
     return out_file
 
 def _find_shared_batch(samples):
