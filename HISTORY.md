@@ -3,6 +3,7 @@
 settings for that antibody. See the documentation for supported antibodies.
 - Add `use_lowfreq_filter` for forcing vardict to report variants with low allelic frequency,
 useful for calling somatic variants in panels with high coverage.
+- Fix for checking for pre-existing inputs with python3.
 
 ## 1.1.7 (10 October 2019)
 - hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
