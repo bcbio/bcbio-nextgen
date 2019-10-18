@@ -109,7 +109,7 @@ def greylisting(data):
     """
     input_bam = data.get("work_bam_input", None)
     if not input_bam:
-        logger.info("No input BAM file detected, skipping greylisting.")
+        logger.info("No input control BAM file detected, skipping greylisting.")
         return None
     try:
         greylister = config_utils.get_program("chipseq-greylist", data)
