@@ -273,9 +273,12 @@ def create_ped_file(samples, base_vcf, out_dir=None):
                         if sname in sample_ped_lines:
                             writer.writerow(sample_ped_lines[sname])
                         else:
-                            writer.writerow([ped_info["family_id"], ped_info["individual_id"],
-                                            ped_info["paternal_id"], ped_info["maternal_id"],
-                                            ped_info["gender"], ped_info["affected"]])
+                            writer.writerow([ped_info["family_id"],
+                                             ped_info["individual_id"],
+                                             ped_info["paternal_id"],
+                                             ped_info["maternal_id"],
+                                             ped_info["gender"],
+                                             ped_info["affected"]])
     return out_file
 
 def _find_shared_batch(samples):

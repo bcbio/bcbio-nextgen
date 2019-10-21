@@ -8,6 +8,7 @@
   Defaults to False.
 - Add `keep_multimappers` for ChIP/ATAC-seq which does not remove multimappers before peak calling.
   Defaults to False.
+- Remove ethnicity as a required column in PED files.
 
 ## 1.1.7 (10 October 2019)
 =======
