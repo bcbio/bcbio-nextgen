@@ -1054,7 +1054,7 @@ ChIP/ATAC sequencing
 `h3f3a`, `h3k27me3`, `h3k36me3`, `h3k4me1`, `h3k79me2`, `h3k9me3`, `h3k9me1`, `h3k9me2`, `h4k20me1`,
 `h2afz`, `h3ac`, `h3k27ac`, `h3k4me2`, `h3k4me3`, `h3k9ac`, `h3k9me3`.
 - ``keep_duplicates``: do not remove duplicates before peak calling. Defaults to `False`.
-- ``keep_multimappers``: do not remove multimappers before peak calling. Defaults to `False`.
+- ``keep_multimapped``: do not remove multimappers before peak calling. Defaults to `False`.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 
