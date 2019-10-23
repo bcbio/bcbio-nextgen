@@ -103,7 +103,9 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                if int(eversion) >= 97:
+                if int(eversion) >= 98:
+                    vep_url_string = "indexed_vep_cache"
+                elif int(eversion) == 97:
                     vep_url_string = "vep"
                 else:
                     vep_url_string = "VEP"
