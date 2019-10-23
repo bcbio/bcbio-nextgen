@@ -179,7 +179,7 @@ def run_vep(in_file, data):
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
-                    config_args += ["--sift", "b", "--polyphen", "b"]
+                    config_args += ["--sift", "b", "--polyphen", "b", "--humdiv"]
                     if hgvs_compatible:
                         config_args += ["--hgvsg", "--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")
