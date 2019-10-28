@@ -103,7 +103,9 @@ def prep_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             if not os.path.exists(out_dir):
                 tmp_dir = utils.safe_makedir(os.path.join(vep_dir, species, "txtmp"))
                 eversion = vepv.split("_")[0]
-                if int(eversion) >= 97:
+                if int(eversion) >= 98:
+                    vep_url_string = "indexed_vep_cache"
+                elif int(eversion) == 97:
                     vep_url_string = "vep"
                 else:
                     vep_url_string = "VEP"
@@ -179,7 +181,7 @@ def run_vep(in_file, data):
                     for plugin in plugins:
                         plugin_args = plugin_fns[plugin](data)
                         config_args += plugin_args
-                    config_args += ["--sift", "b", "--polyphen", "b"]
+                    config_args += ["--sift", "b", "--polyphen", "b", "--humdiv"]
                     if hgvs_compatible:
                         config_args += ["--hgvsg", "--hgvs", "--shift_hgvs", "1"]
                 if (dd.get_effects_transcripts(data).startswith("canonical")

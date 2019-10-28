@@ -531,10 +531,10 @@ def _check_for_degenerate_interesting_groups(items):
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
 ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
-                      "merge_bamprep", "indelcaller", "effects", 
+                      "merge_bamprep", "indelcaller", "effects",
                       "svvalidate", "hlavalidate", "phasing", "validate",
                       "validate_regions", "validate_genome_build", "validate_method",
-                      "clinical_reporting", "nomap_split_size", 
+                      "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "background", "qc", "preseq",] +
                      # back compatibility
                      ["remove_lcr", "coverage_depth_max", "coverage_depth"] +
@@ -543,11 +543,12 @@ ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "quantify_genome_alignments", 
+                          "quantify_genome_alignments",
                           "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
-                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq"])
+                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq",
+                       "use_lowfreq_filter"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 

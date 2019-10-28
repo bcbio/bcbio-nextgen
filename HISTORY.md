@@ -1,15 +1,27 @@
-## 1.1.7
+## 1.1.8 (in progress)
+- Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
+  settings for that antibody. See the documentation for supported antibodies.
+- Add `use_lowfreq_filter` for forcing vardict to report variants with low allelic frequency,
+ useful for calling somatic variants in panels with high coverage.
+- Fix for checking for pre-existing inputs with python3.
+- Add `keep_duplicates` option for ChIP/ATAC-seq which does not remove duplicates before peak calling.
+  Defaults to False.
+- Add `keep_multimappers` for ChIP/ATAC-seq which does not remove multimappers before peak calling.
+  Defaults to False.
+- Remove ethnicity as a required column in PED files.
+
+## 1.1.7 (10 October 2019)
+=======
 - hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
 
-## 1.1.6 
+## 1.1.6 (10 October 2019)
 
 - GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
 - RNA-seq: fixes for cufflinks preparation due to python3 transition.
 - RNA-seq: output count tables from tximport for genes and transcripts. These
-are in `bcbioRNASeq/results/date/genes/counts` and 
-`bcbioRNASeq/results/data/transcripts/counts`.
+  are in `bcbioRNASeq/results/date/genes/counts` and `bcbioRNASeq/results/data/transcripts/counts`.
 - qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
-results with the hisat2 aligner and for RNA-seq just setting it to unstranded
+  results with the hisat2 aligner and for RNA-seq just setting it to unstranded
 - Add `quantify_genome_alignments` option to use genome alignments to quantify
   with Salmon.
 - Add `--validateMappings` flag to Salmon read quantification mode.

@@ -7,6 +7,8 @@ import os
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd
+from bcbio.bam import ref
 
 def is_autosomal(chrom):
     """Keep chromosomes that are a digit 1-22, or chr prefixed digit chr1-chr22
@@ -51,3 +53,8 @@ def bed_to_standardonly(in_file, data, headers=None, include_sex_chroms=False, o
                         if checkfn(line.split()[0]) or (headers and line.startswith(headers)):
                             out_handle.write(line)
     return out_file
+
+def get_mitochondrial_chroms(data):
+    ref_file = dd.get_ref_file(data)
+    mito = [c.name for c in ref.file_contigs(ref_file) if is_mitochondrial(c.name)]
+    return mito

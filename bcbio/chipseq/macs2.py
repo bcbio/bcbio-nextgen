@@ -10,7 +10,6 @@ from bcbio import bam
 from bcbio.chipseq import antibodies
 from bcbio.log import logger
 
-
 def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, data):
     """
     Run macs2 for chip and input samples avoiding
@@ -24,7 +23,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
         _compress_bdg_files(out_dir)
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
-    antibody = antibodies.ANTIBODIES.get(dd.get_chipseq_antibody(data).lower(), None)
+    antibody = antibodies.ANTIBODIES.get(dd.get_antibody(data).lower(), None)
     if antibody:
         logger.info(f"{antibody.name} specified, using {antibody.peaktype} peak settings.")
         peaksettings = select_peak_parameters(antibody)
@@ -35,7 +34,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
     genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
     paired = "-f BAMPE" if bam.is_paired(chip_bam) else ""
     with utils.chdir(out_dir):
-        cmd = _macs2_cmd(method)
+        cmd = _macs2_cmd(data)
         cmd += peaksettings
         try:
             do.run(cmd.format(**locals()), "macs2 for %s" % name)
@@ -67,11 +66,12 @@ def _compress_bdg_files(out_dir):
         cmd = "gzip  %s" % fn
         do.run(cmd, "compress bdg file: %s" % fn)
 
-def _macs2_cmd(method="chip"):
+def _macs2_cmd(data):
     """Main command for macs2 tool."""
+    method = dd.get_chip_method(data)
     if method.lower() == "chip":
         cmd = ("{macs2} callpeak -t {chip_bam} -c {input_bam} {paired} "
-                " {genome_size} -n {name} --bdg {options}")
+               "{genome_size} -n {name} --bdg {options} ")
     elif method.lower() == "atac":
         cmd = ("{macs2} callpeak -t {chip_bam} --nomodel "
                " {paired} {genome_size} -n {name} --bdg {options}"

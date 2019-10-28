@@ -39,7 +39,9 @@ def run(bam_file, data, fastqc_out):
         frmt = "bam" if bam_file.endswith("bam") else "fastq"
         fastqc_name = utils.splitext_plus(os.path.basename(bam_file))[0]
         fastqc_clean_name = dd.get_sample_name(data)
-        num_cores = data["config"]["algorithm"].get("num_cores", 1)
+        # FastQC scales memory with threads (250mb per thread) so we avoid
+        # very low memory usage
+        num_cores = max(data["config"]["algorithm"].get("num_cores", 1), 2)
         with tx_tmpdir(data, work_dir) as tx_tmp_dir:
             with utils.chdir(tx_tmp_dir):
                 cl = [config_utils.get_program("fastqc", data["config"]),

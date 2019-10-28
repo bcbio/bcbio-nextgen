@@ -123,6 +123,7 @@ Contributors
 - `Roman Valls`_, Science for Life Laboratory, Stockholm
 - `Kevin Ying`_, Garvan Institute of Medical Research, Sydney, Australia
 - `Vlad Saveliev`_, Center for Algorithmic Biotechnology, St. Petersburg University
+- `Sergey Naumenko`_, Harvard Chan Bioinformatics Core
 
 
 .. _Miika Ahdesmaki: https://github.com/mjafin
@@ -146,6 +147,7 @@ Contributors
 .. _Matt Edwards: https://github.com/matted
 .. _Saket Choudhary: https://github.com/saketkc
 .. _Vlad Saveliev: https://github.com/vladsaveliev
+.. _Sergey Naumenko: https://github.com/naumenko-sa
 
 License
 -------

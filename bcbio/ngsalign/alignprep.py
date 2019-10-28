@@ -716,7 +716,7 @@ def _check_gzipped_input(in_file, data):
     """Determine if a gzipped input file is blocked gzip or standard.
     """
     grabix = config_utils.get_program("grabix", data["config"])
-    is_bgzip = subprocess.check_output([grabix, "check", in_file])
+    is_bgzip = subprocess.check_output([grabix, "check", in_file]).decode().strip()
     if is_bgzip.strip() == "yes":
         return False, False
     else:

@@ -743,6 +743,12 @@ Somatic variant calling
   in the tumor sample of a tumor/normal pair. It is percentage, not ratio,
   it is divided /100.0 when calling vardict!
 
+- ``use_lowfreq_filter: false``. When set, forces vardict to report variants
+  with low allelec frequency, useful to call variants in panels with high coverage
+  (>1000x). The default (option is not set to false in the config) is to use
+  low frequency filter, i.e. variants could be underreported (variant VAF is above
+  min_allele_fraction but rejected by the filter).
+
 .. _config-variant-annotation:
 
 Variant annotation
@@ -1044,6 +1050,11 @@ ChIP/ATAC sequencing
 - ``aligner`` Currently ``bowtie2`` is the only one tested. ``bwa`` is also available.
 - The ``phenotype`` and ``batch`` tags need to be set under ``metadata`` in the config YAML file. The ``phenotype`` tag will specify the chip (``phenotype: chip``) and input samples (``phenotype: input``). The ``batch`` tag will specify the input-chip pairs of samples for example, ``batch: pair1``. Same input can be used for different chip samples giving a list of distinct values: ``batch: [sample1, sample2]``.
 - ``chip_method``: currently supporting standard CHIP-seq (TF or broad regions using `chip`) or ATAC-seq (`atac`). Parameters will change depending on the option to get the best possible results. Only macs2 supported for now.
+- ``antibody``: automatically sets peakcalling options tailored for the specific anitbody. Supports
+`h3f3a`, `h3k27me3`, `h3k36me3`, `h3k4me1`, `h3k79me2`, `h3k9me3`, `h3k9me1`, `h3k9me2`, `h4k20me1`,
+`h2afz`, `h3ac`, `h3k27ac`, `h3k4me2`, `h3k4me3`, `h3k9ac`, `h3k9me3`.
+- ``keep_duplicates``: do not remove duplicates before peak calling. Defaults to `False`.
+- ``keep_multimappers``: do not remove multimappers before peak calling. Defaults to `False`.
 
 You can pass different parameters for ``macs2`` adding to :ref:`config-resources`::
 
