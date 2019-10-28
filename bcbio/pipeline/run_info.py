@@ -544,7 +544,8 @@ ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
                           "quantify_genome_alignments",
-                          "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
+                          "recalibrate", "realign", "cwl_reporting", "save_diskspace", "keep_multimapped",
+                          "keep_duplicates"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
                        "variantcaller", "positional_umi", "maxcov_downsample", "preseq",
