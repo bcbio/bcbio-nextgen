@@ -57,7 +57,7 @@ def upgrade_bcbio(args):
     args = add_install_defaults(args)
     if args.upgrade in ["stable", "system", "deps", "development"]:
         if args.upgrade == "development":
-            anaconda_dir = _update_conda_devel()
+            anaconda_dir = _update_conda_latest()
             _check_for_conda_problems()
             print("Upgrading bcbio-nextgen to latest development version")
             pip_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "pip")
@@ -285,6 +285,27 @@ def _update_conda_packages():
                           ["--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
+    return os.path.dirname(os.path.dirname(conda_bin))
+
+def _update_conda_latest():
+    """Update to the latest bcbio conda package
+    """
+    conda_bin = _get_conda_bin()
+    output = subprocess.run([conda_bin, "search", "-c", "bioconda", "bcbio-nextgen"], stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE).stdout
+    lines = [l for l in output.decode().split("\n") if l]
+    latest = lines.pop()
+    tokens = latest.split()
+    conda_version = tokens[1].strip()
+    print(f"Detected {conda_version} as latest version of bcbio-nextgen on bioconda.")
+    channels = _get_conda_channels(conda_bin)
+    bcbio_version = version.__version__
+    if LooseVersion(bcbio_version) < LooseVersion(conda_version):
+        print(f"Installing bcbio {conda_version} from bioconda.")
+        subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + channels +
+                            [f"bcbio-nextgen>={conda_version}"])
+    else:
+        print(f"bcbio version {bcbio_version} is newer than the conda version {conda_version}, skipping upgrade from conda.")
     return os.path.dirname(os.path.dirname(conda_bin))
 
 def _update_conda_devel():
