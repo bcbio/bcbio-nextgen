@@ -89,7 +89,11 @@ def filter_multimappers(align_file, data):
     if utils.file_exists(out_file):
         return out_file
     """
-    CPI: We removed the `[XS] == null` multi-mapping step, for ChIP-seq.
+    CPI: Filtering for uniquely mapping reads doesn't always perform well for
+    ChIP-seq samples with large global changes in chromatin state. Ideally, the
+    '[XS] == null' filter should be user-definable as a YAML param.
+    https://hbctraining.github.io/Intro-to-ChIPseq/lessons/
+        03_align_and_filtering.html
     > base_filter = '-F "[XS] == null and not unmapped {paired_filter}" '
     """
     base_filter = '-F "not unmapped {paired_filter}" '
