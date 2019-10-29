@@ -1,4 +1,4 @@
-## 1.1.8 (in progress)
+## 1.1.8
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
   settings for that antibody. See the documentation for supported antibodies.
 - Add `use_lowfreq_filter` for forcing vardict to report variants with low allelic frequency,
