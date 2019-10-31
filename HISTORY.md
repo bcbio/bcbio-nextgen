@@ -1,4 +1,7 @@
-## 1.1.8
+## 1.1.9 (in progress)
+- Fix for get VEP cache
+
+## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
   settings for that antibody. See the documentation for supported antibodies.
 - Add `use_lowfreq_filter` for forcing vardict to report variants with low allelic frequency,
