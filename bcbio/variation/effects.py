@@ -139,13 +139,13 @@ def get_vep_cache(dbkey, ref_file, tooldir=None, config=None):
             resources = yaml.safe_load(in_handle)
         ensembl_name = tz.get_in(["aliases", "ensembl"], resources)
         symlink_dir = _special_dbkey_maps(dbkey, ref_file)
-        if ensembl_name and ensembl_name.find("_vep_") == -1:
-            raise ValueError("%s has ensembl an incorrect value."
-                             "It should have _vep_ in the name."
-                             "Remove line or fix the name to avoid error.")
         if symlink_dir and ensembl_name:
             species, vepv = ensembl_name.split("_vep_")
             return symlink_dir, species
+        elif ensembl_name:
+            species, vepv = ensembl_name.split("_vep_")
+            vep_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(ref_file)), "vep"))
+            return vep_dir, species
     return None, None
 
 def run_vep(in_file, data):
