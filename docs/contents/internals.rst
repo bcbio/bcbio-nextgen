@@ -268,7 +268,8 @@ bcbio.yaml config::
     --bc2 harvard-indrop-v3-cb2.txt.gz demultiplexed/[sample-barcodeAATTTTT].fq  | \
     gzip -c > project-sample_barcode.filtered.fq.gz
 
-- step 4*: create cellular barcode histrogram::
+- step 4*: create cellular barcode histogram, also creates cb-histogram-filtered.txt for cells
+  with nreads > minimum_barcode_depth::
 
     python umis cb_histogram project-sample_barcode.filtered.fq.gz > cb-histogram.txt
 
