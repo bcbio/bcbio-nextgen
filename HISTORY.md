@@ -1,5 +1,6 @@
 ## 1.1.9 (in progress)
-- Fix for get VEP cache
+- Fix for get VEP cache.
+- Support Picard's new syntax for ReorderSam (REFERENCE -> SEQUENCE_DICTIONARY).
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
