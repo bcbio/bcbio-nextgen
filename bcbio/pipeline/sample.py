@@ -147,7 +147,8 @@ def process_alignment(data, alt_input=None):
             if sort_method and sort_method != "coordinate":
                 raise ValueError("Cannot specify `bam_clean: picard` with `bam_sort` other than coordinate: %s"
                                  % sort_method)
-            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], dd.get_ref_file(data), data["dirs"],
+            ref_file = dd.get_ref_file(data)
+            out_bam = cleanbam.picard_prep(fastq1, data["rgnames"], ref_file, data["dirs"],
                                            data)
         elif bamclean == "fixrg":
             out_bam = cleanbam.fixrg(fastq1, data["rgnames"], dd.get_ref_file(data), data["dirs"], data)
