@@ -118,6 +118,7 @@ def _get_files_chipseq(sample):
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
     out = _maybe_add_alignment(algorithm, sample, out)
+    out = _maybe_add_full_alignment(algorithm, sample, out)
     out = _maybe_add_peaks(algorithm, sample, out)
     out = _maybe_add_greylist(algorithm, sample, out)
     return _add_meta(out, sample)
@@ -491,6 +492,17 @@ def _maybe_add_transcriptome_alignment(sample, out):
         out.append({"path": transcriptome_bam,
                     "type": "bam",
                     "ext": "transcriptome"})
+    return out
+
+def _maybe_add_full_alignment(algorithm, sample, out):
+    """
+    for ATAC-seq, also upload the non-NF filtered BAM file
+    """
+    full_bam = sample.get("full_bam", None)
+    if full_bam and utils.file_exists(full_bam):
+        out.append({"path": full_bam,
+                    "type": "bam",
+                    "ext": "full"})
     return out
 
 def _maybe_add_counts(algorithm, sample, out):

@@ -28,6 +28,7 @@ Project directory
 - ``multiqc`` run `MultiQC`_ to gather all QC metrics from different tools, such as,
   cutadapt, featureCounts, samtools, STAR ... into an unique HTML report.
 - ``metadata.csv`` -- CSV with the metadata in the YAML file.
+- ``data_versions.csv`` -- Data versions for bcbio-nextgen and software
 
 .. _MultiQC: http://multiqc.info
 
@@ -173,6 +174,26 @@ Sample directories
 
 .. _seqcluster: https://github.com/lpantano/seqcluster
 .. _tdrmapper: https://github.com/sararselitsky/tDRmapper
+
+
+ATAC-seq
+========
+
+Sample directories
+~~~~~~~~~~~~~~~~~~
+Below is an example sample directory for a sample called `rep1`.
+
+| rep1
+| ├── macs2 -- peak calls from macs2
+| │   ├── rep1_control_lambda.bdg.gz -- local lambda estimate for poisson distribution from control samples in bedgraph format
+| │   ├── rep1_peaks_macs2.xls -- 
+| │   ├── rep1_peaks.narrowpeak -- narrowpeak calls `(format)<http://genome.ucsc.edu/faq/faqformat.html#format12>`_.
+| │   ├── rep1_summits.bed -- top of peak in bed format
+| │   └── rep1_treat_pileup.bdg.gz -- bedgraph for rep1 sample
+| ├── rep1-full.bam -- bam file without nucleosome free regions subset
+| ├── rep1-ready.bam -- bam file of nucleosome free regions only. peaks were called from this file.
+| └── rep1-ready.bw -- bigwig file of nucleosome free regions only
+
 
 Downstream analysis
 ===================

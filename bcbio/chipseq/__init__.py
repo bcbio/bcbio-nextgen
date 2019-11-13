@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import toolz as tz
@@ -33,6 +34,9 @@ def clean_chipseq_alignment(data):
                        f" falling back to non-normalized coverage.")
         data["bigwig"] = _bam_coverage(dd.get_sample_name(data),
                                        dd.get_work_bam(data), data)
+    method = dd.get_chip_method(data)
+    if method == "atac":
+        data = clean_ATAC(data)
     return [[data]]
 
 def remove_multimappers(bam_file, data):
@@ -50,7 +54,6 @@ def remove_multimappers(bam_file, data):
         unique_bam = bam_file
         logger.warn("When a BAM file is given as input, bcbio skips removal of "
                     "multimappers.")
-    logger.warn("ChIP/ATAC-seq usually requires duplicate marking, but it was disabled.")
     return unique_bam
 
 def remove_nonassembled_chrom(bam_file, data):
@@ -143,10 +146,10 @@ def _normalized_bam_coverage(name, bam_input, data):
 def _compute_deeptools_matrix(data):
     pass
 
-def extract_NF_regions(data):
+def clean_ATAC(data):
     """
     extract the nucleosome free regions from the work_bam. These regions will
-    be < 100 bases
+    be < 100 bases. This also shifts the alignments for ATAC-seq.
     """
     MAX_FRAG_LENGTH = 100
     sieve = config_utils.get_program("alignmentSieve", data)
@@ -154,20 +157,25 @@ def extract_NF_regions(data):
     num_cores = dd.get_num_cores(data)
     out_file = os.path.splitext(work_bam)[0] + "-NF.bam"
     log_file = os.path.splitext(work_bam)[0] + "-NF.log"
-    if file_exists(out_file):
-        data["NF_bam"] = out_file
+    logger.info(f"Selecting nucleosome free regions from {work_bam} and saving as {out_file}.")
+    if utils.file_exists(out_file):
+        data["full_bam"] = work_bam
+        data["work_bam"] = out_file
         return data
 
-    with file_transaction(out_file) as tx_out_file, \
-         file_transaction(log_file) as tx_log_file:
-        tx_unsorted_bam = tx_out_file + ".unsorted"
-        cmd = (
-            f"{sieve} --bam ${work_bam} --outFile {tx_unsorted_bam} --ATACshift "
-            f"--numberOfProcessors {num_cores} --maxFragmentLength {MAX_FRAG_LENGTH} "
-            f"--minMappingQuality 10 "
-            f"--filterMetrics {tx_log_file} ")
-        do.run(cmd, "Extract NF regions from {work_bam} to {tx_unsorted_bam}.")
-        tx_out_file = bam.sort(tx_unsorted_bam)
-
-    data["NF_bam"] = out_file
+    unsorted_bam = os.path.splitext(out_file)[0] + ".unsorted.bam"
+    if not utils.file_exists(unsorted_bam):
+        with file_transaction(unsorted_bam) as tx_out_file, \
+            file_transaction(log_file) as tx_log_file:
+            tx_unsorted_bam = os.path.splitext(tx_out_file)[0] + ".unsorted.bam" 
+            cmd = (
+                f"{sieve} --verbose --bam {work_bam} --outFile {tx_out_file} --ATACshift "
+                f"--numberOfProcessors {num_cores} --maxFragmentLength {MAX_FRAG_LENGTH} "
+                f"--minMappingQuality 10 "
+                f"--filterMetrics {tx_log_file} ")
+            do.run(cmd, f"Extract NF regions from {work_bam} to {tx_out_file}.")
+    sorted_bam = bam.sort(unsorted_bam, dd.get_config(data))
+    shutil.move(sorted_bam, out_file)
+    data["full_bam"] = work_bam
+    data["work_bam"] = out_file
     return data
