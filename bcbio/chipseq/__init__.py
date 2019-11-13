@@ -11,12 +11,18 @@ from bcbio.ngsalign import bowtie2, bwa
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
-from bcbio.heterogeneity.chromhacks import get_mitochondrial_chroms
+from bcbio.heterogeneity.chromhacks import (get_mitochondrial_chroms,
+                                            get_nonmitochondrial_chroms)
 
 def clean_chipseq_alignment(data):
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
+    method = dd.get_chip_method(data)
+    if method == "atac":
+        data = clean_ATAC(data)
+    # for ATAC-seq, this will be the NF BAM
     work_bam = dd.get_work_bam(data)
     clean_bam = remove_nonassembled_chrom(work_bam, data)
+    clean_bam = remove_mitochondrial_reads(clean_bam, data)
     if not dd.get_keep_multimapped(data):
         clean_bam = remove_multimappers(clean_bam, data)
     if not dd.get_keep_duplicates(data):
@@ -34,10 +40,27 @@ def clean_chipseq_alignment(data):
                        f" falling back to non-normalized coverage.")
         data["bigwig"] = _bam_coverage(dd.get_sample_name(data),
                                        dd.get_work_bam(data), data)
-    method = dd.get_chip_method(data)
-    if method == "atac":
-        data = clean_ATAC(data)
     return [[data]]
+
+def remove_mitochondrial_reads(bam_file, data):
+    mito = get_mitochondrial_chroms(data)
+    if not mito:
+        logger.info(f"Mitochondrial chromosome not identified, skipping removal of "
+                    "mitochondrial reads from {bam_file}.")
+        return bam_file
+    nonmito = get_nonmitochondrial_chroms(data)
+    mito_bam = os.path.splitext(bam_file)[0] + "-noMito.bam"
+    if utils.file_exists(mito_bam):
+        return mito_bam
+    samtools = config_utils.get_program("samtools", dd.get_config(data))
+    nonmito_flag = " ".join(nonmito)
+    num_cores = dd.get_num_cores(data)
+    with file_transaction(mito_bam) as tx_out_bam:
+        cmd = (f"{samtools} view -bh -@ {num_cores} {bam_file} {nonmito_flag} "
+               f"> {tx_out_bam}")
+        message = f"Removing mitochondrial reads on {','.join(mito)} from {bam_file}."
+        do.run(cmd, message)
+    return mito_bam
 
 def remove_multimappers(bam_file, data):
     aligner = dd.get_aligner(data)

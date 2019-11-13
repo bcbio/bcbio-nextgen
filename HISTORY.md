@@ -5,6 +5,7 @@
 - Add peak calling on NF regions.
 - Add uploading of full and NF BAM for ATAC-seq.
 - Add documentation describing ATAC-seq outputs.
+- Remove mitochondrial reads from ChIP/ATAC-seq calling.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate

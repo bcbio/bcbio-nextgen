@@ -2,7 +2,7 @@ upload:
   dir: upload
 details:
   - analysis: chip-seq
-    files: ['../data/test_chipseq/Hsapiens_Mmusculus_1.fq']
+    files: [../data/100326_FC6107FAAXX/7_100326_FC6107FAAXX_1_fastq.txt]
     algorithm:
       aligner: bwa
       quality_format: Standard

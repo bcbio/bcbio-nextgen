@@ -58,3 +58,8 @@ def get_mitochondrial_chroms(data):
     ref_file = dd.get_ref_file(data)
     mito = [c.name for c in ref.file_contigs(ref_file) if is_mitochondrial(c.name)]
     return mito
+
+def get_nonmitochondrial_chroms(data):
+    ref_file = dd.get_ref_file(data)
+    nonmito = [c.name for c in ref.file_contigs(ref_file) if not is_mitochondrial(c.name)]
+    return nonmito
