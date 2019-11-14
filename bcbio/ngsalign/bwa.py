@@ -44,7 +44,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
                 cmd = ("unset JAVA_HOME && "
-                       "{samtools} sort -n -o -l 1 -@ {num_cores} -m {max_mem} {in_bam} {prefix1} "
+                       "{samtools} sort -n -l 1 -@ {num_cores} -m {max_mem} {in_bam} -T {prefix1} "
                        "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
                        "| {bwa_cmd} | ")
                 cmd = cmd.format(**locals()) + tobam_cl
