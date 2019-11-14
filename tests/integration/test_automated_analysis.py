@@ -189,6 +189,17 @@ def test_chipseq(install_test_files, data_dir):
               os.path.join(data_dir, "run_info-chipseq.yaml")]
         subprocess.check_call(cl)
 
+@pytest.mark.atacseq
+def test_atacseq(install_test_files, data_dir):
+    """
+    Test ATAC-seq pipeline
+    """
+    with make_workdir() as workdir:
+        cl = ["bcbio_nextgen.py",
+              get_post_process_yaml(data_dir, workdir),
+              os.path.join(data_dir, os.pardir, "test_atacseq"),
+              os.path.join(data_dir, "run_info-atacseq.yaml")]
+        subprocess.check_call(cl)
 
 @pytest.mark.speed1
 @pytest.mark.ensemble

@@ -1,0 +1,17 @@
+upload:
+  dir: upload
+details:
+  - analysis: chip-seq
+    files: [../data/atac/atac_1.fq, ../data/atac/atac_2.fq]
+    algorithm:
+      chip_method: atac
+      aligner: bwa
+      adapters: [truseq]
+      peakcaller: macs2
+      keep_multimapped: False
+      keep_duplicates: False
+    description: Test1
+    genome_build: mm9
+    metadata:
+      batch: b1
+      phenotype: input
