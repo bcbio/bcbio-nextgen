@@ -403,11 +403,11 @@ def merge(bamfiles, out_bam, config):
     return out_bam
 
 
-def sort(in_bam, config, order="coordinate", out_dir=None):
+def sort(in_bam, config, order="coordinate", out_dir=None, force=False):
     """Sort a BAM file, skipping if already present.
     """
     assert is_bam(in_bam), "%s in not a BAM file" % in_bam
-    if bam_already_sorted(in_bam, config, order):
+    if not force and bam_already_sorted(in_bam, config, order):
         return in_bam
 
     sort_stem = _get_sort_stem(in_bam, order, out_dir)
