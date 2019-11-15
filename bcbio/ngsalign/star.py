@@ -70,6 +70,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
                "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
                "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
                "--outStd BAM_Unsorted {srna_opts} "
+               "--twopassMode Basic "
                "--limitOutSJcollapsed 2000000 "
                "--outSAMtype BAM Unsorted "
                "--outSAMmapqUnique 60 "
