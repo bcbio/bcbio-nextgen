@@ -34,6 +34,7 @@ from bcbio.variation import bedutils
 from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
 from bcbio.variation import coverage
+from bcbio.chipseq import atac
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -447,6 +448,13 @@ def _add_disambiguate(sample):
             sample["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return sample
 
+def _add_atac(sample):
+    atac_metrics = atac.calculate_encode_complexity_metrics(sample)
+    if not atac_metrics:
+        return sample
+    sample["summary"]["metrics"] = tz.merge(atac_metrics, sample["summary"]["metrics"])
+    return sample
+
 def _fix_duplicated_rate(dt):
     """Get RNA duplicated rate if exists and replace by samtools metric"""
     if "Duplication_Rate_of_Mapped" in dt:
@@ -461,6 +469,7 @@ def _merge_metrics(samples, out_dir):
     sample_metrics = collections.defaultdict(dict)
     for s in samples:
         s = _add_disambiguate(s)
+        s = _add_atac(s)
         m = tz.get_in(['summary', 'metrics'], s)
         if isinstance(m, six.string_types):
             m = json.loads(m)
