@@ -13,6 +13,7 @@ from bcbio.provenance import do
 from bcbio.log import logger
 from bcbio.heterogeneity.chromhacks import (get_mitochondrial_chroms,
                                             get_nonmitochondrial_chroms)
+from bcbio.chipseq import atac
 
 def clean_chipseq_alignment(data):
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
@@ -21,8 +22,12 @@ def clean_chipseq_alignment(data):
         data = clean_ATAC(data)
     # for ATAC-seq, this will be the NF BAM
     work_bam = dd.get_work_bam(data)
+    work_bam = bam.sort(work_bam, dd.get_config(data))
+    bam.index(work_bam, dd.get_config(data))
     clean_bam = remove_nonassembled_chrom(work_bam, data)
     clean_bam = remove_mitochondrial_reads(clean_bam, data)
+    if method == "atac":
+        data = atac.calculate_complexity_metrics(clean_bam, data)
     if not dd.get_keep_multimapped(data):
         clean_bam = remove_multimappers(clean_bam, data)
     if not dd.get_keep_duplicates(data):
@@ -83,6 +88,7 @@ def remove_nonassembled_chrom(bam_file, data):
     """Remove non-assembled contigs from the BAM file"""
     ref_file =  dd.get_ref_file(data)
     config = dd.get_config(data)
+    bam.index(bam_file, config)
     fai = "%s.fai" % ref_file
     chrom = []
     with open(fai) as inh:
@@ -187,18 +193,20 @@ def clean_ATAC(data):
         return data
 
     unsorted_bam = os.path.splitext(out_file)[0] + ".unsorted.bam"
-    if not utils.file_exists(unsorted_bam):
-        with file_transaction(unsorted_bam) as tx_out_file, \
+    if not utils.file_exists(out_file):
+        with file_transaction(out_file) as tx_out_file, \
             file_transaction(log_file) as tx_log_file:
-            tx_unsorted_bam = os.path.splitext(tx_out_file)[0] + ".unsorted.bam" 
+            tx_unsorted_file = os.path.splitext(tx_out_file)[0] + ".tmp.bam"
             cmd = (
-                f"{sieve} --verbose --bam {work_bam} --outFile {tx_out_file} --ATACshift "
+                f"{sieve} --verbose --bam {work_bam} --outFile {tx_unsorted_file} --ATACshift "
                 f"--numberOfProcessors {num_cores} --maxFragmentLength {MAX_FRAG_LENGTH} "
                 f"--minMappingQuality 10 "
                 f"--filterMetrics {tx_log_file} ")
-            do.run(cmd, f"Extract NF regions from {work_bam} to {tx_out_file}.")
-    sorted_bam = bam.sort(unsorted_bam, dd.get_config(data))
-    shutil.move(sorted_bam, out_file)
+            do.run(cmd, f"Extract NF regions from {work_bam} to {tx_unsorted_file}.")
+            # shifting can cause the file to become unsorted
+            sorted_file = bam.sort(tx_unsorted_file, dd.get_config(data), force=True)
+            shutil.move(sorted_file, tx_out_file)
+    bam.index(out_file, dd.get_config(data))
     data["full_bam"] = work_bam
     data["work_bam"] = out_file
     return data
