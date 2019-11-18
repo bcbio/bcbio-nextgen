@@ -579,3 +579,24 @@ def remove_duplicates(in_bam, data):
         do.run(cmd, message)
     index(out_bam, dd.get_config(data))
     return out_bam
+
+def count_alignments(in_bam, data, filter=None):
+    """
+    count alignments in a BAM file passing a given filter. valid filter
+    strings are available in the sambamba documentation:
+
+    https://github.com/biod/sambamba/wiki/%5Bsambamba-view%5D-Filter-expression-syntax
+    """
+    sambamba = config_utils.get_program("sambamba", dd.get_config(data))
+    num_cores = dd.get_num_cores(data)
+    if not filter:
+        filter_string = ""
+        message = f"Counting alignments in {in_bam}."
+    else:
+        filter_string = "--filter {filter}"
+        message = f"Counting alignments in {in_bam} matching {filter}."
+    cmd = f"{sambamba} view -c --nthreads {num_cores} -f bam {filter_string} {in_bam}"
+    logger.info(message)
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    return int(result.stdout.decode().strip())
