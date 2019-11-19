@@ -62,15 +62,15 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         ref_file = os.path.dirname(ref_file)
 
     with file_transaction(data, align_dir) as tx_align_dir:
-        tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
+        tx_1pass_dir = tx_align_dir + "1pass"
+        tx_star_dirnames = _get_star_dirnames(tx_1pass_dir, data, names)
         tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
-        safe_makedir(tx_align_dir)
+        safe_makedir(tx_1pass_dir)
         safe_makedir(tx_out_dir)
         cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
                "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
                "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
                "--outStd BAM_Unsorted {srna_opts} "
-               "--twopassMode Basic "
                "--limitOutSJcollapsed 2000000 "
                "--outSAMtype BAM Unsorted "
                "--outSAMmapqUnique 60 "
@@ -105,7 +105,55 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
-        run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
+        run_message = "Running 1st pass of STAR aligner on %s and %s" % (fastq_file, ref_file)
+        do.run(cmd.format(**locals()), run_message, None)
+
+        sjfile = get_splicejunction_file(tx_out_dir, data)
+        sjflag = f"--sjdbFileChrStartEnd {sjfile}" if sjfile else ""
+        tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
+        tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
+        safe_makedir(tx_align_dir)
+        safe_makedir(tx_out_dir)
+        cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
+            "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
+            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
+            "--outStd BAM_Unsorted {srna_opts} "
+            "--limitOutSJcollapsed 2000000 "
+            "{sjflag} "
+            "--outSAMtype BAM Unsorted "
+            "--outSAMmapqUnique 60 "
+            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
+        cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
+        cmd += _read_group_option(names)
+        if dd.get_fusion_caller(data):
+            if "arriba" in dd.get_fusion_caller(data):
+                cmd += (
+                    "--chimSegmentMin 10 --chimOutType WithinBAM SoftClip Junctions "
+                    "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
+                    "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
+                    "--alignSJstitchMismatchNmax 5 -1 5 5 "
+                    "--chimSegmentReadGapMax 3 ")
+            else: 
+                cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                    "--chimScoreSeparation 5 ")
+                if "oncofuse" in dd.get_fusion_caller(data):
+                    cmd += "--chimOutType Junctions "
+                else:
+                    cmd += "--chimOutType WithinBAM "
+        strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
+                                    "unstranded").lower()
+        if strandedness == "unstranded" and not srna:
+            cmd += " --outSAMstrandField intronMotif "
+        if not srna:
+            cmd += " --quantMode TranscriptomeSAM "
+
+        resources = config_utils.get_resources("star", data["config"])
+        if resources.get("options", []):
+            cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
+        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
+        cmd += " > {tx_final_out} "
+        run_message = "Running 2nd pass of STAR aligner on %s and %s" % (fastq_file, ref_file)
         do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
