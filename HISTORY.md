@@ -6,7 +6,7 @@
 - Add uploading of full and NF BAM for ATAC-seq.
 - Add documentation describing ATAC-seq outputs.
 - Remove mitochondrial reads from ChIP/ATAC-seq calling.
-- Add ENCODE library complexity metrics for ATAC-seq to MultiQC report 
+- Add ENCODE library complexity metrics for ATAC/ChIP-seq to MultiQC report 
   (see https://www.encodeproject.org/data-standards/terms/#library for a description of the metrics)
 - Add STAR sample-specific 2-pass. This helps assign a moderate number of reads per genes. Thanks
   to @naumenko-sa for the intial implementation and push to get this going.
