@@ -26,8 +26,7 @@ def clean_chipseq_alignment(data):
     bam.index(work_bam, dd.get_config(data))
     clean_bam = remove_nonassembled_chrom(work_bam, data)
     clean_bam = remove_mitochondrial_reads(clean_bam, data)
-    if method == "atac":
-        data = atac.calculate_complexity_metrics(clean_bam, data)
+    data = atac.calculate_complexity_metrics(clean_bam, data)
     if not dd.get_keep_multimapped(data):
         clean_bam = remove_multimappers(clean_bam, data)
     if not dd.get_keep_duplicates(data):
