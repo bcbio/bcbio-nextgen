@@ -187,13 +187,14 @@ Below is an example sample directory for a sample called `rep1`.
 | ├── macs2 -- peak calls from macs2
 | │   ├── rep1_control_lambda.bdg.gz -- local lambda estimate for poisson distribution from control samples in bedgraph format
 | │   ├── rep1_peaks_macs2.xls -- 
-| │   ├── rep1_peaks.narrowpeak -- narrowpeak calls `(format)<http://genome.ucsc.edu/faq/faqformat.html#format12>`_.
+| │   ├── rep1_peaks.narrowpeak -- peaks in `narrowPeak`_ format
 | │   ├── rep1_summits.bed -- top of peak in bed format
 | │   └── rep1_treat_pileup.bdg.gz -- bedgraph for rep1 sample
 | ├── rep1-full.bam -- bam file without nucleosome free regions subset
 | ├── rep1-ready.bam -- bam file of nucleosome free regions only. peaks were called from this file.
 | └── rep1-ready.bw -- bigwig file of nucleosome free regions only
 
+.. _narrowPeak: http://genome.ucsc.edu/faq/faqformat.html#format12
 
 Downstream analysis
 ===================
