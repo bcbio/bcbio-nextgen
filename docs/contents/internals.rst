@@ -302,3 +302,13 @@ bcbio.yaml config::
 - step 8. Concatenate all cb-histogram-filtered.txt files::
 
     cat project-[all-barcodes]/cb-histogram-filtered.txt > cb-histogram.txt
+    
+Tests
+~~~~~
+To run bcbio automated tests, install bcbio and clone bcbio master repository. You are testing your installation with tests provided in bcbio-nextgen/tests::
+
+    which bcbio_nextgen.py
+    cd bcbio-nextgen/tests
+    ./run_tests.sh > tests.out
+    
+Tests are in integration/*.py. Each test has a set or marks. Marks are listed in pytest.ini. The mark defines how many tests to select. By default (just running plain ./run_tests.sh), it is speed1 = 11 tests. 
