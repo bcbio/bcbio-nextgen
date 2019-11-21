@@ -11,7 +11,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 
 def fast_rnaseq(samples, run_parallel):
-    samples = run_parallel("run_salmon_index", [samples])
+    to_index = determine_indexes_to_make(samples)
+    run_parallel("run_salmon_index", [to_index])
     samples = run_parallel("run_salmon_reads", samples)
     samples = run_parallel("run_counts_spikein", samples)
     samples = spikein.combine_spikein(samples)
@@ -205,6 +206,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     take advantage of the threaded run_parallel environment
     """
     data = samples[0][0]
+    to_index = determine_indexes_to_make(samples)
     samples = run_parallel("generate_transcript_counts", samples)
     if "cufflinks" in dd.get_expression_caller(data):
         samples = run_parallel("run_cufflinks", samples)
@@ -213,13 +215,14 @@ def quantitate_expression_parallel(samples, run_parallel):
     if ("kallisto" in dd.get_expression_caller(data) or
         dd.get_fusion_mode(data) or
         "pizzly" in dd.get_fusion_caller(data, [])):
-        samples = run_parallel("run_kallisto_index", [samples])
+        run_parallel("run_kallisto_index", [to_index])
         samples = run_parallel("run_kallisto_rnaseq", samples)
     if "sailfish" in dd.get_expression_caller(data):
-        samples = run_parallel("run_sailfish_index", [samples])
+        run_parallel("run_sailfish_index", [to_index])
         samples = run_parallel("run_sailfish", samples)
 
     # always run salmon
+    run_parallel("run_salmon_index", [to_index])
     if dd.get_quantify_genome_alignments(data):
         if dd.get_aligner(data).lower() != "star":
             if dd.get_genome_build(data) == "hg38":
@@ -496,3 +499,25 @@ def combine_files(samples):
             data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
     return updated_samples
+
+def determine_indexes_to_make(samples):
+    """
+    returns a subset of the samples that have different indexes in them to make sure we only
+    make each index once
+    """
+    samples = [to_single_data(x) for x in samples]
+    indexes = set()
+    tomake = []
+    for data in samples:
+        out_dir = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome")
+        out_stem = os.path.join(out_dir, dd.get_genome_build(data))
+        if dd.get_disambiguate(data):
+            out_stem = "-".join([out_stem] + (dd.get_disambiguate(data) or []))
+        if dd.get_disambiguate(data):
+            out_stem = "-".join([out_stem] + (dd.get_disambiguate(data) or []))
+        combined_file = out_stem + ".fa"
+        if combined_file not in indexes:
+            tomake.append(data)
+            indexes.add(combined_file)
+    return tomake
+
