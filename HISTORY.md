@@ -10,6 +10,8 @@
   (see https://www.encodeproject.org/data-standards/terms/#library for a description of the metrics)
 - Add STAR sample-specific 2-pass. This helps assign a moderate number of reads per genes. Thanks
   to @naumenko-sa for the intial implementation and push to get this going.
+- Index transcriptomes only once for pseudo/quasi aligner tools. This fixes race conditions that
+  can happen.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
