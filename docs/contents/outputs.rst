@@ -69,29 +69,70 @@ RNA-seq
 Project directory
 ~~~~~~~~~~~~~~~~~
 
-- ``annotated_combined.counts`` -- featureCounts counts matrix
-  with gene symbol as an extra column.
-- ``combined.counts`` -- featureCounts counts matrix
-  with gene symbol as an extra column.
-- ``combined.dexseq`` -- DEXseq counts matrix with
-  exonID as first column.
-- ``combined.gene.sf.tmp`` -- Sailfish gene count
-  matrix normalized to TPM.
-- ``combined.isoform.sf.tpm`` -- Sailfish transcript
-  count matix normalized to TPM.
-- ``combined.sf`` -- Sailfish raw output, all samples
-  files are pasted one after another.
-- ``tx2gene.csv`` -- Annotation file needed for DESeq2
-  to use Sailfish output.
+| ├── annotated_combined.counts -- gene counts with symbols from featureCounts (don't use this)
+| ├── bcbio-nextgen-commands.log -- commands run by bcbio
+| ├── bcbio-nextgen.log -- logging information from bcbio run
+| ├── combined.counts -- gene counts with gene IDs from featureCounts (don't use this)
+| ├── metadata.csv -- provided metadata about each sample
+| ├── multiqc
+|     ├── multiqc_report.html -- multiQC report
+| ├── programs.txt -- program versions of tools run
+| ├── project-summary.yaml -- YAML description of project, with derived metadata
+| └── tx2gene.csv -- transcript to gene mappings for use with tximport
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
 
-- ``SAMPLE-transcriptome.bam`` -- BAM file aligned to transcriptome.
-- ``SAMPLE-ready.counts`` -- featureCounts gene counts output.
-- ``salmon`` -- Salmon output.
+| S1
+| ├── S1-ready.bam -- coordinate-sorted whole genome alignments
+| ├── S1-ready.counts -- featureCounts counts (don't use this)
+| ├── S1-transcriptome.bam -- alignments to the transcriptome
+| ├── salmon
+| │   ├── abundance.h5 -- h5 object, usable with `sleuth`_
+| │   └── quant.sf -- salmon quantifications, usable with `tximport`_
+| └── STAR
+|     ├── S1-SJ.bed -- STAR junction file in BED format
+|     └── S1-SJ.tab -- STAR junction file in tabular format
 
-single cell RNA-seq
+bcbioRNASeq directory
+~~~~~~~~~~~~~~~~~~~~~
+| bcbioRNASeq/
+| ├── data
+| │   ├── bcb.rda -- `bcbioRNASeq`_ object with gene-level data
+| ├── data-transcript
+| │   ├── bcb.rda -- `bcbioRNASeq`_ object with transcript-level data
+| ├── quality_control.html -- quality control report
+| ├── quality_control.Rmd -- RMarkdown that generated quality control report
+| ├── results
+| │   └── 2019-11-21
+| │       ├── gene -- gene level information
+| │       │   └── counts
+| │       │       ├── counts.csv.gz -- count matrix from tximport, suitable for count-based analyses
+| │       │       └── metadata.csv.gz -- metadata and quality control data for samples
+| │       ├── quality_control
+| │       │   └── tpm.csv.gz -- TPM from tximport, use for visualization
+| │       └── transcript -- transcript level information
+| │           └── counts
+| │               ├── counts.csv.gz -- transcript level count matrix, suitable for count-based analyses needed transcript-level data
+| │               └── metadata.csv.gz -- metadata and quality control for samples
+
+.. _sleuth: http://seqcluster.readthedocs.io/mirna_annotation.html
+.. _tximport: https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
+.. _bcbioRNASeq: https://bioinformatics.sph.harvard.edu/bcbioRNASeq/
+
+Workflow for analysis
+~~~~~~~~~~~~~~~~~~~~~
+For gene-level analyses, we recommend loading the gene-level counts.csv.gz and the metadata.csv.gz and using `DESeq2`_ to do the analysis. For a more in-depth walkthrough of how to use DESeq2, refer to our `DGE_workshop`_.
+
+For transcript-level analyses, we recommend using `sleuth`_ with the bootstrap samples. You can load the abundance.h5 files from Salmon, or if you set ``kallisto`` as an expression caller, use the abundance.h5 files from that.
+
+Another great alternative is to use the Salmon quantification to look at differential transcript usage (DTU) instead of differential transcript expression (DTE). The idea behind DTU is you are looking for transcripts of genes that have been flipped from one isoform to another. The `Swimming downstream`_ tutorial has a nice walkthrough of how to do that.
+
+.. _DESeq2: https://bioconductor.org/packages/release/bioc/html/DESeq2.html
+.. _DGE_workshop: https://hbctraining.github.io/DGE_workshop_salmon/schedule/
+.. _Swimming downstream: http://www.bioconductor.org/packages/devel/workflows/vignettes/rnaseqDTU/inst/doc/rnaseqDTU.html#salmon-quantification
+
+single cell RNA-Seq
 ===================
 
 Project directory
