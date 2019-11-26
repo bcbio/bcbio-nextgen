@@ -237,7 +237,9 @@ if __name__ == "__main__":
                         help="Add ERCC spike-ins.")
     parser.add_argument("--mirbase", help="species in mirbase for smallRNAseq data.")
     parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
-
+    parser.add_argument("--buildversion", required=True, 
+	                help=("String describing build of genome used. Examples: "
+                              "Ensembl_94, EnsemblMetazoa_94, Flybase_21, etc"))
     args = parser.parse_args()
  #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")
@@ -306,7 +308,7 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --cores {args.cores} --genome-dir {genome_dir} "
+            cmd = ("{sys.executable} {prepare_tx} --buildversion {args.buildversion} --cores {args.cores} --genome-dir {genome_dir} "
                    "--gtf {gtf_file} {args.name} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     if args.mirbase:
