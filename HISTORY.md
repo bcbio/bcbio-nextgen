@@ -12,6 +12,9 @@
   to @naumenko-sa for the intial implementation and push to get this going.
 - Index transcriptomes only once for pseudo/quasi aligner tools. This fixes race conditions that
   can happen.
+- Add --buildversion option, for tracking which version of a gene build was used. This is used
+  during `bcbio_setup_genome.py`. Suggested formats are source_version, so Ensembl_94, 
+  EnsemblMetazoa_25, FlyBase_26, etc.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate

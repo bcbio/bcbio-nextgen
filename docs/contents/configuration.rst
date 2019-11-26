@@ -1542,11 +1542,13 @@ Adding custom genomes
 ``bcbio_setup_genome.py`` will help you to install a custom genome and apply all changes needed
 to the configuration files. It needs the genome in FASTA format, and the annotation file
 in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreover, it will create
-the folder `rnaseq` to allow you run the RNAseq pipeline without further configuration.
+the folder `rnaseq` to allow you run the RNAseq pipeline without further configuration. The ``--buildversion``
+option will write that string to the ``version.txt`` file, to track from where and which version of
+a gene build was used.
 
 ::
 
-    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135
+    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --buildversion WormBase_34
 
 If you want to add smallRNA-seq data files, you will need to add the 3 letters code of mirbase
 for your genome (i.e hsa for human) and the GTF file for the annotation of smallRNA data.
@@ -1554,7 +1556,7 @@ Here you can use the same file than the transcriptome if no other available.
 
 ::
 
-    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --species cel --srna_gtf another_annotation.gtf
+    bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --species cel --srna_gtf another_annotation.gtf --buildversion WormBase_34
 
 To use that genome just need to configure your YAML files as::
 
