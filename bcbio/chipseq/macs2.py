@@ -9,6 +9,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio import bam
 from bcbio.chipseq import antibodies
 from bcbio.log import logger
+from bcbio.distributed.transaction import file_transaction
 
 def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, data):
     """
@@ -20,7 +21,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
     out_file = os.path.join(out_dir, name + "_peaks_macs2.xls")
     macs2_file = os.path.join(out_dir, name + "_peaks.xls")
     if utils.file_exists(out_file):
-        _compress_bdg_files(out_dir)
+        _compress_and_sort_bdg_files(out_dir, data)
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
     antibody = antibodies.ANTIBODIES.get(dd.get_antibody(data).lower(), None)
@@ -46,7 +47,7 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
                                  "You can add specific options for the sample "
                                  "setting resources as explained in docs: "
                                  "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#sample-specific-resources")
-    _compress_bdg_files(out_dir)
+    _compress_and_sort_bdg_files(out_dir, data)
     return _get_output_files(out_dir)
 
 def _get_output_files(out_dir):
@@ -61,10 +62,16 @@ def _get_output_files(out_dir):
             break
     return {"main": peaks, "macs2": fns}
 
-def _compress_bdg_files(out_dir):
+def _compress_and_sort_bdg_files(out_dir, data):
     for fn in glob.glob(os.path.join(out_dir, "*bdg")):
-        cmd = "gzip  %s" % fn
-        do.run(cmd, "compress bdg file: %s" % fn)
+        out_file = fn + ".gz"
+        if utils.file_exists(out_file):
+            continue
+        bedtools = config_utils.get_program("bedtools", data)
+        with file_transaction(out_file) as tx_out_file:
+            cmd = f"{bedtools} sort -i {fn} | bgzip -c > {tx_out_file}"
+            message = f"Compressing and sorting {fn}."
+            do.run(cmd, message)
 
 def _macs2_cmd(data):
     """Main command for macs2 tool."""
