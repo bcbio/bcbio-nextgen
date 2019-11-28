@@ -11,6 +11,7 @@ import itertools
 import operator
 import os
 import string
+import sys
 
 import six
 import toolz as tz
@@ -331,6 +332,11 @@ def _clean_metadata(data):
         if "metadata" not in data:
             data["metadata"] = {}
         data["metadata"]["batch"] = "%s-joint" % dd.get_sample_name(data)
+    analysis = dd.get_analysis(data).lower()
+    if tz.get_in(("metadata", "sample"), data) and analysis == "rna-seq":
+        logger.error("'sample' is a reserved keyword in metadata for RNA-seq. Please "
+                     "rename this column to something else and rerun.")
+        sys.exit(1)
     return data
 
 def _clean_algorithm(data):

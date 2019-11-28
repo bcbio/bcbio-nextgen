@@ -16,6 +16,8 @@
   during `bcbio_setup_genome.py`. Suggested formats are source_version, so Ensembl_94, 
   EnsemblMetazoa_25, FlyBase_26, etc.
 - Sort MACS2 bedgraph files before compressing. Thanks to @LMannarino for the suggestion.
+- Check for the reserved field `sample` in RNA-seq metadata and quit with a useful error message. 
+  Thanks to @marypiper for suggesting this.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
