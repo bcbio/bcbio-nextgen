@@ -41,9 +41,9 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
             do.run(cmd.format(**locals()), "macs2 for %s" % name)
             utils.move_safe(macs2_file, out_file)
         except subprocess.CalledProcessError:
-            raise RuntimeWarning("macs2 terminated with an error.\n"
+            raise RuntimeWarning("macs2 terminated with an error. "
                                  "Please, check the message and report "
-                                 "error if it is related to bcbio.\n"
+                                 "error if it is related to bcbio. "
                                  "You can add specific options for the sample "
                                  "setting resources as explained in docs: "
                                  "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#sample-specific-resources")

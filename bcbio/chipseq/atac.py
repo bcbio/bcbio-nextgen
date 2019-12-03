@@ -1,7 +1,6 @@
-# add ["atac_metrics": {}] to the datadict
-
 import os
 import toolz as tz
+from collections import namedtuple
 
 from bcbio import utils
 from bcbio.pipeline import datadict as dd
@@ -10,6 +9,13 @@ from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
+
+# ranges taken from Buenrostro, Nat. Methods 10, 1213–1218 (2013).
+ATACRange = namedtuple('ATACRange', ['label', 'min', 'max'])
+ATACRanges = {"NF": ATACRange("NF", 0, 100),
+              "MN": ATACRange("MN", 180, 247),
+              "DN": ATACRange("DN", 315, 473),
+              "TN": ATACRange("TN", 558, 615)}
 
 def calculate_complexity_metrics(work_bam, data):
     """
@@ -59,3 +65,28 @@ def calculate_encode_complexity_metrics(data):
         PBC2 = raw_metrics["m1"] / raw_metrics["m2"]
     metrics["PBC2"] = PBC2
     return(metrics)
+
+def split_ATAC(data, bam_file=None):
+    """
+    splits a BAM into nucleosome-free (NF) and mono/di/tri nucleosome BAMs based
+    on the estimated insert sizes
+    uses the current working BAM file if no BAM file is supplied
+    """
+    sambamba = config_utils.get_program("sambamba", data)
+    num_cores = dd.get_num_cores(data)
+    base_cmd = f'{sambamba} view --format bam --nthreads {num_cores} '
+    bam_file = bam_file if bam_file else dd.get_work_bam(data)
+    out_stem = os.path.splitext(bam_file)[0]
+    split_files = {}
+    for arange in ATACRanges.values():
+        out_file = f"{out_stem}-{arange.label}.bam"
+        if not utils.file_exists(out_file):
+            with file_transaction(out_file) as tx_out_file:
+                cmd = base_cmd +\
+                    f'-F "template_length > {arange.min} and template_length < {arange.max}" ' +\
+                    f'{bam_file} > {tx_out_file}'
+                message = f'Splitting {arange.label} regions from {bam_file}.'
+                do.run(cmd, message)
+        split_files[arange.label] = out_file
+    data = tz.assoc_in(data, ['atac', 'align'], split_files)
+    return data

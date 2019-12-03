@@ -44,7 +44,11 @@ def peakcall_prepare(data, run_parallel):
 
 def calling(data):
     """Main function to parallelize peak calling."""
-    chip_bam = data.get("work_bam")
+    method = dd.get_chip_method(data)
+    if method == "atac":
+        chip_bam = tz.get_in(("atac", "align", "NF"), data)
+    else:
+        chip_bam = data.get("work_bam")
     input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
     name = dd.get_sample_name(data)

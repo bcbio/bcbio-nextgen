@@ -19,8 +19,7 @@ def clean_chipseq_alignment(data):
     # lcr_bed = utils.get_in(data, ("genome_resources", "variation", "lcr"))
     method = dd.get_chip_method(data)
     if method == "atac":
-        data = clean_ATAC(data)
-    # for ATAC-seq, this will be the NF BAM
+        data = shift_ATAC(data)
     work_bam = dd.get_work_bam(data)
     work_bam = bam.sort(work_bam, dd.get_config(data))
     bam.index(work_bam, dd.get_config(data))
@@ -32,6 +31,9 @@ def clean_chipseq_alignment(data):
     if not dd.get_keep_duplicates(data):
         clean_bam = bam.remove_duplicates(clean_bam, data)
     data["work_bam"] = clean_bam
+    # for ATAC-seq, brewak alignments into NF, mono/di/tri nucleosome BAM files
+    if method == "atac":
+        data  = atac.split_ATAC(data)
     encode_bed = tz.get_in(["genome_resources", "variation", "encode_blacklist"], data)
     if encode_bed:
         data["work_bam"] = remove_blacklist_regions(dd.get_work_bam(data), encode_bed, data['config'])
@@ -174,20 +176,17 @@ def _normalized_bam_coverage(name, bam_input, data):
 def _compute_deeptools_matrix(data):
     pass
 
-def clean_ATAC(data):
+def shift_ATAC(data):
     """
-    extract the nucleosome free regions from the work_bam. These regions will
-    be < 100 bases. This also shifts the alignments for ATAC-seq.
+    shift the ATAC-seq alignments
     """
     MAX_FRAG_LENGTH = 100
     sieve = config_utils.get_program("alignmentSieve", data)
     work_bam = dd.get_work_bam(data)
     num_cores = dd.get_num_cores(data)
-    out_file = os.path.splitext(work_bam)[0] + "-NF.bam"
-    log_file = os.path.splitext(work_bam)[0] + "-NF.log"
-    logger.info(f"Selecting nucleosome free regions from {work_bam} and saving as {out_file}.")
+    out_file = os.path.splitext(work_bam)[0] + "-shifted.bam"
+    log_file = os.path.splitext(work_bam)[0] + "-shifted.log"
     if utils.file_exists(out_file):
-        data["full_bam"] = work_bam
         data["work_bam"] = out_file
         return data
 
@@ -198,14 +197,14 @@ def clean_ATAC(data):
             tx_unsorted_file = os.path.splitext(tx_out_file)[0] + ".tmp.bam"
             cmd = (
                 f"{sieve} --verbose --bam {work_bam} --outFile {tx_unsorted_file} --ATACshift "
-                f"--numberOfProcessors {num_cores} --maxFragmentLength {MAX_FRAG_LENGTH} "
+                f"--numberOfProcessors {num_cores} --maxFragmentLength 0 "
+                f"--minFragmentLength 0 "
                 f"--minMappingQuality 10 "
                 f"--filterMetrics {tx_log_file} ")
-            do.run(cmd, f"Extract NF regions from {work_bam} to {tx_unsorted_file}.")
+            do.run(cmd, f"Shifting ATAC-seq alignments in {work_bam} to {tx_unsorted_file}.")
             # shifting can cause the file to become unsorted
             sorted_file = bam.sort(tx_unsorted_file, dd.get_config(data), force=True)
             shutil.move(sorted_file, tx_out_file)
     bam.index(out_file, dd.get_config(data))
-    data["full_bam"] = work_bam
     data["work_bam"] = out_file
     return data
