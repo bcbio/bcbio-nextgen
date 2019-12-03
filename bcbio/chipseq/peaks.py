@@ -12,7 +12,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
-
+from bcbio.chipseq import atac
 
 def get_callers():
     """Get functions related to each caller"""
@@ -45,21 +45,27 @@ def peakcall_prepare(data, run_parallel):
 def calling(data):
     """Main function to parallelize peak calling."""
     method = dd.get_chip_method(data)
-    if method == "atac":
-        chip_bam = tz.get_in(("atac", "align", "NF"), data)
-    else:
-        chip_bam = data.get("work_bam")
-    input_bam = data.get("work_bam_input", None)
     caller_fn = get_callers()[data["peak_fn"]]
-    name = dd.get_sample_name(data)
-    out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
-    out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
-                          dd.get_chip_method(data), data["resources"], data)
-    greylistdir = greylisting(data)
-    data.update({"peaks_files": out_files})
-    # data["input_bam_filter"] = input_bam
-    if greylistdir:
-        data["greylist"] = greylistdir
+    if method == "chip":
+        chip_bam = data.get("work_bam")
+        input_bam = data.get("work_bam_input", None)
+        name = dd.get_sample_name(data)
+        out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
+        out_files = caller_fn(name, chip_bam, input_bam, dd.get_genome_build(data), out_dir,
+                            dd.get_chip_method(data), data["resources"], data)
+        greylistdir = greylisting(data)
+        data.update({"peaks_files": out_files})
+        if greylistdir:
+            data["greylist"] = greylistdir
+    if method == "atac":
+        for fraction in atac.ATACRanges.keys():
+            chip_bam = tz.get_in(("atac", "align", fraction), data)
+            logger.info(f"Running peak calling with {data['peak_fn']} on the {fraction} fraction of {chip_bam}.")
+            name = dd.get_sample_name(data) + f"-{fraction}"
+            out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
+            out_files = caller_fn(name, chip_bam, None, dd.get_genome_build(data), out_dir,
+                                  dd.get_chip_method(data), data["resources"], data)
+            data = tz.assoc_in(data, ("peaks_files", fraction), out_files)
     return [[data]]
 
 def _sync(original, processed):

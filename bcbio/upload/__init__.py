@@ -662,14 +662,25 @@ def _maybe_add_trna(algorithm, sample, out):
 
 def _maybe_add_peaks(algorithm, sample, out):
     out_dir = sample.get("peaks_files", {})
-    for caller in out_dir:
-        if caller == "main":
-            continue
-        for fn in out_dir[caller]:
-            if os.path.exists(fn):
-                out.append({"path": fn,
-                             "dir": caller,
-                             "ext": utils.splitext_plus(fn)[1]})
+    if "NF" in out_dir.keys():
+        for files in out_dir.values():
+            for caller in files:
+                if caller == "main":
+                    continue
+                for fn in files[caller]:
+                    if os.path.exists(fn):
+                        out.append({"path": fn,
+                                    "dir": caller,
+                                    "ext": utils.splitext_plus(fn)[1]})
+    else:
+        for caller in out_dir:
+            if caller == "main":
+                continue
+            for fn in out_dir[caller]:
+                if os.path.exists(fn):
+                    out.append({"path": fn,
+                                "dir": caller,
+                                "ext": utils.splitext_plus(fn)[1]})
     return out
 
 def _maybe_add_greylist(algorithm, sample, out):

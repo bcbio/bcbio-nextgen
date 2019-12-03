@@ -222,18 +222,23 @@ ATAC-seq
 
 Sample directories
 ~~~~~~~~~~~~~~~~~~
-Below is an example sample directory for a sample called `rep1`.
+Below is an example sample directory for a sample called `rep1`. There are four
+sets of peak files for each sample, for each peak caller, one set for each of
+the nucleosome-free (NF), mononucleosome (MF), dinucleosome (DF) and trinucleosome
+(TF) regions. There are BAM files of reach of those regions as well.
 
 | rep1
 | ├── macs2 -- peak calls from macs2
-| │   ├── rep1_control_lambda.bdg.gz -- local lambda estimate for poisson distribution from control samples in bedgraph format
-| │   ├── rep1_peaks_macs2.xls -- 
-| │   ├── rep1_peaks.narrowpeak -- peaks in `narrowPeak`_ format
-| │   ├── rep1_summits.bed -- top of peak in bed format
-| │   └── rep1_treat_pileup.bdg.gz -- bedgraph for rep1 sample
-| ├── rep1-full.bam -- bam file without nucleosome free regions subset
-| ├── rep1-ready.bam -- bam file of nucleosome free regions only. peaks were called from this file.
-| └── rep1-ready.bw -- bigwig file of nucleosome free regions only
+| │   ├── rep1-NF_control_lambda.bdg.gz -- local lambda estimate for poisson distribution from control samples in bedgraph format, NF regions only
+| │   ├── rep1-NF_peaks.narrowpeak -- peaks in `narrowPeak`_ format in NF regions
+| │   ├── rep1-NF_summits.bed -- top of peak in bed format of NF regions
+| │   └── rep1-NF_treat_pileup.bdg.gz -- bedgraph for rep1 sample of NF regions
+| ├── rep1-NF.bam -- BAM of just nucleosome free regions
+| ├── rep1-MN.bam -- BAM of just mononucleosome regions
+| ├── rep1-DN.bam -- BAM of just dinucleosome regions
+| ├── rep1-TN.bam -- BAM of just trinucleosome regions
+| ├── rep1-ready.bam -- BAM of all alignments
+| └── rep1-ready.bw -- bigwig file of all alignments
 
 .. _narrowPeak: http://genome.ucsc.edu/faq/faqformat.html#format12
 
