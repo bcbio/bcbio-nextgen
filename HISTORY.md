@@ -21,6 +21,7 @@
 - Split ATAC-seq BAM files into nucleosome-free and mono/di/tri nucleosome files, so we can call 
   peaks on them separately.
 - Call peaks on NF/MN/DN/TN regions separately for each caller during ATAC-seq.
+- Allow viral contamination to be assasyed on non tumor/normal samples.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
