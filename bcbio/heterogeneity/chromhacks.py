@@ -63,3 +63,11 @@ def get_nonmitochondrial_chroms(data):
     ref_file = dd.get_ref_file(data)
     nonmito = [c.name for c in ref.file_contigs(ref_file) if not is_mitochondrial(c.name)]
     return nonmito
+
+def get_EBV(data):
+    EBVCONTIGS = ["chrEBV", "EBV"]
+    ref_file = dd.get_ref_file(data)
+    for c in ref.file_contigs(ref_file):
+        if c.name in EBVCONTIGS:
+            return c.name
+    return False

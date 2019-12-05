@@ -22,6 +22,7 @@
   peaks on them separately.
 - Call peaks on NF/MN/DN/TN regions separately for each caller during ATAC-seq.
 - Allow viral contamination to be assasyed on non tumor/normal samples.
+- Ensure EBV coverage is calculated when run on genomes with it included as a contig.
 
 ## 1.1.8 (28 October 2019)
 - Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate

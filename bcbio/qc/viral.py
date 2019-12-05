@@ -11,6 +11,7 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+from bcbio.heterogeneity import chromhacks
 
 def run(bam_file, data, out_dir):
     """Run viral QC analysis:
@@ -51,6 +52,18 @@ def run(bam_file, data, out_dir):
                         "awk 'BEGIN {{FS=\"\\t\"}} {{ print $1 FS $3 FS $4 FS $10/$3 FS $11/$3 FS $12/$3}}' | "
                         "sort -n -r -k 5,5 >> {tx_out_file}")
                 do.run(cmd.format(**locals()), "Analyse coverage of viral genomes")
+                if chromhacks.get_EBV(data):
+                    ref_file = dd.get_ref_file(data)
+                    work_bam = dd.get_work_bam(data)
+                    ebv = chromhacks.get_EBV(data)
+                    mosdepth_prefix = os.path.splitext(work_bam)[0] + "-EBV"
+                    cmd = ("mosdepth -t {cores} {mosdepth_prefix} {work_bam} -n --thresholds 1,5,25 --by "
+                            "<(grep {ebv} {ref_file}.fai | awk 'BEGIN {{FS=\"\\t\"}}; {{print $1 FS \"0\" FS $2}}') && "
+                            "paste <(zcat {mosdepth_prefix}.regions.bed.gz) <(zgrep -v ^# {mosdepth_prefix}.thresholds.bed.gz) | "
+                            "awk 'BEGIN {{FS=\"\\t\"}} {{ print $1 FS $3 FS $4 FS $10/$3 FS $11/$3 FS $12/$3}}' | "
+                            "sort -n -r -k 5,5 >> {tx_out_file}")
+                    do.run(cmd.format(**locals()), "Analyse coverage of EBV")
+
         out["base"] = out_file
         out["secondary"] = []
     return out
