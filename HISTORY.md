@@ -1,11 +1,8 @@
 ## 1.1.9 (in progress)
 - Fix for get VEP cache.
 - Support Picard's new syntax for ReorderSam (REFERENCE -> SEQUENCE_DICTIONARY).
-- Adds filtering of nucleosome free (NF) regions for ATAC-seq.
-- Add peak calling on NF regions.
-- Add uploading of full and NF BAM for ATAC-seq.
-- Add documentation describing ATAC-seq outputs.
 - Remove mitochondrial reads from ChIP/ATAC-seq calling.
+- Add documentation describing ATAC-seq outputs.
 - Add ENCODE library complexity metrics for ATAC/ChIP-seq to MultiQC report 
   (see https://www.encodeproject.org/data-standards/terms/#library for a description of the metrics)
 - Add STAR sample-specific 2-pass. This helps assign a moderate number of reads per genes. Thanks
