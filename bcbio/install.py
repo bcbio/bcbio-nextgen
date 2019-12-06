@@ -42,8 +42,9 @@ SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
                      "pseudomonas_aeruginosa_ucbpp_pa14", "sacCer3", "TAIR10",
                      "WBcel235", "xenTro3", "GRCz10", "GRCz11", "Sscrofa11.1", "BDGP6"]
 TARBALL_DIRECTORIES = ["bwa", "rtg", "hisat2"]
-SUPPORTED_INDEXES = TARBALL_DIRECTORIES + ["bbmap", "bowtie", "bowtie2", "minimap2", "novoalign", "twobit",
-                                           "snap", "star", "seq"]
+SUPPORTED_INDEXES = TARBALL_DIRECTORIES +\
+    ["bbmap", "bowtie", "bowtie2", "minimap2", "novoalign", "twobit", "bismark",
+     "snap", "star", "seq"]
 DEFAULT_INDEXES = ["rtg"]
 
 Tool = collections.namedtuple("Tool", ["name", "fname"])
