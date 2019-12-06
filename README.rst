@@ -12,6 +12,8 @@ downstream biology.
 
 .. image:: https://travis-ci.org/bcbio/bcbio-nextgen.png
     :target: https://travis-ci.org/bcbio/bcbio-nextgen
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3564939.svg
+    :target: https://zenodo.org/record/3564939
 
 Features
 --------
