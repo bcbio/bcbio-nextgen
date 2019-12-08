@@ -1,4 +1,7 @@
-## 1.1.9 (in progress)
+## 1.2.0
+- Fix for bismark not being a supported aligner.
+
+## 1.1.9 
 - Fix for get VEP cache.
 - Support Picard's new syntax for ReorderSam (REFERENCE -> SEQUENCE_DICTIONARY).
 - Remove mitochondrial reads from ChIP/ATAC-seq calling.
