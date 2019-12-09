@@ -686,7 +686,7 @@ def _check_variantcaller(item):
         problem = [x for x in vc_set if x not in allowed]
         if len(problem) > 0:
             raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
-                             "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                             "Supported options: %s\n" % (problem, sorted(map(str, list(allowed)))))
     # Ensure germline somatic calling only specified with tumor/normal samples
     if "germline" in vcs or "somatic" in vcs:
         paired = vcfutils.get_paired_phenotype(item)
