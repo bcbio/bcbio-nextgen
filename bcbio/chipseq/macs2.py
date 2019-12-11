@@ -29,8 +29,8 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
         logger.info(f"{antibody.name} specified, using {antibody.peaktype} peak settings.")
         peaksettings = select_peak_parameters(antibody)
     elif method == "atac":
-        logger.info(f"ATAC-seq specified, using broad peak settings.")
-        peaksettings = " --broad --broad-cutoff 0.05 "
+        logger.info(f"ATAC-seq specified, using narrow peak settings.")
+        peaksettings = " "
     options = " ".join(resources.get("macs2", {}).get("options", ""))
     genome_size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
