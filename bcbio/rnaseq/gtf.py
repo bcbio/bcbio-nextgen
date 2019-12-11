@@ -1,4 +1,5 @@
 import gffutils
+from gffutils import pybedtools_integration
 import tempfile
 import os
 import random
@@ -9,6 +10,7 @@ from bcbio.utils import file_exists, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
+from bcbio.pipeline import datadict as dd
 
 def guess_infer_extent(gtf_file):
     """
@@ -420,3 +422,17 @@ def is_cpat_compatible(gtf):
         if pred(biotype):
             return True
     return False
+
+def get_tss_bed(gtf, out_file, data, padding=1000):
+    """
+    get a BED file of transcription start sites (TSS), padded in both directions by `padding`
+    """
+    if file_exists(out_file):
+        return out_file
+    db = get_gtf_db(gtf)
+    tsses = pybedtools_integration.tsses(db, merge_overlapping=True)
+    genome = dd.get_ref_file(data) + ".fai"
+    tsses = tsses.slop(l=padding, r=padding, g=genome)
+    with file_transaction(out_file) as tx_out_file:
+        tsses.saveas(tx_out_file)
+    return out_file
