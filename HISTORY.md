@@ -1,8 +1,9 @@
 ## 1.2.0
 - Fix for bismark not being a supported aligner.
-- Ensure broad peaks are called when running ATAC-seq.
 - Run ataqv (https://github.com/ParkerLab/ataqv) to calculate additional ATAQ-seq quality control
   metrics.
+- Workaround for some bcbioRNASeq plots failing with many samples when `interesting_groups` is not set.
+- Add `known_fusions` parameter for passing in known fusions to arriba.
 
 ## 1.1.9 
 - Fix for get VEP cache.

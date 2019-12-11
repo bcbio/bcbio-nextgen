@@ -4,7 +4,7 @@ details:
   - analysis: RNA-seq
     algorithm:
       fusion_caller: [pizzly, oncofuse, ericscript, arriba]
-      variantcaller: [gatk-haplotype]
+      #variantcaller: [gatk-haplotype]
       transcriptome_align: True
       aligner: star
       quality_format: illumina
@@ -18,6 +18,7 @@ details:
       #bcbiornaseq:
       #    organism: homo sapiens
       #    interesting_groups: batch
+      known_fusions: ../data/test_fusion/known_fusions.tsv
     metadata:
       batch: TestBatch1
     description: Test1
@@ -26,7 +27,7 @@ details:
   - analysis: RNA-seq
     algorithm:
       fusion_caller: [pizzly, oncofuse, ericscript]
-      variantcaller: [gatk-haplotype]
+      #variantcaller: [gatk-haplotype]
       transcriptome_align: True
       aligner: star
       quality_format: illumina
@@ -40,8 +41,9 @@ details:
       #bcbiornaseq:
       #    organism: homo sapiens
       #    interesting_groups: batch
+      known_fusions: ../data/test_fusion/known_fusions.tsv
     metadata:
-      batch: TestBatch1
+      batch: TestBatch2
     description: 2Test2
     files: [../data/test_fusion/1_1.fq.gz, ../data/test_fusion/1_2.fq.gz]
     genome_build: hg19

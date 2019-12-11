@@ -42,6 +42,8 @@ def run_arriba(data):
         else:
             logger.info("arriba blacklist file not found, disabling blacklist filtering.")
             cmd += (f"-f blacklist ")
+        if dd.get_known_fusions(data):
+            cmd += (f"-k {dd.get_known_fusions(data)} ")
         message = f"Running arriba on {dd.get_sample_name(data)}."
         do.run(cmd, message)
 

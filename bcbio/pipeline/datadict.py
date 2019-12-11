@@ -12,6 +12,7 @@ LOOKUPS = {
     "config": {"keys": ['config']},
     "tmp_dir": {"keys": ['config', 'resources', 'tmp', 'dir']},
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
+
                   "default": 1},
     "svprioritize": {"keys": ['config', 'algorithm', 'svprioritize']},
     "effects_transcripts": {"keys": ["config", "algorithm", "effects_transcripts"], "default": "all"},
@@ -104,6 +105,7 @@ LOOKUPS = {
     "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "fusion_caller": {"keys": ['config', 'algorithm', 'fusion_caller']},
+    "known_fusions": {"keys": ['config', 'algorithm', 'known_fusions']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
     "aligner": {"keys": ['config', 'algorithm', 'aligner']},
@@ -404,3 +406,4 @@ def get_algorithm_keys():
         if k == v["keys"][2]:
             keys.append(k)
     return keys
+
