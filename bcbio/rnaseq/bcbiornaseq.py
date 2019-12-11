@@ -1,4 +1,5 @@
 import os
+import shutil
 import toolz as tz
 from string import Template
 from bcbio.utils import file_exists, Rscript_cmd, safe_makedir, chdir
@@ -6,6 +7,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from datetime import datetime as dt
+from pathlib import Path
+from bcbio.log import logger
 
 import six
 
@@ -44,17 +47,37 @@ def make_quality_report(data):
     """
     create and render the bcbioRNASeq quality report
     """
+    MAX_SAMPLES = 100
     if "bcbiornaseq" not in dd.get_tools_on(data):
         return data
     upload_dir = tz.get_in(("upload", "dir"), data)
     report_dir = os.path.join(upload_dir, "bcbioRNASeq")
+    nsamples = len(list(Path(upload_dir).rglob('quant.sf')))
+    groups = dd.get_bcbiornaseq(data).get("interesting_groups", None)
     safe_makedir(report_dir)
     quality_rmd = os.path.join(report_dir, "quality_control.Rmd")
     quality_html = os.path.join(report_dir, "quality_control.html")
     quality_rmd = rmarkdown_draft(quality_rmd, "quality_control", "bcbioRNASeq")
+    if nsamples > MAX_SAMPLES and not groups:
+        logger.warn(f"{nsamples} detected, disabling a few bcbioRNASeq plots which break "
+                    f"with many samples. Setting `interesting_groups` would allow these plots "
+                    f"to be created.")
+        quality_rmd = many_samples_workaround(quality_rmd)
     if not file_exists(quality_html):
         render_rmarkdown_file(quality_rmd)
     return data
+
+def many_samples_workaround(quality_rmd):
+    """
+    bcbioRNASeq has a few plots that are broken if many samples are included,
+    this disables those plots as a workaround
+    """
+    disable_pca_cmd = "sed -i '/plotPCA(/ { N;N;N;N; s/^/#/gm }' " + f"{quality_rmd}"
+    disable_saturation_cmd = f"sed -i s/plotGeneSaturation/#plotGeneSaturation/ {quality_rmd}"
+    message = f"Disabling PCA plot."
+    do.run(disable_pca_cmd, "Disabling PCA plot.")
+    do.run(disable_saturation_cmd, "Disabling gene saturation plot.")
+    return quality_rmd
 
 def rmarkdown_draft(filename, template, package):
     """
