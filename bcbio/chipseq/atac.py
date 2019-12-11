@@ -9,6 +9,8 @@ from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
+from bcbio.rnaseq import gtf
+from bcbio.heterogeneity import chromhacks
 
 # ranges taken from Buenrostro, Nat. Methods 10, 1213–1218 (2013).
 ATACRange = namedtuple('ATACRange', ['label', 'min', 'max'])
@@ -87,6 +89,72 @@ def split_ATAC(data, bam_file=None):
                     f'{bam_file} > {tx_out_file}'
                 message = f'Splitting {arange.label} regions from {bam_file}.'
                 do.run(cmd, message)
+            bam.index(out_file, dd.get_config(data))
         split_files[arange.label] = out_file
     data = tz.assoc_in(data, ['atac', 'align'], split_files)
     return data
+
+def run_ataqv(data):
+    if not dd.get_chip_method(data) == "atac":
+        return None
+    work_dir = dd.get_work_dir(data)
+    sample_name = dd.get_sample_name(data)
+    out_dir = os.path.join(work_dir, "qc", sample_name, "ataqv")
+    peak_file = get_NF_peaks(data)
+    bam_file = get_NF_bam(data)
+    out_file = os.path.join(out_dir, sample_name + ".ataqv.json.gz")
+    if not peak_file:
+        logger.info(f"NF peak file for {sample_name} not found, skipping ataqv")
+        return None
+    if not bam_file:
+        logger.info(f"NF BAM file for {sample_name} not found, skipping ataqv")
+        return None
+    if utils.file_exists(out_file):
+        return out_file
+    tss_bed_file = os.path.join(out_dir, "TSS.bed")
+    tss_bed_file = gtf.get_tss_bed(dd.get_gtf_file(data), tss_bed_file, data, padding=1000)
+    autosomal_reference = os.path.join(out_dir, "autosomal.txt")
+    autosomal_reference = _make_autosomal_reference_file(autosomal_reference, data)
+    ataqv = config_utils.get_program("ataqv", data)
+    mitoname = chromhacks.get_mitochondrial_chroms(data)[0]
+    if not ataqv:
+        logger.info(f"ataqv executable not found, skipping running ataqv.")
+        return None
+    with file_transaction(out_file) as tx_out_file:
+        cmd = (f"{ataqv} --peak-file {peak_file} --name {sample_name} --metrics-file {tx_out_file} "
+               f"--tss-file {tss_bed_file} --autosomal-reference-file {autosomal_reference} "
+               f"--ignore-read-groups --mitochondrial-reference-name {mitoname} "
+               f"None {bam_file}")
+        message = f"Running ataqv on the NF fraction of {sample_name}."
+        do.run(cmd, message)
+    return out_file
+
+def _make_autosomal_reference_file(out_file, data):
+    """
+    for many organisms we don't know in bcbio what chromosomes are what, for now include
+    everything non-mitochondrial
+    """
+    if utils.file_exists(out_file):
+        return out_file
+    nonmito = chromhacks.get_nonmitochondrial_chroms(data)
+    with file_transaction(out_file) as tx_out_file:
+        with open(tx_out_file, "w") as out_handle:
+            for chrom in nonmito:
+                print(f"{chrom}", file=out_handle)
+    return out_file
+
+def get_NF_bam(data):
+    """
+    get the nucleosome free BAM file for ATAC-seq if it exists
+    """
+    return tz.get_in(("atac", "align", "NF"), data, None)
+
+def get_NF_peaks(data):
+    """
+    get the nucleosome free peak file for ATAC-seq if it exists
+    """
+    peak_files = tz.get_in(("peaks_files", "NF", "macs2"), data, [])
+    for f in peak_files:
+        if f.endswith("narrowPeak") or f.endswith("broadPeak"):
+            return f
+    return None
