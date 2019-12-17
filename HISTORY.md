@@ -5,7 +5,7 @@
 - Workaround for some bcbioRNASeq plots failing with many samples when `interesting_groups` is not set.
 - Add `known_fusions` parameter for passing in known fusions to arriba.
 
-## 1.1.9 
+## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.
 - Support Picard's new syntax for ReorderSam (REFERENCE -> SEQUENCE_DICTIONARY).
 - Remove mitochondrial reads from ChIP/ATAC-seq calling.
