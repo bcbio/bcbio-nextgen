@@ -31,6 +31,8 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
     elif method == "atac":
         logger.info(f"ATAC-seq specified, using narrow peak settings.")
         peaksettings = " "
+    else:
+        peaksettings = " "
     options = " ".join(resources.get("macs2", {}).get("options", ""))
     genome_size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
