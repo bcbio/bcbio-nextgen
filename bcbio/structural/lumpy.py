@@ -28,6 +28,7 @@ from bcbio.variation import effects, vcfutils, vfilter
 def _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items):
     """Run lumpy-sv using smoove.
     """
+    data = items[0]
     batch = sshared.get_cur_batch(items)
     ext = "-%s-svs" % batch if batch else "-svs"
     name = "%s%s" % (dd.get_sample_name(items[0]), ext)
@@ -53,8 +54,10 @@ def _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items):
             exclude_chrs = "--excludechroms '%s'" % ",".join(std_excludes + exclude_chrs)
             exclude_bed = ("--exclude %s" % sv_exclude_bed) if utils.file_exists(sv_exclude_bed) else ""
             tempdir = os.path.dirname(tx_out_file)
-            cmd = ("export TMPDIR={tempdir} && "
-                   "smoove call --processes {cores} --genotype --removepr --fasta {ref_file} "
+            smoove = config_utils.get_program("smoove", data)
+            smoovepath = os.path.dirname(smoove)
+            cmd = ("export TMPDIR={tempdir} && export PATH={smoovepath}:$PATH && "
+                   "{smoove} call --processes {cores} --genotype --removepr --fasta {ref_file} "
                    "--name {name} --outdir {out_dir} "
                    "{exclude_bed} {exclude_chrs} {full_bams}")
             with utils.chdir(tempdir):
