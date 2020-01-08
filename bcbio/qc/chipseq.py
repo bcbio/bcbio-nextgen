@@ -2,6 +2,7 @@
 import os
 import shutil
 import glob
+import toolz as tz
 
 from bcbio.log import logger
 from bcbio import utils
@@ -9,6 +10,7 @@ from bcbio.bam.readstats import number_of_mapped_reads
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import tx_tmpdir
+from bcbio.chipseq.atac import get_NF_peaks
 
 
 supported = ["hg19", "hg38", "mm10", "mm9", "rn4", "ce6", "dm3"]
@@ -20,6 +22,9 @@ def run(bam_file, sample, out_dir):
     #    out = chipqc(bam_file, sample, out_dir)
 
     peaks = sample.get("peaks_files", {}).get("main")
+    # check for NF ATAC peaks
+    if not peaks:
+        peaks = get_NF_peaks(sample)
     if peaks:
         out.update(_reads_in_peaks(bam_file, peaks, sample))
     return out
