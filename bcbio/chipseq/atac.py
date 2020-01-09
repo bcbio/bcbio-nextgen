@@ -91,6 +91,7 @@ def split_ATAC(data, bam_file=None):
                 do.run(cmd, message)
             bam.index(out_file, dd.get_config(data))
         split_files[arange.label] = out_file
+    split_files["full"] = bam_file
     data = tz.assoc_in(data, ['atac', 'align'], split_files)
     return data
 

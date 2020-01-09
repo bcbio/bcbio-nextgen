@@ -58,7 +58,8 @@ def calling(data):
         if greylistdir:
             data["greylist"] = greylistdir
     if method == "atac":
-        for fraction in atac.ATACRanges.keys():
+        fractions = list(atac.ATACRanges.keys()) + ["full"]
+        for fraction in fractions:
             chip_bam = tz.get_in(("atac", "align", fraction), data)
             logger.info(f"Running peak calling with {data['peak_fn']} on the {fraction} fraction of {chip_bam}.")
             name = dd.get_sample_name(data) + f"-{fraction}"
