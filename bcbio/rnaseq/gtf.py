@@ -305,6 +305,10 @@ def tx2genedict(gtf, keep_version=False):
             if has_transcript_version(line) and not keep_version:
                 txid = _strip_feature_version(txid)
                 geneid = _strip_feature_version(geneid)
+            txid = txid.strip()
+            geneid = geneid.strip()
+            if not txid or not geneid:
+                continue
             d[txid] = geneid
     return d
 
