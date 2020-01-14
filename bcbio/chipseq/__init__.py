@@ -23,6 +23,8 @@ def clean_chipseq_alignment(data):
     work_bam = dd.get_work_bam(data)
     work_bam = bam.sort(work_bam, dd.get_config(data))
     bam.index(work_bam, dd.get_config(data))
+    # an unfiltered BAM file is useful for calculating some metrics later
+    data = tz.assoc_in(data, ['chipseq', 'align', "unfiltered"],  work_bam)
     clean_bam = remove_nonassembled_chrom(work_bam, data)
     clean_bam = remove_mitochondrial_reads(clean_bam, data)
     data = atac.calculate_complexity_metrics(clean_bam, data)
