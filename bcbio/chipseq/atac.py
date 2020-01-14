@@ -101,14 +101,14 @@ def run_ataqv(data):
     work_dir = dd.get_work_dir(data)
     sample_name = dd.get_sample_name(data)
     out_dir = os.path.join(work_dir, "qc", sample_name, "ataqv")
-    peak_file = get_NF_peaks(data)
-    bam_file = get_NF_bam(data)
+    peak_file = get_full_peaks(data)
+    bam_file = get_unfiltered_bam(data)
     out_file = os.path.join(out_dir, sample_name + ".ataqv.json.gz")
     if not peak_file:
-        logger.info(f"NF peak file for {sample_name} not found, skipping ataqv")
+        logger.info(f"Full peak file for {sample_name} not found, skipping ataqv")
         return None
     if not bam_file:
-        logger.info(f"NF BAM file for {sample_name} not found, skipping ataqv")
+        logger.info(f"Unfiltered BAM file for {sample_name} not found, skipping ataqv")
         return None
     if utils.file_exists(out_file):
         return out_file
@@ -126,7 +126,7 @@ def run_ataqv(data):
                f"--tss-file {tss_bed_file} --autosomal-reference-file {autosomal_reference} "
                f"--ignore-read-groups --mitochondrial-reference-name {mitoname} "
                f"None {bam_file}")
-        message = f"Running ataqv on the NF fraction of {sample_name}."
+        message = f"Running ataqv on {sample_name}."
         do.run(cmd, message)
     return out_file
 
@@ -155,6 +155,22 @@ def get_NF_peaks(data):
     get the nucleosome free peak file for ATAC-seq if it exists
     """
     peak_files = tz.get_in(("peaks_files", "NF", "macs2"), data, [])
+    for f in peak_files:
+        if f.endswith("narrowPeak") or f.endswith("broadPeak"):
+            return f
+    return None
+
+def get_unfiltered_bam(data):
+    """
+    get the nucleosome free BAM file for ATAC-seq if it exists
+    """
+    return tz.get_in(("chipseq", "align", "unfiltered"), data, None)
+
+def get_full_peaks(data):
+    """
+    get the nucleosome free peak file for ATAC-seq if it exists
+    """
+    peak_files = tz.get_in(("peaks_files", "full", "macs2"), data, [])
     for f in peak_files:
         if f.endswith("narrowPeak") or f.endswith("broadPeak"):
             return f
