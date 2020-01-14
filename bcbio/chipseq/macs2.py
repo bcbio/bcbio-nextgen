@@ -72,7 +72,7 @@ def _compress_and_sort_bdg_files(out_dir, data):
             continue
         bedtools = config_utils.get_program("bedtools", data)
         with file_transaction(out_file) as tx_out_file:
-            cmd = f"{bedtools} sort -i {fn} | bgzip -c > {tx_out_file}"
+            cmd = f"sort -k1,1 -k2,2n {fn} | bgzip -c > {tx_out_file}"
             message = f"Compressing and sorting {fn}."
             do.run(cmd, message)
 

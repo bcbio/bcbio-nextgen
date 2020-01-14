@@ -4,6 +4,8 @@
   metrics.
 - Workaround for some bcbioRNASeq plots failing with many samples when `interesting_groups` is not set.
 - Add `known_fusions` parameter for passing in known fusions to arriba.
+- Fix for tx2gene not working properly on some GTF files.
+- Sort MACS2 output with UNIX sort to avoid memory issues.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.
