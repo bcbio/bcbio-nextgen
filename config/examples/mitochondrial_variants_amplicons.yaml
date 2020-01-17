@@ -1,0 +1,39 @@
+# mitochondrial variant calling from Amplicon sequencing
+# using mutect2 - somatic caller and tumor phenotype
+# more elaborated approach: 
+# - https://gatk.broadinstitute.org/hc/en-us/community/posts/360056028651-GATK-Best-Practices-Mitochondrial-Analysis
+# - https://gatkforums.broadinstitute.org/gatk/discussion/23598/new-mitochondrial-analysis-with-mutect2#latest
+# no alignment, because amplicon already captures mt Read and alignment will map them back to autosomes which have nuclear mt DNA segments
+# mt.bed in grch37: MT	1	16569
+details:
+- algorithm:
+    aligner: false
+    bam_clean: picard
+    coverage_interval: amplicon
+    effects: vep
+    effects_transcripts: all
+    realign: false
+    recalibrate: false
+    mark_duplicates: true
+    save_diskspace: true
+    tools_on:
+    - vep_splicesite_annotations
+    variantcaller:
+    - mutect2
+    variant_regions: /path/mt.bed
+  analysis: variant2
+  description: sample
+  files:
+  - /path/input/sample.MT.bam
+  genome_build: GRCh37
+  metadata:
+    phenotype: tumor
+resources:
+  default:
+    cores: 7
+    jvm_opts:
+    - -Xms750m
+    - -Xmx7000m
+    memory: 7G
+upload:
+  dir: ../final
