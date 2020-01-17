@@ -13,27 +13,22 @@ details:
     metadata:
       sex: female
     analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       aligner: bwa
-      variantcaller: [freebayes, gatk-haplotype, samtools]
-      recalibrate: gatk
+      variantcaller: gatk-haplotype
       validate: giab-NA12878/truth_small_variants.vcf.gz
       validate_regions: giab-NA12878/truth_regions.bed
       variant_regions: capture_regions/Exome-NGv3
-      ensemble:
-        numpass: 2
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
     description: NA12878-2
     metadata:
       sex: female
     analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       aligner: bwa
-      variantcaller: [freebayes, gatk-haplotype, samtools]
+      variantcaller: gatk-haplotype
       validate: giab-NA12878/truth_small_variants.vcf.gz
       validate_regions: giab-NA12878/truth_regions.bed
       variant_regions: capture_regions/Exome-NGv3
-      ensemble:
-        numpass: 2

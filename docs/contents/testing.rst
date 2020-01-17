@@ -1,56 +1,53 @@
 Getting started
 ---------------
 
-Overview
-========
+Project structure
+=================
 
-1. Create a `sample configuration file`_ for your project
-   (substitute the example BAM and fastq names below with the full
-   path to your sample files)::
+bcbio encourages a project structure::
 
-         bcbio_nextgen.py -w template gatk-variant project1 sample1.bam sample2_1.fq sample2_2.fq
+    project/
+    ├── config
+    ├── final
+    ├── input
+    └── work
 
-   This uses a standard template (GATK best practice variant calling)
-   to automate creation of a full configuration for all samples. See
-   :ref:`automated-sample-config` for more details on running the
-   script, and manually edit the base template or final output
-   file to incorporate project specific configuration. The example
-   pipelines provide a good starting point and the
-   :ref:`sample-configuration` documentation has full details on
-   available options.
+with the project.yaml configuration in the ``config`` directory, the input files
+(fastq, bam, bed) in the ``input`` directory, the outputs of the
+pipeline in the ``final`` directory, and the actual processing done in the
+``work`` directory.
 
-2. Run analysis, distributed across 8 local cores::
+Typical bcbio run:
 
-         bcbio_nextgen.py bcbio_sample.yaml -n 8
+- copy or link input files in the ``input`` directory
+- set pipeline parameters in ``config/project.yaml``
+- run the ``bcbio_nextgen.py`` script from inside the ``work``
+- review the results in ``final``
+- delete ``work`` with intermediate files.
 
-3. Read the :ref:`docs-config` documentation for full details on
-   adjusting both the sample and system configuration files to match
-   your experiment and computational setup.
+Quick start with GATK variant calling
+=====================================
+
+1. Prepare input files (WES, WGS, or a small subset):
+
+        ls
+        sample1_1.fq.gz, sample1_2.fq.gz
+
+2. Create a `sample configuration file`_::
+
+        bcbio_nextgen.py -w template gatk-variant project1 sample1_1.fq sample1_2.fq
+
+   The resulting config file `project1/config/project1.yaml` is created by using
+   a `standard template for GATK` best practices variant calling.
+
+2. Run analysis using 8 local cores::
+
+         cd project1/work
+         bcbio_nextgen.py ../config/project1.yaml -n 8
 
 .. _sample configuration file: https://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_sample.yaml
 
-Project directory
-=================
-
-bcbio encourages a project structure like::
-
-    my-project/
-    ├── config
-    ├── final
-    └── work
-
-with the input configuration in the ``config`` directory, the outputs of the
-pipeline in the ``final`` directory, and the actual processing done in the
-``work`` directory. Run the ``bcbio_nextgen.py`` script from inside the ``work``
-directory to keep all intermediates there.  The ``final`` directory, relative to
-the parent directory of the ``work`` directory, is the default location
-specified in the example configuration files and gets created during
-processing. The ``final`` directory has all of the finished outputs and you can
-remove the ``work`` intermediates to cleanup disk space after confirming the
-results. All of these locations are configurable and this project structure is
-only a recommendation.
-
-.. _logging-output:
+.. _standard template for GATK: https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml
 
 Logging
 =======
@@ -77,20 +74,50 @@ Example pipelines
 We supply example input configuration files for validation
 and to help in understanding the pipeline.
 
-Whole genome trio (50x)
-~~~~~~~~~~~~~~~~~~~~~~~
+Exome variant calling with validation - hg38
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This input configuration runs whole genome variant calling using bwa, GATK
-HaplotypeCaller and FreeBayes. It uses a father/mother/child
-trio from the `CEPH NA12878 family`_: NA12891, NA12892, NA12878.
+This example calls variants on the two technical replicates of NA12878 exome
+from `EdgeBio's`_ clinical sequencing pipeline, and compares them against reference
+materials from NIST's `Genome in a Bottle`_ initiative.
+
+1. Get the input configuration file, fastq reads, reference materials and analysis regions::
+
+    mkdir -p NA12878-exome-eval
+    cd NA12878-exome-eval
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+    bash NA12878-exome-methodcmp-getdata.sh
+
+2. Run the analysis, distributed on 8 local cores, with::
+
+    cd work
+    bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
+
+The ``grading-summary.csv`` contains detailed comparisons of the results
+to the NIST reference materials, enabling rapid comparisons of methods.
+
+.. _combined ensemble callset: http://bcb.io/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
+.. _Genome in a Bottle: http://www.genomeinabottle.org/
+.. _EdgeBio's: http://www.edgebio.com/
+
+.. _example-cancer:
+
+
+Whole genome trio (50x) - hg38
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This input configuration runs whole genome bwa alignment and GATK variant calling.
+It uses a father/mother/child trio from the `CEPH NA12878 family`_: NA12891, NA12892, NA12878.
 Illumina's `Platinum genomes project`_ has 50X whole genome sequencing of the
 three members. The analysis compares results against a reference
 NA12878 callset from NIST's `Genome in a Bottle`_ initiative.
 
 To run the analysis do::
 
-  mkdir -p NA12878-trio-eval/config NA12878-trio-eval/input NA12878-trio-eval/work
-  cd NA12878-trio-eval/config
+  mkdir NA12878-trio-eval
+  cd NA12878-trio-eval
+  mkdir config input work
+  cd config
   wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
   cd ../input
   wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
@@ -106,55 +133,8 @@ less disk and computational requirements.
 
 .. _CEPH NA12878 family: http://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png
 
-We also have a more extensive evaluation that includes 2 additional variant
-callers, Platypus and samtools, and 3 different methods of calling variants:
-single sample, pooled, and incremental joint calling. This uses the same input
-data as above but a different input configuration file::
-
-  mkdir -p NA12878-trio-eval/work_joint
-  cd NA12878-trio-eval/config
-  wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-joint.yaml
-  cd ../work_joint
-  bcbio_nextgen.py ../config/NA12878-trio-wgs-joint.yaml -n 16
-
-Exome with validation against reference materials
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This example calls variants on NA12878 exomes from `EdgeBio's`_
-clinical sequencing pipeline, and compares them against reference
-materials from NIST's `Genome in a Bottle`_ initiative. This supplies
-a full regression pipeline to ensure consistency of calling between
-releases and updates of third party software. The pipeline performs
-alignment with bwa mem and variant calling with FreeBayes, GATK
-UnifiedGenotyper and GATK HaplotypeCaller. Finally it integrates all 3
-variant calling approaches into a `combined ensemble callset`_.
-
-This is a large full exome example with multiple variant callers, so
-can take more than 24 hours on machines using multiple cores.
-
-First get the input configuration file, fastq reads, reference materials and analysis regions::
-
-    mkdir -p NA12878-exome-eval
-    cd NA12878-exome-eval
-    wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
-    bash NA12878-exome-methodcmp-getdata.sh
-
-Finally run the analysis, distributed on 8 local cores, with::
-
-    cd work
-    bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
-
-The ``grading-summary.csv`` contains detailed comparisons of the results
-to the NIST reference materials, enabling rapid comparisons of methods.
-
-.. _combined ensemble callset: http://bcb.io/2013/02/06/an-automated-ensemble-method-for-combining-and-evaluating-genomic-variants-from-multiple-callers/
-.. _Genome in a Bottle: http://www.genomeinabottle.org/
-.. _EdgeBio's: http://www.edgebio.com/
-
-.. _example-cancer:
-
-Cancer tumor normal
-~~~~~~~~~~~~~~~~~~~
+Cancer tumor normal - GRCh37
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This example calls variants using multiple approaches in a paired tumor/normal
 cancer sample from the `ICGC-TCGA DREAM challenge
