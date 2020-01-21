@@ -1,0 +1,23 @@
+# variant calling in RNA-seq using gatk3.x
+details:
+- algorithm:
+    aligner: star
+    variantcaller: gatk-haplotype
+    tools_off:
+    - gatk4
+    strandedness: unstranded
+  analysis: RNA-seq
+  description: AN-C1-1
+  files:
+  - /path/to/file_1.fq.gz
+  - /path/to/file_2.fq.gz
+  genome_build: hg38
+resources:
+  default:
+    cores: 4
+    jvm_opts:
+    - -Xms750m
+    - -Xmx7000m
+    memory: 15G
+upload:
+  dir: ../final
