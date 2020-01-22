@@ -145,3 +145,10 @@ def extract_germline_vcinfo(data, out_dir):
                     gd = germline.extract(d, [d], out_dir)
                     v["germline"] = gd["vrn_file_plus"]["germline"]
                     return v
+
+def extract_population_vcinfo(data):
+    """Extract population level VCFs
+    """
+    for v in _get_variants(data):
+        if v.get("population"):
+            return v
