@@ -89,7 +89,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         if dd.get_fusion_caller(data):
             if "arriba" in dd.get_fusion_caller(data):
                 cmd += (
-                    "--chimSegmentMin 10 --chimOutType WithinBAM SoftClip Junctions "
+                    "--chimSegmentMin 10 --chimOutType WithinBAM "
                     "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
                     "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
                     "--alignSJstitchMismatchNmax 5 -1 5 5 "
