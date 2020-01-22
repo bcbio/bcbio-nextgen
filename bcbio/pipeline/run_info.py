@@ -530,7 +530,7 @@ def _check_for_degenerate_interesting_groups(items):
         if all(x is None for x in values):
             raise ValueError("group %s is labelled as an interesting group, "
                              "but does not appear in the metadata." % group)
-        if len(list(tz.unique(values))) == 1:
+        if len(items) > 1 and len(list(tz.unique(values))) == 1:
             raise ValueError("group %s is marked as an interesting group, "
                              "but all samples have the same value." % group)
 
