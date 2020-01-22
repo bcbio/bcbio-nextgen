@@ -71,3 +71,9 @@ def get_EBV(data):
         if c.name in EBVCONTIGS:
             return c.name
     return False
+
+def is_alt(chrom):
+    """
+    check if chromosome is an ALT
+    """
+    return chrom.endswith("_alt")

@@ -10,6 +10,7 @@
 - Run ataqv on unfiltered BAM file with the full peak file.
 - Run peddy on the population variant file, not the individual sample level file if joint calling was done.
 - Add STAR to MultiQC metrics.
+- Throw an error if STAR is run on a genome with alts.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.

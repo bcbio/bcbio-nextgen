@@ -16,6 +16,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.ngsalign import postalign
 from bcbio.bam import fastq
+from bcbio.heterogeneity import chromhacks
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
@@ -63,6 +64,12 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if ref_file.endswith("chrLength"):
         ref_file = os.path.dirname(ref_file)
 
+    if index_has_alts(ref_file):
+        logger.error(
+            "STAR is being run on an index with ALTs which STAR is not "
+            "designed for. Please remake your STAR index or use an ALT-aware "
+            "aligner like hisat2")
+        sys.exit(1)
     with file_transaction(data, align_dir) as tx_align_dir:
         tx_1pass_dir = tx_align_dir + "1pass"
         tx_star_dirnames = _get_star_dirnames(tx_1pass_dir, data, names)
@@ -317,3 +324,10 @@ def junction2bed(junction_file):
         minimize = bed.minimize(tx_out_file)
         minimize.saveas(tx_out_file)
     return out_file
+
+def index_has_alts(ref_file):
+    name_file = os.path.join(os.path.dirname(ref_file), "chrName.txt")
+    with open(name_file) as in_handle:
+        names = [x.strip() for x in in_handle.readlines()]
+    has_alts = [chromhacks.is_alt(chrom) for chrom in names]
+    return any(has_alts)
