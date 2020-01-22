@@ -14,6 +14,7 @@
 - Don't run bcbioRNASeq if there is only one sample. Thanks to @kmendler for the suggestion.
 - Improve arriba sensitivity by setting `--peOverlapNbasesMin 10` and `--alignSplicedMateMapLminOverLmate 0.5` when
   running STAR (see https://github.com/suhrig/arriba/issues/41).
+- Make TPM and counts files from tximport automatically.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.

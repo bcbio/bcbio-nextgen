@@ -6,9 +6,10 @@ from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import effects, joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data, file_exists
+from bcbio.utils import filter_missing, flatten, to_single_data, file_exists, Rscript_cmd, safe_makedir
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
+from bcbio.provenance import do
 
 def fast_rnaseq(samples, run_parallel):
     to_index = determine_indexes_to_make(samples)
@@ -498,6 +499,7 @@ def combine_files(samples):
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
         updated_samples.append([data])
+    samples = load_tximport(samples)
     return updated_samples
 
 def determine_indexes_to_make(samples):
@@ -521,3 +523,27 @@ def determine_indexes_to_make(samples):
             indexes.add(combined_file)
     return tomake
 
+def load_tximport(samples):
+    rcmd = Rscript_cmd()
+    data = samples[0][0]
+    salmon_dir = os.path.join(dd.get_work_dir(data), "salmon")
+    tx2gene_file = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome", "tx2gene.csv")
+    out_dir = os.path.join(salmon_dir, "combined")
+    safe_makedir(out_dir)
+    tpm_file = os.path.join(out_dir, "tximport-tpm.csv")
+    counts_file = os.path.join(out_dir, "tximport-counts.csv")
+    if file_exists(tpm_file) and file_exists(tpm_file):
+        return samples
+    with file_transaction(tpm_file) as tx_tpm_file, file_transaction(counts_file) as tx_counts_file:
+        render_string = (
+            f'library(tidyverse);'
+            f'salmon_files = list.files("{salmon_dir}", pattern="quant.sf", recursive=TRUE, full.names=TRUE);'
+            f'tx2gene = readr::read_csv("{tx2gene_file}", col_names=c("transcript", "gene")); '
+            f'samples = basename(dirname(dirname(salmon_files)));'
+            f'names(salmon_files) = samples;'
+            f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM");'
+            f'readr::write_csv(txi$counts %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
+            f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
+        )
+        do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
+    return samples
