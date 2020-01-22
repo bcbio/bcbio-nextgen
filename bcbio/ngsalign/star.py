@@ -39,6 +39,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     star_dirs = _get_star_dirnames(align_dir, data, names)
     if file_exists(star_dirs.final_out):
         data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
+        out_log_file = os.path.join(align_dir, dd.get_lane(data) + "Log.final.out")
+        data = dd.update_summary_qc(data, "star", base=out_log_file)
         return data
 
     star_path = config_utils.get_program("STAR", config)
@@ -157,6 +159,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
+    out_log_file = os.path.join(align_dir, dd.get_lane(data) + "Log.final.out")
+    data = dd.update_summary_qc(data, "star", base=out_log_file)
     return data
 
 

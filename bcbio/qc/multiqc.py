@@ -379,6 +379,7 @@ def _create_config_file(out_dir, samples):
         module_order.append("bcftools")
     module_order.extend([
         "salmon",
+        "star",
         "picard",
         "qualimap",
         "snpeff",
