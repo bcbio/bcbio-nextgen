@@ -8,6 +8,7 @@
 - Sort MACS2 output with UNIX sort to avoid memory issues.
 - Run RiP on full peak file for ATAC-seq.
 - Run ataqv on unfiltered BAM file with the full peak file.
+- Run peddy on the population variant file, not the individual sample level file if joint calling was done.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.
