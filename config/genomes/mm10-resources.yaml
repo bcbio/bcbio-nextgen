@@ -1,8 +1,8 @@
-version: 31
+version: 32
 
 aliases:
   snpeff: GRCm38.86
-  ensembl: mus_musculus_vep_98_GRCm38
+  ensembl: mus_musculus_vep_99_GRCm38
 
 variation:
   dbsnp: ../variation/mm10-dbSNP-2013-09-12.vcf.gz

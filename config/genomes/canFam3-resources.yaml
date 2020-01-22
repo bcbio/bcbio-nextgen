@@ -1,7 +1,7 @@
-version: 24
+version: 25
 
 aliases:
-  ensembl: canis_familiaris_vep_98_CanFam3.1
+  ensembl: canis_familiaris_vep_99_CanFam3.1
   snpeff: CanFam3.1.86
 
 variation:
