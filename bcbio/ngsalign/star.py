@@ -93,7 +93,9 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
                     "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
                     "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
                     "--alignSJstitchMismatchNmax 5 -1 5 5 "
-                    "--chimSegmentReadGapMax 3 ")
+                    "--chimSegmentReadGapMax 3 "
+                    "--peOverlapNbasesMin 10 "
+                    "--alignSplicedMateMapLminOverLmate 0.5 ")
             else: 
                 cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
                     "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
