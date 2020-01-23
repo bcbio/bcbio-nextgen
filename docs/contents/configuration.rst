@@ -1181,44 +1181,45 @@ lists with multiple options:
 
 - ``tools_on`` Specify functionality to enable that is off by default:
 
-  - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
-    uses downsampled files and numbers here are an estimation of 1e7 reads.).
-  - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.
-  - ``damage_filter`` annotates low frequency somatic calls in INFO/DKFZBias for
-    DNA damage artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
-  - ``tumoronly_germline_filter`` applies a ``LowPriority`` filter to tumor-only calls
-    that match population germline databases. The default is to just apply a tag
-    ``EPR`` (external prioritization) that flags variants present in external
-    databases. Anything missing a ``pass`` here is a likely germline.
-  - ``vqsr`` makes GATK try quality score recalibration for variant filtration,
-    even for smaller sample sizes.
-  - ``svplots`` adds additional coverage and summary plots for CNVkit and detected
-    ensemble variants.
+  - ``bcbiornaseq`` loads a bcbioRNASeq object for use with `bcbioRNASeq <https://github.com/hbc/bcbioRNASeq>`_.
+  - ``bnd-genotype`` enables genotyping of breakends in Lumpy calls, which
+    improves accuracy but can be slow.
   - ``bwa-mem`` forces use of bwa mem even for samples with less than 70bp
-    reads.
+  reads.
+  - ``coverage_perbase`` calculates per-base coverage depth for analyzed variant
+    regions.
+  - ``damage_filter`` annotates low frequency somatic calls in INFO/DKFZBias for
+  DNA damage artifacts using `DKFZBiasFilter <https://github.com/eilslabs/DKFZBiasFilter>`_.
+  - ``gemini`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_ of variants for
+    downstream query using the new vcfanno and vcf2db approach.
+  - ``gemini_allvariants`` enables all variants to go into GEMINI, not only
+    those that pass filters.
+  - ``gemini_orig`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_
+    of variants using the older GEMINI loader. Only works for GRCh37 and hg19.
   - ``gvcf`` forces gVCF output for callers that support it (GATK
     HaplotypeCaller, FreeBayes, Platypus). For joint calling using a population of samples,
     please use `jointcaller` (:ref:`population-calling`).
-  - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
-    SpliceRegion plugin for VEP. Both optional plugins add extra splice site
-    annotations.
-  - ``gemini`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_ of variants for
-    downstream query using the new vcfanno and
-    vcf2db approach.
-  - ``gemini_orig`` Create a `GEMINI database <https://github.com/arq5x/gemini>`_
-    of variants using the older GEMINI loader. Only works for GRCh37 and hg19.
-  - ``gemini_allvariants`` enables all variants to go into GEMINI, not only
-    those that pass filters.
+  - ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy
+    calling.
+  - ``noalt_calling`` call variants only for chr1,,22,X,Y,MT.
+  - ``qualimap`` runs `Qualimap <http://qualimap.bioinfo.cipf.es/>`_ (qualimap
+    uses downsampled files and numbers here are an estimation of 1e7 reads.).
+  - ``qualimap_full`` runs Qualimap with full bam files but it may be slow.
+  - ``svplots`` adds additional coverage and summary plots for CNVkit and detected
+    ensemble variants.
+  - ``tumoronly_germline_filter`` applies a ``LowPriority`` filter to tumor-only calls
+    that match population germline databases. The default is to just apply a tag ``EPR``
+    (external prioritization) that flags variants present in external databases.
+    Anything missing a ``pass`` here is a likely germline.
   - ``vcf2db_expand`` decompresses and expands the genotype columns in the
     vcfanno prepared GEMINI databases, enabling standard SQL queries on
     genotypes and depths.
-  - ``bnd-genotype`` enables genotyping of breakends in Lumpy calls, which
-    improves accuracy but can be slow.
-  - ``lumpy_usecnv`` uses input calls from CNVkit as prior evidence to Lumpy
-    calling.
-  - ``coverage_perbase`` calculates per-base coverage depth for analyzed variant
-    regions.
-  - ``bcbiornaseq`` loads a bcbioRNASeq object for use with `bcbioRNASeq <https://github.com/hbc/bcbioRNASeq>`_.
+  - ``vqsr`` makes GATK try quality score recalibration for variant filtration,
+    even for smaller sample sizes.
+  - ``vep_splicesite_annotations`` enables the use of the MaxEntScan and
+    SpliceRegion plugin for VEP. Both optional plugins add extra splice site
+    annotations.
+
 
 
 parallelization
