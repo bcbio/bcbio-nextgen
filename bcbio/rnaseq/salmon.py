@@ -168,7 +168,7 @@ def salmon_index(gtf_file, data, out_dir):
     files = dd.get_input_sequence_files(data)
     kmersize = sailfish.pick_kmersize(files[0])
     with file_transaction(data, out_dir) as tx_out_dir:
-        cmd = "{salmon} index -k {kmersize} -p {num_cores} -i {tx_out_dir} -t {gtf_fa}"
+        cmd = "{salmon} index --keepDuplicates -k {kmersize} -p {num_cores} -i {tx_out_dir} -t {gtf_fa}"
         message = "Creating Salmon index for {gtf_fa} with {kmersize} bp kmers."
         do.run(cmd.format(**locals()), message.format(**locals()), None)
     return out_dir

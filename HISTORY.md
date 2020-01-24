@@ -15,6 +15,9 @@
 - Improve arriba sensitivity by setting `--peOverlapNbasesMin 10` and `--alignSplicedMateMapLminOverLmate 0.5` when
   running STAR (see https://github.com/suhrig/arriba/issues/41).
 - Make TPM and counts files from tximport automatically.
+- Use --keepDuplicates when making the Salmon index. This keeps transcripts that are identical in the index instead of 
+  randomly choosing one. This helps when comparing to other ways of quantifying the transcripts, ensuring all of
+  the transcripts are represented. 
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.
