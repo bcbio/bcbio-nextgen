@@ -4,7 +4,7 @@ functions to access the data dictionary in a clearer way
 
 import os
 import toolz as tz
-from bcbio.utils import file_exists, to_single_data
+from bcbio.utils import file_exists, to_single_data, deepish_copy
 from bcbio.log import logger
 import sys
 
@@ -149,6 +149,7 @@ LOOKUPS = {
     "junction_bed": {"keys": ["junction_bed"]},
     "starjunction": {"keys": ["starjunction"]},
     "chimericjunction": {"keys": ["chimericjunction"]},
+    "star_log": {"keys": ["STAR", "log"], "default": None},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},
     "galaxy_dir": {"keys": ["dirs", "galaxy"]},
@@ -376,7 +377,9 @@ def update_summary_qc(data, key, base=None, secondary=None):
     stick files into summary_qc if you want them propagated forward
     and available for multiqc
     """
-    summary = get_summary_qc(data, {})
+    summary = deepish_copy(get_summary_qc(data, {}))
+    if key in summary:
+        return data
     if base and secondary:
         summary[key] = {"base": base, "secondary": secondary}
     elif base:
@@ -406,4 +409,3 @@ def get_algorithm_keys():
         if k == v["keys"][2]:
             keys.append(k)
     return keys
-
