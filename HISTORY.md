@@ -18,6 +18,7 @@
 - Use --keepDuplicates when making the Salmon index. This keeps transcripts that are identical in the index instead of 
   randomly choosing one. This helps when comparing to other ways of quantifying the transcripts, ensuring all of
   the transcripts are represented. 
+- Remove unnecessary "quant" subdirectory for Salmon runs. This allows MultiQC to properly name the samples.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.

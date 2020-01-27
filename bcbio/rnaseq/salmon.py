@@ -76,7 +76,7 @@ def run_salmon_decoy(data):
 
 def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, data, index):
     samplename = dd.get_sample_name(data)
-    quant_dir = os.path.join(salmon_dir, "quant")
+    quant_dir = salmon_dir
     safe_makedir(salmon_dir)
     out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
@@ -114,7 +114,7 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, data, index):
 
 def salmon_quant_bam(bam_file, salmon_dir, gtf_file, data):
     samplename = dd.get_sample_name(data)
-    quant_dir = os.path.join(salmon_dir, "quant")
+    quant_dir = salmon_dir
     safe_makedir(salmon_dir)
     out_file = os.path.join(quant_dir, "quant.sf")
     if file_exists(out_file):
@@ -212,7 +212,7 @@ def create_decoy_transcriptome(transcriptome, decoys, out_file):
     return out_file
 
 def _get_fraglen_file(salmondir):
-    flenfile = os.path.join(salmondir, "quant", "libParams", "flenDist.txt")
+    flenfile = os.path.join(salmondir, "libParams", "flenDist.txt")
     if not file_exists(flenfile):
         return None
     else:

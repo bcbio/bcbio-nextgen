@@ -374,7 +374,7 @@ def _get_variant_file(x, key, suffix="", sample=None, ignore_do_upload=False):
 def _maybe_add_sailfish_files(algorithm, sample, out):
     analysis = dd.get_analysis(sample)
     sailfish_dir = os.path.join(dd.get_work_dir(sample), "sailfish",
-                                dd.get_sample_name(sample), "quant")
+                                dd.get_sample_name(sample))
     if os.path.exists(sailfish_dir):
         out.append({"path": sailfish_dir,
                     "type": "directory",
