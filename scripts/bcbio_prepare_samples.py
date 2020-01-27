@@ -169,7 +169,7 @@ if __name__ == "__main__":
     else:
         print("WARNING: bcbio_system.yaml not found, creating own resources.")
         config = {'resources': {}}
-    res = {'cores': args.cores_per_job, 'memory': args.memory_per_job}
+    res = {'cores': args.cores_per_job, 'memory': f"{args.memory_per_job}g"}
     config["algorithm"] = {"num_cores": args.cores_per_job}
     config["resources"].update({'sambamba': res,
                                 'samtools': res})
