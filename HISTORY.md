@@ -19,6 +19,7 @@
   randomly choosing one. This helps when comparing to other ways of quantifying the transcripts, ensuring all of
   the transcripts are represented. 
 - Remove unnecessary "quant" subdirectory for Salmon runs. This allows MultiQC to properly name the samples.
+- Ensure STAR log file is propagated to the upload directory.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.

@@ -374,7 +374,7 @@ def _get_variant_file(x, key, suffix="", sample=None, ignore_do_upload=False):
 def _maybe_add_sailfish_files(algorithm, sample, out):
     analysis = dd.get_analysis(sample)
     sailfish_dir = os.path.join(dd.get_work_dir(sample), "sailfish",
-                                dd.get_sample_name(sample))
+                                dd.get_sample_name(sample), "quant")
     if os.path.exists(sailfish_dir):
         out.append({"path": sailfish_dir,
                     "type": "directory",
@@ -383,7 +383,7 @@ def _maybe_add_sailfish_files(algorithm, sample, out):
 
 def _maybe_add_salmon_files(algorithm, sample, out):
     salmon_dir = os.path.join(dd.get_work_dir(sample), "salmon",
-                              dd.get_sample_name(sample), "quant")
+                              dd.get_sample_name(sample))
     if os.path.exists(salmon_dir):
         out.append({"path": salmon_dir,
                     "type": "directory",
@@ -605,6 +605,13 @@ def _maybe_add_junction_files(algorithm, sample, out):
                     "type": "tab",
                     "ext": "SJ",
                     "dir": "STAR"})
+    star_summary = dd.get_summary_qc(sample).get("star", None)
+    if star_summary:
+        star_log = star_summary["base"]
+        if star_log:
+            out.append({"path": star_log,
+                        "type": "log",
+                        "dir": "STAR"})
     return out
 
 def _maybe_add_cufflinks(algorithm, sample, out):
