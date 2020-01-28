@@ -944,6 +944,18 @@ To convert duplex barcodes present on the ends of read 1 and read 2::
 
    bcbio_fastq_umi_prep.py autopair -c <cores_to_use> --tag1 5 --tag2 5 <list> <of> <fastq> <files>
 
+If you want to prepare your FASTQ files for use with the ``umi_type: fastq_name`` option and they
+don't follow the two barcode schemes listed you can pre-transform the FASTQ files yourself by
+putting ``:UMI_yourumisequence`` in the read name. Here is an example::
+
+  @A00574:89:HCLMTDRXX:1:2101:1425:1016:UMI_CGAACGTGTACACG 2:N:0:CTGAAGCT+GGCTCTGA
+  GTGATATAATTTATTTTCTTAAAATAGCCATGCTGGCTGGAGCCACAGCAGTTTACTCCCAGTTCATTACTCAGCTAACAGACGAAAACCAGT
+  +
+  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+For more complex UMI schemes please open up an issue and we can help you write a transformation to
+prepare your files. We use https://github.com/vals/umis to do these more complex transformations.
+
 Configuration options for UMIs:
 
 - ``umi_type`` The UMI/cellular barcode scheme used for your data. For single
@@ -966,6 +978,7 @@ avoid losing reads but you can set to larger values for high depth panels::
      resources:
        fgbio:
          options: [--min-reads, 2]
+
 
 RNA sequencing
 ==============
