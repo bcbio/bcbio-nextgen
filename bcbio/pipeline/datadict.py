@@ -6,7 +6,13 @@ import os
 import toolz as tz
 from bcbio.utils import file_exists, to_single_data, deepish_copy
 from bcbio.log import logger
+from collections import namedtuple
 import sys
+
+# be explicit about what fields can show up in the nested dictionaries and what they are
+
+TxImport = namedtuple("TxImport", 'gene_tpm, gene_counts')
+TxImport.__new__.__defaults__ = (None,) * len(TxImport._fields)
 
 LOOKUPS = {
     "config": {"keys": ['config']},
@@ -192,6 +198,7 @@ LOOKUPS = {
                                     "default": 1},
     "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
+    "tximport": {"keys": ["tximport"], "default": None}, 
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},

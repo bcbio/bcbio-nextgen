@@ -479,6 +479,7 @@ def combine_files(samples):
     else:
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
+    tximport = load_tximport(data)
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -498,8 +499,8 @@ def combine_files(samples):
             data = dd.set_dexseq_counts(data, dexseq_combined_file)
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
+        data = dd.set_tximport(data, tximport)
         updated_samples.append([data])
-    samples = load_tximport(samples)
     return updated_samples
 
 def determine_indexes_to_make(samples):
@@ -523,17 +524,16 @@ def determine_indexes_to_make(samples):
             indexes.add(combined_file)
     return tomake
 
-def load_tximport(samples):
+def load_tximport(data):
     rcmd = Rscript_cmd()
-    data = samples[0][0]
     salmon_dir = os.path.join(dd.get_work_dir(data), "salmon")
     tx2gene_file = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome", "tx2gene.csv")
     out_dir = os.path.join(salmon_dir, "combined")
     safe_makedir(out_dir)
     tpm_file = os.path.join(out_dir, "tximport-tpm.csv")
     counts_file = os.path.join(out_dir, "tximport-counts.csv")
-    if file_exists(tpm_file) and file_exists(tpm_file):
-        return samples
+    if file_exists(tpm_file) and file_exists(counts_file):
+        return dd.TxImport(gene_tpm = tpm_file, gene_counts=counts_file)
     with file_transaction(tpm_file) as tx_tpm_file, file_transaction(counts_file) as tx_counts_file:
         render_string = (
             f'library(tidyverse);'
@@ -546,4 +546,4 @@ def load_tximport(samples):
             f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
         )
         do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
-    return samples
+    return dd.TxImport(gene_tpm = tpm_file, gene_counts=counts_file)
