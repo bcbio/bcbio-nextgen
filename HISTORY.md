@@ -22,6 +22,8 @@
 - Ensure STAR log file is propagated to the upload directory.
 - Fix issue with memory not being specified properly when running `bcbio_prepare_samples.py`.
 - Run tximport automatically and store TPM in `project/date/tpm` and counts in `project/date/counts`.
+- Calculate ENCODE quality flags for ATAC-seq. See https://www.encodeproject.org/data-standards/terms/#library for a
+  description of what the metrics mean.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.

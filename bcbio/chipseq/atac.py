@@ -66,7 +66,26 @@ def calculate_encode_complexity_metrics(data):
     else:
         PBC2 = raw_metrics["m1"] / raw_metrics["m2"]
     metrics["PBC2"] = PBC2
+    metrics["bottlenecking"] = get_bottlenecking_flag(metrics["PBC1"], metrics["PBC2"])
+    metrics["complexity"] = get_complexity_flag(metrics["NRF"])
     return(metrics)
+
+def get_bottlenecking_flag(PBC1, PBC2):
+    if PBC1 < 0.7 or PBC2 < 1:
+        return "severe"
+    elif PBC1 <= 0.9 or PBC2 <= 3:
+        return "moderate"
+    else:
+        return "none"
+
+def get_complexity_flag(NRF):
+    if NRF < 0.7:
+        return "concerning"
+    elif NRF < 0.9:
+        return "acceptable"
+    else:
+        return "ideal"
+
 
 def split_ATAC(data, bam_file=None):
     """
