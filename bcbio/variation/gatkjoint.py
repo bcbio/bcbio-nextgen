@@ -8,6 +8,7 @@ import math
 import os
 import shutil
 import toolz as tz
+import tempfile
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -56,7 +57,8 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                           "-L", bamprep.region_to_gatk(region)]
                 for vrn_file in vrn_files:
                     vcfutils.bgzip_and_index(vrn_file, data["config"])
-                    params += ["--variant", vrn_file]
+                samplemap = _create_samplemap_file(vrn_files)
+                params += ["--sample-name-map", samplemap]
                 # For large inputs, reduce memory usage by batching
                 # https://github.com/bcbio/bcbio-nextgen/issues/2852
                 if len(vrn_files) > 200:
@@ -64,6 +66,15 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
                 broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
+
+def _create_samplemap_file(vrn_files):
+    tf = tempfile.NamedTemporaryFile(suffix=".tsv", delete=False)
+    samplemap = tf.name
+    samplenames = [vcfutils.get_samples(vrn_file)[0] for vrn_file in vrn_files]
+    with open(samplemap, "w") as out_handle:
+        for samplename, vrn_file in zip(samplenames, vrn_files):
+            print(f"{samplename}\t{vrn_file}", file=out_handle)
+    return samplemap
 
 def _incomplete_genomicsdb(dbdir):
     """Check if a GenomicsDB output is incomplete and we should regenerate.
