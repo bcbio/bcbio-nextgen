@@ -642,9 +642,9 @@ the naming schemes described in the
       help with slow runtimes in these regions, and also on for whole genome
       structural variant calling to avoid false positives from high depth
       repeats.
-    - ``altcontigs`` Skip calling entirely in alternative and unplaced contigs. This
-      limits analysis to standard chromosomes -- chr1-22,X,Y,MT for human -- to
-      avoid slowdowns on the additional contigs.
+    - ``altcontigs`` Skip calling in unplaced contigs (Un), limit analysis to standard chromosomes -- 
+      chr1-22,X,Y,MT for human -- to avoid slowdowns on the additional contigs. By default bcbio calls variants in 
+      unplaced but not in alternative contigs (alleles). Alt contig calling is currently not supported.
 .. _variant-config:
 
 Variant calling
