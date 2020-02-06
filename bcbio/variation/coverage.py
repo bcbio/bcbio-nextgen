@@ -154,8 +154,14 @@ def _write_cache(cache, cache_file):
 def get_average_coverage(target_name, bed_file, data, bam_file=None):
     if not bam_file:
         bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
+
     cache_file = _get_cache_file(data, target_name)
-    cache = _read_cache(cache_file, [bam_file, bed_file])
+
+    if dd.get_disambiguate(data):
+        cache = _read_cache(cache_file, [bed_file])
+    else:
+        cache = _read_cache(cache_file, [bam_file, bed_file])
+
     if "avg_coverage" in cache:
         return int(cache["avg_coverage"])
 
