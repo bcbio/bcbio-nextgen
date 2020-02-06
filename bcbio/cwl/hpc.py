@@ -427,7 +427,8 @@ HPC_CONFIGS = {
         %(cwl_attrs)s
         \"\"\"
         submit = \"\"\"
-        qsub -V -d ${cwd} -N ${job_name} -o ${out} -e ${err} -q ${queue} \
+        cd ${cwd} && \
+        qsub -V -N ${job_name} -o ${out} -e ${err} -q ${queue} \
         -l nodes=1:ppn=${cpu} -l mem=${memory_mb}mb -l walltime=${walltime} \
         ${script}
         \"\"\"
