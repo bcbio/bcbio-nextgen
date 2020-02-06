@@ -11,7 +11,7 @@ import sys
 
 # be explicit about what fields can show up in the nested dictionaries and what they are
 
-TxImport = namedtuple("TxImport", 'gene_tpm, gene_counts')
+TxImport = namedtuple("TxImport", ['gene_tpm', 'gene_counts'])
 TxImport.__new__.__defaults__ = (None,) * len(TxImport._fields)
 
 LOOKUPS = {
