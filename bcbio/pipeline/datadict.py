@@ -9,11 +9,6 @@ from bcbio.log import logger
 from collections import namedtuple
 import sys
 
-# be explicit about what fields can show up in the nested dictionaries and what they are
-
-TxImport = namedtuple("TxImport", ['gene_tpm', 'gene_counts'])
-TxImport.__new__.__defaults__ = (None,) * len(TxImport._fields)
-
 LOOKUPS = {
     "config": {"keys": ['config']},
     "tmp_dir": {"keys": ['config', 'resources', 'tmp', 'dir']},

@@ -845,8 +845,8 @@ def _get_files_project(sample, upload_config):
         else:
             out.append({"path": dd.get_combined_counts(sample)})
     if dd.get_tximport(sample):
-        out.append({"path": dd.get_tximport(sample).gene_tpm, "dir": "tpm"})
-        out.append({"path": dd.get_tximport(sample).gene_counts, "dir": "counts"})
+        out.append({"path": dd.get_tximport(sample)["gene_tpm"], "dir": "tpm"})
+        out.append({"path": dd.get_tximport(sample)["gene_counts"], "dir": "counts"})
     if dd.get_annotated_combined_counts(sample):
         out.append({"path": dd.get_annotated_combined_counts(sample)})
     if dd.get_combined_fpkm(sample):

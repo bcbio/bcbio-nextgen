@@ -533,7 +533,8 @@ def load_tximport(data):
     tpm_file = os.path.join(out_dir, "tximport-tpm.csv")
     counts_file = os.path.join(out_dir, "tximport-counts.csv")
     if file_exists(tpm_file) and file_exists(counts_file):
-        return dd.TxImport(gene_tpm = tpm_file, gene_counts=counts_file)
+        return {"gene_tpm": tpm_file,
+                "gene_counts": counts_file}
     with file_transaction(tpm_file) as tx_tpm_file, file_transaction(counts_file) as tx_counts_file:
         render_string = (
             f'library(tidyverse);'
@@ -546,4 +547,5 @@ def load_tximport(data):
             f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
         )
         do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
-    return dd.TxImport(gene_tpm = tpm_file, gene_counts=counts_file)
+    return {"gene_tpm": tpm_file,
+            "gene_counts": counts_file}
