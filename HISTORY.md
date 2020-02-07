@@ -24,7 +24,8 @@
 - Run tximport automatically and store TPM in `project/date/tpm` and counts in `project/date/counts`.
 - Calculate ENCODE quality flags for ATAC-seq. See https://www.encodeproject.org/data-standards/terms/#library for a
   description of what the metrics mean.
-- Fix for command being too long while joint genotyping thousands of samples.
+- Fix for command line being too long while joint genotyping thousands of samples.
+- Fix for command line being too long when running the CWL workflow with cromwell.
 
 ## 1.1.9 (5 December 2019)
 - Fix for get VEP cache.
