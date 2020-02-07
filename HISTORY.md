@@ -1,4 +1,6 @@
-## 1.2.0
+## 1.2.1 (in progress)
+
+## 1.2.0 (7 February 2020)
 - Fix for bismark not being a supported aligner.
 - Run ataqv (https://github.com/ParkerLab/ataqv) to calculate additional ATAQ-seq quality control
   metrics.
