@@ -1,4 +1,5 @@
 ## 1.2.1 (in progress)
+- Update ChIP and ATAC bowtie2 runs to use `--very-sensitive`.
 
 ## 1.2.0 (7 February 2020)
 - Fix for bismark not being a supported aligner.
