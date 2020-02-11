@@ -132,7 +132,7 @@ def run_ataqv(data):
     if utils.file_exists(out_file):
         return out_file
     tss_bed_file = os.path.join(out_dir, "TSS.bed")
-    tss_bed_file = gtf.get_tss_bed(dd.get_gtf_file(data), tss_bed_file, data, padding=1000)
+    tss_bed_file = gtf.get_tss_bed(dd.get_gtf_file(data), tss_bed_file, data, padding=0)
     autosomal_reference = os.path.join(out_dir, "autosomal.txt")
     autosomal_reference = _make_autosomal_reference_file(autosomal_reference, data)
     ataqv = config_utils.get_program("ataqv", data)
@@ -144,6 +144,7 @@ def run_ataqv(data):
         cmd = (f"{ataqv} --peak-file {peak_file} --name {sample_name} --metrics-file {tx_out_file} "
                f"--tss-file {tss_bed_file} --autosomal-reference-file {autosomal_reference} "
                f"--ignore-read-groups --mitochondrial-reference-name {mitoname} "
+               f"--tss-extension 1000 "
                f"None {bam_file}")
         message = f"Running ataqv on {sample_name}."
         do.run(cmd, message)
