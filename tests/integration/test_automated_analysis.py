@@ -1,18 +1,18 @@
 """This directory is setup with configurations to run the main functional test.
 
 It exercises a full analysis pipeline on a smaller subset of data.
+
+Use 'install_required' mark to skip tests that cannot be run on Travis CI,
+because they require installation of additional dependencies (e.g. GATK)
 """
 import glob
 import os
 import subprocess
 
 import pytest
-from tests.conftest import make_workdir
-from tests.conftest import get_post_process_yaml
 
+from tests.conftest import get_post_process_yaml, make_workdir
 
-# Use 'install_required' mark to skip tests that cannot be run on Travis CI,
-# because they require installation of additional dependencies (e.g. GATK)
 
 @pytest.mark.speed3
 @pytest.mark.skip(reason='Multiplexing not supporting in latest versions')
@@ -218,14 +218,11 @@ def test_1_variantcall(install_test_files, data_dir):
 
 @pytest.mark.devel
 @pytest.mark.speed1
-def test_5_bam(install_test_files, data_dir):
-    """Allow BAM files as input to pipeline.
-    """
+def test_variant2_pipeline_with_bam_input(install_test_files, data_dir):
     with make_workdir() as workdir:
-        cl = ["bcbio_nextgen.py",
-              get_post_process_yaml(data_dir, workdir),
-              os.path.join(data_dir, "run_info-bam.yaml")]
-        subprocess.check_call(cl)
+        global_config = get_post_process_yaml(data_dir, workdir)
+        run_config = os.path.join(data_dir, "run_info-bam.yaml")
+        subprocess.check_call(["bcbio_nextgen.py", global_config, run_config])
 
 
 @pytest.mark.speed2
