@@ -1,3 +1,10 @@
+"""Pytest fixtures and test helper functions
+
+BCBIO_TEST_DIR environment variable is used to run tests in a directory outside of the source tree
+In Vagrant it must point to a directory outside of a synced_folder for integration tests to pass
+For example: export BCBIO_TEST_DIR=/tmp/bcbio
+"""
+
 import collections
 import contextlib
 from datetime import datetime
@@ -29,18 +36,23 @@ def data_dir():
 
 @contextlib.contextmanager
 def make_workdir():
-    # Specify workdir though env var, in case tests have to run not in the
-    # default location (e.g. to run tests on a  mounted FS)
-    work_dir = os.environ.get("BCBIO_TEST_WORKDIR", default_workdir())
+    custom_test_dir = os.getenv("BCBIO_TEST_DIR")
+
+    if custom_test_dir:
+        work_dir = os.path.join(custom_test_dir, os.path.basename(default_workdir()))
+    else:
+        work_dir = default_workdir()
+
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     os.makedirs(work_dir)
+
     # workaround for hardcoded data file paths in test run config files
-    if work_dir != default_workdir():
-        test_data_dir_symlink_target = os.path.join(os.path.dirname(work_dir),
-                                                    os.path.basename(test_data_dir()))
+    if custom_test_dir:
+        custom_test_data_dir = os.path.join(custom_test_dir, os.path.basename(test_data_dir()))
         with contextlib.suppress(FileExistsError):
-            os.symlink(test_data_dir(), test_data_dir_symlink_target)
+            os.symlink(test_data_dir(), custom_test_data_dir)
+
     orig_dir = os.getcwd()
     try:
         os.chdir(work_dir)
