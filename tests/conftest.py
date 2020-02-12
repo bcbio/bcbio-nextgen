@@ -13,32 +13,38 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
-OUTPUT_DIR = "test_automated_output"
-
 
 def default_workdir():
-    return os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
+    return os.path.join(os.path.dirname(__file__), "test_automated_output")
+
+
+def test_data_dir():
+    return os.path.join(os.path.dirname(__file__), "data")
 
 
 @pytest.fixture
 def data_dir():
-    return os.path.join(os.path.dirname(__file__), "data", "automated")
+    return os.path.join(test_data_dir(), "automated")
 
 
 @contextlib.contextmanager
 def make_workdir():
-    remove_old_dir = True
     # Specify workdir though env var, in case tests have to run not in the
     # default location (e.g. to run tests on a  mounted FS)
-    dirname = os.environ.get('BCBIO_WORKDIR', default_workdir())
-    if remove_old_dir:
-        if os.path.exists(dirname):
-            shutil.rmtree(dirname)
-        os.makedirs(dirname)
+    work_dir = os.environ.get("BCBIO_TEST_WORKDIR", default_workdir())
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+    # workaround for hardcoded data file paths in test run config files
+    if work_dir != default_workdir():
+        test_data_dir_symlink_target = os.path.join(os.path.dirname(work_dir),
+                                                    os.path.basename(test_data_dir()))
+        with contextlib.suppress(FileExistsError):
+            os.symlink(test_data_dir(), test_data_dir_symlink_target)
     orig_dir = os.getcwd()
     try:
-        os.chdir(dirname)
-        yield dirname
+        os.chdir(work_dir)
+        yield work_dir
     finally:
         os.chdir(orig_dir)
 
