@@ -302,7 +302,7 @@ bcbio.yaml config::
 - step 8. Concatenate all cb-histogram-filtered.txt files::
 
     cat project-[all-barcodes]/cb-histogram-filtered.txt > cb-histogram.txt
-    
+
 Tests
 ~~~~~
 To run bcbio automated tests, install bcbio and clone bcbio master repository. You are testing your installation with tests provided in bcbio-nextgen/tests::
@@ -310,5 +310,48 @@ To run bcbio automated tests, install bcbio and clone bcbio master repository. Y
     which bcbio_nextgen.py
     cd bcbio-nextgen/tests
     ./run_tests.sh > tests.out
-    
-Tests are in integration/*.py. Each test has a set or marks. Marks are listed in pytest.ini. The mark defines how many tests to select. By default (just running plain ./run_tests.sh), it is speed1 = 11 tests. 
+
+Tests are in integration/*.py. Each test has a set or marks. Marks are listed in pytest.ini. The mark defines how many tests to select. By default (just running plain ./run_tests.sh), it is speed1 = 11 tests.
+
+Profiling
+~~~~~~~~~
+Profiling (tracking CPU, memory, IO usage) could help to optimize resource
+usage of bcbio, especially when running  on a server or AWS instance.
+Sometimes running a bcbio project with 32 cores is just 10% more efficient
+than with 16 cores, because a particular configuration might have memory or
+IO related bottlenecks.
+
+- step 1. install and start sysstat deamon: http://www.leonardoborda.com/blog/how-to-configure-sysstatsar-on-ubuntudebian/.
+- step 2. Create a cron job to gather system statistics every minute or two.
+- step 3. Before bcbio start, drop system memory caches. Otherwise memory usage statistic might be misleading::
+
+    sudo su
+    echo 1 > /proc/sys/vm/drop_caches
+
+- step 4. Record bcbio project start and stop time (`date`)
+- step 5. collect usage statistics::
+
+    # CPU load
+    sar -q -s $start -e $end |  awk '{print $1","$4}'  | sed 1d | sed 1d > cpu.csv
+    # memory
+    sar -r -s $start -e $end | awk '{print $5}' | sed 1d | sed 1d > mem.csv
+    # IO
+    sar -b -s $start -e $end | awk '{print $5","$6}' | sed 1d | sed 1d > io.csv
+    paste -d "," cpu.csv mem.csv io.csv > usage.csv
+
+    # Example of usage.csv, man sar for more options
+    head usage.csv
+
+    23:07:01,ldavg-1,%memused,bread/s,bwrtn/s
+    23:08:01,1.77,3.10,23238.66,20204.10
+    23:09:01,4.34,24.28,208650.45,26270.58
+    23:10:01,11.09,25.67,0.13,15.46
+    23:11:01,13.56,27.00,4.27,21.99
+    23:12:01,15.44,29.63,26.52,2749.22
+    23:13:01,15.16,29.75,42.93,27.06
+    23:14:01,16.94,30.54,205.26,2740.95
+    23:15:01,15.76,30.57,28.92,2751.62
+    23:16:01,15.77,30.88,6.13,33.59
+
+- step 6. Overlap profiling results with bcbio-nextgen-commands.log to investigate the
+    performance of particular steps.
