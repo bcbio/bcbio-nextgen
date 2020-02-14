@@ -1,3 +1,10 @@
+"""Pytest fixtures and test helper functions
+
+BCBIO_TEST_DIR environment variable is used to run tests in a directory outside of the source tree
+In Vagrant it must point to a directory outside of a synced_folder for integration tests to pass
+For example: export BCBIO_TEST_DIR=/tmp/bcbio
+"""
+
 import collections
 import contextlib
 from datetime import datetime
@@ -13,32 +20,43 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
-OUTPUT_DIR = "test_automated_output"
-
 
 def default_workdir():
-    return os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
+    return os.path.join(os.path.dirname(__file__), "test_automated_output")
+
+
+def test_data_dir():
+    return os.path.join(os.path.dirname(__file__), "data")
 
 
 @pytest.fixture
 def data_dir():
-    return os.path.join(os.path.dirname(__file__), "data", "automated")
+    return os.path.join(test_data_dir(), "automated")
 
 
 @contextlib.contextmanager
 def make_workdir():
-    remove_old_dir = True
-    # Specify workdir though env var, in case tests have to run not in the
-    # default location (e.g. to run tests on a  mounted FS)
-    dirname = os.environ.get('BCBIO_WORKDIR', default_workdir())
-    if remove_old_dir:
-        if os.path.exists(dirname):
-            shutil.rmtree(dirname)
-        os.makedirs(dirname)
+    custom_test_dir = os.getenv("BCBIO_TEST_DIR")
+
+    if custom_test_dir:
+        work_dir = os.path.join(custom_test_dir, os.path.basename(default_workdir()))
+    else:
+        work_dir = default_workdir()
+
+    if os.path.exists(work_dir):
+        shutil.rmtree(work_dir)
+    os.makedirs(work_dir)
+
+    # workaround for hardcoded data file paths in test run config files
+    if custom_test_dir:
+        custom_test_data_dir = os.path.join(custom_test_dir, os.path.basename(test_data_dir()))
+        with contextlib.suppress(FileExistsError):
+            os.symlink(test_data_dir(), custom_test_data_dir)
+
     orig_dir = os.getcwd()
     try:
-        os.chdir(dirname)
-        yield dirname
+        os.chdir(work_dir)
+        yield work_dir
     finally:
         os.chdir(orig_dir)
 
