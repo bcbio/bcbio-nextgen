@@ -12,5 +12,4 @@ echo "Your VM is up and running. You can complete bcbio setup by doing the follo
 vagrant ssh
 python /opt/bcbio_nextgen_install.py ~/local/share/bcbio --tooldir=~/local --nodata
 
-You might have to answer a few questions during the install process, but other
-than that it should be all set!"
+You might have to answer a few questions during the install process, but other than that it should be all set!"
