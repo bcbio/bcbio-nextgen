@@ -86,6 +86,28 @@ your local system or cluster configuration (see :ref:`tuning-cores`).
 
 .. _upgrade-install:
 
+On a Virtual Machine
+====================
+If you are looking to quickly try out bcbio-nextgen on your personal
+machine before installing it on your cluster, installing bcbio-nextgen
+on a virtual machine is easy using `Vagrant`_.
+
+OSX
++++
+- Download and install `VirtualBox`_
+- Download and install `Vagrant for OSX`_
+- Get installer script::
+
+    curl -O https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/vm/setup_vm.sh
+
+- Run the installer and follow the instructions::
+
+    sh setup_vm.sh
+
+.. _Vagrant for OSX: https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg
+.. _VirtualBox: https://download.virtualbox.org/virtualbox/6.1.2/VirtualBox-6.1.2-135662-OSX.dmg
+.. _Vagrant: https://www.vagrantup.com/
+
 Upgrade
 =======
 
