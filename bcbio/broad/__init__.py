@@ -93,8 +93,8 @@ def get_gatk_version(gatk_jar=None, config=None):
     else:
         cl = gatk_cmd("gatk", ["-Xms128m", "-Xmx256m"] + get_default_jvm_opts(), ["-version"], config=config)
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-        stdout = stdout.read().decode().strip()
+                                  stderr=subprocess.STDOUT, shell=True, encoding="UTF-8").stdout) as stdout:
+        stdout = stdout.read().strip()
         out = _clean_java_out(stdout)
         # Historical GATK version (2.4) and newer versions (4.1.0.0)
         # have a flag in front of output version
