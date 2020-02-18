@@ -71,6 +71,10 @@ Python:
 - Add docstrings to each module
 - Clarify function calls with keyword arguments for readability
 - Use `type hints <https://www.python.org/dev/peps/pep-0484/>`_
+- Follow `PEP 257 <https://www.python.org/dev/peps/pep-0257/>`_ for docstrings:
+
+    - the ``"""`` that ends a multiline docstring should be on a line by itself
+    - for one-liner docstrings keep the closing ``"""`` on the same line
 
 reStructuredText:
 
