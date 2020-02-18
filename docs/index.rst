@@ -21,7 +21,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   contents/introduction
+   contents/about
    contents/installation
    contents/pipelines
    contents/testing

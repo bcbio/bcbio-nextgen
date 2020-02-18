@@ -110,8 +110,8 @@ your own research.
 .. _Dell: http://www.dell.com/learn/us/en/70/healthcare
 .. _NMTRC: http://nmtrc.org/about
 
-- `Computer Science and Artificial Intelligence Laboratory (CSAIL),
-  MIT`_: The `Gifford lab`_ uses the bcbio-nextgen pipeline to analyze
+- `Computer Science and Artificial Intelligence Laboratory (CSAIL), MIT`_:
+  The `Gifford lab`_ uses the bcbio-nextgen pipeline to analyze
   a variety of sequencing datasets for their research in genetics and
   regulatory genomics (including the `SysCode`_ and
   `stemcell.mit.edu`_ projects).  The pipeline applies
@@ -126,5 +126,5 @@ your own research.
 
 
 - `Sheffield Bioinformatics Core, The University of Sheffield`_: The Sheffield Bioinformatics Core is a relatively new Core facility at The University of Sheffield, and bcbio has been instrumental in setting-up a best-practice Bioinformatics analysis service. We employ bcbio to automate the analyses of RNA-seq, small RNA and ChiP-Seq datasets for researchers at The University of Sheffield and NIHR Biomedical Research Centre. In conjunction with the bcbioRNASeq Bioconductor package, we deliver publication-quality reports to our researchers based on reproducible analyses.
-  
+
   .. _Sheffield Bioinformatics Core, The University of Sheffield: http://sbc.shef.ac.uk
