@@ -11,12 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import os
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
-
-import os
 
 # -- General configuration -----------------------------------------------------
 
@@ -168,8 +168,7 @@ html_sidebars = {
 htmlhelp_basename = 'bcbio_nextgendoc'
 
 # to use Read The Docs theme when building docs locally
-on_rtd = os.environ.get('READTHEDOCS', False)
-if not on_rtd:
+if not os.getenv('READTHEDOCS'):
     import sphinx_rtd_theme
     html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
