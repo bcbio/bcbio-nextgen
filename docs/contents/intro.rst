@@ -28,7 +28,7 @@ Typical bcbio run:
 Quick start with GATK variant calling
 =====================================
 
-1. Prepare input files (WES, WGS, or a small subset):
+1. Prepare input files (WES, WGS, or a small subset)::
 
         ls
         sample1_1.fq.gz, sample1_2.fq.gz

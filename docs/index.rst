@@ -24,7 +24,7 @@ Contents:
    contents/about
    contents/installation
    contents/pipelines
-   contents/testing
+   contents/intro
    contents/configuration
    contents/parallel
    contents/cwl
