@@ -81,8 +81,8 @@ The most useful modules inside ``bcbio``, ordered by likely interest:
 
 .. _code-devel-infrastructure:
 
-Development infrastructure
-==========================
+Infrastructure
+==============
 
 GitHub
 ~~~~~~
@@ -157,8 +157,8 @@ force consistent installation across methods.
 .. _using git and GitHub: http://biopython.org/wiki/GitUsage
 .. _Anaconda: http://docs.continuum.io/anaconda/index.html
 
-Building the documentation locally
-==================================
+Documentation
+=============
 
 If you have added or modified this documentation, to build it locally and see
 how it looks like you can do so by running::
@@ -166,8 +166,61 @@ how it looks like you can do so by running::
     cd docs
     make html
 
-The documentation will be built under ``docs/_build/html``, open ``index.html`` with your browser to
-load your local build.
+The documentation will be built under ``docs/_build/html``, open ``index.html``
+with your browser to load your local build.
+
+Testing
+=======
+
+The test suite exercises the scripts driving the analysis, so are a
+good starting point to ensure correct installation. Tests use the
+`pytest`_ framework. The tests are available in the bcbio source code::
+
+     $ git clone https://github.com/bcbio/bcbio-nextgen.git
+
+There is a small wrapper script that finds the py.test and other dependencies
+pre-installed with bcbio you can use to run tests::
+
+     $ cd tests
+     $ ./run_tests.sh
+
+You can use this to run specific test targets::
+
+     $ ./run_tests.sh cancer
+     $ ./run_tests.sh rnaseq
+     $ ./run_tests.sh devel
+     $ ./run_tests.sh docker
+
+Optionally, you can run pytest directly from the bcbio install to tweak more
+options. It will be in ``/path/to/bcbio/anaconda/bin/py.test``. Pass
+``-s`` to ``py.test`` to see the stdout log, and ``-v`` to make py.test output
+more verbose. The tests are marked with labels which you can use to run a
+specific subset of the tests using the ``-m`` argument::
+
+     $ py.test -m rnaseq
+
+To run unit tests::
+
+     $ py.test tests/unit
+
+To run integration pipeline tests::
+
+     $ py.test tests/integration
+
+To run tests which use bcbio_vm::
+
+     $ py.test tests/bcbio_vm
+
+To see the test coverage, add the ``--cov=bcbio`` argument to ``py.test``.
+
+By default the test suite will use your installed system configuration
+for running tests, substituting the test genome information instead of
+using full genomes. If you need a specific testing environment, copy
+``tests/data/automated/post_process-sample.yaml`` to
+``tests/data/automated/post_process.yaml`` to provide a test-only
+configuration.
+
+.. _pytest: http://doc.pytest.org/en/latest/
 
 Adding tools
 ============
