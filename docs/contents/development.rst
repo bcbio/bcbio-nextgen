@@ -1,11 +1,11 @@
-Code
-----
+Development
+-----------
 This section provides useful concepts for getting started digging into
 the code and contributing new functionality. We welcome contributors
 and hope these notes help make it easier to get started.
 
-Development goals
-=================
+Goals
+=====
 
 During development we seek to maximize functionality and usefulness,
 while avoiding complexity. Since these goals are sometimes in

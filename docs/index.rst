@@ -30,7 +30,7 @@ Contents:
    contents/cwl
    contents/cloud
    contents/outputs
-   contents/code
+   contents/development
    contents/internals
    contents/presentations
    contents/teaching
