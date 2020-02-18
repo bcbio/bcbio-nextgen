@@ -169,9 +169,13 @@ htmlhelp_basename = 'bcbio_nextgendoc'
 
 # to use Read The Docs theme when building docs locally
 if not os.getenv('READTHEDOCS'):
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    try:
+        import sphinx_rtd_theme
+    except ModuleNotFoundError:
+        pass
+    else:
+        html_theme = 'sphinx_rtd_theme'
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # -- Options for LaTeX output --------------------------------------------------
 
