@@ -54,6 +54,24 @@ conflict, it's useful to understand the design approaches:
   `Travis-CI`_, and a red label will appear in the pull request if the former
   causes any issue.
 
+Style guide
+===========
+
+General:
+
+- Delete unnecessary code (do not just comment it out)
+- Refactor existing code to help deliver new functionality
+- Specify exact version numbers for dependencies
+
+Python:
+
+- Follow `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ and
+  `PEP 20 <https://www.python.org/dev/peps/pep-0020/>`_
+- Limit all lines to a maximum of 99 characters
+- Add docstrings to each module
+- Clarify function calls with keyword arguments for readability
+- Use `type hints <https://www.python.org/dev/peps/pep-0484/>`_
+
 Overview
 ========
 
