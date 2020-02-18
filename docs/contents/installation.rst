@@ -93,7 +93,7 @@ machine before installing it on your cluster, installing bcbio-nextgen
 on a virtual machine is easy using `Vagrant`_.
 
 macOS
-+++++
+~~~~~
 - Download and install `VirtualBox`_
 - Download and install `Vagrant for macOS`_
 - Get installer script::

@@ -72,6 +72,11 @@ Python:
 - Clarify function calls with keyword arguments for readability
 - Use `type hints <https://www.python.org/dev/peps/pep-0484/>`_
 
+reStructuredText:
+
+- Use ``---`` for the top level, ``===`` for the second level, and
+  ``~~~`` for the third level sections
+
 Overview
 ========
 
