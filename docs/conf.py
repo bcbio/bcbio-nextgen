@@ -16,6 +16,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+import os
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -165,6 +167,12 @@ html_sidebars = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'bcbio_nextgendoc'
 
+# to use Read The Docs theme when building docs locally
+on_rtd = os.environ.get('READTHEDOCS', False)
+if not on_rtd:
+    import sphinx_rtd_theme
+    html_theme = 'sphinx_rtd_theme'
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # -- Options for LaTeX output --------------------------------------------------
 

@@ -109,7 +109,7 @@ Before installing the second bcbio instance, investigate your PATH and PYTHONPAT
 variables. It is better to avoid mixing bcbio instances in the PATH. Also watch
 ``~/.conda/environments.txt``.
 
-To install in ${HOME}/local/share/bcbio (your location might be different, 
+To install in ${HOME}/local/share/bcbio (your location might be different,
 make sure you have ~30G of disk quota there)::
 
     wget https://raw.github.com/chapmanb/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
@@ -168,16 +168,6 @@ how it looks like you can do so by running::
 
 The documentation will be built under ``docs/_build/html``, open ``index.html`` with your browser to
 load your local build.
-
-If you want to use the same theme that Read The Docs uses, you can do so by installing ``sphinx_rtd_theme`` via
-``pip``. You will also need to add this in the ``docs/conf.py`` file to use the theme only locally::
-
-  html_theme = 'default'
-  on_rtd = os.environ.get('READTHEDOCS', False)
-  if not on_rtd:  # only import and set the theme if we're building docs locally
-      import sphinx_rtd_theme
-      html_theme = 'sphinx_rtd_theme'
-      html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 Adding tools
 ============
