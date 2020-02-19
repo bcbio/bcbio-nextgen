@@ -5,25 +5,24 @@ Latest version available as part of bcbio-nextgen:
 https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/plink_to_vcf.py
 
 Requires:
-
-plink: http://pngu.mgh.harvard.edu/~purcell/plink/
+PLINK: http://zzz.bwh.harvard.edu/plink/
 PLINK/SEQ: https://atgu.mgh.harvard.edu/plinkseq/
 bx-python: https://github.com/bxlab/bx-python
 
 You also need the genome reference file in 2bit format:
-http://genome.ucsc.edu/FAQ/FAQformat.html#format7
+https://genome.ucsc.edu/FAQ/FAQformat.html#format7
 using faToTwoBit:
-http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/
+https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/
 
 Usage:
   plink_to_vcf.py <ped file> <map file> <UCSC reference file in 2bit format)
-
 """
 import os
-import sys
 import subprocess
+import sys
 
 from bx.seq import twobit
+
 
 def main(ped_file, map_file, ref_file):
     base_dir = os.getcwd()
@@ -31,24 +30,26 @@ def main(ped_file, map_file, ref_file):
     vcf_file = convert_bed_to_vcf(pbed_prefix, ped_file, base_dir)
     fix_nonref_positions(vcf_file, ref_file)
 
+
 def convert_to_plink_bed(ped_file, map_file, base_dir):
     # from ubuntu package, 'plink' otherwise
     for plink_cl in ["p-link", "plink", "plink2"]:
         try:
             subprocess.check_call([plink_cl, "--help"])
+        except subprocess.SubprocessError:
+            continue
+        else:
             break
-        except:
-            pass
     plink_prefix = os.path.splitext(os.path.basename(ped_file))[0].replace(".", "_")
     work_dir = os.path.join(base_dir, "vcfconvert")
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
     out_base = os.path.join(work_dir, plink_prefix)
     if not os.path.exists("{0}.bed".format(out_base)):
-        subprocess.check_call([plink_cl, "--noweb",
-                               "--ped", ped_file, "--map", map_file,
+        subprocess.check_call([plink_cl, "--noweb", "--ped", ped_file, "--map", map_file,
                                "--make-bed", "--out", out_base])
     return out_base
+
 
 def convert_bed_to_vcf(pbed_prefix, ped_file, base_dir):
     out_file = os.path.join(base_dir,
@@ -58,13 +59,12 @@ def convert_bed_to_vcf(pbed_prefix, ped_file, base_dir):
         subprocess.check_call(["pseq", pbed_prefix, "load-plink",
                                "--file", pbed_prefix, "--id", "vcfconvert"])
         with open(out_file, "w") as out_handle:
-            subprocess.check_call(["pseq", pbed_prefix, "write-vcf"],
-                                  stdout=out_handle)
+            subprocess.check_call(["pseq", pbed_prefix, "write-vcf"], stdout=out_handle)
     return out_file
 
+
 def fix_line_problems(parts):
-    """Fix problem alleles and reference/variant bases in VCF line.
-    """
+    """Fix problem alleles and reference/variant bases in VCF line"""
     varinfo = parts[:9]
     genotypes = []
     # replace haploid calls
@@ -72,12 +72,15 @@ def fix_line_problems(parts):
         if len(x) == 1:
             x = "./."
         genotypes.append(x)
-    if varinfo[3] == "0": varinfo[3] = "N"
-    if varinfo[4] == "0": varinfo[4] = "N"
+    if varinfo[3] == "0":
+        varinfo[3] = "N"
+    if varinfo[4] == "0":
+        varinfo[4] = "N"
     return varinfo, genotypes
 
+
 def fix_vcf_line(parts, ref_base):
-    """Orient VCF allele calls with respect to reference base.
+    """Orient VCF allele calls with respect to reference base
 
     Handles cases with ref and variant swaps. strand complements.
     """
@@ -86,7 +89,7 @@ def fix_vcf_line(parts, ref_base):
     varinfo, genotypes = fix_line_problems(parts)
     ref, var = varinfo[3:5]
     # non-reference regions or non-informative, can't do anything
-    if ref_base in [None, "N"] or set(genotypes) == set(["./."]):
+    if ref_base in [None, "N"] or set(genotypes) == {"./."}:
         varinfo = None
     # matching reference, all good
     elif ref_base == ref:
@@ -111,16 +114,16 @@ def fix_vcf_line(parts, ref_base):
         varinfo[4] = ",".join([complements[v] for v in ref.split(",")])
         genotypes = [swap[x] for x in genotypes]
     else:
-        print "Did not associate ref {0} with line: {1}".format(
-            ref_base, varinfo)
+        print(f'Did not associate ref {ref_base} with line: {varinfo}')
     if varinfo is not None:
         return varinfo + genotypes
 
+
 def fix_nonref_positions(in_file, ref_file):
-    """Fix Genotyping VCF positions where the bases are all variants.
+    """Fix Genotyping VCF positions where the bases are all variants
 
     The plink/pseq output does not handle these correctly, and
-    has all reference/variant bases reversed.
+    has all reference/variant bases reversed
     """
     ignore_chrs = ["."]
     ref2bit = twobit.TwoBitFile(open(ref_file))
@@ -141,21 +144,22 @@ def fix_nonref_positions(in_file, ref_file):
                     elif parts[0] not in ref2bit.keys() and parts[0] == "23":
                         for test in ["X", "chrX"]:
                             if test in ref2bit.keys():
-                                parts[0] == test
+                                parts[0] = test
                     ref_base = None
                     if parts[0] not in ignore_chrs:
                         try:
-                            ref_base = ref2bit[parts[0]].get(pos-1, pos).upper()
+                            ref_base = ref2bit[parts[0]].get(pos - 1, pos).upper()
                         except Exception as msg:
-                            print "Skipping line. Failed to retrieve reference base for %s\n%s" % (str(parts), msg)
+                            print(f"Skipping line. Failed to retrieve reference base for {str(parts)}\n{msg}")
                     parts = fix_vcf_line(parts, ref_base)
                     if parts is not None:
                         out_handle.write("\t".join(parts) + "\n")
         return out_file
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print "Incorrect arguments"
-        print __doc__
+        print("Incorrect arguments")
+        print(__doc__)
         sys.exit(1)
     main(*sys.argv[1:])
