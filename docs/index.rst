@@ -21,16 +21,16 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   contents/introduction
+   contents/about
    contents/installation
    contents/pipelines
-   contents/testing
+   contents/intro
    contents/configuration
    contents/parallel
    contents/cwl
    contents/cloud
    contents/outputs
-   contents/code
+   contents/development
    contents/internals
    contents/presentations
    contents/teaching

@@ -11,6 +11,8 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import os
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -165,6 +167,15 @@ html_sidebars = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'bcbio_nextgendoc'
 
+# to use Read The Docs theme when building docs locally
+if not os.getenv('READTHEDOCS'):
+    try:
+        import sphinx_rtd_theme
+    except ModuleNotFoundError:
+        pass
+    else:
+        html_theme = 'sphinx_rtd_theme'
+        html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # -- Options for LaTeX output --------------------------------------------------
 

@@ -92,10 +92,10 @@ If you are looking to quickly try out bcbio-nextgen on your personal
 machine before installing it on your cluster, installing bcbio-nextgen
 on a virtual machine is easy using `Vagrant`_.
 
-OSX
-+++
+macOS
+~~~~~
 - Download and install `VirtualBox`_
-- Download and install `Vagrant for OSX`_
+- Download and install `Vagrant for macOS`_
 - Get installer script::
 
     curl -O https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/vm/setup_vm.sh
@@ -104,9 +104,13 @@ OSX
 
     sh setup_vm.sh
 
-.. _Vagrant for OSX: https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg
+.. _Vagrant for macOS: https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg
 .. _VirtualBox: https://download.virtualbox.org/virtualbox/6.1.2/VirtualBox-6.1.2-135662-OSX.dmg
 .. _Vagrant: https://www.vagrantup.com/
+
+Optionally, set the time zone in the VM for easier log viewing, for example::
+
+    sudo timedatectl set-timezone America/New_York
 
 Upgrade
 =======
