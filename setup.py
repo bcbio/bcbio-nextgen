@@ -18,22 +18,18 @@ scripts = ['scripts/bcbio_nextgen.py',
            'scripts/bcbio_fastq_umi_prep.py',
            'scripts/cwltool2wdl.py']
 
-
-def write_version_py():
-    version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline', 'version.py')
-    try:
-        git = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE)
-        git.check_returncode()
-    except subprocess.SubprocessError:
-        commit_hash = ''
-    else:
-        commit_hash = git.stdout.strip().decode()
-    with open(version_py, 'w') as version_file:
-        version_file.writelines([f'__version__ = "{__version__}"\n',
-                                 f'__git_revision__ = "{commit_hash}"\n'])
-
-
-write_version_py()
+# add bcbio version number and git commit hash of the current revision to version.py
+try:
+    git = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE)
+    git.check_returncode()
+except subprocess.SubprocessError:
+    commit_hash = ''
+else:
+    commit_hash = git.stdout.strip().decode()
+version_py = os.path.join(os.path.dirname(__file__), 'bcbio', 'pipeline', 'version.py')
+with open(version_py, 'w') as version_file:
+    version_file.writelines([f'__version__ = "{__version__}"\n',
+                             f'__git_revision__ = "{commit_hash}"\n'])
 
 setuptools.setup(
     name='bcbio-nextgen',
