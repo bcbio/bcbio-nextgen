@@ -286,7 +286,7 @@ def total_reads_from_grabix(in_file):
         with open(gbi_file) as in_handle:
             next(in_handle)  # throw away
             num_lines = int(next(in_handle).strip())
-        assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
+        assert num_lines % 4 == 0, "Expected lines to be multiple of 4 for file: %s with %s lines" % (in_file, num_lines)
         return num_lines // 4
     else:
         return 0
