@@ -1550,6 +1550,10 @@ indexes corresponding to aligners you'd like to use (for example:
 key names used (like ``GRCh37`` and ``mm10``) should match those used in the
 ``genome_build`` of your sample input configuration file.
 
+To remove a reference genome, delete its directory ``bcbio/genomes/species/reference``
+and remove all the records corresponding to that genome from ``bcbio/galaxy/tool-data/*.loc``
+files.
+
 .. _Galaxy .loc files: http://wiki.galaxyproject.org/Admin/NGS%20Local%20Setup
 
 .. _config-custom:
