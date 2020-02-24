@@ -319,12 +319,14 @@ Profiling (tracking CPU, memory, IO usage) could help to optimize resource
 usage of bcbio, especially when running  on a server or AWS instance.
 Sometimes running a bcbio project with 32 cores is just 10% more efficient
 than with 16 cores, because a particular configuration might have memory or
-IO related bottlenecks.
+IO related bottlenecks. IO bottlenecks are when you see low CPU 
+utilization and high read/write values.
 
 - step 1. install and start sysstat deamon: http://www.leonardoborda.com/blog/how-to-configure-sysstatsar-on-ubuntudebian/.
 - step 2. Create a cron job to gather system statistics every minute or two.
 - step 3. Before bcbio start, drop system memory caches. Otherwise memory usage statistic might be misleading::
 
+    # become root
     sudo su
     echo 1 > /proc/sys/vm/drop_caches
 
@@ -339,8 +341,7 @@ IO related bottlenecks.
     sar -b -s $start -e $end | awk '{print $5","$6}' | sed 1d | sed 1d > io.csv
     paste -d "," cpu.csv mem.csv io.csv > usage.csv
 
-    # Example of usage.csv, man sar for more options
-    head usage.csv
+    # Example of usage.csv
 
     23:07:01,ldavg-1,%memused,bread/s,bwrtn/s
     23:08:01,1.77,3.10,23238.66,20204.10
@@ -352,6 +353,8 @@ IO related bottlenecks.
     23:14:01,16.94,30.54,205.26,2740.95
     23:15:01,15.76,30.57,28.92,2751.62
     23:16:01,15.77,30.88,6.13,33.59
-
+  
+  See sar man page: https://linux.die.net/man/1/sar for more fields and field definitions.
+    
 - step 6. Overlap profiling results with bcbio-nextgen-commands.log to investigate the
     performance of particular steps.
