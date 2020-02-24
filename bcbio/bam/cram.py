@@ -1,23 +1,21 @@
 """Handle conversions to/from CRAM reference based compression.
-
-http://www.ebi.ac.uk/ena/about/cram_toolkit
 """
 import os
 import subprocess
 
 from bcbio import bam, utils
-from bcbio.provenance import do
-from bcbio.pipeline import datadict as dd
-from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import datadict as dd, config_utils
+from bcbio.provenance import do
+
 
 def compress(in_bam, data):
     """Compress a BAM file to CRAM, providing indexed CRAM file.
 
     Does 8 bin compression of quality score and read name removal
-    using bamUtils squeeze if `cram` specified:
+    using Staden io_lib if `cram` specified:
 
-    http://genome.sph.umich.edu/wiki/BamUtil:_squeeze
+    https://github.com/jkbonfield/io_lib
 
     Otherwise does `cram-lossless` which only converts to CRAM.
     """
@@ -28,28 +26,22 @@ def compress(in_bam, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             compress_type = dd.get_archive(data)
-            samtools = config_utils.get_program("samtools", data["config"])
-            try:
-                bam_cmd = config_utils.get_program("bam", data["config"])
-            except config_utils.CmdNotFound:
-                bam_cmd = None
-            to_cram = ("{samtools} view -T {ref_file} -@ {cores} "
-                       "-C -x BD -x BI -o {tx_out_file}")
+            scramble = config_utils.get_program("scramble", data["config"])
+            cmd = [scramble, "-I", "bam", "-O", "cram", "-9", "-X", "archive", "-r", ref_file, "-V", "3.0", "-t", cores,
+                   in_bam, tx_out_file]
             compressed = False
-            if "cram" in compress_type and bam_cmd:
+            if "cram" in compress_type:
                 try:
-                    cmd = ("{bam_cmd} squeeze --in {in_bam} --out -.ubam --keepDups "
-                           "--binQualS=2,10,20,25,30,35,70 --binMid | " + to_cram)
-                    do.run(cmd.format(**locals()), "Compress BAM to CRAM: quality score binning")
+                    cmd.extend(["-B", "-n"])
+                    do.run(cmd, "Compress BAM to CRAM: quality score binning")
                     compressed = True
-                # Retry failures avoiding using bam squeeze which can cause issues
                 except subprocess.CalledProcessError:
                     pass
             if not compressed:
-                cmd = (to_cram + " {in_bam}")
-                do.run(cmd.format(**locals()), "Compress BAM to CRAM: lossless")
+                do.run(cmd, "Compress BAM to CRAM: lossless")
     index(out_file, data["config"])
     return out_file
+
 
 def index(in_cram, config):
     """Ensure CRAM file has a .crai index file.
@@ -59,9 +51,10 @@ def index(in_cram, config):
         with file_transaction(config, in_cram + ".crai") as tx_out_file:
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_cram, tx_in_file)
-            cmd = "samtools index {tx_in_file}"
-            do.run(cmd.format(**locals()), "Index CRAM file")
+            cmd = ["cram_index", {tx_in_file}]
+            do.run(cmd, "Index CRAM file")
     return out_file
+
 
 def to_bam(in_file, out_file, data):
     """Convert CRAM file into BAM.
