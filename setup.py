@@ -9,8 +9,6 @@ import setuptools
 
 VERSION = '1.2.0'
 
-here = os.path.dirname(os.path.abspath(__file__))
-
 # add bcbio version number and git commit hash of the current revision to version.py
 try:
     git_run = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE)
@@ -19,10 +17,12 @@ except subprocess.SubprocessError:
     commit_hash = ''
 else:
     commit_hash = git_run.stdout.strip().decode()
+
+here = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(here, 'bcbio', 'pipeline', 'version.py'), 'w') as version_file:
     version_file.writelines([f'__version__ = "{VERSION}"\n',
                              f'__git_revision__ = "{commit_hash}"\n'])
 
-# dependencies are installed via Conda
+# dependencies are installed via Conda from
 # https://github.com/chapmanb/cloudbiolinux/blob/master/contrib/flavor/ngs_pipeline_minimal/packages-conda.yaml
 setuptools.setup(version=VERSION)
