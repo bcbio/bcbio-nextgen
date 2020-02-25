@@ -218,13 +218,15 @@ def umi_consensus(data):
     """
     align_bam = dd.get_work_bam(data)
     umi_method, umi_tag = _check_umi_type(align_bam)
-    f1_out = "%s-cumi-1.fq.gz" % utils.splitext_plus(align_bam)[0]
-    f2_out = "%s-cumi-2.fq.gz" % utils.splitext_plus(align_bam)[0]
+    base_name = utils.splitext_plus(align_bam)[0]
+    f1_out = f"{base_name}-cumi-1.fq.gz"
+    f2_out = f"{base_name}-cumi-2.fq.gz"
+    f_family_size_histogram = f"{base_name}.family_size_histogram.tsv"
     avg_coverage = coverage.get_average_coverage("rawumi", dd.get_variant_regions(data), data)
     fgbio = config_utils.get_program("fgbio", data["config"])
     bamtofastq = config_utils.get_program("bamtofastq", data["config"])
     if not utils.file_uptodate(f1_out, align_bam):
-        with file_transaction(data, f1_out, f2_out) as (tx_f1_out, tx_f2_out):
+        with file_transaction(data, f1_out, f2_out, f_family_size_histogram) as (tx_f1_out, tx_f2_out, tx_fhist_out):
             jvm_opts = _get_fgbio_jvm_opts(data, os.path.dirname(tx_f1_out), 2)
             # Improve speeds by avoiding compression read/write bottlenecks
             io_opts = "--async-io=true --compression=0"
@@ -235,7 +237,7 @@ def umi_consensus(data):
             ref_file = dd.get_ref_file(data)
             cmd = ("unset JAVA_HOME && "
                    "{fgbio} {jvm_opts} {io_opts} GroupReadsByUmi {group_opts} -t {umi_tag} -s {umi_method} "
-                   "-i {align_bam} | "
+                   "-i {align_bam} -f {tx_fhist_out} | "
                    "{fgbio} {jvm_opts} {io_opts} {cons_method} {cons_opts} --sort-order=:none: "
                    "-i /dev/stdin -o /dev/stdout | "
                    "{fgbio} {jvm_opts} {io_opts} FilterConsensusReads {filter_opts} -r {ref_file} "
