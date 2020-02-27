@@ -5,7 +5,7 @@ Validated, scalable, community developed variant calling, RNA-seq and small RNA 
 [![travis build](https://travis-ci.org/bcbio/bcbio-nextgen.png)](https://travis-ci.org/bcbio/bcbio-nextgen)
 [![zenodo record](https://zenodo.org/badge/DOI/10.5281/zenodo.3659234.svg)](https://zenodo.org/record/3659234)
 
-# Features
+## Features
 
 * Community developed: We welcome contributors with the goal of overcoming the biological, algorithmic and computational challenges that face individual developers working on complex pipelines in quickly changing research areas. See our [users page](https://bcbio-nextgen.readthedocs.io/en/latest/contents/about.html#users) for examples of bcbio-nextgen deployments, and the [developer documentation](https://bcbio-nextgen.readthedocs.io/en/latest/contents/development.html) for tips on contributing.
 * Installation: [A single installer script](https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated) prepares all third party software, data libraries and system configuration files.
@@ -13,7 +13,7 @@ Validated, scalable, community developed variant calling, RNA-seq and small RNA 
 * Distributed: Focus on [parallel analysis and scaling](http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/) to handle large population studies and whole genome analysis. Runs on single multicore computers, in compute clusters using [IPython parallel](https://ipython.org/ipython-doc/dev/index.html), or on the Amazon cloud. See the [parallel documentation](https://bcbio-nextgen.readthedocs.org/en/latest/contents/parallel.html) for full details.
 * Multiple analysis algorithms: bcbio-nextgen provides configurable [variant calling, RNA-seq and small RNA pipelines](https://bcbio-nextgen.readthedocs.org/en/latest/contents/pipelines.html).
 
-# Quick start
+## Quick start
 
 1. [Install](https://bcbio-nextgen.readthedocs.org/en/latest/contents/installation.html#automated) `bcbio-nextgen` with all tool dependencies and data files:
     ```shell script
@@ -35,12 +35,12 @@ Validated, scalable, community developed variant calling, RNA-seq and small RNA 
     bcbio_nextgen.py ../config/project1.yaml -n 8
     ```
 
-# Documentation
+## Documentation
 
 See the [full documentation](https://bcbio-nextgen.readthedocs.org) and [longer analysis-based articles](http://bcb.io). We welcome enhancements or problem reports using
 [GitHub](https://github.com/bcbio/bcbio-nextgen/issues) and discussion on the [biovalidation mailing list](https://groups.google.com/d/forum/biovalidation).
 
-# Contributors
+## Contributors
 
 * [Miika Ahdesmaki](https://github.com/mjafin), AstraZeneca
 * [Luca Beltrame](https://github.com/lbeltrame), IRCCS "Mario Negri" Institute for Pharmacological Research, Milan, Italy
@@ -60,19 +60,19 @@ See the [full documentation](https://bcbio-nextgen.readthedocs.org) and [longer 
 * [John Kern](https://github.com/kern3020)
 * [Rory Kirchner](https://github.com/roryk), Harvard Chan Bioinformatics Core
 * [Tetiana Khotiainsteva](https://github.com/tetianakh), Ardigen
+* [Sergey Naumenko](https://github.com/naumenko-sa), Harvard Chan Bioinformatics Core
 * [Jakub Nowacki](https://github.com/jsnowacki), AstraZeneca
 * [John Morrissey](https://github.com/jwm), Harvard Chan Bioinformatics Core
 * [Lorena Pantano](https://github.com/lpantano), Harvard Chan Bioinformatics Core
 * [Brent Pedersen](https://github.com/brentp), University of Colorado Denver
 * [James Porter](https://github.com/porterjamesj), The University of Chicago
+* [Vlad Saveliev](https://github.com/vladsaveliev), Center for Algorithmic Biotechnology, St. Petersburg University
 * [Valentine Svensson](https://github.com/vals), Science for Life Laboratory, Stockholm
 * [Paul Tang](https://github.com/tanglingfung), UCSF
 * [Stephen Turner](https://github.com/stephenturner), University of Virginia
 * [Roman Valls](https://github.com/brainstorm), Science for Life Laboratory, Stockholm
 * [Kevin Ying](https://github.com/kevyin), Garvan Institute of Medical Research, Sydney, Australia
-* [Vlad Saveliev](https://github.com/vladsaveliev), Center for Algorithmic Biotechnology, St. Petersburg University
-* [Sergey Naumenko](https://github.com/naumenko-sa), Harvard Chan Bioinformatics Core
 
-# License
+## License
 
 The code is freely available under the [MIT license](http://www.opensource.org/licenses/mit-license.html).
