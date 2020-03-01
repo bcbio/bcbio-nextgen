@@ -125,8 +125,8 @@ all merged sample calls. bcbio has two methods to call samples together:
 - Joint calling -- This calls samples independently, then combines them together
   into a single callset by integrating the individual calls. This scales to
   larger population sizes by avoiding the computational bottlenecks of pooled
-  calling. We recommend joint calling with HaplotypeCaller if you have a
-  license for GATK usage, but also support joint calling with FreeBayes using a
+  calling. We recommend joint calling with HaplotypeCaller 
+  but also support joint calling with FreeBayes using a
   custom implementation. Specifying a ``jointcaller`` along with the appropriate
   ``variantcaller`` in the :ref:`variant-config` configuration enables this::
 
