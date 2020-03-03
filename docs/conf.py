@@ -37,6 +37,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosectionlabel',
     'recommonmark',
+    'sphinx_rtd_theme',
 ]
 
 source_suffix = {
