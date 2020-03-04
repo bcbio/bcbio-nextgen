@@ -277,8 +277,8 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("bcbioRNAseq loading", dirs):
             tools_on = dd.get_in_samples(samples, dd.get_tools_on)
             bcbiornaseq_on = tools_on and "bcbiornaseq" in tools_on
-            if bcbiornaseq_on and len(samples) == 1:
-                logger.warn("bcbioRNASeq does not work with just one sample, skipping.")
+            if bcbiornaseq_on and len(samples) < 3:
+                logger.warn("bcbioRNASeq needs at least three samples total, skipping.")
             else:
                 run_parallel("run_bcbiornaseqload", [sample])
     logger.info("Timing: finished")
