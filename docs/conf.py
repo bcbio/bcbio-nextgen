@@ -47,7 +47,7 @@ source_suffix = {
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['templates']
 
-# The master toctree document.
+# The master toctree document (required by Read the Docs).
 master_doc = 'index'
 
 # List of patterns, relative to source directory, that match files and
@@ -74,6 +74,7 @@ if not os.getenv('READTHEDOCS'):
 html_static_path = ['_static']
 
 
+# enable automatic table of contents on the index page
 def setup(app):
     app.add_config_value('recommonmark_config', {
         'auto_toc_tree_section': 'Contents',
