@@ -540,7 +540,7 @@ def load_tximport(data):
             f'library(tidyverse);'
             f'salmon_files = list.files("{salmon_dir}", pattern="quant.sf", recursive=TRUE, full.names=TRUE);'
             f'tx2gene = readr::read_csv("{tx2gene_file}", col_names=c("transcript", "gene")); '
-            f'samples = basename(dirname(dirname(salmon_files)));'
+            f'samples = basename(dirname(salmon_files));'
             f'names(salmon_files) = samples;'
             f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM");'
             f'readr::write_csv(txi$counts %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
