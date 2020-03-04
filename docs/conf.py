@@ -58,11 +58,6 @@ exclude_patterns = ['_build']
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = 'classic'
-
 # to use Read The Docs theme when building docs locally
 if not os.getenv('READTHEDOCS'):
     try:
