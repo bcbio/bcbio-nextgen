@@ -36,6 +36,9 @@ def data_dir():
 
 @contextlib.contextmanager
 def make_workdir():
+    # set to False if you don't want to remove the current testing directory
+    remove_old_dir = True
+
     custom_test_dir = os.getenv("BCBIO_TEST_DIR")
 
     if custom_test_dir:
@@ -43,9 +46,10 @@ def make_workdir():
     else:
         work_dir = default_workdir()
 
-    if os.path.exists(work_dir):
+    if remove_old_dir and os.path.exists(work_dir):
         shutil.rmtree(work_dir)
-    os.makedirs(work_dir)
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir)
 
     # workaround for hardcoded data file paths in test run config files
     if custom_test_dir:
