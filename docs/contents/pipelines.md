@@ -38,7 +38,7 @@ Batching samples results in output VCFs and GEMINI databases containing all merg
 
 * Batch or pooled calling -- This calls all samples simultaneously by feeding them to the variant caller. This works for smaller batch sizes (< 100 samples) as memory requirements become limiting in larger pools. This is the default approach taken when you specify a `variantcaller` in the [variant calling](contents/configuration:variant%20calling) configuration.
 
-* Joint calling -- This calls samples independently, then combines them together into a single callset by integrating the individual calls. This scales to larger population sizes by avoiding the computational bottlenecks of pooled calling. We recommend joint calling with HaplotypeCaller if you have a license for GATK usage, but also support joint calling with FreeBayes using a custom implementation. Specifying a `jointcaller` along with the appropriate `variantcaller` in the [variant calling](contents/configuration:variant%20calling) configuration enables this:
+* Joint calling -- This calls samples independently, then combines them together into a single callset by integrating the individual calls. This scales to larger population sizes by avoiding the computational bottlenecks of pooled calling. We recommend joint calling with HaplotypeCaller but also support joint calling with FreeBayes using a custom implementation. Specifying a `jointcaller` along with the appropriate `variantcaller` in the [variant calling](contents/configuration:variant%20calling) configuration enables this:
 ```yaml
 - description: Sample1
   algorithm:
