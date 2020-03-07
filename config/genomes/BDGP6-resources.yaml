@@ -4,8 +4,8 @@ aliases:
   ensembl: drosophila_melanogaster_vep_99_BDGP6.28
   snpeff: BDGP6.86
   
-  srnaseq:
-    srna_transcripts: ../srnaseq/srna-transcripts.gtf
-    mirbase_hairpin: ../srnaseq/hairpin.fa
-    mirbase_mature: ../srnaseq/mature.fa
-    mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
+srnaseq:
+  srna_transcripts: ../srnaseq/srna-transcripts.gtf
+  mirbase_hairpin: ../srnaseq/hairpin.fa
+  mirbase_mature: ../srnaseq/mature.fa
+  mirdeep2_fasta: ../srnaseq/Rfam_for_miRDeep.fa
