@@ -27,8 +27,8 @@ functionality available in ``bcbio_nextgen.py``.
 
 .. _docs-cloud-gcp:
 
-Google Cloud (GCP)
-##################
+Google Cloud Platform
+#####################
 
 Cromwell runs bcbio CWL pipelines on Google Cloud using the
 `Google Pipelines API <https://cloud.google.com/genomics/reference/rest/>`_.
