@@ -44,7 +44,6 @@ extensions = [
 autosectionlabel_prefix_document = True
 
 source_suffix = {
-    '.rst': 'restructuredtext',
     '.md': 'markdown',
 }
 
