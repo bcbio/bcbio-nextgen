@@ -152,7 +152,8 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = region.parallel_prep_region(samples, run_parallel)
         with profile.report("variant calling", dirs):
             samples = genotype.parallel_variantcall_region(samples, run_parallel)
-
+        with profile.report("joint squaring off/backfilling", dirs):
+            samples = joint.square_off(samples, run_parallel)
     ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
                                      "gemini", "samtools", "fastqc", "sambamba",
@@ -160,8 +161,6 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
                                      "svcaller", "kraken", "preseq"]),
                     samples, config, dirs, "multicore2",
                     multiplier=structural.parallel_multiplier(samples)) as run_parallel:
-        with profile.report("joint squaring off/backfilling", dirs):
-            samples = joint.square_off(samples, run_parallel)
         with profile.report("variant post-processing", dirs):
             samples = run_parallel("postprocess_variants", samples)
             samples = run_parallel("split_variants_by_sample", samples)
