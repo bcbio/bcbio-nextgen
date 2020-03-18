@@ -6,12 +6,12 @@
 
 ### Cancer tumor-normal variant calling
 
-This is a teaching orientated example of using bcbio from the Cold Spring Harbor Laboratory's [Advanced Sequencing Technology and Applications course](http://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15). This uses cancer tumor normal data from the [ICGC-TCGA DREAM synthetic 3 challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/58893), subset to exomes on chromosome 6 to reduce runtimes. It demonstrates:
+This is a teaching orientated example of using bcbio from the Cold Spring Harbor Laboratory's [Advanced Sequencing Technology and Applications course](https://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15). This uses cancer tumor normal data from the [ICGC-TCGA DREAM synthetic 3 challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/58893), subset to exomes on chromosome 6 to reduce runtimes. It demonstrates:
 * Running a cancer tumor/normal workflow through bcbio.
 * Analysis with human genome build 38.
 * SNP and indel detection, with 3 variant callers and an ensemble method.
 * Structural variant calling, with 2 callers.
-* Prioritization of structural variants for cancer associated genes in [CIViC](https://civic.genome.wustl.edu/#/home).
+* Prioritization of structural variants for cancer associated genes in [CIViC](https://civicdb.org/home).
 * HLA typing.
 * Validation of both small and structural variants against truth sets.
 
@@ -23,7 +23,7 @@ Once launched, ssh into the remote machine with `ssh -i your-keypair ubuntu@publ
 
 #### Input configuration file
 
-To run bcbio, you prepare a small configuration file describing your analysis. You can [prepare it manually or use an automated configuration method](https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html). The example has a pre-written configuration file with tumor/normal data located in the `config` directory and this section walks through the settings.
+To run bcbio, you prepare a small configuration file describing your analysis. You can [prepare it manually or use an automated configuration method](configuration). The example has a pre-written configuration file with tumor/normal data located in the `config` directory and this section walks through the settings.
 
 You define the type of analysis (variant calling) along with the input files and genome build:
 ```yaml
