@@ -1,7 +1,7 @@
 FROM stackbrew/ubuntu:14.04
 MAINTAINER Brad Chapman "https://github.com/chapmanb"
 
-# Setup a base system 
+# Setup a base system
 RUN apt-get update && \
     apt-get install -y curl wget git unzip tar gzip bzip2 xz-utils pigz && \
 # Support inclusion in Arvados pipelines
@@ -12,7 +12,7 @@ RUN apt-get update && \
 # bcbio-nextgen installation
     mkdir -p /tmp/bcbio-nextgen-install && cd /tmp/bcbio-nextgen-install && \
     wget --no-check-certificate \
-      https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
+      https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py && \
     python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen \
       --isolate --minimize-disk --nodata -u development && \
     git config --global url.https://github.com/.insteadOf git://github.com/ && \
@@ -28,11 +28,11 @@ RUN apt-get update && \
 
 # add user run script
     wget --no-check-certificate -O createsetuser \
-      https://raw.github.com/bcbio/bcbio-nextgen-vm/master/scripts/createsetuser && \
+      https://raw.githubusercontent.com/bcbio/bcbio-nextgen-vm/master/scripts/createsetuser && \
     chmod a+x createsetuser && mv createsetuser /sbin && \
 
 # clean filesystem
-    cd /usr/local && \ 
+    cd /usr/local && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/tmp/* && \
     /usr/local/share/bcbio-nextgen/anaconda/bin/conda clean --yes --tarballs && \
@@ -48,7 +48,7 @@ RUN apt-get update && \
     rm -rf /.cpanm && \
     rm -rf /tmp/bcbio-nextgen-install && \
 
-# Create directories and symlinks for data 
+# Create directories and symlinks for data
     mkdir -p /mnt/biodata && \
     mkdir -p /tmp/bcbio-nextgen && \
     mv /usr/local/share/bcbio-nextgen/galaxy/bcbio_system.yaml /usr/local/share/bcbio-nextgen/config && \

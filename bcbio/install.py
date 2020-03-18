@@ -34,7 +34,7 @@ REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/master.tar.gz",
-    "genome_resources": "https://raw.github.com/bcbio/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
+    "genome_resources": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
 SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",

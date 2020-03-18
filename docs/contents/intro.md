@@ -77,9 +77,9 @@ mkdir NA12878-trio-eval
 cd NA12878-trio-eval
 mkdir config input work
 cd config
-wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
 cd ../input
-wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
 bash NA12878-trio-wgs-validate-getdata.sh
 cd ../work
 bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
