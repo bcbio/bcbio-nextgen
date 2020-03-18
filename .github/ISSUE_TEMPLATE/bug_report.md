@@ -12,10 +12,11 @@ assignees: ''
  - OS name and version:
 
 **To Reproduce**
-Steps to reproduce the behavior:
-1. 
-2. 
-3. See error
+ - Exact bcbio command you have used
+ - Your sample coniguration file
+
+**Observed behavior**
+Error message or bcbio output.
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
