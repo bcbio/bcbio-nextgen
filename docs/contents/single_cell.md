@@ -1,4 +1,4 @@
-# Counting cells with bcbio for inDrops3 data: proto-SOP
+# Counting cells and transcripts for inDrops3 data
 
 ## Workflow
 
