@@ -433,21 +433,6 @@ You will need to also turn on `bcbiornaseq` by turning it on via `tools_on: [bcb
 
 `transcriptome_fasta` An optional FASTA file of transcriptome sequences to quantitate rather than using bcbio installed transcriptome sequences.
 
-#### Single-cell RNA sequencing
-
-* `minimum_barcode_depth` Cellular barcodes with less than this many reads assigned to them are discarded (default 10,000).
-* `cellular_barcodes` A single file or a list of one or two files which have valid cellular barcodes. Provide one file if there is only one barcode and two files if the barcodes are split. If no file is provided, all cellular barcodes passing the `minimum_barcode_depth` filter are kept.
-* `transcriptome_fasta` An optional FASTA file of transcriptome sequences to quantitate rather than the bcbio installed version.
-* `transcriptome_gtf` An optional GTF file of the transcriptome to quantitate, rather than the bcbio installed version. This is recommended for single-cell RNA-sequencing experiments.
-* `singlecell_quantifier` Quantifier to use for single-cell RNA-sequencing. Supports `rapmap` or `kallisto`.
-* `cellular_barcode_correction` Number of errors to correct in identified cellular barcodes. Requires a set of known barcodes to be passed with the `cellular_barcodes` option. Defaults to 1. Set to 0 to turn off error correction.
-* `sample_barcodes` A text file with one barcode per line of expected sample barcodes. If the file contains sample name for each barcode, this will be used to create a `tagcounts.mtx.metadata` that match each cell with the sample name associated with the barcode. The actual barcodes may be reverse complements of the sequences provided with the samples. It worth to check before running bcbio. For inDrops procol samples barcodes are in the fastq file for read3. This is an example of the `sample_barcodes` file:
-    ```
-    AATTCCGG,sample1
-    CCTTGGAA,sample2
-    ```
-* `demultiplexed` If set to True, each file will be treated as a cell or well and not a collection of cells. Use this if your data has already been broken up into cells or wells.
-
 #### smallRNA sequencing
 
 * `adapters` The 3' end adapter that needs to be remove. For NextFlex protocol you can add `adapters: ["4N", "$3PRIME_ADAPTER"]`. For any other options you can use resources: `atropos:options:["-u 4", "-u -4"]`.
