@@ -4,10 +4,11 @@ A python toolkit providing best-practice pipelines for fully automated high thro
 
 ## Contents
 
+* [Getting started](contents/intro)
+* [Single cell RNA-seq](contents/single_cell)
 * [Introduction](contents/about)
 * [Installation](contents/installation)
 * [Pipelines](contents/pipelines)
-* [Getting started](contents/intro)
 * [Configuration](contents/configuration)
 * [Parallel execution](contents/parallel)
 * [Common Workflow Language (CWL)](contents/cwl)
