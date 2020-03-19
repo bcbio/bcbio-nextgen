@@ -229,7 +229,7 @@ The pipeline generates a _RMD_ template file inside `report` folder that can be 
 
 The bcbio-nextgen implementation of ChIP-seq aligns, removes multimapping reads, calls peaks with a paired input file using MACS2 and outputs a set of greylist regions for filtering possible false peaks in regions of high depth in the input file.
 
-* Adapter trimming: [atropos](https://atropos.readthedocs.org/en/latest/guide.html)
+* Adapter trimming: [atropos](https://atropos.readthedocs.io/en/latest/guide.html)
 * Sequence alignment: [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml), [bwa mem](http://bio-bwa.sourceforge.net/)
 * Peak calling: [macs2](https://github.com/taoliu/MACS)
 * Greylisting: [chipseq-greylist](https://github.com/roryk/chipseq-greylist)
