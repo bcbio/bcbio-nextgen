@@ -1,5 +1,34 @@
 ## Getting started
 
+This example calls variants using NA12878 exome data from [EdgeBio's](https://www.edgebio.com/) clinical sequencing pipeline, and compares them against reference materials from NIST's [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
+
+1. Install bcbio python package and tools
+    ```shell
+    wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir [tools_installation_path] --nodata
+    ```
+
+2. Install hg38 reference genome and bwa indices
+    ```shell
+    bcbio_nextgen.py update -u skip --genomes hg38 --aligners bwa
+    ```
+    See more detailed instructions in the installation user story.
+
+3. Get the input configuration file, fastq reads, reference materials and analysis regions:
+    ```shell
+    mkdir -p NA12878-exome-eval
+    cd NA12878-exome-eval
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+    bash NA12878-exome-methodcmp-getdata.sh
+    ```
+
+4.  Run the analysis, distributed on 8 local cores, with:
+    ```shell
+    cd work
+    bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
+    ```
+    The `grading-summary.csv` contains detailed comparisons of the results to the NIST reference materials, enabling rapid comparisons of methods.
+
 ### Project structure
 
 bcbio encourages a project structure:
@@ -19,24 +48,6 @@ Typical bcbio run:
 * review the results in `final`
 * delete `work` with intermediate files.
 
-### Quick start with GATK variant calling
-
-1. Prepare input files (WES, WGS, or a small subset):
-    ```shell
-    ls
-    sample1_1.fq.gz, sample1_2.fq.gz
-    ```
-2. Create a [sample configuration file](https://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_sample.yaml):
-    ```shell
-    bcbio_nextgen.py -w template gatk-variant project1 sample1_1.fq sample1_2.fq
-    ```
-    The resulting config file `project1/config/project1.yaml` is created by using a _standard template for GATK_ best practices variant calling.
-3. Run analysis using 8 local cores:
-    ```shell
-    cd project1/work
-    bcbio_nextgen.py ../config/project1.yaml -n 8
-    ```
-
 ### Logging
 
 There are 3 logging files in the `log` directory within your working folder:
@@ -47,24 +58,6 @@ There are 3 logging files in the `log` directory within your working folder:
 ### Example pipelines
 
 We supply example input configuration files for validation and to help in understanding the pipeline.
-
-#### Exome variant calling with validation - hg38
-
-This example calls variants on the two technical replicates of NA12878 exome from [EdgeBio's](https://www.edgebio.com/) clinical sequencing pipeline, and compares them against reference materials from NIST's [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
-
-1. Get the input configuration file, fastq reads, reference materials and analysis regions:
-```shell
-mkdir -p NA12878-exome-eval
-cd NA12878-exome-eval
-wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
-bash NA12878-exome-methodcmp-getdata.sh
-```
-2.  Run the analysis, distributed on 8 local cores, with:
-```shell
-cd work
-bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
-```
-The `grading-summary.csv` contains detailed comparisons of the results to the NIST reference materials, enabling rapid comparisons of methods.
 
 #### Whole genome trio (50x) - hg38
 
