@@ -4,7 +4,7 @@ bcbio runs with [Common Workflow Language (CWL)](https://github.com/common-workf
 
 ### Current status
 
-bcbio creates CWL for alignment, small variant calls (SNPs and indels), coverage assessment, HLA typing, quality control and structural variant calling. It generates a [CWL v1.0.2](http://www.commonwl.org/v1.0/) compatible workflow. The actual biological code execution during runs works with either a [bcbio docker container](https://github.com/bcbio/bcbio_docker) or a [local installation of bcbio](installation).
+bcbio creates CWL for alignment, small variant calls (SNPs and indels), coverage assessment, HLA typing, quality control and structural variant calling. It generates a [CWL v1.0.2](https://www.commonwl.org/v1.0/) compatible workflow. The actual biological code execution during runs works with either a [bcbio docker container](https://github.com/bcbio/bcbio_docker) or a [local installation of bcbio](installation).
 
 The implementation includes bcbio's approaches to splitting and batching analyses. At the top level workflow, we parallelize by samples. Using sub-workflows, we split fastq inputs into sections for parallel alignment over multiple machines following by merging. We also use sub-workflows, along with CWL records, to batch multiple samples and run in parallel. This enables pooled and tumor/normal cancer calling with parallelization by chromosome regions based on coverage calculations.
 
@@ -13,7 +13,7 @@ The implementation includes bcbio's approaches to splitting and batching analyse
 bcbio supports these CWL-compatible tools:
 * [Cromwell](https://cromwell.readthedocs.io/) -- multicore local runs and distributed runs on HPC systems with shared filesystems and schedulers like SLURM, SGE and PBSPro.
 * [Arvados](https://arvados.org/) -- a hosted platform that runs on top of parallel cloud environments. We include an example below of
-running on the [public Curoverse](https://cloud.curoverse.com/) instance running on [Microsoft Azure](https://azure.microsoft.com).
+running on the [public Curoverse](https://playground.arvados.org/users/welcome) instance running on [Microsoft Azure](https://azure.microsoft.com).
 * [DNANexus](https://www.dnanexus.com/) -- a hosted platform running distributed jobs on cloud environments, working with both AWS and Azure.
 * [Seven Bridges](https://www.sevenbridges.com/) -- parallel distributed analyses on the Seven Bridges platform and [Cancer Genomics Cloud](https://www.cancergenomicscloud.org/).
 * [Toil](https://github.com/BD2KGenomics/toil) -- parallel local and distributed cluster runs on schedulers like SLURM, SGE and PBSPro.
@@ -153,7 +153,7 @@ bcbio_vm.py cwlrun toil sample-workflow -- --batchSystem slurm
 
 bcbio generated CWL workflows run on [Arvados](https://arvados.org/) and these instructions detail how to run on the [Arvdos public instance](https://playground.arvados.org). [Arvados cwl-runner](https://github.com/curoverse/arvados) comes pre-installed with [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm#installation). We have a publicly accessible project, called [bcbio_resources](https://workbench.qr1hi.arvadosapi.com/projects/qr1hi-j7d0g-8g1u4lh8mwev36n) that contains the latest Docker images, test data and genome references you can use for runs.
 
-Retrieve API keys from the [Arvados public instance](https://playground.arvados.org). Login, then go to ['User Icon-> Personal Token'](https://cloud.curoverse.com/current_token). Copy and paste the commands given there into your shell. You'll specifically need to set `ARVADOS_API_HOST` and `ARVADOS_API_TOKEN`.
+Retrieve API keys from the [Arvados public instance](https://playground.arvados.org). Login, then go to 'User Icon-> Personal Token'. Copy and paste the commands given there into your shell. You'll specifically need to set `ARVADOS_API_HOST` and `ARVADOS_API_TOKEN`.
 
 To run an analysis:
 1. Create a new project from the web interface (Projects -> Add a new project). Note the project ID from the URL of the project (an identifier like `qr1hi-j7d0g-7t73h4hrau3l063`).
@@ -302,7 +302,7 @@ description of the workflow:
 
 ### Running on Seven Bridges
 
-bcbio runs on the [Seven Bridges](https://www.sevenbridges.com/) including the main platform and specialized data sources like the [Cancer Genomics Cloud](https://www.cancergenomicscloud.org/) and [Cavatica](http://www.cavatica.org/). Seven Bridges uses generated CWL directly and bcbio has utilities to query your remote data on the platform and prepare CWL for direct submission.
+bcbio runs on the [Seven Bridges](https://www.sevenbridges.com/) including the main platform and specialized data sources like the [Cancer Genomics Cloud](https://www.cancergenomicscloud.org/) and [Cavatica](https://cavatica.squarespace.com/). Seven Bridges uses generated CWL directly and bcbio has utilities to query your remote data on the platform and prepare CWL for direct submission.
 
 1. Since Seven Bridges is available on multiple platforms and data access points, we authenticate with a configuration file in `$HOME/.sevenbridges/credentials` with potentially [multiple profiles defining API access URLs and authentication keys](https://sevenbridges-python.readthedocs.io/en/latest/quickstart/#initialize-the-library-using-a-configuration-file). We reference the [specified credentials](https://docs.sevenbridges.com/docs/store-credentials-to-access-seven-bridges-client-applications-and-libraries#section-unified-configuration-file) when setting up a `bcbio_system-sbg.yaml` file to ensure correct authentication.
 
