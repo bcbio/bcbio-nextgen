@@ -108,7 +108,7 @@ Credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quick
 
 #### AWS data preparation
 
-The easiest way to organize AWS projects is using an analysis folder inside an [S3 bucket](https://aws.amazon.com/s3/). Create a bucket and folder for your analysis and upload input files (fastq or BAM) and other associated files. Bucket names should include only lowercase letters, numbers and hyphens (`-`) to conform to [S3 bucket naming restrictions](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) and avoid issues with resolution of SSL keys. You can create buckets and upload files using the [the AWS cli client](https://aws.amazon.com/cli/) or [AWS S3 web console](https://console.aws.amazon.com/s3/):
+The easiest way to organize AWS projects is using an analysis folder inside an [S3 bucket](https://aws.amazon.com/s3/). Create a bucket and folder for your analysis and upload input files (fastq or BAM) and other associated files. Bucket names should include only lowercase letters, numbers and hyphens (`-`) to conform to [S3 bucket naming restrictions](https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) and avoid issues with resolution of SSL keys. You can create buckets and upload files using the [the AWS cli client](https://aws.amazon.com/cli/) or [AWS S3 web console](https://console.aws.amazon.com/s3/):
 ```shell
 aws s3 sync /local/inputs s3://your-bucket/inputs
 ```
@@ -180,7 +180,7 @@ bcbio_vm.py aws config edit
 ```
 This dialog allows you to define the cluster size and machine resources you'd like to use. The defaults only have small instances to prevent accidentally starting an [expensive run](https://aws.amazon.com/ec2/pricing/). If you're planning a run with less than 32 cores, do not use a cluster and instead run directly on a single machine using one of the [large r3 or c3 instances](https://aws.amazon.com/ec2/instance-types/).
 
-This script also sets the size of the [encrypted NFS-mounted drive](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html), which you can use to store processing data when running across a distributed cluster. At scale, you can replace this with a Lustre shared filesystem. See below for details on launching and attaching a Lustre filesystem to a cluster.
+This script also sets the size of the [encrypted NFS-mounted drive](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html), which you can use to store processing data when running across a distributed cluster. At scale, you can replace this with a Lustre shared filesystem. See below for details on launching and attaching a Lustre filesystem to a cluster.
 
 To ensure everything is correctly configured, run:
 ```shell
