@@ -2,7 +2,7 @@
 
 ### Germline variant calling
 
-bcbio implements configurable SNP, indel and structural variant calling for germline populations. We include whole genome and exome evaluations against reference calls from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle/) consortium and [Illumina Platinum Genomes](https://www.illumina.com/platinumgenomes.html) project, enabling continuous assessment of new alignment and variant calling algorithms. We regularly report on these comparisons and continue to improve approaches as the community makes new tools available. Here is some of the research that contributes to the current implementation:
+bcbio implements configurable SNP, indel and structural variant calling for germline populations. We include whole genome and exome evaluations against reference calls from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) consortium and [Illumina Platinum Genomes](https://www.illumina.com/platinumgenomes.html) project, enabling continuous assessment of new alignment and variant calling algorithms. We regularly report on these comparisons and continue to improve approaches as the community makes new tools available. Here is some of the research that contributes to the current implementation:
 
 * An introduction to the [variant evaluation framework](https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/). This includes a comparison of the [bwa mem](http://bio-bwa.sourceforge.net/) and [novoalign](http://www.novocraft.com) aligners. We also compared the [FreeBayes](https://github.com/ekg/freebayes), [GATK HaplotypeCaller](https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php) and [GATK UnifiedGenotyper](https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_genotyper_UnifiedGenotyper.php) variant callers.
 * An in-depth evaluation of [FreeBayes and BAM post-alignment processing](https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/). We found that FreeBayes quality was equal to GATK HaplotypeCaller. Additionally, a lightweight post-alignment preparation method using only de-duplication was equivalent to GATK's recommended Base Quality Score Recalibration (BQSR) and realignment around indels, when using good quality input datasets and callers that do local realignment.
@@ -10,7 +10,7 @@ bcbio implements configurable SNP, indel and structural variant calling for germ
 * An [evaluation of joint calling](https://bcb.io/2014/10/07/joint-calling/) with GATK HaplotypeCaller, FreeBayes, Platypus and samtools. This validates the joint calling implementation, allowing scaling of large population germline experiments. It also demonstrates improved performance of new callers: samtools 1.0 and Platypus.
 * Support for [build 38 of the human genome](https://bcb.io/2015/09/17/hg38-validation/), improving precision of detection thanks to the improved genome representation.
 
-bcbio automates post-variant calling annotation to make the outputs easier to feed directly into your biological analysis. We annotate variant effects using [snpEff](http://snpeff.sourceforge.net/) or [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html) (VEP), and prepare a [GEMINI database](https://gemini.readthedocs.org/en/latest/) that associates variants with multiple external annotations in a SQL-based query interface. GEMINI databases have the most associated external information for human samples (GRCh37/hg19 and hg38) but are available for any organism with the database populated using the VCF INFO column and predicted effects.
+bcbio automates post-variant calling annotation to make the outputs easier to feed directly into your biological analysis. We annotate variant effects using [snpEff](http://snpeff.sourceforge.net/) or [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html) (VEP), and prepare a [GEMINI database](https://gemini.readthedocs.io/en/latest/) that associates variants with multiple external annotations in a SQL-based query interface. GEMINI databases have the most associated external information for human samples (GRCh37/hg19 and hg38) but are available for any organism with the database populated using the VCF INFO column and predicted effects.
 
 #### Basic germline calling
 
@@ -163,7 +163,7 @@ To enable structural variant calling, specify `svcaller` options in the algorith
     svcaller: [lumpy, manta, cnvkit]
 ```
 The best supported callers are [Lumpy](https://github.com/arq5x/lumpy-sv) and
-[Manta](https://github.com/Illumina/manta), for paired end and split read calling, [CNVkit](http://cnvkit.readthedocs.org/en/latest/) for read-depth based CNV calling, and
+[Manta](https://github.com/Illumina/manta), for paired end and split read calling, [CNVkit](https://cnvkit.readthedocs.io/en/latest/) for read-depth based CNV calling, and
 [WHAM](https://github.com/jewmanchue/wham) for association testing. We also support [DELLY](https://github.com/tobiasrausch/delly), another excellent paired end and split read caller, although it is slow on large whole genome datasets.
 
 ### RNA-seq
@@ -185,7 +185,7 @@ In addition to directories for each sample, in the `upload` directory there is a
 
 ### fast RNA-seq
 
-This mode of `bcbio-nextgen` quantitates transcript expression using [Salmon](https://salmon.readthedocs.org/en/latest/) and does nothing else. It is an order of magnitude faster or more than running the full RNA-seq analysis. The cost of the increased speed is that you will have much less information about your samples at the end of the run, which can make troubleshooting trickier. Invoke with `analysis: fastrna-seq`.
+This mode of `bcbio-nextgen` quantitates transcript expression using [Salmon](https://salmon.readthedocs.io/en/latest/) and does nothing else. It is an order of magnitude faster or more than running the full RNA-seq analysis. The cost of the increased speed is that you will have much less information about your samples at the end of the run, which can make troubleshooting trickier. Invoke with `analysis: fastrna-seq`.
 
 ### single-cell RNA-seq
 
@@ -204,11 +204,11 @@ Most of the heavy lifting for this part of bcbio-nextgen is implemented in the [
 bcbio-nextgen also implements a configurable best-practices pipeline for smallRNA-seq quality controls, adapter trimming, miRNA/isomiR quantification and other small RNA detection.
 
 * Adapter trimming:
-  * [atropos](https://atropos.readthedocs.org/en/latest/guide.html)
+  * [atropos](https://atropos.readthedocs.io/en/latest/guide.html)
   * [dnapi](https://github.com/jnktsj/DNApi) for adapter de-novo detection
 * Sequence alignment:
-  * [STAR](http://code.google.com/p/rna-star/) for genome annotation
-  * bowtie, _bowtie2_ and [hisat2](https://ccb.jhu.edu/software/hisat2/index.shtml) for genome annotation as an option
+  * [STAR](https://code.google.com/archive/p/rna-star) for genome annotation
+  * bowtie, _bowtie2_ and [hisat2](https://daehwankimlab.github.io/hisat2/) for genome annotation as an option
 * Specific small RNAs quantification (miRNA/tRNAs...):
   * [seqbuster](https://github.com/lpantano/seqbuster) for miRNA annotation
   * [MINTmap](https://github.com/TJU-CMC-Org/MINTmap) for tRNA fragments annotation
@@ -221,7 +221,7 @@ bcbio-nextgen also implements a configurable best-practices pipeline for smallRN
 * Quality control: [FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
 * Other small RNAs quantification:
   * [seqcluster](https://github.com/lpantano/seqcluster)
-  * [mirDeep2](https://www.mdc-berlin.de/8551903/en) for miRNA prediction
+  * [mirDeep2](https://www.mdc-berlin.de/content/mirdeep2-documentation) for miRNA prediction
 
 The pipeline generates a _RMD_ template file inside `report` folder that can be rendered with knitr. An example of the report is [here](https://github.com/lpantano/mypubs/blob/master/srnaseq/mirqc/ready_report.md). Count table (`counts_mirna.tst`) from mirbase miRNAs will be inside `mirbase` or final project folder. Input files for [isomiRs](https://github.com/lpantano/isomiRs) package for isomiRs analysis will be inside each sample in `mirbase` folder. If mirdeep2 can run, count table (`counts_mirna_novel.tsv`) for novel miRNAs will be inside `mirdeep2` or final project folder. tdrmapper results will be inside each sample inside `tdrmapper` or final project folder.
 
@@ -322,7 +322,7 @@ details:
       trim_reads: read_through
       adapters: [nextera, polya]
 ```
-More samples are added just by adding more entries under the details section. This is tedious and error prone to do by hand, so there is an automated [template](contents/configuration:automated%20sample%20configuration) system for common experiments. You could set up the previous experiment by making a mouse version of the [illumina-rnaseq](http://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml) template file and saving it to a local file such as `illumina-mouse-rnaseq.yaml`. Then you can set up the sample file using the templating system:
+More samples are added just by adding more entries under the details section. This is tedious and error prone to do by hand, so there is an automated [template](contents/configuration:automated%20sample%20configuration) system for common experiments. You could set up the previous experiment by making a mouse version of the [illumina-rnaseq](https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/templates/illumina-rnaseq.yaml) template file and saving it to a local file such as `illumina-mouse-rnaseq.yaml`. Then you can set up the sample file using the templating system:
 ```shell
 bcbio_nextgen.py -w template illumina-mouse-rnaseq.yaml mouse_analysis
 /full/path/to/control_rep1.fastq /full/path/to/control_rep2.fastq
