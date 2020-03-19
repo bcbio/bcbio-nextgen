@@ -33,7 +33,7 @@ gcloud config set project your-project
 gcloud services enable genomics.googleapis.com
 gsutil mb gs://your-project
 ```
-Additional documentation for Cromwell: [Google Pipelines API](https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/) and [Google authentication](https://github.com/broadinstitute/cromwell/blob/develop/docs/backends/Google.md).
+Additional documentation for Cromwell: [Google Pipelines API](https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/) and [Google authentication](https://cromwell.readthedocs.io/en/stable/backends/Google/).
 
 #### GCP data preparation
 
@@ -108,7 +108,7 @@ Credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quick
 
 #### AWS data preparation
 
-The easiest way to organize AWS projects is using an analysis folder inside an [S3 bucket](https://aws.amazon.com/s3/). Create a bucket and folder for your analysis and upload input files (fastq or BAM) and other associated files. Bucket names should include only lowercase letters, numbers and hyphens (`-`) to conform to [S3 bucket naming restrictions](http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) and avoid issues with resolution of SSL keys. You can create buckets and upload files using the [the AWS cli client](https://aws.amazon.com/cli/) or [AWS S3 web console](https://console.aws.amazon.com/s3/):
+The easiest way to organize AWS projects is using an analysis folder inside an [S3 bucket](https://aws.amazon.com/s3/). Create a bucket and folder for your analysis and upload input files (fastq or BAM) and other associated files. Bucket names should include only lowercase letters, numbers and hyphens (`-`) to conform to [S3 bucket naming restrictions](https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) and avoid issues with resolution of SSL keys. You can create buckets and upload files using the [the AWS cli client](https://aws.amazon.com/cli/) or [AWS S3 web console](https://console.aws.amazon.com/s3/):
 ```shell
 aws s3 sync /local/inputs s3://your-bucket/inputs
 ```
@@ -180,7 +180,7 @@ bcbio_vm.py aws config edit
 ```
 This dialog allows you to define the cluster size and machine resources you'd like to use. The defaults only have small instances to prevent accidentally starting an [expensive run](https://aws.amazon.com/ec2/pricing/). If you're planning a run with less than 32 cores, do not use a cluster and instead run directly on a single machine using one of the [large r3 or c3 instances](https://aws.amazon.com/ec2/instance-types/).
 
-This script also sets the size of the [encrypted NFS-mounted drive](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html), which you can use to store processing data when running across a distributed cluster. At scale, you can replace this with a Lustre shared filesystem. See below for details on launching and attaching a Lustre filesystem to a cluster.
+This script also sets the size of the [encrypted NFS-mounted drive](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html), which you can use to store processing data when running across a distributed cluster. At scale, you can replace this with a Lustre shared filesystem. See below for details on launching and attaching a Lustre filesystem to a cluster.
 
 To ensure everything is correctly configured, run:
 ```shell
@@ -240,7 +240,7 @@ To run on a full cluster:
 bcbio_vm.py ipythonprep s3://your-project/your-analysis/name.yaml slurm cloud -n 60
 sbatch bcbio_submit.sh
 ```
-Where 60 is the total number of cores to use across all the worker nodes. Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython controller instances. The [SLURM workload manager](https://slurm.schedmd.com/) distributes jobs across your cluster on a queue called `cloud`. A `slurm-PID.out` file in the work directory contains the current status of the job, and `sacct_std` provides the status of jobs on the cluster. If you are new to SLURM, here is a summary of useful [SLURM commands](https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands).
+Where 60 is the total number of cores to use across all the worker nodes. Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython controller instances. The [SLURM workload manager](https://slurm.schedmd.com/) distributes jobs across your cluster on a queue called `cloud`. A `slurm-PID.out` file in the work directory contains the current status of the job, and `sacct_std` provides the status of jobs on the cluster. If you are new to SLURM, here is a summary of useful [SLURM commands](https://docs.rc.fas.harvard.edu/kb/running-jobs/#Summary_of_Slurm_commands).
 
 On successful completion, bcbio uploads the results of the analysis back into your s3 bucket and folder as `s3://your-project/your-analysis/final`. You can now cleanup the cluster and Lustre filesystem.
 

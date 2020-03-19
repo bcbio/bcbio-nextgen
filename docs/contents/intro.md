@@ -81,7 +81,7 @@ This is a large whole genome analysis and meant to test both pipeline scaling an
 
 #### Cancer tumor normal - GRCh37
 
-This example calls variants using multiple approaches in a paired tumor/normal cancer sample from the [ICGC-TCGA DREAM challenge](https://www.synapse.org/#!Synapse:syn312572). It uses [synthetic dataset 3](https://www.synapse.org/#!Synapse:syn312572/wiki/62018) which has multiple subclones, enabling detection of lower frequency variants. Since the dataset is freely available and has a truth set, this allows us to do a full evaluation of variant callers.
+This example calls variants using multiple approaches in a paired tumor/normal cancer sample from the [ICGC-TCGA DREAM challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/58893). It uses [synthetic dataset 3](https://www.synapse.org/#!Synapse:syn312572/wiki/62018) which has multiple subclones, enabling detection of lower frequency variants. Since the dataset is freely available and has a truth set, this allows us to do a full evaluation of variant callers.
 
 To get the data:
 ```shell

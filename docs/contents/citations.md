@@ -19,7 +19,7 @@ Download BIB format: <https://github.com/bcbio/bcbio-nextgen/tree/master/docs/co
 * Heger, A. (2009). Pysam. github.com. Retrieved from <https://github.com/pysam-developers/pysam>
 * Li, H. (2011). A statistical framework for SNP calling, mutation discovery, association mapping and population genetical parameter estimation from sequencing data. Bioinformatics, 27(21), 2987--2993. <https://doi.org/10.1093/bioinformatics/btr509>
 * Li, H., Handsaker, B., Wysoker, A., Fennell, T., Ruan, J., Homer, N., ... Durbin, R. (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics, 25(16), 2078--2079. <https://doi.org/10.1093/bioinformatics/btp352>
-* Pantano, L., Estivill, X., & Martí, E. (2010). SeqBuster, a bioinformatic tool for the processing and analysis of small RNAs datasets, reveals ubiquitous miRNA modifications in human embryonic cells. Nucleic Acids Research, 38(5), e34. Retrieved from <http://www.ncbi.nlm.nih.gov/pubmed/20008100>
+* Pantano, L., Estivill, X., & Martí, E. (2010). SeqBuster, a bioinformatic tool for the processing and analysis of small RNAs datasets, reveals ubiquitous miRNA modifications in human embryonic cells. Nucleic Acids Research, 38(5), e34. Retrieved from <https://www.ncbi.nlm.nih.gov/pubmed/20008100>
 * Pantano, L., Friedlander, M. R., Escaramis, G., Lizano, E., Pallares-Albanell, J., Ferrer, I., ... Marti, E. (2015). Specific small-RNA signatures in the amygdala at premotor and motor stages of Parkinson's disease revealed by deep sequencing analysis. Bioinformatics (Oxford, England). <https://doi.org/10.1093/bioinformatics/btv632>
 
 For the alignment, add what you have used:
@@ -41,7 +41,7 @@ If you have miRge activated:
 * Yin Lu, Alexander S. Baras, Marc K Halushka. miRge2.0: An updated tool to comprehensively analyze microRNA sequencing data. bioRxiv.org.
 
 If you have MINTmap activated:
-* Loher, P, Telonis, AG, Rigoutsos, I. MINTmap: fast and exhaustive profiling of nuclear and mitochondrial tRNA fragments from short RNA-seq data. Sci Rep. 2017;7 :41184. doi: 10.1038/srep41184. PubMed <http://www.ncbi.nlm.nih.gov/pubmed/28220888> PubMed Central PMC5318995.
+* Loher, P, Telonis, AG, Rigoutsos, I. MINTmap: fast and exhaustive profiling of nuclear and mitochondrial tRNA fragments from short RNA-seq data. Sci Rep. 2017;7 :41184. doi: 10.1038/srep41184. PubMed <https://www.ncbi.nlm.nih.gov/pubmed/28220888> PubMed Central PMC5318995.
 
 #### Data
 

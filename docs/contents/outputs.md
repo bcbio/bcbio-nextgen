@@ -9,7 +9,7 @@ The output directory contains sample specific output files labeled by sample nam
 Project directory:
 * `project-summary.yaml` -- Top level YAML format summary file with statistics on read alignments and duplications as well as analysis specific metrics.
 * `programs.txt` -- Program versions for bcbio-nextgen and software run in the pipeline. This enables reproduction of analyses.
-* `multiqc` run [MultiQC](http://multiqc.info) to gather all QC metrics from different tools, such as, cutadapt, featureCounts, samtools, STAR .. into an unique HTML report.
+* `multiqc` run [MultiQC](https://multiqc.info/) to gather all QC metrics from different tools, such as, cutadapt, featureCounts, samtools, STAR .. into an unique HTML report.
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
@@ -83,9 +83,9 @@ Workflow for analysis:
 
 For gene-level analyses, we recommend loading the gene-level counts.csv.gz and the metadata.csv.gz and using [DESeq2](https://bioconductor.org/packages/release/bioc/html/DESeq2.html) to do the analysis. For a more in-depth walkthrough of how to use DESeq2, refer to our [DGE_workshop](https://hbctraining.github.io/DGE_workshop_salmon/schedule/).
 
-For transcript-level analyses, we recommend using [sleuth](http://seqcluster.readthedocs.io/mirna_annotation.html) with the bootstrap samples. You can load the abundance.h5 files from Salmon, or if you set `kallisto` as an expression caller, use the abundance.h5 files from that.
+For transcript-level analyses, we recommend using [sleuth](https://seqcluster.readthedocs.io/mirna_annotation.html) with the bootstrap samples. You can load the abundance.h5 files from Salmon, or if you set `kallisto` as an expression caller, use the abundance.h5 files from that.
 
-Another great alternative is to use the Salmon quantification to look at differential transcript usage (DTU) instead of differential transcript expression (DTE). The idea behind DTU is you are looking for transcripts of genes that have been flipped from one isoform to another. The [Swimming downstream](http://www.bioconductor.org/packages/devel/workflows/vignettes/rnaseqDTU/inst/doc/rnaseqDTU.html#salmon-quantification) tutorial has a nice walkthrough of how to do that.
+Another great alternative is to use the Salmon quantification to look at differential transcript usage (DTU) instead of differential transcript expression (DTE). The idea behind DTU is you are looking for transcripts of genes that have been flipped from one isoform to another. The [Swimming downstream](https://www.bioconductor.org/packages/devel/workflows/vignettes/rnaseqDTU/inst/doc/rnaseqDTU.html#salmon-quantification) tutorial has a nice walkthrough of how to do that.
 
 ### single cell RNA-Seq
 
@@ -126,7 +126,7 @@ Sample directories:
 
 Project directory:
 * `counts_mirna.tsv` -- miRBase miRNA count matrix.
-* `counts.tsv` -- miRBase isomiRs count matrix. The ID is made of 5 tags: miRNA name, SNPs, additions, trimming at 5 and trimming at 3. Here there is detail explanation of the [naming](http://seqcluster.readthedocs.io/mirna_annotation.html).
+* `counts.tsv` -- miRBase isomiRs count matrix. The ID is made of 5 tags: miRNA name, SNPs, additions, trimming at 5 and trimming at 3. Here there is detail explanation of the [naming](https://seqcluster.readthedocs.io/mirna_annotation.html).
 * `counts_mirna_novel.tsv` -- miRDeep2 miRNA count matrix.
 * `counts_novel.tsv` -- miRDeep2 isomiRs. See counts.tsv explanation for more detail. count matrix.
 * `seqcluster` -- output of [seqcluster](https://github.com/lpantano/seqcluster) tool. Inside this folder, counts.tsv has count matrix for all clusters found over the genome.
@@ -163,5 +163,5 @@ rep1
 This section collects useful scripts and tools to do downstream analysis of bcbio-nextgen outputs. If you have pointers to useful tools, please add them to the documentation.
 
 * [Calculate and plot coverage](https://github.com/bcbio/bcbio-nextgen/issues/195#issuecomment-39071048) with matplolib, from Luca Beltrame.
-* [Another way](http://gettinggeneticsdone.blogspot.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html) to visualize coverage for targeted NGS (exome) experiments with bedtools and R, from Stephen Turner
-* assess the efficiency of targeted enrichment sequencing with [ngscat](http://www.bioinfomgp.org/ngscat)
+* [Another way](https://www.gettinggeneticsdone.com/2014/03/visualize-coverage-exome-targeted-ngs-bedtools.html) to visualize coverage for targeted NGS (exome) experiments with bedtools and R, from Stephen Turner
+* assess the efficiency of targeted enrichment sequencing with [ngscat](http://ngscat.clinbioinfosspa.es/start)

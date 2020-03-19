@@ -46,7 +46,7 @@ The most useful modules inside `bcbio`, ordered by likely interest:
 
 #### GitHub
 
-bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](http://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The github help pages have detailed information on keeping your fork updated with the main github repository (e.g. <https://help.github.com/articles/syncing-a-fork/>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
+bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](https://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The GitHub help pages have detailed information on keeping your fork updated with the main GitHub repository (e.g. <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
 
 #### Creating a separate bcbio installation
 
@@ -96,7 +96,7 @@ The documentation will be built under `docs/_build/html`, open `index.html` with
 
 ### Testing
 
-The test suite exercises the scripts driving the analysis, so are a good starting point to ensure correct installation. Tests use the [pytest](http://doc.pytest.org/en/latest/) framework. The tests are available in the bcbio source code:
+The test suite exercises the scripts driving the analysis, so are a good starting point to ensure correct installation. Tests use the [pytest](https://doc.pytest.org/en/latest/) framework. The tests are available in the bcbio source code:
 ```shell
 git clone https://github.com/bcbio/bcbio-nextgen.git
 ```
@@ -143,7 +143,7 @@ Write new aligners within their own submodule inside the `ngsalign` directory. [
 See the [names](#names) section for more details on arguments.
 
 Other required implementation details include:
-* `galaxy_loc_file` -- Provides the name of the [Galaxy loc file](http://wiki.galaxyproject.org/Admin/Data%20Integration) used to identify locations of indexes for this aligner. The automated installer sets up these loc files automatically.
+* `galaxy_loc_file` -- Provides the name of the [Galaxy loc file](https://galaxyproject.org/admin/data-integration/) used to identify locations of indexes for this aligner. The automated installer sets up these loc files automatically.
 * `remap_index_fn` -- A function that remaps an index from the Galaxy location file into the exact one for this aligner. This is useful for tools which aren't supported by a Galaxy .loc file but you can locate them relative to another index.
 
 Once implemented, plug the aligner into the pipeline by defining it as a `_tool` in [bcbio/pipeline/alignment.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/alignment.py). You can then use it as normal by specifying the name of the aligner in the _aligner_ section of your configuration input.
@@ -195,7 +195,7 @@ We are still working on ways to best include these as part of the standard build
 
 #### names
 
-This dictionary provides lane and other [BAM run group](http://samtools.sourceforge.net/SAM1.pdf) naming information used to correctly build BAM files. We use the `rg` attribute as the ID within a BAM file:
+This dictionary provides lane and other [BAM run group](https://samtools.github.io/hts-specs/SAMv1.pdf) naming information used to correctly build BAM files. We use the `rg` attribute as the ID within a BAM file:
 ```
 {'lane': '7_100326_FC6107FAAXX',
  'pl': 'illumina',
