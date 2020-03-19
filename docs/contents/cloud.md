@@ -33,7 +33,7 @@ gcloud config set project your-project
 gcloud services enable genomics.googleapis.com
 gsutil mb gs://your-project
 ```
-Additional documentation for Cromwell: [Google Pipelines API](https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/) and [Google authentication](https://github.com/broadinstitute/cromwell/blob/develop/docs/backends/Google.md).
+Additional documentation for Cromwell: [Google Pipelines API](https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/) and [Google authentication](https://cromwell.readthedocs.io/en/stable/backends/Google/).
 
 #### GCP data preparation
 
@@ -240,7 +240,7 @@ To run on a full cluster:
 bcbio_vm.py ipythonprep s3://your-project/your-analysis/name.yaml slurm cloud -n 60
 sbatch bcbio_submit.sh
 ```
-Where 60 is the total number of cores to use across all the worker nodes. Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython controller instances. The [SLURM workload manager](https://slurm.schedmd.com/) distributes jobs across your cluster on a queue called `cloud`. A `slurm-PID.out` file in the work directory contains the current status of the job, and `sacct_std` provides the status of jobs on the cluster. If you are new to SLURM, here is a summary of useful [SLURM commands](https://rc.fas.harvard.edu/resources/running-jobs/#Summary_of_SLURM_commands).
+Where 60 is the total number of cores to use across all the worker nodes. Of your total machine cores, allocate 2 for the base bcbio_vm script and IPython controller instances. The [SLURM workload manager](https://slurm.schedmd.com/) distributes jobs across your cluster on a queue called `cloud`. A `slurm-PID.out` file in the work directory contains the current status of the job, and `sacct_std` provides the status of jobs on the cluster. If you are new to SLURM, here is a summary of useful [SLURM commands](https://docs.rc.fas.harvard.edu/kb/running-jobs/#Summary_of_Slurm_commands).
 
 On successful completion, bcbio uploads the results of the analysis back into your s3 bucket and folder as `s3://your-project/your-analysis/final`. You can now cleanup the cluster and Lustre filesystem.
 
