@@ -232,7 +232,7 @@ On the first run you'll need to create a project directory to work in:
 and [install bcbio](http://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html)
 on the working volume with the genomes and aligner indices you need:
 
-    wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
     python bcbio_nextgen_install.py /mnt/work/bcbio --tooldir=/mnt/work/bcbio --genomes GRCh37 --aligners bwa
 
 To run CWL, you'll also want to [install
