@@ -112,7 +112,7 @@ gatk3-register /path/to/GenomeAnalysisTK.tar.bz2
 ```
 If you're not using the most recent post-3.6 version of GATK, or using a nightly build, you can add `--noversioncheck` to the command line to skip comparisons to the GATK version.
 
-[MuTect2](https://www.broadinstitute.org/gatk/guide/tooldocs/org_broadinstitute_gatk_tools_walkers_cancer_m2_MuTect2.php) is distributed with GATK in versions 3.5 and later.
+[MuTect2](https://gatk.broadinstitute.org/hc/en-us/articles/360037593851-Mutect2) is distributed with GATK in versions 3.5 and later.
 
 To install versions of GATK < 3.6, download and unzip the latest version from the GATK distribution. Then make this jar available to bcbio-nextgen with:
 ```shell
