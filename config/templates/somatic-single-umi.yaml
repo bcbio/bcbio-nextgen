@@ -2,6 +2,9 @@
 # somatic, tumor only
 # vardict
 # specify coverage.bed and variants.bed according to the capture kit used
+# preprosess libraries with UMIs:
+# bcbio_fastq_umi_prep.py autopair sample_R1.fastq.gz sample_R2.fastq.gz sample_R3.fastq.gz
+# result in with_umis: sample_R1.fq.gz, sample_R2.fq.gz
 details:
 - algorithm:
     align_split_size: false
