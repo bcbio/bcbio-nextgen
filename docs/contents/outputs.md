@@ -87,41 +87,6 @@ For transcript-level analyses, we recommend using [sleuth](https://seqcluster.re
 
 Another great alternative is to use the Salmon quantification to look at differential transcript usage (DTU) instead of differential transcript expression (DTE). The idea behind DTU is you are looking for transcripts of genes that have been flipped from one isoform to another. The [Swimming downstream](https://www.bioconductor.org/packages/devel/workflows/vignettes/rnaseqDTU/inst/doc/rnaseqDTU.html#salmon-quantification) tutorial has a nice walkthrough of how to do that.
 
-### single cell RNA-Seq
-
-Project directory:
-* `tagcounts.mtx` -- count matrix compatible with dgCMatrix type in R.
-* `tagcounts-dupes.mtx` -- count matrix compatible with dgCMatrix type in R but with the duplicated reads counted.
-* `tagcounts.mtx.colnames` -- cell names that would be the columns for the matrix.
-* `tagcounts.mtx.rownames` -- gene names that would be the rows for the matrix.
-* `tagcounts.mtx.metadata` -- metadata that match the colnames for the matrix. This is coming from the barcode.csv file and the metadata given in the YAML config file. for the matrix.
-* `cb-histogram.txt` -- total number of dedup reads assigned to a cell. Comparing colSums(tagcounts.mtx) to this number can tell you how many reads mapped to genes.
-
-To create Seurat object:
-
-in bash:
-```shell
-mkdir data
-cd data
-result_dir=bcbio_project/final/project_dir
-cp $result_dir/tagcounts.mtx matrix.mtx
-cp $result_dir/tagcounts.mtx.colnames barcodes.tsv
-cp $result_dir/tagcounts.mtx.rownames features.tsv
-for f in *;do gzip $f;done;
-cd ..
-```
-in R:
-```r
-library(Seurat)
-counts <- Read10X(data.dir = "data", gene.column = 1)
-seurat_object <- CreateSeuratObject(counts = counts, min.features = 100)
-saveRDS(seurat_object, "seurat.bcbio.RDS")
-```
-
-Sample directories:
-* `SAMPLE-transcriptome.bam` -- BAM file aligned to transcriptome.
-* `SAMPLE-mtx.*` -- gene counts as explained in the project directory.
-
 ### small RNA-seq
 
 Project directory:
