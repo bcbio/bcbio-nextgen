@@ -1,4 +1,4 @@
-# Counting cells and transcripts for inDrops3 data
+# Counting cells with bcbio for inDrops3 data: proto-SOP
 
 ## Workflow
 
@@ -256,22 +256,42 @@ transcriptome_gtf: gencode.vM23.annotation.gtf
 
 ## Parameters
 
-* `minimum_barcode_depth` Cellular barcodes with less than this many reads assigned to them are discarded (default 10,000).
-* `cellular_barcodes` A single file or a list of one or two files which have valid cellular barcodes. Provide one file if there is only one barcode and two files if the barcodes are split. If no file is provided, all cellular barcodes passing the `minimum_barcode_depth` filter are kept.
-* `transcriptome_fasta` An optional FASTA file of transcriptome sequences to quantitate rather than the bcbio installed version.
-* `transcriptome_gtf` An optional GTF file of the transcriptome to quantitate, rather than the bcbio installed version. This is recommended for single-cell RNA-sequencing experiments.
-* `singlecell_quantifier` Quantifier to use for single-cell RNA-sequencing. Supports `rapmap` or `kallisto`.
-* `cellular_barcode_correction` Number of errors to correct in identified cellular barcodes. Requires a set of known barcodes to be passed with the `cellular_barcodes` option. Defaults to 1. Set to 0 to turn off error correction.
-* `sample_barcodes` A text file with one barcode per line of expected sample barcodes. If the file contains sample name for each barcode, this will be used to create a `tagcounts.mtx.metadata` that match each cell with the sample name associated with the barcode. The actual barcodes may be reverse complements of the sequences provided with the samples. It worth to check before running bcbio. For inDrops procol samples barcodes are in the fastq file for read3. This is an example of the `sample_barcodes` file:
+* `umi_type` Single cell library type: [harvard-indrop, harvard-indrop-v2, 10x_v2, icell8, surecell].
+* `minimum_barcode_depth=10000` Cellular barcodes with less reads are discarded.
+* `sample_barcodes` A file with one sample barcode per line.
+If the file contains sample name for each barcode, this will be used to create a `tagcounts.mtx.metadata`
+that match each cell with the sample name associated with the barcode.
+For inDrops3 protocol sample barcodes are in the fastq file for read3. Example of `sample_barcodes` file:
     ```
     AATTCCGG,sample1
     CCTTGGAA,sample2
     ```
+* `singlecell_quantifier=rapmap` Quantifier to use for single-cell RNA-sequencing. Supports `rapmap` or `kallisto`.
+* *optional* `cellular_barcodes` A file or a list [file1.txt, file2.txt] of valid cellular barcodes.
+* *optional* `cellular_barcode_correction=1` Number of errors to correct in identified cellular barcodes. Requires `cellular_barcodes` option set. Set to 0 to turn off error correction.
+* *optional* `transcriptome_fasta` alternative transcriptome reference.
+* *optional* `transcriptome_gtf` An optional GTF file of the transcriptome to quantitate, rather than the bcbio installed version. This is recommended for single-cell RNA-sequencing experiments.
 * `demultiplexed` If set to True, each file will be treated as a cell or well and not a collection of cells. Use this if your data has already been broken up into cells or wells.
+
+## Output
+
+Project directory `bcbio_run/final/project`:
+* `tagcounts.mtx` -- count matrix compatible with dgCMatrix type in R.
+* `tagcounts-dupes.mtx` -- count matrix compatible with dgCMatrix type in R but with the duplicated reads counted.
+* `tagcounts.mtx.colnames` -- cell names that would be the columns for the matrix.
+* `tagcounts.mtx.rownames` -- gene names that would be the rows for the matrix.
+* `tagcounts.mtx.metadata` -- metadata that match the colnames for the matrix. This is coming from the barcode.csv file and the metadata given in the YAML config file. for the matrix.
+* `cb-histogram.txt` -- total number of dedup reads assigned to a cell. Comparing colSums(tagcounts.mtx) to this number can tell you how many reads mapped to genes.
+
+Sample directories `bcbio_run/final/sample`:
+* `SAMPLE-transcriptome.bam` -- BAM file aligned to transcriptome.
+* `SAMPLE-mtx.*` -- gene counts as explained in the project directory.
 
 ## Steps
 
-Minor steps and exact file locations are omitted. * = repeated for every sample in sample_barcodes.csv
+Minor steps and exact file locations are omitted.
+
+* = repeated for every sample in sample_barcodes.csv
 
 *bcbio.yaml config*:
 
