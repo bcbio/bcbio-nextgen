@@ -300,12 +300,14 @@ def _create_list_file(paths, out_file):
     return out_file
 
 def _create_config_file(out_dir, samples):
-    """Provide configuration file hiding duplicate columns.
+    """Provide configuration file for multiqc report."""
 
-    Future entry point for providing top level configuration of output reports.
-    """
     out_file = os.path.join(out_dir, "multiqc_config.yaml")
     out = {"table_columns_visible": dict()}
+
+    extra_fn_clean_trim = []
+    extra_fn_clean_trim.extend(["coverage.mosdepth.region.dist", "coverage.mosdepth.global.dist"])
+    out["extra_fn_clean_trim"] = extra_fn_clean_trim
 
     # Avoid duplicated bcbio columns with qualimap
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
