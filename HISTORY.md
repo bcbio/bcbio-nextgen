@@ -3,6 +3,8 @@
 - Properly pad TSS BED file for ataqv TSS enrichment metrics.
 - Skip bcbioRNASeq if there are less than three samples.
 - Run joint-calling with single cores to save resources.
+- Re-support PureCN.
+- Skip segments with no informative SNPs when creating the LOH VCF file from PureCN output.
 
 ## 1.2.0 (7 February 2020)
 - Fix for bismark not being a supported aligner.

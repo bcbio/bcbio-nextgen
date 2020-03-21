@@ -700,10 +700,18 @@ def Rscript_cmd():
     else:
         return which("Rscript")
 
-def R_sitelib():
-    """Retrieve the R site-library installed with the bcbio installer.
+def R_sitelib(env="base"):
+    """Retrieve the R site-library installed with the bcbio installer for a given
+    environment. Defaults to the base environment.
     """
-    return os.path.join(os.path.dirname(get_bcbio_bin()), "lib", "R", "library")
+    if env == "base":
+        return os.path.join(os.path.dirname(get_bcbio_bin()), "lib", "R", "library")
+    else:
+        conda_dir = get_conda_dir()
+        sitelib = os.path.join(conda_dir, "envs", env, "lib", "R", "library")
+        if not os.path.exists(sitelib):
+            raise OSError("The {env} environment does not have R installed.")
+        return sitelib
 
 def R_package_path(package):
     """
@@ -767,8 +775,13 @@ def get_java_clprep(cmd=None):
     """
     return "%s && export PATH=%s:\"$PATH\"" % (clear_java_home(), get_java_binpath(cmd))
 
-def get_R_exports():
-    return "unset R_HOME && unset R_LIBS && export PATH=%s:\"$PATH\"" % (os.path.dirname(Rscript_cmd()))
+def get_R_exports(env="base"):
+    if env == "base":
+        rpath = os.path.dirname(Rscript_cmd)
+    else:
+        conda_dir = get_conda_dir()
+        rpath = os.path.join(conda_dir, "envs", env, "bin")
+    return f"unset R_HOME && unset R_LIBS && export PATH={rpath}:\"$PATH\""
 
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
@@ -806,11 +819,14 @@ def append_path(bin, path, at_start=True):
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
 
+def get_conda_dir():
+    bcbio_bin = get_bcbio_bin()
+    return os.path.dirname(bcbio_bin)
+
 def get_all_conda_bins():
     """Retrieve all possible conda bin directories, including environments.
     """
-    bcbio_bin = get_bcbio_bin()
-    conda_dir = os.path.dirname(bcbio_bin)
+    conda_dir = get_conda_dir()
     if os.path.join("anaconda", "envs") in conda_dir:
         conda_dir = os.path.join(conda_dir[:conda_dir.rfind(os.path.join("anaconda", "envs"))], "anaconda")
     return [bcbio_bin] + list(glob.glob(os.path.join(conda_dir, "envs", "*", "bin")))
