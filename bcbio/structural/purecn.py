@@ -220,6 +220,10 @@ def _get_header(in_handle):
 def _loh_to_vcf(cur):
     """Convert LOH output into standardized VCF.
     """
+    # PureCN 1.14 outputs segments without informative SNPs, skip those
+    # see https://github.com/lima1/PureCN/blob/ed7d10c7ca578bc7d1aabef86893c23ddddf79dc/NEWS#L92-L94
+    if cur["C"] == "NA" or cur["M"] == "NA":
+        return None
     cn = int(float(cur["C"]))
     minor_cn = int(float(cur["M"]))
     if cur["type"].find("LOH"):
