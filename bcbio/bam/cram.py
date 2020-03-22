@@ -51,7 +51,7 @@ def index(in_cram, config):
         with file_transaction(config, in_cram + ".crai") as tx_out_file:
             tx_in_file = os.path.splitext(tx_out_file)[0]
             utils.symlink_plus(in_cram, tx_in_file)
-            cmd = ["cram_index", {tx_in_file}]
+            cmd = ["cram_index", tx_in_file]
             do.run(cmd, "Index CRAM file")
     return out_file
 
