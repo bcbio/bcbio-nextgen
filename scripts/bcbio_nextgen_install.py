@@ -26,7 +26,7 @@ REMOTES = {
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"}
-TARGETPY = "python=3.6"
+TARGETPY = "python=3.7"
 
 def main(args, sys_argv):
     check_arguments(args)
@@ -35,6 +35,8 @@ def main(args, sys_argv):
         setup_data_dir(args)
         print("Installing isolated base python installation")
         anaconda = install_anaconda_python(args)
+        print("Installing mamba")
+        anaconda = install_mamba(anaconda, args)
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
@@ -91,20 +93,31 @@ def _get_conda_channels(conda_bin):
             out += ["-c", c]
     return out
 
+def install_mamba(anaconda, args):
+    anaconda_dir = os.path.join(args.datadir, "anaconda")
+    bindir = os.path.join(anaconda_dir, "bin")
+    mamba = os.path.join(bindir, "mamba")
+    subprocess.check_call(
+        [anaconda["conda"], "install", "--yes"] +
+        _get_conda_channels(anaconda["conda"]) + ["mamba"])
+    anaconda["mamba"] = mamba
+    return anaconda
+
 def install_conda_pkgs(anaconda, args):
     env = dict(os.environ)
     # Try to avoid user specific pkgs and envs directories
     # https://github.com/conda/conda/issues/6748
     env["CONDA_PKGS_DIRS"] = os.path.join(anaconda["dir"], "pkgs")
     env["CONDA_ENVS_DIRS"] = os.path.join(anaconda["dir"], "envs")
+    conda_bin = anaconda["mamba"]
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
-        subprocess.check_call([anaconda["conda"], "install", "--yes", "nomkl"], env=env)
-    channels = _get_conda_channels(anaconda["conda"])
-    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+        subprocess.check_call([conda_bin, "install", "--yes", "nomkl"], env=env)
+    channels = _get_conda_channels(conda_bin)
+    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
                           ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
-    subprocess.check_call([anaconda["conda"], "install", "--yes"] + channels +
+    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
                           ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 

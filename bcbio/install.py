@@ -216,6 +216,11 @@ def _get_conda_bin():
     if os.path.exists(conda_bin):
         return conda_bin
 
+def _get_mamba_bin():
+    mamba_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "mamba")
+    if os.path.exists(mamba_bin):
+        return mamba_bin
+
 def _check_for_conda_problems():
     """Identify post-install conda problems and fix.
 
@@ -274,7 +279,9 @@ def _get_conda_channels(conda_bin):
 def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
-    conda_bin = _get_conda_bin()
+    conda_bin = _get_mamba_bin()
+    if not mamba_bin:
+        conda_bin = _get_conda_bin()
     channels = _get_conda_channels(conda_bin)
     assert conda_bin, ("Could not find anaconda distribution for upgrading bcbio.\n"
                        "Using python at %s but could not find conda." % (os.path.realpath(sys.executable)))
