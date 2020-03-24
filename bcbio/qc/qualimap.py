@@ -257,7 +257,7 @@ def _detect_rRNA(data, out_dir):
         if not quant:
             salmon_dir = dd.get_salmon_dir(data)
             if salmon_dir:
-                quant = os.path.join(salmon_dir, "quant", "quant.sf")
+                quant = os.path.join(salmon_dir, "quant.sf")
         logger.info("Calculating RNA-seq rRNA metrics for %s." % quant)
         rrna_features = gtf.get_rRNA(gtf_file)
         transcripts = set([x[1] for x in rrna_features if x])
