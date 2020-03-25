@@ -1,10 +1,14 @@
-## 1.2.1 (in progress)
+## 1.2.2 (in progress)
+
+## 1.2.1 (25 March 2020)
 - Update ChIP and ATAC bowtie2 runs to use `--very-sensitive`.
 - Properly pad TSS BED file for ataqv TSS enrichment metrics.
 - Skip bcbioRNASeq if there are less than three samples.
 - Run joint-calling with single cores to save resources.
 - Re-support PureCN.
 - Skip segments with no informative SNPs when creating the LOH VCF file from PureCN output.
+- Fix for duplicated output for mosdepth in quality control report.
+- Fix for missing rRNA statistics.
 
 ## 1.2.0 (7 February 2020)
 - Fix for bismark not being a supported aligner.
