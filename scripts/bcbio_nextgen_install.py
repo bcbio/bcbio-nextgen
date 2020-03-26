@@ -109,7 +109,7 @@ def install_conda_pkgs(anaconda, args):
     # https://github.com/conda/conda/issues/6748
     env["CONDA_PKGS_DIRS"] = os.path.join(anaconda["dir"], "pkgs")
     env["CONDA_ENVS_DIRS"] = os.path.join(anaconda["dir"], "envs")
-    conda_bin = anaconda["mamba"]
+    conda_bin = anaconda["conda"]
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
