@@ -104,7 +104,6 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
             params += ["-ploidy", str(ploidy.get_ploidy([data], region))]
             # Avoid slow genotyping runtimes with improved quality score calculation in GATK4
             # https://gatkforums.broadinstitute.org/gatk/discussion/11471/performance-troubleshooting-tips-for-genotypegvcfs/p1
-            params += ["--use-new-qual-calculator"]
             resources = config_utils.get_resources("gatk", data["config"])
             params += [str(x) for x in resources.get("options", [])]
             cores = dd.get_cores(data)
