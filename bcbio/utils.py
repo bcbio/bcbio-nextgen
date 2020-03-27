@@ -777,7 +777,7 @@ def get_java_clprep(cmd=None):
 
 def get_R_exports(env="base"):
     if env == "base":
-        rpath = os.path.dirname(Rscript_cmd)
+        rpath = os.path.dirname(Rscript_cmd())
     else:
         conda_dir = get_conda_dir()
         rpath = os.path.join(conda_dir, "envs", env, "bin")
