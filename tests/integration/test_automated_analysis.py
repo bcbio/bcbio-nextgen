@@ -58,6 +58,7 @@ def test_2_stranded(install_test_files, data_dir):
 @pytest.mark.tophat
 @pytest.mark.rnaseq_vc
 @pytest.mark.install_required
+@pytest.mark.skip(reason="tophat is no longer supported.")
 def test_2_rnaseq(install_test_files, data_dir):
     """Run an RNA-seq analysis with TopHat and generate gene-level counts.
     """
