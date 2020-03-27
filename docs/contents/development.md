@@ -191,6 +191,26 @@ bcbio_python prepare_tx_gff.py --genome-dir /path/to/bcbio/genomes Mmusculus mm9
 ```
 We are still working on ways to best include these as part of the standard build and install since they either require additional tools to run locally, or require preparing copies in S3 buckets.
 
+### New release checklist
+- [ ] pull from master to make sure you are up to date
+- [ ] run integration tests: `py.test tests/integration`
+- [ ] run unit tests: `py.test tests/unit`
+- [ ] run bcbio-vm tests: `py.test tests/bcbio_vm`
+- [ ] update setup.py to the new version.
+- [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
+- [ ] commit and push changes to bcbio
+- [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
+- [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
+- [ ] review and approve bioconda recipe once it passes the tests 
+- [ ] merge recipe by commenting `@bioconda-bot please merge`
+- [ ] wait until new version is available on [bioconda](https://bioconda.github.io/recipes/bcbio-nextgen/README.html)
+- [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt) 
+- [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
+- [ ] push changes to bcbio
+- [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
+- [ ] update BCBIO_REVISION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
+- [ ] push changes to bcbio_docker and check to make sure the image builds successfully
+
 ### Standard function arguments
 
 #### names
