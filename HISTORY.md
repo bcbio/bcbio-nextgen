@@ -1,5 +1,6 @@
 ## 1.2.2 (in progress)
 - Fix for not properly looking up R environment variables in the base environment.
+- Remove --use-new-qual-calculator which was eliminated in GATK 4.1.5.0.
 
 ## 1.2.1 (25 March 2020)
 - Update ChIP and ATAC bowtie2 runs to use `--very-sensitive`.
