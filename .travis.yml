@@ -26,7 +26,6 @@ install:
   - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm python=3
   # Clean up space with external tools we don't need for tests
   - conda clean --yes --tarballs --index-cache
-  - conda remove --yes --force qt
   - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
   - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
   - df -h
