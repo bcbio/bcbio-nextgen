@@ -9,7 +9,8 @@ This example aligns and creates count files for use with downstream analyses usi
 bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners star --cores 10
 ```
 
-### 2. Download input data, create project structure and config files. This will download six samples from the SEQC project, three from the HBRR panel and three from the UHRR panel (100G download). :
+### 2. Setup bcbio project
+Download input data, create project structure and config files. This will download six samples from the SEQC project, three from the HBRR panel and three from the UHRR panel (100G download). :
 ```shell
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
 bash rnaseq-seqc-getdata.sh
