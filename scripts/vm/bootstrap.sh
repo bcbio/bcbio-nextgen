@@ -11,7 +11,7 @@ set -e -x
 /usr/sbin/usermod -aG docker vagrant
 
 NEW_PATH='${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}'
-grep -qxF "PATH=${NEW_PATH}" ~vagrant/.profile || echo "PATH=${NEW_PATH}" >> ~vagrant/.profile
-grep -qxF 'export BCBIO_TEST_DIR=/tmp/bcbio' ~vagrant/.profile || echo 'export BCBIO_TEST_DIR=/tmp/bcbio' >> ~vagrant/.profile
+/bin/grep -qxF "PATH=${NEW_PATH}" ~vagrant/.profile || /bin/echo "PATH=${NEW_PATH}" >> ~vagrant/.profile
+/bin/grep -qxF 'export BCBIO_TEST_DIR=/tmp/bcbio' ~vagrant/.profile || /bin/echo 'export BCBIO_TEST_DIR=/tmp/bcbio' >> ~vagrant/.profile
 
-wget --no-verbose -P /opt https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+/usr/bin/wget --no-verbose -P /opt https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
