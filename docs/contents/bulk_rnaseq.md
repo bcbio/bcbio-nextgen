@@ -2,7 +2,7 @@
 
 ## Workflow
 
-This example aligns and creates count files for use with downstream analyses using a subset of the SEQC data from the FDA's Sequencing Quality Control project.
+This example aligns and creates count files for use with downstream analyses using a subset of the SEQC data from the [FDA's Sequencing Quality Control project](http://www.fdaseqc.org/).
 
 ### 1. Install STAR index
 ```
