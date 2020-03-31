@@ -249,7 +249,6 @@ def _get_maxcov_downsample(data):
                     return int(avg_cov * params["maxcov_downsample_multiplier"])
     return None
 
-
 def check_header(in_bam, rgnames, ref_file, config):
     """Ensure passed in BAM header matches reference file and read groups names.
     """
@@ -330,7 +329,6 @@ def is_bam(in_file):
     else:
         return False
 
-
 def is_sam(in_file):
     _, ext = os.path.splitext(in_file)
     if ext == ".sam":
@@ -374,7 +372,6 @@ def bam_to_sam(in_file, config):
                 % (str(num_cores), in_file, out_file)))
     return out_file
 
-
 def reheader(header, bam_file, config):
     samtools = config_utils.get_program("samtools", config)
     base, ext = os.path.splitext(bam_file)
@@ -382,7 +379,6 @@ def reheader(header, bam_file, config):
     cmd = "{samtools} reheader {header} {bam_file} > {out_file}"
     do.run(cmd.format(**locals()), "Reheadering %s." % bam_file)
     return out_file
-
 
 def merge(bamfiles, out_bam, config):
     assert all(map(is_bam, bamfiles)), ("Not all of the files to merge are not BAM "
@@ -401,7 +397,6 @@ def merge(bamfiles, out_bam, config):
         do.run(cmd.format(**locals()), "Merge %s into %s." % (bamfiles, out_bam))
     index(out_bam, config)
     return out_bam
-
 
 def sort(in_bam, config, order="coordinate", out_dir=None, force=False):
     """Sort a BAM file, skipping if already present.
@@ -430,10 +425,8 @@ def sort(in_bam, config, order="coordinate", out_dir=None, force=False):
                    (order, os.path.basename(in_bam), os.path.basename(sort_file)))
     return sort_file
 
-
 def bam_already_sorted(in_bam, config, order):
     return order == _get_sort_order(in_bam, config)
-
 
 def _get_sort_order(in_bam, config):
     for line in pysam.view("-H", in_bam).split("\r\n"):
