@@ -166,23 +166,6 @@ The best supported callers are [Lumpy](https://github.com/arq5x/lumpy-sv) and
 [Manta](https://github.com/Illumina/manta), for paired end and split read calling, [CNVkit](https://cnvkit.readthedocs.io/en/latest/) for read-depth based CNV calling, and
 [WHAM](https://github.com/jewmanchue/wham) for association testing. We also support [DELLY](https://github.com/tobiasrausch/delly), another excellent paired end and split read caller, although it is slow on large whole genome datasets.
 
-### RNA-seq
-
-bcbio can also be used to analyze RNA-seq data. It includes steps for quality control, adapter trimming, alignment, variant calling, transcriptome reconstruction and post-alignment quantitation at the level of the gene and isoform.
-
-We recommend using the STAR aligner for all genomes where there are no alt alleles. For genomes such as hg38 that have alt alleles, hisat2 should be used as it handles the alts correctly and STAR does not yet. Use Tophat2 only if you do not have enough RAM available to run STAR (about 30 GB).
-
-Our current recommendation is to run adapter trimming only if using the Tophat2 aligner. Adapter trimming is very slow, and aligners that soft clip the ends of reads such as STAR and hisat2, or algorithms using pseudoalignments like Sailfish handle contaminant sequences at the ends properly. This makes trimming unnecessary. Tophat2 does not perform soft clipping so if using Tophat2, trimming must still be done.
-
-Salmon, which is an extremely fast alignment-free method of quantitation, is run for all experiments. Salmon can accurately quantitate the expression of genes, even ones which are hard to quantitate with other methods (see [this paper](https://doi.org/10.1186/s13059-015-0734-x) for example for Sailfish, which performs similarly to Salmon). Salmon can also quantitate at the transcript level which can help gene-level analyses
-(see [this paper](https://doi.org/10.12688/f1000research.7563.1) for example). We recommend using the Salmon quantitation rather than the counts from featureCounts to perform downstream quantification.
-
-Although we do not recommend using the featureCounts based counts, the alignments are still useful because they give you many more quality metrics than the quasi-alignments from Salmon.
-
-After a bcbio RNA-seq run there will be in the `upload` directory a directory for each sample which contains a BAM file of the aligned and unaligned reads, a `sailfish` directory with the output of Salmon, including TPM values, and a `qc` directory with plots from FastQC and qualimap.
-
-In addition to directories for each sample, in the `upload` directory there is a project directory which contains a YAML file describing some summary statistics for each sample and some provenance data about the bcbio run. In that directory is also a `combined.counts` file with the featureCounts derived counts per cell.
-
 ### fast RNA-seq
 
 This mode of `bcbio-nextgen` quantitates transcript expression using [Salmon](https://salmon.readthedocs.io/en/latest/) and does nothing else. It is an order of magnitude faster or more than running the full RNA-seq analysis. The cost of the increased speed is that you will have much less information about your samples at the end of the run, which can make troubleshooting trickier. Invoke with `analysis: fastrna-seq`.

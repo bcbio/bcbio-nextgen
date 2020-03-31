@@ -129,24 +129,6 @@ bcbio_nextgen.py ../config/NA12878-sv.yaml -n 16
 ```
 This is large whole genome analysis and the timing and disk space requirements for the NA12878 trio analysis above apply here as well.
 
-#### RNAseq example
-
-This example aligns and creates count files for use with downstream analyses using a subset of the SEQC data from the FDA's Sequencing Quality Control project.
-
-Get the setup script and run it, this will download six samples from the SEQC project, three from the HBRR panel and three from the UHRR panel. This will require about 100GB of disk space for these input files. It will also set up a configuration file for the run, using the templating system:
-```shell
-wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/rnaseq-seqc-getdata.sh
-bash rnaseq-seqc-getdata.sh
-```
-Now go into the work directory and run the analysis:
-```shell
-cd seqc/work
-bcbio_nextgen.py ../config/seqc.yaml -n 8
-```
-This will run a full scale RNAseq experiment using Tophat2 as the aligner and will take a long time to finish on a single machine. At the end it will output counts, Cufflinks quantitation and a set of QC results about each lane. If you have a cluster you can [parallelize it](parallel) to speed it up considerably.
-
-A nice looking standalone [report](https://rawgit.com/roryk/bcbio.rnaseq/master/docs/qc-summary.html) of the bcbio-nextgen run can be generated using [bcbio.rnaseq](https://github.com/roryk/bcbio.rnaseq). Check that repository for details.
-
 #### Human genome build 38
 
 Validate variant calling on human genome build 38, using two different builds (with and without alternative alleles) and three different validation datasets (Genome in a Bottle prepared with two methods and Illumina platinum genomes). To run:
