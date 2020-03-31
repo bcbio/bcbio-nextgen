@@ -16,6 +16,75 @@ wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/example
 bash rnaseq-seqc-getdata.sh
 ```
 
+Step 2 in detail:
+
+#### 2.1 Create input directory and download fastq files
+```
+mkdir -p input
+```
+
+#### 2.2 Download a template yaml file describing RNA-seq analysis
+```
+wget --no-check-certificate https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/rnaseq-seqc.yaml
+```
+rnaseq-seqc.yaml:
+```
+# Template for human RNA-seq using Illumina prepared samples
+---
+details:
+  - analysis: RNA-seq
+    genome_build: hg38
+    algorithm:
+      aligner: star
+      strandedness: unstranded
+upload:
+  dir: ../final
+```
+
+#### 2.3 Download fastq files into input dir
+```
+cd input
+for SAMPLE in SRR950078 SRR950079 SRR950080 SRR950081 SRR950082 SRR950083
+do 
+   wget -c -O ${SAMPLE}_1.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/${SAMPLE}/${SAMPLE}_1.fastq.gz
+   wget -c -O ${SAMPLE}_2.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/${SAMPLE}/${SAMPLE}_2.fastq.gz
+done
+```
+
+#### 2.4 Prepare a sample sheet
+```
+wget -c --no-check-certificate https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/seqc.csv
+```
+
+seqc.csv:
+```
+samplename,description,panel
+SRR950078,UHRR_rep1,UHRR
+SRR950079,HBRR_rep1,HBRR
+SRR950080,UHRR_rep2,UHRR
+SRR950081,HBRR_rep2,HBRR
+SRR950082,UHRR_rep3,UHRR
+SRR950083,HBRR_rep3,HBRR
+SRR950084,UHRR_rep4,UHRR
+```
+
+#### 2.5 Generate yaml config file for analysis
+project.yaml = template.yaml x sample_sheet.csv
+```
+cd ../
+bcbio_nextgen.py -w template rnaseq-seqc.yaml input/seqc.csv input
+```
+
+In the result you should see a folder structure:
+```
+seqc
+|---config
+|---final
+|---work
+```
+
+`seqc/config/seqc.yaml` is the main config file to run the bcbio project.
+
 ### 3. Run the analysis:
 ```shell
 cd seqc/work
