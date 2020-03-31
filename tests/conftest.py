@@ -65,11 +65,6 @@ def make_workdir():
         os.chdir(orig_dir)
 
 
-@pytest.yield_fixture
-def workdir():
-    with make_workdir() as wd:
-        yield wd
-
 def get_post_process_yaml(data_dir, workdir):
     """Prepare a bcbio_system YAML file pointing to test data.
     """
