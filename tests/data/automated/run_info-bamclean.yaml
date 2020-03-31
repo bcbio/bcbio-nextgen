@@ -5,7 +5,6 @@ details:
       aligner: false
       bam_clean: picard
       recalibrate: true
-      realign: true
       variantcaller: false
       quality_format: Standard
     analysis: variant2
