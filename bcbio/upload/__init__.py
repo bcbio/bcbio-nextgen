@@ -669,7 +669,7 @@ def _maybe_add_trna(algorithm, sample, out):
 
 def _maybe_add_peaks(algorithm, sample, out):
     out_dir = sample.get("peaks_files", {})
-    if "NF" in out_dir.keys():
+    if dd.get_chip_method(sample) == "atac":
         for files in out_dir.values():
             for caller in files:
                 if caller == "main":

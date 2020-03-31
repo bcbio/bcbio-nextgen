@@ -6,6 +6,7 @@ import toolz as tz
 
 import subprocess
 
+import bcbio.bam as bam
 from bcbio.log import logger
 from bcbio import utils
 from bcbio.pipeline import config_utils
@@ -60,7 +61,11 @@ def calling(data):
     if method == "atac":
         fractions = list(atac.ATACRanges.keys()) + ["full"]
         for fraction in fractions:
+            MIN_READS_TO_CALL = 1000
             chip_bam = tz.get_in(("atac", "align", fraction), data)
+            if bam.count_alignments(chip_bam, data) < MIN_READS_TO_CALL:
+                logger.warn(f"{chip_bam} has less than {MIN_READS_TO_CALL}, peak calling will fail so skip this fraction.")
+                continue
             logger.info(f"Running peak calling with {data['peak_fn']} on the {fraction} fraction of {chip_bam}.")
             name = dd.get_sample_name(data) + f"-{fraction}"
             out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), data["peak_fn"], name))
