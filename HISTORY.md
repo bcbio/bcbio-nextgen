@@ -3,6 +3,8 @@
 - Remove --use-new-qual-calculator which was eliminated in GATK 4.1.5.0.
 - Ensure header is not written for a Series. In pandas 0.24.0 the default for header was changed from 
   False to True so we have to set it explictly now.
+- Remove unused Dockerfile. Thanks to @matthdsm.
+- ATAC-seq: Skip peak-calling on fractions with < 1000 reads.
 
 ## 1.2.1 (25 March 2020)
 - Update ChIP and ATAC bowtie2 runs to use `--very-sensitive`.
