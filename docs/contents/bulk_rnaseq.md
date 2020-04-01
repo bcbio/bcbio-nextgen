@@ -100,7 +100,7 @@ A nice looking standalone [report](https://rawgit.com/roryk/bcbio.rnaseq/master/
 * `transcript_assembler` If set, will assemble novel genes and transcripts and merge the results into the known annotation. Can have multiple values set in a list. Supports ['cufflinks', 'stringtie'].
 * `transcriptome_align` If set to True, will also align reads to just the transcriptome, for use with EBSeq and others.
 * `expression_caller` A list of optional expression callers to turn on. Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq', 'kallisto']. Salmon and count based expression estimation are run by default.
-* `fusion_caller` A list of optional fusion callers to turn on. Supports [oncofuse, pizzly].
+* `fusion_caller` A list of optional fusion callers to turn on. Supports [oncofuse, pizzly, ericscript, arriba].
 * `variantcaller` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 * `spikein_fasta` A FASTA file of spike in sequences to quantitate.
 * `quantify_genome_alignments` If set to True, run Salmon quantification using the genome alignments from STAR, when available. If STAR alignments are not available, use Salmon's SA mode with decoys.
