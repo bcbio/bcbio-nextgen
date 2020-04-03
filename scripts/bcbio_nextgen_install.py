@@ -131,7 +131,7 @@ def install_conda_pkgs(anaconda, args):
     channels = _get_conda_channels(conda_bin)
     subprocess.check_call([mamba_bin, "install", "--yes"] + channels +
                           ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
-    subprocess.check_call([mamba_bin, "install", "--yes"] + channels +
+    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
                           ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
