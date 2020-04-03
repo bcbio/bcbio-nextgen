@@ -25,7 +25,7 @@ sensitivity. Single caller detection with FreeBayes or GATK HaplotypeCaller prov
 
 #### Population calling
 
-When calling multiple samples, we recommend calling together to provide improved sensitivity and a fully squared off final callset. To associate samples together in a population add a `metadata` `batch` to the [sample configuration](contents/configuration):
+When calling multiple samples, we recommend calling together to provide improved sensitivity and a fully squared off final callset. To associate samples together in a population add a `metadata` `batch` to the [sample configuration](contents/configuration:configuration):
 ```yaml
 - description: Sample1
   metadata:
