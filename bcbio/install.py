@@ -513,6 +513,9 @@ def upgrade_thirdparty_tools(args, remotes):
 
     Creates a manifest directory with installed programs on the system.
     """
+    conda_bin = _get_mamba_bin()
+    if not mamba_bin:
+        conda_bin = _get_conda_bin()
     cbl = get_cloudbiolinux(remotes)
     if args.toolconf and os.path.exists(args.toolconf):
         package_yaml = args.toolconf
@@ -521,7 +524,7 @@ def upgrade_thirdparty_tools(args, remotes):
                                     "ngs_pipeline_minimal", "packages-conda.yaml")
     sys.path.insert(0, cbl["dir"])
     cbl_conda = __import__("cloudbio.package.conda", fromlist=["conda"])
-    cbl_conda.install_in(_get_conda_bin(), args.tooldir, package_yaml)
+    cbl_conda.install_in(_get_mamba_bin(), args.tooldir, package_yaml)
     manifest_dir = os.path.join(_get_data_dir(), "manifest")
     print("Creating manifest of installed packages in %s" % manifest_dir)
     cbl_manifest = __import__("cloudbio.manifest", fromlist=["manifest"])
