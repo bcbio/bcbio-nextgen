@@ -110,14 +110,18 @@ def install_conda_pkgs(anaconda, args):
     env["CONDA_PKGS_DIRS"] = os.path.join(anaconda["dir"], "pkgs")
     env["CONDA_ENVS_DIRS"] = os.path.join(anaconda["dir"], "envs")
     conda_bin = anaconda["conda"]
+    if "mamba" in anaconda.keys():
+      mamba_bin = anaconda["mamba"]
+    else:
+      mamba_bin = anaconda["conda"]
     if not os.path.exists(os.path.basename(REMOTES["requirements"])):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
-        subprocess.check_call([conda_bin, "install", "--yes", "nomkl"], env=env)
+        subprocess.check_call([mamba_bin, "install", "--yes", "nomkl"], env=env)
     channels = _get_conda_channels(conda_bin)
-    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
+    subprocess.check_call([mamba_bin, "install", "--yes"] + channels +
                           ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
-    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
+    subprocess.check_call([mamba_bin, "install", "--yes"] + channels +
                           ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
