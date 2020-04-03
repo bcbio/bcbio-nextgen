@@ -38,7 +38,7 @@ def main(args, sys_argv):
         print("Installing mamba")
         anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
-        anaconda = install_conda_build(anaconda, args)
+        install_conda_build(anaconda, args)
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
