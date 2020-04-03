@@ -37,6 +37,8 @@ def main(args, sys_argv):
         anaconda = install_anaconda_python(args)
         print("Installing mamba")
         anaconda = install_mamba(anaconda, args)
+        print("Installing conda-build")
+        anaconda = install_conda_build(anaconda, args)
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
@@ -102,6 +104,14 @@ def install_mamba(anaconda, args):
         _get_conda_channels(anaconda["conda"]) + ["mamba"])
     anaconda["mamba"] = mamba
     return anaconda
+
+def install_conda_build(anaconda, args):
+    anaconda_dir = os.path.join(args.datadir, "anaconda")
+    bindir = os.path.join(anaconda_dir, "bin")
+    mamba = os.path.join(bindir, "mamba")
+    subprocess.check_call(
+        [anaconda["mamba"], "install", "--yes"] +
+        _get_conda_channels(anaconda["conda"]) + ["conda-build"])
 
 def install_conda_pkgs(anaconda, args):
     env = dict(os.environ)
