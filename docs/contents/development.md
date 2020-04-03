@@ -153,7 +153,7 @@ Once implemented, plug the aligner into the pipeline by defining it as a `_tool`
 New variant calling approaches live within their own module inside `bcbio/variation`. The [freebayes.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/freebayes.py) implementation is a good example to follow for providing your own variant caller. Implement a function to run variant calling on multiple BAMs in an input region that takes the following inputs:
 
 * `align_bams` -- A list of BAM files to call simultaneously.
-* `items` -- List of `data` dictionaries associated with each of the samples in `align_bams`. Enables customization of variant calling based on sample configuration inputs. See documentation on the [data](#data) dictionary for all of the information contained inside each `data` item. Having multiple configurations allows customization of sample specific variant calls using parameters supplied to [Samples from GEO or SRA](contents/configuration:samples%20from%20GEO%20or%20SRA).
+* `items` -- List of `data` dictionaries associated with each of the samples in `align_bams`. Enables customization of variant calling based on sample configuration inputs. See documentation on the [data](#data) dictionary for all of the information contained inside each `data` item.
 * `ref_file` -- Fasta reference genome file.
 * `assoc_files` -- Useful associated files for variant calling. This includes the DbSNP VCF file. It's a named tuple mapping to files specified in the configuration. [bcbio/pipeline/shared.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/shared.py#L176) has the available inputs.
 * `region` -- A tuple of (chromosome, start, end) specifying the region to call in.
