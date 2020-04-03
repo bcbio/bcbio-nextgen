@@ -78,11 +78,13 @@ def get_post_process_yaml(data_dir, workdir):
             yaml.dump(config, out_handle)
     return test_system
 
+
 @contextlib.contextmanager
-def install_cwl_test_files(data_dir):
+def install_cwl_test_files():
     orig_dir = os.getcwd()
     url = "https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz"
-    dirname = os.path.normpath(os.path.join(data_dir, os.pardir, "test_bcbio_cwl-master"))
+    test_dir = os.getenv("BCBIO_TEST_DIR", test_data_dir())
+    dirname = os.path.join(test_dir, "test_bcbio_cwl-master")
     if os.path.exists(dirname):
         # check for updated commits if the directory exists
         ctime = os.path.getctime(os.path.join(dirname, "README.md"))
@@ -93,6 +95,7 @@ def install_cwl_test_files(data_dir):
     try:
         if not os.path.exists(dirname):
             print("Downloading CWL test directory: %s" % url)
+            os.makedirs(dirname)
             os.chdir(os.path.dirname(dirname))
             r = requests.get(url)
             tf = tarfile.open(fileobj=io.BytesIO(r.content), mode='r|gz')
@@ -101,6 +104,7 @@ def install_cwl_test_files(data_dir):
         yield dirname
     finally:
         os.chdir(orig_dir)
+
 
 def _get_bcbio_system(workdir, data_dir):
     system = _get_bcbiovm_config(data_dir)
