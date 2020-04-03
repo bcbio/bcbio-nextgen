@@ -139,22 +139,18 @@ def _purecn_summary(call, data):
     loh_calls = pd.read_csv(call["loh"])
     for svtype, coords in get_coords(data):
         cur_calls = {k: collections.defaultdict(int) for k in coords.keys()}
-        
         for rowid, row in loh_calls.iterrows():
-        
             _, chrom, start, end, _, cn, minor_cn = row.iloc[0:7]
-            
             if pd.isnull(cn) or pd.isnull(minor_cn):
                 # NA copy number calls - skip
                 continue
-            
             start = int(start)
             end = int(end)
             for region, cur_coords in coords.items():
                 if chrom == cur_coords[0] and are_overlapping((start, end), cur_coords[1:]):
                     cur_calls[region][_check_copy_number_changes(svtype, _to_cn(cn), _to_cn(minor_cn), data)] += 1
         out[svtype] = {r: _merge_cn_calls(c, svtype) for r, c in cur_calls.items()}
-        
+
     with open(call["hetsummary"]) as in_handle:
         vals = dict(zip(in_handle.readline().strip().replace('"', '').split(","),
                         in_handle.readline().strip().split(",")))
