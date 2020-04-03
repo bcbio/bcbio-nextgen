@@ -107,14 +107,21 @@ sample1,sample1,batch1,normal,female,/path/to/regions.bed
 
 ### Download data from GEO or SRA
 
-Prepare sample sheet project.csv:
+1. Prepare sample sheet project.csv:
 ```
 samplenames,description
 GSM3508215,HEK293T
 SRR8311268,Hela
 ```
 
-Run `bcbio_prepare_samples.py --csv example.csv --out fastq`
+2. Make fastq-dump available in PATH
+```
+module load sratoolkit
+which fastq-dump
+/n/app/sratoolkit/2.9.0/bin/fastq-dump
+```
+
+3. Run `bcbio_prepare_samples.py --csv example.csv --out fastq`
 
 The script will download all the files related to each sample, merge them in case of multiple files,
 and create `project-merged.csv` for `bcbio_nextgen.py -w template`.
