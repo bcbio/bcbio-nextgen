@@ -105,15 +105,19 @@ samplename,description,batch,phenotype,sex,variant_regions
 sample1,sample1,batch1,normal,female,/path/to/regions.bed
 ```
 
-### Samples from GEO or SRA
+### Download data from GEO or SRA
 
-In case you want to download samples from GEO or SRA repositories, you can use `bcbio_prepare_samples.py` as well.
+Prepare sample sheet project.csv:
+```
+samplenames,description
+GSM3508215,HEK293T
+SRR8311268,Hela
+```
 
-You need to create your project.csv file like this:
-```
-samplename,description GSMNNNNN,sample1 GSMNNNNN,sample2 SRRNNNNN,sample3
-```
-The script will download all the files related to each sample and merge them in case of multiple files.
+Run `bcbio_prepare_samples.py --csv example.csv --out fastq`
+
+The script will download all the files related to each sample, merge them in case of multiple files,
+and create `project-merged.csv` for `bcbio_nextgen.py -w template`.
 
 ### Sample information
 
