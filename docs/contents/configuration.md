@@ -24,9 +24,9 @@ bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_
     For [Common Workflow Language (CWL)](cwl) inputs, the first `samplename` column should contain the base filename. For BAM files, this is `your_file.bam`. For fastqs this is `your_file_R1.fastq.gz;your_file_R2.fastq.gz`, separating individual files with a semicolon. By putting paths to the actual locations of the inputs in your `bcbio_system.yaml` input when generating CWL, you can easily move projects between different filesystems.
 
     The remaining columns can contain:
-    * `description` Changes the sample description, originally supplied by the file name or BAM read group, to this value. You can also set the `lane`, although this is less often done as the default sequential numbering works here. See the documentation for [Samples from GEO or SRA](#samples-from-geo-or-sra) on how these map to BAM read groups.
+    * `description` Changes the sample description, originally supplied by the file name or BAM read group, to this value. You can also set the `lane`, although this is less often done as the default sequential numbering works here. 
     * Algorithm parameters specific for this sample. If the column name matches an available [Algorithm parameters](#algorithm-parameters), then this value substitutes into the sample `algorithm`, replacing the defaults from the template. You can also change other information in the BAM read group through the `algorithm` parameters. See [alignment](#alignment) configuration documentation for details on how these map to read group information.
-    * [Samples from GEO or SRA](#samples-from-geo-or-sra) metadata key/value pairs. Any columns not falling into the above cases will go into the metadata section. A `ped` specification will allow bcbio to read family, gender and phenotype information from a PED input file and use it for batch, sex and phenotype, respectively. The PED inputs supplement information from the standard template file, so if you specify a value in the template CSV the PED information will no overwrite it. Alternatively, `ped` fields can be specified directly in the metadata as columns. If `family_id` is specified it will be used as the `family_id` for that sample, otherwise `batch` will be used. The `description` column is used as the `individual_id` column and the `phenotype` column will be used for as the `affected` column in the PED format:
+    * metadata key/value pairs. Any columns not falling into the above cases will go into the metadata section. A `ped` specification will allow bcbio to read family, gender and phenotype information from a PED input file and use it for batch, sex and phenotype, respectively. The PED inputs supplement information from the standard template file, so if you specify a value in the template CSV the PED information will no overwrite it. Alternatively, `ped` fields can be specified directly in the metadata as columns. If `family_id` is specified it will be used as the `family_id` for that sample, otherwise `batch` will be used. The `description` column is used as the `individual_id` column and the `phenotype` column will be used for as the `affected` column in the PED format:
         ```
         samplename,description,phenotype,batch,sex,ethnicity,maternal_id,paternal_id,family_id
         NA12878.bam,NA12878,-9,CEPH,female,-9,NA12892,NA12891,NA12878FAM
@@ -105,7 +105,7 @@ samplename,description,batch,phenotype,sex,variant_regions
 sample1,sample1,batch1,normal,female,/path/to/regions.bed
 ```
 
-### Download data from GEO or SRA
+### Download data from or SRA
 
 1. Prepare sample sheet project.csv:
 ```
