@@ -1,4 +1,6 @@
-## 1.2.2 (in progress)
+## 1.2.3 (in progress)
+
+## 1.2.2 (5 April 2020)
 - Fix for not properly looking up R environment variables in the base environment.
 - Remove --use-new-qual-calculator which was eliminated in GATK 4.1.5.0.
 - Ensure header is not written for a Series. In pandas 0.24.0 the default for header was changed from 
