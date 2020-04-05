@@ -329,5 +329,5 @@ def test_11_hla(install_test_files, data_dir):
         out = optitype.run(data)
         with open(out["hla"]["call_file"]) as in_handle:
             header = in_handle.readline().strip().split(",")
-            hla_a = dict(zip(header), in_handle.readline().strip().split(","))
+            hla_a = dict(zip(header, in_handle.readline().strip().split(",")))
             assert hla_a["alleles"] == "HLA-A*11:01;HLA-A*24:02", hla_a
