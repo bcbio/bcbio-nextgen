@@ -280,7 +280,7 @@ def _update_conda_packages():
     """If installed in an anaconda directory, upgrade conda packages.
     """
     conda_bin = _get_mamba_bin()
-    if not mamba_bin:
+    if not conda_bin:
         conda_bin = _get_conda_bin()
     channels = _get_conda_channels(conda_bin)
     assert conda_bin, ("Could not find anaconda distribution for upgrading bcbio.\n"
