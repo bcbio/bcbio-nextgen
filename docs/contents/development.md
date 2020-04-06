@@ -112,7 +112,7 @@ You can use this to run specific test targets:
 ./run_tests.sh devel
 ./run_tests.sh docker
 ```
-Optionally, you can run pytest directly from the bcbio install to tweak more options. It will be in `/path/to/bcbio/anaconda/bin/py.test`. Pass `-s` to `py.test` to see the stdout log, and `-v` to make py.test output more verbose. The tests are marked with labels which you can use to run a specific subset of the tests using the `-m` argument:
+Optionally, you can run pytest directly from the bcbio install to tweak more options. It will be in `/path/to/bcbio/anaconda/bin/py.test`. Pass `-s` to `py.test` to see the stdout log, and `-v` to make py.test output more verbose. The `-x` flag will stop the test at the first failure and `--lf` will run only the tests that failed the last go-around. Sometimes it is useful to drop into the debugger on failure, wihch you can do by setting `-s --pdb`. The tests are marked with labels which you can use to run a specific subset of the tests using the `-m` argument:
 ```shell
 py.test -m rnaseq
 ```
@@ -193,9 +193,8 @@ We are still working on ways to best include these as part of the standard build
 
 ### New release checklist
 - [ ] pull from master to make sure you are up to date
-- [ ] run integration tests: `py.test tests/integration`
-- [ ] run unit tests: `py.test tests/unit`
-- [ ] run bcbio-vm tests: `py.test tests/bcbio_vm`
+- [ ] run integration tests: `py.test -s -x tests/integration/test_automated_analysis.py`
+- [ ] run unit tests: `py.test -s -x tests/unit`
 - [ ] update setup.py to the new version.
 - [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
 - [ ] commit and push changes to bcbio
@@ -209,7 +208,8 @@ We are still working on ways to best include these as part of the standard build
 - [ ] push changes to bcbio
 - [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
 - [ ] update BCBIO_REVISION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
-- [ ] push changes to bcbio_docker and check to make sure the image builds successfully
+- [ ] push changes to bcbio_docker
+- [ ] make sure the image builds successfully
 
 ### Standard function arguments
 
