@@ -99,7 +99,7 @@ A nice looking standalone [report](https://rawgit.com/roryk/bcbio.rnaseq/master/
 
 * `transcript_assembler` If set, will assemble novel genes and transcripts and merge the results into the known annotation. Can have multiple values set in a list. Supports ['cufflinks', 'stringtie'].
 * `transcriptome_align` If set to True, will also align reads to just the transcriptome, for use with EBSeq and others.
-* `expression_caller` A list of optional expression callers to turn on. Supports ['cufflinks', 'express', 'stringtie', 'sailfish', 'dexseq', 'kallisto']. Salmon and count based expression estimation are run by default.
+* `expression_caller` A list of optional expression callers to turn on. Supports ['cufflinks', 'express', 'stringtie', 'dexseq', 'kallisto']. Salmon and count based expression estimation are run by default. Sailfish is deprecated.
 * `fusion_caller` A list of optional fusion callers to turn on. Supports [oncofuse, pizzly, ericscript, arriba].
 * `variantcaller` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 * `spikein_fasta` A FASTA file of spike in sequences to quantitate.
@@ -181,13 +181,13 @@ RNA-seq pipeline includes steps for quality control, adapter trimming, alignment
 
 We recommend using the STAR aligner for all genomes. Use Tophat2 only if you do not have enough RAM available to run STAR (about 30 GB).
 
-Our current recommendation is to run adapter trimming only if using the Tophat2 aligner. Adapter trimming is very slow, and aligners that soft clip the ends of reads such as STAR and hisat2, or algorithms using pseudoalignments like Sailfish handle contaminant sequences at the ends properly. This makes trimming unnecessary. Tophat2 does not perform soft clipping so if using Tophat2, trimming must still be done.
+Our current recommendation is to run adapter trimming only if using the Tophat2 aligner. Adapter trimming is very slow, and aligners that soft clip the ends of reads such as STAR and hisat2, or algorithms using pseudoalignments like Salmon handle contaminant sequences at the ends properly. This makes trimming unnecessary. Tophat2 does not perform soft clipping so if using Tophat2, trimming must still be done.
 
 Salmon, which is an extremely fast alignment-free method of quantitation, is run for all experiments. Salmon can accurately quantitate the expression of genes, even ones which are hard to quantitate with other methods (see [this paper](https://doi.org/10.1186/s13059-015-0734-x) for example for Sailfish, which performs similarly to Salmon). Salmon can also quantitate at the transcript level which can help gene-level analyses
 (see [this paper](https://doi.org/10.12688/f1000research.7563.1) for example). We recommend using the Salmon quantitation rather than the counts from featureCounts to perform downstream quantification.
 
 Although we do not recommend using the featureCounts based counts, the alignments are still useful because they give you many more quality metrics than the quasi-alignments from Salmon.
 
-After a bcbio RNA-seq run there will be in the `upload` directory a directory for each sample which contains a BAM file of the aligned and unaligned reads, a `sailfish` directory with the output of Salmon, including TPM values, and a `qc` directory with plots from FastQC and qualimap.
+After a bcbio RNA-seq run there will be in the `upload` directory a directory for each sample which contains a BAM file of the aligned and unaligned reads, a `salmon` directory with the output of Salmon, including TPM values, and a `qc` directory with plots from FastQC and qualimap.
 
 In addition to directories for each sample, in the `upload` directory there is a project directory which contains a YAML file describing some summary statistics for each sample and some provenance data about the bcbio run. In that directory is also a `combined.counts` file with the featureCounts derived counts per cell.
