@@ -5,7 +5,7 @@ This example calls variants using NA12878 exome data from [EdgeBio's](https://ww
 1. Install bcbio python package and tools
     ```shell
     wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-    python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir [tools_installation_path] --nodata
+    python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_installation_path] --nodata
     ```
 
 2. Install hg38 reference genome and bwa indices
