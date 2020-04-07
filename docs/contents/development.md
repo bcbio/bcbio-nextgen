@@ -202,7 +202,7 @@ We are still working on ways to best include these as part of the standard build
 - [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
 - [ ] review and approve bioconda recipe once it passes the tests 
 - [ ] merge recipe by commenting `@bioconda-bot please merge`
-- [ ] wait until new version is available on [bioconda](https://bioconda.github.io/recipes/bcbio-nextgen/README.html)
+- [ ] wait until new version is available on [bioconda](https://anaconda.org/bioconda/bcbio-nextgen/files)
 - [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt) 
 - [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
 - [ ] push changes to bcbio
