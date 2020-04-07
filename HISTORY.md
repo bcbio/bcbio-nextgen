@@ -1,4 +1,7 @@
-## 1.2.3 (in progress)
+## 1.2.4 (in progress)
+
+## 1.2.3 (7 April 2020)
+- Hotfix for not being able to upgrade from stable distribution.
 
 ## 1.2.2 (5 April 2020)
 - Fix for not properly looking up R environment variables in the base environment.
