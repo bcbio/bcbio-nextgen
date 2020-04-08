@@ -1,6 +1,6 @@
 ## Citations
 
-<https://github.com/bcbio/bcbio-nextgen>
+<https://doi.org/10.5281/zenodo.3564938>
 
 ### small RNA-seq
 
