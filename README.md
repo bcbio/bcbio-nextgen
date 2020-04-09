@@ -4,7 +4,7 @@ Validated, scalable, community developed variant calling, RNA-seq and small RNA 
 
 [![TravisCI status](https://travis-ci.org/bcbio/bcbio-nextgen.png)](https://travis-ci.org/bcbio/bcbio-nextgen)
 [![Documentation status](https://readthedocs.org/projects/bcbio-nextgen/badge/?version=latest)](https://bcbio-nextgen.readthedocs.io/en/latest/?badge=latest)
-[![Zenodo record](https://zenodo.org/badge/DOI/10.5281/zenodo.3659234.svg)](https://zenodo.org/record/3659234)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3743344.svg)](https://doi.org/10.5281/zenodo.3743344)
 
 ## Features
 
