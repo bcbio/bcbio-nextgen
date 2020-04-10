@@ -384,6 +384,7 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     multiplier = peaks._get_multiplier(samples)) as run_parallel:
         with profile.report("peakcalling", dirs):
             samples = peaks.peakcall_prepare(samples, run_parallel)
+            samples = peaks.call_consensus(samples)
 
     with prun.start(_wres(parallel, ["picard", "fastqc"]),
                     samples, config, dirs, "qc") as run_parallel:

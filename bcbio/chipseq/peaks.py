@@ -3,8 +3,9 @@
 import os
 import copy
 import toolz as tz
-
 import subprocess
+import shutil
+from tempfile import NamedTemporaryFile
 
 import bcbio.bam as bam
 from bcbio.log import logger
@@ -148,3 +149,90 @@ def greylisting(data):
                 return None
     return greylistdir
 
+def consensus(summitfiles, consensusfile, data, pad=250):
+    """call consensus peaks from a set of bed files of summits
+    we use this method: https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html
+    """
+    if utils.file_exists(consensusfile):
+        return consensusfile
+
+    try:
+        bedops = config_utils.get_program("bedops", data)
+    except config_utils.CmdNotFound: 
+        logger.info("bedops not found, skipping consensus peak calling. do a --tools update to install "
+                    "bedops.")
+        return None
+    try:
+        sortbed = config_utils.get_program("sort-bed", data)
+    except config_utils.CmdNotFound: 
+        logger.info("sort-bed not found, skipping consensus peak calling. do a --tools update to install "
+                    "sort-bed.")
+        return None
+    try:
+        bedmap = config_utils.get_program("bedmap", data)
+    except config_utils.CmdNotFound: 
+        logger.info("bedmap not found, skipping consensus peak calling. do a --tools update to install "
+                    "bedmap.")
+        return None
+
+    logger.info(f"Calling peaks on {','.join(summitfiles)}")
+    with file_transaction(consensusfile) as tx_consensus_file:
+        message = f"Combining summits of {' '.join(summitfiles)} and expanding {pad} bases."
+        with utils.tmpfile(suffix=".bed") as tmpbed:
+            slopcommand = f"{bedops} --range {pad} -u {' '.join(summitfiles)} > {tmpbed}"
+            do.run(slopcommand, message)
+            iteration = 0
+            solutions = []
+            while os.path.getsize(tmpbed):
+                iteration = iteration + 1
+                iterationbed = NamedTemporaryFile(suffix=".bed", delete=False).name
+                with utils.tmpfile(suffix="bed") as mergedbed, \
+                     utils.tmpfile(suffix="bed") as intermediatebed, \
+                     utils.tmpfile(suffix="bed") as leftoverbed:
+                    mergecmd = (f"{bedops} -m --range 0:-1 {tmpbed} | "
+                                f"{bedops} -u --range 0:1 - > "
+                                f"{mergedbed}")
+                    message = f"Merging non-overlapping peaks, iteration {iteration}."
+                    do.run(mergecmd, message)
+                    nitems = len(open(mergedbed).readlines())
+                    message = f"Considering {nitems} peaks, choosing the highest score for overlapping peaks."
+                    highscorecmd = (f"{bedmap} --max-element {mergedbed} {tmpbed} |"
+                                    f"{sortbed} - > "
+                                    f"{iterationbed}")
+                    do.run(highscorecmd, message)
+                    message = f"Checking if there are peaks left to merge."
+                    anyleftcmd = (f"{bedops} -n 1 {tmpbed} {iterationbed} > {intermediatebed}")
+                    do.run(anyleftcmd, message)
+                    shutil.move(intermediatebed, tmpbed)
+                    solutions.append(iterationbed)
+        message = f"Creating final consensus peak file: {consensusfile}."
+        consensuscmd = (f"{bedops} -u {' '.join(solutions)} > {tx_consensus_file}")
+        do.run(consensuscmd, message)
+    return consensusfile
+
+def call_consensus(samples):
+    """call consensus peaks on the summit files from a set of ChiP/ATAC samples
+    """
+    data = samples[0][0]
+    new_samples = []
+    consensusdir = os.path.join(dd.get_work_dir(data), "consensus")
+    utils.safe_makedir(consensusdir)
+    summitfiles = []
+    for data in dd.sample_data_iterator(samples):
+        if dd.get_chip_method(data) == "chip":
+            for fn in tz.get_in(("peaks_files", "macs2"), data, []):
+                if "summit" in fn:
+                    summitfiles.append(fn)
+                    break
+        elif dd.get_chip_method(data) == "atac":
+            for fn in tz.get_in(("peaks_files", "NF", "macs2") , data, []):
+                if "summit" in fn:
+                    summitfiles.append(fn)
+    consensusfile = os.path.join(consensusdir, "consensus.bed")
+    if not summitfiles:
+        logger.info("No suitable peak files found, skipping consensus peak calling.")
+        return samples
+    consensusfile = consensus(summitfiles, consensusfile, data)
+    for data in dd.sample_data_iterator(samples):
+        new_samples.append([tz.assoc_in(data, ("peaks_files", "consensus"), {"main": consensusfile})])
+    return new_samples
