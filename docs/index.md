@@ -6,7 +6,8 @@ A python toolkit providing best-practice pipelines for fully automated high thro
 
 * [Getting started](contents/intro)
 * [Single cell RNA-seq](contents/single_cell)
-* [Bulk RNA-seq](contents/bulk_rnaseq)
+* [Bulk RNA-seq expression](contents/bulk_rnaseq)
+* [Bulk RNA-seq variants](contents/rnaseq_variants)
 * [Introduction](contents/about)
 * [Installation](contents/installation)
 * [Pipelines](contents/pipelines)
