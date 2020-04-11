@@ -4,8 +4,8 @@
 
 This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data of RNA-Seq of GM12878:
 [SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898). (SRR307897 is of bad quality - don't use it).
-The dataset is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article,
-which is a reliable work on RNA-seq variant calling validation.
+The dataset is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is a reliable work on RNA-seq variant calling validation.
+
 GATK3.8 requires an additional installation step:
 https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2
 
@@ -58,7 +58,7 @@ bcbio_nextgen.py ../config/NA12878.yaml -n 4
 ```
 
 ## Validation (Grch37)
-Filter variants passed filters and filter out potential RNA editing events
+Using high quality variants for validation (PASS filters, depth>=10 reads, removing potential RNA editing events).
 ```
 bcftools view -f PASS -e "INFO/DP<10 | INFO/possible_rnaedit==1" NA12878-gatk-haplotype-annotated.vcf.gz |  bgzip -c > NA12878.pass.vcf.gz
 tabix NA12878.pass.vcf.gz
