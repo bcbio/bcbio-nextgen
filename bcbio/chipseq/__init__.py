@@ -175,9 +175,6 @@ def _normalized_bam_coverage(name, bam_input, data):
         do.run(cmd.format(**locals()), "Run bamCoverage in %s" % name)
     return bw_output
 
-def _compute_deeptools_matrix(data):
-    pass
-
 def shift_ATAC(data):
     """
     shift the ATAC-seq alignments
