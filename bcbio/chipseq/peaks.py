@@ -5,7 +5,9 @@ import copy
 import toolz as tz
 import subprocess
 import shutil
+import math
 from tempfile import NamedTemporaryFile
+import pandas as pd
 
 import bcbio.bam as bam
 from bcbio.log import logger
@@ -149,9 +151,10 @@ def greylisting(data):
                 return None
     return greylistdir
 
-def consensus(summitfiles, consensusfile, data, pad=250):
-    """call consensus peaks from a set of bed files of summits
-    we use this method: https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html
+def consensus(peakfiles, consensusfile, data, pad=250):
+    """call consensus peaks from a set of narrow/broad peakfiles
+    we use this method:
+    https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html
     """
     if utils.file_exists(consensusfile):
         return consensusfile
@@ -159,27 +162,38 @@ def consensus(summitfiles, consensusfile, data, pad=250):
     try:
         bedops = config_utils.get_program("bedops", data)
     except config_utils.CmdNotFound: 
-        logger.info("bedops not found, skipping consensus peak calling. do a --tools update to install "
-                    "bedops.")
+        logger.info("bedops not found, skipping consensus peak calling. do a "
+                    "--tools update to install bedops.")
         return None
     try:
         sortbed = config_utils.get_program("sort-bed", data)
     except config_utils.CmdNotFound: 
-        logger.info("sort-bed not found, skipping consensus peak calling. do a --tools update to install "
-                    "sort-bed.")
+        logger.info("sort-bed not found, skipping consensus peak calling. do "
+                    "--tools update to install sort-bed.")
         return None
     try:
         bedmap = config_utils.get_program("bedmap", data)
     except config_utils.CmdNotFound: 
-        logger.info("bedmap not found, skipping consensus peak calling. do a --tools update to install "
-                    "bedmap.")
+        logger.info("bedmap not found, skipping consensus peak calling. do a "
+                    "--tools update to install bedmap.")
         return None
 
-    logger.info(f"Calling peaks on {','.join(summitfiles)}")
+    logger.info(f"Calling consensus peaks on {','.join(peakfiles)}")
+    logger.info(f"Removing low quality peaks from {','.join(peakfiles)}")
+    filteredsummits = []
+    for fn in peakfiles:
+        filteredpeak = NamedTemporaryFile(suffix=".bed", delete=False).name
+        df = remove_low_quality_peaks(fn, qval=0.05)
+        df.to_csv(filteredpeak, index=False, header=False, sep="\t")
+        filteredsummit = peakfile_to_summitfile(filteredpeak)
+        filteredsummits.append(filteredsummit)
+    peakfiles = filteredsummits
+
     with file_transaction(consensusfile) as tx_consensus_file:
-        message = f"Combining summits of {' '.join(summitfiles)} and expanding {pad} bases."
+        message = (f"Combining summits of {' '.join(peakfiles)} and "
+                   f"expanding {pad} bases.")
         with utils.tmpfile(suffix=".bed") as tmpbed:
-            slopcommand = f"{bedops} --range {pad} -u {' '.join(summitfiles)} > {tmpbed}"
+            slopcommand = f"{bedops} --range {pad} -u {' '.join(peakfiles)} > {tmpbed}"
             do.run(slopcommand, message)
             iteration = 0
             solutions = []
@@ -211,28 +225,64 @@ def consensus(summitfiles, consensusfile, data, pad=250):
     return consensusfile
 
 def call_consensus(samples):
-    """call consensus peaks on the summit files from a set of ChiP/ATAC samples
+    """
+    call consensus peaks on the narrow/Broad peakfiles from a set of
+    ChiP/ATAC samples
     """
     data = samples[0][0]
     new_samples = []
     consensusdir = os.path.join(dd.get_work_dir(data), "consensus")
     utils.safe_makedir(consensusdir)
-    summitfiles = []
+    peakfiles = []
     for data in dd.sample_data_iterator(samples):
         if dd.get_chip_method(data) == "chip":
             for fn in tz.get_in(("peaks_files", "macs2"), data, []):
-                if "summit" in fn:
-                    summitfiles.append(fn)
+                if "narrowPeak" in fn:
+                    peakfiles.append(fn)
+                    break
+                elif "broadPeak" in fn:
+                    peakfiles.append(fn)
                     break
         elif dd.get_chip_method(data) == "atac":
             for fn in tz.get_in(("peaks_files", "NF", "macs2") , data, []):
-                if "summit" in fn:
-                    summitfiles.append(fn)
+                if "narrowPeak" in fn:
+                    peakfiles.append(fn)
     consensusfile = os.path.join(consensusdir, "consensus.bed")
-    if not summitfiles:
+    if not peakfiles:
         logger.info("No suitable peak files found, skipping consensus peak calling.")
         return samples
-    consensusfile = consensus(summitfiles, consensusfile, data)
+    consensusfile = consensus(peakfiles, consensusfile, data)
     for data in dd.sample_data_iterator(samples):
         new_samples.append([tz.assoc_in(data, ("peaks_files", "consensus"), {"main": consensusfile})])
     return new_samples
+
+def read_peakfile(fn):
+    """read a narrow/broad peakFile
+     see http://genome.ucsc.edu/FAQ/FAQformat.html#format12 for a description of
+    the format
+    """
+    PEAK_HEADER = ["chrom", "chromStart", "chromEnd", "name", "score", "strand",
+                   "signalValue", "pValue", "qValue", "peak"]
+    return pd.read_csv(fn, sep="\t", names=PEAK_HEADER)
+
+def remove_low_quality_peaks(peakfile, qval=0.05):
+    """remove low quality peaks from a narrow/broad peakfile
+    we define low quality peaks as peaks with a FDR (qval) higher than
+    a cutoff, defaulting to 0.05
+    """
+    # qvals are encoded in phred-style format so convert first
+    phredval = -10 * math.log10(qval)
+    peaks = read_peakfile(peakfile)
+    return peaks[peaks["qValue"] > phredval]
+
+def peakfile_to_summitfile(fn, out_file=None):
+    """convert a narrow/broad peakfile to a file of summits
+    """
+    if not out_file:
+        out_file = NamedTemporaryFile(suffix=".bed", delete=False).name
+    df = read_peakfile(fn)
+    df["summitStart"] = df["chromStart"] + df["peak"]
+    df["summitEnd"] = df["summitStart"] + 1
+    summits = df[["chrom", "summitStart", "summitEnd", "name", "qValue"]]
+    summits.to_csv(out_file, index=False, header=False, sep="\t")
+    return out_file
