@@ -23,6 +23,7 @@ wget -c -O NA12878_2.fq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR307/SRR307898/S
 ```
 
 ### 3. Config file `input/NA12878.yaml`
+Note the use of `batch`: RNA-seq variant calling is a separate module and it uses joint calling.
 ```
 details:
 - algorithm:
