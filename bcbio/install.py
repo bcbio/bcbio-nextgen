@@ -282,7 +282,8 @@ def _update_conda_packages():
     conda_bin = _get_mamba_bin()
     if not conda_bin:
         conda_bin = _get_conda_bin()
-    channels = _get_conda_channels(conda_bin)
+    # mamba does not support mamba config --show, using conda here
+    channels = _get_conda_channels(_get_conda_bin())
     assert conda_bin, ("Could not find anaconda distribution for upgrading bcbio.\n"
                        "Using python at %s but could not find conda." % (os.path.realpath(sys.executable)))
     req_file = "bcbio-update-requirements.txt"
