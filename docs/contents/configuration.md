@@ -105,26 +105,9 @@ samplename,description,batch,phenotype,sex,variant_regions
 sample1,sample1,batch1,normal,female,/path/to/regions.bed
 ```
 
-### Download data from or SRA
+### Download data from SRA
 
-1. Prepare sample sheet project.csv:
-```
-samplenames,description
-GSM3508215,HEK293T
-SRR8311268,Hela
-```
-
-2. Make fastq-dump available in PATH
-```
-module load sratoolkit
-which fastq-dump
-/n/app/sratoolkit/2.9.0/bin/fastq-dump
-```
-
-3. Run `bcbio_prepare_samples.py --csv example.csv --out fastq`
-
-The script will download all the files related to each sample, merge them in case of multiple files,
-and create `project-merged.csv` for `bcbio_nextgen.py -w template`.
+Use SRA toolkit prefetch/fastq-dump: https://wiki.rc.hms.harvard.edu/display/O2/Aspera+to+download+NCBI+SRA+data
 
 ### Sample information
 
