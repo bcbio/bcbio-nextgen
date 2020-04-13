@@ -1,4 +1,7 @@
 ## 1.2.4 (in progress)
+- Add consensus peak calling using https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html 
+  to collapse overlapping peaks.
+- Pre-filter consensus peaks by removing peaks with FDR > 0.05 before performing consensus peak calling.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.
