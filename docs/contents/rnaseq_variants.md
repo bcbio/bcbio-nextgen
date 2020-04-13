@@ -58,8 +58,11 @@ cd work
 bcbio_nextgen.py ../config/NA12878.yaml -n 4
 ```
 
-## Validation (GRCh37)
-Using high quality variants for validation (PASS filters, depth>=10 reads, removing potential RNA editing events).
+## Validation
+
+### How to validate calls from bcbio
+
+Use high quality variants (PASS filters, depth>=10 reads, removing potential RNA editing events).
 ```
 bcftools view -f PASS -e "INFO/DP<10 | INFO/possible_rnaedit==1" NA12878-gatk-haplotype-annotated.vcf.gz |  bgzip -c > NA12878.pass.vcf.gz
 tabix NA12878.pass.vcf.gz
@@ -72,7 +75,7 @@ intersect.bed \
 /path/bcbio/genomes/Hsapiens/GRCh37/rtg/GRCh37.sdf
 ```
 
-
+### Validation results, 2016-2019, GRCh37, SRR307898
 ```
 +----------+------+-----+-------+-----+------+------+---+---+------+------------+
 |  date    | type |bcbio|  gatk | TP  | FP   | FN   |FDR|FNR|Target|Total called|
@@ -93,4 +96,4 @@ intersect.bed \
 ## References
 - [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185)
 - [GATK best practices for RNA-seq data variant calling](https://gatk.broadinstitute.org/hc/en-us/articles/360035531192-RNAseq-short-variant-discovery-SNPs-Indels-)
-- [Validation from Brian Haas using better data](https://github.com/NCIP/ctat-mutations/wiki/Performance-Assessment)
+- [Variant calling and validation from Brian Haas using CTAT and better NA12878 data](https://github.com/NCIP/ctat-mutations/wiki/Performance-Assessment)
