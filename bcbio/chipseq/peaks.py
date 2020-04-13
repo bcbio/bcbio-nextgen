@@ -64,7 +64,7 @@ def calling(data):
         for fraction in fractions:
             MIN_READS_TO_CALL = 1000
             chip_bam = tz.get_in(("atac", "align", fraction), data)
-            if bam.count_alignments(chip_bam, data) < MIN_READS_TO_CALL:
+            if not bam.has_nalignments(chip_bam, MIN_READS_TO_CALL, data):
                 logger.warn(f"{chip_bam} has less than {MIN_READS_TO_CALL}, peak calling will fail so skip this fraction.")
                 continue
             logger.info(f"Running peak calling with {data['peak_fn']} on the {fraction} fraction of {chip_bam}.")

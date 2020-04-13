@@ -593,3 +593,22 @@ def count_alignments(in_bam, data, filter=None):
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     return int(result.stdout.decode().strip())
+
+def has_nalignments(in_bam, n, data, filter=None):
+    """
+    does a BAM file has at least n alignments?
+    """
+    sambamba = config_utils.get_program("sambamba", dd.get_config(data))
+    num_cores = dd.get_num_cores(data)
+    if not filter:
+        filter_string = ""
+        message = f"Counting alignments in {in_bam}."
+    else:
+        filter_string = "--filter {filter}"
+        message = f"Counting alignments in {in_bam} matching {filter}."
+    cmd = f"{sambamba} view -f sam {filter_string} {in_bam} | head -{n} | wc -l"
+    logger.info(message)
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    return int(result.stdout.decode().strip()) >= n
+
