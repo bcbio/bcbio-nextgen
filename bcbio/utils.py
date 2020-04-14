@@ -826,6 +826,7 @@ def get_conda_dir():
 def get_all_conda_bins():
     """Retrieve all possible conda bin directories, including environments.
     """
+    bcbio_bin = get_bcbio_bin()
     conda_dir = get_conda_dir()
     if os.path.join("anaconda", "envs") in conda_dir:
         conda_dir = os.path.join(conda_dir[:conda_dir.rfind(os.path.join("anaconda", "envs"))], "anaconda")
