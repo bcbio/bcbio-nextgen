@@ -15,7 +15,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.cpus = 2
   end
 
-  # if you would like to make any additional data on the host available inside the VM
+  # to make any additional data on the host available inside the VM
   # (for example: reference genomes, pipeline inputs, etc)
   # set BCBIO_DATA_DIR environment variable on the host to a directory that contains the data
   if ENV["BCBIO_DATA_DIR"]

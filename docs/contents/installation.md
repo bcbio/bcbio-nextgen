@@ -65,7 +65,7 @@ Optional steps:
     sudo timedatectl set-timezone America/New_York
     ```
 * Outside the VM:
-  * If you'd like to make any additional data from the host available inside the VM (for example: reference genomes, pipeline inputs, etc) set `BCBIO_DATA_DIR` environment variable on the host to a directory that contains the data, for example:
+  * To make any additional data from the host available inside the VM (for example: reference genomes, pipeline inputs, etc) set `BCBIO_DATA_DIR` environment variable on the host to a directory that contains the data, for example:
     ```shell
     export BCBIO_DATA_DIR=~/biodata
     vagrant reload
