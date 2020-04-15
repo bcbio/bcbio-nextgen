@@ -7,7 +7,6 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.box = "bento/ubuntu-18.04"
-  config.vm.box_version = "202002.04.0"
 
   config.vm.hostname = "bcbio"
 
@@ -23,6 +22,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.synced_folder ENV["BCBIO_DATA_DIR"], "/data"
   end
 
-  config.vm.provision :shell, :path => "bootstrap.sh"
+  config.vm.provision :shell, :path => "scripts/vagrant.sh"
 
 end
