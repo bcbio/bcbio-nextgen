@@ -17,6 +17,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
 from bcbio.chipseq import atac
+from bcbio.rnaseq import count
 
 def get_callers():
     """Get functions related to each caller"""
@@ -252,8 +253,11 @@ def call_consensus(samples):
         logger.info("No suitable peak files found, skipping consensus peak calling.")
         return samples
     consensusfile = consensus(peakfiles, consensusfile, data)
+    saffile = consensus_to_saf(consensusfile,
+                               os.path.splitext(consensusfile)[0] + ".saf")
     for data in dd.sample_data_iterator(samples):
-        new_samples.append([tz.assoc_in(data, ("peaks_files", "consensus"), {"main": consensusfile})])
+        data = tz.assoc_in(data, ("peaks_files", "consensus"), {"main": consensusfile})
+        new_samples.append([data])
     return new_samples
 
 def read_peakfile(fn):
@@ -286,3 +290,45 @@ def peakfile_to_summitfile(fn, out_file=None):
     summits = df[["chrom", "summitStart", "summitEnd", "name", "qValue"]]
     summits.to_csv(out_file, index=False, header=False, sep="\t")
     return out_file
+
+def consensus_to_saf(consensusfile, saffile):
+    """
+    consensus format: chrom, chromStart, chromEnd, name, qValue
+    SAF: peakID, chrom, chromStart, chromEnd, strand
+    """
+    CONSENSUS_HEADER = ["chrom", "chromStart", "chromEnd", "name", "qValue"]
+    SAF_HEADER = ["GeneID", "Chr", "Start", "End", "Strand"]
+    if utils.file_exists(saffile):
+        return saffile
+    df = pd.read_csv(consensusfile, sep="\t", names=CONSENSUS_HEADER)
+    df["GeneID"] = (df["chrom"].astype(str) + ":" +
+                    df["chromStart"].astype(str) + "-" +
+                    df["chromEnd"].astype(str))
+    df["Chr"] = df["chrom"]
+    df["Start"] = df["chromStart"]
+    df["End"] = df["chromEnd"]
+    df["Strand"] = "."
+    saf = df[SAF_HEADER]
+    saf.to_csv(saffile, index=False, header=True, sep="\t")
+    return saffile
+
+def create_peaktable(samples):
+    """create a table of peak counts per sample to use with differential peak calling
+    """
+    data = dd.get_data_from_sample(samples[0])
+    peakcounts = []
+    out_dir = os.path.join(dd.get_work_dir(data), "consensus")
+    out_file = os.path.join(out_dir, "consensus-counts.tsv")
+    if dd.get_chip_method(data) == "chip":
+        for data in dd.sample_data_iterator(samples):
+            peakcounts.append(tz.get_in(("peak_counts"), data))
+    elif dd.get_chip_method(data) == "atac":
+        for data in dd.sample_data_iterator(samples):
+            peakcounts.append(tz.get_in(("peak_counts", "NF"), data))
+    combined_peaks = count.combine_count_files(peakcounts, out_file, ext=".counts")
+    new_data = []
+    for data in dd.sample_data_iterator(samples):
+        data = tz.assoc_in(data, ("peak_counts", "peaktable"), combined_peaks)
+        new_data.append(data)
+    new_samples = dd.get_samples_from_datalist(new_data)
+    return new_samples

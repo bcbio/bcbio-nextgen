@@ -11,7 +11,7 @@ except ImportError:
 from bcbio import heterogeneity, hla, chipseq, structural, upload, utils
 from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
-                          bcbiornaseq)
+                          bcbiornaseq, featureCounts)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
@@ -226,6 +226,12 @@ def run_peddy(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(peddy.run_peddy, *args))
+
+@require(featureCounts)
+def run_chipseq_count(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(featureCounts.chipseq_count, *args))
 
 @require(umi)
 def run_tagcount(*args):

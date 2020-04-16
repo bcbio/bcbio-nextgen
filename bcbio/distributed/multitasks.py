@@ -9,7 +9,7 @@ from bcbio.wgbsseq import cpg_caller, deduplication, trimming
 from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
-                          bcbiornaseq)
+                          bcbiornaseq, featureCounts)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, alignment, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -26,6 +26,10 @@ def run_peddy(*args):
 @utils.map_wrap
 def run_tagcount(*args):
     return umi.tagcount(*args)
+
+@utils.map_wrap
+def run_chipseq_count(*args):
+    return featureCounts.chipseq_count(*args)
 
 @utils.map_wrap
 def run_concatenate_sparse_counts(*args):
