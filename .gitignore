@@ -32,3 +32,4 @@ cwl/*-workflow
 __pycache__
 .coverage
 .pytest_cache
+.vagrant/
