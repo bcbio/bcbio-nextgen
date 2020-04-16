@@ -10,9 +10,10 @@ from bcbio.log import logger
 
 from bcbio.utils import file_exists
 
-def combine_count_files(files, out_file=None, ext=".fpkm"):
+def combine_count_files(files, out_file=None, ext=".counts"):
     """
     combine a set of count files into a single combined file
+    ext: remove this extension from the count files
     """
     files = list(files)
     if not files:
