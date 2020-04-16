@@ -411,3 +411,15 @@ def get_algorithm_keys():
         if k == v["keys"][2]:
             keys.append(k)
     return keys
+
+def get_data_from_sample(sample):
+    """
+    get a data object from a single sample
+    """
+    return sample[0]
+
+def get_samples_from_datalist(datalist):
+    """
+    return a samples object from a list of data dicts
+    """
+    return [[x] for x in datalist]
