@@ -876,6 +876,11 @@ def _get_files_project(sample, upload_config):
         out.append({"path": dd.get_tx2gene(sample)})
     if dd.get_spikein_counts(sample):
         out.append({"path": dd.get_spikein_counts(sample)})
+    if tz.get_in(("peaks_files", "consensus", "main"), sample):
+        out.append({"path": tz.get_in(("peaks_files", "consensus", "main"), sample), "dir": "consensus"})
+    if tz.get_in(("peak_counts", "peaktable"), sample):
+        out.append({"path": tz.get_in(("peak_counts", "peaktable"), sample), "dir": "consensus"})
+
     transcriptome_dir = os.path.join(dd.get_work_dir(sample), "inputs",
                                      "transcriptome")
     if os.path.exists(transcriptome_dir):
