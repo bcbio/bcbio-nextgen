@@ -86,10 +86,13 @@ One tricky part that we don't yet know how to work around is that pip and standa
 
 ### Documentation
 
-If you have added or modified this documentation, to build it locally
-and see how it looks like you can do so by running:
+To build this documentation locally and see how it looks like you can do so by installing the dependencies:
 ```shell
 cd docs
+conda install --file requirements-local.txt --file requirements.txt
+```
+and running:
+```shell
 make html
 ```
 The documentation will be built under `docs/_build/html`, open `index.html` with your browser to load your local build.
