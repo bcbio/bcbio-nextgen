@@ -1,3 +1,2 @@
 # only required to upgrade v0.5.0 installed by Read the Docs
 recommonmark==0.6.0
-sphinx-markdown-tables
