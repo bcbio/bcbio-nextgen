@@ -133,8 +133,17 @@ def run_ataqv(data):
         return out_file
     tss_bed_file = os.path.join(out_dir, "TSS.bed")
     tss_bed_file = gtf.get_tss_bed(dd.get_gtf_file(data), tss_bed_file, data, padding=0)
-    autosomal_reference = os.path.join(out_dir, "autosomal.txt")
-    autosomal_reference = _make_autosomal_reference_file(autosomal_reference, data)
+    if chromhacks.is_human(data):
+        organism = "human"
+        autosomal_reference_flag = ""
+    elif chromhacks.is_mouse(data):
+        organism = "mouse"
+        autosomal_reference_flag = ""
+    else:
+        autosomal_reference = os.path.join(out_dir, "autosomal.txt")
+        autosomal_reference = _make_autosomal_reference_file(autosomal_reference, data)
+        organism = "None"
+        autosomal_reference_flag = f"--autosomal-reference-file {autosomal_reference} "
     ataqv = config_utils.get_program("ataqv", data)
     mitoname = chromhacks.get_mitochondrial_chroms(data)[0]
     if not ataqv:
@@ -142,10 +151,10 @@ def run_ataqv(data):
         return None
     with file_transaction(out_file) as tx_out_file:
         cmd = (f"{ataqv} --peak-file {peak_file} --name {sample_name} --metrics-file {tx_out_file} "
-               f"--tss-file {tss_bed_file} --autosomal-reference-file {autosomal_reference} "
+               f"--tss-file {tss_bed_file} {autosomal_reference_flag} "
                f"--ignore-read-groups --mitochondrial-reference-name {mitoname} "
                f"--tss-extension 1000 "
-               f"None {bam_file}")
+               f"{organism} {bam_file}")
         message = f"Running ataqv on {sample_name}."
         do.run(cmd, message)
     return out_file
