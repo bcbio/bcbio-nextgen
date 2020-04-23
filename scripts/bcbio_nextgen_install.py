@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """Automatically install required tools and data to run bcbio-nextgen pipelines.
 
-This automates the steps required for installation and setup to make it
-easier to get started with bcbio-nextgen. The defaults provide data files
-for human variant calling.
+This automates the steps required for installation and setup to make it easier to get started with
+bcbio-nextgen. The defaults provide data files for human variant calling.
 
-Requires: git, wget, bgzip2, Python 3.x, Python 2.7 or argparse + Python 2.6 and earlier
+Requires: git, wget, bgzip2, Python 3 or 2.7
 """
 from __future__ import print_function
+import argparse
 import collections
 import contextlib
 import datetime
@@ -266,12 +266,6 @@ def _check_toolplus(x):
         raise argparse.ArgumentTypeError("Unexpected --toolplus argument. Expect toolname=filename.")
 
 if __name__ == "__main__":
-    try:
-        import argparse
-    except ImportError:
-        raise ImportError("bcbio-nextgen installer requires `argparse`, included in Python 2.7.\n"
-                          "Install for earlier versions with `pip install argparse` or "
-                          "`easy_install argparse`.")
     parser = argparse.ArgumentParser(
         description="Automatic installation for bcbio-nextgen pipelines")
     parser.add_argument("datadir", help="Directory to install genome data",
