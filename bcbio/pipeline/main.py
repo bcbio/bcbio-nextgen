@@ -24,7 +24,7 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
 from bcbio.provenance import profile, system
 from bcbio.variation import (ensemble, genotype, population, validate, joint,
                              peddy)
-from bcbio.chipseq import peaks
+from bcbio.chipseq import peaks, atac
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
@@ -393,6 +393,7 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     samples, config, dirs, "qc") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
+            samples = atac.create_ataqv_report(samples)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for sample in samples:

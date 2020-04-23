@@ -204,3 +204,29 @@ def get_full_peaks(data):
         if f.endswith("narrowPeak") or f.endswith("broadPeak"):
             return f
     return None
+
+def create_ataqv_report(samples):
+    """
+    make the ataqv report from a set of ATAC-seq samples
+    """
+    data = samples[0][0]
+    new_samples = []
+    reportdir = os.path.join(dd.get_work_dir(data), "qc", "ataqv")
+    sentinel = os.path.join(reportdir, "index.html")
+    if utils.file_exists(sentinel):
+        return samples
+    mkarv = config_utils.get_program("mkarv", dd.get_config(data))
+    ataqv_files = []
+    for data in dd.sample_data_iterator(samples):
+        qc = dd.get_summary_qc(data)
+        ataqv_file = tz.get_in(("ataqv", "base"), qc, None)
+        if ataqv_file and utils.file_exists(ataqv_file):
+            ataqv_files.append(ataqv_file)
+    if not ataqv_files:
+        return samples
+    ataqv_json_file_string = " ".join(ataqv_files)
+    with file_transaction(reportdir) as txreportdir:
+        cmd = f"{mkarv} {txreportdir} {ataqv_json_file_string}"
+        message = f"Creating ataqv report from {ataqv_json_file_string}."
+        do.run(cmd, message)
+    return samples

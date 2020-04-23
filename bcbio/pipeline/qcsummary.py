@@ -100,7 +100,7 @@ def get_qc_tools(data):
     if analysis.startswith("chip-seq"):
         to_run.append("chipqc")
         if dd.get_chip_method(data) == "atac":
-            to_run.append("atac")
+            to_run.append("ataqv")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
@@ -153,7 +153,7 @@ def _run_qc_tools(bam_file, data):
              "viral": viral.run,
              "preseq": preseq.run,
              "chipqc": chipseq.run,
-             "atac": atac.run
+             "ataqv": atac.run
              }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
