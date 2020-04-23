@@ -198,7 +198,7 @@ We are still working on ways to best include these as part of the standard build
 - [ ] pull from master to make sure you are up to date
 - [ ] run integration tests: `py.test -s -x tests/integration/test_automated_analysis.py`
 - [ ] run unit tests: `py.test -s -x tests/unit`
-- [ ] update setup.py to the new version.
+- [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
 - [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
 - [ ] commit and push changes to bcbio
 - [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
