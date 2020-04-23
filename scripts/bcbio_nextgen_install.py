@@ -115,10 +115,8 @@ def install_mamba(anaconda, args):
 def install_conda_build(anaconda, args):
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     bindir = os.path.join(anaconda_dir, "bin")
-    mamba = os.path.join(bindir, "mamba")
-    subprocess.check_call(
-        [anaconda["mamba"], "install", "--yes"] +
-        _get_conda_channels(anaconda["conda"]) + ["conda-build"])
+    subprocess.check_call([anaconda["mamba"], "install", "--yes"] +
+                          _get_conda_channels(anaconda["conda"]) + ["conda-build"])
 
 
 def install_conda_pkgs(anaconda, args):
