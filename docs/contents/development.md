@@ -84,6 +84,11 @@ bcbio_python setup.py install
 ```
 One tricky part that we don't yet know how to work around is that pip and standard `setup.py install` have different ideas about how to write Python eggs. `setup.py install` will create an isolated python egg directory like `bcbio_nextgen-1.1.5-py3.6.egg`, while pip creates an egg pointing to a top level `bcbio` directory. Where this gets tricky is that the top level `bcbio` directory takes precedence. The best way to work around this problem is to manually remove the current pip installed bcbio-nextgen code (`rm -rf /path/to/anaconda/lib/python3.6/site-packages/bcbio*`) before managing it manually with `bcbio_python setup.py install`. We'd welcome tips about ways to force consistent installation across methods.
 
+#### Installing development tools
+```shell
+conda install --file requirements-dev.txt
+```
+
 ### Documentation
 
 To build this documentation locally and see how it looks like you can do so by installing the dependencies:
