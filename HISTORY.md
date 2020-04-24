@@ -7,6 +7,7 @@
 - Add consensus peak counting using featureCounts.
 - Skip using autosomal-reference when calling ataqv for mouse/human, as this has a problem with ataqv 
   (see https://github.com/ParkerLab/ataqv/issues/10) for discussion and followup.
+- Add pre-generated ataqv HTML report to upload directory.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.
