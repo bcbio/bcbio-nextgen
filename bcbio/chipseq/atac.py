@@ -214,7 +214,12 @@ def create_ataqv_report(samples):
     reportdir = os.path.join(dd.get_work_dir(data), "qc", "ataqv")
     sentinel = os.path.join(reportdir, "index.html")
     if utils.file_exists(sentinel):
-        return samples
+        ataqv_output = {"base": sentinel, "secondary": get_ataqv_report_files(reportdir)}
+        new_data = []
+        for data in dd.sample_data_iterator(samples):
+            data = tz.assoc_in(data, ["ataqv_report"], ataqv_output)
+            new_data.append(data)
+        return dd.get_samples_from_datalist(new_data)
     mkarv = config_utils.get_program("mkarv", dd.get_config(data))
     ataqv_files = []
     for data in dd.sample_data_iterator(samples):
@@ -229,4 +234,18 @@ def create_ataqv_report(samples):
         cmd = f"{mkarv} {txreportdir} {ataqv_json_file_string}"
         message = f"Creating ataqv report from {ataqv_json_file_string}."
         do.run(cmd, message)
-    return samples
+    new_data = []
+    ataqv_output = {"base": sentinel, "secondary": get_ataqv_report_files(reportdir)}
+    for data in dd.sample_data_iterator(samples):
+        data = tz.assoc_in(data, ["ataqv_report"], ataqv_output)
+        new_data.append(data)
+    return dd.get_samples_from_datalist(new_data)
+
+def get_ataqv_report_files(reportdir):
+    files = []
+    for r, d, f in os.walk(reportdir):
+        for file in f:
+            f = os.path.join(r, file)
+            if utils.file_exists(f):
+                files.append(f)
+    return files

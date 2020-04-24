@@ -760,6 +760,10 @@ def _get_files_project(sample, upload_config):
     if multiqc:
         out.extend(_flatten_file_with_secondary(multiqc, "multiqc"))
 
+    ataqv = tz.get_in(["ataqv_report"], sample)
+    if ataqv:
+        out.extend(_flatten_file_with_secondary(ataqv, "ataqv"))
+
     if sample.get("seqcluster", {}):
         out.append({"path": sample["seqcluster"].get("out_dir"),
                     "type": "directory", "ext": "seqcluster"})
