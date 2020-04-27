@@ -79,7 +79,7 @@ def chipseq_count(data):
         if method == "atac":
             data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
         elif method == "chip":
-            data = tz.assoc_in(data, ("peak_counts"), count)
+            data = tz.assoc_in(data, ("peak_counts"), count_file)
         return [[data]]
     featureCounts = config_utils.get_program("featureCounts", dd.get_config(data))
     paired_flag = _paired_flag(in_bam)
@@ -101,7 +101,7 @@ def chipseq_count(data):
     if method == "atac":
         data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
     elif method == "chip":
-        data = tz.assoc_in(data, ("peak_counts"), count)
+        data = tz.assoc_in(data, ("peak_counts"), count_file)
     return [[data]]
 
 def _change_sample_name(in_file, sample_name, data=None):
