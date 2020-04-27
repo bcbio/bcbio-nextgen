@@ -45,8 +45,9 @@ If you are looking to quickly try out bcbio-nextgen on your personal machine bef
 * Install [Git](https://git-scm.com/download/mac), [VirtualBox](https://download.virtualbox.org/virtualbox/6.1.6/VirtualBox-6.1.6-137129-OSX.dmg), and [Vagrant](https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg)
 * Download bcbio-nextgen and provision Vagrant VM:
     ```shell
+    
     git clone git@github.com:bcbio/bcbio-nextgen.git
-    cd bcbio-nextgen
+    cd bcbio-nextgen/scripts/vm
     vagrant up
     ```
 * Install bcbio-nextgen (this should take about 30 minutes):
