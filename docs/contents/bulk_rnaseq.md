@@ -93,8 +93,6 @@ bcbio_nextgen.py ../config/seqc.yaml -n 8
 
 This will run a full scale RNAseq experiment using STAR as the aligner and will take a long time to finish on a single machine. At the end it will output counts, Cufflinks quantitation and a set of QC results about each lane. If you have a cluster you can [parallelize it](parallel) to speed it up considerably.
 
-A nice looking standalone [report](https://rawgit.com/roryk/bcbio.rnaseq/master/docs/qc-summary.html) of the bcbio-nextgen run can be generated using [bcbio.rnaseq](https://github.com/roryk/bcbio.rnaseq). Check that repository for details.
-
 ## Parameters
 
 * `transcript_assembler` If set, will assemble novel genes and transcripts and merge the results into the known annotation. Can have multiple values set in a list. Supports ['cufflinks', 'stringtie'].
