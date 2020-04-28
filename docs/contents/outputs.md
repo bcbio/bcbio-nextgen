@@ -9,7 +9,9 @@ The output directory contains sample specific output files labeled by sample nam
 Project directory:
 * `project-summary.yaml` -- Top level YAML format summary file with statistics on read alignments and duplications as well as analysis specific metrics.
 * `programs.txt` -- Program versions for bcbio-nextgen and software run in the pipeline. This enables reproduction of analyses.
-* `multiqc` run [MultiQC](https://multiqc.info/) to gather all QC metrics from different tools, such as, cutadapt, featureCounts, samtools, STAR .. into an unique HTML report.
+* `multiqc` -- [MultiQC](https://multiqc.info/) report. multiqc_report.html combines quality metrics from multiple tools (listed in multiqc_config.yaml).
+  - General statistics/Dup - % of duplicates among mapped reads, calculated by https://github.com/bcbio/bcbio-nextgen/blob/69bc24d703d3a0166caabf833ddd9e514ff1d445/bcbio/qc/qualimap.py#L219
+  - % Dups - duplication statistics from [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). It uses first 200k reads to generate % DUP, not a good proxy for RNA-seq data (https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/3%20Analysis%20Modules/8%20Duplicate%20Sequences.html)
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
