@@ -86,8 +86,6 @@ bcbio_nextgen.py ../config/example_dge.yaml -n 1
 
 ## Output
 
-### 3' DGE
-
 Project directory:
 ```
 ├── bcbio-nextgen-commands.log -- commands run by bcbio
