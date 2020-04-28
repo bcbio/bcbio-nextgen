@@ -11,7 +11,8 @@ Project directory:
 * `programs.txt` -- Program versions for bcbio-nextgen and software run in the pipeline. This enables reproduction of analyses.
 * `multiqc` -- [MultiQC](https://multiqc.info/) report. multiqc_report.html combines quality metrics from multiple tools (listed in multiqc_config.yaml).
   - General statistics/Dup - % of duplicates among mapped reads, calculated by [bcbio.qc.qualimap.py](https://github.com/bcbio/bcbio-nextgen/blob/69bc24d703d3a0166caabf833ddd9e514ff1d445/bcbio/qc/qualimap.py#L219)
-  - % Dups - duplication statistics from [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). It uses first 200k reads to generate % DUP, not a good proxy for RNA-seq data, [read more in fastqc docs](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/3%20Analysis%20Modules/8%20Duplicate%20Sequences.html)
+  - General statistics/% Dups - duplication statistics from [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). It uses first 200k reads to generate % DUP, not a good proxy for RNA-seq data, [read more in fastqc docs](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/3%20Analysis%20Modules/8%20Duplicate%20Sequences.html)
+  - Fastqc/Sequence counts/duplicates - same as General statistics/%Dups
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
