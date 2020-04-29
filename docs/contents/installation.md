@@ -20,8 +20,8 @@ The installation is highly customizable, and you can install additional software
 * `--nodata` Do not install genome data.
 
 The machine will need to have some basic requirements for installing and running bcbio:
-* Python 2.7, Python 3.x, or Python 2.6 plus the argparse dependency.
-* Basic system setup for unpacking files: tar, gzip, unzip, bzip2, xz-utils.
+* Python 2.7 or Python 3.x
+* Basic system setup for unpacking files: tar, gzip, unzip, bzip2, xz-utils
 * The git version control system (<https://git-scm.com/>)
 * wget for file retrieval (<https://www.gnu.org/software/wget/>)
 
@@ -45,9 +45,8 @@ If you are looking to quickly try out bcbio-nextgen on your personal machine bef
 * Install [Git](https://git-scm.com/download/mac), [VirtualBox](https://download.virtualbox.org/virtualbox/6.1.6/VirtualBox-6.1.6-137129-OSX.dmg), and [Vagrant](https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg)
 * Download bcbio-nextgen and provision Vagrant VM:
     ```shell
-    
     git clone git@github.com:bcbio/bcbio-nextgen.git
-    cd bcbio-nextgen/scripts/vm
+    cd bcbio-nextgen
     vagrant up
     ```
 * Install bcbio-nextgen (this should take about 30 minutes):
