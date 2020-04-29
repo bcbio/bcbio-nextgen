@@ -190,12 +190,15 @@ def shift_ATAC(data):
         return data
 
     unsorted_bam = os.path.splitext(out_file)[0] + ".unsorted.bam"
+    # shifting removes all reads if the BAM file is not paired
+    shiftflag = "--ATACshift" if bam.is_paired(work_bam) else ""
     if not utils.file_exists(out_file):
         with file_transaction(out_file) as tx_out_file, \
             file_transaction(log_file) as tx_log_file:
             tx_unsorted_file = os.path.splitext(tx_out_file)[0] + ".tmp.bam"
             cmd = (
-                f"{sieve} --verbose --bam {work_bam} --outFile {tx_unsorted_file} --ATACshift "
+                f"{sieve} --verbose --bam {work_bam} --outFile {tx_unsorted_file} "
+                f"{shiftflag} "
                 f"--numberOfProcessors {num_cores} --maxFragmentLength 0 "
                 f"--minFragmentLength 0 "
                 f"--minMappingQuality 10 "
