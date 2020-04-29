@@ -13,6 +13,8 @@ Project directory:
   - General statistics/Dup - % of duplicates among mapped reads, calculated by [bcbio.qc.qualimap.py](https://github.com/bcbio/bcbio-nextgen/blob/69bc24d703d3a0166caabf833ddd9e514ff1d445/bcbio/qc/qualimap.py#L219)
   - General statistics/% Dups - duplication statistics from [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). It uses first 200k reads to generate % DUP, not a good proxy for RNA-seq data, [read more in fastqc docs](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/3%20Analysis%20Modules/8%20Duplicate%20Sequences.html)
   - Fastqc/Sequence counts/duplicates - same as General statistics/%Dups
+  - General statistics/ontarget_pct = 100.0 * ontarget / mapped_unique, see [code](https://github.com/bcbio/bcbio-nextgen/blob/a3473775db06540c10b5f20ddc2043b8cc99d1f8/bcbio/qc/coverage.py#L63)
+  - General statistics/Usable_pct = 100.0 * ontarget / total_read, so ontarget_pct > usable_pct because mapped_unique < total_reads
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
