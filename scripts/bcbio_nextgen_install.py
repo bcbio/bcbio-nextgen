@@ -21,7 +21,6 @@ try:
 except ImportError:
     import urllib.request as urllib_request
 
-CONDA_CHANNELS = ['-c', 'bioconda', '-c', 'conda-forge']
 REMOTES = {
     "requirements":
         "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
@@ -43,9 +42,7 @@ def main(args, sys_argv):
         print("Installing mamba")
         anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
-        subprocess.check_call(
-            [anaconda["mamba"], "install", "--yes"] + CONDA_CHANNELS + ["conda-build"]
-        )
+        subprocess.check_call([anaconda["mamba"], "install", "--yes", "conda-build"])
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
@@ -85,7 +82,7 @@ def install_mamba(anaconda, args):
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     bindir = os.path.join(anaconda_dir, "bin")
     mamba = os.path.join(bindir, "mamba")
-    subprocess.check_call([anaconda["conda"], "install", "--yes"] + CONDA_CHANNELS + ["mamba"])
+    subprocess.check_call([anaconda["conda"], "install", "--yes", "mamba"])
     anaconda["mamba"] = mamba
     return anaconda
 
@@ -105,10 +102,10 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
         subprocess.check_call([mamba_bin, "install", "--yes", "nomkl"], env=env)
-    subprocess.check_call([mamba_bin, "install", "--yes"] + CONDA_CHANNELS +
-                          ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
-    subprocess.check_call([conda_bin, "install", "--yes"] + CONDA_CHANNELS +
-                          ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
+    subprocess.check_call([mamba_bin, "install", "--yes", "--only-deps", "bcbio-nextgen",
+                           TARGETPY], env=env)
+    subprocess.check_call([conda_bin, "install", "--yes",
+                           "--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 
@@ -135,6 +132,10 @@ def install_anaconda_python(args):
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", "--progress=dot:mega", "--no-check-certificate", url])
         subprocess.check_call(['bash', os.path.basename(url), '-b', '-p', anaconda_dir])
+        subprocess.check_call([conda, 'config', '--add', 'channels', 'conda-forge',
+                               '--file', os.path.join(anaconda_dir, '.condarc')])
+        subprocess.check_call([conda, 'config', '--add', 'channels', 'bioconda',
+                               '--file', os.path.join(anaconda_dir, '.condarc')])
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}

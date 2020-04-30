@@ -30,7 +30,6 @@ from bcbio.variation import effects
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 
-CONDA_CHANNELS = ['-c', 'bioconda', '-c', 'conda-forge']
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
@@ -232,9 +231,7 @@ def _check_for_conda_problems():
     lib_dir = os.path.join(os.path.dirname(conda_bin), os.pardir, "lib")
     for l in ["libgomp.so.1", "libquadmath.so"]:
         if not os.path.exists(os.path.join(lib_dir, l)):
-            subprocess.check_call(
-                [conda_bin, "install", "-f", "--yes"] + CONDA_CHANNELS + ["libgcc-ng"]
-            )
+            subprocess.check_call([conda_bin, "install", "-f", "--yes", "libgcc-ng"])
 
 
 def _update_bcbiovm():
@@ -242,7 +239,7 @@ def _update_bcbiovm():
     print("## CWL support with bcbio-vm")
     python_env = "python=3.6"
     conda_bin, env_name = _add_environment("bcbiovm", python_env)
-    base_cmd = [conda_bin, "install", "--yes", "--name", env_name] + CONDA_CHANNELS
+    base_cmd = [conda_bin, "install", "--yes", "--name", env_name]
     subprocess.check_call(base_cmd + [python_env, "nomkl", "bcbio-nextgen"])
     extra_uptodate = ["cromwell"]
     subprocess.check_call(base_cmd + [python_env, "bcbio-nextgen-vm"] + extra_uptodate)
@@ -275,8 +272,7 @@ def _update_conda_packages():
         os.remove(req_file)
     subprocess.check_call(["wget", "-O", req_file, "--no-check-certificate",
                            REMOTES["requirements"]])
-    subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + CONDA_CHANNELS +
-                          ["--file", req_file])
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes", "--file", req_file])
     if os.path.exists(req_file):
         os.remove(req_file)
     return os.path.dirname(os.path.dirname(conda_bin))
@@ -295,8 +291,8 @@ def _update_conda_latest():
     bcbio_version = version.__version__
     if LooseVersion(bcbio_version) < LooseVersion(conda_version):
         print(f"Installing bcbio {conda_version} from bioconda.")
-        subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + CONDA_CHANNELS +
-                              [f"bcbio-nextgen>={conda_version}"])
+        subprocess.check_call([conda_bin, "install", "--quiet", "--yes",
+                               f"bcbio-nextgen>={conda_version}"])
     else:
         print(f"bcbio version {bcbio_version} is newer than the conda version {conda_version}, "
               f"skipping upgrade from conda")
@@ -307,8 +303,8 @@ def _update_conda_devel():
     """Update to the latest development conda package"""
     conda_bin = _get_conda_bin()
     assert conda_bin, "Could not find anaconda distribution for upgrading bcbio"
-    subprocess.check_call([conda_bin, "install", "--quiet", "--yes"] + CONDA_CHANNELS +
-                           ["bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")])
+    subprocess.check_call([conda_bin, "install", "--quiet", "--yes",
+                           "bcbio-nextgen>=%s" % version.__version__.replace("a0", "a")])
     return os.path.dirname(os.path.dirname(conda_bin))
 
 
