@@ -397,11 +397,11 @@ Configuration options for UMIs:
 * `umi_type` The UMI/cellular barcode scheme used for your data. For variant analysis with UMI based consensus calling, supports either `fastq_name` with UMIs in read names or the path to a fastq file with UMIs for each aligned read.
 * `correct_umis: [path/to/whitelist_umi.txt]`. For a restricted set of UMIs specify a text file (one UMI per line). UMIs will be corrected with <http://fulcrumgenomics.github.io/fgbio/tools/latest/CorrectUmis.html>
 
-You can adjust the [fgbio default options](https://github.com/bcbio/bcbio-nextgen/blob/8a76c9e546cb79621707082fd763bd643e0e9652/bcbio/ngsalign/postalign.py#L208) by adjusting [resources](#resources). The most common change is modifying the minimum number of reads as input to consensus sequences. This default to 1 to avoid losing reads but you can set to larger values for high depth panels:
+You can adjust the [fgbio default options](https://github.com/bcbio/bcbio-nextgen/blob/8a76c9e546cb79621707082fd763bd643e0e9652/bcbio/ngsalign/postalign.py#L208) by adjusting [resources](#resources). The most common change is modifying the minimum number of reads as input to consensus sequences. This default to 1 to avoid losing reads, 3 is recommended for high depth panels:
 ```yaml
 resources:
   fgbio:
-    options: [--min-reads, 2]
+    options: [--min-reads, 3]
 ```
 
 #### Fast RNA-seq
