@@ -42,7 +42,7 @@ def main(args, sys_argv):
         print("Installing mamba")
         anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
-        install_conda_build(anaconda)
+        subprocess.check_call([anaconda["mamba"], "install", "--yes", "conda-build"])
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
@@ -78,43 +78,13 @@ def bootstrap_bcbionextgen(anaconda, args):
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
 
-def _get_conda_channels(conda_bin):
-    """Retrieve default conda channels, checking if they are pre-specified in config.
-
-    This allows users to override defaults with specific mirrors in their .condarc
-    """
-    channels = ["bioconda", "conda-forge"]
-    out = []
-    try:
-        import yaml
-        config = yaml.safe_load(subprocess.check_output([conda_bin, "config", "--show"]))
-    except ImportError:
-        config = {}
-    for c in channels:
-        present = False
-        for orig_c in config.get("channels") or []:
-            if orig_c.endswith((c, "%s/" % c)):
-                present = True
-                break
-        if not present:
-            out += ["-c", c]
-    return out
-
-
 def install_mamba(anaconda, args):
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     bindir = os.path.join(anaconda_dir, "bin")
     mamba = os.path.join(bindir, "mamba")
-    subprocess.check_call(
-        [anaconda["conda"], "install", "--yes"] +
-        _get_conda_channels(anaconda["conda"]) + ["mamba"])
+    subprocess.check_call([anaconda["conda"], "install", "--yes", "mamba"])
     anaconda["mamba"] = mamba
     return anaconda
-
-
-def install_conda_build(anaconda):
-    subprocess.check_call([anaconda["mamba"], "install", "--yes"] +
-                          _get_conda_channels(anaconda["conda"]) + ["conda-build"])
 
 
 def install_conda_pkgs(anaconda, args):
@@ -132,11 +102,10 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
         subprocess.check_call([mamba_bin, "install", "--yes", "nomkl"], env=env)
-    channels = _get_conda_channels(conda_bin)
-    subprocess.check_call([mamba_bin, "install", "--yes"] + channels +
-                          ["--only-deps", "bcbio-nextgen", TARGETPY], env=env)
-    subprocess.check_call([conda_bin, "install", "--yes"] + channels +
-                          ["--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
+    subprocess.check_call([mamba_bin, "install", "--yes", "--only-deps", "bcbio-nextgen",
+                           TARGETPY], env=env)
+    subprocess.check_call([conda_bin, "install", "--yes",
+                           "--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 
@@ -162,8 +131,11 @@ def install_anaconda_python(args):
         url = REMOTES["anaconda"] % ("MacOSX" if dist.lower() == "macosx" else "Linux")
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(["wget", "--progress=dot:mega", "--no-check-certificate", url])
-        subprocess.check_call("bash %s -b -p %s" %
-                              (os.path.basename(url), anaconda_dir), shell=True)
+        subprocess.check_call(['bash', os.path.basename(url), '-b', '-p', anaconda_dir])
+        subprocess.check_call([conda, 'config', '--add', 'channels', 'conda-forge',
+                               '--file', os.path.join(anaconda_dir, '.condarc')])
+        subprocess.check_call([conda, 'config', '--add', 'channels', 'bioconda',
+                               '--file', os.path.join(anaconda_dir, '.condarc')])
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
             "dir": anaconda_dir}

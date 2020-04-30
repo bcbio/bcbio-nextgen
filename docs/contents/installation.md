@@ -19,6 +19,8 @@ The installation is highly customizable, and you can install additional software
     ```
 * `--nodata` Do not install genome data.
 
+To use custom mirrors for `conda-forge` and `bioconda` channels used during bcbio installation, set appropriate [channel alias](https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#set-a-channel-alias-channel-alias) in your `.condarc` configuration file.
+
 The machine will need to have some basic requirements for installing and running bcbio:
 * Python 2.7 or Python 3.x
 * Basic system setup for unpacking files: tar, gzip, unzip, bzip2, xz-utils
