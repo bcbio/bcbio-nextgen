@@ -1,5 +1,7 @@
 # Variant calling using bulk RNA-seq data
 
+**2020-04-30: gatk4 and gatk3 are temporarily not available in RNA-seq variant calling in bcbio, use vardict instead**, see [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).
+
 ## Workflow
 
 This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data of RNA-Seq of GM12878:
