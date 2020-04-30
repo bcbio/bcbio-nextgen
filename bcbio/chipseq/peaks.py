@@ -245,9 +245,15 @@ def call_consensus(samples):
                     peakfiles.append(fn)
                     break
         elif dd.get_chip_method(data) == "atac":
-            for fn in tz.get_in(("peaks_files", "NF", "macs2") , data, []):
-                if "narrowPeak" in fn:
-                    peakfiles.append(fn)
+            if bam.is_paired(dd.get_work_bam(data)):
+                for fn in tz.get_in(("peaks_files", "NF", "macs2") , data, []):
+                    if "narrowPeak" in fn:
+                        peakfiles.append(fn)
+            else:
+                logger.info(f"Using peaks from full fraction since {dd.get_work_bam(data)} is single-ended.")
+                for fn in tz.get_in(("peaks_files", "full", "macs2") , data, []):
+                    if "narrowPeak" in fn:
+                        peakfiles.append(fn)
     consensusfile = os.path.join(consensusdir, "consensus.bed")
     if not peakfiles:
         logger.info("No suitable peak files found, skipping consensus peak calling.")
@@ -324,7 +330,12 @@ def create_peaktable(samples):
             peakcounts.append(tz.get_in(("peak_counts"), data))
     elif dd.get_chip_method(data) == "atac":
         for data in dd.sample_data_iterator(samples):
-            peakcounts.append(tz.get_in(("peak_counts", "NF"), data))
+            if bam.is_paired(dd.get_work_bam(data)):
+                peakcounts.append(tz.get_in(("peak_counts", "NF"), data))
+            else:
+                logger.info(f"Creating peak table from full BAM file because "
+                            f"{dd.get_work_bam(data)} is single-ended.")
+                peakcounts.append(tz.get_in(("peak_counts", "full"), data))
     combined_peaks = count.combine_count_files(peakcounts, out_file, ext=".counts")
     new_data = []
     for data in dd.sample_data_iterator(samples):

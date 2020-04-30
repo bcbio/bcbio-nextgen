@@ -30,6 +30,9 @@ def calculate_complexity_metrics(work_bam, data):
     utils.safe_makedir(metrics_dir)
     metrics_file = os.path.join(metrics_dir,
                                 f"{dd.get_sample_name(data)}-atac-metrics.csv")
+    # complexity metrics only make sense for paired-end reads
+    if not bam.is_paired(work_bam):
+        return data
     if utils.file_exists(metrics_file):
         data = tz.assoc_in(data, ['atac', 'complexity_metrics_file'], metrics_file)
         return data
@@ -99,6 +102,11 @@ def split_ATAC(data, bam_file=None):
     bam_file = bam_file if bam_file else dd.get_work_bam(data)
     out_stem = os.path.splitext(bam_file)[0]
     split_files = {}
+    # we can only split these fractions from paired runs
+    if not bam.is_paired(bam_file):
+        split_files["full"] = bam_file
+        data = tz.assoc_in(data, ['atac', 'align'], split_files)
+        return data
     for arange in ATACRanges.values():
         out_file = f"{out_stem}-{arange.label}.bam"
         if not utils.file_exists(out_file):

@@ -64,7 +64,10 @@ def chipseq_count(data):
     if method == "chip":
         in_bam = dd.get_work_bam(data)
     elif method == "atac":
-        in_bam = tz.get_in(("atac", "align", "NF"), data)
+        if bam.is_paired(dd.get_work_bam(data)):
+            in_bam = tz.get_in(("atac", "align", "NF"), data)
+        else:
+            in_bam = tz.get_in(("atac", "align", "full"), data)
     out_dir = os.path.join(dd.get_work_dir(data), "align", dd.get_sample_name(data))
     sorted_bam = bam.sort(in_bam, dd.get_config(data),
                           order="queryname", out_dir=safe_makedir(out_dir))
@@ -77,7 +80,10 @@ def chipseq_count(data):
     summary_file = os.path.join(out_dir, dd.get_sample_name(data)) + ".counts.summary"
     if file_exists(count_file) and _is_fixed_count_file(count_file):
         if method == "atac":
-            data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
+            if bam.is_paired(dd.get_work_bam(data)):
+                data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
+            else:
+                data = tz.assoc_in(data, ("peak_counts", "full"), count_file)
         elif method == "chip":
             data = tz.assoc_in(data, ("peak_counts"), count_file)
         return [[data]]
@@ -99,7 +105,10 @@ def chipseq_count(data):
     shutil.move(fixed_count_file, count_file)
     shutil.move(fixed_summary_file, summary_file)
     if method == "atac":
-        data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
+        if bam.is_paired(dd.get_work_bam(data)):
+            data = tz.assoc_in(data, ("peak_counts", "NF"), count_file)
+        else:
+            data = tz.assoc_in(data, ("peak_counts", "full"), count_file)
     elif method == "chip":
         data = tz.assoc_in(data, ("peak_counts"), count_file)
     return [[data]]
