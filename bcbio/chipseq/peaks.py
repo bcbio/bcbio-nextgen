@@ -16,8 +16,8 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction
-from bcbio.chipseq import atac
 from bcbio.rnaseq import count
+from bcbio.chipseq.atac import ATACRanges
 
 def get_callers():
     """Get functions related to each caller"""
@@ -63,7 +63,7 @@ def calling(data):
         if greylistdir:
             data["greylist"] = greylistdir
     if method == "atac":
-        fractions = list(atac.ATACRanges.keys()) + ["full"]
+        fractions = list(ATACRanges.keys()) + ["full"]
         for fraction in fractions:
             MIN_READS_TO_CALL = 1000
             chip_bam = tz.get_in(("atac", "align", fraction), data)
@@ -197,13 +197,13 @@ def consensus(peakfiles, consensusfile, data, pad=250):
             slopcommand = f"{bedops} --range {pad} -u {' '.join(peakfiles)} > {tmpbed}"
             do.run(slopcommand, message)
             iteration = 0
-            solutions = []
             while os.path.getsize(tmpbed):
                 iteration = iteration + 1
                 iterationbed = NamedTemporaryFile(suffix=".bed", delete=False).name
                 with utils.tmpfile(suffix="bed") as mergedbed, \
                      utils.tmpfile(suffix="bed") as intermediatebed, \
-                     utils.tmpfile(suffix="bed") as leftoverbed:
+                     utils.tmpfile(suffix="bed") as leftoverbed, \
+                     utils.tmpfile(suffix="bed") as tmpsolutionbed:
                     mergecmd = (f"{bedops} -m --range 0:-1 {tmpbed} | "
                                 f"{bedops} -u --range 0:1 - > "
                                 f"{mergedbed}")
@@ -219,10 +219,14 @@ def consensus(peakfiles, consensusfile, data, pad=250):
                     anyleftcmd = (f"{bedops} -n 1 {tmpbed} {iterationbed} > {intermediatebed}")
                     do.run(anyleftcmd, message)
                     shutil.move(intermediatebed, tmpbed)
-                    solutions.append(iterationbed)
-        message = f"Creating final consensus peak file: {consensusfile}."
-        consensuscmd = (f"{bedops} -u {' '.join(solutions)} > {tx_consensus_file}")
-        do.run(consensuscmd, message)
+                    nitems = len(open(iterationbed).readlines())
+                    message = f"Adding {nitems} peaks to consensus peaks."
+                    if utils.file_exists(tx_consensus_file):
+                        consensuscmd = (f"{bedops} -u {tx_consensus_file} {iterationbed} > {tmpsolutionbed}")
+                        do.run(consensuscmd, message)
+                        shutil.move(tmpsolutionbed, tx_consensus_file)
+                    else:
+                        shutil.move(iterationbed, tx_consensus_file)
     return consensusfile
 
 def call_consensus(samples):
