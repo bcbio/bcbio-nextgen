@@ -30,9 +30,6 @@ def calculate_complexity_metrics(work_bam, data):
     utils.safe_makedir(metrics_dir)
     metrics_file = os.path.join(metrics_dir,
                                 f"{dd.get_sample_name(data)}-atac-metrics.csv")
-    # complexity metrics only make sense for paired-end reads
-    if not bam.is_paired(work_bam):
-        return data
     if utils.file_exists(metrics_file):
         data = tz.assoc_in(data, ['atac', 'complexity_metrics_file'], metrics_file)
         return data
@@ -41,13 +38,20 @@ def calculate_complexity_metrics(work_bam, data):
     with file_transaction(metrics_file) as tx_metrics_file:
         with open(tx_metrics_file, "w") as out_handle:
             out_handle.write("mt,m0,m1,m2\n")
-        cmd = (f"{bedtools} bamtobed -bedpe -i {work_bam} | "
-               "awk 'BEGIN{OFS=\"\\t\"}{print $1,$2,$4,$6,$9,$10}' | "
-               "sort | "
-               "uniq -c | "
-               "awk 'BEGIN{mt=0;m0=0;m1=0;m2=0}($1==1){m1=m1+1} "
-               "($1==2){m2=m2+1}{m0=m0+1}{mt=mt+$1}END{printf \"%d,%d,%d,%d\\n\", mt,m0,m1,m2}' >> "
-               f"{tx_metrics_file}")
+        if bam.is_paired(work_bam):
+            cmd = (f"{bedtools} bamtobed -bedpe -i {work_bam} | "
+                "awk 'BEGIN{OFS=\"\\t\"}{print $1,$2,$4,$6,$9,$10}' | "
+                "sort | "
+                "uniq -c | "
+                "awk 'BEGIN{mt=0;m0=0;m1=0;m2=0}($1==1){m1=m1+1} ($1==2){m2=m2+1}{m0=m0+1}{mt=mt+$1} END{printf \"%d,%d,%d,%d\\n\", mt,m0,m1,m2}' >> "
+                f"{tx_metrics_file}")
+        else:
+            cmd = (f"{bedtools} bamtobed -i {work_bam} | "
+                   "awk 'BEGIN{OFS=\"\\t\"}{print $1,$2,$3,$6}' | "
+                   "sort | "
+                   "uniq -c | "
+                   "awk 'BEGIN{mt=0;m0=0;m1=0;m2=0} ($1==1){m1=m1+1} ($1==2){m2=m2+1}{m0=m0+1}{mt=mt+$1} END{printf \"%d,%d,%d,%d\\n\", mt,m0,m1,m2}' >> "
+                   f"{tx_metrics_file}")
         message = f"Calculating ATAC-seq complexity metrics on {work_bam}, saving as {metrics_file}."
         do.run(cmd, message)
     data = tz.assoc_in(data, ['atac', 'complexity_metrics_file'], metrics_file)
