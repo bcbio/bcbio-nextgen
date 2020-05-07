@@ -16,6 +16,7 @@ Project directory:
   - General statistics/ontarget_pct = 100.0 * ontarget / mapped_unique, see [code](https://github.com/bcbio/bcbio-nextgen/blob/a3473775db06540c10b5f20ddc2043b8cc99d1f8/bcbio/qc/coverage.py#L63)
   - `General statistics/Usable_pct` = 100.0 * ontarget / total_read
   - `ontarget_pct` > `usable_pct` for WES without UMI because `mapped_unique` < `total_reads`, `ontarget_pct` ~ `usable_pct` for projects with UMI
+  - `Mosdepth median coverage` < `Qualimap median coverage`. For example, mosdepth = 133, qualimap = 169. Mosdepth calculates the median over the average coverages of contigs (chromosomes), see `mosdepth/Average coverage per contig` figure. Most of the chromosomes have coverage 150-200X, but chromosomes are very few and additional chromosomes have coverage 20-30X, so the median is lowered by that fact. qualimap goes for a median over all exonic regions, see `Qualimap/Coverage Histogram` figure. Exonic regions are many and the median is higher. Use qualimap median coverage as a better estimate.
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
