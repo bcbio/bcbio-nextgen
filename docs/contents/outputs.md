@@ -18,11 +18,11 @@ The output directory contains sample specific output files labeled by sample nam
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
+#### Why do I have so many coverage metrics? Which one should I use?
+
 #### Interpretation of ontarget_pct vs usable_pct
 Usually, `ontarget_pct` > `usable_pct` for WES without UMI because `mapped_unique < total_reads`, `ontarget_pct ~ usable_pct` for projects with UMI, because UMI consensus reads are mapped by definition.
 Sometimes `ontarget_pct` < `usable_pct`, the difference is <=0.2% for UMI projects, because `total_reads` is calculated by samtools, and `mapped_unique` by [readstats.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/bam/readstats.py#L37), which leads to a slight difference in `mapped_unique > total`.
-
-#### Why do I have so many coverage metrics? Which one should I use?
 
 #### Interpretation of mosdepth median coverage vs qualimap median coverage
 `Mosdepth median coverage` < `Qualimap median coverage`. For example, mosdepth = 133, qualimap = 169. Mosdepth calculates the median over the average coverages of contigs (chromosomes), see `mosdepth/Average coverage per contig` figure. Most of the chromosomes have coverage 150-200X, but chromosomes are very few and additional chromosomes have coverage 20-30X, so the median is lowered by that fact. qualimap goes for a median over all exonic regions, see `Qualimap/Coverage Histogram` figure. Exonic regions are many and the median is higher. Use qualimap median coverage as a better estimate. Note that `tools_on: qualimap_full` should be used to get reliable estimates from qualimap. If you are subsetting bam for qualimap (default), use mosdepth median coverage.
