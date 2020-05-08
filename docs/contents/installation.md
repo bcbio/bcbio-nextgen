@@ -5,7 +5,7 @@
 We provide an automated script that installs third party analysis tools, required genome data and python library dependencies for running human variant and RNA-seq analysis, bundled into an isolated directory or virtual environment:
 ```shell
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-python bcbio_nextgen_install.py /usr/local/share/bcbio --tooldir=/usr/local \
+python bcbio_nextgen_install.py /usr/local/share/bcbio-nextgen --tooldir=/usr/local \
     --genomes GRCh37 --aligners bwa --aligners bowtie2
 ```
 bcbio should install cleanly on Linux systems. For Mac OSX, we suggest trying [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm) which runs bcbio on [Cloud](cloud) or isolates all the third party tools inside a Docker container. bcbio-vm is still a work in progress but not all of the dependencies bcbio uses install cleanly on OSX.
