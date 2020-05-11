@@ -31,7 +31,7 @@ wget --no-check-certificate http://s3.amazonaws.com/bcbio-nextgen/dge_userstory_
 qiaseq-upx.yaml: 
 ```yaml
 details:
-  - analysis: singlecell-rnaseq
+  - analysis: scrna-seq
     genome_build: hg38
     algorithm:
       umi_type: qiaseq-upx-96
