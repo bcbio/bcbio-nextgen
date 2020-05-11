@@ -847,12 +847,12 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": rda,
                             "type": "rda"})
         else:
-            out.append({"path": dd.get_combined_counts(sample)})
+            out.append({"path": dd.get_combined_counts(sample), "dir": "featureCounts"})
     if dd.get_tximport(sample):
         out.append({"path": dd.get_tximport(sample)["gene_tpm"], "dir": "tpm"})
         out.append({"path": dd.get_tximport(sample)["gene_counts"], "dir": "counts"})
     if dd.get_annotated_combined_counts(sample):
-        out.append({"path": dd.get_annotated_combined_counts(sample)})
+        out.append({"path": dd.get_annotated_combined_counts(sample), "dir": "featureCounts"})
     if dd.get_combined_fpkm(sample):
         out.append({"path": dd.get_combined_fpkm(sample)})
     if dd.get_combined_fpkm_isoform(sample):
