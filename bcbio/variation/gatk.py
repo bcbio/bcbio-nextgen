@@ -97,8 +97,11 @@ def _joint_calling(items):
     return jointcaller
 
 def _use_spark(num_cores, gatk_type, items, opts):
-    return ((len(items) == 1 and num_cores > 1 and gatk_type == "gatk4") or
-            "--spark-master" in opts)
+    data = items[0]
+    use_spark = False
+    if dd.get_analysis(data).lower() != "rna-seq":
+        use_spark = (len(items) == 1 and num_cores > 1 and gatk_type == "gatk4") or "--spark-master" in opts
+    return use_spark
 
 def haplotype_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
