@@ -8,8 +8,7 @@ This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data 
 [SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898). (SRR307897 is of bad quality - don't use it).
 The dataset is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is a reliable work on RNA-seq variant calling validation.
 
-GATK3.8 requires an additional installation step:
-https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2
+GATK3.8 requires an additional installation [step](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2)
 
 ### 1. Project structure
 ```
@@ -22,6 +21,11 @@ mkdir config input final work
 cd input
 wget -c -O NA12878_1.fq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR307/SRR307898/SRR307898_1.fastq.gz
 wget -c -O NA12878_2.fq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR307/SRR307898/SRR307898_2.fastq.gz
+```
+or
+```
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos1/sra-pub-run-1/SRR307898/SRR307898.3
+fastq-dump --gzip --split-files SRR307898.3 
 ```
 
 ### 3. Config file `input/NA12878.yaml`
