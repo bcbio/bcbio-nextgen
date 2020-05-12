@@ -1,6 +1,6 @@
 # Variant calling using bulk RNA-seq data
 
-**2020-04-30: gatk4 and gatk3 are temporarily not available in RNA-seq variant calling in bcbio, use vardict instead**, see [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).
+**2020-05-12: works for validation samples fails for some random samples due pybedtoolse**, see [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).
 
 ## Workflow
 
@@ -63,6 +63,9 @@ upload:
 cd work
 bcbio_nextgen.py ../config/NA12878.yaml -n 4
 ```
+## Parameters
+- `variantcaller`: gatk-haplotype or vardict. You can use just one variant caller for RNA-seq data in a bcbio project. If you want calls from two callers, run a separate project or edit variantcaller parameter and re-run, to re-use bam files.
+- `tools_off: [gatk4]`: when set, runs gatk3.8, which gives better results. 
 
 ## Validation
 
