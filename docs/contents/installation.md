@@ -121,7 +121,7 @@ We're not able to automatically install some useful tools due to licensing restr
 
 #### GATK and MuTect/MuTect2
 
-bcbio includes an installation of GATK4, which is freely available for all uses. This is the default runner for HaplotypeCaller or MuTect2. If you want to use an older version of GATK, it requires manual installation. This is freely available for academic users, but requires a [license for commercial use](https://gatk.broadinstitute.org/hc/en-us#licensing). It is not freely redistributable, so requires a manual download from the [GATK download](https://console.cloud.google.com/storage/browser/gatk-software/package-archive) site. You also need to include `tools_off: [gatk4]` in your configuration for runs: see [changing bcbio defaults](contents/configuration:changing%20bcbio%20defaults).
+bcbio includes an installation of GATK4, which is freely available for all uses. This is the default runner for HaplotypeCaller or MuTect2. If you want to use an older version of GATK, it requires manual installation. This is freely available for academic users, but requires a [license for commercial use](https://gatk.broadinstitute.org/hc/en-us#licensing). It is not freely redistributable, so requires a manual download from the [GATK download](https://console.cloud.google.com/storage/browser/gatk-software/package-archive) site, direct [link](https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2). You also need to include `tools_off: [gatk4]` in your configuration for runs: see [changing bcbio defaults](contents/configuration:changing%20bcbio%20defaults).
 
 To install GATK3, register with the pre-installed gatk bioconda wrapper:
 ```shell
