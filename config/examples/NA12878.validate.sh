@@ -15,7 +15,7 @@
 export RTG_JAVA_OPTS='-Xms750m' && export RTG_MEM=9100m && \
    rtg vcfeval --threads 5 \
    -b $2 \
-   --bed-regions $2 \
+   --bed-regions $3 \
    -c $1 \
    -t $4 \
    -o rtg --vcf-score-field='GQ'
