@@ -1,14 +1,17 @@
 # Variant calling using bulk RNA-seq data
 
-**2020-05-12: works for validation samples fails for some random samples due pybedtoolse**, see [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).
+**2020-05-12: works for validation samples fails for some random samples due pybedtools [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).**
 
 ## Workflow
 
-This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data of RNA-Seq of GM12878:
-[SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898). (SRR307897 is of bad quality - don't use it).
-The dataset is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is a reliable work on RNA-seq variant calling validation.
+This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data of GM12878 cell line (blood). Using this data allows to access the precision and sensitity of RNA-seq variant calling comparing to the well studied set of calls for NA12878.
 
-GATK3.8 requires an additional installation [step](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2)
+At least 3 RNA-seq dataset exist for NA12878:
+- `SRR307897` is of bad quality - don't use it.
+- [SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898) is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is reliable work on RNA-seq variant calling validation.
+- [SRR5665260](https://www.ncbi.nlm.nih.gov/sra/?term=SRR5665260), NextSeq-500.
+
+GATK3.8 requires additional installation [step](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2)
 
 ### 1. Project structure
 ```
@@ -43,13 +46,13 @@ details:
   files:
   - /path/NA12878/input/NA12878_SRR307898_1.fq.gz
   - /path/NA12878/input/NA12878_SRR307898_2.fq.gz
-  genome_build: GRCh37
+  genome_build: hg38
   metadata:
     batch: NA12878
 fc_name: NA12878
 resources:
   default:
-    cores: 2
+    cores: 4
     jvm_opts:
     - -Xms750m
     - -Xmx7000m
@@ -58,7 +61,7 @@ upload:
   dir: ../final
 ```
 
-### 4. Run bcbio
+### 4. Run bcbio - assuming 60G/4cores machine or cluster node.
 ```
 cd work
 bcbio_nextgen.py ../config/NA12878.yaml -n 4
@@ -66,6 +69,11 @@ bcbio_nextgen.py ../config/NA12878.yaml -n 4
 ## Parameters
 - `variantcaller`: gatk-haplotype or vardict. You can use just one variant caller for RNA-seq data in a bcbio project. If you want calls from two callers, run a separate project or edit variantcaller parameter and re-run, to re-use bam files.
 - `tools_off: [gatk4]`: when set, runs gatk3.8, which gives better results. 
+- `batch` is required:
+   ```
+   metadata:
+     batch: NA12878
+   ```  
 
 ## Validation
 
@@ -75,13 +83,13 @@ Use high quality variants (PASS filters, depth>=10 reads, removing potential RNA
 ```
 bcftools view -f PASS -e "INFO/DP<10 | INFO/possible_rnaedit==1" NA12878-gatk-haplotype-annotated.vcf.gz |  bgzip -c > NA12878.pass.vcf.gz
 tabix NA12878.pass.vcf.gz
-wget https://raw.githubusercontent.com/naumenko-sa/cre/master/data/intersect.bed
+wget https://raw.githubusercontent.com/naumenko-sa/cre/master/data/intersect.hg38.bed
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878.validate.sh
 NA12878.validate.sh \
 NA12878.pass.vcf.gz \
-/path/bcbio/genomes/Hsapiens/GRCh37/validation/giab-NA12878/truth_small_variants.vcf.gz \
+/path/bcbio/genomes/Hsapiens/hg38/validation/giab-NA12878/truth_small_variants.vcf.gz \
 intersect.bed \
-/path/bcbio/genomes/Hsapiens/GRCh37/rtg/GRCh37.sdf
+/path/bcbio/genomes/Hsapiens/hg38/rtg/hg38.sdf
 ```
 
 ### Validation results, 2016-2019, GRCh37, SRR307898
@@ -130,3 +138,4 @@ intersect.bed \
 - [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185)
 - [GATK best practices for RNA-seq data variant calling](https://gatk.broadinstitute.org/hc/en-us/articles/360035531192-RNAseq-short-variant-discovery-SNPs-Indels-)
 - [Variant calling and validation from Brian Haas using CTAT and better NA12878 data](https://github.com/NCIP/ctat-mutations/wiki/Performance-Assessment)
+- [RTG vcfeval](https://cdn.rawgit.com/RealTimeGenomics/rtg-tools/master/installer/resources/tools/RTGOperationsManual/rtg_command_reference.html#vcfeval)
