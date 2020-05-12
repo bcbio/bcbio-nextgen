@@ -8,9 +8,13 @@
 # rtg manual
 # https://github.com/RealTimeGenomics/rtg-tools/blob/master/installer/resources/tools/RTGOperationsManual.pdf
 
+# how bed file is produced in bcbio
 # bedtools intersect -nonamecheck -a NA12878-sort-callable_sample.bed -b GiaB_v2_19_regions.bed > NA12878-sort-callable_sample-NA12878-wrm.bed
-
 # uses PASS variants only
+# use --vc-score-field='QUAL' for vardict
+# memory demanding 10G
+
+# same script works for hg38, use hg38 truth set, bed and SDF
 
 export RTG_JAVA_OPTS='-Xms750m' && export RTG_MEM=9100m && \
    rtg vcfeval --threads 5 \
