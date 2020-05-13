@@ -8,7 +8,7 @@ A python toolkit providing best-practice pipelines for fully automated high thro
 * [Single cell RNA-seq](contents/single_cell)
 * [Bulk RNA-seq expression](contents/bulk_rnaseq)
 * [Bulk RNA-seq variants](contents/rnaseq_variants)
-* [3' digital gene expression](contents/3prime_dge)
+* [3prime digital gene expression](contents/3prime_dge)
 * [ATAC-seq](contents/atac)
 * [Introduction](contents/about)
 * [Installation](contents/installation)
