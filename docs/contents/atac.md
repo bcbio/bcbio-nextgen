@@ -189,7 +189,7 @@ reprocessed samples from many publications with **ataqv** and posted the reports
 which is helpful to browse through to get an idea of what ranges of values you
 can expect. As you can see, they can be all over the place.
 
-#### hindbrain vs forebrain
+#### hindbrain vs forebrain QC reports
 - [MultiQC report](http://atac-userstory.s3-website.us-east-2.amazonaws.com/multiqc_report.html)
 - [ataqv report](http://atac-userstory.s3-website.us-east-2.amazonaws.com)
 
@@ -206,7 +206,7 @@ but that uses these callers under the hood, so you can just call them directly
 and skip an intermediate step if you want. Either way works. The DiffBind tutorials
 are great for understanding how to go about with your downstream analyses.
 
-#### hindbrain vs forebrain
+#### hindbrain vs forebrain differential affinity reports
 - [RMarkdown](http://atac-userstory.s3-website.us-east-2.amazonaws.com/peaks.Rmd)
 - [HTML report](http://atac-userstory.s3-website.us-east-2.amazonaws.com/peaks.html)
 - [example data](http://atac-userstory.s3-website.us-east-2.amazonaws.com/differential-affinity-example.tar.gz)
