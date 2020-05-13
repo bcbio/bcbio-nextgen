@@ -1,17 +1,16 @@
 # Variant calling using bulk RNA-seq data
 
-**2020-05-12: works for validation samples fails for some random samples due pybedtools [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).**
+**2020-05-12: works for validation samples, fails for some random samples due to pybedtools [issue](https://github.com/bcbio/bcbio-nextgen/issues/3078).**
 
 ## Workflow
+This workflow demonstrates how to call variants with GATK3.8 using bulk RNA-seq data of GM12878 cell line (blood). 
 
-This workflow demonstrates how to call variants with GATK3.8 using RNA-seq data of GM12878 cell line (blood). Using this data allows to access the precision and sensitity of RNA-seq variant calling comparing to the well studied set of calls for NA12878.
-
-At least 3 RNA-seq dataset exist for NA12878:
-- `SRR307897` is of bad quality - don't use it.
-- [SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898) is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is reliable work on RNA-seq variant calling validation.
+At least 3 RNA-seq datasets exist for NA12878:
+- `SRR307897` is of bad quality - don't use it;
+- [SRR307898](https://www.ncbi.nlm.nih.gov/sra/?term=SRR307898) is a bit old (Illumina GAII) but it was used in [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185) article, which is reliable work on RNA-seq variant calling validation;
 - [SRR5665260](https://www.ncbi.nlm.nih.gov/sra/?term=SRR5665260), NextSeq-500.
 
-GATK3.8 requires additional installation [step](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2)
+GATK3.8 requires additional installation [step](https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#gatk-and-mutect-mutect2).
 
 ### 1. Project structure
 ```
@@ -25,14 +24,14 @@ cd input
 wget -c -O NA12878_1.fq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR307/SRR307898/SRR307898_1.fastq.gz
 wget -c -O NA12878_2.fq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR307/SRR307898/SRR307898_2.fastq.gz
 ```
-or
+or (if ebi is not online)
 ```
 wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos1/sra-pub-run-1/SRR307898/SRR307898.3
 fastq-dump --gzip --split-files SRR307898.3 
 ```
 
 ### 3. Config file `input/NA12878.yaml`
-Note the use of `batch`: RNA-seq variant calling is a separate module and it uses joint calling.
+Note the use of `batch` even for a single sample.
 ```
 details:
 - algorithm:
@@ -67,8 +66,8 @@ cd work
 bcbio_nextgen.py ../config/NA12878.yaml -n 4
 ```
 ## Parameters
-- `variantcaller`: gatk-haplotype or vardict. You can use just one variant caller for RNA-seq data in a bcbio project. If you want calls from two callers, run a separate project or edit variantcaller parameter and re-run, to re-use bam files.
-- `tools_off: [gatk4]`: when set, runs gatk3.8, which gives better results. 
+- `variantcaller`: gatk-haplotype or vardict. You can use just one variant caller for RNA-seq data in a bcbio project. If you want calls from two callers, run a separate project or edit variantcaller parameter and re-run.
+- `tools_off: [gatk4]`: when set, runs gatk3.8, which gives better precision. 
 - `batch` is required:
    ```
    metadata:
@@ -79,7 +78,7 @@ bcbio_nextgen.py ../config/NA12878.yaml -n 4
 
 ### How to validate calls from bcbio
 
-Use high quality variants (PASS filters, depth>=10 reads, removing potential RNA editing events).
+Use high quality variants (PASS filters, depth>=10 reads), remove potential RNA editing events.
 ```
 bcftools view -f PASS -e "INFO/DP<10 | INFO/possible_rnaedit==1" NA12878-gatk-haplotype-annotated.vcf.gz |  bgzip -c > NA12878.pass.vcf.gz
 tabix NA12878.pass.vcf.gz
@@ -133,6 +132,21 @@ intersect.bed \
 |2020-05-12|SRR307898|INDEL|1.2.3|vardict-java,1.7.0|166  |580  |2,473 |78%|94%|2,639 |746         |
 +----------+---------+-----+-----+------------------+-----+-----+------+---+---+------+------------+
 ```
+
+## Conclusions
+- It is not surprising to see high False Negative rate FN = FN/(FN+TP) in RNA-seq variant calling, i.e. that we are not calling 83% of variants. We validate against intersect.hg38.bed, which is based on exome capture regions and is representing all protein coding genes. Only a minor fraction of genes are expressed in blood, only these genes have read coverage that makes variant calling possible.
+- Indel calling is not reliable with RNA-seq data.
+- Current recommendation is to use gatk3.8 > vardict > gatk4 for better SNP calling precision in bcbio.
+- Annotation of RNA-editing sites and removal of variants around splice junctions improved precision in bcbio, but still 
+more work is needed to achieve better precision at the level of Piskol2013 (<1% FDR).
+
+## TODO
+- update gatk3.8 validation
+- validate with SRR5665260
+- improve post GATK4 filters for better precision
+- paired DNA/RNA-seq variant calling
+- somatic variant calling with RNA-seq, see [discusion](https://github.com/bcbio/bcbio-nextgen/issues/3023)
+- track pybedtools [release](https://github.com/bcbio/bcbio-nextgen/issues/3078).
 
 ## References
 - [Piskol2013](https://www.ncbi.nlm.nih.gov/pubmed/24075185)
