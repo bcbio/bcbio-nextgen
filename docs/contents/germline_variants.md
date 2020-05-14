@@ -98,3 +98,76 @@ the automated sample configuration with one of the default templates:
 fully included in the bcbio installation.
 * [GATK HaplotypeCaller template](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml)
 --Run GATK best practices, including Base Quality Score Recalibration, realignment and HaplotypeCaller variant calling. This requires a license from Broad for commercial use. You need to manually install GATK along with bcbio using downloads from the GATK Broad site or Appistry.
+
+## Workflow3: Population calling
+
+When calling multiple samples, we recommend calling together to provide improved
+sensitivity and a fully squared off final callset. To associate samples together
+in a population add a `metadata` `batch` to the sample configuration:
+
+```yaml
+- description: Sample1
+  metadata:
+    batch: Batch1
+- description: Sample2
+  metadata:
+    batch: Batch1
+```
+Batching samples results in output VCFs and GEMINI databases containing
+all merged sample calls.
+bcbio has two methods to call samples together:
+
+* Batch or pooled calling -- This calls all samples simultaneously by feeding
+them to the variant caller. This works for smaller batch sizes (< 100 samples)
+as memory requirements become limiting in larger pools. This is the default approach
+taken when you specify a `variantcaller` in the variant calling configuration.
+
+* Joint calling -- This calls samples independently, then combines them together
+into a single callset by integrating the individual calls.
+This scales to larger population sizes by avoiding the computational bottlenecks
+of pooled calling. We recommend joint calling with HaplotypeCaller
+but also support joint calling with FreeBayes using a custom implementation.
+Specifying a `jointcaller` along with the appropriate `variantcaller` in the variant calling configuration enables this
+
+```yaml
+- description: Sample1
+  algorithm:
+    variantcaller: gatk-haplotype
+    jointcaller: gatk-haplotype-joint
+  metadata:
+    batch: Batch1
+- description: Sample2
+  algorithm:
+    variantcaller: gatk-haplotype
+    jointcaller: gatk-haplotype-joint
+  metadata:
+    batch: Batch1
+```
+
+## Workflow4: Whole genome trio (50x) - hg38
+
+This input configuration runs whole genome bwa alignment and GATK variant calling.
+It uses a father/mother/child trio from the
+[CEPH NA12878 family](https://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png):
+NA12891, NA12892, NA12878. Illumina's [Platinum genomes project](https://www.illumina.com/platinumgenomes.html) has
+50X whole genome sequencing of the three members.
+The analysis compares results against a reference NA12878 callset from NIST's
+[Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
+
+To run the analysis do:
+```shell
+mkdir NA12878-trio-eval
+cd NA12878-trio-eval
+mkdir config input work
+cd config
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+cd ../input
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+bash NA12878-trio-wgs-validate-getdata.sh
+cd ../work
+bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
+```
+This is a large whole genome analysis and meant to test both pipeline scaling
+and validation across the entire genome. It can take multiple days to run depending on available cores.
+It requires 300GB for the input files and 1.3TB for the work directory.
+Smaller examples below exercise the pipeline with less disk and computational requirements.
