@@ -73,14 +73,14 @@ This is a large whole genome analysis and meant to test both pipeline scaling an
 
 This workflow validates variants calls using WES data for NA12878 sample.
 
-## 1. Create project structure
+### 1. Create project structure
 ```shell
 mkdir validate_giab
 cd validate_giab
 mkdir config input final work
 ```
 
-## 2. Prepare input data
+### 2. Prepare input data
 ```shell
 cd input
 wget -c ftp://ftp-trace.ncbi.nih.gov/ReferenceSamples/giab/data/NA12878/Garvan_NA12878_HG001_HiSeq_Exome/NIST7035_TAAGGCGA_L001_R1_001.fastq.gz
@@ -99,14 +99,14 @@ cat *R2* > NA12878_2.fq.gz
 rm Garvan_NA12878*
 ```
 
-## 3. Convert capture region file to hg38 coordinates with [UCSC liftover](https://genome.ucsc.edu/cgi-bin/hgLiftOver).
+### 3. Convert capture region file to hg38 coordinates with [UCSC liftover](https://genome.ucsc.edu/cgi-bin/hgLiftOver).
 ```
 Successfully converted 200993 records: View Conversions
 Conversion failed on 78 records.
 ```
 Save file to `validate_giab/input/nexterarapidcapture_expandedexome_targetedregions.hg38.bed`
 
-## 4. Set up analysis parameters in `config/NA12878.yaml`:
+### 4. Set up analysis parameters in `config/NA12878.yaml`:
 ```yaml
 details:
   - files:
@@ -134,7 +134,7 @@ upload:
   dir: ../final
 ```
 
-## 5. Run the project (8cores/64G RAM)
+### 5. Run the project (8cores/64G RAM)
 ```bash
 cd validate_giab/work
 bcbio_nextgen.py ../config/NA12878.yaml -n 8
