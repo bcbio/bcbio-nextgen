@@ -8,7 +8,7 @@ included by default with most Python installations.
 ## Tuning core and memory usage
 bcbio has two ways to specify core usage, helping provide options for parallelizing different types of processes:
 * Total available cores: specified with `-n` on the commandline, this tells bcbio how many total cores to use. This applies either to a local multicore run or a distributed job.
-* Maximum cores to use for multicore processing of individual jobs. You specify this in the `resource` section of either a sample YAML file ([Sample or run specific resources](contents/configuration:sample%20or%20run%20specific%20resources)) or `bcbio_system.yaml`. Ideally you specify this in the `default` section (along with memory usage). For example, this would specify that processes using multiple cores can get up to 16 cores with 2GB of memory per core:
+* Maximum cores to use for multicore processing of individual jobs. You specify this in the `resource` section of either a sample YAML file or `bcbio_system.yaml`. Ideally you specify this in the `default` section (along with memory usage). For example, this would specify that processes using multiple cores can get up to 16 cores with 2GB of memory per core:
 ```yaml
 resources:
   default:
@@ -43,7 +43,7 @@ The `-s` flag specifies a type of scheduler to use `(lsf, sge, torque, slurm, pb
 
 The `-q` flag specifies the queue to submit jobs to.
 
-The `-n` flag defines the total number of cores to use on the cluster during processing. The framework will select the appropriate number of cores and type of cluster (single core versus multi-core) to use based on the pipeline stage (see the [Parallel](contents/internals:parallel) section in the internals documentation for more details). For multiple core steps, the number of cores to use for programs like `bwa`, `novoalign` and `gatk` comes from the [Resources](contents/configuration:resources) section of the configuration. Ensure the `cores` specification matches the physical cores available on machines in your cluster, and the pipeline will divide the total cores specified by `-n` into the appropriate number of multicore jobs to run.
+The `-n` flag defines the total number of cores to use on the cluster during processing. The framework will select the appropriate number of cores and type of cluster (single core versus multi-core) to use based on the pipeline stage (see the `Parallel` section in the internals documentation for more details). For multiple core steps, the number of cores to use for programs like `bwa`, `novoalign` and `gatk` comes from the `Resources` section of the configuration. Ensure the `cores` specification matches the physical cores available on machines in your cluster, and the pipeline will divide the total cores specified by `-n` into the appropriate number of multicore jobs to run.
 
 The pipeline default parameters assume a system with minimal time to obtain processing cores and consistent file system accessibility. These defaults allow the system to fail fast in the case of cluster issues which need diagnosis. For running on shared systems with high resource usage and potential failures due to intermittent cluster issues, there are turning parameters that increase resiliency. The `--timeout` flag specifies the numbers of minutes to wait for a cluster to start up before timing out. This defaults to 15 minutes. The `--retries` flag specify the number of times to retry a job on failure. In systems with transient distributed file system hiccups like lock errors or disk availability, this will provide recoverability at the cost of resubmitting jobs that may have failed for reproducible reasons.
 
@@ -96,9 +96,9 @@ where `host-ip` is replaced by the actual IP address of the machine and `hostnam
 
 ## Memory management
 
-The memory information specified in the system configuration [Resources](contents/configuration:resources) enables scheduling of memory intensive processes. The values are specified on a *memory-per-core* basis and thus bcbio-nextgen handles memory scheduling by:
+The memory information specified in the system configuration `Resources` enables scheduling of memory intensive processes. The values are specified on a *memory-per-core* basis and thus bcbio-nextgen handles memory scheduling by:
 * [Determining available cores and memory per machine](#determining-available-cores-and-memory-per-machine)
-* Calculating the memory and core usage. The system configuration [Resources](contents/configuration:resources) contains the expected core and memory usage of external programs.
+* Calculating the memory and core usage. The system configuration `Resources` contains the expected core and memory usage of external programs.
 * Adjusting the specified number of total cores to avoid over-scheduling memory. This allows running programs with more than the available memory per core without getting out of memory system   errors.
 * Passing total memory usage along to schedulers. The SLURM, SGE, Torque and PBSPro schedulers use this information to allocate memory to processes, avoiding issues with other scheduled programs using available memory on a shared machine.
 
@@ -108,7 +108,7 @@ As a result of these calculations, the cores used during processing will not alw
 
 bcbio automatically tries to determine the total available memory and cores per machine for balancing resource usage. For multicore runs, it retrieves total memory from the current machine. For parallel runs, it spawns a job on the queue and extracts the system information from that machine. This expects a homogeneous set of machines within a cluster queue. You can see the determined cores and total memory in `provenance/system-ipython-queue.yaml`.
 
-For heterogeneous clusters or other cases where bcbio does not correctly identify available system resources, you can manually set the machine cores and total memory in the`resource` section of either a sample YAML file ([Sample or run specific resources](contents/configuration:sample%20or%20run%20specific%20resources)) or `bcbio_system.yaml`:
+For heterogeneous clusters or other cases where bcbio does not correctly identify available system resources, you can manually set the machine cores and total memory in the`resource` section of either a sample YAML file or `bcbio_system.yaml`:
 ```yaml
 resources:
   machine:
@@ -144,7 +144,7 @@ bcbio-nextgen makes use of distributed network file systems to manage sharing la
 Harvard and Dell: See the 'Distributed File Systems' section of our [post on scaling bcbio-nextgen](https://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/) for details about the setup within [Harvard FAS Research Computing](https://www.rc.fas.harvard.edu/) and thoughts on scaling and hardware. We also collaborate with Dell to test the pipeline on Dell's Active Infrastructure for Life Sciences. We found the biggest initial factor limiting scaling was network bandwidth between compute and storage nodes.
 
 ### Spark
-Some GATK tools like recalibration use Apache Spark for parallelization. By default bcbio runs these with multicore parallelization on a single node, to fit in standard cluster and local compute environments. If you have a custom Spark cluster on your system you can use that for GATK by setting up the appropriate configuration in your [Sample or run specific resources](contents/configuration:sample%20or%20run%20specific%20resources):
+Some GATK tools like recalibration use Apache Spark for parallelization. By default bcbio runs these with multicore parallelization on a single node, to fit in standard cluster and local compute environments. If you have a custom Spark cluster on your system you can use that for GATK by setting up the appropriate configuration in your `Sample or run specific resources`:
 ```yaml
 resources:
   gatk-spark:
