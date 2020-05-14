@@ -390,7 +390,7 @@ bcbio provides some hints to change default behavior be either turning specific 
   * `gemini` Create a [GEMINI database](https://github.com/arq5x/gemini) of variants for downstream query using the new vcfanno and vcf2db approach.
   * `gemini_allvariants` enables all variants to go into GEMINI, not only those that pass filters.
   * `gemini_orig` Create a [GEMINI database](https://github.com/arq5x/gemini) of variants using the older GEMINI loader. Only works for GRCh37 and hg19.
-  * `gvcf` forces gVCF output for callers that support it (GATK HaplotypeCaller, FreeBayes, Platypus). For joint calling using a population of samples, please use _jointcaller_ ([Population calling](contents/pipelines:population%20calling)).
+  * `gvcf` forces gVCF output for callers that support it (GATK HaplotypeCaller, FreeBayes, Platypus). For joint calling using a population of samples, please use _jointcaller_.
   * `lumpy_usecnv` uses input calls from CNVkit as prior evidence to Lumpy calling.
   * `noalt_calling` call variants only for chr1,,22,X,Y,MT.
   * `qualimap` runs [Qualimap](http://qualimap.bioinfo.cipf.es/) (qualimap uses downsampled files and numbers here are an estimation of 1e7 reads).
