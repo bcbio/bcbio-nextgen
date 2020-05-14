@@ -1,5 +1,6 @@
 # Small germline variants
 
+## Overview
 bcbio implements configurable SNP, indel and structural variant calling
 for germline populations. We include whole genome and exome evaluations against reference calls from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) consortium and [Illumina Platinum Genomes](https://www.illumina.com/platinumgenomes.html) project, enabling continuous assessment of new alignment and variant calling algorithms. We regularly report on these comparisons and continue to improve approaches as the community makes new tools available. Here is some of the research that contributes to the current implementation:
 
@@ -11,67 +12,9 @@ for germline populations. We include whole genome and exome evaluations against 
 
 bcbio automates post-variant calling annotation to make the outputs easier to feed directly into your biological analysis. We annotate variant effects using [snpEff](http://snpeff.sourceforge.net/) or [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html) (VEP), and prepare a [GEMINI database](https://gemini.readthedocs.io/en/latest/) that associates variants with multiple external annotations in a SQL-based query interface. GEMINI databases have the most associated external information for human samples (GRCh37/hg19 and hg38) but are available for any organism with the database populated using the VCF INFO column and predicted effects.
 
-## Workflow1: Basic germline calling
+## Workflow1: validate hg38 calls
 
-The best approach to build a bcbio [configuration](contents/configuration:configuration) for germline calling is to use the [automated sample configuration](contents/configuration:automated%20sample%20configuration) with one of the default templates:
-
-* [FreeBayes template](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/freebayes-variant.yaml) --Call variants using FreeBayes with a minimal preparation pipeline. This is a freely available unrestricted pipeline fully included in the bcbio installation.
-* [GATK HaplotypeCaller template](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml) --Run GATK best practices, including Base Quality Score Recalibration, realignment and HaplotypeCaller variant calling. This requires a license from Broad for commercial use. You need to manually install GATK along with bcbio using downloads from the GATK Broad site or Appistry.
-
-## Workflow2: Population calling
-
-When calling multiple samples, we recommend calling together to provide improved sensitivity and a fully squared off final callset. To associate samples together in a population add a `metadata` `batch` to the [sample configuration](contents/configuration:configuration):
-```yaml
-- description: Sample1
-  metadata:
-    batch: Batch1
-- description: Sample2
-  metadata:
-    batch: Batch1
-```
-Batching samples results in output VCFs and GEMINI databases containing all merged sample calls. bcbio has two methods to call samples together:
-
-* Batch or pooled calling -- This calls all samples simultaneously by feeding them to the variant caller. This works for smaller batch sizes (< 100 samples) as memory requirements become limiting in larger pools. This is the default approach taken when you specify a `variantcaller` in the variant calling configuration.
-
-* Joint calling -- This calls samples independently, then combines them together into a single callset by integrating the individual calls. This scales to larger population sizes by avoiding the computational bottlenecks of pooled calling. We recommend joint calling with HaplotypeCaller but also support joint calling with FreeBayes using a custom implementation. Specifying a `jointcaller` along with the appropriate `variantcaller` in the variant calling configuration enables this
-```yaml
-- description: Sample1
-  algorithm:
-    variantcaller: gatk-haplotype
-    jointcaller: gatk-haplotype-joint
-  metadata:
-    batch: Batch1
-- description: Sample2
-  algorithm:
-    variantcaller: gatk-haplotype
-    jointcaller: gatk-haplotype-joint
-  metadata:
-    batch: Batch1
-```
-
-## Workflow3: Whole genome trio (50x) - hg38
-
-This input configuration runs whole genome bwa alignment and GATK variant calling. It uses a father/mother/child trio from the [CEPH NA12878 family](https://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png): NA12891, NA12892, NA12878. Illumina's [Platinum genomes project](https://www.illumina.com/platinumgenomes.html) has 50X whole genome sequencing of the three members. The analysis compares results against a reference NA12878 callset from NIST's [Genome in a
-Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
-
-To run the analysis do:
-```shell
-mkdir NA12878-trio-eval
-cd NA12878-trio-eval
-mkdir config input work
-cd config
-wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
-cd ../input
-wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
-bash NA12878-trio-wgs-validate-getdata.sh
-cd ../work
-bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
-```
-This is a large whole genome analysis and meant to test both pipeline scaling and validation across the entire genome. It can take multiple days to run depending on available cores. It requires 300GB for the input files and 1.3TB for the work directory. Smaller examples below exercise the pipeline with less disk and computational requirements.
-
-## Workflow4: validate hg38 calls
-
-This workflow validates variants calls using WES data for NA12878 sample.
+This workflow validates variant calls using WES data for NA12878 sample.
 
 ### 1. Create project structure
 ```shell
@@ -139,8 +82,83 @@ upload:
 cd validate_giab/work
 bcbio_nextgen.py ../config/NA12878.yaml -n 8
 ```
+Running time ~ 2.4h
 
-## Workflow5: Whole genome (10x)
+### 6. Review results:
+- `final/[date]_project/grading-summary-NA12878.csv`:
+  ```
+  sample,caller,vtype,metric,value
+  NA12878,gatk-haplotype,SNPs,tp,36710
+  NA12878,gatk-haplotype,Indels,tp,3588
+  NA12878,gatk-haplotype,SNPs,fp,285
+  NA12878,gatk-haplotype,Indels,fp,981
+  NA12878,gatk-haplotype,SNPs,fn,323
+  NA12878,gatk-haplotype,Indels,fn,611
+  ```
+- Here FDR_SNPS = 285 / (285 + 36710) = 0.77%, so precision is 99.23%
+- FNR_SNPS = 323 / (323 + 36710) = 0.87%, so sensitivity is 99.13%
+- more improvement is possible with higher coverage depth and custom filters,
+but overall 99.23% precision / 99.13% sensitivity is a good result for out of the box pipeline.
+
+## Workflow2: Basic germline calling
+
+The best approach to build a bcbio [configuration](contents/configuration:configuration) for germline calling is to use the [automated sample configuration](contents/configuration:automated%20sample%20configuration) with one of the default templates:
+
+* [FreeBayes template](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/freebayes-variant.yaml) --Call variants using FreeBayes with a minimal preparation pipeline. This is a freely available unrestricted pipeline fully included in the bcbio installation.
+* [GATK HaplotypeCaller template](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/gatk-variant.yaml) --Run GATK best practices, including Base Quality Score Recalibration, realignment and HaplotypeCaller variant calling. This requires a license from Broad for commercial use. You need to manually install GATK along with bcbio using downloads from the GATK Broad site or Appistry.
+
+## Workflow3: Population calling
+
+When calling multiple samples, we recommend calling together to provide improved sensitivity and a fully squared off final callset. To associate samples together in a population add a `metadata` `batch` to the [sample configuration](contents/configuration:configuration):
+```yaml
+- description: Sample1
+  metadata:
+    batch: Batch1
+- description: Sample2
+  metadata:
+    batch: Batch1
+```
+Batching samples results in output VCFs and GEMINI databases containing all merged sample calls. bcbio has two methods to call samples together:
+
+* Batch or pooled calling -- This calls all samples simultaneously by feeding them to the variant caller. This works for smaller batch sizes (< 100 samples) as memory requirements become limiting in larger pools. This is the default approach taken when you specify a `variantcaller` in the variant calling configuration.
+
+* Joint calling -- This calls samples independently, then combines them together into a single callset by integrating the individual calls. This scales to larger population sizes by avoiding the computational bottlenecks of pooled calling. We recommend joint calling with HaplotypeCaller but also support joint calling with FreeBayes using a custom implementation. Specifying a `jointcaller` along with the appropriate `variantcaller` in the variant calling configuration enables this
+```yaml
+- description: Sample1
+  algorithm:
+    variantcaller: gatk-haplotype
+    jointcaller: gatk-haplotype-joint
+  metadata:
+    batch: Batch1
+- description: Sample2
+  algorithm:
+    variantcaller: gatk-haplotype
+    jointcaller: gatk-haplotype-joint
+  metadata:
+    batch: Batch1
+```
+
+## Workflow4: Whole genome trio (50x) - hg38
+
+This input configuration runs whole genome bwa alignment and GATK variant calling. It uses a father/mother/child trio from the [CEPH NA12878 family](https://blog.goldenhelix.com/wp-content/uploads/2013/03/Utah-Pedigree-1463-with-NA12878.png): NA12891, NA12892, NA12878. Illumina's [Platinum genomes project](https://www.illumina.com/platinumgenomes.html) has 50X whole genome sequencing of the three members. The analysis compares results against a reference NA12878 callset from NIST's [Genome in a
+Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
+
+To run the analysis do:
+```shell
+mkdir NA12878-trio-eval
+cd NA12878-trio-eval
+mkdir config input work
+cd config
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate.yaml
+cd ../input
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-trio-wgs-validate-getdata.sh
+bash NA12878-trio-wgs-validate-getdata.sh
+cd ../work
+bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
+```
+This is a large whole genome analysis and meant to test both pipeline scaling and validation across the entire genome. It can take multiple days to run depending on available cores. It requires 300GB for the input files and 1.3TB for the work directory. Smaller examples below exercise the pipeline with less disk and computational requirements.
+
+## Workflow6: Whole genome (10x)
 
 An input configuration for running whole gnome variant calling with bwa
 and GATK, using Illumina's [Platinum genomes project](https://www.illumina.com/platinumgenomes.html) ([NA12878-illumina.yaml](https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml)). See this [blog post on whole genome scaling](https://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/) for expected run times and more information about the pipeline. To run the analysis:
@@ -170,9 +188,7 @@ and GATK, using Illumina's [Platinum genomes project](https://www.illumina.com/p
     ```
 * Examine summary of concordance and discordance to comparison calls from the `grading-summary.csv` file in the work directory.
 
-
 ## Parameters
-
 * `variantcaller` Variant calling algorithm. Can be a list of multiple options or false to skip [false, freebayes, gatk-haplotype, haplotyper, platypus, mutect, mutect2, scalpel, tnhaplotyper, tnscope, vardict, varscan, samtools, gatk]
   * Paired (typically somatic, tumor-normal) variant calling is currently supported by vardict, freebayes, mutect2, mutect (see disclaimer below), scalpel (indels only), tnhaplotyper (Sentieon), tnscope (Sentieon) and varscan. See the pipeline documentation on somatic variant calling for details on pairing tumor and normal samples.
   * You can generate both somatic and germline calls for paired tumor-normal samples using different sets of callers. The pipeline documentation on calling `Somatic with germline variants` details how to do this.
@@ -217,6 +233,17 @@ samples), otherwise use standard pooled `population calling`:
 See description in somatic_varinants.
 
 ## Validation
+
+```eval_rst
++----------+-------------------+-----+-----+------------+-----+----+---+-----+-----+-------+------------+
+|date      |data               |type |bcbio|caller      |TP    |FP |FN |FDR  |FNR  |Target |Total called|
++==========+===================+=====+=====+============+======+===+===+=====+=====+=======+============+
+|2020-05-14|Garvan_NA12878(WES)|SNP  |1.2.3|gatk,4.1.6.0|36,710|285|323|0.77%|0.87%|37,033 |36,995      |
++----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
+|2020-05-14|Garvan_NA12878(WES)|INDEL|1.2.3|gatk,4.1.6.0|3,588 |981|611|21%  |15%  |4,199  |4,569       |
++----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
+
+
 bcbio pre-installs standard truth sets for performing validation, and also allows use of custom local files for assessing reliability of your runs:
 * `validate` A VCF file of expected variant calls to perform validation and grading of small variants (SNPs and indels) from the pipeline. This provides a mechanism to ensure consistency of calls against a known set of variants, supporting comparisons to
 genotyping array data or reference materials.
