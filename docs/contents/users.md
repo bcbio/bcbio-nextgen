@@ -1,5 +1,5 @@
 # Users
-A sample of institutions using bcbio-nextgen for solving biological problems. Please submit your story if you're using the pipeline in your own research.
+A sample of institutions using bcbio-nextgen for solving biological problems. Please [submit](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/contents/users.md) your story if you're using the pipeline in your own research.
 
 * [Harvard School of Public Health](https://bioinformatics.sph.harvard.edu/): We use bcbio-nextgen within the bioinformatics core for variant calling on large population studies related to human health like Breast Cancer and Alzheimer's disease. Increasing scalability of the pipeline has been essential for handling study sizes of more than 1400 whole genomes.
 
