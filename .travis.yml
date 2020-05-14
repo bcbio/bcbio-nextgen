@@ -1,6 +1,6 @@
 os: linux
 dist: bionic
-language: generic
+language: python
 
 env:
   global:
@@ -13,26 +13,14 @@ before_install:
   - export BOTO_CONFIG=/dev/null
   # Temporal fix for networking problem: https://github.com/travis-ci/travis-ci/issues/1484
   - echo "127.0.1.1 "`hostname` | sudo tee /etc/hosts
-  # Get and install anaconda for custom Python installation
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
-  - bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
 
 install:
-  # Install bcbio-nextgen and bcbio-nextgen-vm
-  - df -h
-  - export PATH=~/install/bcbio-vm/anaconda/bin:$PATH
-  - conda install --yes nomkl
-  - conda install --yes -c conda-forge -c bioconda bcbio-nextgen python=3
-  - conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm python=3
-  # Clean up space with external tools we don't need for tests
-  - conda clean --yes --tarballs --index-cache
-  - rm -rf ~/install/bcbio-vm/anaconda/pkgs/qt-*
-  - du -sch ~/install/bcbio-vm/anaconda/pkgs/* | sort -h
-  - df -h
-  # Update to latest bcbio-nextgen code externally
-  - rm -rf ~/install/bcbio-vm/anaconda/lib/python*/site-packages/bcbio
-  - rm -rf ~/install/bcbio-vm/anaconda/lib/python*/site-packages/bcbio_nextgen-*
-  - ~/install/bcbio-vm/anaconda/bin/python setup.py install
+  - python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
+  - export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}
+  # Update to latest bcbio-nextgen code
+  - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio
+  - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio_nextgen-*
+  - python setup.py install
 
 script:
   - pytest tests/unit
