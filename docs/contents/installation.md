@@ -189,7 +189,7 @@ Finally, having a `.pydistutils.cfg` file in your home directory can mess with w
 
 ### Manual process
 
-The manual process does not allow the in-place updates and management of third party tools that the automated installer makes possible. It's a more error-prone and labor intensive process. If you find you can't use the installer we'd love to hear why to make it more amenable to your system. If you'd like to develop against a bcbio installation, see the documentation on setting up a [development environment](contents/development).
+The manual process does not allow the in-place updates and management of third party tools that the automated installer makes possible. It's a more error-prone and labor intensive process. If you find you can't use the installer we'd love to hear why to make it more amenable to your system. If you'd like to develop against a bcbio installation, see the documentation on setting up a `development environment`.
 
 #### Tool requirements
 
