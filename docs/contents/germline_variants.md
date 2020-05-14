@@ -30,14 +30,14 @@ cat *R2* > NA12878_2.fq.gz
 rm Garvan_NA12878*
 ```
 
-### 3. Convert capture region file to hg38 coordinates with [UCSC liftover](https://genome.ucsc.edu/cgi-bin/hgLiftOver).
+### 3. Convert capture regions file to hg38 coordinates with [UCSC liftover](https://genome.ucsc.edu/cgi-bin/hgLiftOver).
 ```
 Successfully converted 200993 records: View Conversions
 Conversion failed on 78 records.
 ```
 Save file to `validate_giab/input/nexterarapidcapture_expandedexome_targetedregions.hg38.bed`
 
-### 4. Set up analysis parameters in `config/NA12878.yaml`:
+### 4. Set analysis parameters in `config/NA12878.yaml`:
 ```yaml
 details:
   - files:
@@ -268,4 +268,3 @@ For more information on the hg38 truth set preparation see the work on [validati
 - An [evaluation of joint calling](https://bcb.io/2014/10/07/joint-calling/) with GATK HaplotypeCaller, FreeBayes, Platypus and samtools. This validates the joint calling implementation, allowing scaling of large population germline experiments. It also demonstrates improved performance of new callers: samtools 1.0 and Platypus.
 - Support for [build 38 of the human genome](https://bcb.io/2015/09/17/hg38-validation/), improving precision of detection thanks to the improved genome representation.
 - bcbio automates post-variant calling annotation to make the outputs easier to feed directly into your biological analysis. We annotate variant effects using [snpEff](http://snpeff.sourceforge.net/) or [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html) (VEP), and prepare a [GEMINI database](https://gemini.readthedocs.io/en/latest/) that associates variants with multiple external annotations in a SQL-based query interface. GEMINI databases have the most associated external information for human samples (GRCh37/hg19 and hg38) but are available for any organism with the database populated using the VCF INFO column and predicted effects.
-
