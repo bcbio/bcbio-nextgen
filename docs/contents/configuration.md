@@ -102,7 +102,7 @@ bcbio_nextgen.py -w template freebayes-variant project1.csv sample1.bam sample2_
     samplename,description,phenotype,batch
     normal.bam,two_normal,normal,Batch1;Batch2
     ```
-    For dictionary inputs like [somatic with germline variants](contents/pipelines:somatic%20with%20germline%20variants) setups, you can separate items in a dictionary with colons and double colons, and also use semicolons for lists:
+    For dictionary inputs like `somatic with germline variants` setups, you can separate items in a dictionary with colons and double colons, and also use semicolons for lists:
     ```
     samplename,description,phenotype,variantcaller
     tumor.bam,sample1,tumor,germline:freebayes;gatk-haplotype::somatic:vardict;freebayes
