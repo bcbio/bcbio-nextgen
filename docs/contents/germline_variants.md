@@ -171,3 +171,94 @@ This is a large whole genome analysis and meant to test both pipeline scaling
 and validation across the entire genome. It can take multiple days to run depending on available cores.
 It requires 300GB for the input files and 1.3TB for the work directory.
 Smaller examples below exercise the pipeline with less disk and computational requirements.
+
+## Workflow5: Whole genome (10x)
+
+An input configuration for running whole gnome variant calling with bwa
+and GATK, using Illumina's [Platinum genomes project](https://www.illumina.com/platinumgenomes.html)
+[NA12878-illumina.yaml](https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml).
+See this [blog post on whole genome scaling](https://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/)
+for expected run times and more information about the pipeline. To run the analysis:
+
+* Create an input directory structure like:
+    ```shell
+    ├── config
+    │   └── NA12878-illumina.yaml
+    ├── input
+    └── work
+    ```
+* Retrieve inputs and comparison calls:
+    ```shell
+    cd input
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_1.fastq.gz
+    wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR091/ERR091571/ERR091571_2.fastq.gz
+    ```
+* Retrieve configuration input file:
+    ```shell
+    cd config
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-illumina.yaml
+    ```
+* Run analysis on 16 core machine:
+    ```shell
+    cd work
+    bcbio_nextgen.py ../config/NA12878-illumina.yaml -n 16
+    ```
+* Examine summary of concordance and discordance to comparison calls from the `grading-summary.csv` file in the work directory.
+
+## Parameters
+* `variantcaller` Variant calling algorithm. Can be a list of multiple options or
+false to skip [false, freebayes, gatk-haplotype, haplotyper, platypus, mutect, mutect2, scalpel,
+tnhaplotyper, tnscope, vardict, varscan, samtools, gatk]
+  * Paired (typically somatic, tumor-normal) variant calling is currently supported by vardict,
+  freebayes, mutect2, mutect (see disclaimer below), scalpel (indels only), tnhaplotyper (Sentieon),
+  tnscope (Sentieon) and varscan. See somatic variant calling documentation for details on pairing tumor and normal samples.
+  * You can generate both somatic and germline calls for paired tumor-normal samples using different sets of callers.
+  The pipeline documentation on calling `Somatic with germline variants` details how to do this.
+  * mutect, a SNP-only caller, can be combined with indels from scalpel or sid.
+  Mutect operates in both tumor-normal and tumor-only modes. In tumor-only mode the indels from scalpel will reflect all indels in the sample, as there is currently no way of separating the germline from somatic indels in tumor-only mode.
+* `indelcaller` For the MuTect SNP only variant caller it is possible to add calls from
+an indelcaller such as scalpel, pindel and somatic indel detector (for Appistry MuTect users only).
+Currently an experimental option that adds these indel calls to MuTect's SNP-only output.
+Only one caller supported. Omit to ignore. [scalpel, pindel, sid, false]
+* `jointcaller` Joint calling algorithm, combining variants called with the specified `variantcaller`.
+Can be a list of multiple options but needs to match with appropriate `variantcaller`.
+Joint calling is only needed for larger input sample sizes (>100 samples),
+otherwise use standard pooled `population calling`:
+  * `gatk-haplotype-joint` [GATK incremental joint discovery](https://gatkforums.broadinstitute.org/gatk/discussion/3896/the-gatk-reference-model-pipeline-for-incremental-joint-discovery-in-full-detail)
+  with HaplotypeCaller. Takes individual gVCFs called by `gatk-haploype` and perform combined genotyping.
+  * `freebayes-joint` Combine freebayes calls using [bcbio.variation.recall](https://github.com/chapmanb/bcbio.variation.recall)
+  with recalling at all positions found in each individual sample. Requires `freebayes` variant calling.
+  * `platypus-joint` Combine platypus calls using bcbio.variation.recall
+  with squaring off at all positions found in each individual sample. Requires `platypus` variant calling.
+  * `samtools-joint` Combine samtools calls using bcbio.variation.recall
+  with squaring off at all positions found in each individual sample. Requires `samtools` variant calling.
+* `joint_group_size` Specify the maximum number of gVCF samples to feed into joint calling.
+Currently applies to GATK HaplotypeCaller joint calling and defaults to the GATK recommendation of 200.
+Larger numbers of samples will first get combined prior to genotyping.
+* `ploidy` Ploidy of called reads. Defaults to 2 (diploid). You can also tweak
+specialty ploidy like mitochondrial calling by setting ploidy as a dictionary.
+The defaults are:
+```yaml
+ploidy:
+  default: 2
+  mitochondrial: 1
+  female: 2
+  male: 1
+```
+* `background` Provide pre-calculated files to use as backgrounds for different processes.
+Organized as a dictionary with individual keys for different components of the pipeline. You can enter as many or few as needed:
+  * `variant` A VCF file with variants to use as a background reference during variant calling.
+  For tumor/normal paired calling use this to supply a panel of normal individuals.
+  * `cnv_reference` Background reference file for copy number calling. This can be either
+  a single file for one CNV method or a dictionary for multiple methods.
+  Supports [CNVkit cnn inputs](https://cnvkit.readthedocs.io/en/stable/fileformats.html#copy-number-reference-profile-cnn),
+  [GATK4 HDF5 panel of normals](https://software.broadinstitute.org/gatk/documentation/article?id=11682)
+  and [seq2c](https://github.com/AstraZeneca-NGS/Seq2C) combined mapping plus coverage files:
+  ```yaml
+  background:
+    cnv_reference:
+      cnvkit: /path/to/background.cnn
+      gatk-cnv: /path/to/background_pon.hdf5
+      seq2c: /path/to/background.tsv
+  ```
+  
