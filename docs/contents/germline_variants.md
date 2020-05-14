@@ -261,7 +261,7 @@ Organized as a dictionary with individual keys for different components of the p
       gatk-cnv: /path/to/background_pon.hdf5
       seq2c: /path/to/background.tsv
   ```
-  
+
 ### Variant annotation
 * `effects` Method used to calculate expected variant effects;
 defaults to [snpEff](http://snpeff.sourceforge.net/).
@@ -284,58 +284,3 @@ allowing the application of additional annotations to variant calls. By default,
 ## Output
 See description in somatic_variants.
 
-## Validation
-
-```eval_rst
-+----------+-------------------+-----+-----+------------+-----+----+---+-----+-----+-------+------------+
-|date      |data               |type |bcbio|caller      |TP    |FP |FN |FDR  |FNR  |Target |Total called|
-+==========+===================+=====+=====+============+======+===+===+=====+=====+=======+============+
-|2020-05-14|Garvan_NA12878(WES)|SNP  |1.2.3|gatk,4.1.6.0|36,710|285|323|0.77%|0.87%|37,033 |36,995      |
-+----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
-|2020-05-14|Garvan_NA12878(WES)|INDEL|1.2.3|gatk,4.1.6.0|3,588 |981|611|21%  |15%  |4,199  |4,569       |
-+----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
-```
-
-bcbio pre-installs standard truth sets for performing validation, and also allows
-use of custom local files for assessing reliability of your runs:
-* `validate` A VCF file of expected variant calls to perform validation and
-grading of small variants (SNPs and indels) from the pipeline. This provides
-a mechanism to ensure consistency of calls against a known set of variants, supporting comparisons to
-genotyping array data or reference materials.
-* `validate_regions` A BED file of regions to evaluate small variant calls in.
-This defines specific regions covered by the `validate` VCF file.
-* `svvalidate` -- Dictionary of call types and pointer to BED file of known regions.
-For example: `DEL: known_deletions.bed` does deletion based validation of outputs against the BED file.
-
-Each option can be either the path to a local file, or a partial path to a file
-in the pre-installed truth sets. For instance, to validate an NA12878 run against
-the [Genome in a Bottle](https://github.com/genome-in-a-bottle) truth set:
-```yaml
-validate: giab-NA12878/truth_small_variants.vcf.gz
-validate_regions: giab-NA12878/truth_regions.bed
-svvalidate:
-  DEL: giab-NA12878/truth_DEL.bed
-```
-
-follow the same naming schemes for small variants, regions and different
-structural variant types. bcbio has the following validation materials
-for germline validations:
-* `giab-NA12878` -- [Genome in a Bottle](https://github.com/genome-in-a-bottle) for NA12878, a Caucasian sample. Truth sets: small_variants, regions, DEL; Builds: GRCh37, hg19, hg38
-* `giab-NA24385` -- [Genome in a Bottle](https://github.com/genome-in-a-bottle) for NA24385, an Ashkenazic Jewish sample. Truth sets: small_variants, regions; Builds: GRCh37, hg19, hg38
-* `giab-NA24631` -- [Genome in a Bottle](https://github.com/genome-in-a-bottle) for NA24631, a Chinese sample. Truth sets: small_variants, regions; Builds: GRCh37, hg19, hg38
-* `giab-NA12878-crossmap` -- [Genome in a Bottle](https://github.com/genome-in-a-bottle) for NA12878 converted to hg38 with CrossMap. Truth sets: small_variants, regions, DEL; Builds: hg38
-* `giab-NA12878-remap` -- [Genome in a Bottle](https://github.com/genome-in-a-bottle) for NA12878 converted to hg38 with Remap. Truth sets: small_variants, regions, DEL; Builds: hg38
-* `platinum-genome-NA12878` -- [Illumina Platinum Genome](https://www.illumina.com/platinumgenomes/) for NA12878. Truth sets: small_variants, regions; Builds: hg19, hg38
-
-For more information on the hg38 truth set preparation see the work on [validation on build 38 and conversion of human build 37 truth sets to build 38](https://bcb.io/2015/09/17/hg38-validation/). The [installation recipes](https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes) contain provenance details about the origins of the installed files.
-
-## References
-- [NIST genome in a bottle](https://www.nist.gov/programs-projects/genome-bottle)
-- [GIAB data index](https://github.com/genome-in-a-bottle/giab_data_indexes)
-- [Illumina Platinum Genomes](https://www.illumina.com/platinumgenomes.html)
-- An introduction to the [variant evaluation framework](https://bcb.io/2013/05/06/framework-for-evaluating-variant-detection-methods-comparison-of-aligners-and-callers/). This includes a comparison of the [bwa mem](http://bio-bwa.sourceforge.net/) and [novoalign](http://www.novocraft.com) aligners. We also compared the [FreeBayes](https://github.com/ekg/freebayes), [GATK HaplotypeCaller](https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_haplotypecaller_HaplotypeCaller.php) and [GATK UnifiedGenotyper](https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_genotyper_UnifiedGenotyper.php) variant callers.
-- An in-depth evaluation of [FreeBayes and BAM post-alignment processing](https://bcb.io/2013/10/21/updated-comparison-of-variant-detection-methods-ensemble-freebayes-and-minimal-bam-preparation-pipelines/). We found that FreeBayes quality was equal to GATK HaplotypeCaller. Additionally, a lightweight post-alignment preparation method using only de-duplication was equivalent to GATK's recommended Base Quality Score Recalibration (BQSR) and realignment around indels, when using good quality input datasets and callers that do local realignment.
-- Additional work to [improve variant filtering](https://bcb.io/2014/05/12/wgs-trio-variant-evaluation/), providing methods to remove low complexity regions (LCRs) that can bias indel results. We also tuned [GATK's Variant Quality Score Recalibrator](https://software.broadinstitute.org/gatk/gatkdocs/org_broadinstitute_gatk_tools_walkers_variantrecalibration_VariantRecalibrator.php) (VQSR) and compared it with cutoff-based soft filtering. VQSR requires a large number of variants and we use it in bcbio with GATK HaplotypeCaller when your `algorithm parameters` contain high depth samples (`coverage_depth` is not low) and you are calling on the whole genome (`coverage_interval` is genome) or have more than 50 regional or exome samples called concurrently.
-- An [evaluation of joint calling](https://bcb.io/2014/10/07/joint-calling/) with GATK HaplotypeCaller, FreeBayes, Platypus and samtools. This validates the joint calling implementation, allowing scaling of large population germline experiments. It also demonstrates improved performance of new callers: samtools 1.0 and Platypus.
-- Support for [build 38 of the human genome](https://bcb.io/2015/09/17/hg38-validation/), improving precision of detection thanks to the improved genome representation.
-- bcbio automates post-variant calling annotation to make the outputs easier to feed directly into your biological analysis. We annotate variant effects using [snpEff](http://snpeff.sourceforge.net/) or [Variant Effect Predictor](https://www.ensembl.org/info/docs/tools/vep/index.html) (VEP), and prepare a [GEMINI database](https://gemini.readthedocs.io/en/latest/) that associates variants with multiple external annotations in a SQL-based query interface. GEMINI databases have the most associated external information for human samples (GRCh37/hg19 and hg38) but are available for any organism with the database populated using the VCF INFO column and predicted effects.
