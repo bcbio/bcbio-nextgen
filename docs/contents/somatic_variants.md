@@ -150,7 +150,7 @@ In addition to the somatic and germline outputs attached to the tumor and normal
 
 Copy number variation (CNVs) detection in tumor only samples requires accurately representing the non-somatic capture and sequencing background in the absence of a matched sample. Capture or sequencing specific coverage differences can trigger false positives or negatives. Without a matched normal to remove these artifacts, you can use a process matched set of unrelated samples to build a Panel of Normals (PoN) for the background correction.
 
-To create these, collect all the samples you plan to use for the panel of normals and run through an [automated sample configuration](contents/configuration:automated%20sample%20configuration) as a single batch with the background samples set as control and any nonbackground as the non-background. An example sample CSV:
+To create these, collect all the samples you plan to use for the panel of normals and run through an `automated sample configuration` as a single batch with the background samples set as control and any nonbackground as the non-background. An example sample CSV:
 ```
 samplename,description,svclass,batch
 background1.bam,background1,control,pon_build
@@ -173,7 +173,7 @@ After running, collect the panel of normal files from each calling method:
 
 CNVkit and gatk-cnv cannot be run together, because they require different, incompatible normalization schemes.
 
-Once you have the panel of normals, use them as background in any tumor only project with the same sequencing and capture process in your [variant calling](contents/configuration:variant%20calling) configuration:
+Once you have the panel of normals, use them as background in any tumor only project with the same sequencing and capture process in your `variant calling` configuration:
 ```yaml
 svcaller: [gatk-cnv, seq2c]
 variant_regions: your_regions.bed
