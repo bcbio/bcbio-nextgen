@@ -109,7 +109,7 @@ by uncommenting the relevant parts of the configuration and retrieval script.
 
 Cancer calling handles both tumor-normal paired calls and tumor-only calling. To specify a tumor-only sample, provide a single sample labeled with `phenotype: tumor`. Otherwise the configuration and setup is the same as with paired analyses. For tumor-only samples, bcbio will try to remove likely germline variants present in the public databases like 1000 genomes and ExAC, and not in COSMIC. This runs as long as you have a local GEMINI data installation (`--datatarget gemini`) and marks likely germline variants with a `LowPriority` filter. [This post](http://bcb.io/2015/03/05/cancerval/) has more details on the approach and validation.
 
-The standard variant outputs (`sample-caller.vcf.gz`) for tumor calling emphasize somatic differences, those likely variants unique to the cancer. If you have a tumor-only sample and GEMINI data installed, it will also output `sample-caller-germline.vcf.gz`, which tries to identify germline background mutations based on presence in public databases. If you have tumor/normal data and would like to also call likely germline mutations see the [Somatic with germline variants](#somatic-with-germline-variants) section on specifying a germline caller.
+The standard variant outputs (`sample-caller.vcf.gz`) for tumor calling emphasize somatic differences, those likely variants unique to the cancer. If you have a tumor-only sample and GEMINI data installed, it will also output `sample-caller-germline.vcf.gz`, which tries to identify germline background mutations based on presence in public databases.
 
 We're actively working on improving calling to better account for the heterogeneity and structural variability that define cancer genomes.
 
