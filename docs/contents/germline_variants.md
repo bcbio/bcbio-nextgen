@@ -230,7 +230,7 @@ See description in somatic_varinants.
 +----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
 |2020-05-14|Garvan_NA12878(WES)|INDEL|1.2.3|gatk,4.1.6.0|3,588 |981|611|21%  |15%  |4,199  |4,569       |
 +----------+-------------------+-----+-----+------------+------+---+---+-----+-----+-------+------------+
-
+```
 
 bcbio pre-installs standard truth sets for performing validation, and also allows use of custom local files for assessing reliability of your runs:
 * `validate` A VCF file of expected variant calls to perform validation and grading of small variants (SNPs and indels) from the pipeline. This provides a mechanism to ensure consistency of calls against a known set of variants, supporting comparisons to
