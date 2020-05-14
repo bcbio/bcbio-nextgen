@@ -82,8 +82,8 @@ bcbio_nextgen.py upgrade -u stable --tools --data
 ```
 Tune the upgrade with these options:
 * `-u` Type of upgrade to do for bcbio-nextgen code. `stable` gets the most recent released version and `development` retrieves the latest code from GitHub.
-* `--datatarget` Customized installed data or download additional files not included by default: [Customizing data installation](#customizing-data-installation)
-* `--toolplus` Specify additional tools to include. See the section on [extra software](#extra-software) for more details.
+* `--datatarget` Customized installed data or download additional files not included by default: 
+* `--toolplus` Specify additional tools to include. See the section on `extra software` for more details.
 * `--genomes` and `--aligners` options add additional aligner indexes to download and prepare. `bcbio_nextgen.py upgrade -h` lists available genomes and aligners. If you want to install multiple genomes or aligners at once, specify `--genomes` or `--aligners` multiple times, like this: `--genomes GRCh37 --genomes mm10 --aligners bwa --aligners bowtie2`
 * Leave out the `--tools` option if you don't want to upgrade third party tools. If using `--tools`, it will use the same directory as specified during installation. If you're using an older version that has not yet gone through a successful upgrade or installation and saved the tool directory, you should manually specify `--tooldir` for the first upgrade. You can also pass `--tooldir` to install to a different directory.
 * Leave out the `--data` option if you don't want to get any upgrades of associated genome data.
@@ -99,7 +99,7 @@ By default, bcbio will install data files for `variation`, `rnaseq` and `smallrn
 * `smallrna` -- Data files for doing small RNA analysis.
 * `gemini` -- The [GEMINI](https://gemini.readthedocs.io) framework associates publicly available metadata with called variants, and provides utilities for query and analysis. This target installs the required GEMINI data files, including [ExAC](http://exac.broadinstitute.org/).
 * `gnomad` -- [gnomAD](https://gnomad.broadinstitute.org/) is a large scale collection of genome variants, expanding on ExAC to include whole genome and more exome inputs. This is a large 25Gb download, available for human genome builds GRCh37, hg19 and hg38.
-* `vep` -- Data files for the [Variant Effects Predictor (VEP)](https://www.ensembl.org/info/docs/tools/vep/index.html). To use VEP as an alternative to the default installed snpEff, set `vep` in the [variant calling](contents/configuration:variant%20calling) configuration.
+* `vep` -- Data files for the [Variant Effects Predictor (VEP)](https://www.ensembl.org/info/docs/tools/vep/index.html). To use VEP as an alternative to the default installed snpEff, set `vep` in the `variant calling` configuration.
 * `dbnsfp` -- Like CADD, [dbNSFP](https://sites.google.com/site/jpopgen/dbNSFP) provides integrated and generalized metrics from multiple sources to help with prioritizing variations for follow up. The files are large: dbNSFP is 10Gb, expanding to 100Gb during preparation.
 * `dbscsnv` -- [dbscSNV](https://sites.google.com/site/jpopgen/dbNSFP) includes all potential human SNVs within splicing consensus regions (−3 to +8 at the 5' splice site and −12 to +2 at the 3' splice site), i.e. scSNVs, related functional annotations and two ensemble prediction scores for predicting their potential of altering splicing.
 * `battenberg` -- Data files for [Battenberg](https://github.com/cancerit/cgpBattenberg), which detects subclonality and copy number changes in whole genome cancer samples.
@@ -121,7 +121,7 @@ We're not able to automatically install some useful tools due to licensing restr
 
 #### GATK and MuTect/MuTect2
 
-bcbio includes an installation of GATK4, which is freely available for all uses. This is the default runner for HaplotypeCaller or MuTect2. If you want to use an older version of GATK, it requires manual installation. This is freely available for academic users, but requires a [license for commercial use](https://gatk.broadinstitute.org/hc/en-us#licensing). It is not freely redistributable, so requires a manual download from the [GATK download](https://console.cloud.google.com/storage/browser/gatk-software/package-archive) site, direct [link](https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2). You also need to include `tools_off: [gatk4]` in your configuration for runs: see [changing bcbio defaults](contents/configuration:changing%20bcbio%20defaults).
+bcbio includes an installation of GATK4, which is freely available for all uses. This is the default runner for HaplotypeCaller or MuTect2. If you want to use an older version of GATK, it requires manual installation. This is freely available for academic users, but requires a [license for commercial use](https://gatk.broadinstitute.org/hc/en-us#licensing). It is not freely redistributable, so requires a manual download from the [GATK download](https://console.cloud.google.com/storage/browser/gatk-software/package-archive) site, direct [link](https://storage.googleapis.com/gatk-software/package-archive/gatk/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef.tar.bz2). You also need to include `tools_off: [gatk4]` in your configuration for runs: see `changing bcbio defaults`.
 
 To install GATK3, register with the pre-installed gatk bioconda wrapper:
 ```shell
@@ -189,7 +189,7 @@ Finally, having a `.pydistutils.cfg` file in your home directory can mess with w
 
 ### Manual process
 
-The manual process does not allow the in-place updates and management of third party tools that the automated installer makes possible. It's a more error-prone and labor intensive process. If you find you can't use the installer we'd love to hear why to make it more amenable to your system. If you'd like to develop against a bcbio installation, see the documentation on setting up a [development environment](contents/development:infrastructure).
+The manual process does not allow the in-place updates and management of third party tools that the automated installer makes possible. It's a more error-prone and labor intensive process. If you find you can't use the installer we'd love to hear why to make it more amenable to your system. If you'd like to develop against a bcbio installation, see the documentation on setting up a [development environment](contents/development).
 
 #### Tool requirements
 
