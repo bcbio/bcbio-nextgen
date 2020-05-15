@@ -10,6 +10,7 @@
 - Add pre-generated ataqv HTML report to upload directory.
 - Support single-end reads for ATAC-seq.
 - Move featureCount output files to **featureCounts** directory in project directory.
+- Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.

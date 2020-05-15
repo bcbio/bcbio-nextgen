@@ -488,8 +488,10 @@ def _merge_metrics(samples, out_dir):
             dt = pd.DataFrame(m, index=['1'])
             dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
             dt['sample'] = sample_name
-            dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-            dt['RiP_pct'] = "%.3f" % (int(m.get("RiP", 0)) / float(m.get("Total_reads", 1)) * 100)
+            if m.get('rRNA_rate'):
+                dt['rRNA_rate'] = m.get('rRNA_rate')
+            if m.get("RiP"):
+                dt['RiP_pct'] = "%.3f" % (int(m.get("RiP")) / float(m.get("Total_reads", 1)) * 100)
             dt = _fix_duplicated_rate(dt)
             dt.transpose().to_csv(tx_out_file, sep="\t", header=False)
         out.append(sample_file)
