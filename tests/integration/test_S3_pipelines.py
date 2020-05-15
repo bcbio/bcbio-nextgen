@@ -8,9 +8,9 @@ from tests.conftest import get_post_process_yaml
 
 @pytest.mark.S3
 @pytest.mark.install_required
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3216')
 def test_fusion(install_test_files, data_dir):
-    """Run an RNA-seq analysis and test fusion genes, with human-mouse
-    disambiguation.
+    """Run an RNA-seq analysis and test fusion genes, with human-mouse disambiguation.
     Requires minikraken database.
     """
     with make_workdir() as workdir:
@@ -23,6 +23,7 @@ def test_fusion(install_test_files, data_dir):
 
 @pytest.mark.S3
 @pytest.mark.install_required
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3217')
 def test_variantcall_1(install_test_files, data_dir):
     """Test variant calling with disambiguation.
     Requires minikraken database.
@@ -37,6 +38,7 @@ def test_variantcall_1(install_test_files, data_dir):
 
 @pytest.mark.S3
 @pytest.mark.install_required
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3218')
 def test_variantcall_2(install_test_files, data_dir):
     """Test variant calling with disambiguation.
     Requires minikraken database.
