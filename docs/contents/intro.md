@@ -65,7 +65,7 @@ One reason of low precision could be that NA12878-NGv3-LAB1360 WES dataset
 was sequenced in 2013 or earlier, so it could be of somewhat lower quality.
 We left it here for educational purpose. 
 With a modern NA12878 dataset you can achieve >99% precision and >99% sensitivity using bcbio/gatk, 
-see [germline variants user story](contents/germline_variants.html#workflow1-validate-hg38-calls).
+see [germline variants user story](germline_variants.html#workflow1-validate-hg38-calls).
 Comparing QC and validations in the two NA12878 WES datasets illustrates how sequencing quality affects variant calling precision and sensitivity. 
 Another point one could make when comparing the two validations is that NA12878-NGv3-LAB1360 
 has a larger target (133,288 SNPs vs 37,033), so the choice of `variant_regions` directly influences validation results.
@@ -73,8 +73,7 @@ Including only regions with high coverage, excluding low complexity regions lead
 A larger bed file with more regions included is a more stressful test for combination of capture kit/sequencing instrument/aligner/variant caller/filters.
 
 ## What is next?
-Bcbio documentation is organized by user stories. We support 22 user stories (
-extended use cases):
+Bcbio documentation is organized by user stories. We support 22 user stories (extended use cases):
 * 14 data processing user stories corresponding to different types of NGS data
 and biological questions
 * 8 infrastructural stories.
