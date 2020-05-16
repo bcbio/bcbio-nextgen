@@ -36,76 +36,76 @@ It enables exome by default, but you can use the larger whole genome evaluation
 by uncommenting the relevant parts of the configuration and retrieval script.
 
 ### 1. Get the data:
-    ```shell
-    mkdir -p cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
-    cd cancer-dream-syn3/config
-    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
-    cd ../input
-    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
-    bash cancer-dream-syn3-getdata.sh
-    ```
+```shell
+mkdir -p cancer-dream-syn3/config cancer-dream-syn3/input cancer-dream-syn3/work
+cd cancer-dream-syn3/config
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3.yaml
+cd ../input
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/cancer-dream-syn3-getdata.sh
+bash cancer-dream-syn3-getdata.sh
+```
 
 ### 2. Review parameters in the yaml file:
-    ```yaml
-    # Cancer tumor/normal calling evaluation using synthetic dataset 3
-    # from the ICGC-TCGA DREAM challenge:
-    # https://www.synapse.org/#!Synapse:syn312572/wiki/62018
-    ---
-    details:
-    - algorithm:
-        aligner: bwa
-        mark_duplicates: true
-        remove_lcr: true
-        variantcaller: [mutect2, vardict]
-        variant_regions: ../input/NGv3.bed
-        # svcaller: [cnvkit, lumpy, delly]
-        # coverage_interval: amplicon
-      analysis: variant2
-      description: syn3-normal
-      #files: ../input/synthetic.challenge.set3.normal.bam
-      files:
-        - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
-        - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
-      genome_build: GRCh37
-      metadata:
-        batch: syn3
-        phenotype: normal
-    - algorithm:
-        aligner: bwa
-        mark_duplicates: true
-        remove_lcr: true
-        variantcaller: [mutect2, vardict]
-        variant_regions: ../input/NGv3.bed
-        validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
-        validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
-        # svcaller: [cnvkit, lumpy, delly]
-        # coverage_interval: amplicon
-      #   svvalidate:
-      #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
-      #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
-      #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
-      #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
-      analysis: variant2
-      description: syn3-tumor
-      #files: ../input/synthetic.challenge.set3.tumor.bam
-      files:
-        - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
-        - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
-      genome_build: GRCh37
-      metadata:
-        batch: syn3
-        phenotype: tumor
-    fc_date: '2014-08-13'
-    fc_name: dream-syn3
-    upload:
-      dir: ../final
-    ```
+```yaml
+# Cancer tumor/normal calling evaluation using synthetic dataset 3
+# from the ICGC-TCGA DREAM challenge:
+# https://www.synapse.org/#!Synapse:syn312572/wiki/62018
+---
+details:
+- algorithm:
+    aligner: bwa
+    mark_duplicates: true
+    remove_lcr: true
+    variantcaller: [mutect2, vardict]
+    variant_regions: ../input/NGv3.bed
+    # svcaller: [cnvkit, lumpy, delly]
+    # coverage_interval: amplicon
+  analysis: variant2
+  description: syn3-normal
+  #files: ../input/synthetic.challenge.set3.normal.bam
+  files:
+  - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
+  - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: syn3
+    phenotype: normal
+ - algorithm:
+    aligner: bwa
+    mark_duplicates: true
+    remove_lcr: true
+    variantcaller: [mutect2, vardict]
+    variant_regions: ../input/NGv3.bed
+    validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
+    validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
+    # svcaller: [cnvkit, lumpy, delly]
+    # coverage_interval: amplicon
+    #   svvalidate:
+    #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
+    #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
+    #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
+    #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+  analysis: variant2
+  description: syn3-tumor
+  #files: ../input/synthetic.challenge.set3.tumor.bam
+  files:
+  - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
+  - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: syn3
+    phenotype: tumor
+  fc_date: '2014-08-13'
+  fc_name: dream-syn3
+upload:
+  dir: ../final
+```
 
 ### 3. Run bcbio project
-    ```shell
-    cd ../work
-    bcbio_nextgen.py ../config/cancer-dream-syn3.yaml -n 8
-    ```
+```shell
+cd ../work
+bcbio_nextgen.py ../config/cancer-dream-syn3.yaml -n 8
+```
 
 Cancer calling handles both tumor-normal paired calls and tumor-only calling. To specify a tumor-only sample, provide a single sample labeled with `phenotype: tumor`. Otherwise the configuration and setup is the same as with paired analyses. For tumor-only samples, bcbio will try to remove likely germline variants present in the public databases like 1000 genomes and ExAC, and not in COSMIC. This runs as long as you have a local GEMINI data installation (`--datatarget gemini`) and marks likely germline variants with a `LowPriority` filter. [This post](http://bcb.io/2015/03/05/cancerval/) has more details on the approach and validation.
 
