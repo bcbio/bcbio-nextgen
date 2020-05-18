@@ -368,13 +368,13 @@ def _create_config_file(out_dir, samples):
                 'name': 'Bcftools (somatic)',
                 'info': 'Bcftools stats for somatic variant calls only.',
                 'path_filters': ['*_bcftools_stats.txt'],
-                'write_general_stats': True,
+                'custom_config': {'write_general_stats': True},
             }},
             {'bcftools': {
                 'name': 'Bcftools (germline)',
                 'info': 'Bcftools stats for germline variant calls only.',
                 'path_filters': ['*_bcftools_stats_germline.txt'],
-                'write_general_stats': False
+                'custom_config': {'write_general_stats': False},
             }},
         ])
     else:

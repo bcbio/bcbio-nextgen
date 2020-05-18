@@ -11,6 +11,7 @@
 - Support single-end reads for ATAC-seq.
 - Move featureCount output files to **featureCounts** directory in project directory.
 - Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
+- Only show somatic variant counts in the general stats table, if germline variants are calculated.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.
