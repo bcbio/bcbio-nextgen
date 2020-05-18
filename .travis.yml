@@ -19,8 +19,7 @@ before_install:
   - echo "127.0.1.1 "`hostname` | sudo tee /etc/hosts
 
 install:
-  # bcbio installation takes about half an hour
-  - travis_wait 40 python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
+  - travis_wait 45 python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
   - date
   - export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}
   # Update to latest bcbio-nextgen code
