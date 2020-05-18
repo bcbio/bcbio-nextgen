@@ -49,13 +49,13 @@ def main(args, sys_argv):
     print("Installing data and third party dependencies")
     system_config = write_system_config(REMOTES["system_config"], args.datadir, args.tooldir)
     setup_manifest(args.datadir)
-    # subprocess.check_call([bcbio, "upgrade"] + _clean_args(sys_argv, args))
-    # print("Finished: bcbio-nextgen, tools and data installed")
-    # print(" Genome data installed in:\n  %s" % args.datadir)
-    # if args.tooldir:
-    #     print(" Tools installed in:\n  %s" % args.tooldir)
-    # print(" Ready to use system configuration at:\n  %s" % system_config)
-    # print(" Edit configuration file as needed to match your machine or cluster")
+    subprocess.check_call([bcbio, "upgrade"] + _clean_args(sys_argv, args))
+    print("Finished: bcbio-nextgen, tools and data installed")
+    print(" Genome data installed in:\n  %s" % args.datadir)
+    if args.tooldir:
+        print(" Tools installed in:\n  %s" % args.tooldir)
+    print(" Ready to use system configuration at:\n  %s" % system_config)
+    print(" Edit configuration file as needed to match your machine or cluster")
 
 
 def _clean_args(sys_argv, args):
