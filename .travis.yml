@@ -23,8 +23,8 @@ install:
   - python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
   - date
   - export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}
-#  - bcbio_nextgen.py upgrade --tooldir=${HOME}/local
-#  - date
+  - bcbio_nextgen.py upgrade --tooldir=${HOME}/local
+  - date
   # Update to latest bcbio-nextgen code
   - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio
   - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio_nextgen-*
