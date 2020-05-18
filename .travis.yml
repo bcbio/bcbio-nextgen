@@ -2,6 +2,10 @@ os: linux
 dist: bionic
 language: python
 
+addons:
+  apt:
+    update: true
+
 env:
   global:
     - secure: "VJSdyR3BUpDGf7ot0I+GvSVR77TaMgxgscW1pFgxeitr3XvZ9la+PMuSqKH1B1TR/8Gq+l507FnQb1I/zjzUOvomX2gnsL6CcbTml8DKUz12kmQ0ixGT5IxZjDuBDvJwOJlRg1JLgJkcxMHa9EEmDZTh7Feyu7jJC9qeGKSyjFw="
