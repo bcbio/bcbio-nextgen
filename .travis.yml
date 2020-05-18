@@ -31,8 +31,9 @@ install:
   - python setup.py install
 
 script:
-  - pytest -v tests/unit
-  - pytest -v tests/integration
+  - date
+#  - pytest -v tests/unit
+#  - pytest -v tests/integration
 
 after_failure:
   - df -h
