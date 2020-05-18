@@ -20,7 +20,7 @@ before_install:
 
 install:
   - date
-  - python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
+  - travis_wait 30 python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
   - date
   - export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}
   - bcbio_nextgen.py upgrade --tooldir=${HOME}/local
