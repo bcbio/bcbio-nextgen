@@ -132,9 +132,9 @@ def install_anaconda_python(args):
         if not os.path.exists(os.path.basename(url)):
             subprocess.check_call(['wget', '--progress=dot:giga', url])
         subprocess.check_call(['bash', os.path.basename(url), '-b', '-p', anaconda_dir])
-        subprocess.check_call([conda, 'config', '--add', 'channels', 'conda-forge',
-                               '--file', os.path.join(anaconda_dir, '.condarc')])
         subprocess.check_call([conda, 'config', '--add', 'channels', 'bioconda',
+                               '--file', os.path.join(anaconda_dir, '.condarc')])
+        subprocess.check_call([conda, 'config', '--add', 'channels', 'conda-forge',
                                '--file', os.path.join(anaconda_dir, '.condarc')])
     return {"conda": conda,
             "pip": os.path.join(bindir, "pip"),
