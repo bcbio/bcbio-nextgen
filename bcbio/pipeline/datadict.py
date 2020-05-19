@@ -112,6 +112,7 @@ LOOKUPS = {
     "aligner": {"keys": ['config', 'algorithm', 'aligner']},
     "align_split_size": {"keys": ['config', 'algorithm', 'align_split_size']},
     "bam_clean": {"keys": ['config', 'algorithm', 'bam_clean']},
+    "kit": {"keys": ['config', 'algorithm', 'kit']},
     "platform": {"keys": ['config', 'algorithm', 'platform'],
                  "default": "illumina"},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
