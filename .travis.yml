@@ -22,9 +22,12 @@ install:
   - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio_nextgen-*
   - python setup.py install
 
-script:
-  - pytest -v tests/unit
-  - pytest -v tests/integration
+jobs:
+  include:
+    - script: pytest -v -m install_required tests
+      name: "Tests requiring bcbio install"
+    - script: pytest -v -m "not install_required" tests
+      name: "Tests not requiring bcbio install"
 
 after_failure:
   - df -h
