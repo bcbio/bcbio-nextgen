@@ -28,7 +28,7 @@ def setup_logging():
 
 @pytest.mark.ericscript
 @pytest.mark.install_required
-@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3219')
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3219', run=False)
 def test_detect_fusions_with_ericscipt_without_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on trimmed pair-end reads with EricScript.
@@ -43,7 +43,7 @@ def test_detect_fusions_with_ericscipt_without_disambiguate(
 
 @pytest.mark.ericscript
 @pytest.mark.install_required
-@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3220')
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3220', run=False)
 def test_detect_fusions_with_ericscipt_with_disambiguate(
         install_test_files, data_dir, setup_logging):
     """Run gene fusion analysis on disambiguated reads with EricScript.

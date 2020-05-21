@@ -179,7 +179,7 @@ def test_srnaseq_bowtie(install_test_files, data_dir):
 
 
 @pytest.mark.chipseq
-@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3224')
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3224', run=False)
 def test_chipseq(install_test_files, data_dir):
     """Run a chip-seq alignment with Bowtie2"""
     with make_workdir() as workdir:
@@ -191,7 +191,7 @@ def test_chipseq(install_test_files, data_dir):
 
 
 @pytest.mark.atacseq
-@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3225')
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3225', run=False)
 def test_atacseq(install_test_files, data_dir):
     """Test ATAC-seq pipeline"""
     with make_workdir() as workdir:
