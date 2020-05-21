@@ -39,8 +39,6 @@ def main(args, sys_argv):
         setup_data_dir(args)
         print("Installing isolated base python installation")
         anaconda = install_anaconda_python(args)
-        # print("Installing mamba")
-        # anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
         subprocess.check_call([anaconda['conda'], "install", "--yes", "conda-build"])
         print("Installing bcbio-nextgen")
