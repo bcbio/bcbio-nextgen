@@ -166,7 +166,7 @@ Tune the upgrade with these options:
 
 ## Customizing data installation
 
-bcbio supports the following [genome references](https://github.com/chapmanb/cloudbiolinux/blob/21e8b0db701dddbef4a0b9060cc0cdf012373b79/config/biodata.yaml), 12 of them have [additional data downloads](https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes). If you need a reference which is absent in the list, you may install it as a [custom genome](configuration.html#adding-custom-genomes). 
+bcbio supports the following [genome references](https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml), 12 of them have [additional data downloads](https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes). If you need a reference which is absent in the list, you may install it as a [custom genome](configuration.html#adding-custom-genomes). 
 
 bcbio installs associated data files for sequence processing, and you're able to customize this to install larger files or change the defaults. Use the `--datatarget` flag (potentially multiple times) to customize or add new targets.
 
