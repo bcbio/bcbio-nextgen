@@ -88,18 +88,23 @@ def salmon_quant_reads(fq1, fq2, salmon_dir, gtf_file, data, index):
     num_cores = dd.get_num_cores(data)
     resources = config_utils.get_resources("salmon", dd.get_config(data))
     params = ""
+    bias = True
     if resources.get("options") is not None:
         params = " ".join([str(x) for x in resources.get("options", [])])
+        if any("--noLengthCorrection" in x for x in resources.get("options", [])):
+           bias=False
     cmd = ("{salmon} quant {libtype} -i {index} -p {num_cores} "
            " --validateMappings "
-           " --seqBias "
            "-o {tx_out_dir} {params} ")
+    if bias:
+        cmd += " --seqBias "
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)
     if not fq2:
         cmd += " -r {fq1_cmd} "
     else:
-        cmd += " --gcBias "
+        if bias:
+            cmd += " --gcBias "
         fq2_cmd = "<(cat {fq2})" if not is_gzipped(fq2) else "<(gzip -cd {fq2})"
         fq2_cmd = fq2_cmd.format(fq2=fq2)
         cmd += " -1 {fq1_cmd} -2 {fq2_cmd} "
