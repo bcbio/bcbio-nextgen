@@ -99,7 +99,9 @@ def index(ref_file, out_dir, data):
     if not utils.file_exists(out_dir):
         with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
             num_cores = dd.get_cores(data)
-            cmd = "{bismark} --bowtie2 -p {num_cores} -n 1 -o {tx_out_dir} --basename {sample} --unmapped {ref_file} {in_fastq}"
+            other_opts = config_utils.get_resources("bismark", data["config"]).get("options", [])
+            other_opts = " ".join([str(x) for x in other_opts]).strip()
+            cmd = "{bismark} {other_opts} --bowtie2 -p {num_cores} -n 1 -o {tx_out_dir} --basename {sample} --unmapped {ref_file} {in_fastq}"
             do.run(cmd.format(**locals()), "Index STAR")
             if os.path.exists(out_dir):
                 shutil.rmtree(out_dir)
