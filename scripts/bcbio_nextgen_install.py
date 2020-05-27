@@ -29,6 +29,9 @@ REMOTES = {
         "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"
 }
+# required to prevent potential incompatibility with conda packages that expect 3.7 or below
+# however, this may cause future issues with conda when it is upgraded to 3.8 or above
+# for example: https://github.com/bcbio/bcbio-nextgen/issues/3240
 TARGETPY = 'python=3.7'
 
 
