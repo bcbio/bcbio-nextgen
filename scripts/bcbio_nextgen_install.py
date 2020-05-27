@@ -29,7 +29,7 @@ REMOTES = {
         "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
     "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"
 }
-TARGETPY = "python=3.6"
+TARGETPY = 'python=3.7'
 
 
 def main(args, sys_argv):
