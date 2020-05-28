@@ -55,7 +55,7 @@ def summary(*samples):
             in_files += _merge_metrics(work_samples, out_dir)
             if _one_exists(in_files):
                 with utils.chdir(out_dir):
-                    _create_config_file(out_dir, work_samples)
+                    config_file = _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
                         export_tmp = "export TMPDIR=%s && " % dd.get_tmp_dir(samples[0])
@@ -66,7 +66,7 @@ def summary(*samples):
                     other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
                     other_opts = " ".join([str(x) for x in other_opts])
                     cmd = ("{path_export}{export_tmp}{locale_export} "
-                           "{multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}")
+                           "{multiqc} -c {config_file} -f -l {input_list_file} {other_opts} -o {tx_out}")
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -368,13 +368,13 @@ def _create_config_file(out_dir, samples):
                 'name': 'Bcftools (somatic)',
                 'info': 'Bcftools stats for somatic variant calls only.',
                 'path_filters': ['*_bcftools_stats.txt'],
-                'write_general_stats': True,
+                'custom_config': {'write_general_stats': True},
             }},
             {'bcftools': {
                 'name': 'Bcftools (germline)',
                 'info': 'Bcftools stats for germline variant calls only.',
                 'path_filters': ['*_bcftools_stats_germline.txt'],
-                'write_general_stats': False
+                'custom_config': {'write_general_stats': False},
             }},
         ])
     else:
@@ -488,8 +488,10 @@ def _merge_metrics(samples, out_dir):
             dt = pd.DataFrame(m, index=['1'])
             dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
             dt['sample'] = sample_name
-            dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-            dt['RiP_pct'] = "%.3f" % (int(m.get("RiP", 0)) / float(m.get("Total_reads", 1)) * 100)
+            if m.get('rRNA_rate'):
+                dt['rRNA_rate'] = m.get('rRNA_rate')
+            if m.get("RiP"):
+                dt['RiP_pct'] = "%.3f" % (int(m.get("RiP")) / float(m.get("Total_reads", 1)) * 100)
             dt = _fix_duplicated_rate(dt)
             dt.transpose().to_csv(tx_out_file, sep="\t", header=False)
         out.append(sample_file)

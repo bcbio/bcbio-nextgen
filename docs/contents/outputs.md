@@ -1,12 +1,10 @@
-## Outputs
+# Outputs
 
 bcbio-nextgen runs in a temporary work directory which contains a number of processing intermediates. Pipeline completion extracts the final useful output files into a separate directory, specified by the [Upload](contents/configuration:upload). This configuration allows upload to local directories, Galaxy, or Amazon S3. Once extracting and confirming the output files, you can delete the temporary directory to save space.
 
-### Common files
-
 The output directory contains sample specific output files labeled by sample name and a more general project directory. The sample directories contain all of the sample specific output files, while the project directory contains global files like project summaries or batched population level variant calls. See the [Teaching](teaching) documentation for a full variant calling example with additional details about configuration setting and resulting output files.
 
-#### Project directory:
+## Project directory:
 * `project-summary.yaml` -- Top level YAML format summary file with statistics on read alignments and duplications as well as analysis specific metrics.
 * `programs.txt` -- Program versions for bcbio-nextgen and software run in the pipeline. This enables reproduction of analyses.
 * `multiqc` -- [MultiQC](https://multiqc.info/) report. multiqc_report.html combines quality metrics from multiple tools (listed in multiqc_config.yaml).
@@ -18,71 +16,24 @@ The output directory contains sample specific output files labeled by sample nam
 * `metadata.csv` -- CSV with the metadata in the YAML file.
 * `data_versions.csv` -- Data versions for bcbio-nextgen and software
 
-#### Why do I have so many coverage metrics? Which one should I use?
-
-#### Interpretation of ontarget_pct vs usable_pct
-Usually, `ontarget_pct` > `usable_pct` for WES without UMI because `mapped_unique < total_reads`, `ontarget_pct ~ usable_pct` for projects with UMI, because UMI consensus reads are mapped by definition.
-Sometimes `ontarget_pct` < `usable_pct`, the difference is <=0.2% for UMI projects, because `total_reads` is calculated by samtools, and `mapped_unique` by [readstats.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/bam/readstats.py#L37), which leads to a slight difference in `mapped_unique > total`.
-
-#### Interpretation of mosdepth median coverage vs qualimap median coverage
-`Mosdepth median coverage` < `Qualimap median coverage`. For example, mosdepth = 133, qualimap = 169. Mosdepth calculates the median over the average coverages of contigs (chromosomes), see `mosdepth/Average coverage per contig` figure. Most of the chromosomes have coverage 150-200X, but chromosomes are very few and additional chromosomes have coverage 20-30X, so the median is lowered by that fact. qualimap goes for a median over all exonic regions, see `Qualimap/Coverage Histogram` figure. Exonic regions are many and the median is higher. Use qualimap median coverage as a better estimate. Note that `tools_on: qualimap_full` should be used to get reliable estimates from qualimap. If you are subsetting bam for qualimap (default), use mosdepth median coverage.
-
-#### Interpretation of bcbio(mosdepth) average target coverage vs qualimap mean coverage
-First of all, these two should not be confused with median coverage from mosdepth and qualimap (mean vs median).
-`bcbio_average_target` is calculated by [get_average_coverage](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/coverage.py#L154), in the end it is coverage from [mosdepth](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/coverage.py#L154), `NA12878-exome-eval/work/coverage/NA12878/NA12878-variant_regions.regions.bed.gz ` in the case of an example WES project. It is calculated [excluding](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/coverage.py#L154) duplicated reads and reads with unmapped mate. See also statistics here in the `bcbio project/work/coverage/mapped_stats.txt`. Qualimap includes these reads, so usually for WES data with and without UMIs `bcbio_average_target < qualimap_mean_coverage`. However, we've seen some projects with UMIs and panels where `bcbio_average_target_coverage >> qualimap_mean_coverage`. Use `bcbio_average`.`
-
-#### Sample directories:
+## Sample directories:
 * `SAMPLE/qc` -- Directory of quality control runs for the sample. These include charts and metrics for assessing quality of sequencing and analysis.
 * `SAMPLE-ready.bam` -- A prepared BAM file of the aligned reads. Depending on the analysis used, this may include trimmed, recalibrated and realigned reads following alignment.
 
-### Variant calling
+## Why do I have so many coverage metrics? Which one should I use?
 
-Project directory:
-* `grading-summary.csv` -- Grading details comparing each sample to a reference set of calls. This will only have information when providing a validation callset.
-* `BATCH-caller.vcf` -- Variants called for a population/batch of samples by a particular caller.
-* `BATCH-caller.db` -- A [GEMINI database](https://github.com/arq5x/gemini) associating variant calls with a wide variety of third party annotations. This provides a queryable framework for assessing variant quality statistics.
+## Interpretation of ontarget_pct vs usable_pct
+Usually, `ontarget_pct` > `usable_pct` for WES without UMI because `mapped_unique < total_reads`, `ontarget_pct ~ usable_pct` for projects with UMI, because UMI consensus reads are mapped by definition.
+Sometimes `ontarget_pct` < `usable_pct`, the difference is <=0.2% for UMI projects, because `total_reads` is calculated by samtools, and `mapped_unique` by [readstats.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/bam/readstats.py#L37), which leads to a slight difference in `mapped_unique > total`.
 
-Sample directories:
-* `SAMPLE-caller.vcf` -- Variants calls for an individual sample.
-* `SAMPLE-gdc-viral-completeness.txt` -- Optional viral contamination estimates. File is of the format **depth, 1x, 5x, 25x**. **depth** is the number of reads aligning to the virus. **1x, 5x, 25x** are percentage of the viral sequence covered by reads of 1x, 5x, 25x depth. Real viral contamination will have broad coverage across the entire genome, so high numbers for these values, depending on sequencing depth. High depth and low viral sequence coverage means a likely false positive.
+## Interpretation of mosdepth median coverage vs qualimap median coverage
+`Mosdepth median coverage` < `Qualimap median coverage`. For example, mosdepth = 133, qualimap = 169. Mosdepth calculates the median over the average coverages of contigs (chromosomes), see `mosdepth/Average coverage per contig` figure. Most of the chromosomes have coverage 150-200X, but chromosomes are very few and additional chromosomes have coverage 20-30X, so the median is lowered by that fact. qualimap goes for a median over all exonic regions, see `Qualimap/Coverage Histogram` figure. Exonic regions are many and the median is higher. Use qualimap median coverage as a better estimate. Note that `tools_on: qualimap_full` should be used to get reliable estimates from qualimap. If you are subsetting bam for qualimap (default), use mosdepth median coverage.
 
-### small RNA-seq
+## Interpretation of bcbio(mosdepth) average target coverage vs qualimap mean coverage
+First of all, these two should not be confused with median coverage from mosdepth and qualimap (mean vs median).
+`bcbio_average_target` is calculated by [get_average_coverage](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/coverage.py#L154), in the end it is coverage from `mosdepth`: `NA12878-exome-eval/work/coverage/NA12878/NA12878-variant_regions.regions.bed.gz ` for NA12878 WES project. It is calculated **excluding** duplicated reads and reads with unmapped mate. See also statistics here in the `bcbio project/work/coverage/mapped_stats.txt`. Qualimap includes these reads, so usually for WES data with and without UMIs `bcbio_average_target < qualimap_mean_coverage`. However, we've seen some projects with UMIs and panels where `bcbio_average_target_coverage >> qualimap_mean_coverage`. Use `bcbio_average`.
 
-Project directory:
-* `counts_mirna.tsv` -- miRBase miRNA count matrix.
-* `counts.tsv` -- miRBase isomiRs count matrix. The ID is made of 5 tags: miRNA name, SNPs, additions, trimming at 5 and trimming at 3. Here there is detail explanation of the [naming](https://seqcluster.readthedocs.io/mirna_annotation.html).
-* `counts_mirna_novel.tsv` -- miRDeep2 miRNA count matrix.
-* `counts_novel.tsv` -- miRDeep2 isomiRs. See counts.tsv explanation for more detail. count matrix.
-* `seqcluster` -- output of [seqcluster](https://github.com/lpantano/seqcluster) tool. Inside this folder, counts.tsv has count matrix for all clusters found over the genome.
-* `seqclusterViz` -- input file for interactive browser at <https://github.com/lpantano/seqclusterViz>
-* `report` -- Rmd template to help with downstream analysis like QC metrics, differential expression, and clustering.
-
-Sample directories:
-* `SAMPLE-mirbase-ready.counts` -- counts for miRBase miRNAs.
-* `SAMPLE-novel-ready` -- counts for miRDeep2 novel miRNAs.
-* `tRNA` -- output for [tdrmapper](https://github.com/sararselitsky/tDRmapper).
-
-### ATAC-seq
-
-Sample directories:
-
-Below is an example sample directory for a sample called _rep1_. There are four sets of peak files for each sample, for each peak caller, one set for each of the nucleosome-free (NF), mononucleosome (MF), dinucleosome (DF) and trinucleosome (TF) regions. There are BAM files of reach of those regions as well.
-```
-rep1
-├── macs2 -- peak calls from macs2
-│   ├── rep1-NF_control_lambda.bdg.gz -- local lambda estimate for poisson distribution from control samples in bedgraph format, NF regions only
-│   ├── rep1-NF_peaks.narrowpeak -- peaks in narrowPeak format in NF regions
-│   ├── rep1-NF_summits.bed -- top of peak in bed format of NF regions
-│   └── rep1-NF_treat_pileup.bdg.gz -- bedgraph for rep1 sample of NF regions
-├── rep1-NF.bam -- BAM of just nucleosome free regions
-├── rep1-MN.bam -- BAM of just mononucleosome regions
-├── rep1-DN.bam -- BAM of just dinucleosome regions
-├── rep1-TN.bam -- BAM of just trinucleosome regions
-├── rep1-ready.bam -- BAM of all alignments
-└── rep1-ready.bw -- bigwig file of all alignments
-```
-
-### Downstream analysis
+## Downstream analysis
 
 This section collects useful scripts and tools to do downstream analysis of bcbio-nextgen outputs. If you have pointers to useful tools, please add them to the documentation.
 

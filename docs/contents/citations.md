@@ -1,6 +1,9 @@
 ## Citations
 
+If you use bcbio in your work, please cite it via Zenodo to help us track how and where it is being used:
+
 <https://doi.org/10.5281/zenodo.3564938>
+
 
 ### small RNA-seq
 

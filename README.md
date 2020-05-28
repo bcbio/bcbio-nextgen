@@ -2,9 +2,9 @@
 
 Validated, scalable, community developed variant calling, RNA-seq and small RNA analysis. You write a high level configuration file specifying your inputs and analysis parameters. This input drives a parallel run that handles distributed execution, idempotent processing restarts and safe transactional steps. bcbio provides a shared community resource that handles the data processing component of sequencing analysis, providing researchers with more time to focus on the downstream biology.
 
-[![TravisCI status](https://travis-ci.org/bcbio/bcbio-nextgen.png)](https://travis-ci.org/bcbio/bcbio-nextgen)
+[![Build Status](https://travis-ci.org/bcbio/bcbio-nextgen.svg?branch=master)](https://travis-ci.org/bcbio/bcbio-nextgen)
 [![Documentation status](https://readthedocs.org/projects/bcbio-nextgen/badge/?version=latest)](https://bcbio-nextgen.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3743344.svg)](https://doi.org/10.5281/zenodo.3743344)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3564938.svg)](https://doi.org/10.5281/zenodo.3564938)
 
 ## Features
 

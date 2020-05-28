@@ -27,9 +27,8 @@ REMOTES = {
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config":
         "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
-    "anaconda": "https://repo.continuum.io/miniconda/Miniconda3-latest-%s-x86_64.sh"
+    "anaconda": "https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-%s-x86_64.sh"
 }
-TARGETPY = "python=3.6"
 
 
 def main(args, sys_argv):
@@ -100,10 +99,9 @@ def install_conda_pkgs(anaconda, args):
         subprocess.check_call(["wget", "--no-check-certificate", REMOTES["requirements"]])
     if args.minimize_disk:
         subprocess.check_call([mamba_bin, "install", "--yes", "nomkl"], env=env)
-    subprocess.check_call([mamba_bin, "install", "--yes", "--only-deps", "bcbio-nextgen",
-                           TARGETPY], env=env)
+    subprocess.check_call([mamba_bin, "install", "--yes", "--only-deps", "bcbio-nextgen"], env=env)
     subprocess.check_call([conda_bin, "install", "--yes",
-                           "--file", os.path.basename(REMOTES["requirements"]), TARGETPY], env=env)
+                           "--file", os.path.basename(REMOTES["requirements"])], env=env)
     return os.path.join(anaconda["dir"], "bin", "bcbio_nextgen.py")
 
 

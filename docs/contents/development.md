@@ -1,8 +1,16 @@
-## Development
+# Development
+This section provides useful concepts for getting started digging into the code
+and contributing new functionality. We welcome contributors and hope these notes
+help make it easier to get started.
 
-This section provides useful concepts for getting started digging into the code and contributing new functionality. We welcome contributors and hope these notes help make it easier to get started.
-
-### Goals
+## Goals
+bcbio-nextgen provides best-practice pipelines for automated analysis of high throughput sequencing data with the goal of being:
+* Quantifiable: Doing good science requires being able to accurately assess the quality of results and re-verify approaches as new algorithms and software become available.
+* Analyzable: Results feed into tools to make it easy to query and visualize the results.
+* Scalable: Handle large datasets and sample populations on distributed heterogeneous compute environments.
+* Reproducible: Track configuration, versions, provenance and command lines to enable debugging, extension and reproducibility of results.
+* Community developed: The development process is fully open and sustained by contributors from multiple institutions. By working together on a shared framework, we can overcome the challenges associated with maintaining complex pipelines in a rapidly changing area of research.
+* Accessible: Bioinformaticians, biologists and the general public should be able to run these tools on inputs ranging from research materials to clinical samples to personal genomes.
 
 During development we seek to maximize functionality and usefulness, while avoiding complexity. Since these goals are sometimes in conflict, it's useful to understand the design approaches:
 * Support high level configurability but avoid exposing all program options. Since pipelines support a wide variety of tools, each with a large number of options, we try to define configuration variables at high level based on biological intent and then translate these into best-practice options for each tool. The goal is to avoid having an overwhelming number of input configuration options.
@@ -13,8 +21,7 @@ During development we seek to maximize functionality and usefulness, while avoid
 * Focus on a functional coding style with minimal use of global mutable objects. This approach works well with distributed code and isolates debugging to individual functions rather than globally mutable state.
 * Make sure your changes integrate correctly by running the test suite before submitting a pull request. The pipeline is automatically tested in [Travis-CI](https://travis-ci.org/bcbio/bcbio-nextgen), and a red label will appear in the pull request if the former causes any issue.
 
-### Style guide
-
+## Style guide
 General:
 * Delete unnecessary code (do not just comment it out)
 * Refactor existing code to help deliver new functionality
@@ -30,8 +37,7 @@ Python:
 * Clarify function calls with keyword arguments for readability
 * Use [type hints](https://www.python.org/dev/peps/pep-0484/)
 
-### Overview
-
+## Modules
 The most useful modules inside `bcbio`, ordered by likely interest:
 * `pipeline` -- Top level functionality that drives the analysis pipeline. `main.py` contains top level definitions of pipelines like variant calling and RNAseq, and is the best place to start understanding the overall organization of the code.
 * `ngsalign` -- Integration with aligners for high-throughput sequencing data. We support individual aligners with their own separate modules.
@@ -42,14 +48,10 @@ The most useful modules inside `bcbio`, ordered by likely interest:
 * `workflow` -- Provide high level tools to run customized analyses. They tie into specialized analyses or visual front ends to make running bcbio-nextgen easier for specific common tasks.
 * `broad` -- Code to handle calling Broad tools like GATK and Picard, as well as other Java-based programs.
 
-### Infrastructure
-
-#### GitHub
-
+## GitHub
 bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](https://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The GitHub help pages have detailed information on keeping your fork updated with the main GitHub repository (e.g. <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
 
-#### Creating a separate bcbio installation
-
+## Creating a separate bcbio installation
 When developing, you'd like to avoid breaking your production bcbio instance. Use the installer to create a separate bcbio instance without downloading any data. Before installing the second bcbio instance, investigate your PATH and PYTHONPATH variables. It is better to avoid mixing bcbio instances in the PATH. Also watch `~/.conda/environments.txt`.
 
 To install in `${HOME}/local/share/bcbio` (your location might be different, make sure you have ~30GB of disk quota there):
@@ -72,8 +74,7 @@ export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:$PATH
 Or directly call the testing bcbio:
 `${HOME}/local/share/bcbio/anaconda/bin/bcbio_nextgen.py`.
 
-#### Injecting bcbio code into bcbio installation
-
+## Injecting bcbio code into bcbio installation
 To install from your bcbio-nextgen source tree for testing do:
 ```shell
 # make sure you are using the development bcbio instance
@@ -84,14 +85,14 @@ bcbio_python setup.py install
 ```
 One tricky part that we don't yet know how to work around is that pip and standard `setup.py install` have different ideas about how to write Python eggs. `setup.py install` will create an isolated python egg directory like `bcbio_nextgen-1.1.5-py3.6.egg`, while pip creates an egg pointing to a top level `bcbio` directory. Where this gets tricky is that the top level `bcbio` directory takes precedence. The best way to work around this problem is to manually remove the current pip installed bcbio-nextgen code (`rm -rf /path/to/anaconda/lib/python3.6/site-packages/bcbio*`) before managing it manually with `bcbio_python setup.py install`. We'd welcome tips about ways to force consistent installation across methods.
 
-#### Installing development tools
+## Installing development tools
 ```shell
 conda install --file requirements-dev.txt
 ```
 
-### Documentation
-
-To build this documentation locally and see how it looks like you can do so by installing the dependencies:
+## Documentation
+To build this documentation locally and see how it looks like you can do so by
+installing the dependencies:
 ```shell
 cd docs
 conda install --file requirements-local.txt --file requirements.txt
@@ -100,10 +101,10 @@ and running:
 ```shell
 make html
 ```
-The documentation will be built under `docs/_build/html`, open `index.html` with your browser to load your local build.
+The documentation will be built under `docs/_build/html`, open `index.html`
+with your browser to load your local build.
 
-### Testing
-
+## Testing
 The test suite exercises the scripts driving the analysis, so are a good starting point to ensure correct installation. Tests use the [pytest](https://doc.pytest.org/en/latest/) framework. The tests are available in the bcbio source code:
 ```shell
 git clone https://github.com/bcbio/bcbio-nextgen.git
@@ -140,9 +141,9 @@ To see the test coverage, add the `--cov=bcbio` argument to `py.test`.
 
 By default the test suite will use your installed system configuration for running tests, substituting the test genome information instead of using full genomes. If you need a specific testing environment, copy `tests/data/automated/post_process-sample.yaml` to `tests/data/automated/post_process.yaml` to provide a test-only configuration.
 
-### Adding tools
+## Adding tools
 
-#### Aligner
+### Aligner
 
 Write new aligners within their own submodule inside the `ngsalign` directory. [bwa.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bwa.py) is a good example to follow along with. There are two functions to implement, based on which type of alignment you'd like to allow:
 * `align_bam` -- Performs alignment given an input BAM file. Expected to return a sorted BAM output file.
@@ -156,8 +157,7 @@ Other required implementation details include:
 
 Once implemented, plug the aligner into the pipeline by defining it as a `_tool` in [bcbio/pipeline/alignment.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/alignment.py). You can then use it as normal by specifying the name of the aligner in the _aligner_ section of your configuration input.
 
-#### Variant caller
-
+### Variant caller
 New variant calling approaches live within their own module inside `bcbio/variation`. The [freebayes.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/freebayes.py) implementation is a good example to follow for providing your own variant caller. Implement a function to run variant calling on multiple BAMs in an input region that takes the following inputs:
 
 * `align_bams` -- A list of BAM files to call simultaneously.
@@ -169,8 +169,7 @@ New variant calling approaches live within their own module inside `bcbio/variat
 
 Once implemented, add the variant caller into the pipeline by updating `caller_fns` in the `variantcall_sample` function in [bcbio/variation/genotype.py](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/genotype.py#L548). You can use it by specifying it in the `variantcaller` parameter of your sample configuration.
 
-### Adding new organisms
-
+## Adding new organisms
 While bcbio-nextgen and supporting tools receive the most testing and development on human or human-like diploid organisms, the algorithms are generic and we strive to support the wide diversity of organisms used in your research. We welcome contributors interested in setting up and maintaining support for their particular research organism, and this section defines the steps in integrating a new genome. We also welcome suggestions and implementations that improve this process.
 
 Setup CloudBioLinux to automatically download and prepare the genome:
@@ -199,7 +198,7 @@ bcbio_python prepare_tx_gff.py --genome-dir /path/to/bcbio/genomes Mmusculus mm9
 ```
 We are still working on ways to best include these as part of the standard build and install since they either require additional tools to run locally, or require preparing copies in S3 buckets.
 
-### New release checklist
+## New release checklist
 - [ ] pull from master to make sure you are up to date
 - [ ] run integration tests: `py.test -s -x tests/integration/test_automated_analysis.py`
 - [ ] run unit tests: `py.test -s -x tests/unit`
@@ -209,10 +208,10 @@ We are still working on ways to best include these as part of the standard build
 - [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
 - [ ] update Zenodo badge in [README.md](https://github.com/bcbio/bcbio-nextgen/blob/master/README.md)
 - [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
-- [ ] review and approve bioconda recipe once it passes the tests 
+- [ ] review and approve bioconda recipe once it passes the tests
 - [ ] merge recipe by commenting `@bioconda-bot please merge`
 - [ ] wait until new version is available on [bioconda](https://anaconda.org/bioconda/bcbio-nextgen/files)
-- [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt) 
+- [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt)
 - [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
 - [ ] push changes to bcbio
 - [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
@@ -220,9 +219,9 @@ We are still working on ways to best include these as part of the standard build
 - [ ] push changes to bcbio_docker
 - [ ] make sure the image builds successfully
 
-### Standard function arguments
+## Standard function arguments
 
-#### names
+### names
 
 This dictionary provides lane and other [BAM run group](https://samtools.github.io/hts-specs/SAMv1.pdf) naming information used to correctly build BAM files. We use the `rg` attribute as the ID within a BAM file:
 ```
@@ -233,7 +232,7 @@ This dictionary provides lane and other [BAM run group](https://samtools.github.
  'sample': 'Test1'}
 ```
 
-#### data
+### data
 
 The _data_ dictionary is a large dictionary representing processing, configuration and files associated with a sample. The standard work flow is to pass this dictionary between functions, updating with associated files from the additional processing. Populating this dictionary only with standard types allows serialization to JSON for distributed processing.
 
@@ -326,7 +325,7 @@ of additional information supplied during a variant calling workflow:
  'work_bam': '7_100326_FC6107FAAXX-sort-prep.bam'}
 ```
 
-### Parallelization framework
+## Parallelization framework
 
 bcbio-nextgen supports parallel runs on local machines using multiple cores and distributed on a cluster using IPython using a general framework.
 
