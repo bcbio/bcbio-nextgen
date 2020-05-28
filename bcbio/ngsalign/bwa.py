@@ -1,4 +1,4 @@
-"""Next-gen alignments with BWA (http://bio-bwa.sourceforge.net/)
+"""BWA (https://github.com/lh3/bwa)
 """
 import os
 import signal
@@ -40,7 +40,10 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
     if not utils.file_exists(out_file):
         with tx_tmpdir(data) as work_dir:
             with postalign.tobam_cl(data, out_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
-                bwa_cmd = _get_bwa_mem_cmd(data, out_file, ref_file, "-")
+                if not hla_on(data) or needs_separate_hla(data):
+                    bwa_cmd = _get_bwa_mem_cmd(data, out_file, ref_file, "-", with_hla=False)
+                else:
+                    bwa_cmd = _get_bwa_mem_cmd(data, out_file, ref_file, "-", with_hla=True)
                 tx_out_prefix = os.path.splitext(tx_out_file)[0]
                 prefix1 = "%s-in1" % tx_out_prefix
                 cmd = ("unset JAVA_HOME && "
@@ -50,9 +53,26 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 cmd = cmd.format(**locals()) + tobam_cl
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
-    return out_file
+    data["work_bam"] = out_file
+    hla_file = "HLA-" + out_file
+    if needs_separate_hla(data) and not utils.file_exists(hla_file):
+        with tx_tmpdir(data) as work_dir:
+            with postalign.tobam_cl(data, hla_file, bam.is_paired(in_bam)) as (tobam_cl, tx_out_file):
+                bwa_cmd = _get_bwa_mem_cmd(data, hla_file, ref_file, "-", with_hla=True)
+                tx_out_prefix = os.path.splitext(tx_out_file)[0]
+                prefix1 = "%s-in1" % tx_out_prefix
+                cmd = ("unset JAVA_HOME && "
+                       "{samtools} sort -n -l 1 -@ {num_cores} -m {max_mem} {in_bam} -T {prefix1} "
+                       "| {bedtools} bamtofastq -i /dev/stdin -fq /dev/stdout -fq2 /dev/stdout "
+                       "| {bwa_cmd} | ")
+                cmd = cmd.format(**locals()) + tobam_cl
+                do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
+                       [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
+        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, reg_info, data)
+        data["hla_bam"] = hla_file
+    return data
 
-def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
+def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2="", with_hla=False):
     """Perform piped bwa mem mapping potentially with alternative alleles in GRCh38 + HLA typing.
 
     Commands for HLA post-processing:
@@ -63,7 +83,7 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
        rm -f $base.hla.HLA*gz
     """
     alt_file = ref_file + ".alt"
-    if utils.file_exists(alt_file) and dd.get_hlacaller(data):
+    if with_hla:
         bwakit_dir = os.path.dirname(os.path.realpath(utils.which("run-bwamem")))
         hla_base = os.path.join(utils.safe_makedir(os.path.join(os.path.dirname(out_file), "hla")),
                                 os.path.basename(out_file) + ".hla")
@@ -92,6 +112,14 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2=""):
     bwa_cmd = ("{exports}{bwa} mem {pairing} {c_tags} {mem_usage} -M -t {num_cores} {bwa_params} -R '{rg_info}' "
                "-v 1 {ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
+
+def hla_on(data):
+    alt_file = dd.get_ref_file(data) + ".alt"
+    hla_on = utils.file_exists(alt_file) and dd.get_hlacaller(data)
+    return alt_file and hla_on
+
+def has_umi(data):
+    return umi_bam in data
 
 def fastq_size_output(fastq_file, tocheck):
     head_count = 8000000
@@ -166,9 +194,20 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             out_file = _align_backtrack(fastq_file, pair_file, ref_file, out_file,
                                         names, rg_info, data)
         else:
-            out_file = _align_mem(fastq_file, pair_file, ref_file, out_file,
-                                  names, rg_info, data)
+            if not hla_on(data) or needs_separate_hla(data):
+                out_file = _align_mem(fastq_file, pair_file, ref_file, out_file,
+                                    names, rg_info, data)
+            else:
+                out_file = _align_mem_hla(fastq_file, pair_file, ref_file, out_file,
+                                          names, rg_info, data)
     data["work_bam"] = out_file
+
+    # bwakit will corrupt the non-HLA alignments in a UMI collapsed BAM file
+    # (see https://github.com/bcbio/bcbio-nextgen/issues/3069)
+    if needs_separate_hla(data):
+        hla_file = "HLA-" + out_file
+        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, reg_info, data)
+        data["hla_bam"] = hla_file
     return data
 
 def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
@@ -176,10 +215,27 @@ def _align_mem(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """
     with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
         cmd = ("unset JAVA_HOME && "
-               "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file), tobam_cl))
+            "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file, with_hla=False), tobam_cl))
         do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
                 [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
     return out_file
+
+def _align_mem_hla(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
+    """Perform bwa-mem alignment on supported read lengths with HLA alignments
+    """
+    with postalign.tobam_cl(data, out_file, pair_file != "") as (tobam_cl, tx_out_file):
+        cmd = ("unset JAVA_HOME && "
+            "%s | %s" % (_get_bwa_mem_cmd(data, out_file, ref_file, fastq_file, pair_file, with_hla=True), tobam_cl))
+        do.run(cmd, "bwa mem alignment from fastq: %s" % names["sample"], None,
+                [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, fastq_file)])
+        return out_file
+
+def needs_separate_hla(data):
+    """
+    bwakit will corrupt the non-HLA alignments in a UMI collapsed BAM file
+    (see https://github.com/bcbio/bcbio-nextgen/issues/3069)
+    """
+    return hla_on(data) and has_umi(data)
 
 def _align_backtrack(fastq_file, pair_file, ref_file, out_file, names, rg_info, data):
     """Perform a BWA alignment using 'aln' backtrack algorithm.
