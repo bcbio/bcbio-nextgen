@@ -211,3 +211,31 @@ def _supports_avx():
             for line in in_handle:
                 if line.startswith("flags") and line.find("avx") > 0:
                     return True
+
+def collect_artifact_metrics(data):
+    """Run CollectSequencingArtifacts to collect pre-adapter ligation artifact metrics
+    https://gatk.broadinstitute.org/hc/en-us/articles/360037429491-CollectSequencingArtifactMetrics-Picard-
+    """
+    FILE_EXTENSION = ".txt"
+    OUT_SUFFIXES = [".bait_bias_detail_metrics", ".error_summary_metrics",
+                    ".pre_adapter_detail_metrics", ".pre_adapter_summary_metrics"]
+    broad_runner = broad.runner_from_config(dd.get_config(data))
+    gatk_type = broad_runner.gatk_type()
+    ref_file = dd.get_ref_file(data)
+    bam_file = dd.get_work_bam(data)
+    out_dir = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data))
+    utils.safe_makedir(out_dir)
+    out_base = out_dir + dd.get_sample_name(data)
+    out_files = [out_base + x + FILE_EXTENSION for x in OUT_SUFFIXES]
+    if all([utils.file_exists(x) for x in out_files]):
+        return out_files
+    with file_transaction(data, out_dir) as tx_out_dir:
+        utils.safe_makedir(tx_out_dir)
+        out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
+        params = ["-T", "CollectSequencingArtifactMetrics",
+                "-R", ref_file,
+                "-I", bam_file,
+                "--FILE_EXTENSION", ".txt",
+                "-O", out_base]
+        broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
+    return out_files
