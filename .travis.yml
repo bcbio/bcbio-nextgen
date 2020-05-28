@@ -6,18 +6,8 @@ addons:
   apt:
     update: true
 
-install:
-  - python ./scripts/bcbio_nextgen_install.py ${HOME}/local/share/bcbio --tooldir=${HOME}/local --nodata
-  - export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}
-  # Update to latest bcbio-nextgen code
-  - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio
-  - rm -rf ${HOME}/local/share/bcbio/anaconda/lib/python*/site-packages/bcbio_nextgen-*
-  - python setup.py install
-
 jobs:
   include:
-    - script: pytest -v -m install_required tests
-      name: "Tests requiring bcbio install"
     - script: pytest -v -m "not install_required" tests
       name: "Tests not requiring bcbio install"
 
