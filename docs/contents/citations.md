@@ -7,6 +7,11 @@ Please cite individual tools in the manuscript methods, not just bcbio.
 To promote citation, we are maitaining easy-to-paste reference lists below. 
 Feel free to contribute, if you see a tool that is used through bioconda, but is not included here.
 
+Try to look at the particular tool's documentation, article, and github issues before submitting
+an issue to bcbio. This might help to discriminate early between bcbio issues and tools' issues.
+The authors of the tool might be of better help to fix the issue. Raising the issue in tool's
+github and referencing it in bcbio github issue could speed up its resolution.
+
 ## Variant calling
 Overall, the parameters of our variant calling workflows are based on GATK best practices (https://gatk.broadinstitute.org/hc/en-us/sections/360007226651-Best-Practices-Workflows), contributions from bcbio community (https://github.com/bcbio/bcbio-nextgen) and our validations (https://github.com/bcbio/bcbio_validations/).
 
@@ -117,6 +122,11 @@ We align with STAR[1] or hisat[2], quantify transcripts with salmon[3], kallisto
 ## Fusion calling - RNA-seq
 We call fusions with oncofuse[1], pizzly[2], ericscript[3], arriba[4]. 
 4. Uhrig S. Arriba - Fast and accurate gene fusion detection from RNA-Seq data 2019. Available from: https://github.com/suhrig/arriba. 
+
+## ATAC-seq
+We are using ataqv[1] for quality control.
+
+1. Orchard P, Kyono Y, Hensley J, Kitzman JO, Parker SCJ. Quantification, Dynamic Visualization, and Validation of Bias in ATAC-Seq Data with ataqv. Cell Syst. 2020;10(3):298‐306.e4. doi:10.1016/j.cels.2020.02.009 https://www.cell.com/cell-systems/pdfExtended/S2405-4712(20)30079-X https://github.com/ParkerLab/ataqv 
 
 ## small RNA-seq
 
