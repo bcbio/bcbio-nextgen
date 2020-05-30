@@ -148,35 +148,75 @@ In addition to the somatic and germline outputs attached to the tumor and normal
 
 ## Workflow3: Somatic tumor only CNVs
 
-Copy number variation (CNVs) detection in tumor only samples requires accurately representing the non-somatic capture and sequencing background in the absence of a matched sample. Capture or sequencing specific coverage differences can trigger false positives or negatives. Without a matched normal to remove these artifacts, you can use a process matched set of unrelated samples to build a Panel of Normals (PoN) for the background correction.
+The first bcbio run creates a panel of normals (PON), the second bcbio run uses the PON file to call CNV in tumor only samples.
+PON samples should use the same gene panel/sequencing technology as tumor only samples.
+While it is technically possible to call CNVs in T/N pairs without PON, PON approach is preferable.
+3 tools support PON in bcbio: `gatk-cnv`,`CNVkit`,`seq2c`. 
+To call tumor only CNVs with a PON, this PON file should be created by the same method (not possible to create PON with CNVkit and use it for gatk-cnv calling.
+It is possible to calculate two PON files simultaneously (for gatk-cnv and seq2c or CNVkit and seqc2).
+CNVkit and gatk-cnv cannot be run together, because they require different, incompatible normalization schemes.
 
-To create these, collect all the samples you plan to use for the panel of normals and run through an `automated sample configuration` as a single batch with the background samples set as control and any nonbackground as the non-background. An example sample CSV:
+### 1. Collect PON samples and create a project structure
+Put coverage.bed in pon/config/ and PON input files (bam, fq.gz) to pon/input.
+```bash
+$ mkdir pon
+$ cd pon
+$ mkdir input config
+$ ls config
+coverage.bed
+$ ls -1 input
+S_1_N.bam
+S_2_N.bam
+S_3_N.bam
+...
+```
+coverage.bed contains regions from WES or gene panel capture kit provider.
+
+### 2. Create pon.csv
 ```
 samplename,description,svclass,batch
-background1.bam,background1,control,pon_build
-background2_R1.fq.gz;background2_R2.fq.gz,background2,control,pon_build
-testsample.bam,testsample,pon_build
+S_1_N.bam,S_1_N,control,pon_build
+S_2_N.bam,S_2_N,control,pon_build
+S_3_N.bam,S_3_N,control,pon_build
 ```
-and template YAML:
+To use fastq input: `S_2_N_R1.fq.gz;S_2_N_R2.fq.gz,S_2_N,control,pon_build`
+
+### 3. Create pon_template.yaml:
 ```yaml
 details:
   - analysis: variant2
     genome_build: hg38
     algorithm:
       svcaller: [gatk-cnv, seq2c]
-      variant_regions: your_regions.bed
+      variant_regions: /path/pon/config/coverage.bed
 ```
-After running, collect the panel of normal files from each calling method:
-* gatk-cnv: _work/structural/testsample/bins/background1-pon_build-pon.hdf5_
+
+### 4. Configure bcbio PON project
+Put `pon.csv`, `pon_template.yaml` in the same dir as `pon`.
+Run automatic sample configuration:
+```bash
+$ ls -1
+pon
+pon.csv
+pon_template.yaml
+$ bcbio_nextgen.py -w template pon_template.yaml pon.csv pon/input/*.bam
+```
+
+### 5. Run bcbio PON project
+```bash
+$ cd pon/work
+$ bcbio_nextgen.py ../config/pon.yaml -n 15
+```
+
+### 6. Collect PON file:
+* gatk-cnv: `_work/structural/testsample/bins/background1-pon_build-pon.hdf5_`
 * seq2c: This doesn't have a default panel of normals file format so we create a bcbio specific one as a concatenation of the read mapping file (_final/date_project/seq2c-read_mapping.txt_) and coverage file (_final/date_project/seq2c-coverage.tsv_) outputs for the background samples. When fed to future bcbio runs, it will correctly extract and re-use this file as background.
 * CNVkit: _final/testsample/testsample-cnvkit-background.cnn_
 
-CNVkit and gatk-cnv cannot be run together, because they require different, incompatible normalization schemes.
-
-Once you have the panel of normals, use them as background in any tumor only project with the same sequencing and capture process in your `variant calling` configuration:
+### 7. use PON as background in any tumor only project with the same sequencing and capture process in your `variant calling` configuration:
 ```yaml
 svcaller: [gatk-cnv, seq2c]
-variant_regions: your_regions.bed
+variant_regions: coverage.bed
 background:
   cnv_reference:
     cnvkit: ../pon/your_regions-cnvkit-pon.cnn
@@ -185,7 +225,6 @@ background:
 ```
 
 ## Workflow4: Cancer-like mixture with Genome in a Bottle samples
-
 This example simulates somatic cancer calling using a mixture of two Genome in a Bottle samples, NA12878 as the "tumor" mixed with NA24385 as the background. The [Hartwig Medical Foundation](https://www.hartwigmedicalfoundation.nl/en/) and [Utrecht Medical Center](https://www.umcutrecht.nl/en/Research/Strategic-themes/Cancer) generated this "tumor/normal" pair by physical mixing of samples prior to sequencing. The GiaB FTP directory has [more details on the design and truth sets](ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/use_cases/mixtures/UMCUTRECHT_NA12878_NA24385_mixture_10052016/README-NA12878_NA24385_mixture.txt). The sample has variants at 15% and 30%, providing the ability to look at lower frequency mutations.
 
 To get the data:
@@ -313,4 +352,8 @@ For cancer validations:
 
 A [full evaluation of cancer calling](http://bcb.io/2015/03/05/cancerval/) validates callers against [synthetic dataset 3 from the ICGC-TCGA DREAM challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/62018).
 
-## TODO
+## References
+
+### CNV calling
+- [gatk-cnv](https://gatk.broadinstitute.org/hc/en-us/articles/360035531092--How-to-part-I-Sensitively-detect-copy-ratio-alterations-and-allelic-segments)
+- [Oh et al.2020.Reliable Analysis of Clinical Tumor-Only Whole-Exome Sequencing Data](https://ascopubs.org/doi/suppl/10.1200/CCI.19.00130)
