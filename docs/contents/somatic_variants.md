@@ -158,6 +158,7 @@ CNVkit and gatk-cnv cannot be run together, because they require different, inco
 
 ### 1. Collect PON samples and create a project structure
 Put coverage.bed in pon/config/ and PON input files (bam, fq.gz) to pon/input.
+One test tumor sample is required for this run (it does not included in the PON).
 ```bash
 $ mkdir pon
 $ cd pon
@@ -168,16 +169,19 @@ $ ls -1 input
 S_1_N.bam
 S_2_N.bam
 S_3_N.bam
+S_1_T.bam
 ...
 ```
 coverage.bed contains regions from WES or gene panel capture kit provider.
 
 ### 2. Create pon.csv
+Mark samples to build the PON with `svclass=control`
 ```
 samplename,description,svclass,batch
 S_1_N.bam,S_1_N,control,pon_build
 S_2_N.bam,S_2_N,control,pon_build
 S_3_N.bam,S_3_N,control,pon_build
+S_1_T.bam,S_1_N,tumor,pon_build
 ```
 To use fastq input: `S_2_N_R1.fq.gz;S_2_N_R2.fq.gz,S_2_N,control,pon_build`
 
@@ -209,8 +213,11 @@ $ bcbio_nextgen.py ../config/pon.yaml -n 15
 ```
 
 ### 6. Collect PON file:
-* gatk-cnv: `_work/structural/testsample/bins/background1-pon_build-pon.hdf5_`
-* seq2c: This doesn't have a default panel of normals file format so we create a bcbio specific one as a concatenation of the read mapping file (_final/date_project/seq2c-read_mapping.txt_) and coverage file (_final/date_project/seq2c-coverage.tsv_) outputs for the background samples. When fed to future bcbio runs, it will correctly extract and re-use this file as background.
+* gatk-cnv: `pon/work/structural/S_1_T/bins/S_1_N-0-pon.hdf5`
+* seq2c doesn't have a default PON file format so we create a bcbio specific one as a concatenation of the read mapping file `final/date_project/seq2c-read_mapping.txt` and coverage file `final/date_project/seq2c-coverage.tsv` outputs for the background samples. When fed to future bcbio runs, it will correctly extract and re-use this file as background.
+```bash
+cat seq2c-read_mapping.txt seq2c-coverage.tsv > seqc.pon.txt
+```
 * CNVkit: _final/testsample/testsample-cnvkit-background.cnn_
 
 ### 7. use PON as background in any tumor only project with the same sequencing and capture process in your `variant calling` configuration:
