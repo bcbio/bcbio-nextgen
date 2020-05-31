@@ -1,9 +1,9 @@
 version: 22
 
 aliases:
-  ensembl: drosophila_melanogaster_vep_99_BDGP6.28
+  ensembl: drosophila_melanogaster_vep_100_BDGP6.28
   snpeff: BDGP6.86
-  
+
 srnaseq:
   srna_transcripts: ../srnaseq/srna-transcripts.gtf
   mirbase_hairpin: ../srnaseq/hairpin.fa
