@@ -159,6 +159,8 @@ def pon_to_bed(pon_file, out_dir, data):
                     intervals = f["original_data"]["intervals"]
                     for i in range(len(intervals["transposed_index_start_end"][0])):
                         chrom = intervals["indexed_contig_names"][intervals["transposed_index_start_end"][0][i]]
+                        if isinstance(chrom, bytes):
+                            chrom = chrom.decode("utf-8")
                         start = int(intervals["transposed_index_start_end"][1][i]) - 1
                         end = int(intervals["transposed_index_start_end"][2][i])
                         out_handle.write("%s\t%s\t%s\n" % (chrom, start, end))
