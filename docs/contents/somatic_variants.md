@@ -1,10 +1,16 @@
 # Somatic (cancer) variants
 
-bcbio supports tumor only and tumor-normal small (SNV and indels),
-copy number (CNV) variant calling using multiple tools.
-We recommend to start with `vardict` and `mutect2`.  
-bcbio also supports a majority voting ensemble approach
-to combine calls from multiple callers.
+For small variants (SNV and indels), bcbio supports the following workflows: 
+- tumor-normal calling;
+- tumor only calling;
+- UMIs, including duplex UMIs, which improve precision in many applications including cfDNA analysis;
+We recommend starting with `vardict` and `mutect2` as variant callers. 
+bcbio also supports a majority voting ensemble approach to combine calls from multiple callers.
+
+For copy number (CNV) detection, bcbio supports T/N calling with a panel of normals with `gatk-cnv` and `seq2c`.
+
+Currently (2020-06-02), we are working to introduce tumor only CNV calling with PON (without using T/N pairs) using `gatk-cnv`. `cnvkit` also works for T/N, PON, and tumor only case, but it is not stable - it fails for some random samples,
+see issues.
 
 ## Workflow1 - T/N
 This [example](https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/cancer-dream-syn3.yaml)
@@ -146,13 +152,13 @@ In addition to the somatic and germline outputs attached to the tumor and normal
 * `your-tumor/your-tumor-manta.vcf.gz` -- Somatic structural variant calls for each specified `svcaller`. These will have genotypes for both the tumor and normal samples, with somatic calls labeled as PASS variants.
 * `your-normal/your-normal-manta.vcf.gz` -- Germline structural variant calls for each specified `svcaller`. We expect these to be noisier than the somatic calls due to the lack of a reference sample to help remove technical noise.
 
-## Workflow3: Somatic tumor only CNVs
+## Workflow3: Somatic tumor CNVs
 
-The first bcbio run creates a panel of normals (PON), the second bcbio run uses the PON file to call CNV in tumor only samples.
+The first bcbio run creates a panel of normals (PON), the second bcbio run uses the PON file to call CNV in tumor/normal (gatk-cnv) or tumor only (cnvkit) samples.
 PON samples should use the same gene panel/sequencing technology as tumor only samples.
 While it is technically possible to call CNVs in T/N pairs without PON, PON approach is preferable.
 3 tools support PON in bcbio: `gatk-cnv`,`CNVkit`,`seq2c`. 
-To call tumor only CNVs with a PON, this PON file should be created by the same method (not possible to create PON with CNVkit and use it for gatk-cnv calling.
+To call CNVs with a PON, this PON file should be created by the same method (not possible to create PON with CNVkit and use it for gatk-cnv calling.
 It is possible to calculate two PON files simultaneously (for gatk-cnv and seq2c or CNVkit and seqc2).
 CNVkit and gatk-cnv cannot be run together, because they require different, incompatible normalization schemes.
 
@@ -220,15 +226,60 @@ cat seq2c-read_mapping.txt seq2c-coverage.tsv > seqc.pon.txt
 ```
 * CNVkit: _final/testsample/testsample-cnvkit-background.cnn_
 
-### 7. use PON as background in any tumor only project with the same sequencing and capture process in your `variant calling` configuration:
+Then use PON in a T/N project
+
+### 7. Create pon_tn project structure
+Put coverage.bed, gatk-cnv.pon.hdf5,seq2c.pon.txt in `pon_tn/config/`, 
+copy or symlink all input files (bam, fq.gz) to pon/input.
+```bash
+mkdir pon_tn
+cd pon_tn
+mkdir config input
+cp /path/coverage.bed /path/gatk-cnv.pon.hdf5 /path/seq2c.pon.txt config
+# cp or symlink input files
+cp /path/*.bam input
+cd ..
+```
+
+### 8. Prepare a sample sheet pon_tn.csv:
+```
+samplename,description,batch,phenotype
+S_1_T-ready.bam,S_1_T,S_1,tumor
+S_2_T-ready.bam,S_2_T,S_2,tumor
+S_3_T-ready.bam,S_3_T,S_3,tumor
+S_1_N-ready.bam,S_1_N,S_1,normal
+S_2_N-ready.bam,S_2_N,S_2,normal
+S_3_N-ready.bam,S_3_N,S_3,normal
+```
+
+### 9. Premate a yaml template: pon_tn_template.yaml
 ```yaml
-svcaller: [gatk-cnv, seq2c]
-variant_regions: coverage.bed
-background:
-  cnv_reference:
-    cnvkit: ../pon/your_regions-cnvkit-pon.cnn
-    gatk-cnv: ../pon/your_regions-gatk-cnv-pon.hdf5
-    seq2c: ../pon/your_region-seq2c-pon.txt
+details:
+  - analysis: variant2
+    genome_build: hg38
+    algorithm:
+      svcaller: [gatk-cnv, seq2c]
+      variant_regions: /path/pon_tn/config/coverage.bed
+      coverage_interval: regional
+      background:
+        cnv_reference:
+          gatk-cnv: /path/pon_tn/config/gatk-cnv.pon.hdf5
+          seq2c: /path/pon_tn/config/seqc.pon.txt
+ ```
+
+### 10. configure pon_tn project:
+```
+$ ls -1
+pon_tn
+pon_tn.csv
+pon_tn_template.yaml
+$ bcbio_nextgen.py -w template pon_tn_template.yaml pon_tn.csv pon_tn/input/*.bam
+```
+
+### 11. Run bcbio pon_tn project
+```bash
+$ cd pon_tn/work
+$ bcbio_nextgen.py ../config/pon_tn.yaml -n 15
 ```
 
 ## Workflow4: Cancer-like mixture with Genome in a Bottle samples
