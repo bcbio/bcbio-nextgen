@@ -412,6 +412,7 @@ For cancer validations:
 A [full evaluation of cancer calling](http://bcb.io/2015/03/05/cancerval/) validates callers against [synthetic dataset 3 from the ICGC-TCGA DREAM challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/62018).
 
 ## References
+- [PON at UMCCR](https://umccr.org/blog/panel-of-normals/)
 
 ### CNV calling
 - [gatk-cnv](https://gatk.broadinstitute.org/hc/en-us/articles/360035531092--How-to-part-I-Sensitively-detect-copy-ratio-alterations-and-allelic-segments)
