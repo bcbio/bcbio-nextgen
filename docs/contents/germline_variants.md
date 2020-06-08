@@ -167,10 +167,7 @@ bash NA12878-trio-wgs-validate-getdata.sh
 cd ../work
 bcbio_nextgen.py ../config/NA12878-trio-wgs-validate.yaml -n 16
 ```
-This is a large whole genome analysis and meant to test both pipeline scaling
-and validation across the entire genome. It can take multiple days to run depending on available cores.
-It requires 300GB for the input files and 1.3TB for the work directory.
-Smaller examples below exercise the pipeline with less disk and computational requirements.
+This is a large whole genome analysis and meant to test both pipeline scaling and validation across the entire genome. It can take multiple days to run depending on available cores. It requires 300GB for the input files, 1.3TB for the work directory, and 48GB of memory (with 16 cores). Smaller examples below exercise the pipeline with less disk and computational requirements.
 
 ## Workflow5: Whole genome (10x)
 
