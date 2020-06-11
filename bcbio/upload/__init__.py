@@ -70,6 +70,8 @@ def _get_files(sample):
         return _get_files_chipseq(sample)
     elif analysis.lower() in ["scrna-seq"]:
         return _get_files_scrnaseq(sample)
+    elif analysis.lower() in ["wgbs-seq"]:
+        return _get_files_wgbsseq(sample)
     else:
         return []
 
@@ -121,6 +123,31 @@ def _get_files_chipseq(sample):
     out = _maybe_add_nucleosome_alignments(algorithm, sample, out)
     out = _maybe_add_peaks(algorithm, sample, out)
     out = _maybe_add_greylist(algorithm, sample, out)
+    return _add_meta(out, sample)
+
+def _get_files_wgbsseq(sample):
+    out = []
+    algorithm = sample["config"]["algorithm"]
+    # otherwise deduplicated bam is saved to final
+    sample["work_bam"] = sample["align_bam"]
+    out = _maybe_add_alignment(algorithm, sample, out)
+    bismark_report_dir = sample.get("bismark_report")
+    if bismark_report_dir:
+        out.append({"path": bismark_report_dir,
+                    "type": "directory",
+                    "ext": "bismark"})
+    bam_report = sample.get("bam_report")
+    if bam_report:
+        out.append({"path": bam_report,
+                    "type": "txt",
+                    "ext": "bam_report"})
+
+    deduplication_report = sample.get("deduplication_report")
+    if deduplication_report:
+        out.append({"path": deduplication_report,
+                    "type": "txt",
+                    "ext": "deduplication_report"})
+
     return _add_meta(out, sample)
 
 def _add_meta(xs, sample=None, config=None):

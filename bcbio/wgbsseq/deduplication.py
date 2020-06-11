@@ -11,8 +11,9 @@ def dedup_bismark(data):
     """Remove alignments to the same position in the genome from the Bismark
     mapping output using deduplicate_bismark
     """
+    config = data["config"]
     input_file = datadict.get_work_bam(data)
-    input_file = bam.sort(input_file, datadict.get_config(data), order="queryname")
+    input_file = bam.sort(input_file, config, order="queryname")
     sample_name = datadict.get_sample_name(data)
     output_dir = os.path.join(datadict.get_work_dir(data), 'dedup',
                               sample_name)
@@ -29,11 +30,11 @@ def dedup_bismark(data):
         data = datadict.set_work_bam(data, output_file)
         return [[data]]
 
-    deduplicate_bismark = config_utils.get_program('deduplicate_bismark',
-                                                   data['config'])
+    deduplicate_bismark = config_utils.get_program('deduplicate_bismark', config)
     command = f'{deduplicate_bismark} --output_dir {output_dir} {input_file}'
     with transaction.file_transaction(output_dir):
         do.run(command, 'remove deduplicate alignments')
 
     data = datadict.set_work_bam(data, output_file)
+    data["deduplication_report"] = output_file.replace("deduplicated.bam", "deduplication_report.txt")
     return [[data]]

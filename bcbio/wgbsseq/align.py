@@ -72,5 +72,8 @@ def create_bam(data, args):
     workdir = safe_makedir("align")
     sample = data['name']
     # workdir = op.join("align", sample)
-    data['final_bam'] = _align(data['trimmed'], sample, op.abspath(workdir), args.index, args.is_directional, args.bowtie2, args.reference, data['config'])
+    data['final_bam'] = _align(data['trimmed'], sample, op.abspath(workdir),
+                               args.index, args.is_directional, args.bowtie2,
+                               args.reference, data['config'])
+    data['order_bam'] = data['final_bam']
     return data
