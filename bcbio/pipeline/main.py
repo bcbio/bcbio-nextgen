@@ -428,10 +428,15 @@ def wgbsseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("cpg calling", dirs):
             samples = run_parallel("cpg_calling", samples)
 
-    # with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
-    #                 samples, config, dirs, "qc") as run_parallel:
-    #     with profile.report("quality control", dirs):
-    #         samples = qcsummary.generate_parallel(samples, run_parallel)
+    with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
+                     samples, config, dirs, "qc") as run_parallel:
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
     return samples
 
 

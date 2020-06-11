@@ -28,7 +28,7 @@ We plan to continue to expand CWL support to include more components of bcbio, a
 
 #### Install bcbio-vm with a local bcbio
 
-To run bcbio without using containers, first [install bcbio](contents/installation:automated) and make it available in your path. You'll need both the bcbio code and tools. To only run the tests and bcbio validations, you don't need a full data installation so can install with `--nodata`.
+To run bcbio without using containers, first and make it available in your path. You'll need both the bcbio code and tools. To only run the tests and bcbio validations, you don't need a full data installation so can install with `--nodata`.
 
 To then install bcbio-vm, add the `--cwl` flag to the install:
 ```shell
