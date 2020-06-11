@@ -11,9 +11,10 @@ Consider this a beta feature.
 | Name | Vendor link | Directionality | Trim R1 5' (nt) | Trim R1 3' (nt) | Trim R2 5' (nt) | Trim R2 3' (nt) |
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | accelngs | [link](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/) | directional | 0 | 15 | 15 | 0 |
+| nebemseq | [link](https://www.neb.com/products/e7120-nebnext-enzymatic-methyl-seq-kit) | directional | 0 | 0 | 0 | 0 |
 | truseq | [link](https://www.illumina.com/products/by-type/sequencing-kits/library-prep-kits/truseq-methyl-capture-epic.html) | non-directional | 8 | 8 | 8 | 8 |
 
-It is possible to specify the `trim_galore` trimming parameters and `bismark` non-directional parameter (default: directional) in the `resources` section of the bcbio config file. The following configs for the `truseq` kit will give the same results:
+It is possible to specify the `trim_galore` trimming parameters and `bismark` directionality parameter (default: directional) in the `resources` section of the bcbio config file. The following configs for the `truseq` kit will give the same results:
 ```
 details:
   - analysis: wgbs-seq
@@ -37,4 +38,4 @@ details:
 
 ## Parameters
 - `aligner`: `bismark`
-- `kit`: `accelngs` or `truseq`
+- `kit`: `accelngs`, `nebemseq`, `truseq`
