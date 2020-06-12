@@ -304,7 +304,11 @@ bcbio_nextgen.py ../config/cancer-giab-na12878-na24385.yaml -n 16
 - to use panel of normals (PON) for small variants with mutect2, specify a vcf file as a background for T sample.
   ```yaml
   - algorithm:
-    background: /path/to/input/1000g_pon.hg38.vcf.gz
+      background: /path/to/input/1000g_pon.hg38.vcf.gz
+      variantcaller: mutect2
+    metadata:
+      batch: batch1
+      phenotype: tumor
   ```
   bcbio does not support PON generation at the moment. You may create a PON outside of bcbio or use PONs from Broad Institute: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
 - also see more parameters in `germline_variants` user story.
