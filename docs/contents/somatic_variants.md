@@ -310,7 +310,7 @@ bcbio_nextgen.py ../config/cancer-giab-na12878-na24385.yaml -n 16
       batch: batch1
       phenotype: tumor
   ```
-  bcbio does not support PON generation at the moment. You may create a PON outside of bcbio or use PONs from Broad Institute: https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/
+  bcbio does not support PON generation at the moment. You may create a PON outside of bcbio or use PONs from [Broad Institute](https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/)
 - also see more parameters in `germline_variants` user story.
 
 ### Ensemble variant calling
