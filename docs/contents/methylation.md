@@ -10,7 +10,7 @@ Consider this a beta feature.
 ## Supported Kits
 | Name | Vendor link | Directionality | Trim R1 5' (nt) | Trim R1 3' (nt) | Trim R2 5' (nt) | Trim R2 3' (nt) |
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| accelngs | [link](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/) | directional | 0 | 15 | 15 | 0 |
+| accelngs | [link](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/) | directional | 0 | 19 | 19 | 0 |
 | nebemseq | [link](https://www.neb.com/products/e7120-nebnext-enzymatic-methyl-seq-kit) | directional | 0 | 0 | 0 | 0 |
 | truseq | [link](https://www.illumina.com/products/by-type/sequencing-kits/library-prep-kits/truseq-methyl-capture-epic.html) | non-directional | 8 | 8 | 8 | 8 |
 
