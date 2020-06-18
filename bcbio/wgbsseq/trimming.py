@@ -40,9 +40,12 @@ def trim(data):
         clipsettings = ""
 
     trim_galore = config_utils.get_program("trim_galore", data["config"])
+    # trim_galore actual cores used = 3x + 3 where x = value of the parameter (according to manual)
+    tg_cores = max(int((dd.get_num_cores(data) - 3) / 3), 1)
     other_opts = config_utils.get_resources("trim_galore", data["config"]).get("options", [])
     other_opts = " ".join([str(x) for x in other_opts]).strip()
-    cmd = "{trim_galore} {other_opts} {clipsettings} --length 30 --quality 30 --fastqc --paired -o {tx_out_dir} {files}"
+
+    cmd = "{trim_galore} {other_opts} {clipsettings} --cores {tg_cores} --length 30 --quality 30 --fastqc --paired -o {tx_out_dir} {files}"
     log_file = os.path.join(out_dir, names + "_cutadapt_log.txt")
 
     if not utils.file_exists(out_files[0]):
