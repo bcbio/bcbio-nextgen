@@ -36,9 +36,14 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         return data
 
     bismark = config_utils.get_program("bismark", config)
+
+    # bismark uses 5 threads/sample and ~12GB RAM/sample (hg38)
+    resources = config_utils.get_resources("bismark", data["config"])
+    max_cores = resources.get("cores", 1)
+    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G"))
+    n = min(max(int(max_cores/5), 1),
+            max(int(max_mem/config_utils.convert_to_bytes("12G")), 1))
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
-    num_cores = dd.get_num_cores(data)
-    n = 1 if num_cores < 5 else 2
     safe_makedir(align_dir)
     cmd = "{bismark} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
     if pair_file:
