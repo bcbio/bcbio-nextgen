@@ -33,7 +33,7 @@ details:
       trim_galore:
         options: ["--clip_r1 8", "--clip_r2 8", "--three_prime_clip_r1 8", "--three_prime_clip_r2 8"]
       bismark:
-        options: ["--non-directional"]
+        options: ["--non_directional"]
 ```
 
 ## Parameters
