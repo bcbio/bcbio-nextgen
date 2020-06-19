@@ -43,9 +43,13 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G"))
     n = min(max(int(max_cores/5), 1),
             max(int(max_mem/config_utils.convert_to_bytes("12G")), 1))
+
+    other_opts = resources.get("options", [])
+    other_opts = " ".join([str(x) for x in other_opts]).strip()
+
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
-    cmd = "{bismark} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
+    cmd = "{bismark} {other_opts} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
     raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
