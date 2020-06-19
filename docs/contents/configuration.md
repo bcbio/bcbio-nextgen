@@ -514,10 +514,29 @@ To remove a reference genome, delete its directory `bcbio/genomes/species/refere
 
 ### Adding custom genomes
 
-`bcbio_setup_genome.py` will help you to install a custom genome and apply all changes needed to the configuration files. It needs the genome in FASTA format, and the annotation file in GTF or GFF3 format. It can create index for all aligners used by bcbio. Moreover, it will create the folder _rnaseq_ to allow you run the RNAseq pipeline without further configuration. The `--buildversion` option will write that string to the `version.txt` file, to track from where and which version of a gene build was used.
+[bcbio_setup_genome.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/bcbio_setup_genome.py) installs a custom genome for variant and bulk-RNA-seq analyses and updates the configuration files. 
+
 ```shell
-bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --buildversion WormBase_34
+bcbio_setup_genome.py \
+-f genome.fa \
+-g annotation.gtf \
+-i bwa star seq \
+-n Celegans -b WBcel135 --buildversion WormBase_34
 ```
+
+Arguments:
+- run `bcbio_setup_genome.py --help` to see all available arguments
+- `-f genome.fasta` - genome in FASTA format
+- `-g annotation.gtf` - annotation file in GTF or GFF3 format
+- `-i seq bwa` - list of aligner indices to create. `seq` is a sequence dictionary, always created.
+- `-n Name` - name of the species, for example `Celegans`.
+- `-b Build` - genome build, for example `WBcel135`.
+- `--buildversion annotation_build` - annotation build, for example `WormBase_34` or ensembl build. It is saved in `bcbio/genomes/Name/Build/rnaseq/version.txt`.
+
+References for many species are available from Ensembl:
+- [genomes](http://ftp.ensembl.org/pub/release-100/fasta/)
+- [transriptome annotations](http://ftp.ensembl.org/pub/release-100/gtf/)
+
 If you want to add smallRNA-seq data files, you will need to add the 3 letters code of mirbase for your genome (i.e hsa for human) and the GTF file for the annotation of smallRNA data. Here you can use the same file than the transcriptome if no other available.
 ```shell
 bcbio_setup_genome.py -f genome.fa -g annotation.gtf -i bowtie2 star seq -n Celegans -b WBcel135 --species cel --srna_gtf another_annotation.gtf --buildversion WormBase_34

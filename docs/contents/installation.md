@@ -106,7 +106,7 @@ optional arguments:
 Some useful arguments are:
 * `--isolate` Avoid updating the user's `~/.bashrc` if installing in a non-standard PATH. This facilitates creation of isolated modules without disrupting the user's environmental setup. Manually edit your `~/.bashrc` to allow bcbio runs with:
     ```shell
-    export PATH=/path_to_bcbio/bin:$PATH
+    export PATH=/path_to_bcbio/anaconda/bin:/path_to_bcbio/tools/bin:$PATH
     ```
 * `--nodata` Do not install genome data.
 

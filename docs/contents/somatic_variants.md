@@ -299,9 +299,19 @@ bcbio_nextgen.py ../config/cancer-giab-na12878-na24385.yaml -n 16
 
 ## Parameters
 - `variantcaller`: should be consistent for T/N pairs
-* `min_allele_fraction` Minimum allele fraction to detect variants in heterogeneous tumor samples, set as the float or integer __percentage__ to resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this in the tumor sample of a tumor/normal pair. It is percentage, not ratio, it is divided /100.0 when calling vardict!
-* `use_lowfreq_filter: false`. When set, forces vardict to report variants with low allelec frequency, useful to call variants in panels with high coverage (>1000x). The default (option is not set to false in the config) is to use low frequency filter, i.e. variants could be underreported (variant VAF is above min_allele_fraction but rejected by the filter).
-* also see parameters in `germline_varinants` user story.
+- `min_allele_fraction` Minimum allele fraction to detect variants in heterogeneous tumor samples, set as the float or integer __percentage__ to resolve (i.e. 10 = alleles in 10% of the sample). Defaults to 10. Specify this in the tumor sample of a tumor/normal pair. It is percentage, not ratio, it is divided /100.0 when calling vardict!
+- `use_lowfreq_filter: false`. When set, forces vardict to report variants with low allelec frequency, useful to call variants in panels with high coverage (>1000x). The default (option is not set to false in the config) is to use low frequency filter, i.e. variants could be underreported (variant VAF is above min_allele_fraction but rejected by the filter).
+- to use panel of normals (PON) for small variants with mutect2, specify a vcf file as a background for T sample.
+  ```yaml
+  - algorithm:
+      background: /path/to/input/1000g_pon.hg38.vcf.gz
+      variantcaller: mutect2
+    metadata:
+      batch: batch1
+      phenotype: tumor
+  ```
+  bcbio does not support PON generation at the moment. You may create a PON outside of bcbio or use PONs from [Broad Institute](https://console.cloud.google.com/storage/browser/gatk-best-practices/somatic-hg38/)
+- also see more parameters in `germline_variants` user story.
 
 ### Ensemble variant calling
 A simple majority rule ensemble classifier builds a final callset based on the intersection of calls.
