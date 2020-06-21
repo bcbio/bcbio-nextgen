@@ -109,6 +109,7 @@ upload:
 ```
 
 ### 3. Run bcbio project
+
 ```shell
 cd ../work
 bcbio_nextgen.py ../config/cancer-dream-syn3.yaml -n 8
@@ -165,7 +166,9 @@ CNVkit and gatk-cnv cannot be run together, because they require different, inco
 
 ### 1. Collect PON samples and create a project structure
 Put coverage.bed in pon/config/ and PON input files (bam, fq.gz) to pon/input.
-One test tumor sample is required for this run (it does not included in the PON).
+One test tumor sample is required to create a PON project (cnvkit requirement),
+this tumor sample is not included in the PON).
+
 ```bash
 $ mkdir pon
 $ cd pon
@@ -179,6 +182,7 @@ S_3_N.bam
 S_1_T.bam
 ...
 ```
+
 coverage.bed contains regions from WES or gene panel capture kit provider.
 
 ### 2. Create pon.csv
