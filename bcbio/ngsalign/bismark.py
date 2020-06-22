@@ -46,7 +46,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             max(int(max_mem/config_utils.convert_to_bytes("12G")), 1))
 
     kit = kits.KITS.get(dd.get_kit(data), None)
-    directional = "" if kit and kit.is_directional else "--non_directional"
+    directional = "--non_directional" if kit and not kit.is_directional else ""
 
     other_opts = resources.get("options", [])
     other_opts = " ".join([str(x) for x in other_opts]).strip()
