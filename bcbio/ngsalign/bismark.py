@@ -13,6 +13,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio import bam
 from bcbio import broad
+from bcbio.wgbsseq import kits
 
 
 def align(fastq_file, pair_file, ref_file, names, align_dir, data):
@@ -36,11 +37,23 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         return data
 
     bismark = config_utils.get_program("bismark", config)
+
+    # bismark uses 5 threads/sample and ~12GB RAM/sample (hg38)
+    resources = config_utils.get_resources("bismark", data["config"])
+    max_cores = resources.get("cores", 1)
+    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G"))
+    n = min(max(int(max_cores/5), 1),
+            max(int(max_mem/config_utils.convert_to_bytes("12G")), 1))
+
+    kit = kits.KITS.get(dd.get_kit(data), None)
+    directional = "--non_directional" if kit and not kit.is_directional else ""
+
+    other_opts = resources.get("options", [])
+    other_opts = " ".join([str(x) for x in other_opts]).strip()
+
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
-    num_cores = dd.get_num_cores(data)
-    n = 1 if num_cores < 5 else 2
     safe_makedir(align_dir)
-    cmd = "{bismark} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
+    cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
     raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
@@ -99,7 +112,9 @@ def index(ref_file, out_dir, data):
     if not utils.file_exists(out_dir):
         with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
             num_cores = dd.get_cores(data)
-            cmd = "{bismark} --bowtie2 -p {num_cores} -n 1 -o {tx_out_dir} --basename {sample} --unmapped {ref_file} {in_fastq}"
+            other_opts = config_utils.get_resources("bismark", data["config"]).get("options", [])
+            other_opts = " ".join([str(x) for x in other_opts]).strip()
+            cmd = "{bismark} {other_opts} --bowtie2 -p {num_cores} -n 1 -o {tx_out_dir} --basename {sample} --unmapped {ref_file} {in_fastq}"
             do.run(cmd.format(**locals()), "Index STAR")
             if os.path.exists(out_dir):
                 shutil.rmtree(out_dir)

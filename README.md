@@ -60,6 +60,7 @@ See the [full documentation](https://bcbio-nextgen.readthedocs.io/en/latest/) an
 * [John Kern](https://github.com/kern3020)
 * [Rory Kirchner](https://github.com/roryk), Harvard Chan Bioinformatics Core
 * [Tetiana Khotiainsteva](https://github.com/tetianakh), Ardigen
+* [Kerrin Mendler](https://github.com/kmendler), AstraZeneca
 * [Sergey Naumenko](https://github.com/naumenko-sa), Harvard Chan Bioinformatics Core
 * [Jakub Nowacki](https://github.com/jsnowacki), AstraZeneca
 * [John Morrissey](https://github.com/jwm), Harvard Chan Bioinformatics Core
