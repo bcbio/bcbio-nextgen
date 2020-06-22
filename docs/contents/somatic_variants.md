@@ -159,7 +159,7 @@ In addition to the somatic and germline outputs attached to the tumor and normal
 The first bcbio run creates a panel of normals (PON), the second bcbio run uses the PON file to call copy number variants (CNV) in tumor/normal (gatk-cnv) or tumor only (cnvkit) samples.
 PON samples should use the same gene panel/sequencing technology as tumor only samples.
 While it is technically possible to call CNVs in T/N pairs without PON, PON approach is preferable.
-3 tools support PON in bcbio: `gatk-cnv`,`CNVkit`,`seq2c`. 
+3 tools support PON in bcbio: `gatk-cnv`,`CNVkit`,`seq2c`.
 To call CNVs with a PON, this PON file should be created by the same method (not possible to create PON with CNVkit and use it for gatk-cnv calling.
 It is possible to calculate two PON files simultaneously (for gatk-cnv and seq2c or CNVkit and seqc2).
 CNVkit and gatk-cnv cannot be run together, because they require different, incompatible normalization schemes.
@@ -224,12 +224,12 @@ $ bcbio_nextgen.py ../config/pon.yaml -n 15
 ```
 
 ### 6. Collect PON file:
-* gatk-cnv: `pon/work/structural/S_1_T/bins/S_1_N-0-pon.hdf5`
+* gatk-cnv: `final/project/gatkcnv-pon.hdf5`
 * seq2c doesn't have a default PON file format so we create a bcbio specific one as a concatenation of the read mapping file `final/date_project/seq2c-read_mapping.txt` and coverage file `final/date_project/seq2c-coverage.tsv` outputs for the background samples. When fed to future bcbio runs, it will correctly extract and re-use this file as background.
 ```bash
 cat seq2c-read_mapping.txt seq2c-coverage.tsv > seqc.pon.txt
 ```
-* CNVkit: _final/testsample/testsample-cnvkit-background.cnn_
+* CNVkit: `final/testsample/testsample-cnvkit-background.cnn`
 
 Then use PON in a T/N project
 

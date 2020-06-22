@@ -292,6 +292,11 @@ def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, work_dir, back_fi
         pon = list(input_backs)[0]
     elif backgrounds:
         pon = gatkcnv.create_panel_of_normals(backgrounds, group_id, work_dir)
+        for item in itertools.chain(inputs, backgrounds):
+            if "sv" not in item:
+                item["sv"] = []
+                cur_sv = {"variantcaller": "gatkcnv", "pon": pon}
+                item["sv"].append(cur_sv)
     else:
         pon = None
     for data in inputs:

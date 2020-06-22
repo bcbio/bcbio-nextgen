@@ -823,7 +823,8 @@ def _get_files_project(sample, upload_config):
         if x.get("validate") and x["validate"].get("grading_summary"):
             out.append({"path": x["validate"]["grading_summary"]})
             break
-    sv_project = set([])
+    sv_project = set()
+    pon_project = set()
     for svcall in sample.get("sv", []):
         if svcall.get("variantcaller") == "seq2c":
             if svcall.get("calls_all") and svcall["calls_all"] not in sv_project:
@@ -831,6 +832,11 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": svcall["read_mapping"], "batch": "seq2c", "ext": "read_mapping", "type": "txt"})
                 out.append({"path": svcall["calls_all"], "batch": "seq2c", "ext": "calls", "type": "tsv"})
                 sv_project.add(svcall["calls_all"])
+        if svcall.get("variantcaller") == "gatkcnv":
+            if svcall.get("pon") and svcall["pon"] not in pon_project:
+                out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"}) 
+                pon_project.add(svcall.get("pon"))
+
     if "coverage" in sample:
         cov_db = tz.get_in(["coverage", "summary"], sample)
         if cov_db:
