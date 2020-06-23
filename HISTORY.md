@@ -15,6 +15,7 @@
 - Move featureCount output files to **featureCounts** directory in project directory.
 - Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
 - Only show somatic variant counts in the general stats table, if germline variants are calculated.
+- Add `kit` parameter for setting options for pipelines via just listing the kit. Currently only implemented for WGBS.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.
