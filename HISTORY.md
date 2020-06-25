@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Add `rRNA_pseudogene` as a rRNA biotype.
 - Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
   a discussion. Thanks to @amizeranschi for finding the issue and posting the solution.
 - update VEP to v100
