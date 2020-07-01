@@ -163,6 +163,7 @@ Tune the upgrade with these options:
 * Leave out the `--tools` option if you don't want to upgrade third party tools. If using `--tools`, it will use the same directory as specified during installation. If you're using an older version that has not yet gone through a successful upgrade or installation and saved the tool directory, you should manually specify `--tooldir` for the first upgrade. You can also pass `--tooldir` to install to a different directory.
 * Leave out the `--data` option if you don't want to get any upgrades of associated genome data.
 * Some aligners such as STAR don't have pre-built indices due to the large file sizes of these. You set the number of cores to use for indexing with `--cores 8`.
+* For example, recommended HPC job parameters for `bcbio_nextgen.py upgrade -u skip --data --datatarget rnaseq --genomes GRCh37` are: 2 CPU cores, 2GB memory, and 2 hours run time.
 
 ## Customizing data installation
 
