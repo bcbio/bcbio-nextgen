@@ -224,7 +224,7 @@ Note that muTect does not provide an easy way to query for the current version, 
 
 bcbio-nextgen provides a wrapper around external tools and data, so the actual tools used drive the system requirements. For small projects, it should install on workstations or laptops with a couple GB of memory, and then scale as needed on clusters or multicore machines.
 
-Disk space requirements for the tools, including all system packages are under 4GB. Biological data requirements will depend on the genomes and aligner indices used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses approximately 35GB of storage during preparation and ~25GB after:
+Disk space requirement for the tools, including all system packages is about 22GB (or more, depending on the type of the file system). Biological data requirements will depend on the genomes and aligner indices used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses approximately 35GB of storage during preparation and ~25GB after:
 ```shell
 $ du -shc genomes/Hsapiens/GRCh37/*
 3.8G  bowtie2
