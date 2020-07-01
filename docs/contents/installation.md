@@ -24,7 +24,7 @@ or inside your home directory:
 python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata 
 ```
 
-Installation takes ~30 min.
+Installation takes 30 minutes or more (depending on the speed of your storage and internet connection). Recommended HPC job parameters for the installation process: 1 CPU core, 2GB memory, 1 hour run time.
 
 Check if installation works:
 ```
