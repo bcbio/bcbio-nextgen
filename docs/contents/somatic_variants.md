@@ -107,6 +107,7 @@ details:
 upload:
   dir: ../final
 ```
+Set `remove_lcr` parameter to `true` to remove low complexity regions from variant calling, both germline and somatic (additional information: https://www.ncbi.nlm.nih.gov/pubmed/24974202)
 
 ### 3. Run bcbio project
 
