@@ -141,6 +141,8 @@ To see the test coverage, add the `--cov=bcbio` argument to `py.test`.
 
 By default the test suite will use your installed system configuration for running tests, substituting the test genome information instead of using full genomes. If you need a specific testing environment, copy `tests/data/automated/post_process-sample.yaml` to `tests/data/automated/post_process.yaml` to provide a test-only configuration.
 
+Note: work directory is preserved between test runs. To avoid reusing the output of a previous run delete `tests/test_automated_output` directory (or `$BCBIO_TEST_DIR/test_automated_output` in Vagrant).
+
 ## Adding tools
 
 ### Aligner
