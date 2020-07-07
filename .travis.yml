@@ -14,7 +14,7 @@ env:
 
 before_install:
   # Get and install anaconda for custom Python installation
-  - wget https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-Linux-x86_64.sh
+  - wget --progress=dot:giga https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-Linux-x86_64.sh
   - bash Miniconda3-py37_4.8.2-Linux-x86_64.sh -b -p ~/install/bcbio-vm/anaconda
 
 install:
