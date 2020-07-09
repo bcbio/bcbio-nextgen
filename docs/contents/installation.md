@@ -24,7 +24,7 @@ or inside your home directory:
 python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata 
 ```
 
-Installation takes ~30 min.
+Installation takes 30 minutes or more (depending on the speed of your storage and Internet connection). Recommended HPC job parameters for the installation process: 1 CPU core, 2GB memory, and 1 hour run time.
 
 Check if installation works:
 ```
@@ -163,6 +163,7 @@ Tune the upgrade with these options:
 * Leave out the `--tools` option if you don't want to upgrade third party tools. If using `--tools`, it will use the same directory as specified during installation. If you're using an older version that has not yet gone through a successful upgrade or installation and saved the tool directory, you should manually specify `--tooldir` for the first upgrade. You can also pass `--tooldir` to install to a different directory.
 * Leave out the `--data` option if you don't want to get any upgrades of associated genome data.
 * Some aligners such as STAR don't have pre-built indices due to the large file sizes of these. You set the number of cores to use for indexing with `--cores 8`.
+* For example, recommended HPC job parameters for `bcbio_nextgen.py upgrade -u skip --data --datatarget rnaseq --genomes GRCh37` are: 2 CPU cores, 2GB memory, and 2 hours run time.
 
 ## Customizing data installation
 
@@ -224,7 +225,7 @@ Note that muTect does not provide an easy way to query for the current version, 
 
 bcbio-nextgen provides a wrapper around external tools and data, so the actual tools used drive the system requirements. For small projects, it should install on workstations or laptops with a couple GB of memory, and then scale as needed on clusters or multicore machines.
 
-Disk space requirements for the tools, including all system packages are under 4GB. Biological data requirements will depend on the genomes and aligner indices used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses approximately 35GB of storage during preparation and ~25GB after:
+Disk space requirement for the tools, including all system packages is about 22GB (or more, depending on the type of the file system). Biological data requirements will depend on the genomes and aligner indices used, but a suggested install with GRCh37 and bowtie/bwa2 indexes uses approximately 35GB of storage during preparation and ~25GB after:
 ```shell
 $ du -shc genomes/Hsapiens/GRCh37/*
 3.8G  bowtie2

@@ -1,5 +1,6 @@
 ## 1.2.4 (in progress)
-- Add --genomicsdb-use-vcf-codec when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
+- Add `rRNA_pseudogene` as a rRNA biotype.
+- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
   a discussion. Thanks to @amizeranschi for finding the issue and posting the solution.
 - update VEP to v100
 - Add consensus peak calling using https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html 
@@ -15,6 +16,7 @@
 - Move featureCount output files to **featureCounts** directory in project directory.
 - Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
 - Only show somatic variant counts in the general stats table, if germline variants are calculated.
+- Add `kit` parameter for setting options for pipelines via just listing the kit. Currently only implemented for WGBS.
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.

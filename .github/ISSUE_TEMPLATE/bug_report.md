@@ -8,15 +8,24 @@ assignees: ''
 ---
 
 **Version info**
- - bcbio version (bcbio_nextgen.py --version):
- - OS name and version:
+- bcbio version (`bcbio_nextgen.py --version`):
+- OS name and version (`lsb_release -ds`):
 
 **To Reproduce**
- - Exact bcbio command you have used
- - Your sample configuration file
+Exact bcbio command you have used:
+```
+
+```
+Your sample configuration file:
+```
+
+```
 
 **Observed behavior**
-Error message or bcbio output.
+Error message or bcbio output:
+```
+
+```
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
