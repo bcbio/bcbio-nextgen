@@ -109,7 +109,7 @@ The test suite exercises the scripts driving the analysis, so are a good startin
 ```shell
 git clone https://github.com/bcbio/bcbio-nextgen.git
 ```
-There is a small wrapper script that finds the py.test and other dependencies pre-installed with bcbio you can use to run tests:
+There is a small wrapper script that finds the pytest and other dependencies pre-installed with bcbio you can use to run tests:
 ```shell
 cd tests
 ./run_tests.sh
@@ -121,23 +121,23 @@ You can use this to run specific test targets:
 ./run_tests.sh devel
 ./run_tests.sh docker
 ```
-Optionally, you can run pytest directly from the bcbio install to tweak more options. It will be in `/path/to/bcbio/anaconda/bin/py.test`. Pass `-s` to `py.test` to see the stdout log, and `-v` to make py.test output more verbose. The `-x` flag will stop the test at the first failure and `--lf` will run only the tests that failed the last go-around. Sometimes it is useful to drop into the debugger on failure, wihch you can do by setting `-s --pdb`. The tests are marked with labels which you can use to run a specific subset of the tests using the `-m` argument:
+Optionally, you can run pytest directly from the bcbio install to tweak more options. It will be in `/path/to/bcbio/anaconda/bin/pytest`. Pass `-s` to `pytest` to see the stdout log, and `-v` to make pytest output more verbose. The `-x` flag will stop the test at the first failure and `--lf` will run only the tests that failed the last go-around. Sometimes it is useful to drop into the debugger on failure, wihch you can do by setting `-s --pdb`. The tests are marked with labels which you can use to run a specific subset of the tests using the `-m` argument:
 ```shell
-py.test -m rnaseq
+pytest -m rnaseq
 ```
 To run unit tests:
 ```shell
-py.test tests/unit
+pytest tests/unit
 ```
 To run integration pipeline tests:
 ```shell
-py.test tests/integration
+pytest tests/integration
 ```
 To run tests which use bcbio_vm:
 ```shell
-py.test tests/bcbio_vm
+pytest tests/bcbio_vm
 ```
-To see the test coverage, add the `--cov=bcbio` argument to `py.test`.
+To see the test coverage, add the `--cov=bcbio` argument to `pytest`.
 
 By default the test suite will use your installed system configuration for running tests, substituting the test genome information instead of using full genomes. If you need a specific testing environment, copy `tests/data/automated/post_process-sample.yaml` to `tests/data/automated/post_process.yaml` to provide a test-only configuration.
 
@@ -200,8 +200,8 @@ We are still working on ways to best include these as part of the standard build
 
 ## New release checklist
 - [ ] pull from master to make sure you are up to date
-- [ ] run integration tests: `py.test -s -x tests/integration/test_automated_analysis.py`
-- [ ] run unit tests: `py.test -s -x tests/unit`
+- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py`
+- [ ] run unit tests: `pytest -s -x tests/unit`
 - [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
 - [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
 - [ ] commit and push changes to bcbio
