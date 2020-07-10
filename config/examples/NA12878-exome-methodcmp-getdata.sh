@@ -10,7 +10,7 @@ set -eu -o pipefail
 
 mkdir -p config
 cd config
-wget https://raw.github.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp.yaml
 cd ..
 
 mkdir -p input

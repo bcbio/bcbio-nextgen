@@ -10,7 +10,7 @@ details:
       quality_format: Standard
       trim_reads: read_through
       adapters: [truseq, polya]
-      expression_caller: [sailfish]
+      expression_caller: [salmon]
     description: Test1
     files: [../data/110907_ERP000591/1_110907_ERP000591_1_fastq.txt, ../data/110907_ERP000591/1_110907_ERP000591_2_fastq.txt]
     genome_build: mm9

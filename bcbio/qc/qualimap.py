@@ -257,7 +257,7 @@ def _detect_rRNA(data, out_dir):
         if not quant:
             salmon_dir = dd.get_salmon_dir(data)
             if salmon_dir:
-                quant = os.path.join(salmon_dir, "quant", "quant.sf")
+                quant = os.path.join(salmon_dir, "quant.sf")
         logger.info("Calculating RNA-seq rRNA metrics for %s." % quant)
         rrna_features = gtf.get_rRNA(gtf_file)
         transcripts = set([x[1] for x in rrna_features if x])
@@ -331,6 +331,16 @@ def run_rnaseq(bam_file, data, out_dir):
     config = data["config"]
     gtf_file = dd.get_gtf_file(data)
     library = strandedness[dd.get_strandedness(data)]
+
+    # don't run qualimap on the full bam by default
+    if "qualimap_full" in tz.get_in(("config", "algorithm", "tools_on"), data, []):
+        logger.info(f"Full qualimap analysis for {bam_file} may be slow.")
+        ds_bam = bam_file
+    else:
+        logger.info(f"Downsampling {bam_file} for Qualimap run.")
+        ds_bam = bam.downsample(bam_file, data, 1e7, work_dir=out_dir)
+        bam_file = ds_bam if ds_bam else bam_file
+
     if not utils.file_exists(results_file):
         with file_transaction(data, results_dir) as tx_results_dir:
             utils.safe_makedir(tx_results_dir)

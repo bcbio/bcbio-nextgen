@@ -8,15 +8,16 @@ try:
 except ImportError:
     from IPython.parallel import require
 
-from bcbio import heterogeneity, hla, chipseq, structural, upload
+from bcbio import heterogeneity, hla, chipseq, structural, upload, utils
 from bcbio.bam import callable
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
-                          bcbiornaseq)
+                          bcbiornaseq, featureCounts)
 from bcbio.distributed import ipython
 from bcbio.ngsalign import alignprep
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.wgbsseq import cpg_caller, deduplication, trimming
 from bcbio.pipeline import (archive, config_utils, disambiguate, sample,
                             qcsummary, shared, variation, run_info, rnaseq)
 from bcbio.provenance import system
@@ -29,9 +30,10 @@ from bcbio.log import logger, setup_local_logging
 @contextlib.contextmanager
 def _setup_logging(args):
     # Set environment to standard to use periods for decimals and avoid localization
-    os.environ["LC_ALL"] = "C"
-    os.environ["LC"] = "C"
-    os.environ["LANG"] = "C"
+    locale_to_use = utils.get_locale()
+    os.environ["LC_ALL"] = locale_to_use
+    os.environ["LC"] = locale_to_use
+    os.environ["LANG"] = locale_to_use
     config = None
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         args = args[0]
@@ -103,11 +105,20 @@ def trim_srna_sample(*args):
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(srna.trim_srna_sample, *args))
 
+
+@require(trimming)
+def trim_bs_sample(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(trimming.trim, *args))
+
+
 @require(srna)
 def srna_annotation(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(srna.sample_annotation, *args))
+
 
 @require(seqcluster)
 def seqcluster_prepare(*args):
@@ -132,6 +143,35 @@ def peakcalling(* args):
     args = ipython.unzip_args(args)
     with _setup_logging(args) as config:
         return ipython.zip_args(apply(peaks.calling, *args))
+
+
+@require(cpg_caller)
+def cpg_calling(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.calling, *args))
+
+
+@require(cpg_caller)
+def cpg_processing(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.cpg_postprocessing, *args))
+
+
+@require(cpg_caller)
+def cpg_stats(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args) as config:
+        return ipython.zip_args(apply(cpg_caller.cpg_stats, *args))
+
+
+@require(deduplication)
+def deduplicate_bismark(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(deduplication.dedup_bismark, *args))
+
 
 @require(sailfish)
 def run_sailfish(*args):
@@ -187,6 +227,12 @@ def run_peddy(*args):
     with _setup_logging(args):
         return ipython.zip_args(apply(peddy.run_peddy, *args))
 
+@require(featureCounts)
+def run_chipseq_count(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(featureCounts.chipseq_count, *args))
+
 @require(umi)
 def run_tagcount(*args):
     args = ipython.unzip_args(args)
@@ -224,6 +270,12 @@ def run_salmon_bam(*args):
         return ipython.zip_args(apply(salmon.run_salmon_bam, *args))
 
 @require(salmon)
+def run_salmon_decoy(*args):
+    args = ipython.unzip_args(args)
+    with _setup_logging(args):
+        return ipython.zip_args(apply(salmon.run_salmon_decoy, *args))
+
+@require(salmon)
 def run_salmon_reads(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
@@ -234,7 +286,7 @@ def run_salmon_index(*args):
     args = ipython.unzip_args(args)
     with _setup_logging(args):
         return ipython.zip_args(apply(salmon.run_salmon_index, *args))
-    
+
 @require(rapmap)
 def run_rapmap_index(*args):
     args = ipython.unzip_args(args)

@@ -57,7 +57,9 @@ def run_peddy(samples, out_dir=None):
     vcf_file = None
     for d in samples:
         vcinfo = None
-        if dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor"]:
+        if dd.get_jointcaller(d):
+            vcinfo = variant.extract_population_vcinfo(d)
+        elif dd.get_phenotype(d) == "germline" or dd.get_phenotype(d) not in ["tumor"]:
             vcinfo = variant.get_active_vcinfo(d, use_ensemble=False)
         if not vcinfo and dd.get_phenotype(d) in ["tumor"]:
             vcinfo = variant.extract_germline_vcinfo(d, peddy_dir)

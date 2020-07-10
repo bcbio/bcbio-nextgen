@@ -2,6 +2,7 @@
 import os
 import shutil
 import glob
+import toolz as tz
 
 from bcbio.log import logger
 from bcbio import utils
@@ -9,7 +10,7 @@ from bcbio.bam.readstats import number_of_mapped_reads
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.distributed.transaction import tx_tmpdir
-
+from bcbio.chipseq.atac import get_full_peaks
 
 supported = ["hg19", "hg38", "mm10", "mm9", "rn4", "ce6", "dm3"]
 
@@ -20,6 +21,9 @@ def run(bam_file, sample, out_dir):
     #    out = chipqc(bam_file, sample, out_dir)
 
     peaks = sample.get("peaks_files", {}).get("main")
+    # find ATAC peak files
+    if not peaks:
+        peaks = get_full_peaks(sample)
     if peaks:
         out.update(_reads_in_peaks(bam_file, peaks, sample))
     return out
@@ -29,6 +33,7 @@ def _reads_in_peaks(bam_file, peaks_file, sample):
     if not peaks_file:
         return {}
     rip = number_of_mapped_reads(sample, bam_file, bed_file = peaks_file)
+
     return {"metrics": {"RiP": rip}}
 
 def chipqc(bam_file, sample, out_dir):
@@ -42,7 +47,7 @@ def chipqc(bam_file, sample, out_dir):
         if rcode:
             # local_sitelib = utils.R_sitelib()
             rscript = utils.Rscript_cmd()
-            do.run([rscript, "--no-environ", rcode], "ChIPQC in %s" % sample_name, log_error=False)
+            do.run([rscript, "--vanilla", rcode], "ChIPQC in %s" % sample_name, log_error=False)
             shutil.move(tmp_dir, out_dir)
     return _get_output(out_dir)
 

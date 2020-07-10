@@ -61,8 +61,8 @@ class SparseMatrix(object):
         with file_transaction(out_files) as tx_out_files:
             with open(tx_out_files[0], "wb") as out_handle:
                 scipy.io.mmwrite(out_handle, scipy.sparse.csr_matrix(self.matrix))
-            pd.Series(self.rownames).to_csv(tx_out_files[1], index=False)
-            pd.Series(self.colnames).to_csv(tx_out_files[2], index=False)
+            pd.Series(self.rownames).to_csv(tx_out_files[1], index=False, header=False)
+            pd.Series(self.colnames).to_csv(tx_out_files[2], index=False, header=False)
         return filename
 
     def cat(self, newsm, byrow=False):

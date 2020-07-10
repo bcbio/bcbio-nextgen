@@ -11,6 +11,7 @@ import itertools
 import operator
 import os
 import string
+import sys
 
 import six
 import toolz as tz
@@ -240,7 +241,7 @@ def _fill_validation_targets(data):
     sv_truth = tz.get_in(["config", "algorithm", "svvalidate"], data, {})
     sv_targets = (zip(itertools.repeat("svvalidate"), sv_truth.keys()) if isinstance(sv_truth, dict)
                   else [["svvalidate"]])
-    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"], ["variant_regions"]] + list(sv_targets)]:
+    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + list(sv_targets)]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
@@ -331,6 +332,11 @@ def _clean_metadata(data):
         if "metadata" not in data:
             data["metadata"] = {}
         data["metadata"]["batch"] = "%s-joint" % dd.get_sample_name(data)
+    analysis = dd.get_analysis(data).lower()
+    if tz.get_in(("metadata", "sample"), data) and analysis == "rna-seq":
+        logger.error("'sample' is a reserved keyword in metadata for RNA-seq. Please "
+                     "rename this column to something else and rerun.")
+        sys.exit(1)
     return data
 
 def _clean_algorithm(data):
@@ -524,17 +530,17 @@ def _check_for_degenerate_interesting_groups(items):
         if all(x is None for x in values):
             raise ValueError("group %s is labelled as an interesting group, "
                              "but does not appear in the metadata." % group)
-        if len(list(tz.unique(values))) == 1:
+        if len(items) > 1 and len(list(tz.unique(values))) == 1:
             raise ValueError("group %s is marked as an interesting group, "
                              "but all samples have the same value." % group)
 
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
 ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
-                      "merge_bamprep", "indelcaller", "effects", 
+                      "merge_bamprep", "indelcaller", "effects",
                       "svvalidate", "hlavalidate", "phasing", "validate",
                       "validate_regions", "validate_genome_build", "validate_method",
-                      "clinical_reporting", "nomap_split_size", 
+                      "clinical_reporting", "nomap_split_size",
                       "nomap_split_targets", "background", "qc", "preseq",] +
                      # back compatibility
                      ["remove_lcr", "coverage_depth_max", "coverage_depth"] +
@@ -543,10 +549,13 @@ ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
                           "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
+                          "quantify_genome_alignments",
+                          "recalibrate", "realign", "cwl_reporting", "save_diskspace", "keep_multimapped",
+                          "keep_duplicates"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
-                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq"])
+                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq",
+                       "use_lowfreq_filter"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 
@@ -677,7 +686,7 @@ def _check_variantcaller(item):
         problem = [x for x in vc_set if x not in allowed]
         if len(problem) > 0:
             raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
-                             "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                             "Supported options: %s\n" % (problem, sorted(map(str, list(allowed)))))
     # Ensure germline somatic calling only specified with tumor/normal samples
     if "germline" in vcs or "somatic" in vcs:
         paired = vcfutils.get_paired_phenotype(item)
@@ -696,7 +705,10 @@ def _check_svcaller(item):
     if len(problem) > 0:
         raise ValueError("Unexpected algorithm 'svcaller' parameters: %s\n"
                          "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
-                                                      sorted(list(allowed))))
+                                                      list(allowed)))
+    if "gatk-cnv" in svs and "cnvkit" in svs:
+        raise ValueError("%s uses `gatk-cnv' and 'cnvkit', please use on one of these CNV callers" %
+                         dd.get_sample_name(item))
 
 def _get_as_list(item, k):
     out = item["algorithm"].get(k)
@@ -713,7 +725,7 @@ def _check_hetcaller(item):
     hets = _get_as_list(item, "hetcaller")
     if hets or any([x in svs for x in ["titancna", "purecn"]]):
         if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
-            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk4-cnv` "
+            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk-cnv` "
                              "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
 
 def _check_jointcaller(data):

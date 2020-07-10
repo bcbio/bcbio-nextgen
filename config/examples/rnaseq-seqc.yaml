@@ -2,12 +2,10 @@
 ---
 details:
   - analysis: RNA-seq
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       quality_format: Standard
-      aligner: tophat2
-      trim_reads: read_through
-      adapters: [truseq, polya]
+      aligner: star
       strandedness: unstranded
 upload:
   dir: ../final

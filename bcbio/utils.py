@@ -700,10 +700,18 @@ def Rscript_cmd():
     else:
         return which("Rscript")
 
-def R_sitelib():
-    """Retrieve the R site-library installed with the bcbio installer.
+def R_sitelib(env="base"):
+    """Retrieve the R site-library installed with the bcbio installer for a given
+    environment. Defaults to the base environment.
     """
-    return os.path.join(os.path.dirname(get_bcbio_bin()), "lib", "R", "library")
+    if env == "base":
+        return os.path.join(os.path.dirname(get_bcbio_bin()), "lib", "R", "library")
+    else:
+        conda_dir = get_conda_dir()
+        sitelib = os.path.join(conda_dir, "envs", env, "lib", "R", "library")
+        if not os.path.exists(sitelib):
+            raise OSError("The {env} environment does not have R installed.")
+        return sitelib
 
 def R_package_path(package):
     """
@@ -711,7 +719,7 @@ def R_package_path(package):
     """
     local_sitelib = R_sitelib()
     rscript = Rscript_cmd()
-    cmd = """{rscript} --no-environ -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
+    cmd = """{rscript} --vanilla -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
     try:
         output = subprocess.check_output(cmd.format(**locals()), shell=True)
     except subprocess.CalledProcessError as e:
@@ -767,8 +775,13 @@ def get_java_clprep(cmd=None):
     """
     return "%s && export PATH=%s:\"$PATH\"" % (clear_java_home(), get_java_binpath(cmd))
 
-def get_R_exports():
-    return "unset R_HOME && unset R_LIBS && export PATH=%s:\"$PATH\"" % (os.path.dirname(Rscript_cmd()))
+def get_R_exports(env="base"):
+    if env == "base":
+        rpath = os.path.dirname(Rscript_cmd())
+    else:
+        conda_dir = get_conda_dir()
+        rpath = os.path.join(conda_dir, "envs", env, "bin")
+    return f"unset R_HOME && unset R_LIBS && export PATH={rpath}:\"$PATH\""
 
 def perl_cmd():
     """Retrieve path to locally installed conda Perl or first in PATH.
@@ -806,11 +819,15 @@ def append_path(bin, path, at_start=True):
 def get_bcbio_bin():
     return os.path.dirname(os.path.realpath(sys.executable))
 
+def get_conda_dir():
+    bcbio_bin = get_bcbio_bin()
+    return os.path.dirname(bcbio_bin)
+
 def get_all_conda_bins():
     """Retrieve all possible conda bin directories, including environments.
     """
     bcbio_bin = get_bcbio_bin()
-    conda_dir = os.path.dirname(bcbio_bin)
+    conda_dir = get_conda_dir()
     if os.path.join("anaconda", "envs") in conda_dir:
         conda_dir = os.path.join(conda_dir[:conda_dir.rfind(os.path.join("anaconda", "envs"))], "anaconda")
     return [bcbio_bin] + list(glob.glob(os.path.join(conda_dir, "envs", "*", "bin")))
@@ -853,20 +870,38 @@ def locale_export():
     RuntimeError: Click will abort further execution because Python 3 was
     configured to use ASCII as encoding for the environment.
     Consult https://click.palletsprojects.com/en/7.x/python3/ for mitigation steps.
-
-    Looks up available locales on the system to find an appropriate one to pick,
-    defaulting to C.UTF-8 which is globally available on newer systems.
     """
-    locale_to_use = "C.UTF-8"
+    locale_to_use = get_locale()
+    return "export LC_ALL=%s && export LANG=%s && " % (locale_to_use, locale_to_use)
+
+def get_locale():
+    """
+    Looks up available locales on the system to find an appropriate one to pick,
+    defaulting to C.UTF-8 which is globally available on newer systems. Prefers
+    C.UTF-8 and en_US encodings, if available
+    """
+    default_locale = "C.UTF-8"
+    preferred_locales = {"c.utf-8", "c.utf8", "en_us.utf-8", "en_us.utf8"}
+    locale_to_use = None
     try:
         locales = subprocess.check_output(["locale", "-a"]).decode(errors="ignore").split("\n")
     except subprocess.CalledProcessError:
         locales = []
+    # check for preferred locale
     for locale in locales:
-        if locale.lower().endswith(("utf-8", "utf8")):
+        if locale.lower() in preferred_locales:
             locale_to_use = locale
             break
-    return "export LC_ALL=%s && export LANG=%s && " % (locale_to_use, locale_to_use)
+    # if preferred locale not available take first UTF-8 locale
+    if not locale_to_use:
+        for locale in locales:
+            if locale.lower().endswith(("utf-8", "utf8")):
+                locale_to_use = locale
+                break
+    # if locale listing not available, try using the default locale
+    if not locale_to_use:
+        locale_to_use = default_locale
+    return locale_to_use
 
 def java_freetype_fix():
     """Provide workaround for issues FreeType library symbols.

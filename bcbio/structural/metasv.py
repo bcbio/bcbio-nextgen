@@ -56,4 +56,4 @@ def _sv_workdir(data):
                                            dd.get_sample_name(data), "metasv"))
 
 def _get_cmd():
-    return [sys.executable, os.path.join(os.path.dirname(sys.executable), "run_metasv.py")]
+    return [utils.get_program_python("run_metasv.py"), utils.which("run_metasv.py")]

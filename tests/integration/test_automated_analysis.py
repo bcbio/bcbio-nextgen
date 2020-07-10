@@ -1,18 +1,18 @@
 """This directory is setup with configurations to run the main functional test.
 
 It exercises a full analysis pipeline on a smaller subset of data.
+
+Use 'install_required' mark to skip tests that cannot be run on Travis CI,
+because they require installation of additional dependencies (e.g. GATK)
 """
 import glob
 import os
 import subprocess
 
 import pytest
-from tests.conftest import make_workdir
-from tests.conftest import get_post_process_yaml
 
+from tests.conftest import get_post_process_yaml, make_workdir
 
-# Use 'install_required' mark to skip tests that cannot be run on Travis CI,
-# because they require installation of additional dependencies (e.g. GATK)
 
 @pytest.mark.speed3
 @pytest.mark.skip(reason='Multiplexing not supporting in latest versions')
@@ -58,6 +58,7 @@ def test_2_stranded(install_test_files, data_dir):
 @pytest.mark.tophat
 @pytest.mark.rnaseq_vc
 @pytest.mark.install_required
+@pytest.mark.skip(reason="tophat is no longer supported.")
 def test_2_rnaseq(install_test_files, data_dir):
     """Run an RNA-seq analysis with TopHat and generate gene-level counts.
     """
@@ -178,15 +179,26 @@ def test_srnaseq_bowtie(install_test_files, data_dir):
 
 
 @pytest.mark.chipseq
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3224', run=False)
 def test_chipseq(install_test_files, data_dir):
-    """
-    Run a chip-seq alignment with Bowtie2
-    """
+    """Run a chip-seq alignment with Bowtie2"""
     with make_workdir() as workdir:
         cl = ["bcbio_nextgen.py",
               get_post_process_yaml(data_dir, workdir),
               os.path.join(data_dir, os.pardir, "test_chipseq"),
               os.path.join(data_dir, "run_info-chipseq.yaml")]
+        subprocess.check_call(cl)
+
+
+@pytest.mark.atacseq
+@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3225', run=False)
+def test_atacseq(install_test_files, data_dir):
+    """Test ATAC-seq pipeline"""
+    with make_workdir() as workdir:
+        cl = ["bcbio_nextgen.py",
+              get_post_process_yaml(data_dir, workdir),
+              os.path.join(data_dir, os.pardir, "test_atacseq"),
+              os.path.join(data_dir, "run_info-atacseq.yaml")]
         subprocess.check_call(cl)
 
 
@@ -207,14 +219,11 @@ def test_1_variantcall(install_test_files, data_dir):
 
 @pytest.mark.devel
 @pytest.mark.speed1
-def test_5_bam(install_test_files, data_dir):
-    """Allow BAM files as input to pipeline.
-    """
+def test_variant2_pipeline_with_bam_input(install_test_files, data_dir):
     with make_workdir() as workdir:
-        cl = ["bcbio_nextgen.py",
-              get_post_process_yaml(data_dir, workdir),
-              os.path.join(data_dir, "run_info-bam.yaml")]
-        subprocess.check_call(cl)
+        global_config = get_post_process_yaml(data_dir, workdir)
+        run_config = os.path.join(data_dir, "run_info-bam.yaml")
+        subprocess.check_call(["bcbio_nextgen.py", global_config, run_config])
 
 
 @pytest.mark.speed2
@@ -320,5 +329,5 @@ def test_11_hla(install_test_files, data_dir):
         out = optitype.run(data)
         with open(out["hla"]["call_file"]) as in_handle:
             header = in_handle.readline().strip().split(",")
-            hla_a = dict(zip(header), in_handle.readline().strip().split(","))
+            hla_a = dict(zip(header, in_handle.readline().strip().split(",")))
             assert hla_a["alleles"] == "HLA-A*11:01;HLA-A*24:02", hla_a

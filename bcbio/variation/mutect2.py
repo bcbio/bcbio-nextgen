@@ -6,6 +6,7 @@ import os
 import numpy as np
 
 from bcbio import bam, broad, utils
+from bcbio.bam import is_paired
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import config_utils
@@ -87,6 +88,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
         paired = vcfutils.get_paired_bams(align_bams, items)
         broad_runner = broad.runner_from_config(items[0]["config"])
         gatk_type = broad_runner.gatk_type()
+        f1r2_file = None
         _prep_inputs(align_bams, ref_file, items)
         with file_transaction(items[0], out_file) as tx_out_file:
             params = ["-T", "Mutect2" if gatk_type == "gatk4" else "MuTect2",
@@ -103,6 +105,20 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                 params += ["--read-validation-stringency", "LENIENT"]
             params += _add_tumor_params(paired, items, gatk_type)
             params += _add_region_params(region, out_file, items, gatk_type)
+
+
+            if all(is_paired(bam) for bam in align_bams) and (
+                    "mutect2_readmodel" in utils.get_in(items[0], "config",
+                                                        "tools_on")):
+                orientation_filter = True
+            else:
+                orientation_filter = False
+
+            if gatk_type == "gatk4" and orientation_filter:
+                f1r2_file = "{}-f1r2.tar.gz".format(
+                    utils.splitext_plus(out_file)[0])
+                params += ["--f1r2-tar-gz", f1r2_file]
+
             # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
             # Not yet clear how this helps or hurts in a general case.
             #params += _add_assoc_params(assoc_files)
@@ -114,10 +130,30 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             broad_runner.new_resources("mutect2")
             gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
             if gatk_type == "gatk4":
+
                 tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(out_file)
                 tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
-                filter_cmd = _mutect2_filter(broad_runner, tx_raw_prefilt_file, tx_raw_file, ref_file)
-                cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
+
+                if orientation_filter:
+                    tx_f1r2_file = "{}-read-orientation-model.tar.gz"
+                    tx_f1r2_file = tx_f1r2_file.format(
+                        utils.splitext_plus(f1r2_file)[0])
+                    tx_read_orient_cmd = _mutect2_read_filter(broad_runner,
+                                                              f1r2_file,
+                                                              tx_f1r2_file)
+
+                    filter_cmd = _mutect2_filter(broad_runner, items,
+                                                 tx_raw_prefilt_file,
+                                                 tx_raw_file, ref_file,
+                                                 tx_f1r2_file)
+                else:
+                    filter_cmd = _mutect2_filter(broad_runner, items,
+                                                 tx_raw_prefilt_file,
+                                                 tx_raw_file, ref_file)
+                if orientation_filter:
+                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {tx_read_orient_cmd} && {filter_cmd}"
+                else:
+                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
             else:
                 tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
                 cmd = "{gatk_cmd} > {tx_raw_file}"
@@ -125,15 +161,29 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
             out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
-def _mutect2_filter(broad_runner, in_file, out_file, ref_file):
+def _mutect2_read_filter(broad_runner, in_file, out_file):
+
+    """Calculate and apply the Mutect2 read model to compensate for
+    stand bias and artefacts such as those cause by FFPE."""
+
+    params = ["-T", "LearnReadOrientationModel", "-I", in_file, "-O",
+              out_file]
+    return "{}".format(broad_runner.cl_gatk(params, os.path.dirname(out_file)))
+
+def _mutect2_filter(broad_runner, items, in_file, out_file, ref_file, orient_file=None):
     """Filter of MuTect2 calls, a separate step in GATK4.
 
     Includes a pre-step to avoid stats information with zero callable reads, which
     cause MuTect2 filter errors when there are calls. The sed file increases this
-    to 4 reads, which matches with actually having a call in the output file.
+    to 10 reads, which matches with actually having a call in the output file.
     """
     params = ["-T", "FilterMutectCalls", "--reference", ref_file, "--variant", in_file, "--output", out_file]
-    avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t4.0/' %s.stats" % in_file
+    resources = config_utils.get_resources("mutect2_filter", items[0]["config"])
+    if "options" in resources:
+        params += [str(x) for x in resources.get("options", [])]
+    if orient_file is not None:
+        params += ["--ob-priors", orient_file]
+    avoid_zero_callable = r"sed -i 's/callable\t0.0/callable\t10.0/' %s.stats" % in_file
     return "%s && %s" % (avoid_zero_callable, broad_runner.cl_gatk(params, os.path.dirname(out_file)))
 
 def _af_filter(data, in_file, out_file):

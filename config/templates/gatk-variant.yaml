@@ -2,7 +2,7 @@
 ---
 details:
   - analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     # to do multi-sample variant calling, assign samples the same metadata / batch
     # metadata:
     #   batch: your-arbitrary-batch-name

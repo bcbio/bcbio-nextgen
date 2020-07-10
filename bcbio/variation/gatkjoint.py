@@ -8,6 +8,7 @@ import math
 import os
 import shutil
 import toolz as tz
+import tempfile
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -56,7 +57,8 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                           "-L", bamprep.region_to_gatk(region)]
                 for vrn_file in vrn_files:
                     vcfutils.bgzip_and_index(vrn_file, data["config"])
-                    params += ["--variant", vrn_file]
+                samplemap = _create_samplemap_file(vrn_files)
+                params += ["--sample-name-map", samplemap]
                 # For large inputs, reduce memory usage by batching
                 # https://github.com/bcbio/bcbio-nextgen/issues/2852
                 if len(vrn_files) > 200:
@@ -64,6 +66,15 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                 memscale = {"magnitude": 0.9 * cores, "direction": "increase"} if cores > 1 else None
                 broad_runner.run_gatk(params, memscale=memscale)
     return out_dir
+
+def _create_samplemap_file(vrn_files):
+    tf = tempfile.NamedTemporaryFile(suffix=".tsv", delete=False)
+    samplemap = tf.name
+    samplenames = [vcfutils.get_samples(vrn_file)[0] for vrn_file in vrn_files]
+    with open(samplemap, "w") as out_handle:
+        for samplename, vrn_file in zip(samplenames, vrn_files):
+            print(f"{samplename}\t{vrn_file}", file=out_handle)
+    return samplemap
 
 def _incomplete_genomicsdb(dbdir):
     """Check if a GenomicsDB output is incomplete and we should regenerate.
@@ -85,15 +96,17 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
     if not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             broad_runner = broad.runner_from_config(data["config"])
+            # see issue https://github.com/bcbio/bcbio-nextgen/issues/3263
+            # for why --genomicsdb-use-vcf-codec is necessary
             params = ["-T", "GenotypeGVCFs",
                       "--variant", "gendb://%s" % genomics_db,
                       "-R", dd.get_ref_file(data),
+                      "--genomicsdb-use-vcf-codec",
                       "--output", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
             params += ["-ploidy", str(ploidy.get_ploidy([data], region))]
             # Avoid slow genotyping runtimes with improved quality score calculation in GATK4
             # https://gatkforums.broadinstitute.org/gatk/discussion/11471/performance-troubleshooting-tips-for-genotypegvcfs/p1
-            params += ["--use-new-qual-calculator"]
             resources = config_utils.get_resources("gatk", data["config"])
             params += [str(x) for x in resources.get("options", [])]
             cores = dd.get_cores(data)

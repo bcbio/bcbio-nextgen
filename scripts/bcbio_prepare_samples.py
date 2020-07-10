@@ -73,7 +73,7 @@ def _get_samples_to_process(fn, out_dir, config, force_single, separators):
             fn = "query_gsm"
             ext = ".fastq.gz"
         elif is_srr(items[0][0]):
-            fn = "query_srr"
+            fn = "query_gsm"
             ext = ".fastq.gz"
         files = [os.path.abspath(fn_file[0]) if utils.file_exists(fn_file[0]) else fn_file[0] for fn_file in items]
         samples[sample] = [{'files': _check_paired(files, force_single, separators),
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     else:
         print("WARNING: bcbio_system.yaml not found, creating own resources.")
         config = {'resources': {}}
-    res = {'cores': args.cores_per_job}
+    res = {'cores': args.cores_per_job, 'memory': f"{args.memory_per_job}g"}
     config["algorithm"] = {"num_cores": args.cores_per_job}
     config["resources"].update({'sambamba': res,
                                 'samtools': res})

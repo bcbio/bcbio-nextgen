@@ -24,19 +24,24 @@ from bcbio.pipeline import (archive, config_utils, disambiguate, region,
 from bcbio.provenance import profile, system
 from bcbio.variation import (ensemble, genotype, population, validate, joint,
                              peddy)
-from bcbio.chipseq import peaks
+from bcbio.chipseq import peaks, atac
 
 def run_main(workdir, config_file=None, fc_dir=None, run_info_yaml=None,
              parallel=None, workflow=None):
     """Run variant analysis, handling command line options.
     """
     # Set environment to standard to use periods for decimals and avoid localization
-    os.environ["LC_ALL"] = "C"
-    os.environ["LC"] = "C"
-    os.environ["LANG"] = "C"
+    locale_to_use = utils.get_locale()
+    os.environ["LC_ALL"] = locale_to_use
+    os.environ["LC"] = locale_to_use
+    os.environ["LANG"] = locale_to_use
     workdir = utils.safe_makedir(os.path.abspath(workdir))
     os.chdir(workdir)
     config, config_file = config_utils.load_system_config(config_file, workdir)
+    parallel = log.create_base_logger(config, parallel)
+    log.setup_local_logging(config, parallel)
+    logger.info(f"System YAML configuration: {os.path.abspath(config_file)}.")
+    logger.info(f"Locale set to {locale_to_use}.")
     if config.get("log_dir", None) is None:
         config["log_dir"] = os.path.join(workdir, DEFAULT_LOG_DIR)
     if parallel["type"] in ["local", "clusterk"]:
@@ -76,9 +81,6 @@ def _run_toplevel(config, config_file, work_dir, parallel,
     fc_dir -- Directory of fastq files to process
     run_info_yaml -- YAML configuration file specifying inputs to process
     """
-    parallel = log.create_base_logger(config, parallel)
-    log.setup_local_logging(config, parallel)
-    logger.info("System YAML configuration: %s" % os.path.abspath(config_file))
     dirs = run_info.setup_directories(work_dir, fc_dir, config, config_file)
     config_file = os.path.join(dirs["config"], os.path.basename(config_file))
     pipelines, config = _pair_samples_with_pipelines(run_info_yaml, config)
@@ -150,7 +152,8 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = region.parallel_prep_region(samples, run_parallel)
         with profile.report("variant calling", dirs):
             samples = genotype.parallel_variantcall_region(samples, run_parallel)
-
+        with profile.report("joint squaring off/backfilling", dirs):
+            samples = joint.square_off(samples, run_parallel)
     ## Finalize variants, BAMs and population databases (per-sample multicore cluster)
     with prun.start(_wres(parallel, ["gatk", "gatk-vqsr", "snpeff", "bcbio_variation",
                                      "gemini", "samtools", "fastqc", "sambamba",
@@ -158,8 +161,6 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
                                      "svcaller", "kraken", "preseq"]),
                     samples, config, dirs, "multicore2",
                     multiplier=structural.parallel_multiplier(samples)) as run_parallel:
-        with profile.report("joint squaring off/backfilling", dirs):
-            samples = joint.square_off(samples, run_parallel)
         with profile.report("variant post-processing", dirs):
             samples = run_parallel("postprocess_variants", samples)
             samples = run_parallel("split_variants_by_sample", samples)
@@ -273,7 +274,12 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
             for sample in samples:
                 run_parallel("upload_samples_project", [sample])
         with profile.report("bcbioRNAseq loading", dirs):
-            run_parallel("run_bcbiornaseqload", [sample])
+            tools_on = dd.get_in_samples(samples, dd.get_tools_on)
+            bcbiornaseq_on = tools_on and "bcbiornaseq" in tools_on
+            if bcbiornaseq_on and len(samples) < 3:
+                logger.warn("bcbioRNASeq needs at least three samples total, skipping.")
+            else:
+                run_parallel("run_bcbiornaseqload", [sample])
     logger.info("Timing: finished")
     return samples
 
@@ -378,9 +384,52 @@ def chipseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     multiplier = peaks._get_multiplier(samples)) as run_parallel:
         with profile.report("peakcalling", dirs):
             samples = peaks.peakcall_prepare(samples, run_parallel)
+            samples = peaks.call_consensus(samples)
+            samples = run_parallel("run_chipseq_count", samples)
+
+    samples = peaks.create_peaktable(samples)
 
     with prun.start(_wres(parallel, ["picard", "fastqc"]),
                     samples, config, dirs, "qc") as run_parallel:
+        with profile.report("quality control", dirs):
+            samples = qcsummary.generate_parallel(samples, run_parallel)
+            samples = atac.create_ataqv_report(samples)
+        with profile.report("upload", dirs):
+            samples = run_parallel("upload_samples", samples)
+            for sample in samples:
+                run_parallel("upload_samples_project", [sample])
+    logger.info("Timing: finished")
+    return samples
+
+
+def wgbsseqpipeline(config, run_info_yaml, parallel, dirs, samples):
+    with prun.start(_wres(parallel, ["fastqc", "picard"], ensure_mem={"fastqc" : 4}),
+                    samples, config, dirs, "trimming") as run_parallel:
+        with profile.report("organize samples", dirs):
+            samples = run_parallel("organize_samples", [[dirs, config, run_info_yaml,
+                                                            [x[0]["description"] for x in samples]]])
+            samples = run_parallel("prepare_sample", samples)
+            samples = run_parallel("trim_bs_sample", samples)
+
+    with prun.start(_wres(parallel, ["aligner", "bismark", "picard", "samtools"]),
+                    samples, config, dirs, "multicore",
+                    multiplier=alignprep.parallel_multiplier(samples)) as run_parallel:
+        with profile.report("alignment", dirs):
+            samples = run_parallel("process_alignment", samples)
+
+    with prun.start(_wres(parallel, ['samtools']), samples, config, dirs,
+                    'deduplication') as run_parallel:
+        with profile.report('deduplicate', dirs):
+            samples = run_parallel('deduplicate_bismark', samples)
+
+    with prun.start(_wres(parallel, ["caller"], ensure_mem={"caller": 5}),
+                    samples, config, dirs, "multicore2",
+                    multiplier=24) as run_parallel:
+        with profile.report("cpg calling", dirs):
+            samples = run_parallel("cpg_calling", samples)
+
+    with prun.start(_wres(parallel, ["picard", "fastqc", "samtools"]),
+                     samples, config, dirs, "qc") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
         with profile.report("upload", dirs):
@@ -468,6 +517,7 @@ SUPPORTED_PIPELINES = {"variant2": variant2pipeline,
                        "rna-seq": rnaseqpipeline,
                        "smallrna-seq": smallrnaseqpipeline,
                        "chip-seq": chipseqpipeline,
+                       "wgbs-seq": wgbsseqpipeline,
                        "fastrna-seq": fastrnaseqpipeline,
                        "scrna-seq": singlecellrnaseqpipeline}
 

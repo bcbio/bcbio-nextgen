@@ -1,4 +1,5 @@
 import gffutils
+from gffutils import pybedtools_integration
 import tempfile
 import os
 import random
@@ -9,6 +10,7 @@ from bcbio.utils import file_exists, open_gzipsafe
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.log import logger
+from bcbio.pipeline import datadict as dd
 
 def guess_infer_extent(gtf_file):
     """
@@ -244,7 +246,7 @@ def get_rRNA(gtf):
     """
     extract rRNA genes and transcripts from a gtf file
     """
-    rRNA_biotypes = ["rRNA", "Mt_rRNA", "tRNA", "MT_tRNA"]
+    rRNA_biotypes = ["rRNA", "Mt_rRNA", "tRNA", "MT_tRNA", "rRNA_pseudogene"]
     features = set()
     with open_gzipsafe(gtf) as in_handle:
         for line in in_handle:
@@ -292,6 +294,8 @@ def tx2genedict(gtf, keep_version=False):
                 continue
             geneid = line.split("gene_id")[1].split(" ")[1]
             geneid = _strip_non_alphanumeric(geneid)
+            if not geneid:
+                continue
             txid = line.split("transcript_id")[1].split(" ")[1]
             txid = _strip_non_alphanumeric(txid)
             if keep_version and "transcript_version" in line:
@@ -301,6 +305,10 @@ def tx2genedict(gtf, keep_version=False):
             if has_transcript_version(line) and not keep_version:
                 txid = _strip_feature_version(txid)
                 geneid = _strip_feature_version(geneid)
+            txid = txid.strip()
+            geneid = geneid.strip()
+            if not txid or not geneid:
+                continue
             d[txid] = geneid
     return d
 
@@ -418,3 +426,17 @@ def is_cpat_compatible(gtf):
         if pred(biotype):
             return True
     return False
+
+def get_tss_bed(gtf, out_file, data, padding=1000):
+    """
+    get a BED file of transcription start sites (TSS), padded in both directions by `padding`
+    """
+    if file_exists(out_file):
+        return out_file
+    db = get_gtf_db(gtf)
+    tsses = pybedtools_integration.tsses(db, merge_overlapping=True)
+    genome = dd.get_ref_file(data) + ".fai"
+    tsses = tsses.slop(l=padding, r=padding, g=genome)
+    with file_transaction(out_file) as tx_out_file:
+        tsses.saveas(tx_out_file)
+    return out_file

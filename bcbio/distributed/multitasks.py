@@ -5,10 +5,11 @@ from bcbio.bam import callable
 from bcbio.srna import sample as srna
 from bcbio.srna import group as seqcluster
 from bcbio.chipseq import peaks
+from bcbio.wgbsseq import cpg_caller, deduplication, trimming
 from bcbio.cwl import create as cwl_create
 from bcbio.cwl import cwlutils
 from bcbio.rnaseq import (sailfish, rapmap, salmon, umi, kallisto, spikein,
-                          bcbiornaseq)
+                          bcbiornaseq, featureCounts)
 from bcbio.ngsalign import alignprep
 from bcbio.pipeline import (archive, alignment, disambiguate, qcsummary, region, sample,
                             main, shared, variation, run_info, rnaseq)
@@ -25,6 +26,10 @@ def run_peddy(*args):
 @utils.map_wrap
 def run_tagcount(*args):
     return umi.tagcount(*args)
+
+@utils.map_wrap
+def run_chipseq_count(*args):
+    return featureCounts.chipseq_count(*args)
 
 @utils.map_wrap
 def run_concatenate_sparse_counts(*args):
@@ -57,6 +62,10 @@ def run_kallisto_index(*args):
 @utils.map_wrap
 def run_kallisto_rnaseq(*args):
     return kallisto.run_kallisto_rnaseq(*args)
+
+@utils.map_wrap
+def run_salmon_decoy(*args):
+    return salmon.run_salmon_decoy(*args)
 
 @utils.map_wrap
 def run_salmon_reads(*args):
@@ -174,6 +183,32 @@ def srna_alignment(*args):
 @utils.map_wrap
 def peakcalling(*args):
     return peaks.calling(*args)
+
+
+@utils.map_wrap
+def trim_bs_sample(*args):
+    return trimming.trim(*args)
+
+
+@utils.map_wrap
+def cpg_calling(*args):
+    return cpg_caller.calling(*args)
+
+
+@utils.map_wrap
+def cpg_processing(*args):
+    return cpg_caller.cpg_postprocessing(*args)
+
+
+@utils.map_wrap
+def cpg_stats(*args):
+    return cpg_caller.cpg_stats(*args)
+
+
+@utils.map_wrap
+def deduplicate_bismark(*args):
+    return deduplication.dedup_bismark(*args)
+
 
 @utils.map_wrap
 def prep_align_inputs(*args):

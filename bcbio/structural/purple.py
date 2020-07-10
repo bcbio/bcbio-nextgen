@@ -188,7 +188,7 @@ def _amber_het_file(method, vrn_files, work_dir, paired):
                 r_file = os.path.join(os.path.dirname(tx_out_file), "bafSegmentation.R")
                 with open(r_file, "w") as out_handle:
                     out_handle.write(_amber_seg_script)
-                cmd = "%s && %s --no-environ %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
+                cmd = "%s && %s --vanilla %s %s %s" % (utils.get_R_exports(), utils.Rscript_cmd(), r_file,
                                                           out_file, pcf_file)
                 do.run(cmd, "PURPLE: AMBER baf segmentation")
     else:

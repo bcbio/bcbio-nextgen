@@ -10,6 +10,7 @@ details:
       # aligner: hisat2
       adapters: ["TGGAATTCTCGGGTGC"]
       species: hsa
+      expression_caller: [trna, seqcluster, mirdeep2]
     description: miRQCa
     files:
       - mirqca.fastq

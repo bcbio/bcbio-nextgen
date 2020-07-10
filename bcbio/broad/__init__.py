@@ -384,7 +384,7 @@ class BroadRunner:
             self._set_default_versions(self._config)
 
         if "gatk4" not in dd.get_tools_off({"config": self._config}):
-            # In cases whwere we don't have manifest versions. Not possible to get
+            # In cases where we don't have manifest versions. Not possible to get
             # version from commandline with GATK4 alpha version
             if self._gatk4_version is None:
                 self._gatk4_version = "4.0"

@@ -133,7 +133,7 @@ def _sge_info(queue):
     qstat_out = subprocess.check_output(["qstat", "-f", "-xml"] + qstat_queue).decode()
     slot_info = _sge_get_slots(qstat_out)
     mem_info = _sge_get_mem(qhost_out, queue)
-    machine_keys = slot_info.keys()
+    machine_keys = list(slot_info.keys())
     #num_cpus_vec = [slot_info[x]["slots_total"] for x in machine_keys]
     #mem_vec = [mem_info[x]["mem_total"] for x in machine_keys]
     mem_per_slot = [mem_info[x]["mem_total"] / float(slot_info[x]["slots_total"]) for x in machine_keys]

@@ -16,6 +16,7 @@ from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
 from bcbio.ngsalign import postalign
 from bcbio.bam import fastq
+from bcbio.heterogeneity import chromhacks
 
 CLEANUP_FILES = ["Aligned.out.sam", "Log.out", "Log.progress.out"]
 ALIGN_TAGS = ["NH", "HI", "NM", "MD", "AS"]
@@ -39,6 +40,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     star_dirs = _get_star_dirnames(align_dir, data, names)
     if file_exists(star_dirs.final_out):
         data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
+        out_log_file = os.path.join(align_dir, dd.get_lane(data) + "Log.final.out")
+        data = dd.update_summary_qc(data, "star", base=out_log_file)
         return data
 
     star_path = config_utils.get_program("STAR", config)
@@ -55,14 +58,23 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     fastq_files = (" ".join([_unpack_fastq(fastq_file), _unpack_fastq(pair_file)])
                    if pair_file else _unpack_fastq(fastq_file))
     num_cores = dd.get_num_cores(data)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data)
+    if not gtf_file:
+        gtf_file = dd.get_gtf_file(data)
     if ref_file.endswith("chrLength"):
         ref_file = os.path.dirname(ref_file)
 
+    if index_has_alts(ref_file):
+        logger.error(
+            "STAR is being run on an index with ALTs which STAR is not "
+            "designed for. Please remake your STAR index or use an ALT-aware "
+            "aligner like hisat2")
+        sys.exit(1)
     with file_transaction(data, align_dir) as tx_align_dir:
-        tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
+        tx_1pass_dir = tx_align_dir + "1pass"
+        tx_star_dirnames = _get_star_dirnames(tx_1pass_dir, data, names)
         tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
-        safe_makedir(tx_align_dir)
+        safe_makedir(tx_1pass_dir)
         safe_makedir(tx_out_dir)
         cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
                "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
@@ -75,13 +87,23 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
         cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
         cmd += _read_group_option(names)
         if dd.get_fusion_caller(data):
-            cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
-                "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
-                "--chimScoreSeparation 5 ")
-            if "oncofuse" in dd.get_fusion_caller(data):
-                cmd += "--chimOutType Junctions "
-            else:
-                cmd += "--chimOutType WithinBAM "
+            if "arriba" in dd.get_fusion_caller(data):
+                cmd += (
+                    "--chimSegmentMin 10 --chimOutType WithinBAM "
+                    "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
+                    "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
+                    "--alignSJstitchMismatchNmax 5 -1 5 5 "
+                    "--chimSegmentReadGapMax 3 "
+                    "--peOverlapNbasesMin 10 "
+                    "--alignSplicedMateMapLminOverLmate 0.5 ")
+            else: 
+                cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                    "--chimScoreSeparation 5 ")
+                if "oncofuse" in dd.get_fusion_caller(data):
+                    cmd += "--chimOutType Junctions "
+                else:
+                    cmd += "--chimOutType WithinBAM "
         strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
                                     "unstranded").lower()
         if strandedness == "unstranded" and not srna:
@@ -94,10 +116,60 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
         cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
         cmd += " > {tx_final_out} "
-        run_message = "Running STAR aligner on %s and %s" % (fastq_file, ref_file)
+        run_message = "Running 1st pass of STAR aligner on %s and %s" % (fastq_file, ref_file)
+        do.run(cmd.format(**locals()), run_message, None)
+
+        sjfile = get_splicejunction_file(tx_out_dir, data)
+        sjflag = f"--sjdbFileChrStartEnd {sjfile}" if sjfile else ""
+        tx_star_dirnames = _get_star_dirnames(tx_align_dir, data, names)
+        tx_out_dir, tx_out_file, tx_out_prefix, tx_final_out = tx_star_dirnames
+        safe_makedir(tx_align_dir)
+        safe_makedir(tx_out_dir)
+        cmd = ("{star_path} --genomeDir {ref_file} --readFilesIn {fastq_files} "
+            "--runThreadN {num_cores} --outFileNamePrefix {tx_out_prefix} "
+            "--outReadsUnmapped Fastx --outFilterMultimapNmax {max_hits} "
+            "--outStd BAM_Unsorted {srna_opts} "
+            "--limitOutSJcollapsed 2000000 "
+            "{sjflag} "
+            "--outSAMtype BAM Unsorted "
+            "--outSAMmapqUnique 60 "
+            "--outSAMunmapped Within --outSAMattributes %s " % " ".join(ALIGN_TAGS))
+        cmd += _add_sj_index_commands(fastq_file, ref_file, gtf_file) if not srna else ""
+        cmd += _read_group_option(names)
+        if dd.get_fusion_caller(data):
+            if "arriba" in dd.get_fusion_caller(data):
+                cmd += (
+                    "--chimSegmentMin 10 --chimOutType WithinBAM SoftClip Junctions "
+                    "--chimJunctionOverhangMin 10 --chimScoreMin 1 --chimScoreDropMax 30 "
+                    "--chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 "
+                    "--alignSJstitchMismatchNmax 5 -1 5 5 "
+                    "--chimSegmentReadGapMax 3 ")
+            else: 
+                cmd += (" --chimSegmentMin 12 --chimJunctionOverhangMin 12 "
+                    "--chimScoreDropMax 30 --chimSegmentReadGapMax 5 "
+                    "--chimScoreSeparation 5 ")
+                if "oncofuse" in dd.get_fusion_caller(data):
+                    cmd += "--chimOutType Junctions "
+                else:
+                    cmd += "--chimOutType WithinBAM "
+        strandedness = utils.get_in(data, ("config", "algorithm", "strandedness"),
+                                    "unstranded").lower()
+        if strandedness == "unstranded" and not srna:
+            cmd += " --outSAMstrandField intronMotif "
+        if not srna:
+            cmd += " --quantMode TranscriptomeSAM "
+
+        resources = config_utils.get_resources("star", data["config"])
+        if resources.get("options", []):
+            cmd += " " + " ".join([str(x) for x in resources.get("options", [])])
+        cmd += " | " + postalign.sam_to_sortbam_cl(data, tx_final_out)
+        cmd += " > {tx_final_out} "
+        run_message = "Running 2nd pass of STAR aligner on %s and %s" % (fastq_file, ref_file)
         do.run(cmd.format(**locals()), run_message, None)
 
     data = _update_data(star_dirs.final_out, star_dirs.out_dir, names, data)
+    out_log_file = os.path.join(align_dir, dd.get_lane(data) + "Log.final.out")
+    data = dd.update_summary_qc(data, "star", base=out_log_file)
     return data
 
 
@@ -141,8 +213,11 @@ def _update_data(align_file, out_dir, names, data):
     data = dd.set_transcriptome_bam(data, transcriptome_file)
     sjfile = get_splicejunction_file(out_dir, data)
     if sjfile:
+        data = dd.set_starjunction(data, sjfile)
         sjbed = junction2bed(sjfile)
         data = dd.set_junction_bed(data, sjbed)
+    sjchimfile = get_chimericjunction_file(out_dir, data)
+    data = dd.set_chimericjunction(data, sjchimfile)
     return data
 
 def _move_transcriptome_file(out_dir, names):
@@ -204,12 +279,23 @@ def get_star_version(data):
                 version = line.split("STAR_")[1].strip()
     return version
 
+def get_chimericjunction_file(out_dir, data):
+    """
+    locate the chimeric splice junction file starting from the alignment directory
+    """
+    samplename = dd.get_sample_name(data)
+    sjfile = os.path.join(out_dir, os.pardir, f"{samplename}Chimeric.out.junction")
+    if file_exists(sjfile):
+        return sjfile
+    else:
+        return None
+
 def get_splicejunction_file(out_dir, data):
     """
     locate the splicejunction file starting from the alignment directory
     """
     samplename = dd.get_sample_name(data)
-    sjfile = os.path.join(out_dir, os.pardir, "{0}SJ.out.tab").format(samplename)
+    sjfile = os.path.join(out_dir, os.pardir, f"{samplename}SJ.out.tab")
     if file_exists(sjfile):
         return sjfile
     else:
@@ -240,3 +326,10 @@ def junction2bed(junction_file):
         minimize = bed.minimize(tx_out_file)
         minimize.saveas(tx_out_file)
     return out_file
+
+def index_has_alts(ref_file):
+    name_file = os.path.join(os.path.dirname(ref_file), "chrName.txt")
+    with open(name_file) as in_handle:
+        names = [x.strip() for x in in_handle.readlines()]
+    has_alts = [chromhacks.is_alt(chrom) for chrom in names]
+    return any(has_alts)

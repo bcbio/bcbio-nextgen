@@ -1,4 +1,5 @@
 import os
+import shutil
 import toolz as tz
 from string import Template
 from bcbio.utils import file_exists, Rscript_cmd, safe_makedir, chdir
@@ -6,6 +7,8 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio.pipeline import datadict as dd
 from datetime import datetime as dt
+from pathlib import Path
+from bcbio.log import logger
 
 import six
 
@@ -27,7 +30,7 @@ def make_bcbiornaseq_object(data):
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", r_file], "Loading bcbioRNASeq object.")
+        do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data", "bcb.rda"), "gene")
     loadstring = create_load_string(upload_dir, groups, organism, "transcript")
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
@@ -35,7 +38,7 @@ def make_bcbiornaseq_object(data):
         memoize_write_file(loadstring, tmp_file)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", r_file], "Loading transcript-level bcbioRNASeq object.")
+        do.run([rcmd, "--vanilla", r_file], "Loading transcript-level bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data-transcript", "bcb.rda"), "transcript")
     make_quality_report(data)
     return data
@@ -44,17 +47,37 @@ def make_quality_report(data):
     """
     create and render the bcbioRNASeq quality report
     """
+    MAX_SAMPLES = 100
     if "bcbiornaseq" not in dd.get_tools_on(data):
         return data
     upload_dir = tz.get_in(("upload", "dir"), data)
     report_dir = os.path.join(upload_dir, "bcbioRNASeq")
+    nsamples = len(list(Path(upload_dir).rglob('quant.sf')))
+    groups = dd.get_bcbiornaseq(data).get("interesting_groups", None)
     safe_makedir(report_dir)
     quality_rmd = os.path.join(report_dir, "quality_control.Rmd")
     quality_html = os.path.join(report_dir, "quality_control.html")
     quality_rmd = rmarkdown_draft(quality_rmd, "quality_control", "bcbioRNASeq")
+    if nsamples > MAX_SAMPLES and not groups:
+        logger.warn(f"{nsamples} detected, disabling a few bcbioRNASeq plots which break "
+                    f"with many samples. Setting `interesting_groups` would allow these plots "
+                    f"to be created.")
+        quality_rmd = many_samples_workaround(quality_rmd)
     if not file_exists(quality_html):
         render_rmarkdown_file(quality_rmd)
     return data
+
+def many_samples_workaround(quality_rmd):
+    """
+    bcbioRNASeq has a few plots that are broken if many samples are included,
+    this disables those plots as a workaround
+    """
+    disable_pca_cmd = "sed -i '/plotPCA(/ { N;N;N;N; s/^/#/gm }' " + f"{quality_rmd}"
+    disable_saturation_cmd = f"sed -i s/plotGeneSaturation/#plotGeneSaturation/ {quality_rmd}"
+    message = f"Disabling PCA plot."
+    do.run(disable_pca_cmd, "Disabling PCA plot.")
+    do.run(disable_saturation_cmd, "Disabling gene saturation plot.")
+    return quality_rmd
 
 def rmarkdown_draft(filename, template, package):
     """
@@ -70,7 +93,7 @@ def rmarkdown_draft(filename, template, package):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
+        do.run([rcmd, "--vanilla", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
     return filename
 
@@ -86,7 +109,7 @@ def render_rmarkdown_file(filename):
     report_dir = os.path.dirname(filename)
     rcmd = Rscript_cmd()
     with chdir(report_dir):
-        do.run([rcmd, "--no-environ", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
+        do.run([rcmd, "--vanilla", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
     return filename
 
 def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
@@ -145,7 +168,7 @@ def write_counts(bcb, level="gene"):
             f'metadata = colData(bcb) %>% as.data.frame() %>% tibble::rownames_to_column("sample");'
             f'readr::write_csv(counts, file.path(dir, "counts.csv.gz"));'
             f'readr::write_csv(metadata, file.path(dir, "metadata.csv.gz"));')
-    do.run([rcmd, "--no-environ", "-e", render_string], f"Writing counts table to {out_file}.")
+    do.run([rcmd, "--vanilla", "-e", render_string], f"Writing counts table to {out_file}.")
     return out_file
 
 def memoize_write_file(string, filename):
