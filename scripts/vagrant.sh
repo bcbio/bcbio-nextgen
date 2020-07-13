@@ -14,6 +14,3 @@ set -e -x
 
 NEW_PATH='${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:${PATH}'
 /bin/grep -qxF "PATH=${NEW_PATH}" ~vagrant/.profile || /bin/echo "PATH=${NEW_PATH}" >> ~vagrant/.profile
-# configure test directory within the internal VM file system because synced folders do not support certain features required by bcbio
-# for example: mkfifo is required for CWL Cromwell runs, etc
-/bin/grep -qxF 'export BCBIO_TEST_DIR=/tmp/bcbio' ~vagrant/.profile || /bin/echo 'export BCBIO_TEST_DIR=/tmp/bcbio' >> ~vagrant/.profile
