@@ -6,7 +6,6 @@ import pytest
 import pandas as pd
 
 from bcbio.rnaseq import ericscript
-from tests.conftest import make_workdir
 from bcbio.pipeline import config_utils, run_info
 from bcbio.log import setup_script_logging
 
@@ -30,30 +29,26 @@ def setup_logging():
 @pytest.mark.install_required
 @pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3219', run=False)
 def test_detect_fusions_with_ericscipt_without_disambiguate(
-        install_test_files, data_dir, setup_logging):
+        install_test_files, data_dir, work_dir, setup_logging):
     """Run gene fusion analysis on trimmed pair-end reads with EricScript.
        Requires installation of EricScript and its reference data.
     """
-    with make_workdir() as work_dir:
-        sample_config = create_sample_config(
-            data_dir, work_dir, disambiguate=False)
-        ericscript.run(sample_config)
-        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
+    sample_config = create_sample_config(data_dir, work_dir, disambiguate=False)
+    ericscript.run(sample_config)
+    assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
 @pytest.mark.ericscript
 @pytest.mark.install_required
 @pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3220', run=False)
 def test_detect_fusions_with_ericscipt_with_disambiguate(
-        install_test_files, data_dir, setup_logging):
+        install_test_files, data_dir, work_dir, setup_logging):
     """Run gene fusion analysis on disambiguated reads with EricScript.
        Requires installation of EricScript and its reference data.
     """
-    with make_workdir() as work_dir:
-        sample_config = create_sample_config(
-            data_dir, work_dir, disambiguate=True)
-        ericscript.run(sample_config)
-        assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
+    sample_config = create_sample_config(data_dir, work_dir, disambiguate=True)
+    ericscript.run(sample_config)
+    assert_run_successfully(work_dir=work_dir, data_dir=data_dir)
 
 
 class ConfigCreator(object):

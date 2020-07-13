@@ -1,9 +1,4 @@
-"""Pytest fixtures and test helper functions
-
-BCBIO_TEST_DIR environment variable is used to run tests in a directory outside of the source tree
-In Vagrant it must point to a directory outside of a synced_folder for integration tests to pass
-For example: export BCBIO_TEST_DIR=/tmp/bcbio
-"""
+"""Pytest fixtures and test helper functions"""
 
 import collections
 import contextlib
@@ -13,6 +8,7 @@ import os
 import shutil
 import subprocess
 import tarfile
+import tempfile
 
 import pytest
 import requests
@@ -20,50 +16,44 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
+BCBIO_TEST_DIR = os.path.join(tempfile.gettempdir(), 'bcbio')
+SOURCE_DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
-def default_workdir():
-    return os.path.join(os.path.dirname(__file__), "test_automated_output")
 
-
-def test_data_dir():
-    return os.path.join(os.path.dirname(__file__), "data")
+def pytest_addoption(parser):
+    parser.addoption('--keep-work-dir', action='store_true', default=False,
+                     help='Preserve test output directory after each test')
 
 
 @pytest.fixture
 def data_dir():
-    return os.path.join(test_data_dir(), "automated")
+    return os.path.join(SOURCE_DATA_DIR, 'automated')
 
 
-@contextlib.contextmanager
-def make_workdir():
-    custom_test_dir = os.getenv("BCBIO_TEST_DIR")
-    if custom_test_dir:
-        work_dir = os.path.join(custom_test_dir, os.path.basename(default_workdir()))
-    else:
-        work_dir = default_workdir()
-
-    os.makedirs(work_dir, exist_ok=True)
+@pytest.fixture
+def work_dir(pytestconfig):
+    """Provide and manage output directory for tests"""
+    test_output_dir = os.path.join(BCBIO_TEST_DIR, 'test_automated_output')
+    os.makedirs(test_output_dir, exist_ok=True)
 
     # workaround for hardcoded data file paths in test run config files
-    if custom_test_dir:
-        custom_test_data_dir = os.path.join(custom_test_dir, os.path.basename(test_data_dir()))
-        with contextlib.suppress(FileExistsError):
-            os.symlink(test_data_dir(), custom_test_data_dir)
+    with contextlib.suppress(FileExistsError):
+        os.symlink(SOURCE_DATA_DIR, os.path.join(BCBIO_TEST_DIR, 'data'))
 
-    orig_dir = os.getcwd()
-    try:
-        os.chdir(work_dir)
-        yield work_dir
-    finally:
-        os.chdir(orig_dir)
+    original_dir = os.getcwd()
+    os.chdir(test_output_dir)
+    yield test_output_dir
+    os.chdir(original_dir)
+    if not pytestconfig.getoption('--keep-work-dir'):
+        shutil.rmtree(test_output_dir)
 
 
-def get_post_process_yaml(data_dir, workdir):
-    """Prepare a bcbio_system YAML file pointing to test data.
-    """
-    system = _get_bcbio_system(workdir, data_dir)
+@pytest.fixture
+def global_config(data_dir, work_dir):
+    """Prepare a bcbio_system YAML file pointing to test data"""
+    system = _get_bcbio_system(work_dir, data_dir)
     # create local config pointing to reduced genomes
-    test_system = os.path.join(workdir, "bcbio_system.yaml")
+    test_system = os.path.join(work_dir, 'bcbio_system.yaml')
     with open(system) as in_handle:
         config = yaml.safe_load(in_handle)
         config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
@@ -76,8 +66,7 @@ def get_post_process_yaml(data_dir, workdir):
 def install_cwl_test_files():
     orig_dir = os.getcwd()
     url = "https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz"
-    test_dir = os.getenv("BCBIO_TEST_DIR", test_data_dir())
-    dirname = os.path.join(test_dir, "test_bcbio_cwl-master")
+    dirname = os.path.join(BCBIO_TEST_DIR, 'test_bcbio_cwl-master')
     if os.path.exists(dirname):
         # check for updated commits if the directory exists
         ctime = os.path.getctime(os.path.join(dirname, "README.md"))

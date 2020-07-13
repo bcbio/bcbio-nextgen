@@ -1,7 +1,5 @@
-"""Test individual components of the analysis pipeline.
-"""
+"""Test individual components of the analysis pipeline"""
 import os
-import sys
 import shutil
 import subprocess
 
@@ -10,20 +8,17 @@ from bcbio.bam import fastq
 from bcbio.distributed import prun
 from bcbio.pipeline.config_utils import load_config
 
-from tests.conftest import make_workdir, get_post_process_yaml
-
 import pytest
+
 
 class TestRunInfo(object):
 
     @pytest.mark.speed1
-    def test_programs(self, data_dir):
+    def test_programs(self, global_config):
         """Identify programs and versions used in analysis.
         """
         from bcbio.provenance import programs
-        with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(data_dir, workdir))
-            print(programs._get_versions(config))
+        print(programs._get_versions(load_config(global_config)))
 
 
 class TestVCFUtil(object):
@@ -35,10 +30,6 @@ class TestVCFUtil(object):
             os.path.dirname(os.path.dirname(__file__)),
             "data"
         )
-
-    @property
-    def automated_dir(self):
-        return os.path.join(self.data_dir, "automated")
 
     @property
     def var_dir(self):
@@ -54,7 +45,7 @@ class TestVCFUtil(object):
 
     @pytest.mark.speed1
     @pytest.mark.combo
-    def test_1_parallel_vcf_combine(self):
+    def test_1_parallel_vcf_combine(self, global_config):
         """Parallel combination of VCF files, split by chromosome.
         """
         from bcbio.variation import vcfutils
@@ -62,10 +53,8 @@ class TestVCFUtil(object):
             os.path.join(self.var_dir, "S1-variants.vcf"),
             os.path.join(self.var_dir, "S2-variants.vcf")
         ]
-        with make_workdir() as workdir:
-            config = load_config(
-                get_post_process_yaml(self.automated_dir, workdir))
-            config["algorithm"] = {}
+        config = load_config(global_config)
+        config["algorithm"] = {}
         region_dir = os.path.join(self.var_dir, "S1_S2-combined-regions")
         if os.path.exists(region_dir):
             shutil.rmtree(region_dir)
@@ -83,14 +72,12 @@ class TestVCFUtil(object):
 
     @pytest.mark.speed1
     @pytest.mark.combo
-    def test_2_vcf_exclusion(self):
+    def test_2_vcf_exclusion(self, global_config):
         """Exclude samples from VCF files.
         """
         from bcbio.variation import vcfutils
-        with make_workdir() as workdir:
-            config = load_config(
-                get_post_process_yaml(self.automated_dir, workdir))
-            config["algorithm"] = {}
+        config = load_config(global_config)
+        config["algorithm"] = {}
         out_file = utils.append_stem(self.combo_file, "-exclude")
         to_exclude = ["S1"]
         if os.path.exists(out_file):
@@ -100,14 +87,12 @@ class TestVCFUtil(object):
 
     @pytest.mark.speed1
     @pytest.mark.combo
-    def test_3_vcf_split_combine(self):
+    def test_3_vcf_split_combine(self, global_config):
         """Split a VCF file into SNPs and indels, then combine back together.
         """
         from bcbio.variation import vcfutils
-        with make_workdir() as workdir:
-            config = load_config(get_post_process_yaml(
-                self.automated_dir, workdir))
-            config["algorithm"] = {}
+        config = load_config(global_config)
+        config["algorithm"] = {}
         fname = os.path.join(self.var_dir, "S1-variants.vcf")
         snp_file, indel_file = vcfutils.split_snps_indels(
             fname, self.ref_file, config)
