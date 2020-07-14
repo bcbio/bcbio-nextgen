@@ -173,6 +173,10 @@ For transcript-level analyses, we recommend using [sleuth](https://seqcluster.re
 
 Another great alternative is to use the Salmon quantification to look at differential transcript usage (DTU) instead of differential transcript expression (DTE). The idea behind DTU is you are looking for transcripts of genes that have been flipped from one isoform to another. The [Swimming downstream](https://www.bioconductor.org/packages/devel/workflows/vignettes/rnaseqDTU/inst/doc/rnaseqDTU.html#salmon-quantification) tutorial has a nice walkthrough of how to do that.
 
+## Steps
+
+Step are outlined [here](https://www.michaelchimenti.com/2019/03/bcbio-rna-seq-under-the-hood/)
+
 ## Description
 
 RNA-seq pipeline includes steps for quality control, adapter trimming, alignment, variant calling, transcriptome reconstruction and post-alignment quantitation at the level of the gene and isoform.
