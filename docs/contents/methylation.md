@@ -83,7 +83,7 @@ results of tests:
 
 ```eval_rst
 +--+---------------+--------------+----------+--------+----+
-|N |bismark_threads|bowtie_threads|time      |bcbio -n|RAM |
+|N |bismark_threads|bowtie_threads|time      |bcbio  n|RAM |
 +==+===============+==============+==========+========+====+
 |01|1              |2             |14h 42 min|16	    |50G |
 +--+---------------+--------------+----------+--------+----+
