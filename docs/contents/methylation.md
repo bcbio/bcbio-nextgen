@@ -79,8 +79,9 @@ upload:
   dir: ../final
 ```
 
-results of tests
-```rst_eval
+results of tests:
+
+```eval_rst
 +==+===============+==============+==========+========+====+
 |N |bismark_threads|bowtie_threads|time      |bcbio -n|RAM |
 +==+===============+==============+==========+========+====+
