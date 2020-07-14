@@ -155,10 +155,9 @@ def install_test_files(data_dir):
         if not os.path.exists(dirname):
             _download_to_dir(url, dirname)
 
+
 def _download_to_dir(url, dirname):
-        cl = ["wget", url]
-        subprocess.check_call(cl)
-        cl = ["tar", "-xzvpf", os.path.basename(url)]
-        subprocess.check_call(cl)
-        shutil.move(os.path.basename(dirname), dirname)
-        os.remove(os.path.basename(url))
+    subprocess.check_call(['wget', '--progress=dot:giga', url])
+    subprocess.check_call(['tar', '-xzvpf', os.path.basename(url)])
+    shutil.move(os.path.basename(dirname), dirname)
+    os.remove(os.path.basename(url))
