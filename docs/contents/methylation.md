@@ -8,11 +8,23 @@ please [let us know](https://github.com/bcbio/bcbio-nextgen/issues) and we can a
 Consider this a beta feature.
 
 ## Supported Kits
-| Name | Vendor link | Directionality | Trim R1 5' (nt) | Trim R1 3' (nt) | Trim R2 5' (nt) | Trim R2 3' (nt) |
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| accelngs | [link](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/) | directional | 0 | 19 | 19 | 0 |
-| nebemseq | [link](https://www.neb.com/products/e7120-nebnext-enzymatic-methyl-seq-kit) | directional | 0 | 0 | 0 | 0 |
-| truseq | [link](https://www.illumina.com/products/by-type/sequencing-kits/library-prep-kits/truseq-methyl-capture-epic.html) | non-directional | 8 | 8 | 8 | 8 |
+```eval_rst
++--------+------------+---------+---------+---------+---------+
+|Name    |directional?|TrimR1_5'|TrimR1_3'|TrimR2_5'|TrimR2_3'|
++========+============+=========+=========+=========+=========+
+|accelngs|yes         | 0 nt    | 19 nt   | 19 nt   | 0       |
++--------+------------+---------+---------+---------+---------+
+|nebemseq|yes         | 0 nt    | 0       | 0       | 0       |
++--------+------------+---------+---------+---------+---------+
+|truseq  |no          | 8 nt    | 8       | 8       | 8       |
++--------+------------+---------+---------+---------+---------+
+```
+
+Vendor links:
+- [accelngs](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/)
+- [nebemseq](https://www.neb.com/products/e7120-nebnext-enzymatic-methyl-seq-kit)
+- [truseq](https://www.illumina.com/products/by-type/sequencing-kits/library-prep-kits/truseq-methyl-capture-epic.html)
+
 
 It is possible to specify the `trim_galore` trimming parameters and `bismark` directionality parameter (default: directional) in the `resources` section of the bcbio config file. The following configs for the `truseq` kit will give the same results:
 ```
