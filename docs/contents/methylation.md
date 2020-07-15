@@ -124,3 +124,6 @@ Tests:
 | 19     |4                |32              |1d 2h     |128       | 200G|
 +--------+-----------------+----------------+----------+----------+-----+
 ```
+
+## References
+- [Bock.2012.Analysing and interpreting DNA methylation data](https://www.nature.com/articles/nrg3273)
