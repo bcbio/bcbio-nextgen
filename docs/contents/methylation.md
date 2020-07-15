@@ -50,10 +50,10 @@ details:
 - `kit`: `accelngs`, `nebemseq`, `truseq`
 
 ## Benchmarking
-There is an extensive debate on Bismark and trim_galore performance, see https://github.com/FelixKrueger/Bismark/issues/96.
-We ran a test with NA12878 data generated using nebemseq, 125 mln reads (72.5mln read pairs).
-We tested a performance of bismark/bcbio using `--parallel` (bismark workers) and `-p` (bowtie threads) bismark settings.
-We measured the performance only of the alignment step using bcbio-nextgen-commands.log timecodes.
+There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
+We ran a test with NA12878 nebemseq data, 125 mln reads (72.5mln read pairs).
+We tested performance of bismark/bcbio using `--parallel` (bismark workers) and `-p` (bowtie threads) bismark settings.
+We measured the performance only of the alignment step using bcbio-nextgen-commands log timecodes. 16/2/100G RAM was an optimal parameters set, with other having 5X-10X longer runtimes.
 
 bcbio.yaml:
 ```
@@ -79,7 +79,7 @@ upload:
   dir: ../final
 ```
 
-results of tests:
+Tests:
 
 ```eval_rst
 +---+---------------+--------------+----------+--------+----+
@@ -88,5 +88,21 @@ results of tests:
 | 01|1              |2             |14h 42min |16      |50G |
 +---+---------------+--------------+----------+--------+----+
 | 02|1              |4             |>3days 12h|16      |50G |
++---+---------------+--------------+----------+--------+----+
+| 03|1	            |8	           |1d 21h	  |16      |50G |
++---+---------------+--------------+----------+--------+----+
+| 04|1              |16            |1d 15h	  |32      |50G |
++---+---------------+--------------+----------+--------+----+
+| 05|1	            |32	           |>3day 14h |64      |100G|
++---+---------------+--------------+----------+--------+----+
+| 06|2	            |2	           |2days 4h  |16      |50G |
++---+---------------+--------------+----------+--------+----+
+| 07|4	            |2	           |13 h	    |16      |50G |
++---+---------------+--------------+----------+--------+----+
+| 08|8              |2	           |3h 34 min |16	     |50G |
++---+---------------+--------------+----------+--------+----+
+| 09|16	            |2	           |2h 42 min |32	     |100G|
++---+---------------+--------------+----------+--------+----+
+| 10|32             |2	           |NA        |32      |100G|
 +---+---------------+--------------+----------+--------+----+
 ```
