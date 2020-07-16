@@ -71,8 +71,7 @@ def organize_noalign(data):
     return data
 
 def align_to_sort_bam(fastq1, fastq2, aligner, data):
-    """Align to the named genome build, returning a sorted BAM file.
-    """
+    """Align to the named genome build, returning a sorted BAM file"""
     names = data["rgnames"]
     align_dir_parts = [data["dirs"]["work"], "align", names["sample"]]
     if data.get("disambiguate"):
@@ -92,7 +91,9 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
             # but CWL requires a bai file. Create a fake one to make it happy.
             bam.fake_index(data["work_bam"], data)
         else:
-            bam.index(data["work_bam"], data["config"])
+            # can't index non-sorted bam from bismark
+            if not data["analysis"].lower().startswith("wgbs-seq"):
+                bam.index(data["work_bam"], data["config"])
         for extra in ["-sr", "-disc"]:
             extra_bam = utils.append_stem(data['work_bam'], extra)
             if utils.file_exists(extra_bam):
