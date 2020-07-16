@@ -17,7 +17,6 @@ import yaml
 from bcbio.pipeline.config_utils import load_system_config
 
 BCBIO_TEST_DIR = os.path.join(tempfile.gettempdir(), 'bcbio')  # /tmp/bcbio
-BCBIO_TEST_DATA_DIR = os.path.join(BCBIO_TEST_DIR, 'data')  # /tmp/bcbio/data
 
 
 def pytest_addoption(parser):
@@ -26,8 +25,17 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def data_dir():
-    return os.path.join(BCBIO_TEST_DATA_DIR, 'automated')  # /tmp/bcbio/data/automated
+def test_dir():
+    os.makedirs(BCBIO_TEST_DIR, exist_ok=True)
+
+
+@pytest.fixture
+def data_dir(test_dir):
+    # workaround for hardcoded data file paths in test run config files
+    test_data_dir = os.path.join(BCBIO_TEST_DIR, 'data')  # /tmp/bcbio/data
+    with contextlib.suppress(FileExistsError):
+        os.symlink(os.path.join(os.path.dirname(__file__), 'data'), test_data_dir)
+    return os.path.join(test_data_dir, 'automated')  # /tmp/bcbio/data/automated
 
 
 @pytest.fixture
@@ -35,11 +43,6 @@ def work_dir(pytestconfig):
     """Provide and manage output directory for tests"""
     test_output_dir = os.path.join(BCBIO_TEST_DIR, 'test_automated_output')
     os.makedirs(test_output_dir, exist_ok=True)
-
-    # workaround for hardcoded data file paths in test run config files
-    with contextlib.suppress(FileExistsError):
-        os.symlink(os.path.join(os.path.dirname(__file__), 'data'), BCBIO_TEST_DATA_DIR)
-
     original_dir = os.getcwd()
     os.chdir(test_output_dir)
     yield test_output_dir
