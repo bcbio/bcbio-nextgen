@@ -20,16 +20,19 @@ BCBIO_TEST_DIR = os.path.join(tempfile.gettempdir(), 'bcbio')  # /tmp/bcbio
 
 
 def pytest_addoption(parser):
-    parser.addoption('--keep-work-dir', action='store_true', default=False,
+    parser.addoption('--keep-test-dir', action='store_true', default=False,
                      help='Preserve test output directory after each test')
 
 
-@pytest.fixture
-def test_dir():
+@pytest.fixture(scope='session')
+def test_dir(pytestconfig):
     os.makedirs(BCBIO_TEST_DIR, exist_ok=True)
+    yield
+    if not pytestconfig.getoption('--keep-test-dir'):
+        shutil.rmtree(BCBIO_TEST_DIR)
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def data_dir(test_dir):
     # workaround for hardcoded data file paths in test run config files
     test_data_dir = os.path.join(BCBIO_TEST_DIR, 'data')  # /tmp/bcbio/data
@@ -47,7 +50,7 @@ def work_dir(pytestconfig):
     os.chdir(test_output_dir)
     yield test_output_dir
     os.chdir(original_dir)
-    if not pytestconfig.getoption('--keep-work-dir'):
+    if not pytestconfig.getoption('--keep-test-dir'):
         shutil.rmtree(test_output_dir)
 
 
