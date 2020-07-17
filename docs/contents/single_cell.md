@@ -239,15 +239,17 @@ se = SingleCellExperiment(assays=list(raw = counts), colData = metadata)
 saveRDS(se, "se.RDS")
 ```
 
-### 1a. (Optional).
-If you care, download fresh transcriptome annotation from Gencode (https://www.gencodegenes.org/mouse/)
-(it has chrom names with chr matching mm10 assembly).
+### 1a. (Optional)
+Fresh transcriptome annotations are avaliable from [Gencode](https://www.gencodegenes.org/mouse/)
+The mouse gtf uses chrom names with chr matching mm10 assembly.
+
 ```
 cd sc_mouse/input
 wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/gencode.vM23.annotation.gtf.gz
 gunzip gencode.vM23.annotation.gtf.gz
 gffread -g /n/shared_db/bcbio/biodata/genomes/Mmusculus/mm10/seq/mm10.fa gencode.vM23.annotation.gtf -x gencode.vM23.annotation.cds.fa
 ```
+
 update sc_mouse/config/sc_mouse.yaml:
 ```
 transcriptome_fasta: gencode.vM23.annotation.cds.fa
