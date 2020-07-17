@@ -64,8 +64,8 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             do.run(cmd.format(**locals()), run_message, None)
             shutil.move(tx_out_dir, out_dir)
         raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
-    process_bam = _process_bam(raw_bam[0], fastq_files, sample, dd.get_sam_ref(data), config)
-    utils.symlink_plus(process_bam, final_out)
+    # don't process bam in the bismark pipeline!
+    utils.symlink_plus(raw_bam[0], final_out)
     data = dd.set_work_bam(data, final_out)
     data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
     return data
