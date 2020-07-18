@@ -12,6 +12,7 @@ import glob
 
 import toolz as tz
 
+from bcbio import bam
 from bcbio import utils
 from bcbio.cwl import cwlutils
 from bcbio.log import logger
@@ -63,6 +64,11 @@ def pipeline_summary(data):
     Handles standard and CWL (single QC output) cases.
     """
     data = utils.to_single_data(data)
+    if data["analysis"].startswith("wgbs-seq"):
+        bismark_bam = dd.get_align_bam(data)
+        sorted_bam = bam.sort(bismark_bam, data["config"])
+        data = dd.set_align_bam(data, sorted_bam)
+        data = dd.set_work_bam(data, bismark_bam)
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     if not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
