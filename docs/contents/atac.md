@@ -16,6 +16,8 @@ downstream count-based differential expression callers like DESeq2/limma/edgeR.
 
 ENCODE quality control metrics and other quality control information is added to the [MultiQC](https://multiqc.info) report. A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
 
+For CHIP-seq analysis use this config: [chip_seq.yaml](https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/chip_seq.yaml).
+
 ## Description of example dataset
 We will be using [ENCSR312LQX](https://www.encodeproject.org/experiments/ENCSR312LQX) and
 [ENCSR310MLB](https://www.encodeproject.org/experiments/ENCSR310MLB/) from the ENCODE project
