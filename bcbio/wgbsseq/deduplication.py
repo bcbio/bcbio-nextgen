@@ -13,7 +13,8 @@ def dedup_bismark(data):
     """
     config = data["config"]
     input_file = datadict.get_work_bam(data)
-    input_file = bam.sort(input_file, config, order="queryname")
+    # don't sort even by read names
+    # input_file = bam.sort(input_file, config, order="queryname")
     sample_name = datadict.get_sample_name(data)
     output_dir = os.path.join(datadict.get_work_dir(data), 'dedup',
                               sample_name)

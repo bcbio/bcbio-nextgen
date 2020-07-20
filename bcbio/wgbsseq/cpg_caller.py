@@ -28,7 +28,8 @@ def _run_meth_extractor(bam_in, sample, workdir, index_dir, config):
     bismark = config_utils.get_program("bismark_methylation_extractor", config)
     cores = config["algorithm"].get('cores', 1)
     memory = config["algorithm"].get('mem', 5)
-    bam_in = bam.sort(bam_in, config, order="queryname")
+    # don't sort even by read name!
+    # bam_in = bam.sort(bam_in, config, order="queryname")
     cmd = "{bismark} --no_overlap --comprehensive --cytosine_report --genome_folder {index_dir} --merge_non_CpG --multicore {cores} --buffer_size {memory}G --bedGraph --gzip {bam_in}"
     out_dir = os.path.join(workdir, sample)
     mbias_file = os.path.join(out_dir, os.path.basename(splitext_plus(bam_in)[0]) + '.M-bias.txt')

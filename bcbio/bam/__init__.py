@@ -175,8 +175,7 @@ def get_aligned_reads(in_bam, data):
     return 1.0 * align / total
 
 def downsample(in_bam, data, target_counts, work_dir=None):
-    """Downsample a BAM file to the specified number of target counts.
-    """
+    """Downsample a BAM file to the specified number of target counts."""
     index(in_bam, data["config"], check_timestamp=False)
     ds_pct = get_downsample_pct(in_bam, target_counts, data)
     if ds_pct:
