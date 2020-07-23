@@ -53,7 +53,7 @@ details:
 There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
 We ran a test with NA12878 nebemseq data, 125 mln reads (72.5mln read pairs).
 We tested performance of bismark/bcbio using `--parallel` (bismark workers) and `-p` (bowtie threads) bismark settings.
-We measured the performance only of the alignment step using bcbio-nextgen-commands log timecodes. 16/2/100G RAM was an optimal parameters set, with other having 5X-10X longer runtimes.
+We measured the performance only of the alignment step using bcbio-nextgen-commands log timecodes. 16/2/100G RAM was an optimal parameters set, with other having 5X-10X longer runtimes. When running a cohort of samples ~50% passed with 16/2/100G, some processed broken bam files, re-running with 8/2/100G or 4/2/100G solved the issue. For Lambda Phage genome we re-used trimming step results and 4/2/20G settings.
 
 bcbio.yaml:
 ```
