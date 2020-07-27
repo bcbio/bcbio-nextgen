@@ -104,7 +104,11 @@ def _add_hla_files(data):
     """
     if "hla" not in data:
         data["hla"] = {}
-    align_file = dd.get_align_bam(data)
+    # if HLA bam was created separately, FASTQ files will be based off of it
+    if dd.get_hla_bam(data):
+        align_file = dd.get_hla_bam(data)
+    else:
+        align_file = dd.get_align_bam(data)
     hla_dir = os.path.join(os.path.dirname(align_file), "hla")
     if not os.path.exists(hla_dir):
         hla_files = None
