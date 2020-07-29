@@ -32,6 +32,18 @@ bash NA12878-exome-methodcmp-getdata.sh
 
 ### 4. Run the analysis, distributed on 8 local cores, with:
 
+Make sure that PATH variable contains paths to bcbio scripts and tools:
+```shell
+$ which bcbio_nextgen.py
+/bcbio_installation/anaconda/bin/bcbio_nextgen.py
+$ which mosdepth
+/bcbio_installation/tools/bin/mosdepth
+$ echo $PATH
+/bcbio_installation/anaconda/bin:/bcbio_installation/tools/bin:[other-system-bin-dirs]
+```
+
+Run the project:
+
 ```shell
 cd work
 bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
