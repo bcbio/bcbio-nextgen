@@ -8,49 +8,55 @@ and compares them against reference materials from NIST's
 [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) initiative.
 
 ### 1. Install bcbio python package and tools
-    ```shell
-    wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-    python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_installation_path] --nodata
-    ```
+
+```shell
+wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_installation_path] --nodata
+```
 
 ### 2. Install hg38 reference genome and bwa indices
-    ```shell
-    bcbio_nextgen.py update -u skip --genomes hg38 --aligners bwa
-    ```
-    See more detailed instructions in the installation user story.
+
+```shell
+bcbio_nextgen.py update -u skip --genomes hg38 --aligners bwa
+```
+See more detailed instructions in the installation user story.
 
 ### 3. Get the input configuration file, fastq reads, reference materials and analysis regions:
-    ```shell
-    mkdir -p NA12878-exome-eval
-    cd NA12878-exome-eval
-    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
-    bash NA12878-exome-methodcmp-getdata.sh
-    ```
+
+```shell
+mkdir -p NA12878-exome-eval
+cd NA12878-exome-eval
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/NA12878-exome-methodcmp-getdata.sh
+bash NA12878-exome-methodcmp-getdata.sh
+```
 
 ### 4. Run the analysis, distributed on 8 local cores, with:
-    ```shell
-    cd work
-    bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
-    ```
-    Parameters of the analysis are specified in the yaml configuration file:
-    ```
-    upload:
-      dir: ../final
-    details:
-      - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
-      description: NA12878
-      metadata:
-        sex: female
-      analysis: variant2
-      genome_build: hg38
-      algorithm:
-        aligner: bwa
-        variantcaller: gatk-haplotype
-        validate: giab-NA12878/truth_small_variants.vcf.gz
-        validate_regions: giab-NA12878/truth_regions.bed
-        variant_regions: capture_regions/Exome-NGv3
-    ```
-    Running time is ~2h.
+
+```shell
+cd work
+bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
+```
+
+Parameters of the analysis are specified in the yaml configuration file:
+
+```yaml
+upload:
+  dir: ../final
+details:
+  - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
+  description: NA12878
+  metadata:
+    sex: female
+  analysis: variant2
+    genome_build: hg38
+    algorithm:
+      aligner: bwa
+      variantcaller: gatk-haplotype
+      validate: giab-NA12878/truth_small_variants.vcf.gz
+      validate_regions: giab-NA12878/truth_regions.bed
+      variant_regions: capture_regions/Exome-NGv3
+```
+Running time is ~2h.
 
 ### 5. Explore results in `NA12878-exome-eval/final`:
 *  `date_project/multiqc` - quality contol
