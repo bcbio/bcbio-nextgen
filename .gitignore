@@ -2,6 +2,7 @@
 *.idx
 *.swo
 *.swp
+**/bcbiotx/
 bcbio/pipeline/version.py
 bcbio_nextgen.egg-info/
 build/
@@ -16,7 +17,6 @@ tests/data/110907*
 tests/data/genomes*
 tests/data/reference_material/7_100326_FC6107FAAXX-grade.vcf.gz*
 tests/data/tcga_benchmark
-tests/test_automated_output/
 tests/data/automated/config/
 tests/data/automated/galaxy/
 tests/data/automated/gemini_data/
