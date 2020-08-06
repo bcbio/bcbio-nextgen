@@ -8,7 +8,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 
-SUPPORTED_BUILDS = ("hg38", "GRCh37", "hg19")
+SUPPORTED_BUILDS = ("hg38", "GRCh37", "hg19", "mm10")
 
 def run_arriba(data):
     build = dd.get_genome_build(data)
