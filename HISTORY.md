@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Add mm10 as a supported genome for arriba.
 - Skip `bcbioRNASeq` for more than 100 samples. 
 - Add `rRNA_pseudogene` as a rRNA biotype.
 - Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
