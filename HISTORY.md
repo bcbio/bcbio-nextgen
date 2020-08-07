@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Add predicted transcript and peptide output to arriba.
 - Add mm10 as a supported genome for arriba.
 - Skip `bcbioRNASeq` for more than 100 samples. 
 - Add `rRNA_pseudogene` as a rRNA biotype.

@@ -34,7 +34,7 @@ def run_arriba(data):
     with file_transaction(fusion_file) as tx_fusion_file, \
          file_transaction(discarded_fusion_file) as tx_discarded_fusion_file:
         cmd = (f"{arriba} -x {bam_file} -g {gtf} -a {ref_file} -o {tx_fusion_file} "
-               f"-O {tx_discarded_fusion_file} "
+               f"-O {tx_discarded_fusion_file} -T -P "
                f"-i {contig_list} ")
         if blacklist_file:
             logger.info(f"arriba blacklist file found, running blacklisting with {blacklist_file}.")
