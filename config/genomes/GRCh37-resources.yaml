@@ -1,4 +1,4 @@
-version: 53
+version: 54
 
 aliases:
   human: true
@@ -31,6 +31,7 @@ variation:
   genesplicer: ../variation/genesplicer
   editing: ../editing/RADAR.bed.gz
   genotype2phenotype: ../variation/G2P.csv
+  af_only_gnomad: ../variation/af_only_gnomad.vcf.gz
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
