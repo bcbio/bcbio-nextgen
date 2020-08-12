@@ -17,7 +17,7 @@ python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_insta
 ### 2. Install hg38 reference genome and bwa indices
 
 ```shell
-bcbio_nextgen.py update -u skip --genomes hg38 --aligners bwa
+bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners bwa
 ```
 See more detailed instructions in the installation user story.
 
@@ -76,16 +76,16 @@ Running time is ~2h.
 *  `NA12878/NA12878-callable.bed` - callable regions
 *  `final/NA12878/NA12878-ready.bam` - bam file
 *  `date_project/bcbio-nextgen-commands.log` - commands ran to produce results
-*  `date_project/grading-summary-NA12878.csv` - validation results. 
-False Discovery Rate (FDR) for SNPs here is 3% (i.e. 97% precision for SNPs), 
-so the precision is quite low. 
+*  `date_project/grading-summary-NA12878.csv` - validation results.
+False Discovery Rate (FDR) for SNPs here is 3% (i.e. 97% precision for SNPs),
+so the precision is quite low.
 One reason of low precision could be that NA12878-NGv3-LAB1360 WES dataset
 was sequenced in 2013 or earlier, so it could be of somewhat lower quality.
-We left it here for educational purpose. 
-With a modern NA12878 dataset you can achieve >99% precision and >99% sensitivity using bcbio/gatk, 
+We left it here for educational purpose.
+With a modern NA12878 dataset you can achieve >99% precision and >99% sensitivity using bcbio/gatk,
 see [germline variants user story](germline_variants.html#workflow1-validate-hg38-calls).
-Comparing QC and validations in the two NA12878 WES datasets illustrates how sequencing quality affects variant calling precision and sensitivity. 
-Another point one could make when comparing the two validations is that NA12878-NGv3-LAB1360 
+Comparing QC and validations in the two NA12878 WES datasets illustrates how sequencing quality affects variant calling precision and sensitivity.
+Another point one could make when comparing the two validations is that NA12878-NGv3-LAB1360
 has a larger target (133,288 SNPs vs 37,033), so the choice of `variant_regions` directly influences validation results.
 Including only regions with high coverage, excluding low complexity regions leads to increased precision.
 A larger bed file with more regions included is a more stressful test for combination of capture kit/sequencing instrument/aligner/variant caller/filters.
