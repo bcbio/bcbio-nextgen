@@ -11,17 +11,17 @@
 
 ```shell
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-python bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --nodata 
+python bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --nodata
 ```
 
 You have to specify where to install bcbio in your filesystem and where to install tools, for example:
 ```
-python bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata 
+python bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata
 ```
 
 or inside your home directory:
 ```
-python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata 
+python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata
 ```
 
 Installation takes 30 minutes or more (depending on the speed of your storage and Internet connection). Recommended HPC job parameters for the installation process: 1 CPU core, 2GB memory, and 1 hour run time.
@@ -32,12 +32,12 @@ which bcbio_nextgen.py
 bcbio_nextgen.py --version
 ```
 
-### 2. Install data 
+### 2. Install data
 
 Bcbio needs reference files, indices, and databases to run any analyses. It is possible to install bcbio package and data at once, but we recommend to split these steps, because (i) some datatargets (dbNSFP, gnomad, snpEff) may take tens of hours or several days to finish, they could break in the middle due to unstable connections, i.e. it is better to tackle them one by one; (ii) you can re-use your data installation between bcbio instances. Data does not change much even between years, so you can just link `ln -s /old_bcbio/genomes /new_bcbio/genomes`
 
 ```
-bcbio_nextgen.py -u skip --genomes hg38 --aligners bwa
+bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners bwa
 ```
 
 This command installs hg38 human reference genome and bwa aligner index - the bare minimum required to run germline or somatic variant calling pipelines.
@@ -56,10 +56,10 @@ This command installs hg38 human reference genome and bwa aligner index - the ba
   * An OpenGL library, like [Mesa](https://www.mesa3d.org/) (On Ubuntu/deb systems: `libglu1-mesa`, On RedHat/rpm systems: `mesa-libGLU-devel`). This is only required for cancer heterogeneity analysis with BubbleTree.
   * The Pisces tumor-only variant callers requires the [Microsoft .NET runtime](https://docs.microsoft.com/en-us/dotnet/core/install/linux-package-managers).
 - The [bcbio-nextgen Dockerfile](https://github.com/bcbio/bcbio-nextgen/blob/master/Dockerfile#L5) contains the packages needed to install on bare Ubuntu systems.
-- The automated installer creates a fully integrated environment that allows simultaneous updates of the framework, third party tools and biological data. This offers the advantage over manual installation of being able to manage and evolve a consistent analysis environment as algorithms continue to evolve and improve. Installing this way is as isolated and self-contained as possible without virtual machines or lightweight system containers like [Docker](https://www.docker.com/). 
+- The automated installer creates a fully integrated environment that allows simultaneous updates of the framework, third party tools and biological data. This offers the advantage over manual installation of being able to manage and evolve a consistent analysis environment as algorithms continue to evolve and improve. Installing this way is as isolated and self-contained as possible without virtual machines or lightweight system containers like [Docker](https://www.docker.com/).
 
 ## Installation parameters
-Run 
+Run
 ```
 bcbio_nextgen.py upgrade --help
 ```
@@ -144,7 +144,7 @@ Optional steps:
     export BCBIO_DATA_DIR=~/biodata
     vagrant reload
     ```
-    This directory will be mounted inside Vagrant VM under `/data` 
+    This directory will be mounted inside Vagrant VM under `/data`
 
 ## Upgrade
 
@@ -157,7 +157,7 @@ bcbio_nextgen.py upgrade -u stable --tools --data
 
 Tune the upgrade with these options:
 * `-u` Type of upgrade to do for bcbio-nextgen code. `stable` gets the most recent released version and `development` retrieves the latest code from GitHub.
-* `--datatarget` Customized installed data or download additional files not included by default: 
+* `--datatarget` Customized installed data or download additional files not included by default:
 * `--toolplus` Specify additional tools to include. See the section on `extra software` for more details.
 * `--genomes` and `--aligners` options add additional aligner indexes to download and prepare. `bcbio_nextgen.py upgrade -h` lists available genomes and aligners. If you want to install multiple genomes or aligners at once, specify `--genomes` or `--aligners` multiple times, like this: `--genomes GRCh37 --genomes mm10 --aligners bwa --aligners bowtie2`
 * Leave out the `--tools` option if you don't want to upgrade third party tools. If using `--tools`, it will use the same directory as specified during installation. If you're using an older version that has not yet gone through a successful upgrade or installation and saved the tool directory, you should manually specify `--tooldir` for the first upgrade. You can also pass `--tooldir` to install to a different directory.
@@ -167,7 +167,7 @@ Tune the upgrade with these options:
 
 ## Customizing data installation
 
-bcbio supports the following [genome references](https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml), 12 of them have [additional data downloads](https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes). If you need a reference which is absent in the list, you may install it as a [custom genome](configuration.html#adding-custom-genomes). 
+bcbio supports the following [genome references](https://github.com/chapmanb/cloudbiolinux/blob/master/config/biodata.yaml), 12 of them have [additional data downloads](https://github.com/chapmanb/cloudbiolinux/tree/master/ggd-recipes). If you need a reference which is absent in the list, you may install it as a [custom genome](configuration.html#adding-custom-genomes).
 
 bcbio installs associated data files for sequence processing, and you're able to customize this to install larger files or change the defaults. Use the `--datatarget` flag (potentially multiple times) to customize or add new targets.
 
