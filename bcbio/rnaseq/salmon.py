@@ -39,7 +39,7 @@ def run_salmon_reads(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     if len(files) == 2:
         fq1, fq2 = files
     else:
@@ -61,7 +61,7 @@ def run_salmon_decoy(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     salmon_dir = os.path.join(work_dir, "salmon", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     if len(files) == 2:
         fq1, fq2 = files
     else:
@@ -150,7 +150,7 @@ def run_salmon_index(*samples):
     for data in dd.sample_data_iterator(samples):
         work_dir = dd.get_work_dir(data)
         salmon_dir = os.path.join(work_dir, "salmon")
-        gtf_file = dd.get_gtf_file(data)
+        gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
         salmon_index(gtf_file, data, salmon_dir)
     return samples
 

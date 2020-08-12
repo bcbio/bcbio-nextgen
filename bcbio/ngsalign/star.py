@@ -58,9 +58,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     fastq_files = (" ".join([_unpack_fastq(fastq_file), _unpack_fastq(pair_file)])
                    if pair_file else _unpack_fastq(fastq_file))
     num_cores = dd.get_num_cores(data)
-    gtf_file = dd.get_transcriptome_gtf(data)
-    if not gtf_file:
-        gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     if ref_file.endswith("chrLength"):
         ref_file = os.path.dirname(ref_file)
 
@@ -252,7 +250,7 @@ def index(ref_file, out_dir, data):
     """Create a STAR index in the defined reference directory.
     """
     (ref_dir, local_file) = os.path.split(ref_file)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     if not utils.file_exists(gtf_file):
         raise ValueError("%s not found, could not create a star index." % (gtf_file))
     if not utils.file_exists(out_dir):

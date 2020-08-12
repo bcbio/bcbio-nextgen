@@ -20,7 +20,7 @@ def run_kallisto_rnaseq(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
@@ -71,7 +71,7 @@ def run_kallisto_singlecell(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
@@ -190,7 +190,7 @@ def run_kallisto_index(*samples):
     for data in dd.sample_data_iterator(samples):
         work_dir = dd.get_work_dir(data)
         kallisto_dir = os.path.join(work_dir, "kallisto")
-        gtf_file = dd.get_gtf_file(data)
+        gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
         assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
         fasta_file = dd.get_ref_file(data)
         assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file

@@ -20,7 +20,7 @@ def run_arriba(data):
     utils.safe_makedir(arriba_dir)
     bam_file = dd.get_work_bam(data)
     ref_file = dd.get_ref_file(data)
-    gtf = dd.get_gtf_file(data)
+    gtf = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     arriba = config_utils.get_program("arriba", data)
     fusion_file = os.path.join(arriba_dir, "fusions.tsv")
     discarded_fusion_file = os.path.join(arriba_dir, "fusions.discarded.tsv")

@@ -106,10 +106,10 @@ def index(ref_file, out_dir, data):
     """Create a bismark index in the defined reference directory.
     """
     (ref_dir, local_file) = os.path.split(ref_file)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     bismark = config_utils.find_program("bismark", data["config"])
     if not utils.file_exists(gtf_file):
-        raise ValueError("%s not found, could not create a star index." % (gtf_file))
+        raise ValueError("%s not found, could not create a bismark index." % (gtf_file))
     if not utils.file_exists(out_dir):
         with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
             num_cores = dd.get_cores(data)
