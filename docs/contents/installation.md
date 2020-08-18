@@ -34,7 +34,7 @@ bcbio_nextgen.py --version
 
 ### 2. Install data
 
-Bcbio needs reference files, indices, and databases to run any analyses. It is possible to install bcbio package and data at once, but we recommend to split these steps, because (i) some datatargets (dbNSFP, gnomad, snpEff) may take tens of hours or several days to finish, they could break in the middle due to unstable connections, i.e. it is better to tackle them one by one; (ii) you can re-use your data installation between bcbio instances. Data does not change much even between years, so you can just link `ln -s /old_bcbio/genomes /new_bcbio/genomes`
+Bcbio needs reference files, indices, and databases. It is possible to install bcbio package and data at once, but we recommend to split these steps, because (i) some datatargets (dbNSFP, gnomad, snpEff) may take from tens of hours to several days to finish, they could break in the middle due to unstable connections, i.e. it is better to tackle them one by one; (ii) you can re-use your data installation between bcbio instances. Data does not change much even between years, so you can just create symlinks `/old_bcbio/genomes -> /new_bcbio/genomes`, `/old_bcbio/galaxy/tool-data -> /new_bcbio/galaxy/tool-data`. 
 
 ```
 bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners bwa
