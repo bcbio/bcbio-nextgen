@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Convert fastq inputs into paired inputs with UMIs in read names.
 
-Handles two cases:
+Handles three cases:
 
 - Separate UMI read files (read 1, read 2, UMI)
 
@@ -16,6 +16,8 @@ Handles two cases:
     bcbio_fastq_umi_prep.py single --tag1 5 --tag2 5 <out basename> <read 1 fastq> <read 2 fastq>
   or:
     bcbio_fastq_umi_prep.py autopair --tag1 5 --tag2 5 [<list> <of> <fastq> <files>]
+
+- Adds UMI_ to fastq line1 of Dragen's UMI output, input is R1.fq.gz and R2.fq.gz
 
 Creates two fastq files with embedded UMIs: <out_basename>_R1.fq.gz <out_basename>_R2.fq.gz
 or a directory of fastq files with UMIs added to the names.
@@ -34,6 +36,8 @@ import argparse
 import math
 import os
 import sys
+import gzip
+import itertools
 
 from bcbio import utils
 from bcbio.bam import fastq
@@ -173,6 +177,42 @@ def run_autopair(args):
     parallel = {"type": "local", "cores": overall_processes, "progs": []}
     run_multicore(add_umis_to_fastq_parallel, ready_to_run, {"algorithm": {}}, parallel)
 
+def _add_umi_str(fq_header):
+    ar = fq_header.split(" ")
+    ar1 = ar[0].split(":")
+    prefix = ar1[:-1]
+    suffix = ar1[-1]
+    new_suffix = "UMI_" + suffix
+    ending = ar[1].strip()
+    new_header = ":".join(prefix) + ":" + new_suffix + " " + ending
+    return new_header
+
+def run_dragen(args):
+    to_run = []
+    outdir = utils.safe_makedir(args.outdir)
+    for fnames in fastq.combine_pairs(sorted(args.files)):
+        to_run.append(fnames)
+    for r1, r2 in to_run:
+        out1_fq = os.path.join(outdir, r1)
+        out2_fq = os.path.join(outdir, r2)
+        n = 0
+        with utils.open_gzipsafe(r1) as r1_handle, \
+             utils.open_gzipsafe(r2) as r2_handle, \
+             gzip.open(out1_fq, "wb") as out1_handle, \
+             gzip.open(out2_fq, "wb") as out2_handle:
+            for line1, line2 in itertools.zip_longest(r1_handle, r2_handle):
+                if line1 is not None:
+                    if n%4 == 0:
+                      # parse header line
+                      new_header1 = _add_umi_str(line1) + "\n"
+                      new_header2 = _add_umi_str(line2) + "\n"
+                      out1_handle.write(new_header1.encode())
+                      out2_handle.write(new_header2.encode())
+                    else:
+                      out1_handle.write(line1.encode())
+                      out2_handle.write(line2.encode())
+                    n += 1
+
 def _find_umi(files):
     """Find UMI file using different naming schemes.
 
@@ -226,6 +266,12 @@ if __name__ == "__main__":
     p.add_argument("read2_fq", help="Input fastq, read 2")
     p.add_argument("umi_fq", help="Input fastq, UMIs", nargs="?")
     p.set_defaults(func=run_single)
+
+    p = sp.add_parser("dragen", help="Make Dragen UMI input suitable for bcbio")
+    p.add_argument("--outdir", default="with_umis", help="Output directory to write UMI prepped fastqs")
+    p.add_argument("files", nargs="*", help="All fastq files to pair and process")
+    p.set_defaults(func=run_dragen)
+
     if len(sys.argv) == 1:
         parser.print_help()
     args = parser.parse_args()
