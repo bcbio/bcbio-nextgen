@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Fix race condition when running tests.
 - Add [TOPMed](https://www.nhlbiwgs.org) as a `datatarget`. 
 - Add predicted transcript and peptide output to arriba.
 - Add mm10 as a supported genome for arriba.

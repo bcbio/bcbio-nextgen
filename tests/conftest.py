@@ -16,8 +16,7 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
-BCBIO_TEST_DIR = os.path.join(tempfile.gettempdir(), 'bcbio')  # /tmp/bcbio
-
+BCBIO_TEST_DIR = tempfile.TemporaryDirectory(prefix="bcbio_").name  # /tmp/bcbio
 
 def pytest_addoption(parser):
     parser.addoption('--keep-test-dir', action='store_true', default=False,
