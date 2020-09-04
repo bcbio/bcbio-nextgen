@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Allow custom options to be passed to `featureCounts`.
 - Fix race condition when running tests.
 - Add [TOPMed](https://www.nhlbiwgs.org) as a `datatarget`. 
 - Add predicted transcript and peptide output to arriba.
