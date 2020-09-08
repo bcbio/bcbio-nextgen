@@ -171,9 +171,9 @@ def _add_meta(xs, sample=None, config=None):
         out.append(x)
     return out
 
+
 def _get_files_variantcall(sample):
-    """Return output files for the variant calling pipeline.
-    """
+    """Return output files for the variant calling pipeline"""
     out = []
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
@@ -181,12 +181,13 @@ def _get_files_variantcall(sample):
     out = _maybe_add_callable(sample, out)
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
-    out = _maybe_add_sv(algorithm, sample, out)
+    out = _maybe_add_sv(sample, out)
     out = _maybe_add_hla(algorithm, sample, out)
     out = _maybe_add_heterogeneity(algorithm, sample, out)
 
     out = _maybe_add_validate(algorithm, sample, out)
     return _add_meta(out, sample)
+
 
 def _maybe_add_validate(algorith, sample, out):
     for i, plot in enumerate(tz.get_in(("validate", "grading_plots"), sample, [])):
@@ -271,7 +272,8 @@ def _get_batch_name(sample):
         batch = dd.get_sample_name(sample)
     return batch
 
-def _maybe_add_sv(algorithm, sample, out):
+
+def _maybe_add_sv(sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         batch = _get_batch_name(sample)
         for svcall in sample["sv"]:
@@ -345,6 +347,7 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "type": vext,
                                     "ext": "sv-validate%s" % ext})
     return out
+
 
 def _sample_variant_file_in_population(x):
     """Check if a sample file is the same as the population file.
