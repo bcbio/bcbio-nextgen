@@ -278,6 +278,10 @@ def _maybe_add_sv(algorithm, sample, out):
             if svcall.get("variantcaller") == "seq2c":
                 out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
                 out.extend(_get_variant_file(svcall, ("gender_predicted",), sample=batch))
+            elif svcall.get('variantcaller') == 'scramble':
+                out.extend(_get_variant_file(svcall, ('clusters_file',), suffix='-clusters',
+                                             sample=batch))
+                out.extend(_get_variant_file(svcall, ('mei_file',), suffix='-mei', sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,), sample=batch))
@@ -832,7 +836,7 @@ def _get_files_project(sample, upload_config):
                 sv_project.add(svcall["calls_all"])
         if svcall.get("variantcaller") == "gatkcnv":
             if svcall.get("pon") and svcall["pon"] not in pon_project:
-                out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"}) 
+                out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"})
                 pon_project.add(svcall.get("pon"))
 
     if "coverage" in sample:
