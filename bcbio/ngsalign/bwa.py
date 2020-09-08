@@ -15,6 +15,7 @@ from bcbio.variation import sentieon
 import bcbio.pipeline.datadict as dd
 from bcbio.bam import fastq
 from bcbio.log import logger
+from bcbio.heterogeneity import chromhacks
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -68,7 +69,7 @@ def align_bam(in_bam, ref_file, names, align_dir, data):
                 cmd = cmd.format(**locals()) + tobam_cl
                 do.run(cmd, "bwa mem alignment from BAM: %s" % names["sample"], None,
                        [do.file_nonempty(tx_out_file), do.file_reasonable_size(tx_out_file, in_bam)])
-        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, reg_info, data)
+        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, rg_info, data)
         data["hla_bam"] = hla_file
     return data
 
@@ -113,13 +114,17 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2="", with_hla=False
                "-v 1 {ref_file} {fastq1} {fastq2} ")
     return (bwa_cmd + alt_cmd).format(**locals())
 
+def is_precollapsed_bam(data):
+    return dd.get_umi_type(data) == "fastq_name" and not has_umi(data)
+
 def hla_on(data):
-    alt_file = dd.get_ref_file(data) + ".alt"
-    hla_on = utils.file_exists(alt_file) and dd.get_hlacaller(data)
-    return alt_file and hla_on
+    return has_hla(data) and dd.get_hlacaller(data)
 
 def has_umi(data):
-    return umi_bam in data
+    return "umi_bam" in data
+
+def has_hla(data):
+    return len(chromhacks.get_hla_chroms(dd.get_ref_file(data))) != 0
 
 def fastq_size_output(fastq_file, tocheck):
     head_count = 8000000
@@ -194,7 +199,7 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
             out_file = _align_backtrack(fastq_file, pair_file, ref_file, out_file,
                                         names, rg_info, data)
         else:
-            if not hla_on(data) or needs_separate_hla(data):
+            if is_precollapsed_bam(data) or not hla_on(data) or needs_separate_hla(data):
                 out_file = _align_mem(fastq_file, pair_file, ref_file, out_file,
                                     names, rg_info, data)
             else:
@@ -205,8 +210,8 @@ def align_pipe(fastq_file, pair_file, ref_file, names, align_dir, data):
     # bwakit will corrupt the non-HLA alignments in a UMI collapsed BAM file
     # (see https://github.com/bcbio/bcbio-nextgen/issues/3069)
     if needs_separate_hla(data):
-        hla_file = "HLA-" + out_file
-        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, reg_info, data)
+        hla_file = os.path.join(os.path.dirname(out_file), "HLA-" + os.path.basename(out_file))
+        hla_file = _align_mem_hla(fastq_file, pair_file, ref_file, hla_file, names, rg_info, data)
         data["hla_bam"] = hla_file
     return data
 

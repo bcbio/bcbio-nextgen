@@ -78,8 +78,18 @@ def is_alt(chrom):
     """
     return chrom.endswith("_alt")
 
+def is_hla(chrom):
+    """
+    check if a chromosome is an HLA
+    """
+    return chrom.startswith("HLA")
+
 def is_human(data):
     return dd.get_genome_build(data) in ["hg38", "GRCh37", "GRCh38", "hg19"]
 
 def is_mouse(data):
     return dd.get_genome_build(data) in ["mm10"]
+
+def get_hla_chroms(ref_file):
+    hla = [c.name for c in ref.file_contigs(ref_file) if is_hla(c.name)]
+    return hla

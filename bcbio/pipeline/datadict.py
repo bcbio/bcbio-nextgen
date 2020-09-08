@@ -86,6 +86,7 @@ LOOKUPS = {
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
     "count_file": {"keys": ["count_file"]},
+    "hla_bam": {"keys": ["hla_bam"]},
     "mirna_counts": {"keys": ["mirna_counts"]},
     "isomir_counts": {"keys": ["isomir_counts"]},
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},

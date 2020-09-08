@@ -1,4 +1,6 @@
 ## 1.2.4 (in progress)
+- Performance improvements when HLA calling during panel sequencing. This skips running bwa-kit during the initial
+  mapping for consensus UMI detection, greatly speeding up panel sequencing runs.
 - Allow custom options to be passed to `featureCounts`.
 - Fix race condition when running tests.
 - Add [TOPMed](https://www.nhlbiwgs.org) as a `datatarget`. 
@@ -6,7 +8,7 @@
 - Add mm10 as a supported genome for arriba.
 - Skip `bcbioRNASeq` for more than 100 samples. 
 - Add `rRNA_pseudogene` as a rRNA biotype.
-- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
+- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-  GenotypeGVCFs#--genomicsdb-use-vcf-codec for
   a discussion. Thanks to @amizeranschi for finding the issue and posting the solution.
 - update VEP to v100
 - Add consensus peak calling using https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html 
@@ -23,6 +25,7 @@
 - Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
 - Only show somatic variant counts in the general stats table, if germline variants are calculated.
 - Add `kit` parameter for setting options for pipelines via just listing the kit. Currently only implemented for WGBS.
+
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.
