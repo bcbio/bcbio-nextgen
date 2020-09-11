@@ -31,7 +31,7 @@ resources:
   dexseq:
     memory: 10g
   macs2:
-    memory: 8g
+    memory: 16g
   seqcluster:
     memory: 8g
 
