@@ -1,4 +1,7 @@
 ## 1.2.4 (in progress)
+- Attempt to speed up bismark by implementing the parallelization strategy suggested here: https://github.com/FelixKrueger/Bismark/issues/96
+- Add `--enumerate` option to OptiType to report the top 10 calls and scores, to make it easier to decide how confident we are in
+  a HLA call.
 - Performance improvements when HLA calling during panel sequencing. This skips running bwa-kit during the initial
   mapping for consensus UMI detection, greatly speeding up panel sequencing runs.
 - Allow custom options to be passed to `featureCounts`.
