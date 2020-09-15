@@ -119,7 +119,8 @@ def get_qc_tools(data):
         if vcfanno.is_human(data):
             to_run += ["contamination", "peddy"]
         if vcfutils.get_paired_phenotype(data):
-            to_run += ["viral"]
+            if "viral" not in dd.get_tools_off(data):
+                to_run += ["viral"]
         if damage.should_filter([data]):
             to_run += ["damage"]
     if dd.get_umi_consensus(data):
