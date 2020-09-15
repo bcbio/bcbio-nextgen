@@ -450,9 +450,10 @@ def _fix_gatk_header(exist_files, out_file, config):
         ropts = []
         if "options" in resources:
             ropts += [str(x) for x in resources.get("options", [])]
-        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s %s" %
-               (utils.get_java_clprep(), header_file, base_file, base_fix_file, " ".join(ropts)),
-               "Reheader initial VCF file in merge")
+        bcftools = config_utils.get_program("bcftools", config)
+        cmd = f"{bcftools} reheader --header {header_file} --output {tx_out_file} {base_file}"
+        message = f"Reheader {base_file} with header from {replace_file}."
+        do.run(cmd, message)
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]
 
