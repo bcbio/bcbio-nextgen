@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Fix PS genotype field from octopus to have the correct type.
 - Edit VarDict headers to report VCFv4.2, since htsjdk does not fully support VCFv4.3 yet.
 - Attempt to speed up bismark by implementing the parallelization strategy suggested here: https://github.com/FelixKrueger/Bismark/issues/96
 - Add `--enumerate` option to OptiType to report the top 10 calls and scores, to make it easier to decide how confident we are in
