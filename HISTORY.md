@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
 - Add bismark output to MultiQC.
 - Fix PS genotype field from octopus to have the correct type.
 - Edit VarDict headers to report VCFv4.2, since htsjdk does not fully support VCFv4.3 yet.
