@@ -33,6 +33,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if file_exists(final_out):
         data = dd.set_work_bam(data, final_out)
         data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
+        data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
         return data
 
     bismark = config_utils.get_program("bismark", config)
@@ -50,10 +51,6 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
-    # N is bismark instances
-    # p is pthreads in bowtie2
-    # n = resources.get("bismark_threads")
-    # p = resources.get("bowtie_threads")
     cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --parallel {instances} -o {tx_out_dir} --unmapped {ref_file} {fastq_file} "
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
@@ -68,6 +65,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     utils.symlink_plus(raw_bam[0], final_out)
     data = dd.set_work_bam(data, final_out)
     data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
+    data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
     return data
 
 

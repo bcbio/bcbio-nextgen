@@ -1,4 +1,5 @@
 ## 1.2.4 (in progress)
+- Add bismark output to MultiQC.
 - Fix PS genotype field from octopus to have the correct type.
 - Edit VarDict headers to report VCFv4.2, since htsjdk does not fully support VCFv4.3 yet.
 - Attempt to speed up bismark by implementing the parallelization strategy suggested here: https://github.com/FelixKrueger/Bismark/issues/96

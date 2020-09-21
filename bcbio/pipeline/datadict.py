@@ -4,7 +4,7 @@ functions to access the data dictionary in a clearer way
 
 import os
 import toolz as tz
-from bcbio.utils import file_exists, to_single_data, deepish_copy
+from bcbio.utils import file_exists, to_single_data, deepish_copy, flatten
 from bcbio.log import logger
 from collections import namedtuple
 import sys
@@ -377,19 +377,25 @@ def get_keys(lookup):
 
 def update_summary_qc(data, key, base=None, secondary=None):
     """
-    updates summary_qc with a new section, keyed by key.
+    updates summary_qc, keyed by key. key is generally the program the quality
+    control metrics came from. if key already exists, the specified
+    base/secondary files are added as secondary files to the existing
+    key, removing duplicates.
+
     stick files into summary_qc if you want them propagated forward
     and available for multiqc
     """
     summary = deepish_copy(get_summary_qc(data, {}))
-    if key in summary:
-        return data
+    files = [[base], [secondary],
+             tz.get_in([key, "base"], summary, []),
+             tz.get_in([key, "secondary"], summary, [])]
+    files = list(set([x for x in flatten(files) if x]))
+    base = tz.first(files)
+    secondary = list(tz.drop(1, files))
     if base and secondary:
         summary[key] = {"base": base, "secondary": secondary}
     elif base:
         summary[key] = {"base": base}
-    elif secondary:
-        summary[key] = {"secondary": secondary}
     data = set_summary_qc(data, summary)
     return data
 

@@ -198,6 +198,22 @@ bcbio_python prepare_tx_gff.py --genome-dir /path/to/bcbio/genomes Mmusculus mm9
 ```
 We are still working on ways to best include these as part of the standard build and install since they either require additional tools to run locally, or require preparing copies in S3 buckets.
 
+## Enabling new MultiQC modules
+[MultiQC modules](https://multiqc.info/docs/#multiqc-modules) can be turned
+on in `bcbio/qc/multiqc.py`. `bcbio` collects the files to be used rather
+than searching through the work directory to support CWL workflows. Quality
+control files can be added by using the `datadict.update_summary_qc` function which
+adds the files in the appropriate place in the `data` dict. For example, here
+is how to add the quality control reports from bismark methylation calling:
+
+```python
+    data = dd.update_summary_qc(data, "bismark", base=biasm_file)
+    data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
+    data = dd.update_summary_qc(data, "bismark", base=splitting_report)
+```
+
+Files that can be added for each tool in MultiQC can be found in the [MultiQC module documentation](https://multiqc.info/docs/#multiqc-modules)
+
 ## New release checklist
 - [ ] pull from master to make sure you are up to date
 - [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py`
