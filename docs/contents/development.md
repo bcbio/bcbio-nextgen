@@ -222,7 +222,6 @@ Files that can be added for each tool in MultiQC can be found in the [MultiQC mo
 - [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
 - [ ] commit and push changes to bcbio
 - [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
-- [ ] update Zenodo badge in [README.md](https://github.com/bcbio/bcbio-nextgen/blob/master/README.md)
 - [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
 - [ ] review and approve bioconda recipe once it passes the tests
 - [ ] merge recipe by commenting `@bioconda-bot please merge`
