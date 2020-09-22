@@ -1,4 +1,6 @@
-## 1.2.4 (in progress)
+## 1.2.5 (in progress)
+
+## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
 - Add bismark output to MultiQC.
 - Fix PS genotype field from octopus to have the correct type.
