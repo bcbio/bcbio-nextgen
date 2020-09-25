@@ -339,9 +339,9 @@ def combine_express(samples, combined):
                   dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
     gtf_file = dd.get_gtf_file(samples[0][0])
     isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
-    isoform_to_gene_file = express.isoform_to_gene_name(
-        gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
     if len(to_combine) > 0:
+        isoform_to_gene_file = express.isoform_to_gene_name(
+            gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
         to_combine = [dd.get_express_tpm(x) for x in

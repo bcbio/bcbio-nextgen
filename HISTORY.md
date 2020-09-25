@@ -1,4 +1,5 @@
 ## 1.2.5 (in progress)
+- Only make isoform to gene file from express if we have run express.
 
 ## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
