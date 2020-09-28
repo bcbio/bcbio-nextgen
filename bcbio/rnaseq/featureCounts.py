@@ -78,6 +78,8 @@ def chipseq_count(data):
     sorted_bam = bam.sort(in_bam, dd.get_config(data),
                           order="queryname", out_dir=safe_makedir(out_dir))
     consensus_file = tz.get_in(("peaks_files", "consensus", "main"), data)
+    if not consensus_file:
+        return [[data]]
     saf_file = os.path.splitext(consensus_file)[0] + ".saf"
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "consensus")

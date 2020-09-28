@@ -468,8 +468,8 @@ def combine_files(samples):
     else:
         fpkm_isoform_combined = None
     # combine DEXseq files
-    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
-                                        in samples])
+    to_combine_dexseq = list(filter_missing([dd.get_dexseq_counts(data[0]) for data
+                                        in samples]))
     if to_combine_dexseq and combined:
         dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
         dexseq_combined = count.combine_count_files(to_combine_dexseq,

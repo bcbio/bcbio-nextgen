@@ -16,12 +16,7 @@ def combine_count_files(files, out_file=None, ext=".counts"):
     ext: remove this extension from the count files
     """
     files = list(files)
-    if not files:
-        return None
-    assert all([file_exists(x) for x in files]), \
-        "Some count files in %s do not exist." % files
-    for f in files:
-        assert file_exists(f), "%s does not exist or is empty." % f
+    files = [x for x in files if file_exists(x)]
     col_names = [os.path.basename(x.replace(ext, "")) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
