@@ -251,6 +251,10 @@ def postprocess_alignment(data):
     bam_file = data.get("align_bam") or data.get("work_bam")
     ref_file = dd.get_ref_file(data)
     artifacts = gatk.collect_artifact_metrics(data)
+    if artifacts:
+        data = dd.update_summary_qc(data, "picard", artifacts.pop(), artifacts)
+        oxog = gatk.collect_oxog_metrics(data)
+        data = dd.update_summary_qc(data, "picard", oxog.pop(), oxog)
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data)))
