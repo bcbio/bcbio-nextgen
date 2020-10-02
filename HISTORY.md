@@ -1,6 +1,7 @@
 ## 1.2.5 (in progress)
 - Only make isoform to gene file from express if we have run express.
 - Allow "no consensus peaks found" as a valid endpoint of a ChIP-seq analysis.
+- Allow `BCBIO_TEST_DIR` environment variable to control where tests end up.
 
 ## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.

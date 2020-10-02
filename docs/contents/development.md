@@ -141,6 +141,17 @@ To see the test coverage, add the `--cov=bcbio` argument to `pytest`.
 
 By default the test suite will use your installed system configuration for running tests, substituting the test genome information instead of using full genomes. If you need a specific testing environment, copy `tests/data/automated/post_process-sample.yaml` to `tests/data/automated/post_process.yaml` to provide a test-only configuration.
 
+The environment variable `BCBIO_TEST_DIR` can put the tests in a different directory if the full path to the new
+directory is specified. For example:
+
+```bash
+export BCBIO_TEST_DIR=$(pwd)/output
+```
+
+will put the output in your current working directory/output. 
+
+The test directory can be kept around after running by passing the `--keep-test-dir` flag.
+
 ## Adding tools
 
 ### Aligner
