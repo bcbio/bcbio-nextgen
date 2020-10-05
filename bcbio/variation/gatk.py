@@ -13,6 +13,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, bedutils, ploidy, vcfutils
+from bcbio.provenance import do
 
 def standard_cl_params(items):
     """Shared command line parameters for GATK programs.
@@ -240,7 +241,7 @@ def collect_artifact_metrics(data):
 
 def collect_oxog_metrics(data):
     """
-    extracts 8-oxoguanine (OxoG) artifact metrics from  CollectSequencingArtifacts
+    extracts 8-oxoguanine (OxoG) artifact metrics from CollectSequencingArtifacts
     output so we don't have to run CollectOxoGMetrics.
     """
     input_base = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data),
@@ -265,4 +266,8 @@ def collect_oxog_metrics(data):
                   "-O", out_base,
                   "-R", ref_file]
         broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
+        # multiqc <= 1.9 looks for INPUT not INPUT_BASE for these files
+        # see (https://github.com/ewels/MultiQC/pull/1310)
+        cmd = f"sed 's/INPUT_BASE/INPUT/g' {out_base}.oxog_metrics -i"
+        do.run(cmd, f"Fixing {out_base}.oxog_metrics to work with MultiQC.")
     return out_files
