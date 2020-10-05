@@ -185,6 +185,9 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = heterogeneity.run(samples, run_parallel)
         with profile.report("population database", dirs):
             samples = population.prep_db_parallel(samples, run_parallel)
+        # after SV calling and SNV merging
+        with profile.report("create CNV PON", dirs):
+            samples = structural.create_cnv_pon(samples)
         with profile.report("peddy check", dirs):
             samples = peddy.run_peddy_parallel(samples, run_parallel)
         with profile.report("quality control", dirs):
