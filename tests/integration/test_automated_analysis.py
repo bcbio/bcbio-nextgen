@@ -117,7 +117,6 @@ def test_srnaseq_bowtie(install_test_files, data_dir, global_config):
 
 
 @pytest.mark.chipseq
-@pytest.mark.xfail(reason='https://github.com/bcbio/bcbio-nextgen/issues/3224', run=False)
 def test_chipseq_with_bowtie2(install_test_files, data_dir, global_config):
     fc_dir = os.path.join(data_dir, os.pardir, 'test_chipseq')
     run_config = os.path.join(data_dir, 'run_info-chipseq.yaml')

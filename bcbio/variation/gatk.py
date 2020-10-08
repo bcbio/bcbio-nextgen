@@ -13,6 +13,7 @@ from bcbio.pipeline import config_utils
 from bcbio.pipeline.shared import subset_variant_regions
 from bcbio.pipeline import datadict as dd
 from bcbio.variation import annotation, bamprep, bedutils, ploidy, vcfutils
+from bcbio.provenance import do
 
 def standard_cl_params(items):
     """Shared command line parameters for GATK programs.
@@ -211,3 +212,62 @@ def _supports_avx():
             for line in in_handle:
                 if line.startswith("flags") and line.find("avx") > 0:
                     return True
+
+def collect_artifact_metrics(data):
+    """Run CollectSequencingArtifacts to collect pre-adapter ligation artifact metrics
+    https://gatk.broadinstitute.org/hc/en-us/articles/360037429491-CollectSequencingArtifactMetrics-Picard-
+    """
+    OUT_SUFFIXES = [".bait_bias_detail_metrics", ".error_summary_metrics",
+                    ".pre_adapter_detail_metrics", ".pre_adapter_summary_metrics"]
+    broad_runner = broad.runner_from_config(dd.get_config(data))
+    gatk_type = broad_runner.gatk_type()
+    ref_file = dd.get_ref_file(data)
+    bam_file = dd.get_work_bam(data)
+    out_dir = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data))
+    utils.safe_makedir(out_dir)
+    out_base = os.path.join(out_dir, dd.get_sample_name(data))
+    out_files = [out_base + x for x in OUT_SUFFIXES]
+    if all([utils.file_exists(x) for x in out_files]):
+        return out_files
+    with file_transaction(data, out_dir) as tx_out_dir:
+        utils.safe_makedir(tx_out_dir)
+        out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
+        params = ["-T", "CollectSequencingArtifactMetrics",
+                "-R", ref_file,
+                "-I", bam_file,
+                "-O", out_base]
+        broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
+    return out_files
+
+def collect_oxog_metrics(data):
+    """
+    extracts 8-oxoguanine (OxoG) artifact metrics from CollectSequencingArtifacts
+    output so we don't have to run CollectOxoGMetrics.
+    """
+    input_base = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data),
+                              dd.get_sample_name(data))
+    if not utils.file_exists(input_base + ".pre_adapter_detail_metrics"):
+        return None
+    OUT_SUFFIXES = [".oxog_metrics"]
+    broad_runner = broad.runner_from_config(dd.get_config(data))
+    gatk_type = broad_runner.gatk_type()
+    out_dir = os.path.join(dd.get_work_dir(data), "metrics", "oxog", dd.get_sample_name(data))
+    utils.safe_makedir(out_dir)
+    ref_file = dd.get_ref_file(data)
+    out_base = os.path.join(out_dir, dd.get_sample_name(data))
+    out_files = [out_base + x for x in OUT_SUFFIXES]
+    if all([utils.file_exists(x) for x in out_files]):
+        return out_files
+    with file_transaction(data, out_dir) as tx_out_dir:
+        utils.safe_makedir(tx_out_dir)
+        out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
+        params = ["-T", "ConvertSequencingArtifactToOxoG",
+                  "--INPUT_BASE", input_base,
+                  "-O", out_base,
+                  "-R", ref_file]
+        broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
+        # multiqc <= 1.9 looks for INPUT not INPUT_BASE for these files
+        # see (https://github.com/ewels/MultiQC/pull/1310)
+        cmd = f"sed 's/INPUT_BASE/INPUT/g' {out_base}.oxog_metrics -i"
+        do.run(cmd, f"Fixing {out_base}.oxog_metrics to work with MultiQC.")
+    return out_files

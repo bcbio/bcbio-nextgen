@@ -101,7 +101,6 @@ def _run_genotype_gvcfs_genomicsdb(genomics_db, region, out_file, data):
             params = ["-T", "GenotypeGVCFs",
                       "--variant", "gendb://%s" % genomics_db,
                       "-R", dd.get_ref_file(data),
-                      "--genomicsdb-use-vcf-codec",
                       "--output", tx_out_file,
                       "-L", bamprep.region_to_gatk(region)]
             params += ["-ploidy", str(ploidy.get_ploidy([data], region))]

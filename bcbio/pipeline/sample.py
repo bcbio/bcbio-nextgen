@@ -22,7 +22,7 @@ from bcbio.ngsalign import postalign
 from bcbio.pipeline.fastq import get_fastq_files
 from bcbio.pipeline.alignment import align_to_sort_bam
 from bcbio.pipeline import cleanbam
-from bcbio.variation import coverage, recalibrate
+from bcbio.variation import coverage, recalibrate, gatk
 from bcbio.variation import multi as vmulti
 import bcbio.pipeline.datadict as dd
 from bcbio.pipeline.fastq import merge as fq_merge
@@ -104,7 +104,11 @@ def _add_hla_files(data):
     """
     if "hla" not in data:
         data["hla"] = {}
-    align_file = dd.get_align_bam(data)
+    # if HLA bam was created separately, FASTQ files will be based off of it
+    if dd.get_hla_bam(data):
+        align_file = dd.get_hla_bam(data)
+    else:
+        align_file = dd.get_align_bam(data)
     hla_dir = os.path.join(os.path.dirname(align_file), "hla")
     if not os.path.exists(hla_dir):
         hla_files = None
@@ -246,6 +250,11 @@ def postprocess_alignment(data):
     data = cwlutils.unpack_tarballs(data, data)
     bam_file = data.get("align_bam") or data.get("work_bam")
     ref_file = dd.get_ref_file(data)
+    artifacts = gatk.collect_artifact_metrics(data)
+    if artifacts:
+        data = dd.update_summary_qc(data, "picard", artifacts.pop(), artifacts)
+        oxog = gatk.collect_oxog_metrics(data)
+        data = dd.update_summary_qc(data, "picard", oxog.pop(), oxog)
     if vmulti.bam_needs_processing(data) and bam_file and bam_file.endswith(".bam"):
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data)))

@@ -1,4 +1,4 @@
-version: 42
+version: 44
 
 aliases:
   human: true
@@ -29,6 +29,8 @@ variation:
   editing: ../editing/RADAR.bed.gz
   genotype2phenotype: ../variation/G2P.csv
   af_only_gnomad: ../variation/af_only_gnomad.vcf.gz
+  purecn_mappability: ../coverage/mappability/GCA_000001405.15_GRCh38_no_alt_analysis_set_100.bw
+  simple_repeat: ../coverage/problem_regions/repeats/simple_repeat.bed
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf

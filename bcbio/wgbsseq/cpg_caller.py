@@ -41,7 +41,6 @@ def _run_meth_extractor(bam_in, sample, workdir, index_dir, config):
     assert os.path.exists(mbias_file), "mbias report doesn't exists:%s" % mbias_file
     return mbias_file
 
-
 def _run_report(bam_in, bam_report, sample, biasm_file, workdir, config):
     """
     Run bismark2report command
@@ -63,6 +62,10 @@ def _bismark_calling(data):
     index_dir = get_aligner_index('bismark', data)
     biasm_file = _run_meth_extractor(data["work_bam"], sample, workdir, index_dir, config)
     data['bismark_report'] = _run_report(data["work_bam"], data["bam_report"], sample, biasm_file, workdir, config)
+    splitting_report = biasm_file.replace(".M-bias", "_splitting_report")
+    data = dd.update_summary_qc(data, "bismark", base=biasm_file)
+    data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
+    data = dd.update_summary_qc(data, "bismark", base=splitting_report)
     return data
 
 def _bsmap_calling(data):

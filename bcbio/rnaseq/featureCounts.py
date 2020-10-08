@@ -43,6 +43,12 @@ def count(data):
     cmd = ("{featureCounts} -a {gtf_file} -o {tx_count_file} -s {strand_flag} "
            "{paired_flag} {filtered_bam}")
 
+    resources = config_utils.get_resources("featureCounts", data["config"])
+    if resources:
+        options = resources.get("options")
+        if options:
+            cmd += " %s" % " ".join([str(x) for x in options])
+
     message = ("Count reads in {tx_count_file} mapping to {gtf_file} using "
                "featureCounts")
     with file_transaction(data, [count_file, summary_file]) as tx_files:
@@ -72,6 +78,8 @@ def chipseq_count(data):
     sorted_bam = bam.sort(in_bam, dd.get_config(data),
                           order="queryname", out_dir=safe_makedir(out_dir))
     consensus_file = tz.get_in(("peaks_files", "consensus", "main"), data)
+    if not consensus_file:
+        return [[data]]
     saf_file = os.path.splitext(consensus_file)[0] + ".saf"
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "consensus")

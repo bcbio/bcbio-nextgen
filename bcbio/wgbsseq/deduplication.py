@@ -5,7 +5,7 @@ from bcbio.distributed import transaction
 from bcbio.pipeline import datadict, config_utils
 from bcbio.provenance import do
 from bcbio import bam
-
+from bcbio.pipeline import datadict as dd
 
 def dedup_bismark(data):
     """Remove alignments to the same position in the genome from the Bismark
@@ -29,6 +29,8 @@ def dedup_bismark(data):
 
     if utils.file_exists(output_file):
         data = datadict.set_work_bam(data, output_file)
+        data["deduplication_report"] = output_file.replace("deduplicated.bam", "deduplication_report.txt")
+        data = dd.update_summary_qc(data, "bismark", base=data["deduplication_report"])
         return [[data]]
 
     deduplicate_bismark = config_utils.get_program('deduplicate_bismark', config)
@@ -38,4 +40,5 @@ def dedup_bismark(data):
 
     data = datadict.set_work_bam(data, output_file)
     data["deduplication_report"] = output_file.replace("deduplicated.bam", "deduplication_report.txt")
+    data = dd.update_summary_qc(data, "bismark", base=data["deduplication_report"])
     return [[data]]

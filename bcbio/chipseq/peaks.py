@@ -263,6 +263,9 @@ def call_consensus(samples):
         logger.info("No suitable peak files found, skipping consensus peak calling.")
         return samples
     consensusfile = consensus(peakfiles, consensusfile, data)
+    if not utils.file_exists(consensusfile):
+        logger.warning("No consensus peaks found.")
+        return samples
     saffile = consensus_to_saf(consensusfile,
                                os.path.splitext(consensusfile)[0] + ".saf")
     for data in dd.sample_data_iterator(samples):

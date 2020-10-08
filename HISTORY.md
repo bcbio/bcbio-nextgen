@@ -1,9 +1,27 @@
-## 1.2.4 (in progress)
+## 1.2.5 (in progress)
+- Only make isoform to gene file from express if we have run express.
+- Allow "no consensus peaks found" as a valid endpoint of a ChIP-seq analysis.
+- Allow `BCBIO_TEST_DIR` environment variable to control where tests end up.
+- Collect OxoG and other sequencing artifacts due to damage.
+
+## 1.2.4 (21 September 2020)
+- Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
+- Add bismark output to MultiQC.
+- Fix PS genotype field from octopus to have the correct type.
+- Edit VarDict headers to report VCFv4.2, since htsjdk does not fully support VCFv4.3 yet.
+- Attempt to speed up bismark by implementing the parallelization strategy suggested here: https://github.com/FelixKrueger/Bismark/issues/96
+- Add `--enumerate` option to OptiType to report the top 10 calls and scores, to make it easier to decide how confident we are in
+  a HLA call.
+- Performance improvements when HLA calling during panel sequencing. This skips running bwa-kit during the initial
+  mapping for consensus UMI detection, greatly speeding up panel sequencing runs.
+- Allow custom options to be passed to `featureCounts`.
+- Fix race condition when running tests.
+- Add [TOPMed](https://www.nhlbiwgs.org) as a `datatarget`. 
 - Add predicted transcript and peptide output to arriba.
 - Add mm10 as a supported genome for arriba.
 - Skip `bcbioRNASeq` for more than 100 samples. 
 - Add `rRNA_pseudogene` as a rRNA biotype.
-- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-GenotypeGVCFs#--genomicsdb-use-vcf-codec for
+- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-  GenotypeGVCFs#--genomicsdb-use-vcf-codec for
   a discussion. Thanks to @amizeranschi for finding the issue and posting the solution.
 - update VEP to v100
 - Add consensus peak calling using https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html 
@@ -20,6 +38,7 @@
 - Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
 - Only show somatic variant counts in the general stats table, if germline variants are calculated.
 - Add `kit` parameter for setting options for pipelines via just listing the kit. Currently only implemented for WGBS.
+
 
 ## 1.2.3 (7 April 2020)
 - Hotfix for not being able to upgrade from stable distribution.

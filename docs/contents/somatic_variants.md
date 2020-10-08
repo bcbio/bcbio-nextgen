@@ -167,8 +167,8 @@ CNVkit and gatk-cnv cannot be run together, because they require different, inco
 
 ### 1. Collect PON samples and create a project structure
 Put coverage.bed in pon/config/ and PON input files (bam, fq.gz) to pon/input.
-One test tumor sample is required to create a PON project (cnvkit requirement),
-this tumor sample is not included in the PON).
+One test tumor sample is required to create a PON project,
+this tumor sample is not included in the PON.
 
 ```bash
 $ mkdir pon
