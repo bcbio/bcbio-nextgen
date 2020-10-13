@@ -21,16 +21,14 @@ def run(items):
                 do.run(f'cluster_identifier {dd.get_work_bam(data)} > {temp_output_file_path}',
                        'Running SCRAMble cluster_identifier')
 
-        output_mei_file_path = os.path.join(work_dir, 'mei.txt')
+        output_mei_file_path = os.path.join(work_dir, 'out_MEIs.txt')
         if not utils.file_exists(output_mei_file_path):
             with file_transaction(output_mei_file_path) as temp_mei_file_path:
-                # temp workaround: remove PREFIX when SCRAMble Conda package becomes available
-                PREFIX = '~/scramble/cluster_analysis'
-                do.run(f'{utils.Rscript_cmd()} --vanilla {PREFIX}/bin/SCRAMble-MEIs.R '
-                       f'--out-name {temp_mei_file_path} '
+                output_file_prefix = temp_mei_file_path.replace('_MEIs.txt', '', 1)
+                do.run(f'scramble.sh '
+                       f'--out-name {output_file_prefix} '
                        f'--cluster-file {output_clusters_file_path} '
-                       f'--install-dir {PREFIX}/bin '
-                       f'--mei-refs {PREFIX}/resources/MEI_consensus_seqs.fa',
+                       f'--eval-meis',
                        'Analyzing cluster file for likely MEIs')
 
         items[index].get('sv', []).append({'variantcaller': 'scramble',
