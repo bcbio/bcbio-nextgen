@@ -543,7 +543,7 @@ def load_tximport(data):
             f'samples = basename(dirname(salmon_files));'
             f'names(salmon_files) = samples;'
             f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM");'
-            f'readr::write_csv(txi$counts %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
+            f'readr::write_csv(round(txi$counts) %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
             f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
         )
         do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
