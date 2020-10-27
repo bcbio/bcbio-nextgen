@@ -197,7 +197,8 @@ def _fix_orig_vcf_refs(data):
     """Supply references to initial variantcalls if run in addition to batching.
     """
     variantcaller = tz.get_in(("config", "algorithm", "variantcaller"), data)
-    if variantcaller:
+    jointcaller = tz.get_in(("config", "algorithm", "jointcaller"), data)
+    if variantcaller or jointcaller:
         data["vrn_file_orig"] = data["vrn_file"]
     for i, sub in enumerate(data.get("group_orig", [])):
         sub_vrn = sub.pop("vrn_file", None)
