@@ -10,7 +10,7 @@ import toolz as tz
 
 from bcbio import bam, utils
 from bcbio.bam import cram
-from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
+from bcbio.ngsalign import (bbmap, bowtie, bwa, bwamem2, tophat, bowtie2, minimap2,
                             novoalign, snap, star, hisat2, bismark, bsmap)
 from bcbio.pipeline import datadict as dd
 
@@ -35,6 +35,7 @@ TOOLS = {
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
+    "bwa-mem2": NgsTool(bwamem2.align_pipe, bwamem2.align_bam, bwamem2.galaxy_location_file, None),
     "bismark": NgsTool(bismark.align, None, None, bismark.remap_index_fn),
     "bsmap": NgsTool(bsmap.align, None, None, None),
     "sentieon-bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
