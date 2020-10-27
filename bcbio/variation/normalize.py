@@ -48,13 +48,13 @@
 """
 import os
 
-import cyvcf2
-
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import effects, vcfutils
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def normalize(in_file, data, passonly=False, normalize_indels=True, split_biallelic=True,
               rerun_effects=True, remove_oldeffects=False, nonrefonly=False, work_dir=None):

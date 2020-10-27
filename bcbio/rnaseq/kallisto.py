@@ -20,7 +20,7 @@ def run_kallisto_rnaseq(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
@@ -71,7 +71,7 @@ def run_kallisto_singlecell(data):
     samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     kallisto_dir = os.path.join(work_dir, "kallisto", samplename)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     files = dd.get_input_sequence_files(data)
     if len(files) == 2:
         fq1, fq2 = files
@@ -139,7 +139,7 @@ def kallisto_table(kallisto_dir, index):
     fastafile = os.path.splitext(index)[0] + ".fa"
     fasta_names = fasta.sequence_names(fastafile)
     ec_names = get_ec_names(ecfile, fasta_names)
-    df = pd.read_table(tsvfile, header=None, names=["ec", "cell", "count"])
+    df = pd.read_csv(tsvfile, header=None, names=["ec", "cell", "count"], sep="\t")
     df["ec"] = [ec_names[x] for x in df["ec"]]
     df = df.pivot(index='ec', columns='cell', values='count')
     cellnames = get_cell_names(cellsfile)
@@ -152,7 +152,7 @@ def get_ec_names(ecfile, fasta_names):
     """
     convert equivalence classes to their set of transcripts
     """
-    df = pd.read_table(ecfile, header=None, names=["ec", "transcripts"])
+    df = pd.read_csv(ecfile, header=None, names=["ec", "transcripts"], sep="\t")
     transcript_groups = [x.split(",") for x in df["transcripts"]]
     transcripts = []
     for group in transcript_groups:
@@ -190,7 +190,7 @@ def run_kallisto_index(*samples):
     for data in dd.sample_data_iterator(samples):
         work_dir = dd.get_work_dir(data)
         kallisto_dir = os.path.join(work_dir, "kallisto")
-        gtf_file = dd.get_gtf_file(data)
+        gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
         assert file_exists(gtf_file), "%s was not found, exiting." % gtf_file
         fasta_file = dd.get_ref_file(data)
         assert file_exists(fasta_file), "%s was not found, exiting." % fasta_file

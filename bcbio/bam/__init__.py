@@ -48,7 +48,7 @@ def is_paired(bam_file):
     """
     bam_file = objectstore.cl_input(bam_file)
     cmd = ("set -o pipefail; "
-           "samtools view -h {bam_file} | head -50000 | "
+           "samtools view -h {bam_file} | head -300000 | "
            "samtools view -S -f 1 /dev/stdin  | head -1 | wc -l")
     p = subprocess.Popen(cmd.format(**locals()), shell=True,
                          executable=do.find_bash(),
@@ -175,8 +175,7 @@ def get_aligned_reads(in_bam, data):
     return 1.0 * align / total
 
 def downsample(in_bam, data, target_counts, work_dir=None):
-    """Downsample a BAM file to the specified number of target counts.
-    """
+    """Downsample a BAM file to the specified number of target counts."""
     index(in_bam, data["config"], check_timestamp=False)
     ds_pct = get_downsample_pct(in_bam, target_counts, data)
     if ds_pct:
@@ -248,7 +247,6 @@ def _get_maxcov_downsample(data):
                 if avg_cov >= params["min_coverage_for_downsampling"]:
                     return int(avg_cov * params["maxcov_downsample_multiplier"])
     return None
-
 
 def check_header(in_bam, rgnames, ref_file, config):
     """Ensure passed in BAM header matches reference file and read groups names.
@@ -330,7 +328,6 @@ def is_bam(in_file):
     else:
         return False
 
-
 def is_sam(in_file):
     _, ext = os.path.splitext(in_file)
     if ext == ".sam":
@@ -374,7 +371,6 @@ def bam_to_sam(in_file, config):
                 % (str(num_cores), in_file, out_file)))
     return out_file
 
-
 def reheader(header, bam_file, config):
     samtools = config_utils.get_program("samtools", config)
     base, ext = os.path.splitext(bam_file)
@@ -382,7 +378,6 @@ def reheader(header, bam_file, config):
     cmd = "{samtools} reheader {header} {bam_file} > {out_file}"
     do.run(cmd.format(**locals()), "Reheadering %s." % bam_file)
     return out_file
-
 
 def merge(bamfiles, out_bam, config):
     assert all(map(is_bam, bamfiles)), ("Not all of the files to merge are not BAM "
@@ -402,12 +397,11 @@ def merge(bamfiles, out_bam, config):
     index(out_bam, config)
     return out_bam
 
-
-def sort(in_bam, config, order="coordinate", out_dir=None):
+def sort(in_bam, config, order="coordinate", out_dir=None, force=False):
     """Sort a BAM file, skipping if already present.
     """
     assert is_bam(in_bam), "%s in not a BAM file" % in_bam
-    if bam_already_sorted(in_bam, config, order):
+    if not force and bam_already_sorted(in_bam, config, order):
         return in_bam
 
     sort_stem = _get_sort_stem(in_bam, order, out_dir)
@@ -430,10 +424,8 @@ def sort(in_bam, config, order="coordinate", out_dir=None):
                    (order, os.path.basename(in_bam), os.path.basename(sort_file)))
     return sort_file
 
-
 def bam_already_sorted(in_bam, config, order):
     return order == _get_sort_order(in_bam, config)
-
 
 def _get_sort_order(in_bam, config):
     for line in pysam.view("-H", in_bam).split("\r\n"):
@@ -514,7 +506,7 @@ def estimate_max_mapq(in_bam, nreads=1e6):
     """Guess maximum MAPQ in a BAM file of reads with alignments
     """
     with pysam.Samfile(in_bam, "rb") as work_bam:
-        reads = tz.take(nreads, work_bam)
+        reads = tz.take(int(nreads), work_bam)
         return max([x.mapq for x in reads if not x.is_unmapped])
 
 def convert_cufflinks_mapq(in_bam, out_bam=None):
@@ -561,3 +553,61 @@ def convert_invalid_mapq(in_bam, out_bam=None):
                     read.mapq = VALIDMAPQ
                 out_bam_fh.write(read)
     return out_bam
+
+def remove_duplicates(in_bam, data):
+    """
+    remove duplicates from a duplicate marked BAM file
+    """
+    base, ext = os.path.splitext(in_bam)
+    out_bam = base + "-noduplicates" + ext
+    if utils.file_exists(out_bam):
+        return out_bam
+    num_cores = dd.get_num_cores(data)
+    sambamba = config_utils.get_program("sambamba", data)
+    with file_transaction(out_bam) as tx_out_bam:
+        cmd = (f'{sambamba} view -h --nthreads {num_cores} -f bam -F "not duplicate" '
+               f'{in_bam} > {tx_out_bam}')
+        message = f"Removing duplicates from {in_bam}, saving as {out_bam}."
+        do.run(cmd, message)
+    index(out_bam, dd.get_config(data))
+    return out_bam
+
+def count_alignments(in_bam, data, filter=None):
+    """
+    count alignments in a BAM file passing a given filter. valid filter
+    strings are available in the sambamba documentation:
+
+    https://github.com/biod/sambamba/wiki/%5Bsambamba-view%5D-Filter-expression-syntax
+    """
+    sambamba = config_utils.get_program("sambamba", dd.get_config(data))
+    num_cores = dd.get_num_cores(data)
+    if not filter:
+        filter_string = ""
+        message = f"Counting alignments in {in_bam}."
+    else:
+        filter_string = "--filter {filter}"
+        message = f"Counting alignments in {in_bam} matching {filter}."
+    cmd = f"{sambamba} view -c --nthreads {num_cores} -f bam {filter_string} {in_bam}"
+    logger.info(message)
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    return int(result.stdout.decode().strip())
+
+def has_nalignments(in_bam, n, data, filter=None):
+    """
+    does a BAM file has at least n alignments?
+    """
+    sambamba = config_utils.get_program("sambamba", dd.get_config(data))
+    num_cores = dd.get_num_cores(data)
+    if not filter:
+        filter_string = ""
+        message = f"Counting alignments in {in_bam}."
+    else:
+        filter_string = "--filter {filter}"
+        message = f"Counting alignments in {in_bam} matching {filter}."
+    cmd = f"{sambamba} view -f sam {filter_string} {in_bam} | head -{n} | wc -l"
+    logger.info(message)
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    return int(result.stdout.decode().strip()) >= n
+

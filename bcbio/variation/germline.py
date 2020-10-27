@@ -7,13 +7,14 @@ with germline calls included.
 """
 import os
 import contextlib
-import cyvcf2
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def split_somatic(items):
     """Split somatic batches, adding a germline target.

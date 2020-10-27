@@ -11,6 +11,7 @@ import itertools
 import operator
 import os
 import string
+import sys
 
 import six
 import toolz as tz
@@ -240,7 +241,7 @@ def _fill_validation_targets(data):
     sv_truth = tz.get_in(["config", "algorithm", "svvalidate"], data, {})
     sv_targets = (zip(itertools.repeat("svvalidate"), sv_truth.keys()) if isinstance(sv_truth, dict)
                   else [["svvalidate"]])
-    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"], ["variant_regions"]] + sv_targets]:
+    for vtarget in [list(xs) for xs in [["validate"], ["validate_regions"]] + list(sv_targets)]:
         val = tz.get_in(["config", "algorithm"] + vtarget, data)
         if val and not os.path.exists(val) and not objectstore.is_remote(val):
             installed_val = os.path.normpath(os.path.join(os.path.dirname(ref_file), os.pardir, "validation", val))
@@ -267,7 +268,7 @@ def _fill_capture_regions(data):
             if len(installed_vals) == 0:
                 if target not in special_targets or not val.startswith(special_targets[target]):
                     raise ValueError("Configuration problem. BED file not found for %s: %s" %
-                                    (target, val))
+                                     (target, val))
             else:
                 assert len(installed_vals) == 1, installed_vals
                 data = tz.update_in(data, ["config", "algorithm", target], lambda x: installed_vals[0])
@@ -288,9 +289,10 @@ def _fill_prioritization_targets(data):
                                                                           val + "*%s" % ext)))
             # Check sv-annotation directory for prioritize gene name lists
             if target == "svprioritize":
-                installed_vals += glob.glob(os.path.join(
-                    os.path.dirname(os.path.realpath(utils.which("simple_sv_annotation.py"))),
-                    "%s*" % os.path.basename(val)))
+                simple_sv_bin = utils.which("simple_sv_annotation.py")
+                if simple_sv_bin:
+                    installed_vals += glob.glob(os.path.join(os.path.dirname(os.path.realpath(simple_sv_bin)),
+                                                             "%s*" % os.path.basename(val)))
             if len(installed_vals) == 0:
                 # some targets can be filled in later
                 if target not in set(["coverage"]):
@@ -330,6 +332,11 @@ def _clean_metadata(data):
         if "metadata" not in data:
             data["metadata"] = {}
         data["metadata"]["batch"] = "%s-joint" % dd.get_sample_name(data)
+    analysis = dd.get_analysis(data).lower()
+    if tz.get_in(("metadata", "sample"), data) and analysis == "rna-seq":
+        logger.error("'sample' is a reserved keyword in metadata for RNA-seq. Please "
+                     "rename this column to something else and rerun.")
+        sys.exit(1)
     return data
 
 def _clean_algorithm(data):
@@ -523,51 +530,32 @@ def _check_for_degenerate_interesting_groups(items):
         if all(x is None for x in values):
             raise ValueError("group %s is labelled as an interesting group, "
                              "but does not appear in the metadata." % group)
-        if len(list(tz.unique(values))) == 1:
+        if len(items) > 1 and len(list(tz.unique(values))) == 1:
             raise ValueError("group %s is marked as an interesting group, "
                              "but all samples have the same value." % group)
 
 TOPLEVEL_KEYS = set(["description", "analysis", "genome_build", "metadata", "algorithm",
                      "resources", "files", "vrn_file", "lane", "upload", "rgnames"])
-ALGORITHM_KEYS = set(["platform", "aligner", "bam_clean", "bam_sort",
-                      "trim_reads", "trim_ends", "adapters", "custom_trim", "species", "kraken",
-                      "align_split_size", "save_diskspace",
-                      "transcriptome_align", "bcbiornaseq",
-                      "quality_format", "write_summary", "merge_bamprep",
-                      "coverage", "coverage_interval", "maxcov_downsample",
-                      "ploidy", "indelcaller",
-                      "variantcaller", "jointcaller", "variant_regions",
-                      "peakcaller", "chip_method",
-                      "effects", "effects_transcripts", "mark_duplicates",
-                      "svcaller", "svvalidate", "svprioritize",
-                      "hlacaller", "hlavalidate",
-                      "sv_regions", "hetcaller", "recalibrate", "realign",
-                      "phasing", "validate",
+ALGORITHM_KEYS = set(["bam_sort", "custom_trim", "kraken", "write_summary",
+                      "merge_bamprep", "indelcaller", "effects",
+                      "svvalidate", "hlavalidate", "phasing", "validate",
                       "validate_regions", "validate_genome_build", "validate_method",
-                      "clinical_reporting", "nomap_split_size", "transcriptome_fasta",
-                      "transcriptome_gtf",
-                      "nomap_split_targets", "ensemble", "background",
-                      "disambiguate", "strandedness", "fusion_mode", "fusion_caller",
-                      "min_read_length", "coverage_depth_min", "callable_min_size",
-                      "min_allele_fraction", "umi_type", "minimum_barcode_depth",
-                      "cellular_barcodes", "vcfanno",
-                      "sample_barcodes",
-                      "exclude_regions", "joint_group_size",
-                      "archive", "tools_off", "tools_on", "transcript_assembler",
-                      "mixup_check", "expression_caller", "qc", "positional_umi",
-                      "cellular_barcode_correction",
-                      "singlecell_quantifier", "spikein_fasta", "preseq",] +
-                     # development
-                     ["cwl_reporting"] +
+                      "clinical_reporting", "nomap_split_size",
+                      "nomap_split_targets", "background", "qc", "preseq",] +
                      # back compatibility
-                      ["remove_lcr", "coverage_depth_max", "coverage_depth"])
+                     ["remove_lcr", "coverage_depth_max", "coverage_depth"] +
+                     # from datadict.LOOKUPS
+                     dd.get_algorithm_keys())
 ALG_ALLOW_BOOLEANS = set(["merge_bamprep", "mark_duplicates", "remove_lcr",
-                          "clinical_reporting", "transcriptome_align",
+                          "demultiplexed", "clinical_reporting", "transcriptome_align",
                           "fusion_mode", "assemble_transcripts", "trim_reads",
-                          "recalibrate", "realign", "cwl_reporting", "save_diskspace"])
+                          "quantify_genome_alignments",
+                          "recalibrate", "realign", "cwl_reporting", "save_diskspace", "keep_multimapped",
+                          "keep_duplicates"])
 ALG_ALLOW_FALSE = set(["aligner", "align_split_size", "bam_clean", "bam_sort",
                        "effects", "phasing", "mixup_check", "indelcaller",
-                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq"])
+                       "variantcaller", "positional_umi", "maxcov_downsample", "preseq",
+                       "use_lowfreq_filter"])
 
 ALG_DOC_URL = "https://bcbio-nextgen.readthedocs.org/en/latest/contents/configuration.html#algorithm-parameters"
 
@@ -662,8 +650,7 @@ def _check_quality_format(items):
                              "is not supported. Supported values are %s."
                              % (SAMPLE_FORMAT.values()))
 
-        fastq_file = next((file for file in item.get('files') or [] if
-                           any([ext for ext in fastq_extensions if ext in file])), None)
+        fastq_file = next((f for f in item.get("files") or [] if f.endswith(tuple(fastq_extensions))), None)
 
         if fastq_file and specified_format and not objectstore.is_remote(fastq_file):
             fastq_format = _detect_fastq_format(fastq_file)
@@ -699,7 +686,7 @@ def _check_variantcaller(item):
         problem = [x for x in vc_set if x not in allowed]
         if len(problem) > 0:
             raise ValueError("Unexpected algorithm 'variantcaller' parameter: %s\n"
-                             "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                             "Supported options: %s\n" % (problem, sorted(map(str, list(allowed)))))
     # Ensure germline somatic calling only specified with tumor/normal samples
     if "germline" in vcs or "somatic" in vcs:
         paired = vcfutils.get_paired_phenotype(item)
@@ -718,7 +705,10 @@ def _check_svcaller(item):
     if len(problem) > 0:
         raise ValueError("Unexpected algorithm 'svcaller' parameters: %s\n"
                          "Supported options: %s\n" % (" ".join(["'%s'" % x for x in problem]),
-                                                      sorted(list(allowed))))
+                                                      list(allowed)))
+    if "gatk-cnv" in svs and "cnvkit" in svs:
+        raise ValueError("%s uses `gatk-cnv' and 'cnvkit', please use on one of these CNV callers" %
+                         dd.get_sample_name(item))
 
 def _get_as_list(item, k):
     out = item["algorithm"].get(k)
@@ -735,7 +725,7 @@ def _check_hetcaller(item):
     hets = _get_as_list(item, "hetcaller")
     if hets or any([x in svs for x in ["titancna", "purecn"]]):
         if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
-            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk4-cnv` "
+            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk-cnv` "
                              "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
 
 def _check_jointcaller(data):
@@ -748,7 +738,7 @@ def _check_jointcaller(data):
     problem = [x for x in cs if x not in allowed]
     if len(problem) > 0:
         raise ValueError("Unexpected algorithm 'jointcaller' parameter: %s\n"
-                         "Supported options: %s\n" % (problem, sorted(list(allowed))))
+                         "Supported options: %s\n" % (problem, sorted(list(allowed), key=lambda x: x or "")))
 
 def _check_indelcaller(data):
     c = data["algorithm"].get("indelcaller")
@@ -902,7 +892,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
     """
     validate_yaml(run_info_yaml, run_info_yaml)
     with open(run_info_yaml) as in_handle:
-        loaded = yaml.load(in_handle)
+        loaded = yaml.safe_load(in_handle)
     fc_name, fc_date = None, None
     if dirs.get("flowcell"):
         try:

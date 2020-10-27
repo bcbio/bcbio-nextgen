@@ -20,7 +20,7 @@ from bcbio.rnaseq.umi import get_transform_file, \
 from bcbio.log import logger
 
 TD = os.path.join(os.path.dirname(__file__), os.pardir, "data", "umis")
-p = re.compile('smallrna', re.IGNORECASE)
+p = re.compile(r'smallrna', re.IGNORECASE)
 
 TF = glob.glob(os.path.join(TD, "*-transform.json"))
 TF = [t for t in TF if p.match(t)]

@@ -55,7 +55,8 @@ def _run_delly(bam_files, chrom, ref_file, work_dir, items):
             if sshared.has_variant_regions(items, out_file, chrom):
                 exclude = ["-x", _delly_exclude_file(items, out_file, chrom)]
                 cmd = ["delly", "call", "-g", ref_file, "-o", tx_out_file] + exclude + bam_files
-                multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=C && " % cores
+                locale_to_use = utils.get_locale()
+                multi_cmd = "export OMP_NUM_THREADS=%s && export LC_ALL=%s && " % (cores, locale_to_use)
                 try:
                     do.run(multi_cmd + " ".join(cmd), "delly structural variant")
                 except subprocess.CalledProcessError as msg:

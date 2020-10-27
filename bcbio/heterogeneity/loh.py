@@ -4,11 +4,11 @@ Provides high level summaries of calls in regions of interest.
 """
 import csv
 import collections
-import gzip
 import os
 import decimal
 import uuid
 
+import pandas as pd
 import six
 from six import StringIO
 import toolz as tz
@@ -61,7 +61,7 @@ def _civic_regions(civic_file, variant_types=None, diseases=None, drugs=None):
     """
     if isinstance(diseases, six.string_types):
         diseases = [diseases]
-    with gzip.open(civic_file) as in_handle:
+    with utils.open_gzipsafe(civic_file) as in_handle:
         reader = csv.reader(in_handle, delimiter="\t")
         for chrom, start, end, info_str in reader:
             info = edn_loads(info_str)
@@ -136,18 +136,21 @@ def _purecn_summary(call, data):
     """Summarize purity, ploidy and LOH for PureCN.
     """
     out = {}
+    loh_calls = pd.read_csv(call["loh"])
     for svtype, coords in get_coords(data):
         cur_calls = {k: collections.defaultdict(int) for k in coords.keys()}
-        with open(call["loh"]) as in_handle:
-            in_handle.readline()  # header
-            for line in in_handle:
-                _, chrom, start, end, _, cn, minor_cn = line.split(",")[:7]
-                start = int(start)
-                end = int(end)
-                for region, cur_coords in coords.items():
-                    if chrom == cur_coords[0] and are_overlapping((start, end), cur_coords[1:]):
-                        cur_calls[region][_check_copy_number_changes(svtype, _to_cn(cn), _to_cn(minor_cn), data)] += 1
+        for rowid, row in loh_calls.iterrows():
+            _, chrom, start, end, _, cn, minor_cn = row.iloc[0:7]
+            if pd.isnull(cn) or pd.isnull(minor_cn):
+                # NA copy number calls - skip
+                continue
+            start = int(start)
+            end = int(end)
+            for region, cur_coords in coords.items():
+                if chrom == cur_coords[0] and are_overlapping((start, end), cur_coords[1:]):
+                    cur_calls[region][_check_copy_number_changes(svtype, _to_cn(cn), _to_cn(minor_cn), data)] += 1
         out[svtype] = {r: _merge_cn_calls(c, svtype) for r, c in cur_calls.items()}
+
     with open(call["hetsummary"]) as in_handle:
         vals = dict(zip(in_handle.readline().strip().replace('"', '').split(","),
                         in_handle.readline().strip().split(",")))

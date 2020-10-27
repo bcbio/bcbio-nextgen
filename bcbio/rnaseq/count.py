@@ -10,22 +10,17 @@ from bcbio.log import logger
 
 from bcbio.utils import file_exists
 
-def combine_count_files(files, out_file=None, ext=".fpkm"):
+def combine_count_files(files, out_file=None, ext=".counts"):
     """
     combine a set of count files into a single combined file
+    ext: remove this extension from the count files
     """
     files = list(files)
-    if not files:
-        return None
-    assert all([file_exists(x) for x in files]), \
-        "Some count files in %s do not exist." % files
-    for f in files:
-        assert file_exists(f), "%s does not exist or is empty." % f
+    files = [x for x in files if file_exists(x)]
     col_names = [os.path.basename(x.replace(ext, "")) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
         out_file = os.path.join(out_dir, "combined.counts")
-
     if file_exists(out_file):
         return out_file
     logger.info("Combining count files into %s." % out_file)
@@ -36,14 +31,20 @@ def combine_count_files(files, out_file=None, ext=".fpkm"):
         if i == 0:
             with open(f) as in_handle:
                 for line in in_handle:
-                    rname, val = line.strip().split("\t")
-                    row_names.append(rname)
-                    vals.append(val)
+                    if not line.strip().startswith("#"):
+                        rname, val = line.strip().split("\t")
+                        row_names.append(rname)
+                        vals.append(val)
         else:
             with open(f) as in_handle:
                 for line in in_handle:
-                    _, val = line.strip().split("\t")
-                    vals.append(val)
+                    if not line.strip().startswith("#"):
+                        try:
+                            _, val = line.strip().split("\t")
+                        except ValueError:
+                            print(f, line)
+                            raise
+                        vals.append(val)
         col_vals[col_names[i]] = vals
 
     df = pd.DataFrame(col_vals, index=row_names)
@@ -73,7 +74,7 @@ def annotate_combined_count_file(count_file, gtf_file, out_file=None):
     except KeyError:
         return None
 
-    df = pd.io.parsers.read_table(count_file, sep="\t", index_col=0, header=0)
+    df = pd.io.parsers.read_csv(count_file, sep="\t", index_col=0, header=0)
 
     df['symbol'] = df.apply(lambda x: symbol_lookup.get(x.name, ""), axis=1)
     df.to_csv(out_file, sep="\t", index_label="id")

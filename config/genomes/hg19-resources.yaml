@@ -1,9 +1,9 @@
-version: 51
+version: 55
 
 aliases:
   human: true
   snpeff: GRCh37.75
-  ensembl: homo_sapiens_merged_vep_95_GRCh37
+  ensembl: homo_sapiens_merged_vep_100_GRCh37
 
 variation:
   dbsnp: ../variation/dbsnp-151.vcf.gz

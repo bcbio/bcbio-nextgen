@@ -4,6 +4,7 @@
 from collections import namedtuple, defaultdict
 import copy
 import os
+import pprint
 import shutil
 import subprocess
 
@@ -370,11 +371,16 @@ def concat_variant_files(orig_files, out_file, regions, ref_file, config):
         try:
             out_file = _run_concat_variant_files_gatk4(input_file_list, out_file, config)
         except subprocess.CalledProcessError as msg:
-            if ("We require all VCFs to have complete VCF headers" in str(msg) or
-                  "Features added out of order" in str(msg) or
-                  "The reference allele cannot be missing" in str(msg)):
+            if ("We require all VCFs to have complete VCF headers" in str(msg)
+                  or "Features added out of order" in str(msg)
+                  or "The reference allele cannot be missing" in str(msg)):
                 out_file = _run_concat_variant_files_bcftools(input_file_list, out_file, config, naive=True)
             else:
+                print("## Original contigs")
+                pprint.pprint(zip(regions, orig_files))
+                print("## Ordered file list")
+                with open(input_file_list) as in_handle:
+                    print(in_handle.read())
                 raise
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
@@ -390,6 +396,11 @@ def _run_concat_variant_files_gatk4(input_file_list, out_file, config):
             config = utils.deepish_copy(config)
             if "gatk4" in dd.get_tools_off({"config": config}):
                 config["algorithm"]["tools_off"].remove("gatk4")
+            # Allow specification of verbosity in the unique style this tool uses
+            resources = config_utils.get_resources("gatk", config)
+            opts = [str(x) for x in resources.get("options", [])]
+            if "--verbosity" in opts:
+                params += ["--VERBOSITY:%s" % opts[opts.index("--verbosity") + 1]]
             broad_runner = broad.runner_from_config(config)
             broad_runner.run_gatk(params)
     return out_file
@@ -435,9 +446,14 @@ def _fix_gatk_header(exist_files, out_file, config):
         header_file = "%s-header.vcf" % utils.splitext_plus(tx_out_file)[0]
         do.run("zgrep ^# %s > %s"
                 % (replace_file, header_file), "Prepare header file for merging")
-        do.run("%s && picard FixVcfHeader HEADER=%s INPUT=%s OUTPUT=%s" %
-               (utils.get_java_clprep(), header_file, base_file, base_fix_file),
-               "Reheader initial VCF file in merge")
+        resources = config_utils.get_resources("picard", config)
+        ropts = []
+        if "options" in resources:
+            ropts += [str(x) for x in resources.get("options", [])]
+        bcftools = config_utils.get_program("bcftools", config)
+        cmd = f"{bcftools} reheader --header {header_file} --output {tx_out_file} {base_file}"
+        message = f"Reheader {base_file} with header from {replace_file}."
+        do.run(cmd, message)
     bgzip_and_index(base_fix_file, config)
     return [base_fix_file] + [x for (c, x) in exist_files[1:]]
 

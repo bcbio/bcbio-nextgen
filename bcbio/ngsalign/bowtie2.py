@@ -88,7 +88,7 @@ def filter_multimappers(align_file, data):
     bed_cmd = '-L {0}'.format(bed_file) if bed_file else " "
     if utils.file_exists(out_file):
         return out_file
-    base_filter = '-F "[XS] == null and not unmapped {paired_filter} and not duplicate" '
+    base_filter = '-F "[XS] == null and not unmapped {paired_filter}" '
     if bam.is_paired(align_file):
         paired_filter = "and paired and proper_pair"
     else:
@@ -108,7 +108,7 @@ def filter_multimappers(align_file, data):
     bam.index(out_file, config)
     return out_file
 
-ANALYSIS = {"chip-seq": {"params": ["-X", 2000]},
+ANALYSIS = {"chip-seq": {"params": ["-X", 2000, "--very-sensitive"]},
             "variant2": {"params": ["-X", 2000]},
             "standard": {"params": ["-X", 2000]},
             "rna-seq": {"params": ["--sensitive", "-X", 2000]},

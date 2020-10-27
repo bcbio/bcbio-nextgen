@@ -78,7 +78,7 @@ def _args_to_cromwell(args):
     """Convert input arguments into cromwell inputs for config and command line.
     """
     default_config = {"slurm": {"timelimit": "1-00:00", "account": ""},
-                      "sge": {"memtype": "mem_type", "pename": "smp"},
+                      "sge": {"memtype": "mem_free", "pename": "smp"},
                       "lsf": {"walltime": "24:00", "account": ""},
                       "htcondor": {},
                       "torque": {"walltime": "24:00:00", "account": ""},
@@ -340,7 +340,7 @@ HPC_CONFIGS = {
         Int cpu = 1
         Int memory_mb = 2048
         String queue = "%(queue)s"
-        String pename = "%(pename}s"
+        String pename = "%(pename)s"
         String memtype = "%(memtype)s"
         %(docker_attrs)s
         %(cwl_attrs)s
@@ -348,8 +348,8 @@ HPC_CONFIGS = {
         submit = \"\"\"
         qsub -V -w w -j y -N ${job_name} -wd ${cwd} \
         -o ${out} -e ${err} -q ${queue} \
-        -pe ${pename} ${cpu} ${"-l " + mem_type + "=" + memory_mb + "m"} \
-        /usr/bin/env bash ${script}
+        -pe ${pename} ${cpu} -l ${memtype}=${memory_mb}m \
+        ${script}
         \"\"\"
         kill = "qdel ${job_id}"
         check-alive = "qstat -j ${job_id}"
@@ -427,7 +427,8 @@ HPC_CONFIGS = {
         %(cwl_attrs)s
         \"\"\"
         submit = \"\"\"
-        qsub -V -d ${cwd} -N ${job_name} -o ${out} -e ${err} -q ${queue} \
+        cd ${cwd} && \
+        qsub -V -N ${job_name} -o ${out} -e ${err} -q ${queue} \
         -l nodes=1:ppn=${cpu} -l mem=${memory_mb}mb -l walltime=${walltime} \
         ${script}
         \"\"\"

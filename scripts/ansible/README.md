@@ -40,9 +40,9 @@ Tools used on your local machine:
 
 Install these into an isolated conda environment and setup with:
 
-    wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
-    bash Miniconda2-latest-Linux-x86_64.sh -b -p tools
-    ./tools/bin/conda install -c conda-forge -c bioconda bcbio-nextgen-vm
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p tools
+    ./tools/bin/conda install -c conda-forge -c bioconda python=3 bcbio-nextgen-vm
     ./tools/bin/pip install ansible saws boto
     ./tools/bin/aws configure
 
@@ -232,7 +232,7 @@ On the first run you'll need to create a project directory to work in:
 and [install bcbio](http://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html)
 on the working volume with the genomes and aligner indices you need:
 
-    wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
+    wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
     python bcbio_nextgen_install.py /mnt/work/bcbio --tooldir=/mnt/work/bcbio --genomes GRCh37 --aligners bwa
 
 To run CWL, you'll also want to [install

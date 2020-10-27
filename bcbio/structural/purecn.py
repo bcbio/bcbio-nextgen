@@ -98,7 +98,8 @@ def _run_purecn(paired, work_dir):
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             try:
-                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(), utils.get_R_exports(),
+                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env="r36"),
+                                                             utils.get_R_exports(env="r36"),
                                                              " ".join([str(x) for x in cmd]))
                 do.run(cmd, "PureCN copy number calling")
             except subprocess.CalledProcessError as msg:
@@ -219,6 +220,10 @@ def _get_header(in_handle):
 def _loh_to_vcf(cur):
     """Convert LOH output into standardized VCF.
     """
+    # PureCN 1.14 outputs segments without informative SNPs, skip those
+    # see https://github.com/lima1/PureCN/blob/ed7d10c7ca578bc7d1aabef86893c23ddddf79dc/NEWS#L92-L94
+    if cur["C"] == "NA" or cur["M"] == "NA":
+        return None
     cn = int(float(cur["C"]))
     minor_cn = int(float(cur["M"]))
     if cur["type"].find("LOH"):

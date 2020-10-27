@@ -1,0 +1,92 @@
+details:
+- algorithm:
+    align_split_size: false
+    aligner: bwa
+    coverage: /path/coverage.bed
+    coverage_interval: regional
+    effects_transcripts: canonical_cancer
+    hlacaller: optitype
+    mark_duplicates: true
+    min_allele_fraction: 1
+    platform: Illumina
+    quality_format: Standard
+    realign: false
+    recalibrate: false
+    sv_regions: /path/variants.bed
+    svcaller:
+    - manta
+    - seq2c
+    - gatk-cnv
+    - purecn
+    svprioritize: cancer/az-cancer-panel
+    tools_off:
+    - gemini
+    tools_on:
+    - qualimap_full
+    - damage_filter
+    - gatk4
+    variant_regions: variants.bed
+    variantcaller:
+      germline:
+      - gatk-haplotype
+      somatic:
+      - vardict
+    vcfanno: somatic
+  analysis: variant2
+  description: sample_n
+  files:
+  - /path/sample_n.bam
+  genome_build: hg38
+  metadata:
+    batch: sample_t_batch
+    phenotype: normal
+  resources:
+    qualimap:
+      memory: 16g
+- algorithm:
+    align_split_size: false
+    aligner: bwa
+    coverage: /path/coverage.bed
+    coverage_interval: regional
+    effects_transcripts: canonical_cancer
+    hlacaller: optitype
+    mark_duplicates: true
+    min_allele_fraction: 1
+    platform: Illumina
+    quality_format: Standard
+    realign: false
+    recalibrate: false
+    sv_regions: /path/coverage.bed
+    svcaller:
+    - manta
+    - seq2c
+    - gatk-cnv
+    - purecn
+    svprioritize: cancer/az-cancer-panel
+    tools_off:
+    - gemini
+    tools_on:
+    - qualimap_full
+    - damage_filter
+    - gatk4
+    variant_regions: /path/variants.bed
+    variantcaller:
+      germline:
+      - gatk-haplotype
+      somatic:
+      - vardict
+    vcfanno: somatic
+  analysis: variant2
+  description: sample_t
+  files:
+  - /path/sample_t.bam
+  genome_build: hg38
+  metadata:
+    batch: sample_t_batch
+    phenotype: tumor
+  resources:
+    qualimap:
+      memory: 16g
+fc_name: bcbio
+upload:
+  dir: ../final

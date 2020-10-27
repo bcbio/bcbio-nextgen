@@ -36,7 +36,7 @@ def strip_transcript_versions(fasta, out_file):
             with open(fasta) as in_handle:
                 for line in in_handle:
                     if line.startswith(">"):
-                        out_handle.write(line.split(" ")[0].split(".")[0])
+                        out_handle.write(line.split(" ")[0].split(".")[0] + "\n")
                     else:
                         out_handle.write(line)
     return out_file

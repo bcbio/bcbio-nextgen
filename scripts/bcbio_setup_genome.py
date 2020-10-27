@@ -10,6 +10,7 @@ import gzip
 import os
 from Bio import SeqIO
 import toolz as tz
+
 from bcbio.utils import safe_makedir, file_exists, chdir, is_gzipped
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
@@ -58,7 +59,7 @@ def gff3_to_gtf(gff3_file):
     if file_exists(out_file):
         return out_file
 
-    logger.info("Converting %s to %s." %(gff3_file, out_file))
+    logger.info("Converting %s to %s." % (gff3_file, out_file))
 
     if _is_from_ncbi(gff3_file):
         logger.info("NCBI format detected by the presence of the %s key."
@@ -116,7 +117,7 @@ def _is_from_ncbi(gff3_file):
                 return "db_xref"
     return None
 
-def _index_w_command(dir_name, command, ref_file, ext=None):
+def _index_w_command(env, dir_name, command, ref_file, pre=None, post=None, ext=None):
     index_name = os.path.splitext(os.path.basename(ref_file))[0]
     if ext is not None: index_name += ext
     build_path = os.path.join(os.path.dirname(ref_file), os.pardir)
@@ -210,6 +211,7 @@ class MyParser(ArgumentParser):
         print(open(loc.get_loc_file(galaxy_base, "samtools")).read())
         sys.exit(0)
 
+
 if __name__ == "__main__":
     description = ("Set up a custom genome for bcbio-nextgen. This will "
                    "place the genome under name/build in the genomes "
@@ -235,7 +237,9 @@ if __name__ == "__main__":
                         help="Add ERCC spike-ins.")
     parser.add_argument("--mirbase", help="species in mirbase for smallRNAseq data.")
     parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
-
+    parser.add_argument("--buildversion", required=True, 
+	                help=("String describing build of genome used. Examples: "
+                              "Ensembl_94, EnsemblMetazoa_94, Flybase_21, etc"))
     args = parser.parse_args()
  #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")
@@ -304,7 +308,8 @@ if __name__ == "__main__":
     if args.gtf:
         "Preparing transcriptome."
         with chdir(os.path.join(build_dir, os.pardir)):
-            cmd = ("{sys.executable} {prepare_tx} --cores {args.cores} --genome-dir {genome_dir} --gtf {gtf_file} {args.name} {args.build}")
+            cmd = ("{sys.executable} {prepare_tx} --buildversion {args.buildversion} --cores {args.cores} --genome-dir {genome_dir} "
+                   "--gtf {gtf_file} {args.name} {args.build}")
             subprocess.check_call(cmd.format(**locals()), shell=True)
     if args.mirbase:
         "Preparing smallRNA data."
@@ -350,6 +355,7 @@ if __name__ == "__main__":
     print("Updating Galaxy .loc files.")
     galaxy_base = os.path.join(_get_data_dir(), "galaxy")
     for index, index_file in indexed.items():
-        loc.update_loc_file(galaxy_base, index, args.build, index_file)
+        if index_file:
+            loc.update_loc_file(galaxy_base, index, args.build, index_file)
 
     print("Genome installation complete.")

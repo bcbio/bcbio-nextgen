@@ -1,0 +1,55 @@
+# single UMI variant calling (high coverage panels)
+# somatic, tumor only
+# vardict
+# specify coverage.bed and variants.bed according to the capture kit used
+# preprosess libraries with UMIs:
+# bcbio_fastq_umi_prep.py autopair sample_R1.fastq.gz sample_R2.fastq.gz sample_R3.fastq.gz
+# result in with_umis: sample_R1.fq.gz, sample_R2.fq.gz
+details:
+- algorithm:
+    align_split_size: false
+    aligner: bwa
+    coverage: /path/coverage.bed
+    coverage_interval: regional
+    effects_transcripts: canonical_cancer
+    mark_duplicates: true
+    min_allele_fraction: 0.05
+    platform: Illumina
+    quality_format: Standard
+    realign: false
+    recalibrate: false
+    sv_regions: /path/coverage.bed
+    svcaller:
+    - manta
+    - seq2c
+    - cnvkit
+    svprioritize: cancer/az-cancer-panel
+    tools_off:
+    - gemini
+    tools_on:
+    - qualimap_full
+    - damage_filter
+    - gatk4
+    umi_type: fastq_name
+    variant_regions: /path/variants.bed
+    variantcaller:
+      germline:
+      - gatk-haplotype
+      somatic:
+      - vardict
+  analysis: variant2
+  description: sample_name
+  files:
+  - /path/input/sample_name_R1.fq.gz
+  - /path_input/sample_name_R2.fq.gz
+  genome_build: hg38
+  metadata:
+    batch: sample_name-batch
+    phenotype: tumor
+  resources:
+    fgbio:
+      options:
+      - --min-reads
+      - 3
+      - --edits
+      - 1

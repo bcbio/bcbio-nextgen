@@ -28,7 +28,7 @@ def run(bam_file, data, out_dir):
         return out
 
     samtools_stats_dir = os.path.join(out_dir, os.path.pardir, "samtools")
-    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)
+    samtools_stats = samtools.run(bam_file, data, samtools_stats_dir)["metrics"]
 
     stats_file = os.path.join(out_dir, "%s.txt" % dd.get_sample_name(data))
     if not utils.file_exists(stats_file):

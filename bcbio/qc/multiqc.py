@@ -4,6 +4,7 @@ https://github.com/ewels/MultiQC
 """
 import collections
 import glob
+import io
 import json
 import mimetypes
 import os
@@ -33,6 +34,7 @@ from bcbio.variation import bedutils
 from bcbio.qc.variant import get_active_vcinfo
 from bcbio.upload import get_all_upload_paths_from_sample
 from bcbio.variation import coverage
+from bcbio.chipseq import atac
 
 def summary(*samples):
     """Summarize all quality metrics together"""
@@ -53,7 +55,7 @@ def summary(*samples):
             in_files += _merge_metrics(work_samples, out_dir)
             if _one_exists(in_files):
                 with utils.chdir(out_dir):
-                    _create_config_file(out_dir, work_samples)
+                    config_file = _create_config_file(out_dir, work_samples)
                     input_list_file = _create_list_file(in_files, file_list)
                     if dd.get_tmp_dir(samples[0]):
                         export_tmp = "export TMPDIR=%s && " % dd.get_tmp_dir(samples[0])
@@ -64,7 +66,7 @@ def summary(*samples):
                     other_opts = config_utils.get_resources("multiqc", samples[0]["config"]).get("options", [])
                     other_opts = " ".join([str(x) for x in other_opts])
                     cmd = ("{path_export}{export_tmp}{locale_export} "
-                           "{multiqc} -f -l {input_list_file} {other_opts} -o {tx_out}")
+                           "{multiqc} -c {config_file} -f -l {input_list_file} {other_opts} -o {tx_out}")
                     do.run(cmd.format(**locals()), "Run multiqc")
                     if utils.file_exists(os.path.join(tx_out, "multiqc_report.html")):
                         shutil.move(os.path.join(tx_out, "multiqc_report.html"), out_file)
@@ -145,13 +147,13 @@ def _save_uploaded_data_json(samples, data_json_work, out_dir):
     if not upload_path_mapping:
         return data_json_work
 
-    with open(data_json_work) as f:
+    with io.open(data_json_work, encoding="utf-8") as f:
         data = json.load(f, object_pairs_hook=OrderedDict)
     upload_base = samples[0]["upload"]["dir"]
     data = walk_json(data, lambda s: _work_path_to_rel_final_path(s, upload_path_mapping, upload_base))
 
     data_json_final = os.path.join(out_dir, "multiqc_data_final.json")
-    with open(data_json_final, "w") as f:
+    with io.open(data_json_final, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     return data_json_final
 
@@ -197,12 +199,25 @@ def _work_path_to_rel_final_path(path, upload_path_mapping, upload_base_dir):
     if not path or not isinstance(path, str):
         return path
     upload_path = None
-    for work_path, final_path in upload_path_mapping.items():
-        if os.path.isfile(work_path) and path == work_path:
-            upload_path = final_path
-        elif os.path.isdir(work_path) and path.startswith(work_path):
-            upload_path = path.replace(work_path, final_path)
-    if upload_path:
+
+    # First, check in the mapping: if it's there is a direct reference and
+    # it's a file, we immediately return it (saves lots of iterations)
+    if upload_path_mapping.get(path) is not None and os.path.isfile(path):
+        upload_path = upload_path_mapping[path]
+    else:
+        # Not a file: check for elements in the mapping that contain
+        # it
+        paths_to_check = [key for key in upload_path_mapping
+                          if path.startswith(key)]
+
+        if paths_to_check:
+            for work_path in paths_to_check:
+                if os.path.isdir(work_path):
+                    final_path = upload_path_mapping[work_path]
+                    upload_path = path.replace(work_path, final_path)
+                    break
+
+    if upload_path is not None:
         return os.path.relpath(upload_path, upload_base_dir)
     else:
         return None
@@ -285,12 +300,14 @@ def _create_list_file(paths, out_file):
     return out_file
 
 def _create_config_file(out_dir, samples):
-    """Provide configuration file hiding duplicate columns.
+    """Provide configuration file for multiqc report."""
 
-    Future entry point for providing top level configuration of output reports.
-    """
     out_file = os.path.join(out_dir, "multiqc_config.yaml")
     out = {"table_columns_visible": dict()}
+
+    extra_fn_clean_trim = []
+    extra_fn_clean_trim.extend(["coverage.mosdepth.region.dist", "coverage.mosdepth.global.dist"])
+    out["extra_fn_clean_trim"] = extra_fn_clean_trim
 
     # Avoid duplicated bcbio columns with qualimap
     if any(("qualimap" in dd.get_tools_on(d) or "qualimap_full" in dd.get_tools_on(d)) for d in samples):
@@ -351,23 +368,26 @@ def _create_config_file(out_dir, samples):
                 'name': 'Bcftools (somatic)',
                 'info': 'Bcftools stats for somatic variant calls only.',
                 'path_filters': ['*_bcftools_stats.txt'],
-                'write_general_stats': True,
+                'custom_config': {'write_general_stats': True},
             }},
             {'bcftools': {
                 'name': 'Bcftools (germline)',
                 'info': 'Bcftools stats for germline variant calls only.',
                 'path_filters': ['*_bcftools_stats_germline.txt'],
-                'write_general_stats': False
+                'custom_config': {'write_general_stats': False},
             }},
         ])
     else:
         module_order.append("bcftools")
     module_order.extend([
+        "salmon",
+        "star",
         "picard",
         "qualimap",
         "snpeff",
         "fastqc",
         "preseq",
+        "bismark"
     ])
     out["module_order"] = module_order
 
@@ -432,6 +452,13 @@ def _add_disambiguate(sample):
             sample["summary"]["metrics"]["Disambiguated ambiguous reads"] = disambigStats[2]
     return sample
 
+def _add_atac(sample):
+    atac_metrics = atac.calculate_encode_complexity_metrics(sample)
+    if not atac_metrics:
+        return sample
+    sample["summary"]["metrics"] = tz.merge(atac_metrics, sample["summary"]["metrics"])
+    return sample
+
 def _fix_duplicated_rate(dt):
     """Get RNA duplicated rate if exists and replace by samtools metric"""
     if "Duplication_Rate_of_Mapped" in dt:
@@ -446,11 +473,12 @@ def _merge_metrics(samples, out_dir):
     sample_metrics = collections.defaultdict(dict)
     for s in samples:
         s = _add_disambiguate(s)
+        s = _add_atac(s)
         m = tz.get_in(['summary', 'metrics'], s)
         if isinstance(m, six.string_types):
             m = json.loads(m)
         if m:
-            for me in m.keys():
+            for me in list(m.keys()):
                 if isinstance(m[me], list) or isinstance(m[me], dict) or isinstance(m[me], tuple):
                     m.pop(me, None)
             sample_metrics[dd.get_sample_name(s)].update(m)
@@ -461,8 +489,10 @@ def _merge_metrics(samples, out_dir):
             dt = pd.DataFrame(m, index=['1'])
             dt.columns = [k.replace(" ", "_").replace("(", "").replace(")", "") for k in dt.columns]
             dt['sample'] = sample_name
-            dt['rRNA_rate'] = m.get('rRNA_rate', "NA")
-            dt['RiP_pct'] = "%.3f" % (int(m.get("RiP", 0)) / float(m.get("Total_reads", 1)) * 100)
+            if m.get('rRNA_rate'):
+                dt['rRNA_rate'] = m.get('rRNA_rate')
+            if m.get("RiP"):
+                dt['RiP_pct'] = "%.3f" % (int(m.get("RiP")) / float(m.get("Total_reads", 1)) * 100)
             dt = _fix_duplicated_rate(dt)
             dt.transpose().to_csv(tx_out_file, sep="\t", header=False)
         out.append(sample_file)

@@ -4,7 +4,6 @@ from __future__ import print_function
 import collections
 import copy
 import glob
-import gzip
 import operator
 import os
 import subprocess
@@ -53,7 +52,7 @@ def _prep_sample_and_config(ldetail_group, fastq_dir, fastq_final_dir):
             return out
 
 def _non_empty(f):
-    with gzip.open(f) as in_handle:
+    with utils.open_gzipsafe(f) as in_handle:
         for line in in_handle:
             return True
     return False

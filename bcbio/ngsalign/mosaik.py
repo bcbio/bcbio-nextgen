@@ -43,7 +43,7 @@ def _convert_fastq(fastq_file, pair_file, rg_name, out_file, config):
 def _get_mosaik_nn_args(out_file):
     """Retrieve default neural network files from GitHub to pass to Mosaik.
     """
-    base_nn_url = "https://raw.github.com/wanpinglee/MOSAIK/master/src/networkFile/"
+    base_nn_url = "https://raw.githubusercontent.com/wanpinglee/MOSAIK/master/src/networkFile/"
     out = []
     for arg, fname in [("-annse", "2.1.26.se.100.005.ann"),
                        ("-annpe", "2.1.26.pe.100.0065.ann")]:

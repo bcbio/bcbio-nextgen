@@ -4,14 +4,16 @@ functions to access the data dictionary in a clearer way
 
 import os
 import toolz as tz
-from bcbio.utils import file_exists, to_single_data
+from bcbio.utils import file_exists, to_single_data, deepish_copy, flatten
 from bcbio.log import logger
+from collections import namedtuple
 import sys
 
 LOOKUPS = {
     "config": {"keys": ['config']},
     "tmp_dir": {"keys": ['config', 'resources', 'tmp', 'dir']},
     "num_cores": {"keys": ['config', 'algorithm', 'num_cores'],
+
                   "default": 1},
     "svprioritize": {"keys": ['config', 'algorithm', 'svprioritize']},
     "effects_transcripts": {"keys": ["config", "algorithm", "effects_transcripts"], "default": "all"},
@@ -70,6 +72,9 @@ LOOKUPS = {
     "disease": {"keys": ["metadata", "disease"], "default": ""},
     "hetcaller": {"keys": ["config", "algorithm", "hetcaller"]},
     "variantcaller": {"keys": ['config', 'algorithm', 'variantcaller']},
+    "variantcaller_order": {"keys": ['config', 'algorithm', 'variantcaller_order'], "default": 0},
+    "keep_duplicates": {"keys": ['config', 'algorithm', "keep_duplicates"], "default": False},
+    "keep_multimapped": {"keys": ['config', 'algorithm', "keep_multimapped"], "default": False},
     "svcaller": {"keys": ['config', 'algorithm', 'svcaller'], "default": [], "always_list": True},
     "jointcaller": {"keys": ['config', 'algorithm', 'jointcaller']},
     "hlacaller": {"keys": ['config', 'algorithm', 'hlacaller']},
@@ -81,11 +86,13 @@ LOOKUPS = {
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
     "count_file": {"keys": ["count_file"]},
+    "hla_bam": {"keys": ["hla_bam"]},
     "mirna_counts": {"keys": ["mirna_counts"]},
     "isomir_counts": {"keys": ["isomir_counts"]},
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
     "novel_isomir_counts": {"keys": ["novel_isomir_counts"]},
     "combined_counts": {"keys": ["combined_counts"]},
+    "combined_histogram": {"keys": ["combined_histogram"]},
     "annotated_combined_counts": {"keys": ["annotated_combined_counts"]},
     "genome_context_files": {"keys": ["reference", "genome_context"], "default": [], "always_list": True},
     "viral_files": {"keys": ["reference", "viral"], "default": [], "always_list": True},
@@ -96,14 +103,17 @@ LOOKUPS = {
     "express_fpkm": {"keys": ['express_fpkm']},
     "express_tpm": {"keys": ['express_tpm']},
     "express_counts": {"keys": ['express_counts']},
+    "histogram_counts": {"keys": ['histogram_counts']},
     "isoform_to_gene": {"keys": ['isoform_to_gene']},
     "fusion_mode": {"keys": ['config', 'algorithm', 'fusion_mode']},
     "fusion_caller": {"keys": ['config', 'algorithm', 'fusion_caller']},
+    "known_fusions": {"keys": ['config', 'algorithm', 'known_fusions']},
     "dexseq_counts": {"keys": ['dexseq_counts']},
     "description": {"keys": ['description']},
     "aligner": {"keys": ['config', 'algorithm', 'aligner']},
     "align_split_size": {"keys": ['config', 'algorithm', 'align_split_size']},
     "bam_clean": {"keys": ['config', 'algorithm', 'bam_clean']},
+    "kit": {"keys": ['config', 'algorithm', 'kit']},
     "platform": {"keys": ['config', 'algorithm', 'platform'],
                  "default": "illumina"},
     "quality_format": {"keys": ['config', 'algorithm', 'quality_format'],
@@ -132,12 +142,17 @@ LOOKUPS = {
     "rsem": {"keys": ["config", "algorithm", "rsem"], "default": False},
     "transcriptome_align": {"keys": ["config", "algorithm", "transcriptome_align"],
                             "default": False},
+    "quantify_genome_alignments": {"keys": ["config", "algorithm", "quantify_genome_alignments"],
+                             "default": False},
     "expression_caller": {"keys": ["config", "algorithm", "expression_caller"],
                           "default": [], "always_list": True},
     "fusion_caller": {"keys": ["config", "algorithm", "fusion_caller"], "default": []},
     "spikein_fasta" : {"keys": ["config", "algorithm", "spikein_fasta"], "default": None},
     "transcriptome_bam": {"keys": ["transcriptome_bam"]},
     "junction_bed": {"keys": ["junction_bed"]},
+    "starjunction": {"keys": ["starjunction"]},
+    "chimericjunction": {"keys": ["chimericjunction"]},
+    "star_log": {"keys": ["STAR", "log"], "default": None},
     "fpkm_isoform": {"keys": ["fpkm_isoform"]},
     "fpkm": {"keys": ["fpkm"]},
     "galaxy_dir": {"keys": ["dirs", "galaxy"]},
@@ -168,6 +183,8 @@ LOOKUPS = {
     "save_diskspace": {"keys": ["config", "algorithm", "save_diskspace"]},
     "salmon": {"keys": ["salmon"]},
     "umi_type": {"keys": ["config", "algorithm", "umi_type"]},
+    "correct_umis": {"keys": ["config", "algorithm", "correct_umis"]},
+    "use_lowfreq_filter": {"keys": ["config", "algorithm", "use_lowfreq_filter"]},
     "sample_barcodes": {"keys": ["config", "algorithm", "sample_barcodes"]},
     "cellular_barcodes": {"keys": ["config", "algorithm", "cellular_barcodes"],
                           "default": []},
@@ -176,7 +193,9 @@ LOOKUPS = {
     "cellular_barcode_correction": {"keys": ["config", "algorithm",
                                              "cellular_barcode_correction"],
                                     "default": 1},
+    "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
+    "tximport": {"keys": ["tximport"], "default": None}, 
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},
@@ -191,6 +210,7 @@ LOOKUPS = {
                           "default": False},
     "joint_group_size": {"keys": ["config", "algorithm", "joint_group_size"],
                          "default": 200},
+    "arriba": {"keys": ["arriba"], "default": {}},
     "report": {"keys": ["config", "algorithm", "report"]},
     "work_bam": {"keys": ["work_bam"]},
     "deduped_bam": {"keys": ["deduped_bam"]},
@@ -198,6 +218,7 @@ LOOKUPS = {
     "disc_bam": {"keys": ["work_bam_plus", "disc"]},
     "sr_bam": {"keys": ["work_bam_plus", "sr"]},
     "peddy_report": {"keys": ["peddy_report"]},
+    "antibody": {"keys": ["config", "algorithm", "antibody"], "default": ""},
     "tools_off": {"keys": ["config", "algorithm", "tools_off"], "default": [], "always_list": True},
     "tools_on": {"keys": ["config", "algorithm", "tools_on"], "default": [], "always_list": True},
     "cwl_reporting": {"keys": ["config", "algorithm", "cwl_reporting"]},
@@ -245,6 +266,16 @@ def get_umi_consensus(data):
         assert tz.get_in(["config", "algorithm", "mark_duplicates"], data, True), \
             "Using consensus UMI inputs requires marking duplicates"
         return umi
+
+def get_correct_umis(data):
+    """
+    Do we need to correct UMIs with a whitelist?
+    """
+    umi_whitelist = tz.get_in(["config", "algorithm", "correct_umis"], data)
+    if umi_whitelist:
+        return True
+    else:
+        return False
 
 def get_dexseq_gff(config, default=None):
     """
@@ -344,3 +375,59 @@ def get_keys(lookup):
     """
     return tz.get_in((lookup, "keys"), LOOKUPS, None)
 
+def update_summary_qc(data, key, base=None, secondary=None):
+    """
+    updates summary_qc, keyed by key. key is generally the program the quality
+    control metrics came from. if key already exists, the specified
+    base/secondary files are added as secondary files to the existing
+    key, removing duplicates.
+
+    stick files into summary_qc if you want them propagated forward
+    and available for multiqc
+    """
+    summary = deepish_copy(get_summary_qc(data, {}))
+    files = [[base], [secondary],
+             tz.get_in([key, "base"], summary, []),
+             tz.get_in([key, "secondary"], summary, [])]
+    files = list(set([x for x in flatten(files) if x]))
+    base = tz.first(files)
+    secondary = list(tz.drop(1, files))
+    if base and secondary:
+        summary[key] = {"base": base, "secondary": secondary}
+    elif base:
+        summary[key] = {"base": base}
+    data = set_summary_qc(data, summary)
+    return data
+
+def has_variantcalls(data):
+    """
+    returns True if the data dictionary is configured for variant calling
+    """
+    analysis = get_analysis(data).lower()
+    variant_pipeline = analysis.startswith(("standard", "variant", "variant2"))
+    variantcaller = get_variantcaller(data)
+    return variant_pipeline or variantcaller
+
+def get_algorithm_keys():
+    """
+    returns a list of all defined keys under the algorithm section
+    """
+    keys = []
+    for k, v in LOOKUPS.items():
+        if not "algorithm" in v["keys"]:
+            continue
+        if k == v["keys"][2]:
+            keys.append(k)
+    return keys
+
+def get_data_from_sample(sample):
+    """
+    get a data object from a single sample
+    """
+    return sample[0]
+
+def get_samples_from_datalist(datalist):
+    """
+    return a samples object from a list of data dicts
+    """
+    return [[x] for x in datalist]

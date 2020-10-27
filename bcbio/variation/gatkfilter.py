@@ -1,6 +1,8 @@
 """Perform GATK based filtering: soft filters, CNNs and VQSR.
 """
 import os
+import gzip
+from distutils.version import LooseVersion
 
 from bcbio import broad, utils
 from bcbio.distributed.transaction import file_transaction
@@ -14,6 +16,10 @@ def run(call_file, ref_file, vrn_files, data):
     """Run filtering on the input call file, handling SNPs and indels separately.
     """
     algs = [data["config"]["algorithm"]] * len(data.get("vrn_files", [1]))
+    if includes_missingalt(data):
+        logger.info("Removing variants with missing alts from %s." % call_file)
+        call_file = gatk_remove_missingalt(call_file, data)
+
     if "gatkcnn" in dd.get_tools_on(data):
         return _cnn_filter(call_file, vrn_files, data)
     elif config_utils.use_vqsr(algs, call_file):
@@ -150,7 +156,7 @@ def _get_vqsr_training(filter_type, vrn_files, gatk_type):
     params = []
     for name, train_info, fname in _get_training_data(vrn_files)[filter_type]:
         if gatk_type == "gatk4":
-            params.extend(["--resource", "%s,%s:%s" % (name, train_info, fname)])
+            params.extend(["--resource:%s,%s" % (name, train_info), fname])
             if filter_type == "INDEL":
                 params.extend(["--max-gaussians", "4"])
         else:
@@ -257,3 +263,47 @@ def _variant_filtration(in_file, ref_file, vrn_files, data, filter_type,
         else:
             return _apply_vqsr(in_file, ref_file, recal_file, tranches_file,
                                sensitivities[filter_type], filter_type, data)
+
+def includes_missingalt(data):
+    """
+    As of GATK 4.1.0.0, variants with missing alts are generated
+    (see https://github.com/broadinstitute/gatk/issues/5650)
+    """
+    MISSINGALT_VERSION = LooseVersion("4.1.0.0")
+    version = LooseVersion(broad.get_gatk_version(config=dd.get_config(data)))
+    try:
+        return version >= MISSINGALT_VERSION
+    except TypeError:
+        logger.error(f"LooseVersion failing with {version} as the detected version.")
+        sys.exit(1)
+
+def gatk_remove_missingalt(in_file, data):
+    """
+    GATK 4.1.0.0 outputs variants that have missing ALTs, which breaks downstream
+    tools, this filters those out.
+    """
+    base = in_file.split('.vcf.gz')[0]
+    out_file = "%s-nomissingalt%s" % (base, '.vcf.gz')
+    if utils.file_exists(out_file):
+        return out_file
+    no_gzip_out = out_file.replace(".vcf.gz", ".vcf")
+    with file_transaction(no_gzip_out) as tx_out_file:
+        with utils.open_gzipsafe(in_file) as in_handle, open(tx_out_file, "w") as out_handle:
+            for line in in_handle:
+                line = remove_missingalt(line)
+                if line:
+                    out_handle.write(line)
+    return vcfutils.bgzip_and_index(no_gzip_out, data["config"])
+
+def remove_missingalt(line):
+    """Remove lines that are missing an alternative allele.
+
+    During cleanup of extra alleles, bcftools has an issue in complicated cases
+    with duplicate alleles and will end up stripping all alternative alleles.
+    This removes those lines to avoid issues downstream.
+    """
+    if not line.startswith("#"):
+        parts = line.split("\t")
+        if parts[4] == ".":
+            return None
+    return line

@@ -116,7 +116,7 @@ def find_annotations(data, retriever=None):
         elif not retriever:
             conffn = os.path.join(annodir, conf_file + ".conf")
         else:
-            conffn = conf_file + ".conf"
+            conffn = os.path.join(dd.get_genome_build(data), "config", "vcfanno", conf_file + ".conf")
         luafn = "%s.lua" % utils.splitext_plus(conffn)[0]
         if retriever:
             conffn, luafn = [(x if objectstore.is_remote(x) else None)
@@ -125,6 +125,10 @@ def find_annotations(data, retriever=None):
             pass
         elif conf_file in conf_checkers and not conf_checkers[conf_file](data, retriever):
             logger.warn("Skipping vcfanno configuration: %s. Not all input files found." % conf_file)
+            if dd.get_genome_build(data) == "hg38" and conf_file == "somatic":
+                logger.warn("COSMIC needs to be installed manually for somatic annotation with hg38. "
+                        "See https://bcbio-nextgen.readthedocs.io/en/latest/contents/installation.html#customizing-data-installation "
+                        "for instructions.")
         elif not objectstore.file_exists_or_remote(conffn):
             build = dd.get_genome_build(data)
             CONF_NOT_FOUND = (
@@ -177,12 +181,12 @@ def is_human(data, builds=None):
         return True
     if not builds or "37" in builds:
         target_builds = ["hg19", "GRCh37"]
-        if dd.get_genome_build(data) in target_builds:
+        if any([dd.get_genome_build(data).startswith(b) for b in target_builds]):
             return True
         elif has_build37_contigs(data):
             return True
     if not builds or "38" in builds:
         target_builds = ["hg38"]
-        if dd.get_genome_build(data) in target_builds:
+        if any([dd.get_genome_build(data).startswith(b) for b in target_builds]):
             return True
     return False

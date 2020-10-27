@@ -286,7 +286,7 @@ def total_reads_from_grabix(in_file):
         with open(gbi_file) as in_handle:
             next(in_handle)  # throw away
             num_lines = int(next(in_handle).strip())
-        assert num_lines % 4 == 0, "Expected lines to be multiple of 4"
+        assert num_lines % 4 == 0, f"Expected lines to be multiple of 4 for file: {in_file} with {num_lines} lines"
         return num_lines // 4
     else:
         return 0
@@ -716,7 +716,7 @@ def _check_gzipped_input(in_file, data):
     """Determine if a gzipped input file is blocked gzip or standard.
     """
     grabix = config_utils.get_program("grabix", data["config"])
-    is_bgzip = subprocess.check_output([grabix, "check", in_file])
+    is_bgzip = subprocess.check_output([grabix, "check", in_file]).decode().strip()
     if is_bgzip.strip() == "yes":
         return False, False
     else:

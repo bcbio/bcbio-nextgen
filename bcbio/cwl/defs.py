@@ -160,7 +160,7 @@ def _variant_vc(checkpoints):
                             "gatk4", "vqsr_cnn", "deepvariant;env=dv", "sentieon;env=python2",
                             "htslib", "octopus", "picard", "platypus-variant;env=python2", "pythonpy",
                             "samtools", "pysam>=0.13.0", "strelka;env=python2", "vardict", "vardict-java",
-                            "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.4.1", "r-base=3.4.1=h4fe35fd_8",
+                            "varscan", "moreutils", "vcfanno", "vcflib", "vt", "r=3.5.1", "r-base",
                             "perl"],
                disk={"files": 2.0}),
              s("concat_batch_variantcalls", "batch-merge",
@@ -222,7 +222,9 @@ def _variant_vc(checkpoints):
         batch_in += [["genome_resources", "variation", "train_hapmap"],
                      ["genome_resources", "variation", "train_indels"]]
     vc = [s("batch_for_variantcall", "multi-batch", batch_in,
-            [cwlout("batch_rec", "record")],
+            [cwlout("batch_rec", "record",
+                    fields=[cwlout(["config", "algorithm", "variantcaller_order"], "int"),
+                            cwlout("inherit")])],
             "bcbio-vc",
             disk={"files": 2.0}, cores=1,
             unlist=[["config", "algorithm", "variantcaller"]], no_files=True),
@@ -525,7 +527,7 @@ def _variant_sv(checkpoints):
                          "smoove;env=python2", "pysam>=0.13.0",
                          "seq2c", "simple_sv_annotation;env=python2", "survivor", "svtools;env=python2",
                          "svtyper;env=python2",
-                         "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "vawk;env=python2"],
+                         "r=3.5.1", "r-base", "xorg-libxt", "vawk;env=python2"],
             disk={"files": 2.0})]
     sv_batch_inputs = [["analysis"], ["genome_build"],
                        ["work_bam_plus", "disc"], ["work_bam_plus", "sr"],
@@ -635,7 +637,7 @@ def rnaseq(samples):
                    cwlout(["quant", "hdf5"], "File"),
                    cwlout(["quant", "fusion"], "File")],
                   "bcbio-rnaseq", programs=["sailfish", "salmon", "kallisto>=0.43.1", "subread", "gffread",
-                                            "r=3.4.1", "r-base=3.4.1=h4fe35fd_8", "xorg-libxt", "r-wasabi"],
+                                            "r=3.5.1", "r-base", "xorg-libxt", "r-wasabi"],
                   disk={"files": 0.5})]
     qc = [s("qc_to_rec", "multi-combined",
             [["align_bam"], ["analysis"], ["reference", "fasta", "base"], dd.get_keys("gtf_file"),

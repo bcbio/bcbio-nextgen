@@ -35,10 +35,12 @@ def get_fragment_length(data):
     return(fraglen)
 
 def run_pizzly(data):
+    samplename = dd.get_sample_name(data)
     work_dir = dd.get_work_dir(data)
     pizzlydir = os.path.join(work_dir, "pizzly")
-    samplename = dd.get_sample_name(data)
-    gtf = dd.get_gtf_file(data)
+    gtf = dd.get_transcriptome_gtf(data)
+    if not gtf:
+        gtf = dd.get_gtf_file(data)
     if dd.get_transcriptome_fasta(data):
         gtf_fa = dd.get_transcriptome_fasta(data)
     else:
@@ -65,11 +67,12 @@ def pizzly(pizzly_path, gtf, gtf_fa, fraglength, cachefile, pizzlydir, fusions,
         with file_transaction(data, outdir) as tx_out_dir:
             safe_makedir(tx_out_dir)
             tx_out_stem = os.path.join(tx_out_dir, samplename)
-            cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {cachefile} "
-                "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
-                "--output {tx_out_stem} {fusions}")
-            message = ("Running pizzly on %s." % fusions)
-            do.run(cmd.format(**locals()), message)
+            with file_transaction(cachefile) as tx_cache_file:
+                cmd = ("{pizzly_path} -k 31 --gtf {pizzly_gtf} --cache {tx_cache_file} "
+                    "--align-score 2 --insert-size {fraglength} --fasta {gtf_fa} "
+                    "--output {tx_out_stem} {fusions}")
+                message = ("Running pizzly on %s." % fusions)
+                do.run(cmd.format(**locals()), message)
     flatfile = out_stem + "-flat.tsv"
     filteredfile = out_stem + "-flat-filtered.tsv"
     flatten_pizzly(pizzlycalls, flatfile, data)

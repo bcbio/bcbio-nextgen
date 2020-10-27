@@ -72,7 +72,7 @@ def sleuthify_sailfish(sailfish_dir):
         return None
     else:
         rscript = Rscript_cmd()
-        cmd = """{rscript} --no-environ -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
+        cmd = """{rscript} --vanilla -e 'library("wasabi"); prepare_fish_for_sleuth(c("{sailfish_dir}"))'"""
         do.run(cmd.format(**locals()), "Converting Sailfish to Sleuth format.")
     return os.path.join(sailfish_dir, "abundance.h5")
 
@@ -113,7 +113,9 @@ def create_combined_tx2gene(data):
     tx2gene_files = []
     for i in items:
         odata = i[0]
-        gtf_file = dd.get_gtf_file(odata)
+        gtf_file = dd.get_transcriptome_gtf(odata)
+        if not gtf_file:
+            gtf_file = dd.get_gtf_file(odata)
         out_file = os.path.join(out_dir, dd.get_genome_build(odata) + "-tx2gene.csv")
         if file_exists(out_file):
             tx2gene_files.append(out_file)

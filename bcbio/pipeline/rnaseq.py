@@ -2,16 +2,18 @@ import os
 import sys
 from bcbio.rnaseq import (featureCounts, cufflinks, oncofuse, count, dexseq,
                           express, variation, stringtie, sailfish, spikein, pizzly, ericscript,
-                          kallisto, salmon)
+                          kallisto, salmon, singlecellexperiment, arriba)
 from bcbio.ngsalign import bowtie2, alignprep
 from bcbio.variation import effects, joint, multi, population, vardict
 import bcbio.pipeline.datadict as dd
-from bcbio.utils import filter_missing, flatten, to_single_data
+from bcbio.utils import filter_missing, flatten, to_single_data, file_exists, Rscript_cmd, safe_makedir
+from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
-
+from bcbio.provenance import do
 
 def fast_rnaseq(samples, run_parallel):
-    samples = run_parallel("run_salmon_index", [samples])
+    to_index = determine_indexes_to_make(samples)
+    run_parallel("run_salmon_index", [to_index])
     samples = run_parallel("run_salmon_reads", samples)
     samples = run_parallel("run_counts_spikein", samples)
     samples = spikein.combine_spikein(samples)
@@ -40,6 +42,53 @@ def singlecell_rnaseq(samples, run_parallel):
         logger.error(("%s is not supported for singlecell RNA-seq "
                       "quantification." % quantifier))
         sys.exit(1)
+    samples = scrnaseq_concatenate_metadata(samples)
+    singlecellexperiment.make_scrnaseq_object(samples)
+    return samples
+
+def scrnaseq_concatenate_metadata(samples):
+    """
+    Create file same dimension than mtx.colnames
+    with metadata and sample name to help in the
+    creation of the SC object.
+    """
+    barcodes = {}
+    counts =  ""
+    metadata = {}
+    has_sample_barcodes = False
+    for sample in dd.sample_data_iterator(samples):
+        if dd.get_sample_barcodes(sample):
+            has_sample_barcodes = True
+            with open(dd.get_sample_barcodes(sample)) as inh:
+                for line in inh:
+                    cols = line.strip().split(",")
+                    if len(cols) == 1:
+                        # Assign sample name in case of missing in barcodes
+                        cols.append("NaN")
+                    barcodes[(dd.get_sample_name(sample), cols[0])] = cols[1:]
+        else:
+            barcodes[(dd.get_sample_name(sample), "NaN")] = [dd.get_sample_name(sample), "NaN"]
+
+        counts = dd.get_combined_counts(sample)
+        meta = map(str, list(sample["metadata"].values()))
+        meta_cols = list(sample["metadata"].keys())
+        meta = ["NaN" if not v else v for v in meta]
+        metadata[dd.get_sample_name(sample)] = meta
+
+    metadata_fn = counts + ".metadata"
+    if file_exists(metadata_fn):
+        return samples
+    with file_transaction(metadata_fn) as tx_metadata_fn:
+        with open(tx_metadata_fn, 'w') as outh:
+            outh.write(",".join(["sample"] + meta_cols) + '\n')
+            with open(counts + ".colnames") as inh:
+                for line in inh:
+                    sample = line.split(":")[0]
+                    if has_sample_barcodes:
+                        barcode = sample.split("-")[1]
+                    else:
+                        barcode = "NaN"
+                    outh.write(",".join(barcodes[(sample, barcode)] + metadata[sample]) + '\n')
     return samples
 
 def rnaseq_variant_calling(samples, run_parallel):
@@ -48,14 +97,15 @@ def rnaseq_variant_calling(samples, run_parallel):
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
     variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    jointcaller = dd.get_jointcaller(to_single_data(samples[0]))
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         out = []
         for d in joint.square_off(samples, run_parallel):
             out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
         samples = out
-    if variantcaller:
+    if variantcaller or jointcaller:
         samples = run_parallel("run_rnaseq_ann_filter", samples)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         out = []
         for data in (to_single_data(xs) for xs in samples):
             if "variants" not in data:
@@ -98,9 +148,9 @@ def run_rnaseq_ann_filter(data):
             data = dd.set_vrn_file(data, eff_file)
         ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
         if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
-    variantcaller = dd.get_variantcaller(data)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+            data = dd.set_vrn_file(data, ann_file)    
+    jointcaller = dd.get_jointcaller(data)
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
         data = dd.set_vrn_file(data, filter_file)
     # remove variants close to splice junctions
@@ -131,7 +181,23 @@ def quantitate(data):
     else:
         data["quant"]["fusion"] = None
     if "salmon" in dd.get_expression_caller(data):
-        data = to_single_data(salmon.run_salmon_reads(data)[0])
+        if dd.get_quantify_genome_alignments(data): 
+            if dd.get_aligner(data).lower() != "star":
+                if dd.get_genome_build(data) == "hg38":
+                    logger.warning("Whole genome alignment-based Salmon quantification is "
+                         "only supported for the STAR aligner. Since this is hg38 we will fall "
+                         "back to the decoy method")
+                    data = to_single_data(salmon.run_salmon_decoy(data)[0])
+                else:
+                    logger.warning(
+                         "Whole genome alignment-based Salmon quantification is "
+                         "only supported for the STAR aligner. Falling back to the "
+                         "transcriptome-only method.")
+                    data = to_single_data(salmon.run_salmon_reads(data)[0])
+            else:
+                data = to_single_data(salmon.run_salmon_bam(data)[0])
+        else:
+            data = to_single_data(salmon.run_salmon_reads(data)[0])
         data["quant"]["tsv"] = data["salmon"]
         data["quant"]["hdf5"] = os.path.join(os.path.dirname(data["salmon"]), "abundance.h5")
     return [[data]]
@@ -142,6 +208,7 @@ def quantitate_expression_parallel(samples, run_parallel):
     take advantage of the threaded run_parallel environment
     """
     data = samples[0][0]
+    to_index = determine_indexes_to_make(samples)
     samples = run_parallel("generate_transcript_counts", samples)
     if "cufflinks" in dd.get_expression_caller(data):
         samples = run_parallel("run_cufflinks", samples)
@@ -150,14 +217,31 @@ def quantitate_expression_parallel(samples, run_parallel):
     if ("kallisto" in dd.get_expression_caller(data) or
         dd.get_fusion_mode(data) or
         "pizzly" in dd.get_fusion_caller(data, [])):
-        samples = run_parallel("run_kallisto_index", [samples])
+        run_parallel("run_kallisto_index", [to_index])
         samples = run_parallel("run_kallisto_rnaseq", samples)
     if "sailfish" in dd.get_expression_caller(data):
-        samples = run_parallel("run_sailfish_index", [samples])
+        run_parallel("run_sailfish_index", [to_index])
         samples = run_parallel("run_sailfish", samples)
+
     # always run salmon
-    samples = run_parallel("run_salmon_index", [samples])
-    samples = run_parallel("run_salmon_reads", samples)
+    run_parallel("run_salmon_index", [to_index])
+    if dd.get_quantify_genome_alignments(data):
+        if dd.get_aligner(data).lower() != "star":
+            if dd.get_genome_build(data) == "hg38":
+                logger.warning("Whole genome alignment-based Salmon quantification is "
+                   "only supported for the STAR aligner. Since this is hg38 we will fall "
+                   "back to the decoy method")
+                samples = run_parallel("run_salmon_decoy", samples)
+            else:
+                logger.warning(
+                   "Whole genome alignment-based Salmon quantification is "
+                   "only supported for the STAR aligner. Falling back to the "
+                   "transcriptome-only method.")
+                samples = run_parallel("run_salmon_reads", samples)
+        else:
+            samples = run_parallel("run_salmon_bam", samples)
+    else:
+        samples = run_parallel("run_salmon_reads", samples)
 
     samples = run_parallel("detect_fusions", samples)
     return samples
@@ -184,6 +268,8 @@ def detect_fusions(data):
                               "json": os.path.join(pizzly_dir, "%s.json" % dd.get_sample_name(data))}
     if "ericscript" in fusion_caller:
         ericscript_dir = ericscript.run(data)
+    if "arriba" in fusion_caller:
+        data = arriba.run_arriba(data)
     return [[data]]
 
 def quantitate_expression_noparallel(samples, run_parallel):
@@ -254,9 +340,9 @@ def combine_express(samples, combined):
                   dd.sample_data_iterator(samples) if dd.get_express_counts(x)]
     gtf_file = dd.get_gtf_file(samples[0][0])
     isoform_to_gene_file = os.path.join(os.path.dirname(combined), "isoform_to_gene.txt")
-    isoform_to_gene_file = express.isoform_to_gene_name(
-        gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
     if len(to_combine) > 0:
+        isoform_to_gene_file = express.isoform_to_gene_name(
+            gtf_file, isoform_to_gene_file, next(dd.sample_data_iterator(samples)))
         eff_counts_combined_file = os.path.splitext(combined)[0] + ".isoform.express_counts"
         eff_counts_combined = count.combine_count_files(to_combine, eff_counts_combined_file, ext=".counts")
         to_combine = [dd.get_express_tpm(x) for x in
@@ -383,8 +469,8 @@ def combine_files(samples):
     else:
         fpkm_isoform_combined = None
     # combine DEXseq files
-    to_combine_dexseq = filter_missing([dd.get_dexseq_counts(data[0]) for data
-                                        in samples])
+    to_combine_dexseq = list(filter_missing([dd.get_dexseq_counts(data[0]) for data
+                                        in samples]))
     if to_combine_dexseq and combined:
         dexseq_combined_file = os.path.splitext(combined)[0] + ".dexseq"
         dexseq_combined = count.combine_count_files(to_combine_dexseq,
@@ -394,6 +480,7 @@ def combine_files(samples):
     else:
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
+    tximport = load_tximport(data)
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -413,6 +500,53 @@ def combine_files(samples):
             data = dd.set_dexseq_counts(data, dexseq_combined_file)
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
+        data = dd.set_tximport(data, tximport)
         updated_samples.append([data])
     return updated_samples
 
+def determine_indexes_to_make(samples):
+    """
+    returns a subset of the samples that have different indexes in them to make sure we only
+    make each index once
+    """
+    samples = [to_single_data(x) for x in samples]
+    indexes = set()
+    tomake = []
+    for data in samples:
+        out_dir = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome")
+        out_stem = os.path.join(out_dir, dd.get_genome_build(data))
+        if dd.get_disambiguate(data):
+            out_stem = "-".join([out_stem] + (dd.get_disambiguate(data) or []))
+        if dd.get_disambiguate(data):
+            out_stem = "-".join([out_stem] + (dd.get_disambiguate(data) or []))
+        combined_file = out_stem + ".fa"
+        if combined_file not in indexes:
+            tomake.append(data)
+            indexes.add(combined_file)
+    return tomake
+
+def load_tximport(data):
+    rcmd = Rscript_cmd()
+    salmon_dir = os.path.join(dd.get_work_dir(data), "salmon")
+    tx2gene_file = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome", "tx2gene.csv")
+    out_dir = os.path.join(salmon_dir, "combined")
+    safe_makedir(out_dir)
+    tpm_file = os.path.join(out_dir, "tximport-tpm.csv")
+    counts_file = os.path.join(out_dir, "tximport-counts.csv")
+    if file_exists(tpm_file) and file_exists(counts_file):
+        return {"gene_tpm": tpm_file,
+                "gene_counts": counts_file}
+    with file_transaction(tpm_file) as tx_tpm_file, file_transaction(counts_file) as tx_counts_file:
+        render_string = (
+            f'library(tidyverse);'
+            f'salmon_files = list.files("{salmon_dir}", pattern="quant.sf", recursive=TRUE, full.names=TRUE);'
+            f'tx2gene = readr::read_csv("{tx2gene_file}", col_names=c("transcript", "gene")); '
+            f'samples = basename(dirname(salmon_files));'
+            f'names(salmon_files) = samples;'
+            f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM");'
+            f'readr::write_csv(round(txi$counts) %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
+            f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
+        )
+        do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
+    return {"gene_tpm": tpm_file,
+            "gene_counts": counts_file}

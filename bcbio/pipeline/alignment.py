@@ -11,7 +11,7 @@ import toolz as tz
 from bcbio import bam, utils
 from bcbio.bam import cram
 from bcbio.ngsalign import (bbmap, bowtie, bwa, tophat, bowtie2, minimap2,
-                            novoalign, snap, star, hisat2)
+                            novoalign, snap, star, hisat2, bismark, bsmap)
 from bcbio.pipeline import datadict as dd
 
 # Define a next-generation sequencing tool to plugin:
@@ -35,6 +35,8 @@ TOOLS = {
     "bowtie2": NgsTool(bowtie2.align, None,
                        bowtie2.galaxy_location_file, bowtie2.remap_index_fn),
     "bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
+    "bismark": NgsTool(bismark.align, None, None, bismark.remap_index_fn),
+    "bsmap": NgsTool(bsmap.align, None, None, None),
     "sentieon-bwa": NgsTool(bwa.align_pipe, bwa.align_bam, bwa.galaxy_location_file, None),
     "minimap2": NgsTool(minimap2.align, None, None, minimap2.remap_index_fn),
     "novoalign": NgsTool(novoalign.align_pipe, novoalign.align_bam,
@@ -69,13 +71,12 @@ def organize_noalign(data):
     return data
 
 def align_to_sort_bam(fastq1, fastq2, aligner, data):
-    """Align to the named genome build, returning a sorted BAM file.
-    """
+    """Align to the named genome build, returning a sorted BAM file"""
     names = data["rgnames"]
     align_dir_parts = [data["dirs"]["work"], "align", names["sample"]]
     if data.get("disambiguate"):
         align_dir_parts.append(data["disambiguate"]["genome_build"])
-    aligner_index = _get_aligner_index(aligner, data)
+    aligner_index = get_aligner_index(aligner, data)
     align_dir = utils.safe_makedir(os.path.join(*align_dir_parts))
     ref_file = tz.get_in(("reference", "fasta", "base"), data)
     if fastq1.endswith(".bam"):
@@ -90,7 +91,9 @@ def align_to_sort_bam(fastq1, fastq2, aligner, data):
             # but CWL requires a bai file. Create a fake one to make it happy.
             bam.fake_index(data["work_bam"], data)
         else:
-            bam.index(data["work_bam"], data["config"])
+            # can't index non-sorted bam from bismark
+            if not data["analysis"].lower().startswith("wgbs-seq"):
+                bam.index(data["work_bam"], data["config"])
         for extra in ["-sr", "-disc"]:
             extra_bam = utils.append_stem(data['work_bam'], extra)
             if utils.file_exists(extra_bam):
@@ -112,7 +115,7 @@ def get_aligner_with_aliases(aligner, data):
 def allow_noindices():
     return set(["minimap2"])
 
-def _get_aligner_index(aligner, data):
+def get_aligner_index(aligner, data):
     """Handle multiple specifications of aligner indexes, returning value to pass to aligner.
 
     Original bcbio case -- a list of indices.

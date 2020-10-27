@@ -94,16 +94,15 @@ def get_gatk_version(gatk_jar=None, config=None):
         cl = gatk_cmd("gatk", ["-Xms128m", "-Xmx256m"] + get_default_jvm_opts(), ["-version"], config=config)
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, shell=True).stdout) as stdout:
-        out = _clean_java_out(stdout.read().strip())
-        # versions earlier than 2.4 do not have explicit version command,
-        # parse from error output from GATK
-        if out.find("ERROR") >= 0:
-            flag = "The Genome Analysis Toolkit (GATK)"
-            for line in out.split("\n"):
-                if line.startswith(flag):
-                    version = line.split(flag)[-1].split(",")[0].strip()
-        else:
-            version = out
+        stdout = stdout.read().decode().strip()
+        out = _clean_java_out(stdout)
+        # Historical GATK version (2.4) and newer versions (4.1.0.0)
+        # have a flag in front of output version
+        version = out
+        flag = "The Genome Analysis Toolkit (GATK)"
+        for line in out.split("\n"):
+            if line.startswith(flag):
+                version = line.split(flag)[-1].split(",")[0].strip()
     if version.startswith("v"):
         version = version[1:]
     _check_for_bad_version(version, "GATK")
@@ -115,7 +114,8 @@ def get_mutect_version(mutect_jar):
     """
     cl = ["java", "-Xms128m", "-Xmx256m"] + get_default_jvm_opts() + ["-jar", mutect_jar, "-h"]
     with closing(subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout) as stdout:
-        if "SomaticIndelDetector" in stdout.read().strip():
+        stdout = stdout.read().decode().strip()
+        if "SomaticIndelDetector" in stdout:
             mutect_type = "-appistry"
         else:
             mutect_type = ""
@@ -245,7 +245,7 @@ class BroadRunner:
         cl += ["--version"]
         p = subprocess.Popen(cl, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # fix for issue #494
-        pat = re.compile('([\d|\.]*)(\(\d*\)$)')  # matches '1.96(1510)'
+        pat = re.compile(r'([\d|\.]*)(\(\d*\)$)')  # matches '1.96(1510)'
         m = pat.search(p.stdout.read())
         version = m.group(1)
         self._picard_version = version
@@ -260,7 +260,7 @@ class BroadRunner:
                 return True
             else:
                 try:
-                    stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+                    stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, encoding="UTF-8")
                     return stdout.find("GATK jar file not found") == -1
                 except subprocess.CalledProcessError:
                     return False
@@ -384,7 +384,7 @@ class BroadRunner:
             self._set_default_versions(self._config)
 
         if "gatk4" not in dd.get_tools_off({"config": self._config}):
-            # In cases whwere we don't have manifest versions. Not possible to get
+            # In cases where we don't have manifest versions. Not possible to get
             # version from commandline with GATK4 alpha version
             if self._gatk4_version is None:
                 self._gatk4_version = "4.0"
@@ -546,7 +546,7 @@ def gatk_cmd(name, jvm_opts, params, config=None):
     if not gatk_cmd:
         gatk_cmd = utils.which(name)
     if gatk_cmd:
-        return "%s && export PATH=%s:$PATH && %s %s %s" % \
+        return "%s && export PATH=%s:\"$PATH\" && %s %s %s" % \
             (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd), gatk_cmd,
              " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
@@ -554,7 +554,7 @@ def _gatk4_cmd(jvm_opts, params, data):
     """Retrieve unified command for GATK4, using 'gatk'. GATK3 is 'gatk3'.
     """
     gatk_cmd = utils.which(os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "gatk"))
-    return "%s && export PATH=%s:$PATH && gatk --java-options '%s' %s" % \
+    return "%s && export PATH=%s:\"$PATH\" && gatk --java-options '%s' %s" % \
         (utils.clear_java_home(), utils.get_java_binpath(gatk_cmd),
          " ".join(jvm_opts), " ".join([str(x) for x in params]))
 
@@ -565,7 +565,7 @@ class PicardCmdRunner:
 
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
-        cmd = ["export", "PATH=%s:$PATH" % utils.get_java_binpath(), "&&"] + \
+        cmd = ["export", "PATH=%s:\"$PATH\"" % utils.get_java_binpath(), "&&"] + \
               [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
               ["VALIDATION_STRINGENCY=SILENT"]
         do.run(utils.clear_java_home() + " && " + " ".join(cmd), "Picard: %s" % subcmd)

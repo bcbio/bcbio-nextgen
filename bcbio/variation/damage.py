@@ -5,12 +5,14 @@ INFO level annotations of low frequency variants:
 
 https://github.com/bcbio/bcbio.github.io/blob/master/_posts/2017-01-31-damage-filters.md
 """
+import io
 import os
 import shutil
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 
@@ -28,7 +30,8 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
         if not utils.file_uptodate(raw_file, vrn_file) and not utils.file_uptodate(raw_file + ".gz", vrn_file):
             with file_transaction(items[0], raw_file) as tx_out_file:
                 # Does not apply --qcSummary plotting due to slow runtimes
-                cmd = ["dkfzbiasfilter.py", "--filterCycles", "1", "--passOnly",
+                dkfzbiasfilter = utils.which(config_utils.get_program("dkfzbiasfilter.py", data))
+                cmd = [dkfzbiasfilter, "--filterCycles", "1", "--passOnly",
                        "--tempFolder", os.path.dirname(tx_out_file),
                        vrn_file, align_bam, ref_file, tx_out_file]
                 do.run(cmd, "Filter low frequency variants for DNA damage and strand bias")
@@ -52,7 +55,7 @@ def _filter_to_info(in_file, data):
     if not utils.file_uptodate(out_file, in_file) and not utils.file_uptodate(out_file + ".gz", in_file):
         with file_transaction(data, out_file) as tx_out_file:
             with utils.open_gzipsafe(in_file) as in_handle:
-                with open(tx_out_file, "w") as out_handle:
+                with io.open(tx_out_file, "w", encoding="utf-8") as out_handle:
                     for line in in_handle:
                         if line.startswith("#CHROM"):
                             out_handle.write(header + line)

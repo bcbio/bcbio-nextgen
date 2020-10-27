@@ -7,6 +7,8 @@ from itertools import product
 import os
 import random
 import sys
+import toolz as tz
+from collections import defaultdict
 
 from Bio import SeqIO
 from bcbio.distributed import objectstore
@@ -115,6 +117,8 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
     Adjusted to allow different input paths or extensions for matching files.
     """
     PAIR_FILE_IDENTIFIERS = set(["1", "2", "3", "4"])
+    if len(input_files) > 1000:
+        return fast_combine_pairs(input_files, force_single, full_name, separators)
 
     pairs = []
     used = set([])
@@ -180,6 +184,25 @@ def combine_pairs(input_files, force_single=False, full_name=False, separators=N
             used.add(in_file)
     return pairs
 
+def fast_combine_pairs(files, force_single, full_name, separators):
+    """
+    assume files that need to be paired are within 10 entries of each other, once the list is sorted
+    """
+    files = sort_filenames(files)
+    chunks = tz.sliding_window(10, files)
+    pairs = [combine_pairs(chunk, force_single, full_name, separators) for chunk in chunks]
+    pairs = [y for x in pairs for y in x]
+    longest = defaultdict(list)
+    # for each file, save the longest pair it is in
+    for pair in pairs:
+        for file in pair:
+            if len(longest[file]) < len(pair):
+                longest[file] = pair
+    # keep only unique pairs
+    longest = {tuple(sort_filenames(x)) for x in longest.values()}
+    # ensure filenames are R1 followed by R2
+    return [sort_filenames(list(x)) for x in longest]
+
 def dif(a, b):
     """ copy from http://stackoverflow.com/a/8545526 """
     return [i for i in range(len(a)) if a[i] != b[i]]
@@ -198,8 +221,9 @@ def is_fastq(in_file, bzip=True):
     else:
         return False
 
-def downsample(f1, f2, data, N, quick=False):
-    """ get N random headers from a fastq file without reading the
+
+def downsample(f1, f2, N, quick=False):
+    """Get N random headers from a fastq file without reading the
     whole thing into memory
     modified from: http://www.biostars.org/p/6544/
     quick=True will just grab the first N reads rather than do a true
@@ -208,9 +232,9 @@ def downsample(f1, f2, data, N, quick=False):
     if quick:
         rand_records = range(N)
     else:
-        records = sum(1 for _ in open(f1)) / 4
+        records = int(sum(1 for _ in open_possible_gzip(f1)) / 4)
         N = records if N > records else N
-        rand_records = sorted(random.sample(xrange(records), N))
+        rand_records = sorted(random.sample(range(records), N))
 
     fh1 = open_possible_gzip(f1)
     fh2 = open_possible_gzip(f2) if f2 else None
@@ -252,35 +276,36 @@ def downsample(f1, f2, data, N, quick=False):
 
     return outf1, outf2
 
+
 def estimate_read_length(fastq_file, quality_format="fastq-sanger", nreads=1000):
     """
     estimate average read length of a fastq file
     """
-
-    in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
-    read = next(in_handle)
-    average = len(read.seq)
-    for _ in range(nreads):
-        try:
-            average = (average + len(next(in_handle).seq)) / 2
-        except StopIteration:
-            break
-    in_handle.close()
+    average = 0
+    with open_fastq(fastq_file) as fastq_handle:
+        record_iterator = SeqIO.parse(fastq_handle, quality_format)
+        read = next(record_iterator)
+        average = len(read.seq)
+        for _ in range(nreads):
+            try:
+                average = (average + len(next(record_iterator).seq)) / 2
+            except StopIteration:
+                break
     return average
 
 def estimate_maximum_read_length(fastq_file, quality_format="fastq-sanger",
                                  nreads=1000):
     """
-    estimate average read length of a fastq file
+    estimate maximum read length of a fastq file
     """
-    in_handle = SeqIO.parse(open_fastq(fastq_file), quality_format)
     lengths = []
-    for _ in range(nreads):
-        try:
-            lengths.append(len(next(in_handle).seq))
-        except StopIteration:
-            break
-    in_handle.close()
+    with open_fastq(fastq_file) as fastq_handle:
+        record_iterator = SeqIO.parse(fastq_handle, quality_format)
+        for _ in range(nreads):
+            try:
+                lengths.append(len(next(record_iterator).seq))
+            except StopIteration:
+                break
     return max(lengths)
 
 def open_fastq(in_file):

@@ -16,11 +16,12 @@ resources:
   # default options, used if other items below are not present
   # avoids needing to configure/adjust for every program
   default:
-    memory: 3G
+    memory: 4G
     cores: 16
     jvm_opts: ["-Xms750m", "-Xmx3500m"]
-  gatk:
-    jvm_opts: ["-Xms500m", "-Xmx3500m"]
+  # Can also set program specific options
+  # gatk:
+  #   jvm_opts: ["-Xms500m", "-Xmx3500m"]
   snpeff:
     jvm_opts: ["-Xms750m", "-Xmx3g"]
   qualimap:
@@ -30,7 +31,7 @@ resources:
   dexseq:
     memory: 10g
   macs2:
-    memory: 8g
+    memory: 16g
   seqcluster:
     memory: 8g
 

@@ -97,7 +97,7 @@ def _get_impact_info(vcf_reader):
         'BCSQ': geneimpacts.BCFT}
     for l in (x.strip() for x in _from_bytes(vcf_reader.raw_header).split("\n")):
         if l.startswith("##INFO"):
-            patt = re.compile("(\w+)=(\"[^\"]+\"|[^,]+)")
+            patt = re.compile(r"(\w+)=(\"[^\"]+\"|[^,]+)")
             stub = l.split("=<")[1].rstrip(">")
             d = dict(patt.findall(_from_bytes(stub)))
             if d["ID"] in KEY_2_CLASS:

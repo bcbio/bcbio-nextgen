@@ -4,6 +4,7 @@ Handles configured ploidy, with custom handling for sex chromosomes and pooled
 haploid mitochondrial DNA.
 """
 import collections
+import io
 
 import toolz as tz
 
@@ -78,7 +79,7 @@ def filter_vcf_by_sex(vcf_file, items):
             orig_out_file = out_file
             out_file = orig_out_file.replace(".vcf.gz", ".vcf")
             with file_transaction(items[0], out_file) as tx_out_file:
-                with open(tx_out_file, "w") as out_handle:
+                with io.open(tx_out_file, "w", encoding="utf-8") as out_handle:
                     with utils.open_gzipsafe(vcf_file) as in_handle:
                         for line in in_handle:
                             if line.startswith("#"):

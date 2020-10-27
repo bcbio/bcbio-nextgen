@@ -15,14 +15,13 @@ details:
       batch: ceph
       sex: female
     analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       aligner: bwa
-      align_split_size: 5000000
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype]
+      variantcaller: gatk-haplotype
       remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
       validate_regions: giab-NA12878/truth_regions.bed
@@ -32,25 +31,23 @@ details:
       batch: ceph
       sex: male
     analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       aligner: bwa
-      align_split_size: 5000000
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype]
+      variantcaller: gatk-haplotype
   - files: [../input/NA12892_1.fastq.gz, ../input/NA12892_2.fastq.gz]
     description: NA12892
     metadata:
       batch: ceph
       sex: female
     analysis: variant2
-    genome_build: GRCh37
+    genome_build: hg38
     algorithm:
       aligner: bwa
-      align_split_size: 5000000
       mark_duplicates: true
       recalibrate: false
       realign: false
-      variantcaller: [freebayes, gatk-haplotype]
+      variantcaller: gatk-haplotype

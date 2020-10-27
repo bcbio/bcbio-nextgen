@@ -25,7 +25,7 @@ def run(data):
     """
     hlas = []
     for hla_fq in tz.get_in(["hla", "fastq"], data, []):
-        hla_type = re.search("[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
+        hla_type = re.search(r"[.-](?P<hlatype>HLA-[\w-]+).fq", hla_fq).group("hlatype")
         if hla_type in SUPPORTED_HLAS:
             if utils.file_exists(hla_fq):
                 hlas.append((hla_type, hla_fq))
@@ -33,6 +33,9 @@ def run(data):
         out_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "align",
                                                   dd.get_sample_name(data), "hla",
                                                   "OptiType-HLA-A_B_C"))
+        # When running UMIs and hla typing we want to pick the original fastqs
+        if len(hlas) > len(SUPPORTED_HLAS):
+            hlas = [x for x in hlas if os.path.basename(x[1]).find("-cumi") == -1]
         if len(hlas) == len(SUPPORTED_HLAS):
             hla_fq = combine_hla_fqs(hlas, out_dir + "-input.fq", data)
             if utils.file_exists(hla_fq):
@@ -119,7 +122,7 @@ def _call_hla(hla_fq, out_dir, data):
             opts = " ".join([str(x) for x in resources["options"]])
         else:
             opts = ""
-        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} "
+        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} --enumerate 10 "
                 "-i {hla_fq} -c {config_file}")
         do.run(cmd.format(**locals()), "HLA typing with OptiType")
         for outf in os.listdir(tx_out_dir):

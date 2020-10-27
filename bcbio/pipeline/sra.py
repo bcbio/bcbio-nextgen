@@ -12,24 +12,26 @@ from bcbio.bam.fastq import combine_pairs
 from bcbio.pipeline import fastq
 
 def is_gsm(fn):
-    p = re.compile("^GSM[0-9]+$")
+    p = re.compile(r"^GSM[0-9]+$")
     if p.match(fn) and not utils.file_exists(fn):
         return True
 
 def is_srr(fn):
-    p = re.compile("^SRR[0-9]+$")
+    p = re.compile(r"^SRR[0-9]+$")
     if p.match(fn) and not utils.file_exists(fn):
         return True
 
 def _query_info(db, ids):
+    """ returns a list of urls to download SRR
+    """
     url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db={0}\&id={1}".format(db, ids)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    out = process.stdout.read()
-    data= []
-    for line in out.split("RUN_SET")[1].split("RUN"):
-        if line.find("accession=") > -1:
-            srr = line.split("accession=")[1].split(" ")[0].replace("\"", "")
+    out = process.stdout.read().decode().strip()
+    data = []
+    for line in out.split("RUN_SET")[1].split("RUN")[1].split("SRAFile"):
+        if line.find("url") > -1:
+            srr = line.split("url=")[1].split(" ")[0].replace("\"", "")
             data.append(srr)
     return data
 
@@ -40,16 +42,12 @@ def query_gsm(gsm, out_file, config = {}):
     url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra\&term={0}\&retmode=json".format(gsm)
     cmd = "curl {0}".format(url)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    out = process.stdout.read()
+    out = process.stdout.read().decode().strip()
     data = json.loads(out)
     ids = data.get("esearchresult", {}).get("idlist", [])
     logger.debug("Get id sample for %s" % gsm)
     if ids:
-        gsm_info = _query_info("sra", ids[-1])
-        logger.debug("gsm_info:%s" % gsm_info)
-        srrall = []
-        for srr in gsm_info:
-            srrall.append(_create_link(srr))
+        srrall = _query_info("sra", ids[-1])
         logger.debug("Get FTP link for %s : %s" % (ids[-1], srrall))
         outs = []
         for srx in srrall:
@@ -120,7 +118,8 @@ def _convert_fastq(srafn, outdir, single=False):
     "convert sra to fastq"
     cmd = "fastq-dump --split-files --gzip {srafn}"
     cmd = "%s %s" % (utils.local_path_export(), cmd)
-    sraid = os.path.basename(utils.splitext_plus(srafn)[0])
+    # note /path/dir/SRRRXXX.1
+    sraid = os.path.basename(srafn)
     if not srafn:
         return None
     if not single:
@@ -128,7 +127,7 @@ def _convert_fastq(srafn, outdir, single=False):
                     os.path.join(outdir, "%s_2.fastq.gz" % sraid)]
         if not utils.file_exists(out_file[0]):
             with utils.chdir(outdir):
-                do.run(cmd.format(**locals()), "Covert to fastq %s" % sraid)
+                do.run(cmd.format(**locals()), "Convert to fastq %s" % sraid)
         if not utils.file_exists(out_file[0]):
             raise IOError("SRA %s didn't convert, something happened." % srafn)
         return [out for out in out_file if utils.file_exists(out)]

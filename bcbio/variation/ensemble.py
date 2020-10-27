@@ -42,6 +42,7 @@ def batch(samples):
             batches = set([])
             for d in gsamples:
                 batches |= set(dd.get_batches(d))
+            gsamples.sort(key=dd.get_variantcaller_order)
             cur = copy.deepcopy(gsamples[0])
             cur.update({"batch_id": sorted(list(batches))[0] if batches else "_".join(batch_samples),
                         "batch_samples": batch_samples,
@@ -253,7 +254,7 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
 
         with file_transaction(edata, out_vcf_file) as tx_out_file:
             cmd += [tx_out_file, dd.get_ref_file(edata)] + vrn_files
-            cmd = "%s %s" % (utils.local_path_export(), " ".join(str(x) for x in cmd))
+            cmd = "%s && %s" % (utils.get_java_clprep(), " ".join(str(x) for x in cmd))
             do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
     in_data = utils.deepish_copy(edata)
     in_data["vrn_file"] = out_vcf_file

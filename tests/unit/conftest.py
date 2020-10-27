@@ -21,11 +21,14 @@ class DummyCM(object):
         return self.value.__getattribute__(attr)
 
 
-class BaseTx(DummyCM):
+class BaseTx(DummyCM, str):
     def __iadd__(self, other):
         """support for += operator to make os.path.join work
         with the value yielded by the dummy context manager"""
         return self.value + other
+
+    def __str__(self):
+        return self.value
 
 
 class DummyTxTmpdir(BaseTx):

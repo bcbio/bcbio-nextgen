@@ -1,0 +1,34 @@
+# template for somatic tumor only variant calling using duplex umis
+# min_allele_fraction is % i.e. 0.01% = 0.0001
+# use_lowfreq_filter: false forces vardict to report all variants,
+# including those with low variant frequency
+# to report intronic varints use +-200 padded bed file
+# for TS data first parse UMIs with:
+# bcbio_fastq_umi_prep.py autopair -c 1 --tag1 8 --tag2 8 samplex_1.fq.gz samplex_2.fq.gz,
+# where tag1 8 means 8 bp of UMI
+# trim_ends trims a spacer between UMI and read
+details:
+- algorithm:
+    aligner: bwa
+    trim_ends: [2,0,2,0]
+    min_allele_fraction: 0.01
+    correct_umis: /path/config/whitelist.txt
+    tools_off:
+    - gemini
+    umi_type: fastq_name
+    variantcaller:
+    - vardict
+    coverage: panel.bed
+    variant_regions: panel.bed
+    use_lowfreq_filter: false
+  analysis: variant2
+  description: samplea
+  files:
+  - /path/input/sample_a1_1.fq.gz
+  - /path/input/sample_a1_2.fq.gz
+  genome_build: hg38
+  metadata:
+    phenotype: tumor
+resources:
+  fgbio:
+    options: [--min-reads, 3]

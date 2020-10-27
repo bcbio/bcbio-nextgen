@@ -129,7 +129,8 @@ def _subset_to_variant_regions(callable_file, variant_regions, data):
     out_file = "%s-vrsubset.bed" % utils.splitext_plus(callable_file)[0]
     if not utils.file_uptodate(out_file, callable_file):
         with file_transaction(data, out_file) as tx_out_file:
-            pybedtools.BedTool(callable_file).intersect(variant_regions).saveas(tx_out_file)
+            with utils.open_gzipsafe(callable_file) as in_handle:
+                pybedtools.BedTool(in_handle).intersect(variant_regions).saveas(tx_out_file)
     return out_file
 
 def _get_cache_file(data, target_name):
@@ -153,8 +154,14 @@ def _write_cache(cache, cache_file):
 def get_average_coverage(target_name, bed_file, data, bam_file=None):
     if not bam_file:
         bam_file = dd.get_align_bam(data) or dd.get_work_bam(data)
+
     cache_file = _get_cache_file(data, target_name)
-    cache = _read_cache(cache_file, [bam_file, bed_file])
+
+    if dd.get_disambiguate(data):
+        cache = _read_cache(cache_file, [bed_file])
+    else:
+        cache = _read_cache(cache_file, [bam_file, bed_file])
+
     if "avg_coverage" in cache:
         return int(cache["avg_coverage"])
 

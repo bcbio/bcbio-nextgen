@@ -12,6 +12,7 @@ import glob
 
 import toolz as tz
 
+from bcbio import bam
 from bcbio import utils
 from bcbio.cwl import cwlutils
 from bcbio.log import logger
@@ -63,6 +64,11 @@ def pipeline_summary(data):
     Handles standard and CWL (single QC output) cases.
     """
     data = utils.to_single_data(data)
+    if data["analysis"].startswith("wgbs-seq"):
+        bismark_bam = dd.get_align_bam(data)
+        sorted_bam = bam.sort(bismark_bam, data["config"])
+        data = dd.set_align_bam(data, sorted_bam)
+        data = dd.set_work_bam(data, bismark_bam)
     work_bam = dd.get_align_bam(data) or dd.get_work_bam(data)
     if not work_bam or not work_bam.endswith(".bam"):
         work_bam = None
@@ -99,19 +105,22 @@ def get_qc_tools(data):
                 logger.debug("GTF not compatible with Qualimap, skipping.")
     if analysis.startswith("chip-seq"):
         to_run.append("chipqc")
+        if dd.get_chip_method(data) == "atac":
+            to_run.append("ataqv")
     if analysis.startswith("smallrna-seq"):
         to_run.append("small-rna")
         to_run.append("atropos")
     if "coverage_qc" not in dd.get_tools_off(data):
         to_run.append("samtools")
-    if analysis.startswith(("standard", "variant", "variant2")):
+    if dd.has_variantcalls(data):
         if "coverage_qc" not in dd.get_tools_off(data):
             to_run += ["coverage", "picard"]
         to_run += ["qsignature", "variants"]
         if vcfanno.is_human(data):
             to_run += ["contamination", "peddy"]
         if vcfutils.get_paired_phenotype(data):
-            to_run += ["viral"]
+            if "viral" not in dd.get_tools_off(data):
+                to_run += ["viral"]
         if damage.should_filter([data]):
             to_run += ["damage"]
     if dd.get_umi_consensus(data):
@@ -132,7 +141,7 @@ def _run_qc_tools(bam_file, data):
     """
     from bcbio.qc import (atropos, contamination, coverage, damage, fastqc, kraken,
                           qsignature, qualimap, samtools, picard, srna, umi, variant,
-                          viral, preseq, chipseq)
+                          viral, preseq, chipseq, atac)
     tools = {"fastqc": fastqc.run,
              "atropos": atropos.run,
              "small-rna": srna.run,
@@ -150,7 +159,8 @@ def _run_qc_tools(bam_file, data):
              "umi": umi.run,
              "viral": viral.run,
              "preseq": preseq.run,
-             "chipqc": chipseq.run
+             "chipqc": chipseq.run,
+             "ataqv": atac.run
              }
     qc_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "qc", data["description"]))
     metrics = {}
@@ -320,7 +330,7 @@ def _other_pipeline_samples(summary_file, cur_samples):
     out = []
     if utils.file_exists(summary_file):
         with open(summary_file) as in_handle:
-            for s in yaml.load(in_handle).get("samples", []):
+            for s in yaml.safe_load(in_handle).get("samples", []):
                 if s["description"] not in cur_descriptions:
                     out.append(s)
     return out

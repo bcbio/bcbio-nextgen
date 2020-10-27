@@ -5,7 +5,6 @@ import os
 import six
 import sys
 import numpy as np
-from cyvcf2 import VCF, Writer
 
 from bcbio import utils
 from bcbio.log import logger
@@ -15,6 +14,8 @@ from bcbio.pipeline import shared
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.variation import bamprep, bedutils, joint, ploidy, vcfutils
+
+cyvcf2 = utils.LazyImport("cyvcf2")
 
 def run(align_bams, items, ref_file, assoc_files, region, out_file):
     """Run strelka2 variant calling, either paired tumor/normal or germline calling.
@@ -48,7 +49,8 @@ def get_region_bed(region, items, out_file, want_gzip=True):
     out_file = target
     if want_gzip:
         out_file = vcfutils.bgzip_and_index(out_file, items[0]["config"])
-    return out_file
+    if bedutils.has_regions(out_file):
+        return out_file
 
 def coverage_interval_from_bed(bed_file, per_chrom=True):
     """Calculate a coverage interval for the current region BED.
@@ -126,26 +128,33 @@ def _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_d
     cmd = [utils.get_program_python("configureStrelkaGermlineWorkflow.py"),
            os.path.realpath(utils.which("configureStrelkaGermlineWorkflow.py"))]
     cur_bed = get_region_bed(region, items, out_file)
-    cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % cur_bed,
-            "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
-            "--runDir=%s" % tx_work_dir]
-    cmd += ["--bam=%s" % b for b in align_bams]
-    if _is_targeted_region(cur_bed, items[0]):
-        cmd += ["--targeted"]
-    do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
-    return os.path.join(tx_work_dir, "runWorkflow.py")
+    if cur_bed:
+        cmd += ["--referenceFasta=%s" % ref_file,
+                "--callRegions=%s" % cur_bed,
+                "--ploidy=%s" % _get_ploidy(shared.to_multiregion(region), items, out_file),
+                "--runDir=%s" % tx_work_dir]
+        cmd += ["--bam=%s" % b for b in align_bams]
+        if _is_targeted_region(cur_bed, items[0]):
+            cmd += ["--targeted"]
+        do.run(cmd, "Configure Strelka2 germline calling: %s" % (", ".join([dd.get_sample_name(d) for d in items])))
+        return os.path.join(tx_work_dir, "runWorkflow.py")
 
 def _run_germline(align_bams, items, ref_file, assoc_files, region, out_file, work_dir):
     if not utils.file_exists(out_file):
         with file_transaction(items[0], work_dir) as tx_work_dir:
             workflow_file = _configure_germline(align_bams, items, ref_file, region, out_file, tx_work_dir)
-            _run_workflow(items[0], workflow_file, tx_work_dir)
-        raw_file = os.path.join(work_dir, "results", "variants",
-                                "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
-        utils.copy_plus(raw_file, out_file)
-        # Remove files with relative symlinks
-        utils.remove_plus(os.path.join(work_dir, "results", "variants", "genome.vcf.gz"))
+            if workflow_file:
+                has_variants = True
+                _run_workflow(items[0], workflow_file, tx_work_dir)
+            else:
+                has_variants = False
+                vcfutils.write_empty_vcf(out_file, items[0]["config"], [dd.get_sample_name(d) for d in items])
+        if has_variants:
+            raw_file = os.path.join(work_dir, "results", "variants",
+                                    "genome.vcf.gz" if joint.want_gvcf(items) else "variants.vcf.gz")
+            utils.copy_plus(raw_file, out_file)
+            # Remove files with relative symlinks
+            utils.remove_plus(os.path.join(work_dir, "results", "variants", "genome.vcf.gz"))
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
@@ -153,14 +162,15 @@ def _configure_somatic(paired, ref_file, region, out_file, tx_work_dir):
     cmd = [utils.get_program_python("configureStrelkaSomaticWorkflow.py"),
            os.path.realpath(utils.which("configureStrelkaSomaticWorkflow.py"))]
     cur_bed = get_region_bed(region, [paired.tumor_data, paired.normal_data], out_file)
-    cmd += ["--referenceFasta=%s" % ref_file,
-            "--callRegions=%s" % cur_bed,
-            "--runDir=%s" % tx_work_dir,
-            "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
-    if _is_targeted_region(cur_bed, paired.tumor_data):
-        cmd += ["--targeted"]
-    do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
-    return os.path.join(tx_work_dir, "runWorkflow.py")
+    if cur_bed:
+        cmd += ["--referenceFasta=%s" % ref_file,
+                "--callRegions=%s" % cur_bed,
+                "--runDir=%s" % tx_work_dir,
+                "--normalBam=%s" % paired.normal_bam, "--tumorBam=%s" % paired.tumor_bam]
+        if _is_targeted_region(cur_bed, paired.tumor_data):
+            cmd += ["--targeted"]
+        do.run(cmd, "Configure Strelka2 germline calling: %s" % paired.tumor_name)
+        return os.path.join(tx_work_dir, "runWorkflow.py")
 
 def _tumor_normal_genotypes(ref, alt, info, fname, coords):
     """Retrieve standard 0/0, 0/1, 1/1 style genotypes from INFO field.
@@ -230,7 +240,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
     ungz_out_file = "%s.vcf" % utils.splitext_plus(out_file)[0]
     if not utils.file_exists(ungz_out_file) and not utils.file_exists(ungz_out_file + ".gz"):
         with file_transaction(data, ungz_out_file) as tx_out_file:
-            vcf = VCF(in_file)
+            vcf = cyvcf2.VCF(in_file)
             vcf.add_format_to_header({
                 'ID': 'AF',
                 'Description': 'Allele frequency, as calculated in bcbio: AD/DP (germline), <ALT>U/DP (somatic snps), '
@@ -243,7 +253,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
                     '(configured in bcbio as min_allele_fraction)'
                     if utils.get_in(data["config"], ("algorithm", "min_allele_fraction"))
                     else '(default threshold in bcbio; override with min_allele_fraction in the algorithm section)')})
-            w = Writer(tx_out_file, vcf)
+            w = cyvcf2.Writer(tx_out_file, vcf)
             tumor_index = vcf.samples.index(data['description'])
             for rec in vcf:
                 if paired:  # somatic?
@@ -254,7 +264,7 @@ def _af_annotate_and_filter(paired, items, in_file, out_file):
                     dp = rec.format('DP')[:,0]
                 elif rec.format("AD") is not None:  # germline?
                     alt_counts = rec.format('AD')[:,1:]  # AD=REF,ALT1,ALT2,...
-                    dp = np.sum(rec.format('AD')[:,0:], axis=1)
+                    dp = np.sum(rec.format('AD')[:,0:], axis=1)[:, None]
                 else: # germline gVCF record
                     alt_counts, dp = (None, None)
                 if dp is not None:
@@ -309,11 +319,18 @@ def _run_somatic(paired, ref_file, assoc_files, region, out_file, work_dir):
     if not utils.file_exists(out_file):
         with file_transaction(paired.tumor_data, work_dir) as tx_work_dir:
             workflow_file = _configure_somatic(paired, ref_file, region, out_file, tx_work_dir)
-            _run_workflow(paired.tumor_data, workflow_file, tx_work_dir)
-        var_dir = os.path.join(work_dir, "results", "variants")
-        vcfutils.combine_variant_files([_postprocess_somatic(os.path.join(var_dir, f), paired)
-                                        for f in ["somatic.snvs.vcf.gz", "somatic.indels.vcf.gz"]],
-                                       out_file, ref_file, paired.tumor_data["config"], region=region)
+            if workflow_file:
+                has_variants = True
+                _run_workflow(paired.tumor_data, workflow_file, tx_work_dir)
+            else:
+                has_variants = False
+                vcfutils.write_empty_vcf(out_file, paired.tumor_data["config"],
+                                         [dd.get_sample_name(d) for d in [paired.tumor_data, paired.normal_data]])
+        if has_variants:
+            var_dir = os.path.join(work_dir, "results", "variants")
+            vcfutils.combine_variant_files([_postprocess_somatic(os.path.join(var_dir, f), paired)
+                                            for f in ["somatic.snvs.vcf.gz", "somatic.indels.vcf.gz"]],
+                                           out_file, ref_file, paired.tumor_data["config"], region=region)
     return out_file
 
 def _run_workflow(data, workflow_file, work_dir):

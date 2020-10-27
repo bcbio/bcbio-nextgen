@@ -7,6 +7,7 @@ This requires coverage calculation in each sample and gene, followed by global
 calling across all samples.
 """
 import os
+import shutil
 import subprocess
 from collections import defaultdict
 
@@ -151,10 +152,11 @@ def _call_cnv(items, work_dir, read_mapping_file, coverage_file, control_sample_
 
     if not utils.file_exists(output_fpath):
         with file_transaction(items[0], output_fpath) as tx_out_file:
-            export = utils.local_path_export()
-            cmd = ("{export} {cov2lr} -a {cov2lr_opt} {read_mapping_file} {coverage_file} | " +
-                   "{lr2gene} {lr2gene_opt} > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Seq2C CNV calling")
+            with utils.chdir(work_dir):
+                export = utils.local_path_export()
+                cmd = ("{export} {cov2lr} -a {cov2lr_opt} {read_mapping_file} {coverage_file} | " +
+                    "{lr2gene} {lr2gene_opt} > {tx_out_file}")
+                do.run(cmd.format(**locals()), "Seq2C CNV calling")
     return output_fpath
 
 def _split_cnv(items, calls_fpath, read_mapping_file, coverage_file):
@@ -165,6 +167,8 @@ def _split_cnv(items, calls_fpath, read_mapping_file, coverage_file):
             sample_name = dd.get_sample_name(item)
             work_dir = _sv_workdir(item)
             out_fname = os.path.join(work_dir, sample_name + '-calls.tsv')
+            gender_fname = os.path.join(work_dir, 'gender_predicted.txt')
+            out_gender_name = os.path.join(work_dir, sample_name + '-gender_predicted.txt')
             if not utils.file_exists(out_fname):
                 with file_transaction(item, out_fname) as tx:
                     with open(tx, "w") as out, open(calls_fpath) as inp:
@@ -175,6 +179,10 @@ def _split_cnv(items, calls_fpath, read_mapping_file, coverage_file):
             cur_sv.update({"calls": out_fname, "vrn_file": to_vcf(out_fname, item),
                            "read_mapping": read_mapping_file, "calls_all": calls_fpath,
                            "coverage_all": coverage_file})
+            if utils.file_exists(gender_fname):
+                if not utils.file_exists(out_gender_name):
+                    shutil.copyfile(gender_fname, out_gender_name)
+                cur_sv.update({"gender_predicted": out_gender_name})
         if "sv" not in item:
             item["sv"] = []
         assert "seq2c" not in [x["variantcaller"] for x in item["sv"]], \

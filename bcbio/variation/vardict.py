@@ -11,6 +11,8 @@ https://github.com/AstraZeneca-NGS/VarDict
 
 specify 'vardict-perl'.
 """
+from decimal import *
+
 from distutils.version import LooseVersion
 import os
 import sys
@@ -65,7 +67,27 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     if target and _is_bed_file(target):
         target = _enforce_max_region_size(target, items[0])
         opts += [target]  # this must be the last option
+    _add_freq_options(config, opts, var2vcf_opts)
     return " ".join(opts), " ".join(var2vcf_opts)
+
+def _add_freq_options(config, opts, var2vcf_opts):
+    """ Setting -f option for vardict and var2vcf_valid
+        Prioritizing settings in resources/vardict/options, then algorithm/min_allele_fraction:
+    min_allele_fraction   "-f" in opts  var2vcfopts   ->   vardict -f            var2vcf -f
+    yes                           yes   yes                opts                  var2vcfopts
+    yes                           yes   -                  opts                  -
+    yes                           -     yes                min_allele_fraction   var2vcfopts
+    yes                           -     -                  min_allele_fraction   min_allele_fraction
+    default                       yes   yes                opts                  var2vcfopts
+    default                       yes   -                  opts                  -
+    default                       -     yes                min_allele_fraction   var2vcfopts
+    default                       -     -                  min_allele_fraction   min_allele_fraction
+    """
+    if "-f" not in opts:
+        freq = Decimal(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / Decimal(100.0)
+        opts.extend(["-f", str(freq)])
+        if "-f" not in var2vcf_opts:
+            var2vcf_opts.extend(["-f", str(freq)])
 
 def _enforce_max_region_size(in_file, data):
     """Ensure we don't have any chunks in the region greater than 20kb.
@@ -141,7 +163,6 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 opts, var2vcf_opts = _vardict_options_from_config(items, config, out_file, target)
                 vcfstreamsort = config_utils.get_program("vcfstreamsort", config)
                 compress_cmd = "| bgzip -c" if tx_out_file.endswith("gz") else ""
-                freq = float(utils.get_in(config, ("algorithm", "min_allele_fraction"), 10)) / 100.0
                 fix_ambig_ref = vcfutils.fix_ambiguous_cl()
                 fix_ambig_alt = vcfutils.fix_ambiguous_cl(5)
                 remove_dup = vcfutils.remove_dup_cl()
@@ -149,13 +170,20 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                 jvm_opts = _get_jvm_opts(items[0], tx_out_file)
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
-                lowfreq_filter = _lowfreq_linear_filter(0, False)
-                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                use_lowfreq_filter = config["algorithm"].get("use_lowfreq_filter")
+                if use_lowfreq_filter is False:
+                    lowfreq_filter = " | "
+                else:
+                    lowfreq_filter = " | " + _lowfreq_linear_filter(0, False) + " | "
+                teststrandbias = config_utils.get_program("teststrandbias.R", config)
+                var2vcf_valid = config_utils.get_program("var2vcf_valid.pl", config)
+                fudge_vcf_version = "sed 's/^##fileformat=VCFv4.3/##fileformat=VCFv4.2/'"
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {sample} -b {bamfile} {opts} "
-                       "| teststrandbias.R "
-                       "| var2vcf_valid.pl -A -N {sample} -E -f {freq} {var2vcf_opts} "
-                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' | {lowfreq_filter} "
-                       "| {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                       "| {teststrandbias} "
+                       "| {var2vcf_valid} -A -N {sample} -E {var2vcf_opts} "
+                       "| {contig_cl} | bcftools filter -i 'QUAL >= 0' {lowfreq_filter} "
+                       "{fix_ambig_ref} | {fix_ambig_alt} | {fudge_vcf_version} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -198,7 +226,7 @@ def _lowfreq_linear_filter(tumor_index, is_paired):
         sbf = "INFO/SBF"
         nm = "INFO/NM"
     cmd = ("""bcftools filter --soft-filter 'LowFreqBias' --mode '+' """
-           """-e  'FORMAT/AF[{tumor_index}] < 0.02 && FORMAT/VD[{tumor_index}] < 30 """
+           """-e  'FORMAT/AF[{tumor_index}:0] < 0.02 && FORMAT/VD[{tumor_index}] < 30 """
            """&& {sbf} < 0.1 && {nm} >= 2.0'""")
     return cmd.format(**locals())
 
@@ -328,15 +356,16 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
-                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} -f {freq} "
+                fudge_vcf_version = "sed 's/^##fileformat=VCFv4.3/##fileformat=VCFv4.2/'"
+                cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| awk 'NF>=48' | testsomatic.R "
-                       "| var2vcf_paired.pl -P 0.9 -m 4.25 -f {freq} {var2vcf_opts} "
+                       "| var2vcf_paired.pl -P 0.9 -m 4.25 {var2vcf_opts} "
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "| {contig_cl} {freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
-                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
-                       "{compress_cmd} > {tx_out_file}")
+                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} | "
+                       "{fudge_vcf_version} {compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
     return out_file
 

@@ -1,3 +1,5 @@
+"""Pytest fixtures and test helper functions"""
+
 import collections
 import contextlib
 from datetime import datetime
@@ -6,6 +8,7 @@ import os
 import shutil
 import subprocess
 import tarfile
+import tempfile
 
 import pytest
 import requests
@@ -13,59 +16,65 @@ import yaml
 
 from bcbio.pipeline.config_utils import load_system_config
 
-OUTPUT_DIR = "test_automated_output"
+if os.environ.get("BCBIO_TEST_DIR"):
+    BCBIO_TEST_DIR = os.environ.get("BCBIO_TEST_DIR")
+else:
+    BCBIO_TEST_DIR = tempfile.TemporaryDirectory(prefix="bcbio_").name  # /tmp/bcbio
+
+def pytest_addoption(parser):
+    parser.addoption('--keep-test-dir', action='store_true', default=False,
+                     help='Preserve test output directory after each test')
 
 
-def default_workdir():
-    return os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
+@pytest.fixture(scope='session')
+def test_dir(pytestconfig):
+    os.makedirs(BCBIO_TEST_DIR, exist_ok=True)
+    yield
+    if not pytestconfig.getoption('--keep-test-dir'):
+        shutil.rmtree(BCBIO_TEST_DIR)
+
+
+@pytest.fixture(scope='session')
+def data_dir(test_dir):
+    # workaround for hardcoded data file paths in test run config files
+    test_data_dir = os.path.join(BCBIO_TEST_DIR, 'data')  # /tmp/bcbio/data
+    with contextlib.suppress(FileExistsError):
+        os.symlink(os.path.join(os.path.dirname(__file__), 'data'), test_data_dir)
+    return os.path.join(test_data_dir, 'automated')  # /tmp/bcbio/data/automated
 
 
 @pytest.fixture
-def data_dir():
-    return os.path.join(os.path.dirname(__file__), "data", "automated")
+def work_dir(pytestconfig):
+    """Provide and manage output directory for tests"""
+    test_output_dir = os.path.join(BCBIO_TEST_DIR, 'test_automated_output')
+    os.makedirs(test_output_dir, exist_ok=True)
+    original_dir = os.getcwd()
+    os.chdir(test_output_dir)
+    yield test_output_dir
+    os.chdir(original_dir)
+    if not pytestconfig.getoption('--keep-test-dir'):
+        shutil.rmtree(test_output_dir)
 
 
-@contextlib.contextmanager
-def make_workdir():
-    remove_old_dir = True
-    # Specify workdir though env var, in case tests have to run not in the
-    # default location (e.g. to run tests on a  mounted FS)
-    dirname = os.environ.get('BCBIO_WORKDIR', default_workdir())
-    if remove_old_dir:
-        if os.path.exists(dirname):
-            shutil.rmtree(dirname)
-        os.makedirs(dirname)
-    orig_dir = os.getcwd()
-    try:
-        os.chdir(dirname)
-        yield dirname
-    finally:
-        os.chdir(orig_dir)
-
-
-@pytest.yield_fixture
-def workdir():
-    with make_workdir() as wd:
-        yield wd
-
-def get_post_process_yaml(data_dir, workdir):
-    """Prepare a bcbio_system YAML file pointing to test data.
-    """
-    system = _get_bcbio_system(workdir, data_dir)
+@pytest.fixture
+def global_config(data_dir, work_dir):
+    """Prepare a bcbio_system YAML file pointing to test data"""
+    system = _get_bcbio_system(work_dir, data_dir)
     # create local config pointing to reduced genomes
-    test_system = os.path.join(workdir, "bcbio_system.yaml")
+    test_system = os.path.join(work_dir, 'bcbio_system.yaml')
     with open(system) as in_handle:
-        config = yaml.load(in_handle)
+        config = yaml.safe_load(in_handle)
         config["galaxy_config"] = os.path.join(data_dir, "universe_wsgi.ini")
         with open(test_system, "w") as out_handle:
             yaml.dump(config, out_handle)
     return test_system
 
+
 @contextlib.contextmanager
-def install_cwl_test_files(data_dir):
+def install_cwl_test_files():
     orig_dir = os.getcwd()
     url = "https://github.com/bcbio/test_bcbio_cwl/archive/master.tar.gz"
-    dirname = os.path.normpath(os.path.join(data_dir, os.pardir, "test_bcbio_cwl-master"))
+    dirname = os.path.join(BCBIO_TEST_DIR, 'test_bcbio_cwl-master')
     if os.path.exists(dirname):
         # check for updated commits if the directory exists
         ctime = os.path.getctime(os.path.join(dirname, "README.md"))
@@ -76,6 +85,7 @@ def install_cwl_test_files(data_dir):
     try:
         if not os.path.exists(dirname):
             print("Downloading CWL test directory: %s" % url)
+            os.makedirs(dirname)
             os.chdir(os.path.dirname(dirname))
             r = requests.get(url)
             tf = tarfile.open(fileobj=io.BytesIO(r.content), mode='r|gz')
@@ -84,6 +94,7 @@ def install_cwl_test_files(data_dir):
         yield dirname
     finally:
         os.chdir(orig_dir)
+
 
 def _get_bcbio_system(workdir, data_dir):
     system = _get_bcbiovm_config(data_dir)
@@ -152,10 +163,9 @@ def install_test_files(data_dir):
         if not os.path.exists(dirname):
             _download_to_dir(url, dirname)
 
+
 def _download_to_dir(url, dirname):
-        cl = ["wget", url]
-        subprocess.check_call(cl)
-        cl = ["tar", "-xzvpf", os.path.basename(url)]
-        subprocess.check_call(cl)
-        shutil.move(os.path.basename(dirname), dirname)
-        os.remove(os.path.basename(url))
+    subprocess.check_call(['wget', '--progress=dot:giga', url])
+    subprocess.check_call(['tar', '-xzvpf', os.path.basename(url)])
+    shutil.move(os.path.basename(dirname), dirname)
+    os.remove(os.path.basename(url))

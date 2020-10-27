@@ -1,1 +1,1 @@
-bcbio-nextgen=1.1.3
+bcbio-nextgen=1.2.4

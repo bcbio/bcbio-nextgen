@@ -13,6 +13,7 @@ import toolz as tz
 from bcbio import bam, broad, utils
 from bcbio.log import logger
 from bcbio.distributed.transaction import file_transaction
+from bcbio.pipeline import config_utils
 from bcbio.pipeline import datadict as dd
 from bcbio.variation.realign import has_aligned_reads
 from bcbio.variation import sentieon
@@ -93,12 +94,17 @@ def _gatk_base_recalibrator(broad_runner, dup_align_bam, ref_file, platform,
                 params = ["-I", dup_align_bam]
                 cores = dd.get_num_cores(data)
                 if gatk_type == "gatk4":
+                    resources = config_utils.get_resources("gatk-spark", data["config"])
+                    spark_opts = [str(x) for x in resources.get("options", [])]
                     params += ["-T", "BaseRecalibratorSpark",
-                               "--spark-master", "local[%s]" % cores,
-                               "--output", tx_out_file, "--reference", dd.get_ref_file(data),
-                               "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
-                               "--conf", "spark.executor.heartbeatInterval=100",
-                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
+                               "--output", tx_out_file, "--reference", dd.get_ref_file(data)]
+                    if spark_opts:
+                        params += spark_opts
+                    else:
+                        params += ["--spark-master", "local[%s]" % cores,
+                                   "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
+                                   "--conf", "spark.executor.heartbeatInterval=100",
+                                   "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file)]
                     if dbsnp_file:
                         params += ["--known-sites", dbsnp_file]
                     if intervals:
@@ -145,12 +151,21 @@ def _gatk_apply_bqsr(data):
             gatk_type = broad_runner.gatk_type()
             cores = dd.get_num_cores(data)
             if gatk_type == "gatk4":
-                params = ["-T", "ApplyBQSRSpark", "--spark-master", "local[%s]" % cores,
+                resources = config_utils.get_resources("gatk-spark", data["config"])
+                spark_opts = [str(x) for x in resources.get("options", [])]
+                params = ["-T", "ApplyBQSRSpark",
                           "--input", in_file, "--output", tx_out_file, "--bqsr-recal-file", data["prep_recal"],
-                          "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
-                          "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800",
                           "--static-quantized-quals", "10", "--static-quantized-quals", "20",
                           "--static-quantized-quals", "30"]
+                if spark_opts:
+                    params += spark_opts
+                else:
+                    params += ["--spark-master", "local[%s]" % cores,
+                               "--conf", "spark.local.dir=%s" % os.path.dirname(tx_out_file),
+                               "--conf", "spark.driver.host=localhost", "--conf", "spark.network.timeout=800"]
+                # Avoid problems with StreamClosedErrors on GATK 4.1+
+                # https://github.com/bcbio/bcbio-nextgen/issues/2806#issuecomment-492504497
+                params += ["--create-output-bam-index", "false"]
             else:
                 params = ["-T", "PrintReads", "-R", dd.get_ref_file(data), "-I", in_file,
                           "-BQSR", data["prep_recal"], "-o", tx_out_file]

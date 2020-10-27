@@ -30,7 +30,7 @@ def run(align_file, ref_file, data):
             safe_makedir(tmp_out_dir)
             cmd.extend(["--output-dir", tmp_out_dir])
             cmd.extend([align_file])
-            cmd = map(str, cmd)
+            cmd = list(map(str, cmd))
             do.run(cmd, "Cufflinks on %s." % (align_file))
         fpkm_file = gene_tracking_to_fpkm(tracking_file, fpkm_file)
         fpkm_file_isoform = gene_tracking_to_fpkm(tracking_file_isoform, fpkm_file_isoform)
@@ -46,7 +46,7 @@ def gene_tracking_to_fpkm(tracking_file, out_file):
     """
     if file_exists(out_file):
         return out_file
-    df = pd.io.parsers.read_table(tracking_file, sep="\t", header=0)
+    df = pd.io.parsers.read_csv(tracking_file, sep="\t", header=0)
     df = df[['tracking_id', 'FPKM']]
     df = df.groupby(['tracking_id']).sum()
     df.to_csv(out_file, sep="\t", header=False, index_label=False)

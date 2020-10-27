@@ -52,7 +52,7 @@ def _salmon_quant_reads(fq1, fq2, salmon_dir, index, data):
     num_cores = dd.get_num_cores(data)
     salmon = config_utils.get_program("salmon", dd.get_config(data))
     num_cores = dd.get_num_cores(data)
-    cmd = ("{salmon} quant -l A -i {index} -p {num_cores} "
+    cmd = ("{salmon} quant --validateMappings -l A -i {index} -p {num_cores} "
            "-o {tx_out_dir} ")
     fq1_cmd = "<(cat {fq1})" if not is_gzipped(fq1) else "<(gzip -cd {fq1})"
     fq1_cmd = fq1_cmd.format(fq1=fq1)

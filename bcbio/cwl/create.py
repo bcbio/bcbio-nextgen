@@ -761,7 +761,7 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
             elif x.endswith((".vcf.gz", ".bed.gz")):
                 out = _add_secondary_if_exists([x + ".tbi"], out, get_retriever)
             elif x.endswith(".fa"):
-                out = _add_secondary_if_exists([x + ".fai", os.path.splitext(x)[0] + ".dict"], out, get_retriever)
+                out = _add_secondary_if_exists([x + ".fai", os.path.splitext(x)[0] + ".dict", os.path.splitext(x)[0] + "-resources.yaml"], out, get_retriever)
             elif x.endswith(".fa.gz"):
                 out = _add_secondary_if_exists([x + ".fai", x + ".gzi", x.replace(".fa.gz", "") + ".dict"],
                                                out, get_retriever)

@@ -32,7 +32,7 @@ def get_resources(genome, ref_file, data):
                       "bcbio_nextgen.py upgrade -u skip"
                       % (genome, resource_file))
     with open(resource_file) as in_handle:
-        resources = yaml.load(in_handle)
+        resources = yaml.safe_load(in_handle)
 
     def resource_file_path(x):
         if isinstance(x, six.string_types) and os.path.exists(os.path.join(base_dir, x)):

@@ -17,7 +17,7 @@ def samtools(items):
     output, stderr = p.communicate()
     p.stdout.close()
     p.stderr.close()
-    if str(output).find("-@") == -1 and str(stderr).find("-@") == -1:
+    if str(output.decode()).find("-@") == -1 and str(stderr.decode()).find("-@") == -1:
         return ("Installed version of samtools sort does not have support for "
                 "multithreading (-@ option) "
                 "required to support bwa piped alignment and BAM merging. "
@@ -70,7 +70,7 @@ def java(items):
             output, _ = p.communicate()
             p.stdout.close()
         version = ""
-        for line in output.split("\n"):
+        for line in output.decode().split("\n"):
             if line.startswith(("java version", "openjdk version")):
                 version = line.strip().split()[-1]
                 if version.startswith('"'):

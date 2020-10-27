@@ -7,9 +7,7 @@ details:
     aligner: bwa
     mark_duplicates: true
     remove_lcr: true
-    variantcaller: [mutect2, freebayes, vardict, varscan]
-    ensemble:
-      numpass: 2
+    variantcaller: [mutect2, vardict]
     variant_regions: ../input/NGv3.bed
     # svcaller: [cnvkit, lumpy, delly]
     # coverage_interval: amplicon
@@ -27,9 +25,7 @@ details:
     aligner: bwa
     mark_duplicates: true
     remove_lcr: true
-    variantcaller: [mutect2, freebayes, vardict, varscan]
-    ensemble:
-      numpass: 2
+    variantcaller: [mutect2, vardict]
     variant_regions: ../input/NGv3.bed
     validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
     validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed

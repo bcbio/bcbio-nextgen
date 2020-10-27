@@ -1,9 +1,211 @@
-## 1.1.4 (in progress)
+## 1.2.5 (in progress)
+- Only make isoform to gene file from express if we have run express.
+- Allow "no consensus peaks found" as a valid endpoint of a ChIP-seq analysis.
+- Allow `BCBIO_TEST_DIR` environment variable to control where tests end up.
+- Collect OxoG and other sequencing artifacts due to damage.
+- Round tximport estimated counts.
 
+## 1.2.4 (21 September 2020)
+- Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
+- Add bismark output to MultiQC.
+- Fix PS genotype field from octopus to have the correct type.
+- Edit VarDict headers to report VCFv4.2, since htsjdk does not fully support VCFv4.3 yet.
+- Attempt to speed up bismark by implementing the parallelization strategy suggested here: https://github.com/FelixKrueger/Bismark/issues/96
+- Add `--enumerate` option to OptiType to report the top 10 calls and scores, to make it easier to decide how confident we are in
+  a HLA call.
+- Performance improvements when HLA calling during panel sequencing. This skips running bwa-kit during the initial
+  mapping for consensus UMI detection, greatly speeding up panel sequencing runs.
+- Allow custom options to be passed to `featureCounts`.
+- Fix race condition when running tests.
+- Add [TOPMed](https://www.nhlbiwgs.org) as a `datatarget`. 
+- Add predicted transcript and peptide output to arriba.
+- Add mm10 as a supported genome for arriba.
+- Skip `bcbioRNASeq` for more than 100 samples. 
+- Add `rRNA_pseudogene` as a rRNA biotype.
+- Add `--genomicsdb-use-vcf-codec` when running GenotypeGVCF. See https://gatk.broadinstitute.org/hc/en-us/articles/360040509751-  GenotypeGVCFs#--genomicsdb-use-vcf-codec for
+  a discussion. Thanks to @amizeranschi for finding the issue and posting the solution.
+- update VEP to v100
+- Add consensus peak calling using https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html 
+  to collapse overlapping peaks.
+- Pre-filter consensus peaks by removing peaks with FDR > 0.05 before performing consensus peak calling.
+- Add support for Qiagen's Qiaseq UPX 3' transcriptome kit for DGE. Support for 96 and 384 well configurations
+  by specifying `umi_type: qiagen-upx-96` or `umi_type: qiagen-upx-384`.
+- Add consensus peak counting using featureCounts.
+- Skip using autosomal-reference when calling ataqv for mouse/human, as this has a problem with ataqv 
+  (see https://github.com/ParkerLab/ataqv/issues/10) for discussion and followup.
+- Add pre-generated ataqv HTML report to upload directory.
+- Support single-end reads for ATAC-seq.
+- Move featureCount output files to **featureCounts** directory in project directory.
+- Remove RNA and reads in peak stats from MultiQC table when they are not calculated for a pipeline.
+- Only show somatic variant counts in the general stats table, if germline variants are calculated.
+- Add `kit` parameter for setting options for pipelines via just listing the kit. Currently only implemented for WGBS.
+
+
+## 1.2.3 (7 April 2020)
+- Hotfix for not being able to upgrade from stable distribution.
+
+## 1.2.2 (5 April 2020)
+- Fix for not properly looking up R environment variables in the base environment.
+- Remove --use-new-qual-calculator which was eliminated in GATK 4.1.5.0.
+- Ensure header is not written for a Series. In pandas 0.24.0 the default for header was changed from 
+  False to True so we have to set it explictly now.
+- Remove unused Dockerfile. Thanks to @matthdsm.
+- ATAC-seq: Skip peak-calling on fractions with < 1000 reads.
+
+## 1.2.1 (25 March 2020)
+- Update ChIP and ATAC bowtie2 runs to use `--very-sensitive`.
+- Properly pad TSS BED file for ataqv TSS enrichment metrics.
+- Skip bcbioRNASeq if there are less than three samples.
+- Run joint-calling with single cores to save resources.
+- Re-support PureCN.
+- Skip segments with no informative SNPs when creating the LOH VCF file from PureCN output.
+- Fix for duplicated output for mosdepth in quality control report.
+- Fix for missing rRNA statistics.
+
+## 1.2.0 (7 February 2020)
+- Fix for bismark not being a supported aligner.
+- Run ataqv (https://github.com/ParkerLab/ataqv) to calculate additional ATAQ-seq quality control
+  metrics.
+- Workaround for some bcbioRNASeq plots failing with many samples when `interesting_groups` is not set.
+- Add `known_fusions` parameter for passing in known fusions to arriba.
+- Fix for tx2gene not working properly on some GTF files.
+- Sort MACS2 output with UNIX sort to avoid memory issues.
+- Run RiP on full peak file for ATAC-seq.
+- Run ataqv on unfiltered BAM file with the full peak file.
+- Run peddy on the population variant file, not the individual sample level file if joint calling was done.
+- Add STAR to MultiQC metrics.
+- Throw an error if STAR is run on a genome with alts.
+- Don't run bcbioRNASeq if there is only one sample. Thanks to @kmendler for the suggestion.
+- Improve arriba sensitivity by setting `--peOverlapNbasesMin 10` and `--alignSplicedMateMapLminOverLmate 0.5` when
+  running STAR (see https://github.com/suhrig/arriba/issues/41).
+- Make TPM and counts files from tximport automatically.
+- Use --keepDuplicates when making the Salmon index. This keeps transcripts that are identical in the index instead of 
+  randomly choosing one. This helps when comparing to other ways of quantifying the transcripts, ensuring all of
+  the transcripts are represented. 
+- Remove unnecessary "quant" subdirectory for Salmon runs. This allows MultiQC to properly name the samples.
+- Ensure STAR log file is propagated to the upload directory.
+- Fix issue with memory not being specified properly when running `bcbio_prepare_samples.py`.
+- Run tximport automatically and store TPM in `project/date/tpm` and counts in `project/date/counts`.
+- Calculate ENCODE quality flags for ATAC-seq. See https://www.encodeproject.org/data-standards/terms/#library for a
+  description of what the metrics mean.
+- Fix for command line being too long while joint genotyping thousands of samples.
+- Fix for command line being too long when running the CWL workflow with cromwell.
+
+## 1.1.9 (5 December 2019)
+- Fix for get VEP cache.
+- Support Picard's new syntax for ReorderSam (REFERENCE -> SEQUENCE_DICTIONARY).
+- Remove mitochondrial reads from ChIP/ATAC-seq calling.
+- Add documentation describing ATAC-seq outputs.
+- Add ENCODE library complexity metrics for ATAC/ChIP-seq to MultiQC report 
+  (see https://www.encodeproject.org/data-standards/terms/#library for a description of the metrics)
+- Add STAR sample-specific 2-pass. This helps assign a moderate number of reads per genes. Thanks
+  to @naumenko-sa for the intial implementation and push to get this going.
+- Index transcriptomes only once for pseudo/quasi aligner tools. This fixes race conditions that
+  can happen.
+- Add --buildversion option, for tracking which version of a gene build was used. This is used
+  during `bcbio_setup_genome.py`. Suggested formats are source_version, so Ensembl_94, 
+  EnsemblMetazoa_25, FlyBase_26, etc.
+- Sort MACS2 bedgraph files before compressing. Thanks to @LMannarino for the suggestion.
+- Check for the reserved field `sample` in RNA-seq metadata and quit with a useful error message. 
+  Thanks to @marypiper for suggesting this.
+- Split ATAC-seq BAM files into nucleosome-free and mono/di/tri nucleosome files, so we can call 
+  peaks on them separately.
+- Call peaks on NF/MN/DN/TN regions separately for each caller during ATAC-seq.
+- Allow viral contamination to be assasyed on non tumor/normal samples.
+- Ensure EBV coverage is calculated when run on genomes with it included as a contig.
+
+## 1.1.8 (28 October 2019)
+- Add `antibody` configuration option. Setting a specific antibody for ChIP-seq will use appropriate
+  settings for that antibody. See the documentation for supported antibodies.
+- Add `use_lowfreq_filter` for forcing vardict to report variants with low allelic frequency,
+ useful for calling somatic variants in panels with high coverage.
+- Fix for checking for pre-existing inputs with python3.
+- Add `keep_duplicates` option for ChIP/ATAC-seq which does not remove duplicates before peak calling.
+  Defaults to False.
+- Add `keep_multimappers` for ChIP/ATAC-seq which does not remove multimappers before peak calling.
+  Defaults to False.
+- Remove ethnicity as a required column in PED files.
+
+## 1.1.7 (10 October 2019)
+=======
+- hot fix for dataclasses not being supported in 3.6. Use namedtuple instead.
+
+## 1.1.6 (10 October 2019)
+
+- GATK ApplyBQSRSpark: avoid StreamClosed issue with GATK 4.1+
+- RNA-seq: fixes for cufflinks preparation due to python3 transition.
+- RNA-seq: output count tables from tximport for genes and transcripts. These
+  are in `bcbioRNASeq/results/date/genes/counts` and `bcbioRNASeq/results/data/transcripts/counts`.
+- qualimap (RNA-seq): disable stranded mode for qualimap, as it gives incorrect
+  results with the hisat2 aligner and for RNA-seq just setting it to unstranded
+- Add `quantify_genome_alignments` option to use genome alignments to quantify
+  with Salmon.
+- Add `--validateMappings` flag to Salmon read quantification mode.
+- VEP cache is not installing anymore from bcbio run
+- Add support for Salmon SA method when STAR alignments are not available 
+  (for hg38).
+- Add support for the new read model for filtering in Mutect2. This is
+  experimental, and a little flaky, so it can optionally be turned on via:
+  `tools_on: mutect2_readmodel`. Thanks to @lbeltrame for implementing this
+  feature and doing a ton of work debugging.
+- Swap pandas `from_csv` call to `read_csv`.
+- Make STAR respect the `transcriptome_gtf` option.
+- Prefix regular expression with r. Thanks to @smoe for finding all of these.
+- Add informative logging messages at beginning of bcbio run. Includes the version
+  and the configuration files being used.
+- Swap samtools mpileup to use bcftools mpileup as samtools mpileup is being 
+  deprecated (https://github.com/samtools/samtools/releases/tag/1.9).
+- Ensure locale is set to one supporting UTF-8 bcbio-wide. This may need to get
+  reverted if it introduces issues.
+- Added hg38 support for STAR. We did this by taking hg38 and removing the alts,
+  decoys and HLA sequences.
+- Added support for the arriba fusion caller.
+- Added back missing programs from the version provenance file. Fixed formatting
+  problems introduced by switch to python3.
+- Added initial support for whole genome bisulfite sequencing using bismark. Thanks to
+  @hackdna for implementing this and @jnhutchinson for drafting the initial
+  pipeline. This is a work in progress in collaboration with @gcampanella, who
+  has a similar implementation with some extra features that we will be merging
+  in soon.
+- qualimap for RNA-seq runs on the downsampled BAM files by default. Set 
+  `tools_on: [qualimap_full]` to run on the full BAM files.
+- Add STAR junction files to the files captured at the end of a run.
+  
+## 1.1.5 (12 April 2019)
+
+- Fixes for Python3 incompatibilities on distributed IPython runs.
+- Numerous smaller Python3 incompatibilities with strings/unicode and types.
+  Thanks to the community for reporting these.
+- GATK HaplotypeCaller: correctly apply skipping of marked duplicates only
+  for amplicon runs. Thanks to Ben Liesfeld.
+- Fix format detection for bzip2 fastq inputs.
+- Support latest GATK4 MuTect2 (4.1.1.0) with changes to ploidy and reference
+  parameters.
+- Support changes to GATK4 for VQSR --resource specification in 4.1.1.0. Thanks
+  to Timothee Cezard.
+- Support latest bedtools (2.28.0) which expects SAM heads for bgzipped BED
+  inputs.
+
+## 1.1.4 (3 April 2019)
+
+- Move to Python 3.6. A python2 environment in the install runs non python3
+  compatible programs. The codebase is still compatible with python 2.7 but
+  will only get run and tested on python 3 for future releases.
+- RNA-seq: fix for race condition when creating the pizzly cache
+- RNA-seq: Add Salmon to multiqc report.
+- RNA-seq single-cell/DGE: Properly strip transcript versions from GENCODE GTFs.
+- RNA-seq: Faster and more flexible rRNA biotype lookup.
+- Move to R3.5.1, including updates to all CRAN and Bioconductor packages.
 - tumor-only germline prioritization: provide more useful germline filtering
   based on prioritization INFO tag (EPR) rather than filter field.
 - Install: do not require fabric for tool and data installs, making full codebase
   compatible with python 3.
+- variant: Filter out variants with missing ALT alleles output by GATK4.
+- GATK: enable specification of spark specific parameters with `gatk-spark`
+  resources.
+- RNA-seq single-cell/DGE: added `demultiplexed` option. If set to True, treat the
+  data as if it has already been demultiplexed into cells/wells.
+- Multiple orders of magnitude faster templating with thousands of input files.
 
 ## 1.1.3 (29 January 2019)
 

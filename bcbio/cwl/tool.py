@@ -158,13 +158,64 @@ def _run_wes(args):
     """
     main_file, json_file, project_name = _get_main_and_json(args.directory)
     main_file = _pack_cwl(main_file)
-    opts = ["--no-wait"]
-    if args.host:
-        opts += ["--host", args.host]
-    if args.auth:
-        opts += ["--auth", args.auth]
-    cmd = ["wes-client"] + opts + [main_file, json_file]
-    _run_tool(cmd)
+    if args.host and "stratus" in args.host:
+        _run_wes_stratus(args, main_file, json_file)
+    else:
+        opts = ["--no-wait"]
+        if args.host:
+            opts += ["--host", args.host]
+        if args.auth:
+            opts += ["--auth", args.auth]
+        cmd = ["wes-client"] + opts + [main_file, json_file]
+        _run_tool(cmd)
+
+def _run_wes_stratus(args, main_file, json_file):
+    """Run WES on Illumina stratus endpoint server, which wes-client doesn't support.
+
+    https://stratus-docs.readme.io/docs/quick-start-4
+    """
+    import requests
+    base_url = args.host
+    if not base_url.startswith("http"):
+        base_url = "https://%s" % base_url
+    with open(main_file) as in_handle:
+        r = requests.post("%s/v1/workflows" % base_url,
+                          headers={"Content-Type": "application/json",
+                                   "Authorization": "Bearer %s" % args.auth},
+                          data=in_handle.read())
+    print(r.status_code)
+    print(r.text)
+
+def _estimate_runner_memory(json_file):
+    """Estimate Java memory requirements based on number of samples.
+
+    A rough approach to selecting correct allocated memory for Cromwell.
+    """
+    with open(json_file) as in_handle:
+        sinfo = json.load(in_handle)
+    num_parallel = 1
+    for key in ["config__algorithm__variantcaller", "description"]:
+        item_counts = []
+        n = 0
+        for val in (sinfo.get(key) or []):
+            n += 1
+            if val:
+                if isinstance(val, (list, tuple)):
+                    item_counts.append(len(val))
+                else:
+                    item_counts.append(1)
+        print(key, n, item_counts)
+        if n and item_counts:
+            num_parallel = n * max(item_counts)
+            break
+    if num_parallel < 25:
+        return "3g"
+    if num_parallel < 150:
+        return "6g"
+    elif num_parallel < 500:
+        return "12g"
+    else:
+        return "24g"
 
 def _run_cromwell(args):
     """Run CWL with Cromwell.
@@ -182,7 +233,8 @@ def _run_cromwell(args):
     with open(option_file, "w") as out_handle:
         json.dump(cromwell_opts, out_handle)
 
-    cmd = ["cromwell", "-Xms1g", "-Xmx3g", "run", "--type", "CWL",
+    cmd = ["cromwell", "-Xms1g", "-Xmx%s" % _estimate_runner_memory(json_file),
+           "run", "--type", "CWL",
            "-Dconfig.file=%s" % hpc.create_cromwell_config(args, work_dir, json_file)]
     cmd += hpc.args_to_cromwell_cl(args)
     cmd += ["--metadata-output", metadata_file, "--options", option_file,
