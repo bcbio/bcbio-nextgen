@@ -97,14 +97,15 @@ def rnaseq_variant_calling(samples, run_parallel):
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
     variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    jointcaller = dd.get_jointcaller(to_single_data(samples[0]))
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         out = []
         for d in joint.square_off(samples, run_parallel):
             out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
         samples = out
-    if variantcaller:
+    if variantcaller or jointcaller:
         samples = run_parallel("run_rnaseq_ann_filter", samples)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         out = []
         for data in (to_single_data(xs) for xs in samples):
             if "variants" not in data:
@@ -147,9 +148,9 @@ def run_rnaseq_ann_filter(data):
             data = dd.set_vrn_file(data, eff_file)
         ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
         if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
-    variantcaller = dd.get_variantcaller(data)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+            data = dd.set_vrn_file(data, ann_file)    
+    jointcaller = dd.get_jointcaller(data)
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
         data = dd.set_vrn_file(data, filter_file)
     # remove variants close to splice junctions
