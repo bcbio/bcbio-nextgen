@@ -27,7 +27,7 @@ REMOTES = {
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "system_config":
         "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/bcbio_system.yaml",
-    "anaconda": "https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-%s-x86_64.sh"
+    "anaconda": "https://repo.anaconda.com/miniconda/Miniconda3-4.4.10-%s-x86_64.sh"
 }
 
 
