@@ -189,7 +189,7 @@ def run_vep(in_file, data):
                     config_args += ["--most_severe"]
                 else:
                     config_args += ["--flag_pick_allele_gene",
-                                    "--appris", "--biotype", "--canonical","--mane",
+                                    "--appris", "--biotype", "--canonical",
                                     "--ccds", "--domains", "--numbers", "--protein",
                                     "--symbol", "--tsl", "--uniprot"]
                 if ensembl_name.endswith("_merged"):
