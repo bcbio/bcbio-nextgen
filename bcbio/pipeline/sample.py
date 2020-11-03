@@ -232,7 +232,7 @@ def clean_inputs(data):
         data["config"]["algorithm"]["coverage"] = clean_cov_bed
         data["config"]["algorithm"]["coverage_merged"] = merged_cov_bed
 
-    if 'seq2c' in get_svcallers(data):
+    if "seq2c" in get_svcallers(data):
         seq2c_ready_bed = prep_seq2c_bed(data)
         if not seq2c_ready_bed:
             logger.warning("Can't run Seq2C without a svregions or variant_regions BED file")
@@ -240,6 +240,14 @@ def clean_inputs(data):
             data["config"]["algorithm"]["seq2c_bed_ready"] = seq2c_ready_bed
     elif regions.get_sv_bed(data):
         dd.set_sv_regions(data, clean_file(regions.get_sv_bed(data), data, prefix="svregions-"))
+
+    if "purecn" in get_svcallers(data):
+        from bcbio.structural import purecn
+        purecn_ready_bed = purecn.process_intervals(data)
+        if not purecn_ready_bed:
+            logger.warning("Can't run PureCN without a svregions or variant_regions BED file")
+        else:
+            data["config"]["algorithm"]["purecn_bed_ready"] = purecn_ready_bed
     return data
 
 def postprocess_alignment(data):

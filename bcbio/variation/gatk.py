@@ -271,3 +271,4 @@ def collect_oxog_metrics(data):
         cmd = f"sed 's/INPUT_BASE/INPUT/g' {out_base}.oxog_metrics -i"
         do.run(cmd, f"Fixing {out_base}.oxog_metrics to work with MultiQC.")
     return out_files
+

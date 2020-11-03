@@ -2,8 +2,10 @@
 """
 from distutils.version import LooseVersion
 import os
+import shutil
 
 import numpy as np
+import toolz as tz
 
 from bcbio import bam, broad, utils
 from bcbio.bam import is_paired
@@ -79,86 +81,128 @@ def _prep_inputs(align_bams, ref_file, items):
 def mutect2_caller(align_bams, items, ref_file, assoc_files,
                        region=None, out_file=None):
     """Call variation with GATK's MuTect2.
-
     This requires the full non open-source version of GATK 3.5+.
+    items = 1 sample or T/N pair
     """
     if out_file is None:
         out_file = "%s-variants.vcf.gz" % utils.splitext_plus(align_bams[0])[0]
     if not utils.file_exists(out_file):
-        paired = vcfutils.get_paired_bams(align_bams, items)
+        # call somatic variants keeping germline sites and using germline 1KG resource
+        # use --native-pair-hmm-threads?
         broad_runner = broad.runner_from_config(items[0]["config"])
         gatk_type = broad_runner.gatk_type()
-        f1r2_file = None
-        _prep_inputs(align_bams, ref_file, items)
-        with file_transaction(items[0], out_file) as tx_out_file:
-            params = ["-T", "Mutect2" if gatk_type == "gatk4" else "MuTect2",
-                      "--annotation", "ClippingRankSumTest",
-                      "--annotation", "DepthPerSampleHC"]
-            if gatk_type == "gatk4":
-                params += ["--reference", ref_file]
-            else:
-                params += ["-R", ref_file]
-            for a in annotation.get_gatk_annotations(items[0]["config"], include_baseqranksum=False):
-                params += ["--annotation", a]
-            # Avoid issues with BAM CIGAR reads that GATK doesn't like
-            if gatk_type == "gatk4":
-                params += ["--read-validation-stringency", "LENIENT"]
-            params += _add_tumor_params(paired, items, gatk_type)
-            params += _add_region_params(region, out_file, items, gatk_type)
+        # shared Mutect2 settings for PureCN analysis in the case of:
+        # - PON creation 
+        # - Tumor-only PureCN run
+        # - T/N PureCN run
+        # PURECN requirement alters Mutect2 variants calling!
+        if "purecn" in dd.get_svcaller(items[0]):
+            # mutect call for PON creation or purecn T-only analysis
+            _prep_inputs(align_bams, ref_file, items)
+            with file_transaction(items[0], out_file) as tx_out_file:
+                germline_resource = tz.get_in(["genome_resources", "variation", "af_only_gnomad"], items[0])
+                germline_path = os.path.normpath(os.path.join(os.path.dirname(ref_file), germline_resource))
+                input_bam = dd.get_work_bam(items[0])
+                tx_prefilt_vcf = utils.splitext_plus(tx_out_file)[0] + ".prefilt.vcf"
+                tx_vcf = os.path.splitext(tx_out_file)[0]
+                out_file_ungz = os.path.splitext(out_file)[0]
+                params = ["-T", "Mutect2"]
+                # T/N pair
+                if len(items) == 2:
+                    paired = vcfutils.get_paired_bams(align_bams, items)
+                    # not really running purecn with mutect1/gatk3
+                    params += _add_tumor_params(paired, items, gatk_type)
+                    logger.debug("You are running mutect2 in PureCN analysis in T/N mode, T-only + PON is recommended")
+                else: #T only
+                    params += ["-I", input_bam]
+                    # adding SNV PON from background/variant
+                    snv_pon = tz.get_in(["config", "algorithm", "background", "variant"], items[0])
+                    if snv_pon and dd.get_batch(items[0]) != "pon_build":
+                        params += ["-pon", snv_pon]
 
+                params += ["--max-mnp-distance", "0",
+                           "--interval-padding", "50",
+                           "--germline-resource", germline_path,
+                           "--genotype-germline-sites",
+                           "--reference", ref_file,
+                           "-O", tx_prefilt_vcf]
 
-            if all(is_paired(bam) for bam in align_bams) and (
-                    "mutect2_readmodel" in utils.get_in(items[0], "config",
-                                                        "tools_on")):
-                orientation_filter = True
-            else:
-                orientation_filter = False
-
-            if gatk_type == "gatk4" and orientation_filter:
-                f1r2_file = "{}-f1r2.tar.gz".format(
-                    utils.splitext_plus(out_file)[0])
-                params += ["--f1r2-tar-gz", f1r2_file]
-
-            # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
-            # Not yet clear how this helps or hurts in a general case.
-            #params += _add_assoc_params(assoc_files)
-            resources = config_utils.get_resources("mutect2", items[0]["config"])
-            if "options" in resources:
-                params += [str(x) for x in resources.get("options", [])]
-            assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
-                "Require full version of GATK 3.5+ for mutect2 calling"
-            broad_runner.new_resources("mutect2")
-            gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
-            if gatk_type == "gatk4":
-
-                tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(out_file)
-                tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
-
-                if orientation_filter:
-                    tx_f1r2_file = "{}-read-orientation-model.tar.gz"
-                    tx_f1r2_file = tx_f1r2_file.format(
-                        utils.splitext_plus(f1r2_file)[0])
-                    tx_read_orient_cmd = _mutect2_read_filter(broad_runner,
-                                                              f1r2_file,
-                                                              tx_f1r2_file)
-
-                    filter_cmd = _mutect2_filter(broad_runner, items,
-                                                 tx_raw_prefilt_file,
-                                                 tx_raw_file, ref_file,
-                                                 tx_f1r2_file)
+                params += _add_region_params(region, out_file, items, gatk_type)
+                broad_runner.new_resources("mutect2")
+                gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
+                filter_cmd = _mutect2_filter(broad_runner, items, tx_prefilt_vcf, out_file_ungz, ref_file)
+                cmd = "{gatk_cmd} && {filter_cmd}"
+                do.run(cmd.format(**locals()), "MuTect2")
+                # no AF filter for PureCN variants
+                out_file = vcfutils.bgzip_and_index(out_file_ungz, items[0]["config"])
+        else:
+            # a regular mutect call
+            paired = vcfutils.get_paired_bams(align_bams, items)
+            f1r2_file = None
+            _prep_inputs(align_bams, ref_file, items)
+            with file_transaction(items[0], out_file) as tx_out_file:
+                params = ["-T", "Mutect2" if gatk_type == "gatk4" else "MuTect2",
+                          "--annotation", "ClippingRankSumTest",
+                          "--annotation", "DepthPerSampleHC"]
+                if gatk_type == "gatk4":
+                    params += ["--reference", ref_file]
                 else:
-                    filter_cmd = _mutect2_filter(broad_runner, items,
-                                                 tx_raw_prefilt_file,
-                                                 tx_raw_file, ref_file)
-                if orientation_filter:
-                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {tx_read_orient_cmd} && {filter_cmd}"
+                    params += ["-R", ref_file]
+                for a in annotation.get_gatk_annotations(items[0]["config"], include_baseqranksum=False):
+                    params += ["--annotation", a]
+                # Avoid issues with BAM CIGAR reads that GATK doesn't like
+                if gatk_type == "gatk4":
+                    params += ["--read-validation-stringency", "LENIENT"]
+                params += _add_tumor_params(paired, items, gatk_type)
+                params += _add_region_params(region, out_file, items, gatk_type)
+                if all(is_paired(bam) for bam in align_bams) and (
+                        "mutect2_readmodel" in utils.get_in(items[0], "config", "tools_on")):
+                    orientation_filter = True
                 else:
-                    cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
-            else:
-                tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
-                cmd = "{gatk_cmd} > {tx_raw_file}"
-            do.run(cmd.format(**locals()), "MuTect2")
-            out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
+                    orientation_filter = False
+
+                if gatk_type == "gatk4" and orientation_filter:
+                    f1r2_file = "{}-f1r2.tar.gz".format(utils.splitext_plus(out_file)[0])
+                    params += ["--f1r2-tar-gz", f1r2_file]
+
+                # Avoid adding dbSNP/Cosmic so they do not get fed to variant filtering algorithm
+                # Not yet clear how this helps or hurts in a general case.
+                #params += _add_assoc_params(assoc_files)
+                resources = config_utils.get_resources("mutect2", items[0]["config"])
+                if "options" in resources:
+                    params += [str(x) for x in resources.get("options", [])]
+                assert LooseVersion(broad_runner.gatk_major_version()) >= LooseVersion("3.5"), \
+                    "Require full version of GATK 3.5+ for mutect2 calling"
+                broad_runner.new_resources("mutect2")
+                gatk_cmd = broad_runner.cl_gatk(params, os.path.dirname(tx_out_file))
+                if gatk_type == "gatk4":
+                    tx_raw_prefilt_file = "%s-raw%s" % utils.splitext_plus(out_file)
+                    tx_raw_file = "%s-raw-filt%s" % utils.splitext_plus(tx_out_file)
+
+                    if orientation_filter:
+                        tx_f1r2_file = "{}-read-orientation-model.tar.gz"
+                        tx_f1r2_file = tx_f1r2_file.format(utils.splitext_plus(f1r2_file)[0])
+                        tx_read_orient_cmd = _mutect2_read_filter(broad_runner,
+                                                                  f1r2_file,
+                                                                  tx_f1r2_file)
+
+                        filter_cmd = _mutect2_filter(broad_runner, items,
+                                                     tx_raw_prefilt_file,
+                                                     tx_raw_file, ref_file,
+                                                     tx_f1r2_file)
+                    else:
+                        filter_cmd = _mutect2_filter(broad_runner, items,
+                                                     tx_raw_prefilt_file,
+                                                     tx_raw_file, ref_file)
+                    if orientation_filter:
+                        cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {tx_read_orient_cmd} && {filter_cmd}"
+                    else:
+                        cmd = "{gatk_cmd} -O {tx_raw_prefilt_file} && {filter_cmd}"
+                else:
+                    tx_raw_file = "%s-raw%s" % utils.splitext_plus(tx_out_file)
+                    cmd = "{gatk_cmd} > {tx_raw_file}"
+                do.run(cmd.format(**locals()), "MuTect2")
+                out_file = _af_filter(paired.tumor_data, tx_raw_file, out_file)
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 def _mutect2_read_filter(broad_runner, in_file, out_file):
@@ -213,3 +257,4 @@ def _af_filter(data, in_file, out_file):
                 w.write_record(rec)
             w.close()
     return vcfutils.bgzip_and_index(ungz_out_file, data["config"])
+
