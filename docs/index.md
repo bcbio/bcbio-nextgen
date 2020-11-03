@@ -13,6 +13,7 @@ the data processing component of sequencing analysis, providing researchers with
 * [Somatic variants](contents/somatic_variants)
 * [Bulk RNA-seq expression](contents/bulk_rnaseq)
 * [Single cell RNA-seq](contents/single_cell)
+* [PureCN analysis](contents/purecn)
 * [HLA typing](contents/hla_typing)
 * [Germline small variants](contents/germline_variants)
 * [3prime digital gene expression](contents/3prime_dge)
