@@ -54,7 +54,7 @@ def run(items):
 
 def _run_purecn_normaldb(paired, out):
     """Run PureCN with normaldb and native segmentation
-       paired is one t/n pair or only t 
+       paired is one t/n pair or only t
     """
     sample = utils.to_single_data(paired.tumor_data)
     bed_file = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
@@ -74,6 +74,7 @@ def _run_purecn_normaldb(paired, out):
     sample_coverage = tz.get_in(["depth", "bins", "purecn"], sample)
     simple_repeat_bed = dd.get_variation_resources(sample)["simple_repeat"]
     result_file = os.path.join(work_dir, sample_name + ".rds")
+    genome = dd.get_genome_build(sample)
     cmd = [ rscript, purecn_r,
             "--out", work_dir,
             "--tumor", sample_coverage,
@@ -83,7 +84,7 @@ def _run_purecn_normaldb(paired, out):
             "--mappingbiasfile", mappingbiasfile,
             "--intervals", intervals,
             "--snpblacklist", simple_repeat_bed,
-            "--genome", "hg38",
+            "--genome", genome,
             "--force",
             "--postoptimize",
             "--seed", "123",
@@ -331,11 +332,12 @@ def process_intervals(data):
     interval_file_r = utils.R_package_script("r36", "PureCN", "extdata/IntervalFile.R")
     ref_file = dd.get_ref_file(data)
     mappability_resource = dd.get_variation_resources(data)["purecn_mappability"]
+    genome = dd.get_genome_build(data)
     cmd = [rscript, interval_file_r, "--infile", bed_file,
           "--fasta", ref_file,
-          "--outfile", ready_file, 
+          "--outfile", ready_file,
           "--offtarget",
-          "--genome hg38",
+          "--genome", genome,
           "--export", optimized_bed,
           "--mappability", mappability_resource]
     try:
@@ -359,7 +361,7 @@ def get_coverage(data):
     rscript = utils.Rscript_cmd("r36")
     coverage_r = utils.R_package_script("r36", "PureCN", "extdata/Coverage.R")
     intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
-    # PureCN resolves symlinks and the actual output PureCN coverage file name 
+    # PureCN resolves symlinks and the actual output PureCN coverage file name
     # is derived from the end bam not from bam_file
     bam_file = os.path.realpath(dd.get_align_bam(data))
     bam_name = os.path.basename(bam_file)
@@ -380,7 +382,7 @@ def get_coverage(data):
         logger.debug("Saved PureCN coverage files to " + result_file)
     return result_file
 
-def create_normal_db(coverage_files_txt, snv_pon, out_dir):
+def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
     """create normal db
        input: coverage files calculated by purecn for each sample
               snv_pon - mutect2 SNV PON
@@ -394,7 +396,7 @@ def create_normal_db(coverage_files_txt, snv_pon, out_dir):
            "--outdir", out_dir,
            "--coveragefiles", coverage_files_txt,
            "--normal_panel" , snv_pon,
-           "--genome hg38",
+           "--genome", genome_build,
            "--force"]
     try:
         cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),

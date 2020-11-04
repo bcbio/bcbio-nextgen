@@ -136,23 +136,29 @@ def create_cnv_pon(samples):
     """create normal db using SNV PON and coverage information"""
     coverage_files = []
     sample0 = utils.to_single_data(samples[0])
+    genome = dd.get_genome_build(sample0)
     purecn_pon_build = tz.get_in(["config", "algorithm", "purecn_pon_build"], sample0)
     if purecn_pon_build:
+
         for sample in (utils.to_single_data(x) for x in samples):
             sample_coverage = tz.get_in(["depth", "bins", "purecn"], sample)
+
             if os.path.exists(sample_coverage):
                 coverage_files.append(sample_coverage)
+
         work_dir = tz.get_in(["dirs", "work"], sample0)
         out_dir = utils.safe_makedir(os.path.join(work_dir, "gemini"))
         purecn_coverage_files_txt = os.path.join(out_dir, "purecn_coverage_files.txt")
+
         with open(purecn_coverage_files_txt, "w") as out_handle:
-            for fname in coverage_files:
-                out_handle.write(fname + "\n")
+            out_handle.write("\n".join(coverage_files))
+
         snv_pon = tz.get_in(["config", "algorithm", "purecn_snv_pon"], sample0)
-        normal_db = os.path.join(out_dir, "normalDB_hg38.rds")
+        normal_db = os.path.join(out_dir, "normalDB_{}.rds".format(genome))
         # delete normal db in work/gemini if you'd like to rebuild it!
-        if os.path.exists(snv_pon) and len(coverage_files) >=3 and not os.path.exists(normal_db):
-            purecn.create_normal_db(purecn_coverage_files_txt, snv_pon, out_dir)
+        if os.path.exists(snv_pon) and len(coverage_files) >= 3 and not os.path.exists(normal_db):
+            purecn.create_normal_db(purecn_coverage_files_txt, snv_pon,
+                                    out_dir, genome)
     return samples
 
 def batch_for_sv(samples):
