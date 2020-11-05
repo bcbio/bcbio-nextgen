@@ -151,8 +151,9 @@ def create_cnv_pon(samples):
         purecn_coverage_files_txt = os.path.join(out_dir, "purecn_coverage_files.txt")
 
         with open(purecn_coverage_files_txt, "w") as out_handle:
-            out_handle.write("\n".join(coverage_files))
-
+            for fname in coverage_files:
+                out_handle.write(fname + "\n")
+            
         snv_pon = tz.get_in(["config", "algorithm", "purecn_snv_pon"], sample0)
         normal_db = os.path.join(out_dir, "normalDB_{}.rds".format(genome))
         # delete normal db in work/gemini if you'd like to rebuild it!
