@@ -338,3 +338,9 @@ automatically:
     `-- ucsc
         `-- phix.2bit
 ```
+
+## Maintain many bcbio installations
+It is often asked how to reproduce older bcbio analyses when every update changes a lot in tools and in bcbio code.
+One of the solutions is the use of modules in HPC environemnt: https://www.admin-magazine.com/HPC/Articles/Environment-Modules.
+You can have a bcbio/version module for every bcbio snapshot you need. They would consume <50G each, and a single large `genomes`
+folder could be symlinked to all of them. Data in genomes changes in a much slower pace compared to bcbio code and tools.
