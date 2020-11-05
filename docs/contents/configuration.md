@@ -595,11 +595,6 @@ Galaxy parameters:
 * `galaxy_library` Name of the Galaxy Data Library to upload to. You can specify this globally for a project in `upload` or for individual samples in the sample details section.
 * `galaxy_role` Specific Galaxy access roles to assign to the uploaded datasets. This is optional and will default to the access of the parent data library if not supplied. You can specify this globally for a project in `upload` or for individual samples in the sample details section. The [Galaxy Admin](https://galaxyproject.org/data-libraries/#permissions) documentation has more details about roles.
 
-## Persistence
-
-Every pipeline has multiple steps. Bcbio saves intermediate results in the work directory. If a step has been successfully finished (alignment bam file is generated, variants vcf is calculated, purecn normal db is generated), and the pipeline failed one of the subsequent steps, then upon re-running the pipeline, the finished steps would not be re-calculated. If you'd like to re-generate data for a particular step, simply remove the corresponding `work/step` folder,
-for example, remove `work/gemini` if you'd like to re-generate a gemini database or purecn normaldb.
-
 Here is an example configuration for uploading to a Galaxy instance. This assumes you have a shared mounted filesystem that your Galaxy instance can also access:
 ```yaml
 upload:
@@ -657,3 +652,9 @@ from third party software and error traces for failures. Look here to identify t
 * Default location for log files is `work/log` directory. Also 2 logs are saved in `final/project`
 * `log_dir: /path/to/logs` in `/bcbio/galaxy/bcbio-system.yaml` sets logging destination
 for all projects.
+
+## Persistence
+
+Every pipeline has multiple steps. Bcbio saves intermediate results in the work directory. If a step has been successfully finished (alignment bam file is generated, variants vcf is calculated, purecn normal db is generated), and the pipeline failed one of the subsequent steps, then upon re-running the pipeline, the finished steps would not be re-calculated. If you'd like to re-generate data for a particular step, simply remove the corresponding `work/step` folder,
+for example, remove `work/gemini` if you'd like to re-generate a gemini database or purecn normaldb.
+
