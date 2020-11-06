@@ -224,6 +224,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                       ("%s.quantized.bed.gz" % prefix) if quantize else None,
                       ("%s.thresholds.bed.gz" % prefix) if thresholds else None)
     if not utils.file_uptodate(out.dist, bam_file):
+        bam.index(bam_file, dd.get_config(data))
         with file_transaction(data, out.dist) as tx_out_file:
             tx_prefix = os.path.join(os.path.dirname(tx_out_file), os.path.basename(prefix))
             num_cores = dd.get_cores(data)

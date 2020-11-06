@@ -1,4 +1,5 @@
 ## 1.2.5 (in progress)
+- Add `umi_type: dragen`. This enables bcbio to run with first-pass, pre-consensus called UMI BAM files from   DRAGEN.
 - Turn off inferential replicate loading when creating the gene x sample RNA-seq count matrix. This allows loading of thousands of RNA-seq samples.
 - Only make isoform to gene file from express if we have run express.
 - Allow "no consensus peaks found" as a valid endpoint of a ChIP-seq analysis.

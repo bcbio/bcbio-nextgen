@@ -257,7 +257,7 @@ def get_umi_consensus(data):
     We specify this either as a separate fastq file or embedded
     in the read name as `fastq_name`.`
     """
-    consensus_choices = (["fastq_name"])
+    consensus_choices = (["fastq_name", "dragen"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
     # don't run consensus UMI calling for scrna-seq
     if tz.get_in(["analysis"], data, "").lower() == "scrna-seq":
