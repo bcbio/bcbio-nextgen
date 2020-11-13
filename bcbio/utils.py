@@ -19,8 +19,10 @@ import six
 import toolz as tz
 import yaml
 
-from collections import Mapping, OrderedDict
-
+try:
+   from collections.abc import Mapping, OrderedDict
+except ImportError:
+   from collections import Mapping, OrderedDict
 
 try:
     from concurrent import futures
