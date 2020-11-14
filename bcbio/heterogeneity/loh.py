@@ -322,7 +322,7 @@ class CljDecoder(object):
 
             elif t == "char":
                 buf = []
-                while c is not self.terminator and c is not "" and c not in _STOP_CHARS:
+                while c is not self.terminator and c != "" and c not in _STOP_CHARS:
                     c = self.__read_fd(1)
                     buf.append(c)
 
@@ -353,7 +353,7 @@ class CljDecoder(object):
 
             elif t == "keyword":
                 buf = []    ##skip the leading ":"
-                while c is not self.terminator and c is not "" and c not in _STOP_CHARS:
+                while c is not self.terminator and c != "" and c not in _STOP_CHARS:
                     c = self.__read_fd(1)
                     buf.append(c)
 
