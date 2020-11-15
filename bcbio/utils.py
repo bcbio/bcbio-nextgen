@@ -20,9 +20,11 @@ import toolz as tz
 import yaml
 
 try:
-   from collections.abc import Mapping, OrderedDict
+   from collections.abc import Mapping
 except ImportError:
-   from collections import Mapping, OrderedDict
+   from collections import Mapping
+
+from collections import OrderedDict
 
 try:
     from concurrent import futures
