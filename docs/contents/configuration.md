@@ -262,7 +262,7 @@ Sometimes you need a little bit more flexibility than the standard pipeline, and
 #### Parallelization
 
 * `nomap_split_size` Unmapped base pair regions required to split analysis into blocks. Creates islands of mapped reads surrounded by unmapped (or N) regions, allowing each mapped region to run in parallel. (default: 250)
-* `nomap_split_targets` Number of target intervals to attempt to split processing into. This picks unmapped regions evenly spaced across the genome to process concurrently. Limiting targets prevents a large number of small targets. (default: 200 for standard runs, 20 for CWL runs)
+* `nomap_split_targets` Number of target intervals to attempt to split processing into. This picks unmapped regions evenly spaced across the genome to process concurrently. Limiting targets prevents a large number of small targets which can blow up the memory for runs with many samples. (default: 200 for standard runs, 20 for CWL runs)
 
 #### Multiple samples
 
