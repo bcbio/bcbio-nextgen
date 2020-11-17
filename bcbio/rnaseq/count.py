@@ -17,6 +17,8 @@ def combine_count_files(files, out_file=None, ext=".counts"):
     """
     files = list(files)
     files = [x for x in files if file_exists(x)]
+    if not files:
+        return None
     col_names = [os.path.basename(x.replace(ext, "")) for x in files]
     if not out_file:
         out_dir = os.path.join(os.path.dirname(files[0]))
