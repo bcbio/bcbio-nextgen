@@ -223,6 +223,8 @@ def collect_artifact_metrics(data):
     gatk_type = broad_runner.gatk_type()
     ref_file = dd.get_ref_file(data)
     bam_file = dd.get_work_bam(data)
+    if not bam_file:
+        return None
     out_dir = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data))
     utils.safe_makedir(out_dir)
     out_base = os.path.join(out_dir, dd.get_sample_name(data))
@@ -233,9 +235,10 @@ def collect_artifact_metrics(data):
         utils.safe_makedir(tx_out_dir)
         out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
         params = ["-T", "CollectSequencingArtifactMetrics",
-                "-R", ref_file,
-                "-I", bam_file,
-                "-O", out_base]
+                  "--VALIDATION_STRINGENCY", "SILENT",
+                  "-R", ref_file,
+                  "-I", bam_file,
+                  "-O", out_base]
         broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
     return out_files
 
