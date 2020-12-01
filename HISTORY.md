@@ -6,6 +6,7 @@
 - Allow `BCBIO_TEST_DIR` environment variable to control where tests end up.
 - Collect OxoG and other sequencing artifacts due to damage.
 - Round tximport estimated counts.
+- Turn off consensus peak calling for broad peaks. Thanks to @lbeltrame and @LMannarino for diagnosing the broad-peaks-run-forever bug.
 
 ## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
