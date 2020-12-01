@@ -36,7 +36,9 @@ _ANTIBODIES = [
     Antibody("h3k4me2", "narrow", True),
     Antibody("h3k4me3", "narrow", True),
     Antibody("h3k9ac", "narrow", True),
-    Antibody("h3k9me3", "broad", False)
+    Antibody("h3k9me3", "broad", False),
+    Antibody("broad", "broad", False),
+    Antibody("narrow", "narrow", True)
 ]
 
 ANTIBODIES = {x.name: x for x in _ANTIBODIES}
