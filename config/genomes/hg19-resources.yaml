@@ -1,4 +1,4 @@
-version: 55
+version: 56
 
 aliases:
   human: true
@@ -31,6 +31,9 @@ variation:
   genesplicer: ../variation/genesplicer
   editing: ../editing/RADAR.bed.gz
   genotype2phenotype: ../variation/G2P.csv
+  af_only_gnomad: ../variation/af_only_gnomad.vcf.gz
+  purecn_mappability: ../coverage/mappability/wgEncodeCrgMapabilityAlign100mer.bigWig
+  simple_repeat: ../coverage/problem_regions/repeats/simple_repeat.bed
 
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
