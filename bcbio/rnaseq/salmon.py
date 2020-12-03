@@ -168,7 +168,6 @@ def salmon_index(gtf_file, data, out_dir):
     tmpdir = dd.get_tmp_dir(data)
     out_file = os.path.join(out_dir, "versionInfo.json")
     if file_exists(out_file):
-        logger.info("Transcriptome index for %s detected, skipping building." % gtf_fa)
         return out_dir
     files = dd.get_input_sequence_files(data)
     kmersize = sailfish.pick_kmersize(files[0])
