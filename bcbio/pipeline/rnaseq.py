@@ -480,6 +480,11 @@ def combine_files(samples):
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
     tximport = load_tximport(data)
+    # don't fail runs while we get dependencies straightened out
+    try:
+        summarized_experiment = load_summarizedexperiment(data)
+    except Exception:
+        pass
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -549,3 +554,18 @@ def load_tximport(data):
         do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
     return {"gene_tpm": tpm_file,
             "gene_counts": counts_file}
+
+def load_summarizedexperiment(data):
+    rcmd = Rscript_cmd()
+    se_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
+                             "R", "bcbio2se.R")
+    work_dir = dd.get_work_dir(data)
+    out_dir = os.path.join(work_dir, "salmon")
+    out_file = os.path.join(out_dir, "bcbio-se.rds")
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
+        message = f"Loading SummarizedExperiment."
+        do.run(cmd, message)
+    return out_file
