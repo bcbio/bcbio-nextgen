@@ -136,7 +136,7 @@ def process_alignment(data, alt_input=None):
 #            bam.index(fastq1, dd.get_config(data))
 #            data["work_bam"] = fastq1
         else:
-            logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
+#            logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
             data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         if dd.get_correct_umis(data):
             data["work_bam"] = postalign.correct_umis(data)
