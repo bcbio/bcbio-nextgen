@@ -484,7 +484,7 @@ def combine_files(samples):
     try:
         summarized_experiment = load_summarizedexperiment(data)
     except Exception:
-        pass
+        summarized_experiment = None
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -505,6 +505,7 @@ def combine_files(samples):
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
         data = dd.set_tximport(data, tximport)
+        data = dd.set_summarized_experiment(data, summarized_experiment)
         updated_samples.append([data])
     return updated_samples
 

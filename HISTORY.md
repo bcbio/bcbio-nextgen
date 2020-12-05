@@ -1,4 +1,5 @@
 ## 1.2.5 (in progress)
+- Add SummarizedExperiment object from RNA-seq runs, a simplified version of the bcbioRNASeq object.
 - Add `umi_type: dragen`. This enables bcbio to run with first-pass, pre-consensus called UMI BAM files from   DRAGEN.
 - Turn off inferential replicate loading when creating the gene x sample RNA-seq count matrix. This allows loading of thousands of RNA-seq samples.
 - Only make isoform to gene file from express if we have run express.
@@ -7,6 +8,7 @@
 - Collect OxoG and other sequencing artifacts due to damage.
 - Round tximport estimated counts.
 - Turn off consensus peak calling for broad peaks. Thanks to @lbeltrame and @LMannarino for diagnosing the broad-peaks-run-forever bug.
+
 
 ## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.
