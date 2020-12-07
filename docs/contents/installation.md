@@ -153,8 +153,6 @@ We use the same automated installation process for performing upgrades of tools,
 bcbio_nextgen.py upgrade -u stable --tools --data
 ```
 
-**2020-05-21: in bcbio 1.2.3 upgrade -u stable is broken, use -u development, or -u skip, this will be fixed in bcbio 1.2.4**
-
 Tune the upgrade with these options:
 * `-u` Type of upgrade to do for bcbio-nextgen code. `stable` gets the most recent released version and `development` retrieves the latest code from GitHub.
 * `--datatarget` Customized installed data or download additional files not included by default:
