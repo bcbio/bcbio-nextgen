@@ -401,6 +401,7 @@ bcbio provides some hints to change default behavior be either turning specific 
   * `vcf2db_expand` decompresses and expands the genotype columns in the vcfanno prepared GEMINI databases, enabling standard SQL queries on genotypes and depths.
   * `vqsr` makes GATK try quality score recalibration for variant filtration, even for smaller sample sizes.
   * `vep_splicesite_annotations` enables the use of the MaxEntScan and SpliceRegion plugin for VEP. Both optional plugins add extra splice site annotations.
+  * `vardict_sv` remove `--nosv` option from the vardict call (default is `--nosv` ON).
 
 ## Resources
 
