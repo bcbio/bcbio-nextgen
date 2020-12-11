@@ -73,7 +73,7 @@ See the [full documentation](https://bcbio-nextgen.readthedocs.io/en/latest/) an
 * [Stephen Turner](https://github.com/stephenturner), University of Virginia
 * [Roman Valls](https://github.com/brainstorm), Science for Life Laboratory, Stockholm
 * [Kevin Ying](https://github.com/kevyin), Garvan Institute of Medical Research, Sydney, Australia
-
+* [Steffen Möller](https://github.com/smoe), University of Rostock, Germany
 ## License
 
 The code is freely available under the [MIT license](https://opensource.org/licenses/mit-license.html).
