@@ -1,4 +1,5 @@
 ## 1.2.5 (in progress)
+- Fix getiterator -> iter deprecation in ElementTree. Thanks to @smoe.
 - Add SummarizedExperiment object from RNA-seq runs, a simplified version of the bcbioRNASeq object.
 - Add `umi_type: dragen`. This enables bcbio to run with first-pass, pre-consensus called UMI BAM files from   DRAGEN.
 - Turn off inferential replicate loading when creating the gene x sample RNA-seq count matrix. This allows loading of thousands of RNA-seq samples.
