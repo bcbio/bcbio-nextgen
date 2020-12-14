@@ -847,11 +847,14 @@ def _get_files_project(sample, upload_config):
                 pon_project.add(svcall.get("pon"))
 
     purecn_pon = tz.get_in(["config", "algorithm", "purecn_pon_build"], sample)
+    genome_build = dd.get_genome_build(sample)
     if purecn_pon:
         work_dir = tz.get_in(["dirs", "work"], sample)
         gemini_dir = os.path.join(work_dir, "gemini")
-        mapping_bias_file = os.path.join(gemini_dir, "mapping_bias_hg38.rds")
-        normal_db = os.path.join(gemini_dir, "normalDB_hg38.rds")
+        mapping_bias_filename = f"mapping_bias_{genome_build}.rds"
+        mapping_bias_file = os.path.join(gemini_dir, mapping_bias_filename)
+        normal_db_file = f"normalDB_{genome_build}.rds"
+        normal_db = os.path.join(gemini_dir, normal_db_file)
         if mapping_bias_file and normal_db:
             out.append({"path": mapping_bias_file})
             out.append({"path": normal_db})
