@@ -6,12 +6,12 @@ from bcbio import upload
 from bcbio.rnaseq.ericscript import EricScriptConfig
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def exists(mocker):
     yield mocker.patch.object(os.path, 'exists')
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def es_out_dir(mocker):
     yield mocker.patch.object(EricScriptConfig, 'sample_out_dir')
 

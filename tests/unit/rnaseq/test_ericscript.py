@@ -4,7 +4,7 @@ from bcbio.rnaseq import ericscript
 from tests.unit.conftest import DummyFileTransaction
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def utils(mocker):
     yield mocker.patch('bcbio.rnaseq.ericscript.utils')
 
@@ -42,20 +42,20 @@ class TestGetInputData(object):
 
 class TestRun(object):
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def mock_ft(self, mocker):
         yield mocker.patch(
             'bcbio.rnaseq.ericscript.file_transaction',
             side_effect=DummyFileTransaction
         )
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def do_run(self, mocker):
         yield mocker.patch(
             'bcbio.rnaseq.ericscript.do.run',
             autospec=True
         )
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def prepare_data(self, mocker):
         yield mocker.patch('bcbio.rnaseq.ericscript.prepare_input_data')

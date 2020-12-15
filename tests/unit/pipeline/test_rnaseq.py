@@ -3,7 +3,7 @@ import pytest
 from bcbio.pipeline import rnaseq
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def ericscript_run(mocker):
     yield mocker.patch('bcbio.pipeline.rnaseq.ericscript.run', autospec=True)
 
