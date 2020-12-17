@@ -111,12 +111,14 @@ def split_ATAC(data, bam_file=None):
         split_files["full"] = bam_file
         data = tz.assoc_in(data, ['atac', 'align'], split_files)
         return data
+    # reads on the negative strand have a negative template_length value
     for arange in ATACRanges.values():
         out_file = f"{out_stem}-{arange.label}.bam"
         if not utils.file_exists(out_file):
             with file_transaction(out_file) as tx_out_file:
                 cmd = base_cmd +\
-                    f'-F "template_length > {arange.min} and template_length < {arange.max}" ' +\
+                    f'-F "(template_length > {arange.min} and template_length < {arange.max}) or ' +\
+                    f'(template_length) < {-arange.min} and template_length > {-arange.max})" ' +\
                     f'{bam_file} > {tx_out_file}'
                 message = f'Splitting {arange.label} regions from {bam_file}.'
                 do.run(cmd, message)
