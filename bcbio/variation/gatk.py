@@ -225,6 +225,8 @@ def collect_artifact_metrics(data):
     bam_file = dd.get_work_bam(data)
     if not bam_file:
         return None
+    if "collectsequencingartifacts" in dd.get_tools_off(data):
+        return None
     out_dir = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data))
     utils.safe_makedir(out_dir)
     out_base = os.path.join(out_dir, dd.get_sample_name(data))

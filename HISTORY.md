@@ -1,4 +1,5 @@
 ## 1.2.5 (in progress)
+- Allow `CollectSequencingArtifacts` to be turned off via `tools_off: [collectsequencingartifacts]`.
 - Fix getiterator -> iter deprecation in ElementTree. Thanks to @smoe.
 - Add SummarizedExperiment object from RNA-seq runs, a simplified version of the bcbioRNASeq object.
 - Add `umi_type: dragen`. This enables bcbio to run with first-pass, pre-consensus called UMI BAM files from   DRAGEN.
