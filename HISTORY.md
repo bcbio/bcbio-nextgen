@@ -1,4 +1,6 @@
 ## 1.2.5 (in progress)
+- Allow pre-aligned BAMs and gVCFs for RNA-seq joint variant calling. Thanks to @WimSpree for the
+  feature.
 - Allow `CollectSequencingArtifacts` to be turned off via `tools_off: [collectsequencingartifacts]`.
 - Fix getiterator -> iter deprecation in ElementTree. Thanks to @smoe.
 - Add SummarizedExperiment object from RNA-seq runs, a simplified version of the bcbioRNASeq object.
