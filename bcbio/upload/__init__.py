@@ -171,9 +171,9 @@ def _add_meta(xs, sample=None, config=None):
         out.append(x)
     return out
 
+
 def _get_files_variantcall(sample):
-    """Return output files for the variant calling pipeline.
-    """
+    """Return output files for the variant calling pipeline"""
     out = []
     algorithm = sample["config"]["algorithm"]
     out = _maybe_add_summary(algorithm, sample, out)
@@ -181,7 +181,7 @@ def _get_files_variantcall(sample):
     out = _maybe_add_callable(sample, out)
     out = _maybe_add_disambiguate(algorithm, sample, out)
     out = _maybe_add_variant_file(algorithm, sample, out)
-    out = _maybe_add_sv(algorithm, sample, out)
+    out = _maybe_add_sv(sample, out)
     out = _maybe_add_hla(algorithm, sample, out)
     out = _maybe_add_heterogeneity(algorithm, sample, out)
 
@@ -282,13 +282,18 @@ def _get_batch_name(sample):
         batch = dd.get_sample_name(sample)
     return batch
 
-def _maybe_add_sv(algorithm, sample, out):
+
+def _maybe_add_sv(sample, out):
     if sample.get("align_bam") is not None and sample.get("sv"):
         batch = _get_batch_name(sample)
         for svcall in sample["sv"]:
             if svcall.get("variantcaller") == "seq2c":
                 out.extend(_get_variant_file(svcall, ("calls",), sample=batch))
                 out.extend(_get_variant_file(svcall, ("gender_predicted",), sample=batch))
+            elif svcall.get('variantcaller') == 'scramble':
+                out.extend(_get_variant_file(svcall, ('clusters_file',), suffix='-clusters',
+                                             sample=batch))
+                out.extend(_get_variant_file(svcall, ('mei_file',), suffix='-mei', sample=batch))
             for key in ["vrn_file", "cnr", "cns", "seg", "gainloss",
                         "segmetrics", "vrn_bed", "vrn_bedpe"]:
                 out.extend(_get_variant_file(svcall, (key,), sample=batch))
@@ -352,6 +357,7 @@ def _maybe_add_sv(algorithm, sample, out):
                                     "type": vext,
                                     "ext": "sv-validate%s" % ext})
     return out
+
 
 def _sample_variant_file_in_population(x):
     """Check if a sample file is the same as the population file.
@@ -843,7 +849,7 @@ def _get_files_project(sample, upload_config):
                 sv_project.add(svcall["calls_all"])
         if svcall.get("variantcaller") == "gatkcnv":
             if svcall.get("pon") and svcall["pon"] not in pon_project:
-                out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"}) 
+                out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"})
                 pon_project.add(svcall.get("pon"))
 
     purecn_pon = tz.get_in(["config", "algorithm", "purecn_pon_build"], sample)
