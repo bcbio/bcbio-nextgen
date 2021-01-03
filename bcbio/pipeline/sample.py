@@ -33,6 +33,7 @@ from bcbio.structural.seq2c import prep_seq2c_bed
 from bcbio.variation.bedutils import clean_file, merge_overlaps
 from bcbio.structural import get_svcallers, regions
 from bcbio.qc import samtools
+from bcbio.dragen import dragen
 
 def prepare_sample(data):
     """Prepare a sample to be run, potentially converting from BAM to
@@ -128,13 +129,20 @@ def process_alignment(data, alt_input=None):
     config = data["config"]
     aligner = config["algorithm"].get("aligner", None)
     if fastq1 and objectstore.file_exists_or_remote(fastq1) and aligner:
-        logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
-        data = align_to_sort_bam(fastq1, fastq2, aligner, data)
+        if dd.get_umi_type(data) == "dragen":
+            assert bam.is_bam(fastq1), f"umi_type: dragen needs a BAM file as input."
+            data = dragen.fix_umi_dragen_bam(data, bam=fastq1)
+#            fastq1 = bam.sort(fastq1, dd.get_config(data))
+#            bam.index(fastq1, dd.get_config(data))
+#            data["work_bam"] = fastq1
+        else:
+#            logger.info("Aligning lane %s with %s aligner" % (data["rgnames"]["lane"], aligner))
+            data = align_to_sort_bam(fastq1, fastq2, aligner, data)
         if dd.get_correct_umis(data):
             data["work_bam"] = postalign.correct_umis(data)
         if dd.get_umi_consensus(data):
             data["umi_bam"] = dd.get_work_bam(data)
-            if fastq2:
+            if fastq2 or dd.get_umi_type(data) == "dragen":
                 f1, f2, avg_cov = postalign.umi_consensus(data)
                 data["config"]["algorithm"]["rawumi_avg_cov"] = avg_cov
                 del data["config"]["algorithm"]["umi_type"]
@@ -232,7 +240,7 @@ def clean_inputs(data):
         data["config"]["algorithm"]["coverage"] = clean_cov_bed
         data["config"]["algorithm"]["coverage_merged"] = merged_cov_bed
 
-    if 'seq2c' in get_svcallers(data):
+    if "seq2c" in get_svcallers(data):
         seq2c_ready_bed = prep_seq2c_bed(data)
         if not seq2c_ready_bed:
             logger.warning("Can't run Seq2C without a svregions or variant_regions BED file")
@@ -240,6 +248,14 @@ def clean_inputs(data):
             data["config"]["algorithm"]["seq2c_bed_ready"] = seq2c_ready_bed
     elif regions.get_sv_bed(data):
         dd.set_sv_regions(data, clean_file(regions.get_sv_bed(data), data, prefix="svregions-"))
+
+    if "purecn" in get_svcallers(data):
+        from bcbio.structural import purecn
+        purecn_ready_bed = purecn.process_intervals(data)
+        if not purecn_ready_bed:
+            logger.warning("Can't run PureCN without a svregions or variant_regions BED file")
+        else:
+            data["config"]["algorithm"]["purecn_bed_ready"] = purecn_ready_bed
     return data
 
 def postprocess_alignment(data):

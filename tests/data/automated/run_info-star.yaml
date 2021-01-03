@@ -12,7 +12,6 @@ details:
       exclude_regions: [altcontigs]
       adapters: [truseq, polya]
       expression_caller: [stringtie, dexseq, kallisto, salmon]
-      transcriptome_gtf: /n/data1/cores/bcbio/rory_kirchner/dev/bcbio-nextgen/tests/ref-transcripts.gtf
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
       #tools_on: [bcbiornaseq]
@@ -38,7 +37,6 @@ details:
       expression_caller: [stringtie, dexseq, kallisto, salmon, arriba]
       #transcript_assembler: [stringtie]
       spikein_fasta: ../data/spikeins/spikeins.fa
-      transcriptome_gtf: /n/data1/cores/bcbio/rory_kirchner/dev/bcbio-nextgen/tests/ref-transcripts.gtf
       #tools_on: [bcbiornaseq]
       #bcbiornaseq:
       #    organism: homo sapiens

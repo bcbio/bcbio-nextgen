@@ -73,6 +73,8 @@ See the [full documentation](https://bcbio-nextgen.readthedocs.io/en/latest/) an
 * [Stephen Turner](https://github.com/stephenturner), University of Virginia
 * [Roman Valls](https://github.com/brainstorm), Science for Life Laboratory, Stockholm
 * [Kevin Ying](https://github.com/kevyin), Garvan Institute of Medical Research, Sydney, Australia
+* [Steffen Möller](https://github.com/smoe), University of Rostock, Germany
+* [WimSpee](https://github.com/wimspee)
 
 ## License
 

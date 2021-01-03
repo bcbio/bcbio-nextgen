@@ -217,7 +217,11 @@ def umi_consensus(data):
     """Convert UMI grouped reads into fastq pair for re-alignment.
     """
     align_bam = dd.get_work_bam(data)
-    umi_method, umi_tag = _check_umi_type(align_bam)
+    if dd.get_umi_type(data) == "dragen":
+        umi_method = "adjacency"
+        umi_tag = "RX"
+    else:
+        umi_method, umi_tag = _check_umi_type(align_bam)
     base_name = utils.splitext_plus(align_bam)[0]
     f1_out = f"{base_name}-cumi-1.fq.gz"
     f2_out = f"{base_name}-cumi-2.fq.gz"

@@ -195,7 +195,8 @@ LOOKUPS = {
                                     "default": 1},
     "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
-    "tximport": {"keys": ["tximport"], "default": None}, 
+    "tximport": {"keys": ["tximport"], "default": None},
+    "summarized_experiment": {"keys": ["summarized_experiment"], "default": None},
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},
@@ -257,7 +258,7 @@ def get_umi_consensus(data):
     We specify this either as a separate fastq file or embedded
     in the read name as `fastq_name`.`
     """
-    consensus_choices = (["fastq_name"])
+    consensus_choices = (["fastq_name", "dragen"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
     # don't run consensus UMI calling for scrna-seq
     if tz.get_in(["analysis"], data, "").lower() == "scrna-seq":

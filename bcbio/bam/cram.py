@@ -27,7 +27,7 @@ def compress(in_bam, data):
         with file_transaction(data, out_file) as tx_out_file:
             compress_type = dd.get_archive(data)
             scramble = config_utils.get_program("scramble", data["config"])
-            cmd = [scramble, "-I", "bam", "-O", "cram", "-9", "-X", "archive", "-r", ref_file, "-V", "3.0", "-t", cores,
+            cmd = [scramble, "-I", "bam", "-O", "cram", "-9", "-r", ref_file, "-V", "3.0", "-t", cores,
                    in_bam, tx_out_file]
             compressed = False
             if "cram" in compress_type:

@@ -18,16 +18,22 @@ from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import loh
 from bcbio.provenance import do
 from bcbio.variation import germline, vcfutils
-from bcbio.structural import cnvkit, gatkcnv
+from bcbio.structural import cnvkit, gatkcnv, regions
 
 def run(items):
     paired = vcfutils.get_paired(items)
+    # paired is PairedInfo of one T/N pair (or just T) - named tuple, paired.tumor_config
     if not paired:
         logger.info("Skipping PureCN; no somatic tumor calls in batch: %s" %
                     " ".join([dd.get_sample_name(d) for d in items]))
         return items
     work_dir = _sv_workdir(paired.tumor_data)
-    purecn_out = _run_purecn(paired, work_dir)
+    normaldb = tz.get_in(["algorithm", "background", "cnv_reference", "purecn_normaldb"], paired.tumor_config)
+    # the right way of running purecn is with normaldb
+    if normaldb:
+        purecn_out = _run_purecn_normaldb(paired, work_dir)
+    else:
+        purecn_out = _run_purecn(paired, work_dir)
     # XXX Currently finding edge case failures with Dx calling, needs additional testing
     # purecn_out = _run_purecn_dx(purecn_out, paired)
     out = []
@@ -44,6 +50,64 @@ def run(items):
             paired.tumor_data["sv"] = []
         paired.tumor_data["sv"].append(purecn_out)
     out.append(paired.tumor_data)
+    return out
+
+def _run_purecn_normaldb(paired, out):
+    """Run PureCN with normaldb and native segmentation
+       paired is one t/n pair or only t
+    """
+    sample = utils.to_single_data(paired.tumor_data)
+    bed_file = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
+    sample_name = dd.get_sample_name(sample)
+    work_dir = _sv_workdir(sample)
+    rscript = utils.Rscript_cmd("r36")
+    purecn_r = utils.R_package_script("r36", "PureCN", "extdata/PureCN.R")
+    intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
+    bam_file = dd.get_align_bam(sample)
+    # termline and somatic - just annotated and filters assigned
+    variants_vcf =  tz.get_in(["variants"], sample)[0].get("germline")
+    # in a T/N case, there is no germline file - vrn file with all variants
+    if not variants_vcf:
+        variants_vcf = tz.get_in(["variants"], sample)[0].get("vrn_file")
+    normaldb = tz.get_in(["config", "algorithm", "background", "cnv_reference", "purecn_normaldb"], sample)
+    mappingbiasfile = tz.get_in(["config", "algorithm", "background", "cnv_reference", "purecn_mapping_bias"], sample)
+    sample_coverage = tz.get_in(["depth", "bins", "purecn"], sample)
+    simple_repeat_bed = dd.get_variation_resources(sample)["simple_repeat"]
+    result_file = os.path.join(work_dir, sample_name + ".rds")
+    genome = dd.get_genome_build(sample)
+    cmd = [ rscript, purecn_r,
+            "--out", work_dir,
+            "--tumor", sample_coverage,
+            "--sampleid", sample_name,
+            "--vcf", variants_vcf,
+            "--normaldb", normaldb,
+            "--mappingbiasfile", mappingbiasfile,
+            "--intervals", intervals,
+            "--snpblacklist", simple_repeat_bed,
+            "--genome", genome,
+            "--force",
+            "--postoptimize",
+            "--seed", "123",
+            "--bootstrapn", "500",
+            "--cores", dd.get_num_cores(sample)]
+    # it is not recommended to use matched normal sample in PureCN analysis,
+    # because then it skips PON coverage normalization and denoising steps!
+    # but still, if it is supplied, we useit
+    if paired.normal_data:
+        normal_sample = utils.to_single_data(paired.normal_data)
+        if normal_sample:
+            normal_coverage = tz.get_in(["depth", "bins", "purecn"], normal_sample)
+            cmd.extend(["--normal", normal_coverage])
+    if not os.path.exists(result_file):
+        try:
+            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
+                                                              utils.get_R_exports(env = "r36"),
+                                                              " ".join([str(x) for x in cmd]))
+            do.run(cmd_line, "PureCN copy number calling")
+            logger.debug("Saved PureCN output to " + work_dir)
+        except subprocess.CalledProcessError as msg:
+            logger.info("PureCN failed")
+    out_base, out, all_files  = _get_purecn_files(paired, work_dir, require_exist = True)
     return out
 
 def _run_purecn_dx(out, paired):
@@ -206,6 +270,16 @@ def _get_purecn_files(paired, work_dir, require_exist=False):
         if not require_exist or os.path.exists(cur_file):
             out[key] = cur_file
             all_files.append(os.path.basename(cur_file))
+    sample_name = dd.get_sample_name(paired.tumor_data)
+    more_files = [sample_name + item for item in ["_amplification_pvalues.csv", "_chromosomes.pdf",
+                                   ".csv", "_dnacopy.seg", "_genes.csv", "_local_optima.pdf",
+                                   ".log", "_loh.csv", ".pdf", ".rds", "_segmentation.pdf",
+                                   "_variants.csv"]]
+    for purecn_file in more_files:
+        purecn_file_path = os.path.join(work_dir, purecn_file)
+        if not require_exist or os.path.exists(purecn_file_path):
+            out[purecn_file] = purecn_file_path
+            all_files.append(purecn_file_path)
     return out_base, out, all_files
 
 def _sv_workdir(data):
@@ -240,3 +314,96 @@ def _loh_to_vcf(cur):
                 "CN=%s" % cn, "MajorCN=%s" % (cn - minor_cn), "MinorCN=%s" % minor_cn]
         return [cur["chr"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
                 ";".join(info), "GT", "0/1"]
+
+def process_intervals(data):
+    """Prepare intervals file"""
+    bed_file = regions.get_sv_bed(data)
+    if not bed_file:
+         bed_file = bedutils.clean_file(dd.get_variant_regions(data), data)
+    if not bed_file:
+        return None
+
+    basename = os.path.splitext(bed_file)[0]
+    ready_file = basename + ".txt"
+    if os.path.exists(ready_file):
+        return ready_file
+    optimized_bed = basename + ".optimized.bed"
+    rscript = utils.Rscript_cmd("r36")
+    interval_file_r = utils.R_package_script("r36", "PureCN", "extdata/IntervalFile.R")
+    ref_file = dd.get_ref_file(data)
+    mappability_resource = dd.get_variation_resources(data)["purecn_mappability"]
+    genome = dd.get_genome_build(data)
+    cmd = [rscript, interval_file_r, "--infile", bed_file,
+          "--fasta", ref_file,
+          "--outfile", ready_file,
+          "--offtarget",
+          "--genome", genome,
+          "--export", optimized_bed,
+          "--mappability", mappability_resource]
+    try:
+        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
+                                                     utils.get_R_exports(env = "r36"),
+                                                     " ".join([str(x) for x in cmd]))
+        do.run(cmd_line, "PureCN intervals")
+    except subprocess.CalledProcessError as msg:
+        logger.info("PureCN failed to prepare intervals")
+    logger.debug("Saved PureCN interval file into " + ready_file)
+    return ready_file
+
+def get_coverage(data):
+    """Calculate coverage for a sample.bam, account for GC content
+       data is single sample
+    """
+    data = utils.to_single_data(data)
+    bed_file = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
+    sample_name = dd.get_sample_name(data)
+    work_dir = _sv_workdir(data)
+    rscript = utils.Rscript_cmd("r36")
+    coverage_r = utils.R_package_script("r36", "PureCN", "extdata/Coverage.R")
+    intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
+    # PureCN resolves symlinks and the actual output PureCN coverage file name
+    # is derived from the end bam not from bam_file
+    bam_file = os.path.realpath(dd.get_align_bam(data))
+    bam_name = os.path.basename(bam_file)
+    (bname, ext) = os.path.splitext(bam_name)
+    result_file = os.path.join(work_dir, bname + "_coverage_loess.txt.gz")
+    if not os.path.exists(result_file):
+        cmd = [rscript, coverage_r,
+               "--outdir", work_dir,
+               "--bam", bam_file,
+               "--intervals", intervals]
+        try:
+            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
+                                                              utils.get_R_exports(env = "r36"),
+                                                              " ".join([str(x) for x in cmd]))
+            do.run(cmd_line, "PureCN coverage")
+        except subprocess.CalledProcessError as msg:
+            logger.info("PureCN failed to calculate coverage")
+        logger.debug("Saved PureCN coverage files to " + result_file)
+    return result_file
+
+def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
+    """create normal db
+       input: coverage files calculated by purecn for each sample
+              snv_pon - mutect2 SNV PON
+       output:
+              mapping_bias_hg38.rds
+              normalDB_hg38.rds
+    """
+    rscript = utils.Rscript_cmd("r36")
+    normaldb_r = utils.R_package_script("r36", "PureCN", "extdata/NormalDB.R")
+    cmd = [rscript, normaldb_r,
+           "--outdir", out_dir,
+           "--coveragefiles", coverage_files_txt,
+           "--normal_panel" , snv_pon,
+           "--genome", genome_build,
+           "--force"]
+    try:
+        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
+                                                          utils.get_R_exports(env = "r36"),
+                                                          " ".join([str(x) for x in cmd]))
+        do.run(cmd_line, "PureCN normalDB")
+    except subprocess.CalledProcessError as msg:
+        logger.info("PureCN failed to create a normal db")
+
+    return out_dir

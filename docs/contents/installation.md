@@ -153,8 +153,6 @@ We use the same automated installation process for performing upgrades of tools,
 bcbio_nextgen.py upgrade -u stable --tools --data
 ```
 
-**2020-05-21: in bcbio 1.2.3 upgrade -u stable is broken, use -u development, or -u skip, this will be fixed in bcbio 1.2.4**
-
 Tune the upgrade with these options:
 * `-u` Type of upgrade to do for bcbio-nextgen code. `stable` gets the most recent released version and `development` retrieves the latest code from GitHub.
 * `--datatarget` Customized installed data or download additional files not included by default:
@@ -338,3 +336,9 @@ automatically:
     `-- ucsc
         `-- phix.2bit
 ```
+
+## Maintain many bcbio installations
+It is often asked how to reproduce older bcbio analyses when every update changes a lot in tools and in bcbio code.
+One of the solutions is the use of modules in HPC environemnt: https://www.admin-magazine.com/HPC/Articles/Environment-Modules.
+You can have a bcbio/version module for every bcbio snapshot you need. They would consume <50G each, and a single large `genomes`
+folder could be symlinked to all of them. Data in genomes changes in a much slower pace compared to bcbio code and tools.

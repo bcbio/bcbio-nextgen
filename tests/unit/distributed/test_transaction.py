@@ -24,7 +24,7 @@ class DummyFlattenPlusSafe(DummyCM):
             yield v
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def mock_flatten(mocker):
     yield mocker.patch(
         'bcbio.distributed.transaction._flatten_plus_safe',
@@ -32,7 +32,7 @@ def mock_flatten(mocker):
     )
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def mock_io(mocker):
     mocker.patch('bcbio.distributed.transaction.open')
     mocker.patch('bcbio.distributed.transaction.os.path.isdir')
@@ -140,7 +140,7 @@ class TestFlattenPlusSafe(object):
     """Tests the logic of handling arguments passed to file_transaction
     in different forms.
     """
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def mock_tx_tmpdir(self, mocker):
         yield mocker.patch(
             'bcbio.distributed.transaction.tx_tmpdir',

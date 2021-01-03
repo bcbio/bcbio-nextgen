@@ -26,8 +26,11 @@ def run_salmon_bam(data):
     out_file = salmon_quant_bam(bam_file, salmon_dir, gtf_file, data)
     data = dd.set_salmon(data, out_file)
     data = dd.set_salmon_dir(data, salmon_dir)
+    # sometimes there is no fraglen file
+    fraglen_file = _get_fraglen_file(salmon_dir)
     data = dd.set_salmon_fraglen_file(data, _get_fraglen_file(salmon_dir))
-    data = dd.update_summary_qc(data, "salmon", base=dd.get_salmon_fraglen_file(data))
+    if fraglen_file:
+        data = dd.update_summary_qc(data, "salmon", base = fraglen_file)
     return [[data]]
 
 def run_salmon_reads(data):
@@ -168,7 +171,6 @@ def salmon_index(gtf_file, data, out_dir):
     tmpdir = dd.get_tmp_dir(data)
     out_file = os.path.join(out_dir, "versionInfo.json")
     if file_exists(out_file):
-        logger.info("Transcriptome index for %s detected, skipping building." % gtf_fa)
         return out_dir
     files = dd.get_input_sequence_files(data)
     kmersize = sailfish.pick_kmersize(files[0])

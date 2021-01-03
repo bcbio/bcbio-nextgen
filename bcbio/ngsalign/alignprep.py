@@ -39,6 +39,9 @@ def create_inputs(data):
         # skip indexing on samples without input files or not doing alignment
         if ("files" not in data or not data["files"] or data["files"][0] is None or not aligner):
             return [[data]]
+        # if this is a DRAGEN BAM, we need to do further alignments with this BAM, so don't convert it
+        if dd.get_umi_type(data) == "dragen":
+            return [[data]]
     data["files_orig"] = data["files"]
     data["files"] = prep_fastq_inputs(data["files"], data)
     # preparation converts illumina into sanger format

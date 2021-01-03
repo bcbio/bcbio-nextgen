@@ -186,8 +186,18 @@ def _get_files_variantcall(sample):
     out = _maybe_add_heterogeneity(algorithm, sample, out)
 
     out = _maybe_add_validate(algorithm, sample, out)
+    out = _maybe_add_purecn_files(sample, out)
     return _add_meta(out, sample)
 
+def _maybe_add_purecn_files(sample, out):
+    """keep all files from purecn dir"""
+    purecn_coverage = tz.get_in(["depth", "bins", "purecn"], sample)
+    if purecn_coverage:
+        purecn_dir, purecn_file = os.path.split(purecn_coverage)
+        out.append({"path": purecn_dir,
+                    "type": "directory",
+                    "ext": "purecn"})
+    return out
 
 def _maybe_add_validate(algorith, sample, out):
     for i, plot in enumerate(tz.get_in(("validate", "grading_plots"), sample, [])):
@@ -842,6 +852,19 @@ def _get_files_project(sample, upload_config):
                 out.append({"path": svcall["pon"], "batch": "gatkcnv", "ext": "pon", "type": "hdf5"})
                 pon_project.add(svcall.get("pon"))
 
+    purecn_pon = tz.get_in(["config", "algorithm", "purecn_pon_build"], sample)
+    genome_build = dd.get_genome_build(sample)
+    if purecn_pon:
+        work_dir = tz.get_in(["dirs", "work"], sample)
+        gemini_dir = os.path.join(work_dir, "gemini")
+        mapping_bias_filename = f"mapping_bias_{genome_build}.rds"
+        mapping_bias_file = os.path.join(gemini_dir, mapping_bias_filename)
+        normal_db_file = f"normalDB_{genome_build}.rds"
+        normal_db = os.path.join(gemini_dir, normal_db_file)
+        if mapping_bias_file and normal_db:
+            out.append({"path": mapping_bias_file})
+            out.append({"path": normal_db})
+
     if "coverage" in sample:
         cov_db = tz.get_in(["coverage", "summary"], sample)
         if cov_db:
@@ -886,6 +909,8 @@ def _get_files_project(sample, upload_config):
                             "type": "rda"})
         else:
             out.append({"path": dd.get_combined_counts(sample), "dir": "featureCounts"})
+    if dd.get_summarized_experiment(sample):
+        out.append({"path": dd.get_summarized_experiment(sample), "dir": "counts"})
     if dd.get_tximport(sample):
         out.append({"path": dd.get_tximport(sample)["gene_tpm"], "dir": "tpm"})
         out.append({"path": dd.get_tximport(sample)["gene_counts"], "dir": "counts"})

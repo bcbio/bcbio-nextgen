@@ -477,6 +477,8 @@ def _check_for_problem_somatic_batches(items, config):
 
     We do not support multiple tumors in a single batch and VarDict(Java) does not
     handle pooled calling, only tumor/normal.
+
+    We allow multiple normals when batch: pon_build is set
     """
     to_check = []
     for data in items:
@@ -490,7 +492,9 @@ def _check_for_problem_somatic_batches(items, config):
             for batch in batches:
                 data_by_batches[batch].append(data)
     for batch, items in data_by_batches.items():
-        if vcfutils.get_paired(items):
+        if batch == "pon_build": 
+            pass
+        elif vcfutils.get_paired(items):
             vcfutils.check_paired_problems(items)
         elif len(items) > 1:
             vcs = vcfutils.get_somatic_variantcallers(items)
@@ -720,10 +724,11 @@ def _get_as_list(item, k):
 
 def _check_hetcaller(item):
     """Ensure upstream SV callers requires to heterogeneity analysis are available.
+    purecn has its own segmentation - no need in cnvkit or gatk-cnv
     """
     svs = _get_as_list(item, "svcaller")
     hets = _get_as_list(item, "hetcaller")
-    if hets or any([x in svs for x in ["titancna", "purecn"]]):
+    if hets or any([x in svs for x in ["titancna"]]):
         if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
             raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk-cnv` "
                              "or `cnvkit` to `svcaller` in sample: %s" % item["description"])

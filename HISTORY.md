@@ -1,8 +1,20 @@
 ## 1.2.5 (in progress)
+- Joint calling for RNA-seq variant calling requires setting `jointcaller` to bring it in line
+  with the configuration options for variant calling.
+- Allow pre-aligned BAMs and gVCFs for RNA-seq joint variant calling. Thanks to @WimSpree for the
+  feature.
+- Allow `CollectSequencingArtifacts` to be turned off via `tools_off: [collectsequencingartifacts]`.
+- Fix getiterator -> iter deprecation in ElementTree. Thanks to @smoe.
+- Add SummarizedExperiment object from RNA-seq runs, a simplified version of the bcbioRNASeq object.
+- Add `umi_type: dragen`. This enables bcbio to run with first-pass, pre-consensus called UMI BAM files from   DRAGEN.
+- Turn off inferential replicate loading when creating the gene x sample RNA-seq count matrix. This allows loading of thousands of RNA-seq samples.
 - Only make isoform to gene file from express if we have run express.
 - Allow "no consensus peaks found" as a valid endpoint of a ChIP-seq analysis.
 - Allow `BCBIO_TEST_DIR` environment variable to control where tests end up.
 - Collect OxoG and other sequencing artifacts due to damage.
+- Round tximport estimated counts.
+- Turn off consensus peak calling for broad peaks. Thanks to @lbeltrame and @LMannarino for diagnosing the broad-peaks-run-forever bug.
+
 
 ## 1.2.4 (21 September 2020)
 - Remove deprecated `--genomicsdb-use-vcf-codec` option as this is now the default.

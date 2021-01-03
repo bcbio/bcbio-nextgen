@@ -97,14 +97,15 @@ def rnaseq_variant_calling(samples, run_parallel):
     """
     samples = run_parallel("run_rnaseq_variant_calling", samples)
     variantcaller = dd.get_variantcaller(to_single_data(samples[0]))
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    jointcaller = dd.get_jointcaller(to_single_data(samples[0]))
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:    
         out = []
         for d in joint.square_off(samples, run_parallel):
             out.extend([[to_single_data(xs)] for xs in multi.split_variants_by_sample(to_single_data(d))])
         samples = out
-    if variantcaller:
+    if variantcaller or jointcaller:
         samples = run_parallel("run_rnaseq_ann_filter", samples)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:
         out = []
         for data in (to_single_data(xs) for xs in samples):
             if "variants" not in data:
@@ -147,9 +148,9 @@ def run_rnaseq_ann_filter(data):
             data = dd.set_vrn_file(data, eff_file)
         ann_file = population.run_vcfanno(dd.get_vrn_file(data), data)
         if ann_file:
-            data = dd.set_vrn_file(data, ann_file)
-    variantcaller = dd.get_variantcaller(data)
-    if variantcaller and ("gatk-haplotype" in variantcaller):
+            data = dd.set_vrn_file(data, ann_file)    
+    jointcaller = dd.get_jointcaller(data)
+    if jointcaller and 'gatk-haplotype-joint' in jointcaller:  
         filter_file = variation.gatk_filter_rnaseq(dd.get_vrn_file(data), data)
         data = dd.set_vrn_file(data, filter_file)
     # remove variants close to splice junctions
@@ -480,6 +481,11 @@ def combine_files(samples):
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
     tximport = load_tximport(data)
+    # don't fail runs while we get dependencies straightened out
+    try:
+        summarized_experiment = load_summarizedexperiment(data)
+    except Exception:
+        summarized_experiment = None
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -500,6 +506,7 @@ def combine_files(samples):
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
         data = dd.set_tximport(data, tximport)
+        data = dd.set_summarized_experiment(data, summarized_experiment)
         updated_samples.append([data])
     return updated_samples
 
@@ -542,10 +549,25 @@ def load_tximport(data):
             f'tx2gene = readr::read_csv("{tx2gene_file}", col_names=c("transcript", "gene")); '
             f'samples = basename(dirname(salmon_files));'
             f'names(salmon_files) = samples;'
-            f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM");'
-            f'readr::write_csv(txi$counts %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
+            f'txi = tximport::tximport(salmon_files, type="salmon", tx2gene=tx2gene, countsFromAbundance="lengthScaledTPM", dropInfReps=TRUE);'
+            f'readr::write_csv(round(txi$counts) %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_counts_file}");'
             f'readr::write_csv(txi$abundance %>% as.data.frame() %>% tibble::rownames_to_column("gene"), "{tx_tpm_file}");'
         )
         do.run([rcmd, "--vanilla", "-e", render_string], f"Loading tximport.")
     return {"gene_tpm": tpm_file,
             "gene_counts": counts_file}
+
+def load_summarizedexperiment(data):
+    rcmd = Rscript_cmd()
+    se_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
+                             "R", "bcbio2se.R")
+    work_dir = dd.get_work_dir(data)
+    out_dir = os.path.join(work_dir, "salmon")
+    out_file = os.path.join(out_dir, "bcbio-se.rds")
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
+        message = f"Loading SummarizedExperiment."
+        do.run(cmd, message)
+    return out_file

@@ -31,6 +31,7 @@ def prep_gemini_db(fnames, call_info, samples, extras):
     name, caller, is_batch = call_info
     build_type = _get_build_type(fnames, samples, caller)
     out_dir = utils.safe_makedir(os.path.join(data["dirs"]["work"], "gemini"))
+    # could be multisample vcf of a SNV PON vcf
     gemini_vcf = get_multisample_vcf(fnames, name, caller, data)
     # If we're building a gemini database, normalize the inputs
     if build_type:
@@ -415,6 +416,9 @@ def prep_db_parallel(samples, parallel_fn):
                 vrn["population"] = out_fetch[(batch_name, vrn["variantcaller"])]
             out_variants.append(vrn)
         data["variants"] = out_variants
+        # save SNV PON file name to use when creating normal_db
+        if batch_name == "pon_build":
+            data["config"]["algorithm"]["purecn_snv_pon"] = output[0][1]["vcf"]
         out.append([data])
     for x in extras:
         out.append([x])

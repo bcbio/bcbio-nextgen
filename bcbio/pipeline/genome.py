@@ -212,7 +212,7 @@ def _get_galaxy_data_table(name, dt_config_file):
     out = {}
     if os.path.exists(dt_config_file):
         tdtc = ElementTree.parse(dt_config_file)
-        for t in tdtc.getiterator("table"):
+        for t in tdtc.iter("table"):
             if t.attrib.get("name", "") in [name, "%s_indexes" % name]:
                 out["column"] = [x.strip() for x in t.find("columns").text.split(",")]
                 out["file"] = t.find("file").attrib.get("path", "")

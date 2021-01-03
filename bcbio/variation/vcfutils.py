@@ -22,6 +22,8 @@ from bcbio.pipeline import config_utils, tools
 from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 
+from bcbio.log import logger
+
 # ## Tumor/normal paired cancer analyses
 
 PairedData = namedtuple("PairedData", ["tumor_bam", "tumor_name",
@@ -62,7 +64,7 @@ def get_paired_bams(align_bams, items):
     Allows cases with only tumor BAMs to handle callers that can work without
     normal BAMs or with normal VCF panels.
     """
-    tumor_bam, tumor_name, normal_bam, normal_name, normal_panel, tumor_config, normal_data = (None,) * 7
+    tumor_bam, tumor_name, tumor_data, normal_bam, normal_name, normal_panel, tumor_config, normal_data = (None,) * 8
     for bamfile, item in zip(align_bams, items):
         phenotype = get_paired_phenotype(item)
         if phenotype == "normal":
@@ -298,7 +300,11 @@ def merge_variant_files(orig_files, out_file, ref_file, config, region=None):
         file_key = config["file_key"]
         in_pipeline = True
         orig_files = orig_files[file_key]
-    out_file = _do_merge(orig_files, out_file, config, region)
+    if tz.get_in(["algorithm", "purecn_pon_build"], config):
+        out_vcf, ext = os.path.splitext(out_file)
+        out_file = _do_combine_variants(orig_files, out_vcf, ref_file, config, region)
+    else:
+        out_file = _do_merge(orig_files, out_file, config, region)
     if in_pipeline:
         return [{file_key: out_file, "region": region, "sam_ref": ref_file, "config": config}]
     else:
@@ -323,6 +329,25 @@ def _do_merge(orig_files, out_file, config, region):
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)
     return out_file
+
+def _do_combine_variants(orig_files, out_vcf, ref_file, config, region, minimumN = 3):
+    """combine variants with gatk3 using minimum N threshold for PureCN PON"""
+    gatk3 = config_utils.get_program("gatk3", config)
+    cmd = [gatk3, "-Xmx12g",
+           "-T", "CombineVariants",
+           "-R", ref_file,
+           "-o", out_vcf,
+           "--minimumN", minimumN]
+    out_gz = out_vcf + ".gz"
+    if not os.path.exists(out_gz):
+        try:
+            cmd_line = " ".join([str(x) for x in cmd]) + " -V " + " -V ".join(orig_files)
+            do.run(cmd_line, "combine variants")
+        except subprocess.CalledProcessError as msg:
+              logger.info("PON merge failed")
+        bgzip_and_index(out_vcf, config)
+        logger.debug("Saved SNV PON to " + out_gz)
+    return out_gz
 
 def _check_samples_nodups(fnames):
     """Ensure a set of input VCFs do not have duplicate samples.
