@@ -118,6 +118,9 @@ You will need to also turn on `bcbiornaseq` by turning it on via `tools_on: [bcb
 
 Project directory:
 ```
+├── counts
+    ├── tximport-counts.csv -- gene-level counts for DE analysis generated from salmon counts by tximport
+    ├── bcbio-se.rds -- SummarizedExperiment object with all counts
 ├── annotated_combined.counts -- gene counts with symbols from featureCounts (don't use this)
 ├── bcbio-nextgen-commands.log -- commands run by bcbio
 ├── bcbio-nextgen.log -- logging information from bcbio run
