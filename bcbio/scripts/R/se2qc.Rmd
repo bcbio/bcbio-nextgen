@@ -229,23 +229,6 @@ assays(se)[["raw"]] %>%
     ggtitle("Counts per gene, all non-zero genes")
 ```
 
-## Counts per gene - protein coding genes
-
-```{r plot_counts_per_gene_protein_coding}
-protein_coding_genes <- read_csv("data/mouse.protein_coding.csv")
-assays(se)[["raw"]] %>% 
-    as_tibble(rownames = "ensembl_gene_id") %>% 
-    filter(ensembl_gene_id %in% protein_coding_genes$ensembl_gene_id) %>% 
-    select(-ensembl_gene_id) %>% 
-    filter(rowSums(.)!=0) %>% 
-    gather(sample, counts) %>% 
-    left_join(metadata, by = c("sample" = "sample")) %>% 
-    ggplot(aes(sample, log2(counts+1), fill = category)) +
-    geom_boxplot() + 
-    coord_flip() +
-    ggtitle("Counts per gene, protein_coding_genes")
-```
-
 # Sample similarity analysis
 
 ## Principal component analysis (PCA) - non zero genes 
@@ -272,34 +255,6 @@ pca_data %>%
     ggtitle(paste0("PCA: ", nrow(vst), " genes"))
 ```
 
-## Principal component analysis (PCA) - protein coding genes
-
-```{r pca_coding_filtered}
-raw_counts <- assays(se)[["raw"]] %>% 
-    as_tibble(rownames = "ensembl_gene_id") %>% 
-    filter(ensembl_gene_id %in% protein_coding_genes$ensembl_gene_id) %>% 
-    column_to_rownames(var = "ensembl_gene_id") %>% 
-    filter(rowSums(.)!=0) %>% 
-    as.matrix()
-
-vst <- vst(raw_counts) 
-
-pca <- degPCA(vst, colData(se), condition = "category", name = "sample", data = T)[["plot"]]
-pca_labels <- pca[["labels"]]
-pca_data <- pca[["data"]] %>% as_tibble() %>%
-    select(sample, PC1, PC2, category)
-
-pca_data %>% 
-    ggplot(aes(x = PC1, y = PC2, color = category, label = sample)) + 
-    geom_point() + 
-    geom_text_repel() + 
-    xlab(pca_labels$x) + 
-    ylab(pca_labels$y) +
-    ggtitle(paste0("PCA:", nrow(vst), " genes"))
-
-```
-    
-    
 # R session
 
 ```{r}
