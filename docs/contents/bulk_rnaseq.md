@@ -5,7 +5,7 @@
 This example aligns and creates count files for use with downstream analyses using a subset of the SEQC data from the [FDA's Sequencing Quality Control project](http://www.fdaseqc.org/).
 
 ### 1. Install STAR index
-```
+```bash
 bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners star --cores 10
 ```
 
@@ -19,16 +19,16 @@ bash rnaseq-seqc-getdata.sh
 Step 2 in detail:
 
 #### 2.1 Create input directory and download fastq files
-```
+```bash
 mkdir -p input
 ```
 
 #### 2.2 Download a template yaml file describing RNA-seq analysis
-```
+```bash
 wget --no-check-certificate https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/examples/rnaseq-seqc.yaml
 ```
 rnaseq-seqc.yaml:
-```
+```yaml
 # Template for human RNA-seq using Illumina prepared samples
 ---
 details:
@@ -42,7 +42,7 @@ upload:
 ```
 
 #### 2.3 Download fastq files into input dir
-```
+```bash
 cd input
 for SAMPLE in SRR950078 SRR950079 SRR950080 SRR950081 SRR950082 SRR950083
 do 
@@ -86,9 +86,28 @@ seqc
 `seqc/config/seqc.yaml` is the main config file to run the bcbio project.
 
 ### 3. Run the analysis:
-```shell
+Single node:
+```bash
 cd seqc/work
 bcbio_nextgen.py ../config/seqc.yaml -n 8
+```
+
+ipython: `sbatch bcbio.sh`:
+```bash
+#!/bin/bash
+
+# https://slurm.schedmd.com/sbatch.html
+
+#SBATCH --partition=priority        # Partition (queue)
+#SBATCH --time=5-00:00:00           # Runtime in D-HH:MM format
+#SBATCH --job-name=bulkrnatest      # Job name
+#SBATCH -c 1
+#SBATCH --mem-per-cpu=10G           # Memory needed per CPU
+#SBATCH --output=project_%j.out     # File to which STDOUT will be written, including job ID
+#SBATCH --error=project_%j.err      # File to which STDERR will be written, including job ID
+#SBATCH --mail-type=NONE            # Type of email notification (BEGIN, END, FAIL, ALL)
+
+bcbio_nextgen.py ../config/seqc.yaml -n 72 -t ipython -s slurm -q medium -r t=0-72:00 -r conmem=20 --timeout 3000 --tag "rna"
 ```
 
 This will run a full scale RNAseq experiment using STAR as the aligner and will take a long time to finish on a single machine. At the end it will output counts, Cufflinks quantitation and a set of QC results about each lane. If you have a cluster you can [parallelize it](parallel) to speed it up considerably.
@@ -102,15 +121,28 @@ This will run a full scale RNAseq experiment using STAR as the aligner and will 
 * `variantcaller` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
 * `spikein_fasta` A FASTA file of spike in sequences to quantitate.
 * `quantify_genome_alignments` If set to True, run Salmon quantification using the genome alignments from STAR, when available. If STAR alignments are not available, use Salmon's SA mode with decoys.
-* `bcbiornaseq` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports _organism_ as a key and takes the latin name of the genome used (_mus
-musculus_, _homo sapiens_, etc) and _interesting_groups_ which will be used to color
-quality control plots:
-    ```yaml
-    bcbiornaseq:
-      organism: homo sapiens
-      interesting_groups: [treatment, genotype, etc, etc]
-    ```
-You will need to also turn on `bcbiornaseq` by turning it on via `tools_on: [bcbiornaseq]`.
+
+## QC and Basic DE analysis
+By default, bcbio runs simple [R scripts](https://github.com/bcbio/bcbio-nextgen/tree/master/bcbio/scripts/R).
+To make them work, you need >1 sample, and `category` in the metadata for each sample:
+```yaml
+algorithm:
+  aligner: star
+  strandedness: unstranded
+metadata:
+  category: normal
+```
+If there is no category in the yaml, the script assigns the same `fake_category` to all samples.
+
+A more comprehensive QC and DE analysis is possible with [bcbiornaseq](https://bioinformatics.sph.harvard.edu/bcbioRNASeq/)
+* `bcbiornaseq` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports _organism_ as a key and takes the latin name of the genome used (_mus musculus_, _homo sapiens_, etc) and _interesting_groups_ which will be used to color quality control plots:
+```yaml
+algorithm:
+  tools_on: [bcbiornaseq]
+  bcbiornaseq:
+    organism: homo sapiens
+    interesting_groups: [treatment, genotype, etc, etc]
+```
 
 ## Output
 
@@ -121,6 +153,7 @@ Project directory:
 ├── counts
     ├── tximport-counts.csv -- gene-level counts for DE analysis generated from salmon counts by tximport
     ├── bcbio-se.rds -- SummarizedExperiment object with all counts
+bcbio-se.html -- a simple Rmd QC report
 ├── annotated_combined.counts -- gene counts with symbols from featureCounts (don't use this)
 ├── bcbio-nextgen-commands.log -- commands run by bcbio
 ├── bcbio-nextgen.log -- logging information from bcbio run
