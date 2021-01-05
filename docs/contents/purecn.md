@@ -170,6 +170,10 @@ sample1_T_FFPE,sample1_T_FFPE,sample1_T_FFPE-batch,tumor
 
 PureCN results will be copied to the folder of the tumor sample in the final dir.
 
+## Troubleshooting
+
+We found useful to adjust some memory parameters when running large cohorts (149 samples): https://github.com/bcbio/bcbio-nextgen/issues/3230
+
 ## References
 
 - [PureCN publication](https://scfbm.biomedcentral.com/articles/10.1186/s13029-016-0060-z)
