@@ -36,6 +36,32 @@ bcbio_nextgen.py bcbio_sample.yaml -t local -n 12
 [IPython parallel](https://ipython.readthedocs.io/en/stable/) provides a distributed framework for performing parallel computation in standard cluster environments. The bcbio-nextgen setup script installs both IPython and [pyzmq](https://github.com/zeromq/pyzmq), which provides Python bindings for the [ZeroMQ](https://zeromq.org/) messaging library. The only additional requirement is that the work directory where you run the analysis is accessible to all processing nodes. This is typically accomplished with a distributed file system like [NFS](https://en.wikipedia.org/wiki/Network_File_System), [Gluster](https://www.gluster.org/) or [Lustre](http://wiki.lustre.org/Main_Page).
 
 Run an analysis using ipython for parallel execution:
+
+A typical SLURM batch script or [O2 cluster](https://wiki.rc.hms.harvard.edu/display/O2): `sbatch bcbio.sh`:
+```bash
+#!/bin/bash
+
+# https://slurm.schedmd.com/sbatch.html
+
+#SBATCH --partition=priority        # Partition (queue)
+#SBATCH --time=5-00:00:00           # Runtime in D-HH:MM format
+#SBATCH --job-name=bulkrnatest      # Job name
+#SBATCH -c 1
+#SBATCH --mem-per-cpu=10G           # Memory needed per CPU
+#SBATCH --output=project_%j.out     # File to which STDOUT will be written, including job ID
+#SBATCH --error=project_%j.err      # File to which STDERR will be written, including job ID
+#SBATCH --mail-type=NONE            # Type of email notification (BEGIN, END, FAIL, ALL)
+
+bcbio_nextgen.py ../config/project.yaml -n 72 -t ipython -s slurm -q medium -r t=0-72:00 -r conmem=20 --timeout 3000 --tag "rna"
+```
+
+- this is a launcher job which goes to priority partition (queue), requests 1CPU/10G RAM; it is not doing any calculations;
+- it submits a controller job to the medium partition with MEM=20G;
+- the controller job submits worker jobs to the medium; total cores for all workers = 72; cores/worker is configured in the bcbio system config;
+worker jobs walltime (72h) < launch job walltime (5days).
+
+
+LSF example:
 ```shell
 bcbio_nextgen.py bcbio_sample.yaml -t ipython -n 12 -s lsf -q queue
 ```
