@@ -172,7 +172,7 @@ PureCN results will be copied to the folder of the tumor sample in the final dir
 
 ## Troubleshooting
 
-We found useful to adjust some memory parameters when running large cohorts (149 samples): https://github.com/bcbio/bcbio-nextgen/issues/3230
+We found useful to adjust memory parameters when running large cohorts with ipython (149 samples): [see issue 3230](https://github.com/bcbio/bcbio-nextgen/issues/3230).
 
 ## References
 
