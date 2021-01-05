@@ -947,4 +947,9 @@ def _get_files_project(sample, upload_config):
     if os.path.exists(transcriptome_dir):
         out.append({"path": transcriptome_dir, "type": "directory",
                     "ext": "transcriptome"})
+
+    rnaseq_se_qc_file = os.path.join(dd.get_work_dir(sample), "qc", "bcbio-se.html")
+    if os.path.exists(rnaseq_se_qc_file):
+        out.append({"path": rnaseq_se_qc_file})
+
     return _add_meta(out, config=upload_config)

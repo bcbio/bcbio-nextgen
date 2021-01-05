@@ -1,0 +1,307 @@
+---
+title: "Quality Control"
+author: "bcbio"
+date: "`r Sys.Date()`"
+output:
+   html_document:
+      code_folding: hide
+      df_print: paged
+      highlights: pygments
+      number_sections: true
+      self_contained: true
+      theme: default
+      toc: true
+      toc_float:
+         collapsed: true
+         smooth_scroll: true
+params:
+    rds_file: bcbio-se.rds
+---
+
+# Overview
+
+- Principal Investigator: 
+- Researcher
+- Experiment:
+
+```{r, cache = FALSE, message = FALSE}
+library(tidyverse)
+library(knitr)
+library(DESeq2)
+library(DEGreport)
+library(ggrepel)
+
+ggplot2::theme_set(theme_light(base_size = 14))
+
+opts_chunk[["set"]](
+    cache = FALSE,
+    dev = c("png", "pdf"),
+    error = TRUE,
+    highlight = TRUE,
+    message = FALSE,
+    prompt = FALSE,
+    tidy = FALSE,
+    warning = FALSE)
+```
+
+# Metadata
+```{r  show-metadata}
+se <- readRDS(params$rds_file)
+metadata <- colData(se) %>% 
+    as_tibble(rownames = NULL) %>% 
+    select(sample, category)
+metrics <- metadata(se)$metrics %>% 
+    left_join(metadata, by = c("sample" = "sample"))
+metadata
+```
+
+# Read metrics {.tabset}
+
+## Total reads
+
+```{r plot_total_reads}
+metrics %>%
+    ggplot(aes(x = reorder(sample, -total_reads), 
+               y = total_reads/1e6L, 
+               fill = category)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    scale_y_continuous(name = "mln reads") +
+    geom_text(aes(label = floor(total_reads/1e6L)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ggtitle("Total reads")
+```
+
+
+## Mapped reads
+
+The number of mapped reads should correspond to the number of total reads.
+
+```{r plot_mapped_reads}
+metrics %>%
+    ggplot(aes(x = reorder(sample, -mapped_reads),
+               y = mapped_reads, fill = category)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    scale_y_continuous(name = "mln reads") +
+    geom_text(aes(label = floor(total_reads/1e6L)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ggtitle("Mapped reads")
+```
+
+
+## Mapping rate
+
+The genomic mapping rate represents the percentage of reads mapping to the reference genome. Low mapping rates are indicative of sample contamination, poor sequencing quality or other artifacts.
+
+```{r plot_mapping_rate}
+metrics$mapped_reads_pct <- metrics$mapped_reads/metrics$total_reads
+metrics %>%
+    ggplot(aes(x = reorder(sample, -mapped_reads_pct), 
+               y = mapped_reads_pct, fill = category)) +
+        geom_bar(stat = "identity") +
+    coord_flip() +
+    geom_text(aes(label = floor(mapped_reads_pct)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ggtitle("Mapping rate")
+```
+
+
+## Number of genes detected
+
+```{r plot_genes_detected}
+genes_detected <- colSums(assays(se)[["raw"]] > 0) %>% enframe()
+colnames(genes_detected) <- c("sample", "n_genes")
+
+metrics <- metrics %>%
+    left_join(genes_detected, by = c("sample" = "sample"))
+
+metrics %>% 
+    ggplot(aes(x = reorder(sample, -n_genes),
+               y = n_genes, fill = category)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    geom_text(aes(label = n_genes), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ylim(0, 30000) +
+    ggtitle("Number of genes")
+```
+
+
+## Gene detection saturation
+
+We should observe a linear trend in the number of genes detected with the number of mapped reads, which indicates that the sample input was not overloaded.
+
+```{r plot_gene_saturation}
+metrics %>% 
+    ggplot(aes(x = log10(total_reads), 
+               y = n_genes,
+               color = category)) +
+        geom_point()+
+        geom_text_repel(aes(label = sample))+
+    ggtitle("Gene saturation")
+```
+
+## Exonic mapping rate
+
+Ideally, at least 60% of total reads should map to exons.
+
+```{r plot_exonic_mapping_rate}
+metrics %>%
+    ggplot(aes(x = reorder(sample, -exonic_rate),
+               y = exonic_rate * 100, 
+               fill = category)) +
+        geom_bar(stat = "identity") +
+    geom_text(aes(label = floor(exonic_rate*100)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ylab("Exonic rate %") + 
+    ggtitle("Exonic mapping rate") + 
+    coord_flip() 
+```
+
+## Intronic mapping rate
+
+The majority of reads should map to exons and not introns.
+
+```{r plot_intronic_mapping_rate}
+metrics %>%
+    ggplot(aes(x = reorder(sample, -intronic_rate),
+               y = intronic_rate * 100, 
+               fill = category)) +
+        geom_bar(stat = "identity") +
+    geom_text(aes(label = floor(intronic_rate*100)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ylab("Intronic rate %")
+    ggtitle("Intronic mapping rate") + 
+    coord_flip() 
+```
+
+## rRNA mapping rate
+
+Samples should have a ribosomal RNA (rRNA) contamination rate below 10%.
+
+```{r plot_rrna_mapping_rate}
+# for some bad samples it could be > 50%
+rrna_ylim <- max(round(metrics$r_rna_rate*100, 2)) + 10
+metrics %>%
+    ggplot(aes(x = reorder(sample, -r_rna_rate),
+               y = r_rna_rate * 100, 
+               fill = category)) +
+        geom_bar(stat = "identity") +
+    geom_text(aes(label = round(r_rna_rate*100,2)), hjust = 0, nudge_y = 0.5)+
+    xlab("sample") + 
+    ylab("rRNA rate, %")+
+    ylim(0, rrna_ylim) + 
+    ggtitle("rRNA mapping rate") +
+    coord_flip()
+```
+
+## 5'->3' bias
+
+```{r plot_53_bias}
+metrics %>%
+    ggplot(aes(x = reorder(sample, -x5_3_bias),
+               y = x5_3_bias, 
+               fill = category)) +
+        geom_bar(stat = "identity") +
+    geom_text(aes(label = x5_3_bias), hjust = 0, nudge_y = 0.01)+
+    xlab("sample") + 
+    ylim(0, 1.1)+
+    ggtitle("5'-3' bias") + 
+    coord_flip()
+
+```
+
+## Counts per gene - all genes
+
+We expected similar spread for every sample.
+
+```{r plot_counts_per_gene}
+metrics_small <- metrics %>% select(sample, category)
+assays(se)[["raw"]] %>% 
+    as_tibble() %>% 
+    filter(rowSums(.)!=0) %>% 
+    gather(sample, counts) %>% 
+    left_join(metadata, by = c("sample" = "sample")) %>% 
+    ggplot(aes(sample, log2(counts+1), fill = category)) +
+    geom_boxplot() + 
+    coord_flip() +
+    ggtitle("Counts per gene, all non-zero genes")
+```
+
+## Counts per gene - protein coding genes
+
+```{r plot_counts_per_gene_protein_coding}
+protein_coding_genes <- read_csv("data/mouse.protein_coding.csv")
+assays(se)[["raw"]] %>% 
+    as_tibble(rownames = "ensembl_gene_id") %>% 
+    filter(ensembl_gene_id %in% protein_coding_genes$ensembl_gene_id) %>% 
+    select(-ensembl_gene_id) %>% 
+    filter(rowSums(.)!=0) %>% 
+    gather(sample, counts) %>% 
+    left_join(metadata, by = c("sample" = "sample")) %>% 
+    ggplot(aes(sample, log2(counts+1), fill = category)) +
+    geom_boxplot() + 
+    coord_flip() +
+    ggtitle("Counts per gene, protein_coding_genes")
+```
+
+# Sample similarity analysis
+
+## Principal component analysis (PCA) - non zero genes 
+
+```{r pca}
+raw_counts <- assays(se)[["raw"]] %>% 
+    as_tibble() %>% 
+    filter(rowSums(.)!=0) %>% 
+    as.matrix()
+
+vst <- vst(raw_counts) 
+
+pca <- degPCA(vst, colData(se), condition = "category", name = "sample", data = T)[["plot"]]
+pca_labels <- pca[["labels"]]
+pca_data <- pca[["data"]] %>% as_tibble() %>%
+    select(sample, PC1, PC2, category)
+
+pca_data %>% 
+    ggplot(aes(x = PC1, y = PC2, color = category, label = sample)) + 
+    geom_point() + 
+    geom_text_repel() + 
+    xlab(pca_labels$x) + 
+    ylab(pca_labels$y) +
+    ggtitle(paste0("PCA: ", nrow(vst), " genes"))
+```
+
+## Principal component analysis (PCA) - protein coding genes
+
+```{r pca_coding_filtered}
+raw_counts <- assays(se)[["raw"]] %>% 
+    as_tibble(rownames = "ensembl_gene_id") %>% 
+    filter(ensembl_gene_id %in% protein_coding_genes$ensembl_gene_id) %>% 
+    column_to_rownames(var = "ensembl_gene_id") %>% 
+    filter(rowSums(.)!=0) %>% 
+    as.matrix()
+
+vst <- vst(raw_counts) 
+
+pca <- degPCA(vst, colData(se), condition = "category", name = "sample", data = T)[["plot"]]
+pca_labels <- pca[["labels"]]
+pca_data <- pca[["data"]] %>% as_tibble() %>%
+    select(sample, PC1, PC2, category)
+
+pca_data %>% 
+    ggplot(aes(x = PC1, y = PC2, color = category, label = sample)) + 
+    geom_point() + 
+    geom_text_repel() + 
+    xlab(pca_labels$x) + 
+    ylab(pca_labels$y) +
+    ggtitle(paste0("PCA:", nrow(vst), " genes"))
+
+```
+    
+    
+# R session
+
+```{r}
+sessionInfo()
+```

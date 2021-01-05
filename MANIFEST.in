@@ -10,3 +10,4 @@ include tests/data/automated/*.yaml
 include tests/data/automated/*.ini
 include tests/data/automated/tool-data/*.loc
 include bcbio/scripts/R/*.R
+include bcbio/scripts/R/*.Rmd

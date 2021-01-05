@@ -10,6 +10,7 @@ from bcbio.utils import filter_missing, flatten, to_single_data, file_exists, Rs
 from bcbio.distributed.transaction import file_transaction
 from bcbio.log import logger
 from bcbio.provenance import do
+from bcbio.pipeline import qcsummary
 
 def fast_rnaseq(samples, run_parallel):
     to_index = determine_indexes_to_make(samples)
@@ -483,7 +484,13 @@ def combine_files(samples):
     tximport = load_tximport(data)
     # don't fail runs while we get dependencies straightened out
     try:
+        # we need metadata.csv to generate SE
+        work_dir = dd.get_work_dir(data)
+        metadata_file = os.path.join(work_dir, "metadata.csv")
+        if not file_exists(metadata_file):
+            qcsummary._merge_metadata(samples)
         summarized_experiment = load_summarizedexperiment(data)
+        qc_report = generate_se_qc_report(data)
     except Exception:
         summarized_experiment = None
     updated_samples = []
@@ -558,7 +565,10 @@ def load_tximport(data):
             "gene_counts": counts_file}
 
 def load_summarizedexperiment(data):
-    rcmd = Rscript_cmd()
+    """ create summarizedexperiment rds object
+    fails with n_samples = 1 """
+    # using r36 (4.0) - will eventually drop R3.5
+    rcmd = Rscript_cmd("r36")
     se_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
                              "R", "bcbio2se.R")
     work_dir = dd.get_work_dir(data)
@@ -569,5 +579,24 @@ def load_summarizedexperiment(data):
     with file_transaction(out_file) as tx_out_file:
         cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
         message = f"Loading SummarizedExperiment."
+        do.run(cmd, message)
+    return out_file
+
+def generate_se_qc_report(data):
+    """ generate QC report based on SE RDS object"""
+    rcmd = Rscript_cmd("r36")
+    qc_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
+                             "R", "se2qc.Rmd")
+    work_dir = dd.get_work_dir(data)
+    out_file = os.path.join(work_dir, "qc", "bcbio-se.html")
+    rds_file = os.path.join(work_dir, "salmon", "bcbio-se.rds")
+    if file_exists(out_file):
+        return out_file
+    with file_transaction(out_file) as tx_out_file:
+        cmd = (
+            f"""{rcmd} --vanilla """
+            f"""-e 'rmarkdown::render("{qc_script}", params = list(rds_file="{rds_file}"), output_file="{tx_out_file}")'"""
+        )
+        message = f"Creating SE QC report"
         do.run(cmd, message)
     return out_file
