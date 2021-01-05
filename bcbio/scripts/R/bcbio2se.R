@@ -2,6 +2,7 @@
 # usage:
 # Rscript bcbio2se.R work_dir out_file
 # output: out_file a RDS file with the SE object in it
+# needs work/metadata.csv provided by qcsummary._merge_metadata()
 
 library(tidyverse)
 library(tximport)
@@ -17,6 +18,10 @@ metadata <- read_csv(file.path(work_dir, "metadata.csv"))
 colnames(metadata)[1] <- "sample"
 metadata$sample = make_clean_names(metadata$sample)
 
+if (! "category" %in% colnames(metadata)){
+    metadata$category <- "fake_category"
+}
+
 metrics <- read_tsv(file.path(work_dir, "qc",
                   "multiqc",
                   "multiqc_data",
@@ -26,6 +31,11 @@ salmon_dir = file.path(work_dir, "salmon")
 salmon_files = file.path(salmon_dir, metrics$sample, "quant.sf")
 metrics$sample = make_clean_names(metrics$sample)
 names(salmon_files) = metrics$sample
+
+# we need replicates to create SE object
+if (nrow(metrics) < 2){
+    stop(paste0("Too few samples to create SE object: ", nrow(metrics)))
+}
 
 transcripts2genes_file <- file.path(work_dir, "inputs", "transcriptome", "tx2gene.csv")
 transcripts2genes <- read_csv(transcripts2genes_file,
