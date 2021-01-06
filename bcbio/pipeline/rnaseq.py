@@ -539,7 +539,7 @@ def determine_indexes_to_make(samples):
     return tomake
 
 def load_tximport(data):
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd("r36")
     salmon_dir = os.path.join(dd.get_work_dir(data), "salmon")
     tx2gene_file = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome", "tx2gene.csv")
     out_dir = os.path.join(salmon_dir, "combined")
