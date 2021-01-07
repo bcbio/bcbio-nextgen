@@ -25,6 +25,10 @@ details:
       variantcaller: mutect2
 ```
 
+*If you are using bam files as input (aligner: false) make sure that bai indices are located in
+the same dir as input bam files. Bcbio generates indices on the fly, but PureCN follows a symlink
+to the original bam file and if there is no index, it crashes.*
+
 ### 2. Create a sample sheet pon.csv:
 You need a minimum of 3 samples for a PON.
 See the discussion about the number of sample in PureCN documentation.
