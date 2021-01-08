@@ -36,12 +36,24 @@ cat *R1.fastq | gzip > sample_1.fq.gz
 
 - some cores produce R1,R2,R3,R4, others R1,R2,I1,I2, rename them
 ```
-bcbio_R1 = R1 = 86 or 64 bp transcript read
+bcbio_R1 = R1 = 100 or 86 or 64 bp transcript read
 bcbio_R2 = I1 = 8 bp part 1 of cell barcode
 bcbio_R3 = I2 = 8 bp sample (library) barcode
 bcbio_R4 = R2 = 14 bp = 8 bp part 2 of cell barcode + 6 bp of transcript UMI
 ```
-- files in sc_mouse/input should be (KM here is project name):
+
+*Some 100 bp libraries produce low count numbers, and trimming them to 61 bp improves counting*:
+```bash
+# $1 = sample_1.fq.gz
+java -jar /path/to/Trimmomatic-0.39/trimmomatic-0.39.jar SE \
+-threads 10 \
+-phred33 \
+$1 \
+$1.trimmed.fq.gz \
+CROP:61
+```
+
+- files in sc_mouse/input should be (KM here is a project name):
 ```
 KM_1.fq.gz
 KM_2.fq.gz
