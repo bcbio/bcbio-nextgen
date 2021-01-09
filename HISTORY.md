@@ -1,4 +1,6 @@
-## 1.2.5 (in progress)
+## 1.2.6 (in progress)
+
+## 1.2.5 (01 January 2021)
 - Joint calling for RNA-seq variant calling requires setting `jointcaller` to bring it in line
   with the configuration options for variant calling.
 - Allow pre-aligned BAMs and gVCFs for RNA-seq joint variant calling. Thanks to @WimSpree for the
