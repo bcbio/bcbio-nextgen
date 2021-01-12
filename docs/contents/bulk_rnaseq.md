@@ -2,9 +2,9 @@
 
 ## Workflow
 
-This example aligns and creates count files for use with downstream analyses using a subset of the SEQC data from the [FDA's Sequencing Quality Control project](http://www.fdaseqc.org/).
+This example processes 6 RNA-seq samples from the [FDA's Sequencing Quality Control project](http://www.fdaseqc.org/).
 
-### 1. Install STAR index
+### 1. Install STAR index (if there is no STAR in the current bcbio installation)
 ```bash
 bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners star --cores 10
 ```
@@ -20,7 +20,7 @@ Step 2 in detail:
 
 #### 2.1 Create input directory and download fastq files
 ```bash
-mkdir -p input
+mkdir -p seqc/input
 ```
 
 #### 2.2 Download a template yaml file describing RNA-seq analysis
@@ -35,20 +35,26 @@ details:
   - analysis: RNA-seq
     genome_build: hg38
     algorithm:
+      quality_format: standard
       aligner: star
       strandedness: unstranded
 upload:
   dir: ../final
+resources:
+  star:
+    cores: 10
+    memory: 10G
 ```
 
 #### 2.3 Download fastq files into input dir
 ```bash
-cd input
+cd seqc/input
 for SAMPLE in SRR950078 SRR950079 SRR950080 SRR950081 SRR950082 SRR950083
 do 
    wget -c -O ${SAMPLE}_1.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/${SAMPLE}/${SAMPLE}_1.fastq.gz
    wget -c -O ${SAMPLE}_2.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR950/${SAMPLE}/${SAMPLE}_2.fastq.gz
 done
+cd ../../
 ```
 
 #### 2.4 Prepare a sample sheet
@@ -65,20 +71,19 @@ SRR950080,UHRR_rep2,UHRR
 SRR950081,HBRR_rep2,HBRR
 SRR950082,UHRR_rep3,UHRR
 SRR950083,HBRR_rep3,HBRR
-SRR950084,UHRR_rep4,UHRR
 ```
 
 #### 2.5 Generate yaml config file for analysis
 project.yaml = template.yaml x sample_sheet.csv
 ```
-cd ../
-bcbio_nextgen.py -w template rnaseq-seqc.yaml input/seqc.csv input
+bcbio_nextgen.py -w template rnaseq-seqc.yaml seqc.csv seqc/input/*.gz
 ```
 
 In the result you should see a folder structure:
 ```
 seqc
 |---config
+|---input
 |---final
 |---work
 ```
@@ -109,8 +114,6 @@ ipython: `sbatch bcbio.sh`:
 
 bcbio_nextgen.py ../config/seqc.yaml -n 72 -t ipython -s slurm -q medium -r t=0-72:00 -r conmem=20 --timeout 3000 --tag "rna"
 ```
-
-This will run a full scale RNAseq experiment using STAR as the aligner and will take a long time to finish on a single machine. At the end it will output counts, Cufflinks quantitation and a set of QC results about each lane. If you have a cluster you can [parallelize it](parallel) to speed it up considerably.
 
 ## Parameters
 
