@@ -1,5 +1,15 @@
 # Bulk RNA-seq
 
+Bulk RNA-seq pipeline in bcbio:
+- aligns reads with STAR (2pass), or hisat2 vs genome and transcriptome references (human, mouse, custom references);
+- quantifies expression counts with salmon, kallisto;
+- runs quality control;
+- calculates TPM with tximport;
+- detects rusions with arriba, pizzly;
+- creates a SummarizedExperiment object for downstream analysis in R;
+- calls variants with gatk or with vardict;
+- supports [spike-in](https://en.wikipedia.org/wiki/RNA_spike-in) calibration
+
 ## Workflow
 
 This example processes 6 RNA-seq samples from the [FDA's Sequencing Quality Control project](http://www.fdaseqc.org/).
