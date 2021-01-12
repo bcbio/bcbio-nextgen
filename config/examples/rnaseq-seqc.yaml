@@ -4,8 +4,12 @@ details:
   - analysis: RNA-seq
     genome_build: hg38
     algorithm:
-      quality_format: Standard
+      quality_format: standard
       aligner: star
       strandedness: unstranded
 upload:
   dir: ../final
+resources:
+  star:
+    cores: 10
+    memory: 10G
