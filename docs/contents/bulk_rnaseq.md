@@ -237,6 +237,26 @@ Our current recommendation is to run adapter trimming only if using the Tophat2 
 Salmon, which is an extremely fast alignment-free method of quantitation, is run for all experiments. Salmon can accurately quantitate the expression of genes, even ones which are hard to quantitate with other methods (see [this paper](https://doi.org/10.1186/s13059-015-0734-x) for example for Sailfish, which performs similarly to Salmon). Salmon can also quantitate at the transcript level which can help gene-level analyses
 (see [this paper](https://doi.org/10.12688/f1000research.7563.1) for example). We recommend using the Salmon quantitation rather than the counts from featureCounts to perform downstream quantification.
 
+Still, we had at least two projects with initally low % mapped (STAR) at 50-70% which greatly benefited from trimming both in terms of % mapped and N mapped reads.
+We trimmed with 
+bcbio.yaml:
+```yaml
+algorithm:
+  trim_reads: read_through 
+  adapters: illumina
+```
+or with [fastp](https://github.com/OpenGene/fastp)
+```bash
+#!/bin/bash
+fastp -I {input.R1]} -I {input.R2} -o {output.R1_trim_fastq} -O {output.R2_trim_fastq} -h {output.fastp_html} -g -x -5 -3
+
+# Additional flag definitions:
+# -g trims polyG, common artifact in Illumina 2-dye sequencing chemistry (MiniSeq, NextSeq, Novaseq)
+# -x trims polyX, any other homopolymeric stretch
+# -5 sliding window 5’ quality trimming
+# -3 sliding window 3’ quality trimming
+```
+
 Although we do not recommend using the featureCounts based counts, the alignments are still useful because they give you many more quality metrics than the quasi-alignments from Salmon.
 
 After a bcbio RNA-seq run there will be in the `upload` directory a directory for each sample which contains a BAM file of the aligned and unaligned reads, a `salmon` directory with the output of Salmon, including TPM values, and a `qc` directory with plots from FastQC and qualimap.
