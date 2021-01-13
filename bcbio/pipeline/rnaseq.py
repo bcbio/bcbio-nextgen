@@ -482,17 +482,6 @@ def combine_files(samples):
         dexseq_combined = None
     samples = spikein.combine_spikein(samples)
     tximport = load_tximport(data)
-    # don't fail runs while we get dependencies straightened out
-    try:
-        # we need metadata.csv to generate SE
-        work_dir = dd.get_work_dir(data)
-        metadata_file = os.path.join(work_dir, "metadata.csv")
-        if not file_exists(metadata_file):
-            qcsummary._merge_metadata(samples)
-        summarized_experiment = load_summarizedexperiment(data)
-        qc_report = generate_se_qc_report(data)
-    except Exception:
-        summarized_experiment = None
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         if combined:
@@ -513,7 +502,6 @@ def combine_files(samples):
         if gtf_file:
             data = dd.set_tx2gene(data, tx2gene_file)
         data = dd.set_tximport(data, tximport)
-        data = dd.set_summarized_experiment(data, summarized_experiment)
         updated_samples.append([data])
     return updated_samples
 
@@ -564,30 +552,35 @@ def load_tximport(data):
     return {"gene_tpm": tpm_file,
             "gene_counts": counts_file}
 
-def load_summarizedexperiment(data):
+def load_summarizedexperiment(samples):
     """ create summarizedexperiment rds object
     fails with n_samples = 1 """
     # using r36 (4.0) - will eventually drop R3.5
     rcmd = Rscript_cmd("r36")
     se_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
                              "R", "bcbio2se.R")
+    data = samples[0][0]
     work_dir = dd.get_work_dir(data)
     out_dir = os.path.join(work_dir, "salmon")
-    out_file = os.path.join(out_dir, "bcbio-se.rds")
-    if file_exists(out_file):
-        return out_file
-    with file_transaction(out_file) as tx_out_file:
-        cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
-        message = f"Loading SummarizedExperiment."
-        do.run(cmd, message)
-    return out_file
+    summarized_experiment = os.path.join(out_dir, "bcbio-se.rds")
+    if not file_exists(summarized_experiment):
+        with file_transaction(summarized_experiment) as tx_out_file:
+            cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
+            message = f"Loading SummarizedExperiment."
+            do.run(cmd, message)
+    if file_exists(summarized_experiment):
+        se_qc_report = generate_se_qc_report(work_dir)
+    updated_samples = []
+    for data in dd.sample_data_iterator(samples):
+        data = dd.set_summarized_experiment(data, summarized_experiment)
+        updated_samples.append([data])
+    return updated_samples
 
-def generate_se_qc_report(data):
+def generate_se_qc_report(work_dir):
     """ generate QC report based on SE RDS object"""
     rcmd = Rscript_cmd("r36")
     qc_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
                              "R", "se2qc.Rmd")
-    work_dir = dd.get_work_dir(data)
     out_file = os.path.join(work_dir, "qc", "bcbio-se.html")
     rds_file = os.path.join(work_dir, "salmon", "bcbio-se.rds")
     if file_exists(out_file):
