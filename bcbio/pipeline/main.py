@@ -272,6 +272,8 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     samples, config, dirs, "qc") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("create SummarizedExperiment object", dirs):
+            samples = rnaseq.load_summarizedexperiment(samples)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for sample in samples:
