@@ -132,9 +132,9 @@ bcbio_nextgen.py ../config/seqc.yaml -n 72 -t ipython -s slurm -q medium -r t=0-
 * `expression_caller` A list of optional expression callers to turn on. Supports ['cufflinks', 'express', 'stringtie', 'dexseq', 'kallisto']. Salmon and count based expression estimation are run by default. Sailfish is deprecated.
 * `fusion_caller` A list of optional fusion callers to turn on. Supports [oncofuse, pizzly, ericscript, arriba].
 * `variantcaller` Variant calling algorithm to call variants on RNA-seq data. Supports [gatk-haplotype] or [vardict].
-* `spikein_fasta` A FASTA file of spike in sequences to quantitate.
+* `spikein_fasta` A FASTA file of spike in sequences to quantitate. There are quantitated separately, so should be things you are not expecting to match anywhere to the genome or trancriptome of the species you are working with.
 * `quantify_genome_alignments` If set to True, run Salmon quantification using the genome alignments from STAR, when available. If STAR alignments are not available, use Salmon's SA mode with decoys.
-
+* `transcriptome_gtf` A GTF file to use to specify transcripts which will override the bcbio-installed versions. This is used if you have an alternate transcriptome you want to quantitate. You can also use this option to add your own transcripts to a set to quantitate, just append them to your GTF file and sort it.
 ## QC and Basic DE analysis
 By default, bcbio runs simple [R scripts](https://github.com/bcbio/bcbio-nextgen/tree/master/bcbio/scripts/R).
 To make them work, you need >1 sample, and `category` in the metadata for each sample:
