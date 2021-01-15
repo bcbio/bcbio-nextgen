@@ -567,9 +567,16 @@ def load_summarizedexperiment(samples):
         with file_transaction(summarized_experiment) as tx_out_file:
             cmd = f"{rcmd} --vanilla {se_script} {work_dir} {tx_out_file}"
             message = f"Loading SummarizedExperiment."
-            do.run(cmd, message)
+            try:
+                do.run(cmd, message)
+            except Exception:
+                logger.error("SE creation failed")
     if file_exists(summarized_experiment):
-        se_qc_report = generate_se_qc_report(work_dir)
+        try:
+            se_qc_report = generate_se_qc_report(work_dir)
+        except Exception:
+            se_qc_report = None
+            logger.error("SE QC failed")
     updated_samples = []
     for data in dd.sample_data_iterator(samples):
         data = dd.set_summarized_experiment(data, summarized_experiment)
