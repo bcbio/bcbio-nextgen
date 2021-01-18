@@ -577,11 +577,13 @@ def load_summarizedexperiment(samples):
         except Exception:
             se_qc_report = None
             logger.error("SE QC failed")
-    updated_samples = []
-    for data in dd.sample_data_iterator(samples):
-        data = dd.set_summarized_experiment(data, summarized_experiment)
-        updated_samples.append([data])
-    return updated_samples
+        updated_samples = []
+        for data in dd.sample_data_iterator(samples):
+            data = dd.set_summarized_experiment(data, summarized_experiment)
+            updated_samples.append([data])
+        return updated_samples
+    else:
+        return samples
 
 def generate_se_qc_report(work_dir):
     """ generate QC report based on SE RDS object"""
