@@ -1,4 +1,6 @@
 ## 1.2.6 (in progress)
+- RNASeq: Fail more gracefully if SummarizedExperiment object cannot be created.
+- Fixes to handle DRAGEN BAM files from the first stage of UMI processing.
 
 ## 1.2.5 (01 January 2021)
 - Joint calling for RNA-seq variant calling requires setting `jointcaller` to bring it in line
