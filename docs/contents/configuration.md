@@ -576,7 +576,7 @@ For adding an organism not present in snpEff, please see this [mailing list disc
 
 ## Download data from SRA
 
-Use SRA toolkit [prefetch/fastq-dump](https://wiki.rc.hms.harvard.edu/display/O2/Aspera+to+download+NCBI+SRA+data)
+Use SRA toolkit [prefetch/fastq-dump](https://wiki.rc.hms.harvard.edu/pages/viewpage.action?pageId=42402938)
 
 ## Upload
 
