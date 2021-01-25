@@ -90,7 +90,11 @@ mv sample1_T_FFPE.bam sample2_T_FFPE ton/input/
 ```
 
 ### 2. Create purecn_ton_template.yaml:
+```bash
+wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/templates/purecn_ton.yaml
 ```
+
+```yaml
 details:
   - analysis: variant2
     genome_build: hg38
