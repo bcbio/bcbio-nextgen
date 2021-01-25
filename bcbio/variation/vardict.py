@@ -46,9 +46,10 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     # SV calling will be worked on as a separate step
     vardict_cl = get_vardict_command(items[0])
     version = programs.get_version_manifest(vardict_cl)
+    # turn off structural variants
     if (vardict_cl and version and
         ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
-         (vardict_cl == "vardict" and LooseVersion(version) >= LooseVersion("2018.07.25")))):
+         (vardict_cl == "vardict"))):
         opts += ["--nosv"]
     if (vardict_cl and version and
          (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
