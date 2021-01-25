@@ -1,0 +1,16 @@
+# Tumor only PureCN analysis with a PON (panel of normals)
+details:
+  - analysis: variant2
+    genome_build: hg38
+    algorithm:
+      aligner: false
+      svcaller: purecn
+      variant_regions: /path/ton/config/panel.bed
+      variantcaller: mutect2
+      background:
+        variant: /path/ton/config/pon_build-mutect2-annotated.vcf.gz
+        cnv_reference:
+          purecn_normaldb: /path/ton/config/normalDB_hg38.rds
+          purecn_mapping_bias: /path/ton/config/mapping_bias_hg38.rds
+    metadata:
+        phenotype: tumor
