@@ -513,6 +513,10 @@ To manually make genomes available to bcbio-nextgen, edit the individual `.loc` 
 
 To remove a reference genome, delete its directory `bcbio/genomes/species/reference` and remove all the records corresponding to that genome from `bcbio/galaxy/tool-data/*.loc` files.
 
+`genomes/Hsapiens/hg38/seq/hg38-resources.yaml` specifies relative locations of the resources. To determine the absolute path, bcbio fetches a value
+from `bcbio/galaxy/tool-data/sam_fa_indices.loc` and uses it is a basedir for all resources. If there are several installations of bcbio `data`,
+it is important to have separate `tool-data` as well.
+
 ### Adding custom genomes
 
 [bcbio_setup_genome.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/bcbio_setup_genome.py) installs a custom genome for variant and bulk-RNA-seq analyses and updates the configuration files. 
