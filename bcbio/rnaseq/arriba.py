@@ -8,7 +8,7 @@ from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 
-SUPPORTED_BUILDS = ("hg38", "GRCh37", "hg19")
+SUPPORTED_BUILDS = ("hg38", "GRCh37", "hg19", "mm10")
 
 def run_arriba(data):
     build = dd.get_genome_build(data)
@@ -20,7 +20,7 @@ def run_arriba(data):
     utils.safe_makedir(arriba_dir)
     bam_file = dd.get_work_bam(data)
     ref_file = dd.get_ref_file(data)
-    gtf = dd.get_gtf_file(data)
+    gtf = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     arriba = config_utils.get_program("arriba", data)
     fusion_file = os.path.join(arriba_dir, "fusions.tsv")
     discarded_fusion_file = os.path.join(arriba_dir, "fusions.discarded.tsv")
@@ -34,7 +34,7 @@ def run_arriba(data):
     with file_transaction(fusion_file) as tx_fusion_file, \
          file_transaction(discarded_fusion_file) as tx_discarded_fusion_file:
         cmd = (f"{arriba} -x {bam_file} -g {gtf} -a {ref_file} -o {tx_fusion_file} "
-               f"-O {tx_discarded_fusion_file} "
+               f"-O {tx_discarded_fusion_file} -T -P "
                f"-i {contig_list} ")
         if blacklist_file:
             logger.info(f"arriba blacklist file found, running blacklisting with {blacklist_file}.")

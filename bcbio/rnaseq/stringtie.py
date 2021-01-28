@@ -22,7 +22,7 @@ def _stringtie_expression(bam, data, out_dir="."):
     """
     only estimate expression the Stringtie, do not assemble new transcripts
     """
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, dd.get_gtf_file(data))
     num_cores = dd.get_num_cores(data)
     error_message = "The %s file for %s is missing. StringTie has an error."
     stringtie = config_utils.get_program("stringtie", data, default="stringtie")

@@ -4,7 +4,7 @@ functions to access the data dictionary in a clearer way
 
 import os
 import toolz as tz
-from bcbio.utils import file_exists, to_single_data, deepish_copy
+from bcbio.utils import file_exists, to_single_data, deepish_copy, flatten
 from bcbio.log import logger
 from collections import namedtuple
 import sys
@@ -86,6 +86,7 @@ LOOKUPS = {
     "chip_method": {"keys": ['config', 'algorithm', 'chip_method'], "default": "chip"},
     "spikein_counts": {"keys": ["spikein_counts"]},
     "count_file": {"keys": ["count_file"]},
+    "hla_bam": {"keys": ["hla_bam"]},
     "mirna_counts": {"keys": ["mirna_counts"]},
     "isomir_counts": {"keys": ["isomir_counts"]},
     "novel_mirna_counts": {"keys": ["novel_mirna_counts"]},
@@ -194,7 +195,8 @@ LOOKUPS = {
                                     "default": 1},
     "demultiplexed": {"keys": ["config", "algorithm", "demultiplexed"]},
     "kallisto_quant": {"keys": ["kallisto_quant"]},
-    "tximport": {"keys": ["tximport"], "default": None}, 
+    "tximport": {"keys": ["tximport"], "default": None},
+    "summarized_experiment": {"keys": ["summarized_experiment"], "default": None},
     "salmon_dir": {"keys": ["salmon_dir"]},
     "salmon_fraglen_file": {"keys": ["salmon_fraglen_file"]},
     "sailfish": {"keys": ["sailfish"]},
@@ -256,7 +258,7 @@ def get_umi_consensus(data):
     We specify this either as a separate fastq file or embedded
     in the read name as `fastq_name`.`
     """
-    consensus_choices = (["fastq_name"])
+    consensus_choices = (["fastq_name", "dragen"])
     umi = tz.get_in(["config", "algorithm", "umi_type"], data)
     # don't run consensus UMI calling for scrna-seq
     if tz.get_in(["analysis"], data, "").lower() == "scrna-seq":
@@ -376,19 +378,25 @@ def get_keys(lookup):
 
 def update_summary_qc(data, key, base=None, secondary=None):
     """
-    updates summary_qc with a new section, keyed by key.
+    updates summary_qc, keyed by key. key is generally the program the quality
+    control metrics came from. if key already exists, the specified
+    base/secondary files are added as secondary files to the existing
+    key, removing duplicates.
+
     stick files into summary_qc if you want them propagated forward
     and available for multiqc
     """
     summary = deepish_copy(get_summary_qc(data, {}))
-    if key in summary:
-        return data
+    files = [[base], [secondary],
+             tz.get_in([key, "base"], summary, []),
+             tz.get_in([key, "secondary"], summary, [])]
+    files = list(set([x for x in flatten(files) if x]))
+    base = tz.first(files)
+    secondary = list(tz.drop(1, files))
     if base and secondary:
         summary[key] = {"base": base, "secondary": secondary}
     elif base:
         summary[key] = {"base": base}
-    elif secondary:
-        summary[key] = {"secondary": secondary}
     data = set_summary_qc(data, summary)
     return data
 

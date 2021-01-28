@@ -19,8 +19,12 @@ import six
 import toolz as tz
 import yaml
 
-from collections import Mapping, OrderedDict
+try:
+   from collections.abc import Mapping
+except ImportError:
+   from collections import Mapping
 
+from collections import OrderedDict
 
 try:
     from concurrent import futures
@@ -689,12 +693,15 @@ def dictapply(d, fn):
             d[k] = fn(v)
     return d
 
-def Rscript_cmd():
-    """Retrieve path to locally installed Rscript or first in PATH.
-
+def Rscript_cmd(env="base"):
+    """Retrieve path to locally installed Rscript in the given env.
     Prefers Rscript version installed via conda to a system version.
     """
-    rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
+    if env == "base":
+        rscript = which(os.path.join(get_bcbio_bin(), "Rscript"))
+    else:
+        conda_dir = get_conda_dir()
+        rscript = os.path.join(conda_dir, "envs", env, "bin", "Rscript")
     if rscript:
         return rscript
     else:
@@ -712,6 +719,15 @@ def R_sitelib(env="base"):
         if not os.path.exists(sitelib):
             raise OSError("The {env} environment does not have R installed.")
         return sitelib
+
+def R_package_script(env, package, script):
+    """Return path to a script in an R package within env (PureCN)"""
+    conda_dir = get_conda_dir()
+    script_path = os.path.join(conda_dir, "envs", env, "lib", "R", "library", package, script)
+    if not file_exists(script_path):
+        return None
+    else:
+        return script_path
 
 def R_package_path(package):
     """

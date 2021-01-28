@@ -24,8 +24,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     out_dir = os.path.join(align_dir, "%s_bismark" % dd.get_lane(data))
 
     if not ref_file:
-        logger.error("bismark index not found. We don't provide the STAR indexes "
-                     "by default because they are very large. You can install "
+        logger.error("bismark index not found. You can install "
                      "the index for your genome with: bcbio_nextgen.py upgrade "
                      "--aligners bismark --genomes genome-build-name --data")
         sys.exit(1)
@@ -34,16 +33,15 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if file_exists(final_out):
         data = dd.set_work_bam(data, final_out)
         data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
+        data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
         return data
 
     bismark = config_utils.get_program("bismark", config)
-
     # bismark uses 5 threads/sample and ~12GB RAM/sample (hg38)
     resources = config_utils.get_resources("bismark", data["config"])
-    max_cores = resources.get("cores", 1)
-    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G"))
-    n = min(max(int(max_cores/5), 1),
-            max(int(max_mem/config_utils.convert_to_bytes("12G")), 1))
+    max_cores = dd.get_num_cores(data)
+    max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G")) / (1024.0 * 1024.0)
+    instances = calculate_bismark_instances(max_cores, max_mem * max_cores)
 
     kit = kits.KITS.get(dd.get_kit(data), None)
     directional = "--non_directional" if kit and not kit.is_directional else ""
@@ -53,7 +51,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
-    cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --multicore {n} -o {tx_out_dir} --unmapped {ref_file} {fastq_file}"
+    cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --parallel {instances} -o {tx_out_dir} --unmapped {ref_file} {fastq_file} "
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
     raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
@@ -63,10 +61,11 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
             do.run(cmd.format(**locals()), run_message, None)
             shutil.move(tx_out_dir, out_dir)
         raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
-    process_bam = _process_bam(raw_bam[0], fastq_files, sample, dd.get_sam_ref(data), config)
-    utils.symlink_plus(process_bam, final_out)
+    # don't process bam in the bismark pipeline!
+    utils.symlink_plus(raw_bam[0], final_out)
     data = dd.set_work_bam(data, final_out)
     data["bam_report"] = glob.glob(os.path.join(out_dir, "*report.txt"))[0]
+    data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
     return data
 
 
@@ -105,10 +104,10 @@ def index(ref_file, out_dir, data):
     """Create a bismark index in the defined reference directory.
     """
     (ref_dir, local_file) = os.path.split(ref_file)
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     bismark = config_utils.find_program("bismark", data["config"])
     if not utils.file_exists(gtf_file):
-        raise ValueError("%s not found, could not create a star index." % (gtf_file))
+        raise ValueError("%s not found, could not create a bismark index." % (gtf_file))
     if not utils.file_exists(out_dir):
         with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
             num_cores = dd.get_cores(data)
@@ -120,3 +119,25 @@ def index(ref_file, out_dir, data):
                 shutil.rmtree(out_dir)
             shutil.move(tx_out_dir, out_dir)
     return out_dir
+
+def calculate_bismark_instances(cores, memory):
+    """
+    calculate number of parallel bismark instances to run, based on disussion here
+    https://github.com/FelixKrueger/Bismark/issues/96
+    cores and memory here are the maximum amounts available for us to use
+    """
+    BISMARK_CORES = 1
+    BOWTIE_CORES_PER_INSTANCE = 2
+    SAMTOOLS_CORES_PER_INSTANCE = 1
+    CORES_PER_INSTANCE = BOWTIE_CORES_PER_INSTANCE + SAMTOOLS_CORES_PER_INSTANCE
+    GENOME_MEMORY_GB = 12
+    INSTANCE_MEMORY_GB = 10
+
+    available_instance_memory = memory - GENOME_MEMORY_GB
+    instances_in_memory = max(available_instance_memory / INSTANCE_MEMORY_GB, 1)
+
+    available_instance_cores = cores - BISMARK_CORES
+    instances_in_cores = max(available_instance_cores / CORES_PER_INSTANCE, 1)
+    instances = int(min(instances_in_memory, instances_in_cores))
+    logger.info(f"{cores} cores and {memory} memory are available. Spinning up {instances} instances of bismark.")
+    return instances

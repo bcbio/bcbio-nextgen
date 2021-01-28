@@ -271,7 +271,11 @@ def includes_missingalt(data):
     """
     MISSINGALT_VERSION = LooseVersion("4.1.0.0")
     version = LooseVersion(broad.get_gatk_version(config=dd.get_config(data)))
-    return version >= MISSINGALT_VERSION
+    try:
+        return version >= MISSINGALT_VERSION
+    except TypeError:
+        logger.error(f"LooseVersion failing with {version} as the detected version.")
+        sys.exit(1)
 
 def gatk_remove_missingalt(in_file, data):
     """

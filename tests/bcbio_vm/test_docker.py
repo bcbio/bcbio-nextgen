@@ -5,49 +5,33 @@ import subprocess
 import pytest
 
 from bcbio import utils
+from tests.conftest import install_cwl_test_files
 
-from tests.conftest import (make_workdir, get_post_process_yaml, install_cwl_test_files)
 
 @pytest.mark.docker
 @pytest.mark.docker_multicore
-def test_docker(install_test_files, data_dir):
-    """Run an analysis with code and tools inside a docker container.
-
+def test_docker(install_test_files, data_dir, global_config):
+    """Run an analysis with code and tools inside a docker container
     Requires https://github.com/bcbio/bcbio-nextgen-vm
     """
-    with make_workdir() as workdir:
-        cl = [
-            "bcbio_vm.py",
-            "--datadir=%s" % data_dir,
-            "run",
-            "--image=quay.io/bcbio/bcbio-vc",
-            "--systemconfig=%s" % get_post_process_yaml(data_dir, workdir),
-            "--fcdir=%s" % os.path.join(
-                data_dir, os.pardir, "100326_FC6107FAAXX"),
-            os.path.join(data_dir, "run_info-bam.yaml")
-        ]
-        subprocess.check_call(cl)
+    fc_dir = os.path.join(data_dir, os.pardir, '100326_FC6107FAAXX')
+    run_config = os.path.join(data_dir, 'run_info-bam.yaml')
+    subprocess.check_call(['bcbio_vm.py', f'--datadir={data_dir}', 'run',
+                           '--image=quay.io/bcbio/bcbio-vc', f'--systemconfig={global_config}',
+                           f'--fcdir={fc_dir}', run_config])
+
 
 @pytest.mark.docker
 @pytest.mark.docker_ipython
-def test_docker_ipython(install_test_files, data_dir):
-    """Run an analysis with code and tools inside a docker container,
-    driven via IPython.
-
+def test_docker_ipython(install_test_files, data_dir, global_config):
+    """Run an analysis with code and tools inside a docker container, driven via IPython
     Requires https://github.com/bcbio/bcbio-nextgen-vm
     """
-    with make_workdir() as workdir:
-        cl = [
-            "bcbio_vm.py",
-            "--datadir=%s" % data_dir,
-            "ipython",
-            "--systemconfig=%s" % get_post_process_yaml(data_dir, workdir),
-            "--fcdir=%s" % os.path.join(
-                data_dir, os.pardir, "100326_FC6107FAAXX"),
-            os.path.join(data_dir, "run_info-bam.yaml"),
-            "lsf", "localrun"
-        ]
-        subprocess.check_call(cl)
+    fc_dir = os.path.join(data_dir, os.pardir, '100326_FC6107FAAXX')
+    run_config = os.path.join(data_dir, 'run_info-bam.yaml')
+    subprocess.check_call(['bcbio_vm.py', f'--datadir={data_dir}', 'ipython',
+                           f'--systemconfig={global_config}', f'--fcdir={fc_dir}', run_config,
+                           'lsf', 'localrun'])
 
 
 class TestCWL:

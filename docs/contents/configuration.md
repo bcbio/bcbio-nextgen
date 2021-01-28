@@ -181,7 +181,7 @@ sample1,sample1,batch1,normal,female,/path/to/regions.bed
   * `picard` -- Picard/GATK based cleaning. Includes read group changes, fixing of problematic reads and re-ordering chromosome order to match the reference genome. To fix misencoded input BAMs with non-standard scores, set `quality_format` to `illumina`.
 * `bam_sort` Allow sorting of input BAMs when skipping alignment step (`aligner` set to false). Options are coordinate or queryname. For additional processing through standard pipelines requires coordinate sorted inputs. The default is to not do additional sorting and assume pre-sorted BAMs.
 * `align_split_size`: Increase parallelization of alignment. As of 0.9.8, bcbio will try to determine a useful parameter and you don't need to set this. If you manually set it, bcbio will respect your specification. Set to false to avoid splitting entirely. If set, this defines the number of records to feed into each independent parallel step (for example, 5000000 = 5 million reads per chunk). It converts the original inputs into bgzip grabix indexed FASTQ files, and then retrieves chunks for parallel alignment. Following alignment, it combines all chunks back into the final merged alignment file. This allows parallelization at the cost of additional work of preparing inputs and combining split outputs. The tradeoff makes sense when you have large files and lots of distributed compute. When you have fewer large multicore machines this parameter may not help speed up processing.
-* `quality_format` Quality format of FASTQ or BAM inputs [standard, illumina]
+* `quality_format` Quality format of FASTQ or BAM inputs [standard, illumina]. `standard` means Sanger, `illumina` means Illumina [1.3, 1.8).
 * `strandedness` For RNA-seq libraries, if your library is strand specific, set the appropriate flag from [unstranded, firststrand, secondstrand]. Defaults to unstranded. For dUTP marked libraries, firststrand is correct; for Scriptseq prepared libraries, secondstrand is correct.
 * `save_diskspace` Remove align prepped bgzip and split BAM files after merging into final BAMs. Helps reduce space on limited filesystems during a run. `tools_off: [upload_alignment]` may also be useful in conjunction with this. `[false, true]`
 
@@ -262,7 +262,7 @@ Sometimes you need a little bit more flexibility than the standard pipeline, and
 #### Parallelization
 
 * `nomap_split_size` Unmapped base pair regions required to split analysis into blocks. Creates islands of mapped reads surrounded by unmapped (or N) regions, allowing each mapped region to run in parallel. (default: 250)
-* `nomap_split_targets` Number of target intervals to attempt to split processing into. This picks unmapped regions evenly spaced across the genome to process concurrently. Limiting targets prevents a large number of small targets. (default: 200 for standard runs, 20 for CWL runs)
+* `nomap_split_targets` Number of target intervals to attempt to split processing into. This picks unmapped regions evenly spaced across the genome to process concurrently. Limiting targets prevents a large number of small targets which can blow up the memory for runs with many samples. (default: 200 for standard runs, 20 for CWL runs)
 
 #### Multiple samples
 
@@ -513,6 +513,10 @@ To manually make genomes available to bcbio-nextgen, edit the individual `.loc` 
 
 To remove a reference genome, delete its directory `bcbio/genomes/species/reference` and remove all the records corresponding to that genome from `bcbio/galaxy/tool-data/*.loc` files.
 
+`genomes/Hsapiens/hg38/seq/hg38-resources.yaml` specifies relative locations of the resources. To determine the absolute path, bcbio fetches a value
+from `bcbio/galaxy/tool-data/sam_fa_indices.loc` and uses it is a basedir for all resources. If there are several installations of bcbio `data`,
+it is important to have separate `tool-data` as well.
+
 ### Adding custom genomes
 
 [bcbio_setup_genome.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/bcbio_setup_genome.py) installs a custom genome for variant and bulk-RNA-seq analyses and updates the configuration files. 
@@ -576,7 +580,7 @@ For adding an organism not present in snpEff, please see this [mailing list disc
 
 ## Download data from SRA
 
-Use SRA toolkit [prefetch/fastq-dump](https://wiki.rc.hms.harvard.edu/display/O2/Aspera+to+download+NCBI+SRA+data)
+Use SRA toolkit [prefetch/fastq-dump](https://wiki.rc.hms.harvard.edu/pages/viewpage.action?pageId=42402938)
 
 ## Upload
 
@@ -652,3 +656,9 @@ from third party software and error traces for failures. Look here to identify t
 * Default location for log files is `work/log` directory. Also 2 logs are saved in `final/project`
 * `log_dir: /path/to/logs` in `/bcbio/galaxy/bcbio-system.yaml` sets logging destination
 for all projects.
+
+## Persistence
+
+Every pipeline has multiple steps. Bcbio saves intermediate results in the work directory. If a step has been successfully finished (alignment bam file is generated, variants vcf is calculated, purecn normal db is generated), and the pipeline failed one of the subsequent steps, then upon re-running the pipeline, the finished steps would not be re-calculated. If you'd like to re-generate data for a particular step, simply remove the corresponding `work/step` folder,
+for example, remove `work/gemini` if you'd like to re-generate a gemini database or purecn normaldb.
+

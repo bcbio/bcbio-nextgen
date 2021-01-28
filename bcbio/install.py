@@ -237,7 +237,7 @@ def _check_for_conda_problems():
 def _update_bcbiovm():
     """Update or install a local bcbiovm install with tools and dependencies"""
     print("## CWL support with bcbio-vm")
-    python_env = "python=3.6"
+    python_env = "python=3.7"
     conda_bin, env_name = _add_environment("bcbiovm", python_env)
     base_cmd = [conda_bin, "install", "--yes", "--name", env_name]
     subprocess.check_call(base_cmd + [python_env, "nomkl", "bcbio-nextgen"])
@@ -782,7 +782,7 @@ def add_subparser(subparsers):
                         action="append", default=[], type=_check_toolplus)
     parser.add_argument("--datatarget", help="Data to install. Allows customization or install of extra data.",
                         action="append", default=[],
-                        choices=["variation", "rnaseq", "smallrna", "gemini", "vep", "dbnsfp", "dbscsnv", "battenberg", "kraken", "ericscript", "gnomad"])
+                        choices=["variation", "rnaseq", "smallrna", "gemini", "vep", "dbnsfp", "dbscsnv", "battenberg", "kraken", "ericscript", "gnomad", "topmed"])
     parser.add_argument("--genomes", help="Genomes to download",
                         action="append", default=[], choices=SUPPORTED_GENOMES)
     parser.add_argument("--aligners", help="Aligner indexes to download",

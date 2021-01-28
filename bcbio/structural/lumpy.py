@@ -55,7 +55,7 @@ def _run_smoove(full_bams, sr_bams, disc_bams, work_dir, items):
             exclude_bed = ("--exclude %s" % sv_exclude_bed) if utils.file_exists(sv_exclude_bed) else ""
             tempdir = os.path.dirname(tx_out_file)
             smoove = config_utils.get_program("smoove", data)
-            smoovepath = os.path.dirname(smoove)
+            smoovepath = os.path.dirname(os.path.realpath(smoove))
             cmd = ("export TMPDIR={tempdir} && export PATH={smoovepath}:$PATH && "
                    "{smoove} call --processes {cores} --genotype --removepr --fasta {ref_file} "
                    "--name {name} --outdir {out_dir} "

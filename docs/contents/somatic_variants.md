@@ -167,8 +167,8 @@ CNVkit and gatk-cnv cannot be run together, because they require different, inco
 
 ### 1. Collect PON samples and create a project structure
 Put coverage.bed in pon/config/ and PON input files (bam, fq.gz) to pon/input.
-One test tumor sample is required to create a PON project (cnvkit requirement),
-this tumor sample is not included in the PON).
+One test tumor sample is required to create a PON project,
+this tumor sample is not included in the PON.
 
 ```bash
 $ mkdir pon
@@ -380,7 +380,7 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 For more complex UMI schemes please open up an issue and we can help you write a transformation to prepare your files. We use <https://github.com/vals/umis> to do these more complex transformations.
 
 Configuration options for UMIs:
-* `umi_type` The UMI/cellular barcode scheme used for your data. For variant analysis with UMI based consensus calling, supports either `fastq_name` with UMIs in read names or the path to a fastq file with UMIs for each aligned read.
+* `umi_type` The UMI/cellular barcode scheme used for your data. For variant analysis with UMI based consensus calling, supports `fastq_name` with UMIs in read names, the path to a fastq file with UMIs for each aligned read or `dragen` which accepts the pre-consensus BAM file from DRAGEN.
 * `correct_umis: [path/to/whitelist_umi.txt]`. For a restricted set of UMIs specify a text file (one UMI per line). UMIs will be corrected with <http://fulcrumgenomics.github.io/fgbio/tools/latest/CorrectUmis.html>
 
 You can adjust the [fgbio default options](https://github.com/bcbio/bcbio-nextgen/blob/8a76c9e546cb79621707082fd763bd643e0e9652/bcbio/ngsalign/postalign.py#L208) by adjusting `resources`. The most common change is modifying the minimum number of reads as input to consensus sequences.

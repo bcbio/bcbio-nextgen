@@ -38,8 +38,14 @@ def calculate_sv_bins(*items):
     calcfns = {"cnvkit": _calculate_sv_bins_cnvkit, "gatk-cnv": _calculate_sv_bins_gatk}
     from bcbio.structural import cnvkit
     items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
-    if all(not cnvkit.use_general_sv_bins(x) for x in items):
+
+    from bcbio.structural import get_svcallers
+    sv_callers = get_svcallers(items[0])
+    has_cnvkit_gatkcnv = bool(set(sv_callers) & set(["cnvkit", "gatk-cnv"]))
+
+    if all(not cnvkit.use_general_sv_bins(x) for x in items) or not has_cnvkit_gatkcnv:
         return [[d] for d in items]
+
     out = []
     for i, cnv_group in enumerate(_group_by_cnv_method(multi.group_by_batch(items, False))):
         size_calc_fn = MemoizedSizes(cnv_group.region_file, cnv_group.items).get_target_antitarget_bin_sizes
@@ -167,13 +173,18 @@ def _group_by_cnv_method(batches):
 
 def calculate_sv_coverage(data):
     """Calculate coverage within bins for downstream CNV calling.
-
     Creates corrected cnr files with log2 ratios and depths.
+    data is one sample
     """
     calcfns = {"cnvkit": _calculate_sv_coverage_cnvkit, "gatk-cnv": _calculate_sv_coverage_gatk}
     from bcbio.structural import cnvkit
     data = utils.to_single_data(data)
-    if not cnvkit.use_general_sv_bins(data):
+
+    from bcbio.structural import get_svcallers
+    sv_callers = get_svcallers(data)
+    has_cnvkit_or_gatkcnv = bool(set(["cnvkit", "gatk-cnv"]) & set(sv_callers))
+
+    if not cnvkit.use_general_sv_bins(data) or not has_cnvkit_or_gatkcnv:
         out_target_file, out_anti_file = (None, None)
     else:
         work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(data), "structural",
@@ -181,15 +192,29 @@ def calculate_sv_coverage(data):
         out_target_file, out_anti_file = calcfns[cnvkit.bin_approach(data)](data, work_dir)
         if not os.path.exists(out_target_file):
             out_target_file, out_anti_file = (None, None)
+
     if "seq2c" in dd.get_svcaller(data):
         from bcbio.structural import seq2c
         seq2c_target = seq2c.precall(data)
     else:
         seq2c_target = None
 
+    if "purecn" in dd.get_svcaller(data):
+        # set purecn_pon_build flag
+        if "pon_build" in dd.get_batch(data):
+            data["config"]["algorithm"]["purecn_pon_build"] = True
+        from bcbio.structural import purecn
+        # still calculate coverage even when not building pon - for t-only analysis
+        purecn_target = purecn.get_coverage(data)
+    else:
+        purecn_target = None
+
     if not tz.get_in(["depth", "bins"], data):
         data = tz.update_in(data, ["depth", "bins"], lambda x: {})
-    data["depth"]["bins"] = {"target": out_target_file, "antitarget": out_anti_file, "seq2c": seq2c_target}
+    data["depth"]["bins"] = {"target": out_target_file,
+                             "antitarget": out_anti_file,
+                             "seq2c": seq2c_target,
+                             "purecn": purecn_target}
     return [[data]]
 
 def _calculate_sv_coverage_gatk(data, work_dir):
@@ -255,31 +280,37 @@ def _add_log2_depth(in_file, out_file, data):
 
 def normalize_sv_coverage(*items):
     """Normalize CNV coverage, providing flexible point for multiple methods.
+       Don't normalize when running purecn alone
     """
-    calcfns = {"cnvkit": _normalize_sv_coverage_cnvkit, "gatk-cnv": _normalize_sv_coverage_gatk}
-    from bcbio.structural import cnvkit
-    from bcbio.structural import shared as sshared
-    items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
-    if all(not cnvkit.use_general_sv_bins(x) for x in items):
-        return [[d] for d in items]
-    out_files = {}
-    back_files = {}
-    for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
-        # No CNVkit calling for this particular set of samples
-        if group_id is None:
-            continue
-        inputs, backgrounds = sshared.find_case_control(list(gitems))
-        assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
-        work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
-                                                    dd.get_sample_name(inputs[0]), "bins"))
-        back_files, out_files = calcfns[cnvkit.bin_approach(inputs[0])](group_id, inputs, backgrounds, work_dir,
-                                                                        back_files, out_files)
     out = []
-    for data in items:
-        if dd.get_sample_name(data) in out_files:
-            data["depth"]["bins"]["background"] = back_files[dd.get_sample_name(data)]
-            data["depth"]["bins"]["normalized"] = out_files[dd.get_sample_name(data)]
-        out.append([data])
+    items = [utils.to_single_data(x) for x in cwlutils.handle_combined_input(items)]
+    from bcbio.structural import get_svcallers
+    sv_callers = get_svcallers(items[0])
+    if "gatk-cnv" in sv_callers or "cnvkit" in sv_callers:
+        calcfns = {"cnvkit": _normalize_sv_coverage_cnvkit, "gatk-cnv": _normalize_sv_coverage_gatk}
+        from bcbio.structural import cnvkit
+        from bcbio.structural import shared as sshared
+        if all(not cnvkit.use_general_sv_bins(x) for x in items):
+            return [[d] for d in items]
+        out_files = {}
+        back_files = {}
+        for group_id, gitems in itertools.groupby(items, lambda x: tz.get_in(["regions", "bins", "group"], x)):
+            # No CNVkit calling for this particular set of samples
+            if group_id is None:
+                continue
+            inputs, backgrounds = sshared.find_case_control(list(gitems))
+            assert inputs, "Did not find inputs for sample batch: %s" % (" ".join(dd.get_sample_name(x) for x in items))
+            work_dir = utils.safe_makedir(os.path.join(dd.get_work_dir(inputs[0]), "structural",
+                                                       dd.get_sample_name(inputs[0]), "bins"))
+            back_files, out_files = calcfns[cnvkit.bin_approach(inputs[0])](group_id, inputs, backgrounds, work_dir,
+                                                                        back_files, out_files)
+        for data in items:
+            if dd.get_sample_name(data) in out_files:
+                data["depth"]["bins"]["background"] = back_files[dd.get_sample_name(data)]
+                data["depth"]["bins"]["normalized"] = out_files[dd.get_sample_name(data)]
+            out.append([data])
+    else:
+        out = [[d] for d in items]
     return out
 
 def _normalize_sv_coverage_gatk(group_id, inputs, backgrounds, work_dir, back_files, out_files):

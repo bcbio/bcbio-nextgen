@@ -252,7 +252,7 @@ def _transform_browser_coor(rRNA_interval, rRNA_coor):
 def _detect_rRNA(data, out_dir):
     out_file = os.path.join(out_dir, "rRNA_metrics.txt")
     if not utils.file_exists(out_file):
-        gtf_file = dd.get_gtf_file(data)
+        gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
         quant = tz.get_in(["quant", "tsv"], data)
         if not quant:
             salmon_dir = dd.get_salmon_dir(data)
@@ -329,7 +329,7 @@ def run_rnaseq(bam_file, data, out_dir):
     results_file = os.path.join(results_dir, "rnaseq_qc_results.txt")
     report_file = os.path.join(results_dir, "qualimapReport.html")
     config = data["config"]
-    gtf_file = dd.get_gtf_file(data)
+    gtf_file = dd.get_transcriptome_gtf(data, default=dd.get_gtf_file(data))
     library = strandedness[dd.get_strandedness(data)]
 
     # don't run qualimap on the full bam by default

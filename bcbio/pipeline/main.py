@@ -185,6 +185,9 @@ def variant2pipeline(config, run_info_yaml, parallel, dirs, samples):
             samples = heterogeneity.run(samples, run_parallel)
         with profile.report("population database", dirs):
             samples = population.prep_db_parallel(samples, run_parallel)
+        # after SV calling and SNV merging
+        with profile.report("create CNV PON", dirs):
+            samples = structural.create_cnv_pon(samples)
         with profile.report("peddy check", dirs):
             samples = peddy.run_peddy_parallel(samples, run_parallel)
         with profile.report("quality control", dirs):
@@ -269,6 +272,8 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
                     samples, config, dirs, "qc") as run_parallel:
         with profile.report("quality control", dirs):
             samples = qcsummary.generate_parallel(samples, run_parallel)
+        with profile.report("create SummarizedExperiment object", dirs):
+            samples = rnaseq.load_summarizedexperiment(samples)
         with profile.report("upload", dirs):
             samples = run_parallel("upload_samples", samples)
             for sample in samples:
@@ -276,10 +281,13 @@ def rnaseqpipeline(config, run_info_yaml, parallel, dirs, samples):
         with profile.report("bcbioRNAseq loading", dirs):
             tools_on = dd.get_in_samples(samples, dd.get_tools_on)
             bcbiornaseq_on = tools_on and "bcbiornaseq" in tools_on
-            if bcbiornaseq_on and len(samples) < 3:
-                logger.warn("bcbioRNASeq needs at least three samples total, skipping.")
-            else:
-                run_parallel("run_bcbiornaseqload", [sample])
+            if bcbiornaseq_on:
+                if len(samples) < 3:
+                    logger.warn("bcbioRNASeq needs at least three samples total, skipping.")
+                elif len(samples) > 100:
+                    logger.warn("Over 100 samples, skipping bcbioRNASeq.")
+                else:
+                    run_parallel("run_bcbiornaseqload", [sample])
     logger.info("Timing: finished")
     return samples
 

@@ -80,8 +80,10 @@ def _bgzip_and_clean(bcf_file, items):
             if not utils.file_exists(bcf_file):
                 vcfutils.write_empty_vcf(tx_out_file, samples=[dd.get_sample_name(d) for d in items])
             else:
-                cmd = ("bcftools view {bcf_file} | sed 's/\.,\.,\././' | bgzip -c > {tx_out_file}")
-                do.run(cmd.format(**locals()), "Convert and clean delly output")
+                cmd = (f"bcftools view {bcf_file} | "
+                       fr"sed 's/\.,\.,\././' | "
+                       f"bgzip -c > {tx_out_file}")
+                do.run(cmd, "Convert and clean delly output")
     return vcfutils.bgzip_and_index(out_file, items[0]["config"])
 
 @utils.map_wrap

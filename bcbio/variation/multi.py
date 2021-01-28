@@ -105,6 +105,7 @@ def _list_to_tuple(xs):
 
 def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
     """Shared functionality for grouping by batches for variant calling and joint calling.
+       when creating a pon (batch: pon_build) process samples as singles first
     """
     singles = []
     batch_groups = collections.defaultdict(list)
@@ -112,7 +113,7 @@ def _group_batches_shared(xs, caller_batch_fn, prep_data_fn):
         data = utils.to_single_data(args)
         caller, batch = caller_batch_fn(data)
         region = _list_to_tuple(data["region"]) if "region" in data else ()
-        if batch is not None:
+        if batch is not None and batch != "pon_build":
             batches = batch if isinstance(batch, (list, tuple)) else [batch]
             for b in batches:
                 batch_groups[(b, region, caller)].append(utils.deepish_copy(data))
@@ -204,6 +205,7 @@ def _pick_lead_item(items):
         for data in items:
             if vcfutils.get_paired_phenotype(data) == "tumor":
                 return data
+        print(items)
         raise ValueError("Did not find tumor sample in paired tumor/normal calling")
     else:
         return items[0]

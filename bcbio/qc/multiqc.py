@@ -387,6 +387,7 @@ def _create_config_file(out_dir, samples):
         "snpeff",
         "fastqc",
         "preseq",
+        "bismark"
     ])
     out["module_order"] = module_order
 

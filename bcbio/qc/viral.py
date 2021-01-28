@@ -10,6 +10,7 @@ import subprocess
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 from bcbio.heterogeneity import chromhacks
@@ -42,12 +43,13 @@ def run(bam_file, data, out_dir):
                             "inputformat=sam index=1 indexfilename={tx_out_file}.bai O={tx_out_file}")
                     do.run(cmd.format(**locals()), "Align unmapped reads to viral genome")
 
-            total_reads = _count_reads(bam_file)
+            total_reads = _count_reads(bam_file, data)
             assert total_reads > 0, 'Reads count is {total_reads}, is there a bug in counting the read count? {bam_file}'.format(**locals())
             with file_transaction(data, out_file) as tx_out_file:
                 sample_name = dd.get_sample_name(data)
                 mosdepth_prefix = os.path.splitext(viral_bam)[0]
-                cmd = ("mosdepth -t {cores} {mosdepth_prefix} {viral_bam} -n --thresholds 1,5,25 --by "
+                mosdepth = config_utils.get_program("mosdepth", data)
+                cmd = ("{mosdepth} -t {cores} {mosdepth_prefix} {viral_bam} -n --thresholds 1,5,25 --by "
                        "<(awk 'BEGIN {{FS=\"\\t\"}}; {{print $1 FS \"0\" FS $2}}' {viral_ref}.fai) && "
                        "echo '## Viral sequences (from {source_link}) found in unmapped reads' > {tx_out_file} &&"
                        "echo '## Sample: {sample_name}' >> {tx_out_file} && "
@@ -64,7 +66,8 @@ def run(bam_file, data, out_dir):
                     work_bam = dd.get_work_bam(data)
                     ebv = chromhacks.get_EBV(data)
                     mosdepth_prefix = os.path.splitext(work_bam)[0] + "-EBV"
-                    cmd = ("mosdepth -t {cores} {mosdepth_prefix} {work_bam} -n --thresholds 1,5,25 --by "
+                    mosdepth = config_utils.get_program("mosdepth", data)
+                    cmd = ("{mosdepth} -t {cores} {mosdepth_prefix} {work_bam} -n --thresholds 1,5,25 --by "
                             "<(grep {ebv} {ref_file}.fai | awk 'BEGIN {{FS=\"\\t\"}}; {{print $1 FS \"0\" FS $2}}') && "
                             "paste "
                             "<(zcat {mosdepth_prefix}.regions.bed.gz) "
@@ -85,7 +88,8 @@ def get_files(data):
                                                         os.pardir, "viral", "*")))
     return sorted(all_files)
 
-def _count_reads(bam_file):
-    cmd = "samtools idxstats %s | awk '{sum += $3 + $4} END {print sum}'"
-    count = subprocess.check_output(cmd % bam_file, shell=True)
+def _count_reads(bam_file, data):
+    samtools = config_utils.get_program("samtools", data)
+    cmd = "%s idxstats %s | awk '{sum += $3 + $4} END {print sum}'"
+    count = subprocess.check_output(cmd % (samtools, bam_file), shell=True)
     return int(count.strip())

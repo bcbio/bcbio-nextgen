@@ -1,8 +1,7 @@
-samplename,description,panel
+samplename,description,category
 SRR950078,UHRR_rep1,UHRR
 SRR950079,HBRR_rep1,HBRR
 SRR950080,UHRR_rep2,UHRR
 SRR950081,HBRR_rep2,HBRR
 SRR950082,UHRR_rep3,UHRR
 SRR950083,HBRR_rep3,HBRR
-SRR950084,UHRR_rep4,UHRR

@@ -1,6 +1,7 @@
 import os
-import subprocess
 import glob
+import subprocess
+import sys
 
 from bcbio import utils
 from bcbio.provenance import do
@@ -24,8 +25,14 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
         _compress_and_sort_bdg_files(out_dir, data)
         return _get_output_files(out_dir)
     macs2 = config_utils.get_program("macs2", config)
-    antibody = antibodies.ANTIBODIES.get(dd.get_antibody(data).lower(), None)
+    antibody = dd.get_antibody(data)
     if antibody:
+        antibody = antibody.lower()
+        if antibody not in antibodies.SUPPORTED_ANTIBODIES:
+            logger.error(f"{antibody} specified, but not listed as a supported antibody. Valid antibodies are {antibodies.SUPPORTED_ANTIBODIES}. If you know your antibody "
+                        f"should be called with narrow or broad peaks, supply 'narrow' or 'broad' as the antibody.")
+            sys.exit(1)
+        antibody = antibodies.ANTIBODIES[antibody]
         logger.info(f"{antibody.name} specified, using {antibody.peaktype} peak settings.")
         peaksettings = select_peak_parameters(antibody)
     elif method == "atac":

@@ -221,25 +221,26 @@ if __name__ == "__main__":
 
     parser.add_argument("-c", "--cores", default=1,
                         help="number of cores to use")
-    parser.add_argument("-f", "--fasta", required=True,
-                        help="FASTA file of the genome.")
     parser.add_argument("--gff3", default=False, action='store_true',
                         help="File is a GFF3 file.")
-    parser.add_argument("-g", "--gtf", default=None,
-                        help="GTF file of the transcriptome")
-    parser.add_argument("-n", "--name", required=True,
-                        help="Name of organism, for example Hsapiens.")
-    parser.add_argument("-b", "--build", required=True,
-                        help="Build of genome, for example hg19.")
     parser.add_argument("-i", "--indexes", choices=SUPPORTED_INDEXES, nargs="*",
                         default=["seq"], help="Space separated list of indexes to make")
     parser.add_argument("--ercc", action='store_true', default=False,
                         help="Add ERCC spike-ins.")
     parser.add_argument("--mirbase", help="species in mirbase for smallRNAseq data.")
     parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
-    parser.add_argument("--buildversion", required=True, 
-	                help=("String describing build of genome used. Examples: "
-                              "Ensembl_94, EnsemblMetazoa_94, Flybase_21, etc"))
+    required = parser.add_argument_group('required named arguments')
+    required.add_argument("--buildversion", required=True,
+	                      help=("String describing build of genome used. Examples: "
+                                "Ensembl_94, EnsemblMetazoa_94, Flybase_21, etc"))
+    required.add_argument("-f", "--fasta", required=True,
+                        help="FASTA file of the genome.")
+    required.add_argument("-g", "--gtf", default=None,
+                        help="GTF file of the transcriptome")
+    required.add_argument("-n", "--name", required=True,
+                        help="Name of organism, for example Hsapiens.")
+    required.add_argument("-b", "--build", required=True,
+                        help="Build of genome, for example hg19.")
     args = parser.parse_args()
  #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")

@@ -52,6 +52,7 @@ def _produce_compatible_vcf(out_file, data, is_somatic=False):
       GatherVcfs when merging
     - Fixes alleles prefixed with '*' like 'C,*T' which cause
       downstream failures when reading with GATK.
+    - Changes phase set (PS) header to be type Integer.
     """
     base, ext = utils.splitext_plus(out_file)
     legacy_file = "%s.legacy%s" % (base, ext)
@@ -61,8 +62,9 @@ def _produce_compatible_vcf(out_file, data, is_somatic=False):
     cat_cmd = "zcat" if legacy_file.endswith(".gz") else "cat"
     contig_cl = vcfutils.add_contig_to_header_cl(dd.get_ref_file(data), out_file)
     remove_problem_alleles = r"sed 's/,\*\([A-Z]\)/,\1/'"
+    fix_phasing_header = r"sed 's/ID=PS,Number=1,Type=String/ID=PS,Number=1,Type=Integer/'"
     cmd = ("{cat_cmd} {legacy_file} | sed 's/fileformat=VCFv4.3/fileformat=VCFv4.2/' | "
-           "{remove_problem_alleles} | {contig_cl} | bgzip -c > {final_file}")
+           "{remove_problem_alleles} | {fix_phasing_header} | {contig_cl} | bgzip -c > {final_file}")
     do.run(cmd.format(**locals()), "Produce compatible VCF output file from octopus")
     return vcfutils.bgzip_and_index(out_file, data["config"])
 

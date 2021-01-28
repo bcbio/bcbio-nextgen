@@ -46,9 +46,10 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     # SV calling will be worked on as a separate step
     vardict_cl = get_vardict_command(items[0])
     version = programs.get_version_manifest(vardict_cl)
+    # turn off structural variants
     if (vardict_cl and version and
         ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
-         (vardict_cl == "vardict" and LooseVersion(version) >= LooseVersion("2018.07.25")))):
+         (vardict_cl == "vardict"))):
         opts += ["--nosv"]
     if (vardict_cl and version and
          (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
@@ -177,12 +178,13 @@ def _run_vardict_caller(align_bams, items, ref_file, assoc_files,
                     lowfreq_filter = " | " + _lowfreq_linear_filter(0, False) + " | "
                 teststrandbias = config_utils.get_program("teststrandbias.R", config)
                 var2vcf_valid = config_utils.get_program("var2vcf_valid.pl", config)
+                fudge_vcf_version = "sed 's/^##fileformat=VCFv4.3/##fileformat=VCFv4.2/'"
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {sample} -b {bamfile} {opts} "
                        "| {teststrandbias} "
                        "| {var2vcf_valid} -A -N {sample} -E {var2vcf_opts} "
                        "| {contig_cl} | bcftools filter -i 'QUAL >= 0' {lowfreq_filter} "
-                       "{fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
+                       "{fix_ambig_ref} | {fix_ambig_alt} | {fudge_vcf_version} | {remove_dup} | {vcfstreamsort} {compress_cmd}")
                 if num_bams > 1:
                     temp_file_prefix = out_file.replace(".gz", "").replace(".vcf", "") + item["name"][1]
                     tmp_out = temp_file_prefix + ".temp.vcf"
@@ -355,6 +357,7 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                 py_cl = os.path.join(utils.get_bcbio_bin(), "py")
                 setup = ("%s && unset JAVA_HOME &&" % utils.get_R_exports())
                 contig_cl = vcfutils.add_contig_to_header_cl(ref_file, tx_out_file)
+                fudge_vcf_version = "sed 's/^##fileformat=VCFv4.3/##fileformat=VCFv4.2/'"
                 cmd = ("{setup}{jvm_opts}{vardict} -G {ref_file} "
                        "-N {paired.tumor_name} -b \"{paired.tumor_bam}|{paired.normal_bam}\" {opts} "
                        "| awk 'NF>=48' | testsomatic.R "
@@ -362,8 +365,8 @@ def _run_vardict_paired(align_bams, items, ref_file, assoc_files,
                        "-N \"{paired.tumor_name}|{paired.normal_name}\" "
                        "| {contig_cl} {freq_filter} "
                        "| bcftools filter -i 'QUAL >= 0' "
-                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} "
-                       "{compress_cmd} > {tx_out_file}")
+                       "{somatic_filter} | {fix_ambig_ref} | {fix_ambig_alt} | {remove_dup} | {vcfstreamsort} | "
+                       "{fudge_vcf_version} {compress_cmd} > {tx_out_file}")
                 do.run(cmd.format(**locals()), "Genotyping with VarDict: Inference", {})
     return out_file
 

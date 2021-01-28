@@ -5,10 +5,29 @@
 Bcbio installation paths in this workflow correspond to [O2 bcbio installation](https://wiki.rc.hms.harvard.edu/display/O2).
 Adjust to bcbio installation you are working with.
 
-### 1. Check reference genome and transcriptome - is it a mouse project?
+### 1. Check reference genome and transcriptome
+mouse project:
 - mm10 reference genome: /n/shared_db/bcbio/biodata/genomes/Mmusculus/mm10
 - transcriptome_fasta: /n/shared_db/bcbio/biodata/genomes/Mmusculus/mm10/rnaseq/ref-transcripts.fa
 - transcriptome_gtf: /n/shared_db/bcbio/biodata/genomes/Mmusculus/mm10/rnaseq/ref-transcripts.gtf
+
+human project:
+- hg38 reference genome: /n/shared_db/bcbio/biodata/genomes/Hsapiens/hg38
+- transcriptome_fasta: /n/shared_db/bcbio/biodata/genomes/Hsapiens/hg38/rnaseq/ref-transcripts.fa
+- transcriptome_gtf: /n/shared_db/bcbio/biodata/genomes/Hsapiens/hg38/rnaseq/ref-transcripts.gtf
+
+Those are *spliced* references. 
+
+To prepare the unspliced reference, use:
+```bash
+#!/bin/bash
+$1 = ref-transcripts.gtf
+bname=`basename $1 .gtf`
+awk 'BEGIN{FS="\t"; OFS="\t"} $3 == "transcript"{ $3="exon"; print}' $1 > $bname.premrna.gtf
+gffread -g /path/to/genome_reference/genome.fa $bname.premrna.gtf -w $bname.unspliced.fa
+```
+
+In some datasets using the unspliced reference allows to yield 1.5X more counts.
 
 ### 2. Create bcbio project structure in /scratch
 ```
@@ -18,30 +37,39 @@ mkdir config input final work
 ```
 
 ### 3. Prepare fastq input in sc_mouse/input
-- some FC come in 1..4 lanes, merge lanes for every read:
+- if data comes in >1 lanes, merge lanes for every read:
 ```
 cat lane1_r1.fq.gz lane2_r1.fq.gz > project_1.fq.gz
 cat lane1_r2.fq.gz lane2_r2.fq.gz > project_2.fq.gz
 ```
-- cat'ing gzip files sounds ridiculous, but works for the most part, for purists:
-```
-zcat KM_lane1_R1.fastq KM_lane2_R1.fastq.gz | gzip > KM_1.fq.gz
-```
 
-- some cores send bz2 files not gz
+- some sequencing cores send bz2 files not gz
 ```
 bunzip2 *.bz2
 cat *R1.fastq | gzip > sample_1.fq.gz
 ```
 
-- some cores produce R1,R2,R3,R4, others R1,R2,I1,I2, rename them
+- some cores produce R1,R2,R3,R4, others R1,R2,I1,I2, rename files
 ```
-bcbio_R1 = R1 = 86 or 64 bp transcript read
+bcbio_R1 = R1 = 100 or 86 or 64 bp transcript read
 bcbio_R2 = I1 = 8 bp part 1 of cell barcode
 bcbio_R3 = I2 = 8 bp sample (library) barcode
 bcbio_R4 = R2 = 14 bp = 8 bp part 2 of cell barcode + 6 bp of transcript UMI
 ```
-- files in sc_mouse/input should be (KM here is project name):
+
+*Some 100 bp R1 libraries yield low count numbers, and trimming them to 61 bp improves counting*:
+```bash
+#!/bin/bash
+# $1 = sample_1.fq.gz
+java -jar /path/to/Trimmomatic-0.39/trimmomatic-0.39.jar SE \
+-threads 10 \
+-phred33 \
+$1 \
+$1.trimmed.fq.gz \
+CROP:61
+```
+
+- files in sc_mouse/input should be (KM here is a project name):
 ```
 KM_1.fq.gz
 KM_2.fq.gz
@@ -239,15 +267,17 @@ se = SingleCellExperiment(assays=list(raw = counts), colData = metadata)
 saveRDS(se, "se.RDS")
 ```
 
-### 1a. (Optional).
-If you care, download fresh transcriptome annotation from Gencode (https://www.gencodegenes.org/mouse/)
-(it has chrom names with chr matching mm10 assembly).
+### 1a. (Optional)
+Fresh transcriptome annotations are avaliable from [Gencode](https://www.gencodegenes.org/mouse/)
+The mouse gtf uses chrom names with chr matching mm10 assembly.
+
 ```
 cd sc_mouse/input
 wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M23/gencode.vM23.annotation.gtf.gz
 gunzip gencode.vM23.annotation.gtf.gz
 gffread -g /n/shared_db/bcbio/biodata/genomes/Mmusculus/mm10/seq/mm10.fa gencode.vM23.annotation.gtf -x gencode.vM23.annotation.cds.fa
 ```
+
 update sc_mouse/config/sc_mouse.yaml:
 ```
 transcriptome_fasta: gencode.vM23.annotation.cds.fa

@@ -28,7 +28,8 @@ def _run_meth_extractor(bam_in, sample, workdir, index_dir, config):
     bismark = config_utils.get_program("bismark_methylation_extractor", config)
     cores = config["algorithm"].get('cores', 1)
     memory = config["algorithm"].get('mem', 5)
-    bam_in = bam.sort(bam_in, config, order="queryname")
+    # don't sort even by read name!
+    # bam_in = bam.sort(bam_in, config, order="queryname")
     cmd = "{bismark} --no_overlap --comprehensive --cytosine_report --genome_folder {index_dir} --merge_non_CpG --multicore {cores} --buffer_size {memory}G --bedGraph --gzip {bam_in}"
     out_dir = os.path.join(workdir, sample)
     mbias_file = os.path.join(out_dir, os.path.basename(splitext_plus(bam_in)[0]) + '.M-bias.txt')
@@ -39,7 +40,6 @@ def _run_meth_extractor(bam_in, sample, workdir, index_dir, config):
                 shutil.move(tx_dir, out_dir)
     assert os.path.exists(mbias_file), "mbias report doesn't exists:%s" % mbias_file
     return mbias_file
-
 
 def _run_report(bam_in, bam_report, sample, biasm_file, workdir, config):
     """
@@ -62,6 +62,10 @@ def _bismark_calling(data):
     index_dir = get_aligner_index('bismark', data)
     biasm_file = _run_meth_extractor(data["work_bam"], sample, workdir, index_dir, config)
     data['bismark_report'] = _run_report(data["work_bam"], data["bam_report"], sample, biasm_file, workdir, config)
+    splitting_report = biasm_file.replace(".M-bias", "_splitting_report")
+    data = dd.update_summary_qc(data, "bismark", base=biasm_file)
+    data = dd.update_summary_qc(data, "bismark", base=data["bam_report"])
+    data = dd.update_summary_qc(data, "bismark", base=splitting_report)
     return data
 
 def _bsmap_calling(data):

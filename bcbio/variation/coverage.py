@@ -20,6 +20,7 @@ from bcbio.pipeline import datadict as dd
 from bcbio.provenance import do
 from bcbio.pipeline import shared
 from bcbio.variation import bedutils
+from bcbio.pipeline import config_utils
 
 GENOME_COV_THRESH = 0.40  # percent of genome covered for whole genome analysis
 OFFTARGET_THRESH = 0.01  # percent of offtarget reads required to be capture (not amplification) based
@@ -224,6 +225,7 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                       ("%s.quantized.bed.gz" % prefix) if quantize else None,
                       ("%s.thresholds.bed.gz" % prefix) if thresholds else None)
     if not utils.file_uptodate(out.dist, bam_file):
+        bam.index(bam_file, dd.get_config(data))
         with file_transaction(data, out.dist) as tx_out_file:
             tx_prefix = os.path.join(os.path.dirname(tx_out_file), os.path.basename(prefix))
             num_cores = dd.get_cores(data)
@@ -238,7 +240,8 @@ def run_mosdepth(data, target_name, bed_file, per_base=False, quantize=None, thr
                 quant_arg, quant_export = "", ""
 
             thresholds_cmdl = ("-T " + ",".join([str(t) for t in thresholds])) if out.thresholds else ""
-            cmd = ("{quant_export}mosdepth -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
+            mosdepth = config_utils.get_program("mosdepth", data)
+            cmd = ("{quant_export}{mosdepth} -t {num_cores} -F 1804 {mapq_arg} {perbase_arg} {bed_arg} {quant_arg} "
                    "{tx_prefix} {bam_file} {thresholds_cmdl}")
             message = "Calculating coverage: %s %s" % (dd.get_sample_name(data), target_name)
             do.run(cmd.format(**locals()), message.format(**locals()))

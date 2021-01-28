@@ -1,0 +1,31 @@
+details:
+- algorithm:
+    aligner: bowtie2
+    chip_method: chip
+    peakcaller: macs2
+    quality_format: standard
+    trim_reads: read_through
+  analysis: chip-seq
+  description: sample_input
+  files:
+  - /path/project/sample_input.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: b_pair    
+    phenotype: input
+- algorithm:
+    aligner: bowtie2
+    chip_method: chip
+    peakcaller: macs2
+    quality_format: standard
+    trim_reads: read_through
+  analysis: chip-seq
+  description: sample_chip
+  files:
+  - /path/project/sample_chip.fq.gz
+  genome_build: GRCh37
+  metadata:
+    batch: b_pair
+    phenotype: chip
+upload:
+  dir: /path/project/final

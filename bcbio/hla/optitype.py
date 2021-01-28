@@ -122,7 +122,7 @@ def _call_hla(hla_fq, out_dir, data):
             opts = " ".join([str(x) for x in resources["options"]])
         else:
             opts = ""
-        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} "
+        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} --enumerate 10 "
                 "-i {hla_fq} -c {config_file}")
         do.run(cmd.format(**locals()), "HLA typing with OptiType")
         for outf in os.listdir(tx_out_dir):
