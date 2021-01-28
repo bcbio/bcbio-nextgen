@@ -726,12 +726,15 @@ def _check_hetcaller(item):
     """Ensure upstream SV callers requires to heterogeneity analysis are available.
     purecn has its own segmentation - no need in cnvkit or gatk-cnv
     """
-    svs = _get_as_list(item, "svcaller")
     hets = _get_as_list(item, "hetcaller")
-    if hets or any([x in svs for x in ["titancna"]]):
-        if not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
-            raise ValueError("Heterogeneity caller used but need CNV calls. Add `gatk-cnv` "
-                             "or `cnvkit` to `svcaller` in sample: %s" % item["description"])
+    svs = _get_as_list(item, "svcaller")
+    needing_cnv = hets.copy()
+    for s in svs:
+        if s in ["titancna"]:
+            needing_cnv.append(s)
+    if needing_cnv and not any([x in svs for x in ["cnvkit", "gatk-cnv"]]):
+            raise ValueError("Heterogeneity caller(s) %s used but need CNV calls. Add `gatk-cnv` "
+                             "or `cnvkit` to `svcaller` in sample: %s" % (", ".join(needing_cnv), item["description"]))
 
 def _check_jointcaller(data):
     """Ensure specified jointcaller is valid.
