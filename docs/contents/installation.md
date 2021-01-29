@@ -183,14 +183,14 @@ By default, bcbio will install data files for `variation`, `rnaseq` and `smallrn
 * `ericscript` -- Database for [EricScript](https://sites.google.com/site/bioericscript/), based gene fusion detection. Supports hg38, hg19 and GRCh37.
 * `TOPMed` -- [TOPMed](https://www.nhlbiwgs.org) Allele frequencies for whole genome variants from heart, lung, blood and sleep disorders. Supports hg38, hg19 and GRCh37.
 
-For somatic analyses, bcbio includes [COSMIC](https://cancer.sanger.ac.uk/cosmic) v68 for hg19 and GRCh37 only. Due to license restrictions, we cannot include updated versions of
-this dataset and hg38 support with the installer. To prepare these datasets yourself you can use [a utility script shipped with cloudbiolinux](https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_cosmic.py) that downloads, sorts and merges the VCFs, then copies into your bcbio installation:
+For somatic analyses, bcbio includes [COSMIC](https://cancer.sanger.ac.uk/cosmic) v68 for hg19 and GRCh37 only. Due to license restrictions, we cannot include updated versions of this dataset and hg38 support with the installer. To prepare these datasets yourself you can use [a utility script shipped with cloudbiolinux](https://github.com/chapmanb/cloudbiolinux/blob/master/utils/prepare_cosmic.py) that downloads, sorts and merges the VCFs, then copies into your bcbio installation:
 ```shell
 export COSMIC_USER="you@example.org"
 export COSMIC_PASS="your_cosmic_password"
 bcbio_python prepare_cosmic.py 89 /path/to/bcbio
 ```
-`/path/to/bcbio/` here is the directory one up from the `genomes` directory.
+`/path/to/bcbio/` here is the directory one up from the `genomes` directory. The script removes variants marked as `SNP` in COSMIC, i.e. leaving only somatic variants. From version a minor portion of variants gets re-classified, for example: 3,779 variants were SNPs in cosmic-90 and became mutations in cosmic-92,
+656 variants were mutations in cosmic-90 and became SNPs in cosmic-92.
 
 ## Extra software
 
