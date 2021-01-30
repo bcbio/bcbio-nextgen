@@ -9,5 +9,7 @@ include tests/data/*.csv
 include tests/data/automated/*.yaml
 include tests/data/automated/*.ini
 include tests/data/automated/tool-data/*.loc
+include tests/data/variants/*.vcf
+include tests/data/variants/*.tbi
 include bcbio/scripts/R/*.R
 include bcbio/scripts/R/*.Rmd
