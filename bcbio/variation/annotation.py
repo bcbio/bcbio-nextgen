@@ -46,7 +46,7 @@ def get_gatk_annotations(config, include_depth=True, include_baseqranksum=True,
     return anns
 
 def finalize_vcf(in_file, variantcaller, items):
-    """Perform cleanup and dbSNP annotation of the final VCF.
+    """Perform cleanup of the final VCF.
 
     - Adds contigs to header for bcftools compatibility
     - adds sample information for tumor/normal
@@ -60,9 +60,6 @@ def finalize_vcf(in_file, variantcaller, items):
             post_cl = " | ".join(cls) + " | "
         else:
             post_cl = None
-        dbsnp_file = tz.get_in(("genome_resources", "variation", "dbsnp"), items[0])
-        if dbsnp_file:
-            out_file = _add_dbsnp(in_file, dbsnp_file, items[0], out_file, post_cl)
     if utils.file_exists(out_file):
         return vcfutils.bgzip_and_index(out_file, items[0]["config"])
     else:
@@ -132,45 +129,6 @@ def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
             chrom_line = chrom_process_fn(chrom_line)
         out_handle.write(chrom_line)
     return new_header
-
-_DBSNP_TEMPLATE = """
-[[annotation]]
-file="%s"
-fields=["ID"]
-names=["rs_ids"]
-ops=["concat"]
-
-[[postannotation]]
-name="ID"
-fields=["rs_ids"]
-op="setid"
-type="String"
-
-[[postannotation]]
-fields=["rs_ids"]
-op="delete"
-"""
-
-def _add_dbsnp(orig_file, dbsnp_file, data, out_file=None, post_cl=None):
-    """Annotate a VCF file with dbSNP.
-
-    vcfanno has flexible matching for NON_REF gVCF positions, matching
-    at position and REF allele, matching ALT NON_REF as a wildcard.
-    """
-    orig_file = vcfutils.bgzip_and_index(orig_file, data["config"])
-    if out_file is None:
-        out_file = "%s-wdbsnp.vcf.gz" % utils.splitext_plus(orig_file)[0]
-    if not utils.file_uptodate(out_file, orig_file):
-        with file_transaction(data, out_file) as tx_out_file:
-            conf_file = os.path.join(os.path.dirname(out_file), "dbsnp.conf")
-            with open(conf_file, "w") as out_handle:
-                out_handle.write(_DBSNP_TEMPLATE % os.path.normpath(os.path.join(dd.get_work_dir(data), dbsnp_file)))
-            if not post_cl: post_cl = ""
-            cores = dd.get_num_cores(data)
-            cmd = ("vcfanno -p {cores} {conf_file} {orig_file} | {post_cl} "
-                   "bgzip -c > {tx_out_file}")
-            do.run(cmd.format(**locals()), "Annotate with dbSNP")
-    return vcfutils.bgzip_and_index(out_file, data["config"])
 
 def get_context_files(data):
     """Retrieve pre-installed annotation files for annotating genome context.
