@@ -1,4 +1,6 @@
-## 1.2.6 (in progress)
+## 1.2.7 (in progress)
+
+## 1.2.6 (04 February 2021)
 - RNASeq: Fail more gracefully if SummarizedExperiment object cannot be created.
 - Fixes to handle DRAGEN BAM files from the first stage of UMI processing.
 - Fix issue with double-annotating with dbSNP. Separating out somatic variant annotation into it's own vcfanno configuration.
