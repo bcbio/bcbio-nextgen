@@ -392,14 +392,9 @@ def _find_qualimap_secondary_files(results_dir, base_file):
         is_dup = (os.path.basename(x) == os.path.basename(base_file) and
                   os.path.getsize(x) == os.path.getsize(base_file))
         return not is_dup
-    def is_problem_file(x):
-        """Problematic files with characters that make some CWL runners unhappy.
-        """
-        return x.find("(") >= 0 or x.find(")") >= 0 or x.find(" ") >= 0
-    return list(filter(lambda x: not is_problem_file(x),
-                       filter(not_dup,
+    return list(filter(not_dup,
                               glob.glob(os.path.join(results_dir, 'qualimapReport.html')) +
                               glob.glob(os.path.join(results_dir, '*.txt')) +
                               glob.glob(os.path.join(results_dir, "css", "*")) +
                               glob.glob(os.path.join(results_dir, "raw_data_qualimapReport", "*")) +
-                              glob.glob(os.path.join(results_dir, "images_qualimapReport", "*")))))
+                              glob.glob(os.path.join(results_dir, "images_qualimapReport", "*"))))

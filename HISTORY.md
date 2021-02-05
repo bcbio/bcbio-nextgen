@@ -1,4 +1,5 @@
 ## 1.2.7 (in progress)
+- RNASeq: Add gene body coverage plots to multiqc report. 
 
 ## 1.2.6 (04 February 2021)
 - RNASeq: Fail more gracefully if SummarizedExperiment object cannot be created.
