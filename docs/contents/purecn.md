@@ -190,9 +190,9 @@ resources:
 ```
 
 Capturing more SNP markers is also useful for PureCN analysis, the input bed file for the panel or exome capture kit
-is usually 100 bp padded on both sides of the probe (it is not padded in bcbio). In addition to that the mutect2
-step uses 50bp interval_padding setting (https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/mutect2.py#L126).
-Interval padding could be adjusted with:
+is usually 100 bp padded on both sides of the probe (it is not padded by bcbio). In addition to that the mutect2
+step uses 50bp interval_padding [option](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/mutect2.py#L126).
+The interval padding could be adjusted with:
 
 ```yaml
 resources:
