@@ -14,6 +14,7 @@ from bcbio import utils
 from bcbio.heterogeneity import chromhacks
 from bcbio.log import logger
 from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 from bcbio.distributed.transaction import file_transaction
 from bcbio.heterogeneity import loh
 from bcbio.provenance import do
@@ -90,6 +91,9 @@ def _run_purecn_normaldb(paired, out):
             "--seed", "123",
             "--bootstrapn", "500",
             "--cores", dd.get_num_cores(sample)]
+    resources = config_utils.get_resources("purecn", sample)
+    if "options" in resources:
+        cmd += [str(x) for x in resources.get("options", [])]
     # it is not recommended to use matched normal sample in PureCN analysis,
     # because then it skips PON coverage normalization and denoising steps!
     # but still, if it is supplied, we useit
