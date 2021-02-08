@@ -120,8 +120,17 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                     if snv_pon and dd.get_batch(items[0]) != "pon_build":
                         params += ["-pon", snv_pon]
 
+                opt_list = config_utils.get_resources("mutect2", items[0]["config"]).get("options")
+                # default is 50, sometimes 100 or 200 is recommended for better sensitivity in detection
+                # hom del CNVs (calling more variants helps)
+                interval_padding = 50
+                if opt_list:
+                    opt_dict = dict(zip(opt_list[::2], opt_list[1::2]))
+                    if "--interval_padding" in opt_dict:
+                        interval_padding = opt_dict["--interval_padding"]
+
                 params += ["--max-mnp-distance", "0",
-                           "--interval-padding", "50",
+                           "--interval-padding", interval_padding,
                            "--germline-resource", germline_path,
                            "--genotype-germline-sites",
                            "--reference", ref_file,
