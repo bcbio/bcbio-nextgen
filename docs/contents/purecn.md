@@ -182,6 +182,24 @@ PureCN results will be copied to the folder of the tumor sample in the final dir
 
 We found useful to adjust memory parameters when running large cohorts with ipython (149 samples): [see issue 3230](https://github.com/bcbio/bcbio-nextgen/issues/3230).
 
+To detect deletions in cfDNA samples we found useful to set PureCN parameters in the yaml:
+```yaml
+resources:
+  purecn:
+    options: ["--funsegmentation", "PSCBS", "--minpurity", "0.1", "--minaf", "0.01", "--error", "0.0005"]
+```
+
+Capturing more SNP markers is also useful for PureCN analysis, the input bed file for the panel or exome capture kit
+is usually 100 bp padded on both sides of the probe (it is not padded in bcbio). In addition to that the mutect2
+step uses 50bp interval_padding setting (https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/mutect2.py#L126).
+Interval padding could be adjusted with:
+
+```yaml
+resources:
+  mutect2:
+    options: ["interval_padding", "100"]
+```
+
 ## References
 
 - [PureCN publication](https://scfbm.biomedcentral.com/articles/10.1186/s13029-016-0060-z)
