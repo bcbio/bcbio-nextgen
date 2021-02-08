@@ -551,6 +551,25 @@ To use that genome just need to configure your YAML files as:
 genome_build: WBcel135
 ```
 
+The GTF file you provide for the `bcbio_setup_genome.py` script must have the following features:
+
+1) each entry must have a `transcript_id` and a `gene_id`
+2) for each transcript there must be entries where the **feature** field (field 3) is `exon` with the coordinates describing the stop and end of the exon
+
+for example, this is a snippet from a valid GTF file:
+
+```
+1	pseudogene	gene	11869	14412	.	+	.	gene_source "ensembl_havana"; gene_biotype "pseudogene"; gene_id "ENSG00000223972"; gene_name "DDX11L1";
+1	processed_transcript	transcript	11869	14409	.	+	.	transcript_source "havana"; gene_id "ENSG00000223972"; gene_source "ensembl_havana"; trans
+cript_name "DDX11L1-002"; gene_biotype "pseudogene"; transcript_id "ENST00000456328"; gene_name "DDX11L1";
+1	processed_transcript	exon	11869	12227	.	+	.	exon_number "1"; transcript_source "havana"; gene_id "ENSG00000223972"; exon_id "ENSE00002234944";
+ gene_source "ensembl_havana"; transcript_id "ENST00000456328"; gene_biotype "pseudogene"; transcript_name "DDX11L1-002"; gene_name "DDX11L1";
+1	processed_transcript	exon	12613	12721	.	+	.	exon_number "2"; transcript_source "havana"; gene_id "ENSG00000223972"; exon_id "ENSE00003582793";
+ gene_source "ensembl_havana"; transcript_id "ENST00000456328"; gene_biotype "pseudogene"; transcript_name "DDX11L1-002"; gene_name "DDX11L1";
+1	processed_transcript	exon	13221	14409	.	+	.	exon_number "3"; transcript_source "havana"; gene_id "ENSG00000223972"; exon_id "ENSE00002312635";
+ gene_source "ensembl_havana"; transcript_id "ENST00000456328"; gene_biotype "pseudogene"; transcript_name "DDX11L1-002"; gene_name "DDX11L1";
+```
+
 #### Effects prediction
 
 To perform variant calling and predict effects in a custom genome you'd have to manually download and link this into your installation. First find the snpEff genome build:
