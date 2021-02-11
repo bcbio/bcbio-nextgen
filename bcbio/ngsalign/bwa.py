@@ -15,7 +15,6 @@ from bcbio.variation import sentieon
 import bcbio.pipeline.datadict as dd
 from bcbio.bam import fastq
 from bcbio.log import logger
-from bcbio.heterogeneity import chromhacks
 
 galaxy_location_file = "bwa_index.loc"
 
@@ -124,6 +123,7 @@ def has_umi(data):
     return "umi_bam" in data
 
 def has_hla(data):
+    from bcbio.heterogeneity import chromhacks
     return len(chromhacks.get_hla_chroms(dd.get_ref_file(data))) != 0
 
 def fastq_size_output(fastq_file, tocheck):
