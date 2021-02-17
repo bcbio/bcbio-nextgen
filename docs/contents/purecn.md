@@ -189,6 +189,14 @@ resources:
     options: ["--funsegmentation", "PSCBS", "--minpurity", "0.1", "--minaf", "0.01", "--error", "0.0005"]
 ```
 
+A patched implementation of PSCBS works better than the default, to install the patched version in bcbio:
+```bash
+# run R from r36 conda environment:
+/path/to/bcbio/anaconda/envs/r36/bin/R
+# install patched PSCBS:
+BiocManager::install("lima1/PSCBS", ref="add_dnacopy_weighting")
+```
+
 Capturing more SNP markers is also useful for PureCN analysis, the input bed file for the panel or exome capture kit
 is usually 100 bp padded on both sides of the probe (it is not padded by bcbio). In addition to that the mutect2
 step uses 50bp interval_padding [option](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/mutect2.py#L126).
