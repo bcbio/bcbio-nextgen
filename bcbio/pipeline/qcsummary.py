@@ -117,7 +117,9 @@ def get_qc_tools(data):
             to_run += ["coverage", "picard"]
         to_run += ["qsignature", "variants"]
         if vcfanno.is_human(data):
-            to_run += ["contamination", "peddy"]
+            to_run += ["peddy"]
+            if "contamination" not in dd.get_tools_off(data):
+                to_run += ["contamination"]
         if vcfutils.get_paired_phenotype(data):
             if "viral" not in dd.get_tools_off(data):
                 to_run += ["viral"]
