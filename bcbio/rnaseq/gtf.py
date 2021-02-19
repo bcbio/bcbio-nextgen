@@ -105,6 +105,7 @@ def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
     to output only the CDS
     handles malformed FASTA files where a single transcript is repeated multiple
     times by just using the first one
+    handles stripping of transcript version IDs if they exist
     """
     if out_file and file_exists(out_file):
         return out_file
@@ -135,6 +136,7 @@ def gtf_to_fasta(gtf_file, ref_fasta, cds=False, out_file=None):
                     else:
                         transcript = cur_transcript
                         skipping = False
+                    transcript = _strip_feature_version(transcript)
                     line = ">" + transcript + "\n"
                 if not skipping:
                     out_handle.write(line)
