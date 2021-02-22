@@ -34,8 +34,9 @@ def _generate_estimates(bam_file, out_base, failed_file, exts, data):
                   "nvars": "100k",
                   "build":"b38" if dd.get_genome_build(data) == "hg38" else "b37"}
     with file_transaction(data, out_base) as tx_out_base:
+        num_cores = dd.get_num_cores(data)
         cmd = ["verifybamid2", background["dataset"], background["nvars"], background["build"],
-               "--Reference", dd.get_ref_file(data), "--Output", tx_out_base]
+               "--Reference", dd.get_ref_file(data), "--Output", tx_out_base, "--NumThread", num_cores]
         cmd += _get_input_args(bam_file, data, out_base, background)
         try:
             do.run(cmd, "VerifyBamID contamination checks")
@@ -50,7 +51,8 @@ def _generate_estimates(bam_file, out_base, failed_file, exts, data):
                     out_handle.write(str(msg))
             else:
                 logger.warning(str(msg))
-                raise
+                # don't escalate, it breaks some terminals on AWS Ubuntu
+                # raise
         else:
             # Fix any sample name problems, for pileups
             shutil.move(tx_out_base + ".selfSM", tx_out_base + ".selfSM.orig")
