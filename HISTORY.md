@@ -1,5 +1,10 @@
 ## 1.2.7 (in progress)
 - RNASeq: Add gene body coverage plots to multiqc report. 
+- Restore ability to opt out of contamination checking via tools_off.
+- Properly invoke threading for `verifybamid2`.
+- Fix circular import issue when using bcbio functions outside of
+  the main bcbio script.
+- Enable setting custom PureCN options via YAML file.
 
 ## 1.2.6 (04 February 2021)
 - RNASeq: Fail more gracefully if SummarizedExperiment object cannot be created.
