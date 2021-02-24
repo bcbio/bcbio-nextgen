@@ -73,11 +73,45 @@ def calculate_encode_complexity_metrics(data):
     else:
         PBC2 = raw_metrics["m1"] / raw_metrics["m2"]
     metrics["PBC2"] = PBC2
-    metrics["bottlenecking"] = get_bottlenecking_flag(metrics["PBC1"], metrics["PBC2"])
-    metrics["complexity"] = get_complexity_flag(metrics["NRF"])
+
+    if dd.get_chip_method(data) == "atac":
+        metrics["bottlenecking"] = get_atac_bottlenecking_flag(metrics["PBC1"], metrics["PBC2"])
+        metrics["complexity"] = get_atac_complexity_flag(metrics["NRF"])
+    else:
+        metrics["bottlenecking"] = get_chip_bottlenecking_flag(metrics["PBC1"], metrics["PBC2"])
+        metrics["complexity"] = get_chip_complexity_flag(metrics["NRF"])
     return(metrics)
 
-def get_bottlenecking_flag(PBC1, PBC2):
+def get_chip_bottlenecking_flag(PBC1, PBC2):
+    """
+    flags from: https://www.encodeproject.org/data-standards/terms/ under Library Complexity
+    """
+    if PBC1 < 0.5 or PBC2 < 1:
+        return "severe"
+    elif PBC1 <= 0.8 or PBC2 <= 3:
+        return "moderate"
+    elif PBC1 <= 0.9 or PBC2 <= 10:
+        return "mild"
+    else:
+        return "none"
+
+def get_chip_complexity_flag(NRF):
+    """
+    flags from: https://www.encodeproject.org/data-standards/terms/ under Library Complexity
+    """
+    if NRF < 0.5:
+        return "concerning"
+    elif NRF < 0.8:
+        return "acceptable"
+    elif NRF < 0.9:
+        return "compliant"
+    else:
+        return "ideal"
+
+def get_atac_bottlenecking_flag(PBC1, PBC2):
+    """
+    flags from: https://www.encodeproject.org/data-standards/terms/ under Library Complexity
+    """
     if PBC1 < 0.7 or PBC2 < 1:
         return "severe"
     elif PBC1 <= 0.9 or PBC2 <= 3:
@@ -85,14 +119,16 @@ def get_bottlenecking_flag(PBC1, PBC2):
     else:
         return "none"
 
-def get_complexity_flag(NRF):
+def get_atac_complexity_flag(NRF):
+    """
+    flags from: https://www.encodeproject.org/data-standards/terms/ under Library Complexity
+    """
     if NRF < 0.7:
         return "concerning"
     elif NRF < 0.9:
         return "acceptable"
     else:
         return "ideal"
-
 
 def split_ATAC(data, bam_file=None):
     """
