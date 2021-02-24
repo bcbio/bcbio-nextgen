@@ -1,4 +1,5 @@
 ## 1.2.8 (in progress)
+- Set ENCODE library complexity flags properly for ChIP-seq. Thanks @mistrm82!
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report. 
