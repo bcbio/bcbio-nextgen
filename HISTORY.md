@@ -1,8 +1,9 @@
 ## 1.2.8 (in progress)
-- Set ENCODE library complexity flags properly for ChIP-seq. Thanks @mistrm82!
+- Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
+- Fix greylisted peaks not being propagated to the output directory. Thanks to @mistrm82.
 
 ## 1.2.7 (22 February 2021)
-- RNASeq: Add gene body coverage plots to multiqc report. 
+- RNASeq: Add gene body coverage plots to multiqc report.
 - Restore ability to opt out of contamination checking via tools_off.
 - Properly invoke threading for `verifybamid2`.
 - Fix circular import issue when using bcbio functions outside of
