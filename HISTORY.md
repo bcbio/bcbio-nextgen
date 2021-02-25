@@ -1,6 +1,7 @@
 ## 1.2.8 (in progress)
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
 - Fix greylisted peaks not being propagated to the output directory. Thanks to @mistrm82.
+- Better error message when no sample barcodes are found for single-cell RNA-seq.
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report.
