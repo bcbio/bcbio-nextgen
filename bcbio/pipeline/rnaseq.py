@@ -30,6 +30,11 @@ def singlecell_rnaseq(samples, run_parallel):
     for lane in demultiplexed:
         for index in lane:
             samples.append([index])
+    if not samples:
+        logger.error(f"No samples were found matching the supplied sample barcodes. See "
+            f"https://github.com/bcbio/bcbio-nextgen/issues/3428#issuecomment-772609904 "
+            f"for how to debug this issue.")
+        sys.exit(1)
     samples = run_parallel("run_filter_barcodes", samples)
     samples = run_parallel("run_barcode_histogram", samples)
     if quantifier == "rapmap":
