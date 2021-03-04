@@ -212,6 +212,8 @@ Tests:
 +--------+-----------------+----------------+----------+----------+-----+
 ```
 
+ipython parallelization is not implemented for `wgbs-seq`, use 1 node / multicore jobs.
+
 ## References
 - [Bock.2012.Analysing and interpreting DNA methylation data](https://www.nature.com/articles/nrg3273)
 - [accelngs](https://swiftbiosci.com/accel-ngs-methyl-seq-dna-library-kit/)
