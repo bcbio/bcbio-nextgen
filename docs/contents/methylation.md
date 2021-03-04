@@ -95,11 +95,13 @@ resources:
   trim_galore:
     options: ["--clip_r1 8", "--clip_r2 8", "--three_prime_clip_r1 8", "--three_prime_clip_r2 8"]
 ```
-- bismark `--non-directional` option (default is directional mode and you don't have to specify it):
+- bismark `--non-directional` option (default is directional mode and you don't have to specify it) and threading options:
 ```yaml
 resources:
   bismark:
     options: ["--non_directional"]
+    bismark_threads: 16
+    bowtie_threads: 2
 ```
 
 - deduplicate_bismark options:
