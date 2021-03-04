@@ -42,12 +42,12 @@ resources:
   trim_galore:
     options: ["--clip_r1 4", "--clip_r2 4", "--three_prime_clip_r1 4", "--three_prime_clip_r2 4"]
   bismark:
-    options: ["--directional"]
     bismark_threads: 16
     bowtie_threads: 2
 upload:
   dir: ../final
 ```
+
 ### 4. Create and launch bcbio start script wgbs_example/work/bcbio.sh (O2 slurm example)
 ```bash
 #!/bin/bash
@@ -84,10 +84,32 @@ date
 +--------+------------+---------+---------+---------+---------+
 ```
 
+In the `algorithm` section of the yaml:
 - `aligner`: `bismark`
 - `kit`: `accelngs`, `nebemseq`, `truseq`
 
-It is possible to specify the `trim_galore` trimming parameters and `bismark` directionality parameter (default: directional) in the `resources` section of the bcbio config file. The following configs for the `truseq` kit will give the same results:
+In the `resources` section of the yaml:
+- trim_galore trimming options:
+```yaml
+resources:
+  trim_galore:
+    options: ["--clip_r1 8", "--clip_r2 8", "--three_prime_clip_r1 8", "--three_prime_clip_r2 8"]
+```
+- bismark `--non-directional` option (default is directional mode and you don't have to specify it):
+```yaml
+resources:
+  bismark:
+    options: ["--non_directional"]
+```
+
+- deduplicate_bismark options:
+```yaml
+resources:
+  deduplicate_bismark:
+    options: ["--barcode"]
+```
+
+The following configs for the `truseq` kit are equivalent:
 ```
 details:
 - analysis: wgbs-seq
