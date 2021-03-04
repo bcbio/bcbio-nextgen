@@ -29,6 +29,12 @@ details:
 the same dir as input bam files. Bcbio generates indices on the fly, but PureCN follows a symlink
 to the original bam file and if there is no index, it crashes.*
 
+For better capture of the coverage panel.bed (or exome.bed) could be padded:
+```bash
+cat panel.bed | awk '{print $1"\t"$2-100"\t"$3+100"\t"$4}' > panel.padded100bp.bed 
+bedtools merge -i panel.padded100bp.bed > panel.padded100bp.merged.bed
+```
+
 ### 2. Create a sample sheet pon.csv:
 You need a minimum of 3 samples for a PON.
 See the discussion about the number of sample in PureCN documentation.
