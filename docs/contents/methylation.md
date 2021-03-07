@@ -95,12 +95,12 @@ resources:
   trim_galore:
     options: ["--clip_r1 8", "--clip_r2 8", "--three_prime_clip_r1 8", "--three_prime_clip_r2 8"]
 ```
-- bismark `--non-directional` option (default is directional mode and you don't have to specify it) and threading options:
+- bismark `--non-directional` option (default is directional mode and you don't have to specify it) and threading options (use with caution, see benchmarking notes below; by default bcbio is trying to calculate the optimal number of bismark threads with this [function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L123); if you alter bismark_threads = X, request 5-7X cores for bcbio; some samples could be processed much faster, but some could fail, reduce threads then):
 ```yaml
 resources:
   bismark:
     options: ["--non_directional"]
-    bismark_threads: 16
+    bismark_threads: 4
     bowtie_threads: 2
 ```
 
@@ -158,7 +158,7 @@ details:
 fc_name: bcbio
 resources:
   bismark:
-    bismark_threads: 16
+    bismark_threads: 4
     bowtie_threads: 2
 upload:
   dir: ../final
@@ -182,7 +182,7 @@ Tests:
 +--------+-----------------+----------------+----------+----------+-----+
 | 06     |2                |2               |2days 4h  | 16       | 50G |
 +--------+-----------------+----------------+----------+----------+-----+
-| 07     |4                |2               |13h       | 16       | 50G |
+| **07** |4                |2               |13h       | 16       | 50G |
 +--------+-----------------+----------------+----------+----------+-----+
 | 08     |8                |2               |3h 34 min | 16       | 50G |
 +--------+-----------------+----------------+----------+----------+-----+
