@@ -42,7 +42,14 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     max_cores = dd.get_num_cores(data)
     max_mem = config_utils.convert_to_bytes(resources.get("memory", "1G")) / (1024.0 * 1024.0)
     instances = calculate_bismark_instances(max_cores, max_mem * max_cores)
-
+    # override instances if specified in the config
+    if resources and resources.get("bismark_threads"):
+        instances = resources.get("bismark_threads")
+        logger.info(f"Using {instances} bismark instances - overriden by resources")
+    bowtie_threads = 1
+    if resources and resources.get("bowtie_threads"):
+        bowtie_threads = resources.get("bowtie_threads")
+    logger.info(f"Using {bowtie_threads} bowtie threads per bismark instance")
     kit = kits.KITS.get(dd.get_kit(data), None)
     directional = "--non_directional" if kit and not kit.is_directional else ""
 
@@ -51,7 +58,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
 
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
-    cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --parallel {instances} -o {tx_out_dir} --unmapped {ref_file} {fastq_file} "
+    cmd = "{bismark} {other_opts} {directional} --bowtie2 --temp_dir {tx_out_dir} --gzip --parallel {instances} -p {bowtie_threads} -o {tx_out_dir} --unmapped {ref_file} {fastq_file} "
     if pair_file:
         fastq_file = "-1 %s -2 %s" % (fastq_file, pair_file)
     raw_bam = glob.glob(out_dir + "/*bismark*bt2*bam")
