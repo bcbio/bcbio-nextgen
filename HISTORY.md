@@ -2,6 +2,10 @@
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
 - Fix greylisted peaks not being propagated to the output directory. Thanks to @mistrm82.
 - Better error message when no sample barcodes are found for single-cell RNA-seq.
+- Better trimming for 2 wgbs kits
+- enable setting parameters for deduplicate_bismark
+- custom threading for bismark via yaml
+- reproducible WGBS user story with the data from Encode
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report.
