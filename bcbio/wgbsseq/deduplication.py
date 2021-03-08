@@ -8,9 +8,8 @@ from bcbio import bam
 from bcbio.pipeline import datadict as dd
 
 def dedup_bismark(data):
-    """Remove alignments to the same position in the genome from the Bismark
-    mapping output using deduplicate_bismark
-    """
+    """ Remove alignments to the same position in the genome from the Bismark
+    mapping output using deduplicate_bismark """
     config = data["config"]
     input_file = datadict.get_work_bam(data)
     # don't sort even by read names
@@ -34,7 +33,12 @@ def dedup_bismark(data):
         return [[data]]
 
     deduplicate_bismark = config_utils.get_program('deduplicate_bismark', config)
-    command = f'{deduplicate_bismark} --output_dir {output_dir} {input_file}'
+    resources = config_utils.get_resources("deduplicate_bismark", data)
+    opt = ""
+    if "options" in resources:
+        opt_list = [str(x) for x in resources.get("options", [])]
+        opt = ' '.join(opt_list)
+    command = f'{deduplicate_bismark} {opt} --output_dir {output_dir} {input_file}'
     with transaction.file_transaction(output_dir):
         do.run(command, 'remove deduplicate alignments')
 

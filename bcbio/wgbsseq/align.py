@@ -10,6 +10,8 @@ from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import broad
 from bcbio.bam import index
+from bcbio.pipeline import datadict as dd
+from bcbio.pipeline import config_utils
 
 from ichwrapper import log
 
@@ -28,11 +30,17 @@ def _set_quality(in_bam):
     return out_file
 
 def _align(in_fastq, sample, workdir, genome_index, is_directional, bowtie2, reference, config):
-    """
-    align with bismark
-    """
+    """ align with bismark. this is actually not used. the align is in ngsalign.bismark.align """
     bismark = do.find_cmd("bismark")
-    num_cores = max(int(config['algorithm'].get('cores', 1) / 2), 1)
+    resources = config_utils.get_resources("bismark")
+    num_cores = 1
+    if resources and resources.get("bismark_threads"):
+        num_cores = resources.get("bismark_threads")
+    else:
+        num_cores = max(int(config['algorithm'].get('cores', 1) / 2), 1)
+    bowtie_threads = 1
+    if resources and resources.get("bowtie_threads"):
+        bowtie_threads = resources.get("bowtie_threads")
     basename = sample
     if is_directional:
         is_directional = ""
@@ -41,7 +49,7 @@ def _align(in_fastq, sample, workdir, genome_index, is_directional, bowtie2, ref
 
     cmd = "{bismark} -n 1 -o {tx_dir} --basename {sample} --unmapped {is_directional} {genome_index} {in_fastq}"
     if bowtie2:
-        cmd = "{bismark} --bowtie2 -p {num_cores} -n 1 -o {tx_dir} --basename {sample} --unmapped {is_directional} {genome_index} {in_fastq}"
+        cmd = "{bismark} --bowtie2 --parallel {num_cores} -p {bowtie_threads} -o {tx_dir} --basename {sample} --unmapped {is_directional} {genome_index} {in_fastq}"
     out_dir = op.join(workdir, sample)
     out_bam = op.join(out_dir, sample + ".bam")
 
