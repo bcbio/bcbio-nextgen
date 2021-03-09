@@ -134,6 +134,18 @@ resources:
     options: ["--non_directional"]
 ```
 
+## Output
+
+### Project directory
+- multiqc - QC report, including information from Bismark for all samples (alignment rates, deduplication, M-Bias) 
+
+### Sample directory
+- sample-bam_report.txt - bismark alignment report
+- sample-deduplication_report.txt
+- sample-ready.bam (not indexed unsorted bam)
+- bismark - Bismark output
+- bismark/sample.html - Bismark processing report
+
 ## Benchmarking
 There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
 We ran a test with NA12878 nebemseq data, 125 mln reads (72.5mln read pairs).
