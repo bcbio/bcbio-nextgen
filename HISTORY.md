@@ -10,6 +10,7 @@
   the summit for the highest scoring peak and expanding the peak to 250 bases. 
 - Enable consensus peak calling for broad peaks. Thanks to @mistrm82 and
   @yoonsquared for pointing out this was missing. 
+- Re-enable ATAC-seq tests, they work now.
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report.
