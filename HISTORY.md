@@ -6,6 +6,10 @@
 - enable setting parameters for deduplicate_bismark
 - custom threading for bismark via yaml
 - reproducible WGBS user story with the data from Encode
+- While consensus peak calling, keep the highest scoring peak instead of calling
+  the summit for the highest scoring peak and expanding the peak to 250 bases. 
+- Enable consensus peak calling for broad peaks. Thanks to @mistrm82 and
+  @yoonsquared for pointing out this was missing. 
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report.

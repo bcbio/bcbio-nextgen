@@ -152,7 +152,7 @@ def greylisting(data):
                 return None
     return greylistdir
 
-def consensus(peakfiles, consensusfile, data, pad=250):
+def consensus(peakfiles, consensusfile, data):
     """call consensus peaks from a set of narrow/broad peakfiles
     we use this method:
     https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html
@@ -181,21 +181,19 @@ def consensus(peakfiles, consensusfile, data, pad=250):
 
     logger.info(f"Calling consensus peaks on {','.join(peakfiles)}")
     logger.info(f"Removing low quality peaks from {','.join(peakfiles)}")
-    filteredsummits = []
+    filteredpeaks = []
     for fn in peakfiles:
         filteredpeak = NamedTemporaryFile(suffix=".bed", delete=False).name
         df = remove_low_quality_peaks(fn, qval=0.05)
         df.to_csv(filteredpeak, index=False, header=False, sep="\t")
-        filteredsummit = peakfile_to_summitfile(filteredpeak)
-        filteredsummits.append(filteredsummit)
-    peakfiles = filteredsummits
+        filteredpeaks.append(filteredpeak)
+    peakfiles = filteredpeaks
 
     with file_transaction(consensusfile) as tx_consensus_file:
-        message = (f"Combining summits of {' '.join(peakfiles)} and "
-                   f"expanding {pad} bases.")
         with utils.tmpfile(suffix=".bed") as tmpbed:
-            slopcommand = f"{bedops} --range {pad} -u {' '.join(peakfiles)} > {tmpbed}"
-            do.run(slopcommand, message)
+            message = f"Move all peaks in {' '.join(peakfiles)} to a single file."
+            mergepeakscmd = f"{bedops} -u {' '.join(peakfiles)} > {tmpbed}"
+            do.run(mergepeakscmd, message)
             iteration = 0
             while os.path.getsize(tmpbed):
                 iteration = iteration + 1
@@ -244,7 +242,8 @@ def call_consensus(samples):
             for fn in tz.get_in(("peaks_files", "macs2"), data, []):
                 if "narrowPeak" in fn:
                     peakfiles.append(fn)
-                    break
+                elif "broadPeak" in fn:
+                    peakfiles.append(fn)
         elif dd.get_chip_method(data) == "atac":
             if bam.is_paired(dd.get_work_bam(data)):
                 for fn in tz.get_in(("peaks_files", "NF", "macs2") , data, []):
@@ -273,10 +272,27 @@ def call_consensus(samples):
 def read_peakfile(fn):
     """read a narrow/broad peakFile
      see http://genome.ucsc.edu/FAQ/FAQformat.html#format12 for a description of
-    the format
+    the formats
+    """
+    if "narrowPeak" in fn:
+        return read_narrowpeakfile(fn)
+    elif "broadPeak" in fn:
+        return read_broadpeakfile(fn)
+
+def read_narrowpeakfile(fn):
+    """
+    read a narrowPeak file
     """
     PEAK_HEADER = ["chrom", "chromStart", "chromEnd", "name", "score", "strand",
                    "signalValue", "pValue", "qValue", "peak"]
+    return pd.read_csv(fn, sep="\t", names=PEAK_HEADER)
+
+def read_broadpeakfile(fn):
+    """
+    read a broadPeak file
+    """
+    PEAK_HEADER = ["chrom", "chromStart", "chromEnd", "name", "score", "strand",
+                   "signalValue", "pValue", "qValue"]
     return pd.read_csv(fn, sep="\t", names=PEAK_HEADER)
 
 def remove_low_quality_peaks(peakfile, qval=0.05):
