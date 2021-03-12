@@ -391,6 +391,9 @@ resources:
     options: [--min-reads, 3]
 ```
 
+Duplex UMI sequencing allows to reduce false positive rate compared to single UMIs,
+see implementations from [TwinStrand](https://twinstrandbio.com/technology/) or [IDT](https://www.idtdna.com/pages/products/next-generation-sequencing/adapters/xgen-dual-index-umi-adapters-tech-access). [Duplex UMI data processing example in bcbio](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/somatic-duplex-umi.yaml)
+
 ## Output
 
 ### Project directory:
