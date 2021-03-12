@@ -1,4 +1,5 @@
-# template for somatic tumor only variant calling using duplex umis
+# this template is for somatic tumor only variant calling using duplex UMIs
+# and high coverage panel data
 # min_allele_fraction is % i.e. 0.01% = 0.0001
 # use_lowfreq_filter: false forces vardict to report all variants,
 # including those with low variant frequency
@@ -10,16 +11,30 @@
 details:
 - algorithm:
     aligner: bwa
-    trim_ends: [2,0,2,0]
-    min_allele_fraction: 0.01
+    align_split_size: false
     correct_umis: /path/config/whitelist.txt
+    coverage_interval: regional
+    coverage: /path/to/Panel/coverage.bed
+    sv_regions: /path/to/Panel/coverage.bed
+    variant_regions: /path/to/Panel/variants.bed 
+    effects_transcripts: canonical_cancer
+    mark_duplicates: true
+    min_allele_fraction: 0.01
+    variantcaller:
+      somatic: vardict
+      germline: gatk-haplotype
+    platform: Illumina
+    quality_format: Standard
+    recalibrate: false
+    realign: false
+    svcaller: [manta, seq2c, cnvkit]
+    svprioritize: cancer/az-cancer-panel
     tools_off:
     - gemini
+    tools_on: [qualimap_full, damage_filter, gatk4]
+    trim_ends: [2,0,2,0]
+    variant_regions: panel.bed  
     umi_type: fastq_name
-    variantcaller:
-    - vardict
-    coverage: panel.bed
-    variant_regions: panel.bed
     use_lowfreq_filter: false
   analysis: variant2
   description: samplea
