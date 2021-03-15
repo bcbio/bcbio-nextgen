@@ -42,7 +42,7 @@ resources:
   trim_galore:
     options: ["--clip_r1 4", "--clip_r2 4", "--three_prime_clip_r1 4", "--three_prime_clip_r2 4"]
   bismark:
-    bismark_threads: 16
+    bismark_threads: 4
     bowtie_threads: 2
 upload:
   dir: ../final
@@ -58,14 +58,14 @@ upload:
 #SBATCH --partition=priority        # Partition (queue) priority
 #SBATCH --time=5-00:00              # Runtime in D-HH:MM format, 10:00:00 for hours
 #SBATCH --job-name=wgbs             # Job name
-#SBATCH -c 16		              	    # cores
+#SBATCH -c 32		              	# cores
 #SBATCH --mem=100G                  # Memory
 #SBATCH --output=project_%j.out     # File to which STDOUT will be written, including job ID
 #SBATCH --error=project_%j.err      # File to which STDERR will be written, including job ID
-#SBATCH --mail-type=NONE             # Type of email notification (BEGIN, END, FAIL, ALL)
+#SBATCH --mail-type=NONE            # Type of email notification (BEGIN, END, FAIL, ALL)
 
 date
-bcbio_nextgen.py ../config/bcbio.yaml -n 16
+bcbio_nextgen.py ../config/bcbio.yaml -n 32
 date
 ```
 
