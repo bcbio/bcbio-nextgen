@@ -59,6 +59,9 @@ https://gatkforums.broadinstitute.org/gatk/discussion/10061/using-genomicsdbimpo
                     vcfutils.bgzip_and_index(vrn_file, data["config"])
                 samplemap = _create_samplemap_file(vrn_files)
                 params += ["--sample-name-map", samplemap]
+                resources = config_utils.get_resources("GenomicsDBImport", data["config"])
+                if resources and resources.get("options", []):
+                    params += resources.get("options", [])
                 # For large inputs, reduce memory usage by batching
                 # https://github.com/bcbio/bcbio-nextgen/issues/2852
                 if len(vrn_files) > 200:
