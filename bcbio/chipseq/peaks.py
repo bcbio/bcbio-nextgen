@@ -8,6 +8,7 @@ import shutil
 import math
 from tempfile import NamedTemporaryFile
 import pandas as pd
+import sys
 
 import bcbio.bam as bam
 from bcbio.log import logger
@@ -322,11 +323,21 @@ def consensus_to_saf(consensusfile, saffile):
     consensus format: chrom, chromStart, chromEnd, name, qValue
     SAF: peakID, chrom, chromStart, chromEnd, strand
     """
-    CONSENSUS_HEADER = ["chrom", "chromStart", "chromEnd", "name", "qValue"]
+    BROAD_CONSENSUS_HEADER = ["chrom", "chromStart", "chromEnd", "name", "score", "strand",
+                              "signalValue", "pValue", "qValue"]
+    NARROW_CONSENSUS_HEADER = ["chrom", "chromStart", "chromEnd", "name", "score", "strand",
+                               "signalValue", "pValue", "qValue", "peak"]
     SAF_HEADER = ["GeneID", "Chr", "Start", "End", "Strand"]
     if utils.file_exists(saffile):
         return saffile
-    df = pd.read_csv(consensusfile, sep="\t", names=CONSENSUS_HEADER)
+    df = pd.read_csv(consensusfile, sep="\t")
+    if len(df.columns) == 9:
+        df.columns = BROAD_CONSENSUS_HEADER
+    elif len(df.columns) == 10:
+        df.columns = NARROW_CONSENSUS_HEADER
+    else:
+        logger.error("Could not determine if consensus peak file was from broad or narrow peaks, aborting.")
+        sys.exit(1)
     df["GeneID"] = (df["chrom"].astype(str) + ":" +
                     df["chromStart"].astype(str) + "-" +
                     df["chromEnd"].astype(str))
