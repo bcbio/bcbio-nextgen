@@ -1,0 +1,8 @@
+details:
+  - analysis: variant2
+    genome_build: hg38
+    algorithm:
+      aligner: false
+      svcaller: purecn
+      variant_regions: /path/to/panel.bed
+      variantcaller: mutect2
