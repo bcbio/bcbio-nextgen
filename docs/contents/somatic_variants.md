@@ -7,11 +7,8 @@ For small variants (SNV and indels), bcbio supports the following workflows:
 We recommend starting with `vardict` and `mutect2` as variant callers. 
 bcbio also supports a majority voting ensemble approach to combine calls from multiple callers.
 
-For copy number (CNV) detection, bcbio supports T/N calling with a panel of normals with `gatk-cnv` and `seq2c`,
-see `workflow3`.
-
-Currently (2020-06-02), we are working to introduce tumor only CNV calling with PON (without using T/N pairs) using `gatk-cnv`. `cnvkit` also works for T/N, PON, and tumor only case, but it is not stable - it fails for some random samples,
-see issues.
+For copy number (CNV) detection, bcbio supports T/N and T only calling with a panel of normals with `purecn`, `cnvkit`,
+`gatk-cnv` and `seq2c`.
 
 ## Workflow1 - T/N
 This [example](https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/cancer-dream-syn3.yaml)
@@ -155,6 +152,8 @@ In addition to the somatic and germline outputs attached to the tumor and normal
 * `your-normal/your-normal-manta.vcf.gz` -- Germline structural variant calls for each specified `svcaller`. We expect these to be noisier than the somatic calls due to the lack of a reference sample to help remove technical noise.
 
 ## Workflow3: copy number variants
+
+See also [PureCN user story](https://bcbio-nextgen.readthedocs.io/en/latest/contents/purecn.html) which is a recommended option.
 
 The first bcbio run creates a panel of normals (PON), the second bcbio run uses the PON file to call copy number variants (CNV) in tumor/normal (gatk-cnv) or tumor only (cnvkit) samples.
 PON samples should use the same gene panel/sequencing technology as tumor only samples.
