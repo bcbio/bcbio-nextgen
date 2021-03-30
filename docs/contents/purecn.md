@@ -1,13 +1,12 @@
 # PureCN analysis of tumor-only samples
 
 PureCN by [Markus Riester](https://github.com/lima1/) is a reliable tool to estimate
-purity and ploidy in cancer samples sequences with high coverage gene panels and exomes.
-It provides also segmentation, gene-level copy numbers, LOH, and classification
+purity and ploidy in cancer samples sequenced with high coverage gene panels and exomes.
+It also provides segmentation, gene-level copy numbers, LOH, and classification
 of variants.
 
 The important aspect of running PureCN is a requirement to have process matched
 normals (as opposed to matched T/N).
-
 
 ## Normal DB (panel of normals)
 This step could be performed one time for every panel/cohort, and then a PON
@@ -21,18 +20,24 @@ details:
     algorithm:
       aligner: false
       svcaller: purecn
-      variant_regions: /path/to/panel.bed
+      sv_regions: /path/to/panel.bed
       variantcaller: mutect2
+```
+
+You can download the template to modify:
+```bash
+wget -O purecn_pon_template.yaml https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/templates/purecn_pon.yaml
 ```
 
 *If you are using bam files as input (aligner: false) make sure that bai indices are located in
 the same dir as input bam files. Bcbio generates indices on the fly, but PureCN follows a symlink
 to the original bam file and if there is no index, it crashes.*
 
-For better capture of the coverage panel.bed (or exome.bed) could be padded:
+For better capture of the coverage panel.bed (or exome.bed) could be padded. To output gene-level
+CNA, gene names must be present in the bed file (4th column).
 ```bash
 cat panel.bed | awk '{print $1"\t"$2-100"\t"$3+100"\t"$4}' > panel.padded100bp.bed 
-bedtools merge -i panel.padded100bp.bed > panel.padded100bp.merged.bed
+bedtools merge -i panel.padded100bp.bed -c 4 -o distinct > panel.padded100bp.merged.bed
 ```
 
 ### 2. Create a sample sheet pon.csv:
@@ -107,7 +112,7 @@ details:
     algorithm:
       aligner: false
       svcaller: purecn
-      variant_regions: /path/ton/config/panel.bed
+      sv_regions: /path/ton/config/panel.bed
       variantcaller: mutect2
       background:
         variant: /path/ton/config/pon_build-mutect2-annotated.vcf.gz
