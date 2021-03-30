@@ -17,7 +17,7 @@ details:
   files:
     - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
     - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
-  genome_build: GRCh37
+  genome_build: hg38
   metadata:
     batch: syn3
     phenotype: normal
@@ -42,11 +42,9 @@ details:
   files:
     - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
     - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
-  genome_build: GRCh37
+  genome_build: hg38
   metadata:
     batch: syn3
     phenotype: tumor
-fc_date: '2014-08-13'
-fc_name: dream-syn3
 upload:
   dir: ../final
