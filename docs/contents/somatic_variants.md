@@ -71,13 +71,13 @@ details:
   description: syn3-normal
   #files: ../input/synthetic.challenge.set3.normal.bam
   files:
-  - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
-  - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
-  genome_build: GRCh37
+    - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
+  genome_build: hg38
   metadata:
     batch: syn3
     phenotype: normal
- - algorithm:
+- algorithm:
     aligner: bwa
     mark_duplicates: true
     remove_lcr: true
@@ -87,26 +87,25 @@ details:
     validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
     # svcaller: [cnvkit, lumpy, delly]
     # coverage_interval: amplicon
-    #   svvalidate:
-    #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
-    #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
-    #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
-    #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+  #   svvalidate:
+  #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
+  #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
+  #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
+  #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
   analysis: variant2
   description: syn3-tumor
   #files: ../input/synthetic.challenge.set3.tumor.bam
   files:
-  - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
-  - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
-  genome_build: GRCh37
+    - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
+    - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
+  genome_build: hg38
   metadata:
     batch: syn3
     phenotype: tumor
-  fc_date: '2014-08-13'
-  fc_name: dream-syn3
 upload:
   dir: ../final
 ```
+
 Set `remove_lcr` parameter to `true` to remove low complexity regions from variant calling, both germline and somatic (additional information: https://www.ncbi.nlm.nih.gov/pubmed/24974202)
 
 ### 3. Run bcbio project
