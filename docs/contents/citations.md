@@ -78,7 +78,7 @@ We annotate structural variant calls with coverage information using duphold (ht
 ## Somatic small variants
 We call somatic variants in tumor only or tumor/normal mode with:
 - mutect2 (https://gatk.broadinstitute.org/hc/en-us/articles/360037593851-Mutect2)
-- vardict (https://github.com/AstraZeneca-NGS/VarDict)
+- vardict: [vardict - Github](https://github.com/AstraZeneca-NGS/VarDict), [vardict-java - Github](https://github.com/AstraZeneca-NGS/VarDictJava), vardict - publication: Lai Z, Markovets A, Ahdesmaki M, Chapman B, Hofmann O, McEwen R, Johnson J, Dougherty B, Barrett JC, Dry JR. VarDict: a novel and versatile variant caller for next-generation sequencing in cancer research. Nucleic Acids Res. 2016 Jun 20;44(11):e108. doi: 10.1093/nar/gkw227. Epub 2016 Apr 7. PMID: 27060149; PMCID: PMC4914105.
 - strelka2 (https://github.com/Illumina/strelka)
 - varscan2 (Koboldt DC, Zhang Q, Larson DE, Shen D, McLellan MD, Lin L, Miller CA, Mardis ER, Ding L, & Wilson RK (2012). VarScan 2: Somatic mutation and copy number alteration discovery in cancer by exome sequencing. Genome Research PMID: 22300766)
 
