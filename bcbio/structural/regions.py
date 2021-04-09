@@ -201,7 +201,8 @@ def calculate_sv_coverage(data):
 
     if "purecn" in dd.get_svcaller(data):
         # set purecn_pon_build flag
-        if "pon_build" in dd.get_batch(data):
+        batches = dd.get_batch(data)
+        if batches and "pon_build" in dd.get_batch(data):
             data["config"]["algorithm"]["purecn_pon_build"] = True
         from bcbio.structural import purecn
         # still calculate coverage even when not building pon - for t-only analysis
