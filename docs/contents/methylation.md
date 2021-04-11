@@ -28,7 +28,7 @@ wget -c ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR423/008/SRR4235788/SRR4235788_2.fa
 ```
 
 ### 3. Create wgbs_example/config/bcbio.yaml
-```
+```yaml
 details:
 - algorithm:
     aligner: bismark
@@ -86,7 +86,7 @@ date
 
 In the `algorithm` section of the yaml:
 - `aligner`: `bismark`
-- `kit`: `accelngs`, `nebemseq`, `truseq`
+- `kit`: `accelngs`, `nebemseq`, `truseq`; setting a kit automatically applies the proper trimming options.
 
 In the `resources` section of the yaml:
 - trim_galore trimming options:
@@ -95,7 +95,7 @@ resources:
   trim_galore:
     options: ["--clip_r1 8", "--clip_r2 8", "--three_prime_clip_r1 8", "--three_prime_clip_r2 8"]
 ```
-- bismark `--non-directional` option (default is directional mode and you don't have to specify it) and threading options (use with caution, see benchmarking notes below; by default bcbio is trying to calculate the optimal number of bismark threads with this [function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L123); if you alter bismark_threads = X, request 5-7X cores for bcbio; some samples could be processed much faster, but some could fail, reduce threads then):
+- bismark `--non-directional` option (default is directional mode and you don't have to specify it) and threading options (use with caution, see benchmarking notes below; by default bcbio is trying to calculate the optimal number of bismark threads with this [function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L123); if you alter bismark_threads = X, request 5-7X cores for bcbio; some samples could be processed much faster, but some could fail, reduce threads then). By defaut, we are using `--local --maxins 1000` alignment options (after benchmarking using nebemseq kit).
 ```yaml
 resources:
   bismark:
@@ -112,7 +112,7 @@ resources:
 ```
 
 The following configs for the `truseq` kit are equivalent:
-```
+```yaml
 details:
 - analysis: wgbs-seq
   genome_build: hg38
@@ -121,7 +121,7 @@ details:
     kit: truseq
 ```
 
-```
+```yaml
 details:
 - analysis: wgbs-seq
   genome_build: hg38
@@ -142,7 +142,7 @@ resources:
 ### Sample directory
 - sample-bam_report.txt - bismark alignment report
 - sample-deduplication_report.txt
-- sample-ready.bam (not indexed unsorted bam)
+- sample-ready.bam - **sorted** bam  (even though we are using the unsorted bam throughout the pipeline).
 - bismark - Bismark output
 - bismark/sample.html - Bismark processing report
 
