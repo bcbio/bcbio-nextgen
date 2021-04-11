@@ -128,6 +128,8 @@ def _get_files_chipseq(sample):
 def _get_files_wgbsseq(sample):
     out = []
     algorithm = sample["config"]["algorithm"]
+    # upload sorted bam as output
+    sample["work_bam"] = sample["align_bam"]
     out = _maybe_add_alignment(algorithm, sample, out)
     bismark_report_dir = sample.get("bismark_report")
     if bismark_report_dir:

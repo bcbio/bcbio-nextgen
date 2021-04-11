@@ -53,8 +53,17 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     kit = kits.KITS.get(dd.get_kit(data), None)
     directional = "--non_directional" if kit and not kit.is_directional else ""
 
-    other_opts = resources.get("options", [])
-    other_opts = " ".join([str(x) for x in other_opts]).strip()
+    other_opts = ""
+    if resources and resources.get("options", []):
+        other_opts = resources.get("options", [])
+        # default --local --maxins 1000
+        if "--local" not in other_opts:
+            other_opts.append("--local")
+        if "--maxins" not in other_opts:
+            other_opts.extend(["--maxins", "1000"])
+        other_opts = " ".join([str(x) for x in other_opts]).strip()
+    else: # no opts set
+        other_opts = "--local --maxins 1000"
 
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
