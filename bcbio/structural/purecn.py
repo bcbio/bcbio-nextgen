@@ -312,7 +312,7 @@ def _loh_to_vcf(cur):
         return None
     cn = int(float(cur["C"]))
     minor_cn = int(float(cur["M"]))
-    if cur["type"].find("LOH"):
+    if cur["type"].find("LOH") > -1:
         svtype = "LOH"
     elif cn > 2:
         svtype = "DUP"
@@ -321,9 +321,15 @@ def _loh_to_vcf(cur):
     else:
         svtype = None
     if svtype:
-        info = ["SVTYPE=%s" % svtype, "END=%s" % cur["end"],
-                "SVLEN=%s" % (int(cur["end"]) - int(cur["start"])),
-                "CN=%s" % cn, "MajorCN=%s" % (cn - minor_cn), "MinorCN=%s" % minor_cn]
+        # end could be 100.5
+        start = int(float(cur["start"]))
+        end = int(float(cur["end"]))
+        info = [f"SVTYPE={svtype}", 
+                f"END={end}",
+                f"SVLEN={end-start+1}",
+                f"CN={cn}",
+                f"MajorCN={cn - minor_cn}",
+                f"MinorCN={minor_cn}"]
         return [cur["chr"], cur["start"], ".", "N", "<%s>" % svtype, ".", ".",
                 ";".join(info), "GT", "0/1"]
 
