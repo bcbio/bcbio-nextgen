@@ -212,9 +212,9 @@ def _seg_to_vcf(cur):
             ".", ";".join(info), "GT", "0/1"]
 
 def to_vcf(in_file, caller, header_fn, vcf_fn, data, sep="\t"):
-    """Convert output TitanCNA segs file into bgzipped VCF.
-    """
+    """Convert output TitanCNA segs file into bgzipped VCF."""
     out_file = "%s.vcf" % utils.splitext_plus(in_file)[0]
+    out_file_gz = out_file + ".gz"
     if not utils.file_exists(out_file + ".gz") and not utils.file_exists(out_file):
         with file_transaction(data, out_file) as tx_out_file:
             with open(in_file) as in_handle:
@@ -227,9 +227,12 @@ def to_vcf(in_file, caller, header_fn, vcf_fn, data, sep="\t"):
                         out = vcf_fn(dict(zip(header, line.strip().split(sep))))
                         if out:
                             out_handle.write("\t".join(out) + "\n")
-    out_file = vcfutils.bgzip_and_index(out_file, data["config"])
-    effects_vcf, _ = effects.add_to_vcf(out_file, data, "snpeff")
-    return effects_vcf or out_file
+        # also does bgzip and index
+        out_file_prep_vcf_gz = vcfutils.sort_by_ref(out_file, data)
+        shutil.move(out_file_prep_vcf_gz, out_file_gz)
+        shutil.move(out_file_prep_vcf_gz + ".tbi", out_file_gz + ".tbi")
+    effects_vcf, _ = effects.add_to_vcf(out_file_gz, data, "snpeff")
+    return effects_vcf or out_file_gz
 
 def _get_svtype(call):
     """Retrieve structural variant type from current TitanCNA events.
