@@ -119,7 +119,8 @@ However, please note that the `antibody` column should be added with caution.
 
 If you know your antibody should be called with narrow or broad peaks, supply 'narrow' or 'broad' as the antibody.
 ```
-Bcbio will not call peaks if you have a antibody column, but do not have a vaild antibody within that list.
+Bcbio will call narrow peaks if you have a antibody column, but do not have a vaild antibody within that list.
+
 By default, you will get *.narrowPeak files if you do not have a antibody column.
 ```
 
