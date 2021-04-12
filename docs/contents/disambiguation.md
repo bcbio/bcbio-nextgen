@@ -41,3 +41,6 @@ upload:
 The resulting `final/project/multiqc/multiqc_report.html` will contain hg38 and mm10 columns with numbers of reads aligned to hg38 and mm10.
 Also `final/sample` contains sample-ready.bam - reads aligned to hg38 and sample-disambiguate-mm10.bam - reads aligned to mm10.
 
+## Output
+
+- final/project/multiqc: Reads = single reads in the final bam (mapped to human genome), hg38 = single reads mapped to human genome (same as Reads), mm10 = single reads mapped to mouse genome; Ambig. = single reads ambiguously mapped; Total reads = sum (hg38 + mm10 + Ambig.).
