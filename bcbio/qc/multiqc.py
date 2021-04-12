@@ -427,8 +427,7 @@ def _is_good_file_for_multiqc(fpath):
     return True
 
 def _parse_disambiguate(disambiguatestatsfilename):
-    """Parse disambiguation stats from given file.
-    """
+    """Parse disambiguation stats from given file."""
     disambig_stats = [0, 0, 0]
     with open(disambiguatestatsfilename, "r") as in_handle:
         for i, line in enumerate(in_handle):
@@ -437,7 +436,10 @@ def _parse_disambiguate(disambiguatestatsfilename):
                 assert fields == ['sample', 'unique species A pairs', 'unique species B pairs', 'ambiguous pairs']
             else:
                 disambig_stats = [x + int(y) for x, y in zip(disambig_stats, fields[1:])]
-    return disambig_stats
+    # stats is reported in read pairs while Reads in the final bam in single
+    # reporting here single reads as well
+    disambig_stats_single_reads = [2 * x for x in disambig_stats]
+    return disambig_stats_single_reads
 
 def _add_disambiguate(sample):
     # check if disambiguation was run
