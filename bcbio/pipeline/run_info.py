@@ -781,9 +781,15 @@ def _check_trim(data):
                              (dd.get_sample_name(data)))
 
 
+def _check_hla_align(data):
+    """ Check for align: bwa if hlacaller: optitype """
+    algorithm = tz.get_in(["algorithm"], data)
+    if algorithm and "aligner" in algorithm and "hlacaller" in algorithm:
+        if algorithm["aligner"] != "bwa" and algorithm["hlacaller"].lower() == "optitype":
+            raise ValueError(f"In sample {dd.get_sample_name(data)}, hlacaller: optitype requires aligner: bwa")
+
 def _check_sample_config(items, in_file, config):
-    """Identify common problems in input sample configuration files.
-    """
+    """Identify common problems in input sample configuration files."""
     logger.info("Checking sample YAML configuration: %s" % in_file)
     _check_quality_format(items)
     _check_for_duplicates(items, "lane")
@@ -807,6 +813,7 @@ def _check_sample_config(items, in_file, config):
     [_check_hlacaller(x) for x in items]
     [_check_realign(x) for x in items]
     [_check_trim(x) for x in items]
+    [_check_hla_align(x) for x in items]
 
 # ## Read bcbio_sample.yaml files
 

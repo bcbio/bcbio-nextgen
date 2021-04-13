@@ -547,10 +547,17 @@ def _find_remote_inputs(metadata):
                 out.append(fr)
     return out
 
+def check_hla_align(base_item):
+    algorithm = tz.get_in(["algorithm"], base_item)
+    if algorithm and "aligner" in algorithm and "hlacaller" in algorithm:
+        if algorithm["aligner"] != "bwa" and algorithm["hlacaller"].lower() == "optitype":
+            print("WARNING: Optitype needs aligner: bwa; no HLA calls will be made with aligner: false")
+
 def setup(args):
     template, template_txt = name_to_config(args.template)
     run_info.validate_yaml(template_txt, args.template)
     base_item = template["details"][0]
+    check_hla_align(base_item)
     project_name, metadata, global_vars, md_file = _pname_and_metadata(args.metadata)
     remotes = _retrieve_remote([args.metadata, args.template])
     inputs = args.input_files + remotes.get("inputs", []) + _find_remote_inputs(metadata)
