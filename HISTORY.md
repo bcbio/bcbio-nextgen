@@ -1,4 +1,7 @@
-## 1.2.8 (in progress)
+## 1.2.9 (in progress)
+
+
+## 1.2.8 (14 April 2021)
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
 - Fix greylisted peaks not being propagated to the output directory. Thanks to @mistrm82.
 - Better error message when no sample barcodes are found for single-cell RNA-seq.
@@ -11,6 +14,14 @@
 - Enable consensus peak calling for broad peaks. Thanks to @mistrm82 and
   @yoonsquared for pointing out this was missing. 
 - Re-enable ATAC-seq tests, they work now.
+- svprioritize for mm10
+- purecn_Dx.R - mutational signatures - still requires a manual update of deconstructsigs or release of it
+- make sure purecn uses sv_regions bed to call variants
+- fix misleading disambiguation fastqc read statistics (total, hg38, mm10)
+- wgbs: nebemseq kit: add --maxins 1000 and --local to bismark align
+- WGBS: sorted indexed deduplicated bam for ready.bam
+- print error message when aligner: false and hla typing is on
+- make sure that mark_duplicates is false with collapsed UMI input
 
 ## 1.2.7 (22 February 2021)
 - RNASeq: Add gene body coverage plots to multiqc report.
