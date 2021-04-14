@@ -7,7 +7,7 @@ import subprocess
 
 import setuptools
 
-VERSION = '1.2.7'
+VERSION = '1.2.8'
 
 # add bcbio version number and git commit hash of the current revision to version.py
 try:

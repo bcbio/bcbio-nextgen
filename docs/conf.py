@@ -22,11 +22,11 @@ from recommonmark.transform import AutoStructify
 # -- Project information -----------------------------------------------------
 
 project = 'bcbio-nextgen'
-copyright = '2020, bcbio-nextgen contributors'
+copyright = '2021, bcbio-nextgen contributors'
 author = 'bcbio-nextgen contributors'
 
 # The full version, including alpha/beta/rc tags
-version = release = '1.2.4'
+version = release = '1.2.8'
 
 # -- General configuration ---------------------------------------------------
 
