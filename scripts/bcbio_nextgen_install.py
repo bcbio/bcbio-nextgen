@@ -62,7 +62,8 @@ def main(args, sys_argv):
 
 
 def _clean_args(sys_argv, args):
-    """Remove data directory from arguments to pass to upgrade function"""
+    """Remove data directory from arguments to pass to upgrade function
+       remove --mamba"""
     base = [x for x in sys_argv if
             x.startswith("-") or not args.datadir == os.path.abspath(os.path.expanduser(x))]
     # Remove installer only options we don't pass on
@@ -71,6 +72,8 @@ def _clean_args(sys_argv, args):
         base.remove("--nodata")
     else:
         base.append("--data")
+    if "--mamba" in base:
+        base.remove("--mamba")
     return base
 
 
