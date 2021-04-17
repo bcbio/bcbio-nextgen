@@ -38,10 +38,14 @@ def main(args, sys_argv):
         setup_data_dir(args)
         print("Installing isolated base python installation")
         anaconda = install_anaconda_python(args)
-        print("Installing mamba")
+        if args.use_mamba:
+            conda_bin = "mamba"
+        else:
+            conda_bin = "conda"
+        print(f"Installing {conda_bin}")
         anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
-        subprocess.check_call([anaconda["mamba"], "install", "--yes", "conda-build"])
+        subprocess.check_call([anaconda[conda_bin], "install", "--yes", "conda-build"])
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
@@ -76,15 +80,18 @@ def bootstrap_bcbionextgen(anaconda, args):
         subprocess.check_call([anaconda["pip"], "install", "--upgrade", "--no-deps",
                                "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)])
 
-
 def install_mamba(anaconda, args):
+    """ Install conda or mamba"""
+    if args.use_mamba:
+        conda_bin = "mamba"
+    else:
+        conda_bin = "conda"
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     bindir = os.path.join(anaconda_dir, "bin")
-    mamba = os.path.join(bindir, "mamba")
-    subprocess.check_call([anaconda["conda"], "install", "--yes", "mamba"])
-    anaconda["mamba"] = mamba
+    mamba = os.path.join(bindir, conda_bin)
+    subprocess.check_call([anaconda["conda"], "install", "--yes", conda_bin])
+    anaconda[conda_bin] = mamba
     return anaconda
-
 
 def install_conda_pkgs(anaconda, args):
     env = dict(os.environ)
@@ -274,6 +281,8 @@ if __name__ == "__main__":
                                  "novoalign", "rtg", "snap", "star", "ucsc"])
     parser.add_argument("--nodata", help="Do not install data dependencies",
                         dest="install_data", action="store_false", default=True)
+    parser.add_argument("--mamba", help="Use mamba instead of conda",
+                        dest="use_mamba", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
     parser.add_argument("--minimize-disk", help="Try to minimize disk usage (no MKL extensions)",
