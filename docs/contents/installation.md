@@ -9,40 +9,47 @@
 - python library dependencies;
 - third party analysis tools:
 
-```shell
+```bash
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
 python bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --nodata
 ```
 
 You have to specify where to install bcbio in your filesystem and where to install tools, for example:
-```
+```bash
 python bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata
 ```
 
-or inside your home directory:
-```
+or inside your home directory (make sure it has enough disk quota, 1.2.8 installation with no data ~44G):
+```bash
 python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata
 ```
 
-Installation takes 30 minutes or more (depending on the speed of your storage and Internet connection). Recommended HPC job parameters for the installation process: 1 CPU core, 2GB memory, and 1 hour run time.
+Installation takes 2h or more (depending on the throughput of your storage system and Internet connection). 
+Recommended HPC job parameters for the installation process: 1 CPU core, 20 GB RAM (conda solves could take a lot of RAM).
+
+By default, bcbio_nextgen_install.py uses conda package manager (2h installation time without data as of bcbio1.2.8/2021-04-17), `--mamba` option switches to mamba package manager. The performance of conda vs mamba differs from version to version and the geographical location of the installation. Two examples: mid-2020 - conda installation took > 20h, sometimes w/o success, mamba installation - 30min, 2021/04 - conda installation ~ 2h, mamba installation is freezing, finished successfully after restart(s).
 
 Check if installation works:
-```
+```bash
 which bcbio_nextgen.py
 bcbio_nextgen.py --version
 ```
 
 ### 2. Install data
 
-Bcbio needs reference files, indices, and databases. It is possible to install bcbio package and data at once, but we recommend to split these steps, because (i) some datatargets (dbNSFP, gnomad, snpEff) may take from tens of hours to several days to finish, they could break in the middle due to unstable connections, i.e. it is better to tackle them one by one; (ii) you can re-use your data installation between bcbio instances. Data does not change much even between years, so you can just create symlinks `/old_bcbio/genomes -> /new_bcbio/genomes`, `/old_bcbio/galaxy/tool-data -> /new_bcbio/galaxy/tool-data`. 
+Bcbio needs reference files, indices, and databases. It is possible to install bcbio package and data at once, but we recommend to split these steps, because:
+- (i) some datatargets (dbNSFP, gnomad, snpEff) may take from tens of hours to several days to finish, they could break in the middle due to unstable connections, i.e. it is better to tackle them one by one;
+- (ii) you can re-use your data installation between bcbio instances. Data does not change much even between years, so you can just create symlinks `/old_bcbio/genomes -> /new_bcbio/genomes`, `/old_bcbio/galaxy/tool-data -> /new_bcbio/galaxy/tool-data`. 
+- (iii) it is easier to debug conda/mamba issues (code installation) and cloudbiolinux issues (recipes) separately.
 
-```
+```bash
 bcbio_nextgen.py upgrade -u skip --genomes hg38 --aligners bwa
 ```
 
 This command installs hg38 human reference genome and bwa aligner index - the bare minimum required to run germline or somatic variant calling pipelines.
 
 ## Installation notes
+
 - bcbio should install cleanly on Linux systems. For Mac OSX, we suggest trying [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm) which runs bcbio on [Cloud](cloud) or isolates all the third party tools inside a Docker container. bcbio-vm is still a work in progress but not all of the dependencies bcbio uses install cleanly on OSX.
 - Don't run the installer with sudo or as the root user. Do not use directories with `:` in the name, it is not POSIX compliant and will cause installation failures.
 - To use custom mirrors for `conda-forge` and `bioconda` channels used during bcbio installation, set appropriate [channel alias](https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#set-a-channel-alias-channel-alias) in your `.condarc` configuration file.
@@ -59,6 +66,7 @@ This command installs hg38 human reference genome and bwa aligner index - the ba
 - The automated installer creates a fully integrated environment that allows simultaneous updates of the framework, third party tools and biological data. This offers the advantage over manual installation of being able to manage and evolve a consistent analysis environment as algorithms continue to evolve and improve. Installing this way is as isolated and self-contained as possible without virtual machines or lightweight system containers like [Docker](https://www.docker.com/).
 
 ## Installation parameters
+
 Run
 ```
 bcbio_nextgen.py upgrade --help
