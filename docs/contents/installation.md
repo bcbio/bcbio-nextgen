@@ -19,7 +19,7 @@ You have to specify where to install bcbio in your filesystem and where to insta
 python bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata
 ```
 
-or inside your home directory (make sure it has enough disk quota, 1.2.8 installation with no data ~44G):
+or inside your home directory (make sure it has enough disk quota, 1.2.8 installation with no data takes ~37G - 44G depending on the filesystem):
 ```bash
 python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata
 ```
