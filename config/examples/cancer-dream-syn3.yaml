@@ -8,7 +8,7 @@ details:
     mark_duplicates: true
     remove_lcr: true
     variantcaller: [mutect2, vardict]
-    variant_regions: ../input/NGv3.bed
+    variant_regions: /path/to/bcbio/genomes/Hsapiens/hg38/coverage/capture_regions/NGv3.bed
     # svcaller: [cnvkit, lumpy, delly]
     # coverage_interval: amplicon
   analysis: variant2
@@ -26,16 +26,7 @@ details:
     mark_duplicates: true
     remove_lcr: true
     variantcaller: [mutect2, vardict]
-    variant_regions: ../input/NGv3.bed
-    validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
-    validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
-    # svcaller: [cnvkit, lumpy, delly]
-    # coverage_interval: amplicon
-  #   svvalidate:
-  #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
-  #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
-  #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
-  #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+    variant_regions: /path/to/bcbio/genomes/Hsapiens/hg38/coverage/capture_regions/NGv3.bed
   analysis: variant2
   description: syn3-tumor
   #files: ../input/synthetic.challenge.set3.tumor.bam
