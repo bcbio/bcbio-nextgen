@@ -50,6 +50,9 @@ bash cancer-dream-syn3-getdata.sh
 ```
 
 ### 2. Review parameters in the yaml file:
+Modify variant_regions for both samples to point to your bcbio installation or copy NGv3.bed from there to project/input
+and reference it as ../input/NGv3.bed in the yaml.
+
 ```yaml
 # Cancer tumor/normal calling evaluation using synthetic dataset 3
 # from the ICGC-TCGA DREAM challenge:
@@ -61,12 +64,9 @@ details:
     mark_duplicates: true
     remove_lcr: true
     variantcaller: [mutect2, vardict]
-    variant_regions: ../input/NGv3.bed
-    # svcaller: [cnvkit, lumpy, delly]
-    # coverage_interval: amplicon
+    variant_regions: /path/to/bcbio/genomes/Hsapiens/hg38/coverage/capture_regions/NGv3.bed
   analysis: variant2
   description: syn3-normal
-  #files: ../input/synthetic.challenge.set3.normal.bam
   files:
     - ../input/synthetic_challenge_set3_normal_NGv3_1.fq.gz
     - ../input/synthetic_challenge_set3_normal_NGv3_2.fq.gz
@@ -79,19 +79,9 @@ details:
     mark_duplicates: true
     remove_lcr: true
     variantcaller: [mutect2, vardict]
-    variant_regions: ../input/NGv3.bed
-    validate: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth.vcf.gz
-    validate_regions: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_regions.bed
-    # svcaller: [cnvkit, lumpy, delly]
-    # coverage_interval: amplicon
-  #   svvalidate:
-  #     DEL: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DEL.bed
-  #     DUP: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_DUP.bed
-  #     INS: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INS.bed
-  #     INV: ../input/synthetic_challenge_set3_tumor_20pctmasked_truth_sv_INV.bed
+    variant_regions: /path/to/bcbio/genomes/Hsapiens/hg38/coverage/capture_regions/NGv3.bed 
   analysis: variant2
   description: syn3-tumor
-  #files: ../input/synthetic.challenge.set3.tumor.bam
   files:
     - ../input/synthetic_challenge_set3_tumor_NGv3_1.fq.gz
     - ../input/synthetic_challenge_set3_tumor_NGv3_2.fq.gz
