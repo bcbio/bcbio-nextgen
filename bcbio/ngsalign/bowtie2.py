@@ -108,7 +108,7 @@ def filter_multimappers(align_file, data):
     bam.index(out_file, config)
     return out_file
 
-ANALYSIS = {"chip-seq": {"params": ["-X", 2000, "--very-sensitive"]},
+ANALYSIS = {"chip-seq": {"params": ["-X", 2000, "--very-sensitive-local"]},
             "variant2": {"params": ["-X", 2000]},
             "standard": {"params": ["-X", 2000]},
             "rna-seq": {"params": ["--sensitive", "-X", 2000]},
