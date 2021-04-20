@@ -11,7 +11,7 @@ and compares them against reference materials from NIST's
 
 ```shell
 wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-python bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_installation_path] --nodata
+python3 bcbio_nextgen_install.py [bcbio_installation_path] --tooldir=[tools_installation_path] --nodata
 ```
 
 ### 2. Install hg38 reference genome and bwa indices
