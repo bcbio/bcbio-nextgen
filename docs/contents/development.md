@@ -240,6 +240,8 @@ Files that can be added for each tool in MultiQC can be found in the [MultiQC mo
 - [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt)
 - [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
 - [ ] push changes to bcbio
+- [ ] run installation test (--no-data)
+- [ ] run T/N end2end test
 - [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
 - [ ] update BCBIO_REVISION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
 - [ ] push changes to bcbio_docker
