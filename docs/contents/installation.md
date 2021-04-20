@@ -16,12 +16,12 @@ python bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --noda
 
 You have to specify where to install bcbio in your filesystem and where to install tools, for example:
 ```bash
-python bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata
+python3 bcbio_nextgen_install.py /bcbio --tooldir=/bcbio/tools --nodata
 ```
 
 or inside your home directory (make sure it has enough disk quota, 1.2.8 installation with no data takes ~37G - 44G depending on the filesystem):
 ```bash
-python bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata
+python3 bcbio_nextgen_install.py /home/user/bcbio --tooldir=/home/user/bcbio/tools --nodata
 ```
 
 Installation takes 2h or more (depending on the throughput of your storage system and Internet connection). 
@@ -54,7 +54,7 @@ This command installs hg38 human reference genome and bwa aligner index - the ba
 - Don't run the installer with sudo or as the root user. Do not use directories with `:` in the name, it is not POSIX compliant and will cause installation failures.
 - To use custom mirrors for `conda-forge` and `bioconda` channels used during bcbio installation, set appropriate [channel alias](https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html#set-a-channel-alias-channel-alias) in your `.condarc` configuration file.
 - The machine will need to have some basic requirements for installing and running bcbio:
-  * Python 2.7 or Python 3.x
+  * Python 3.x
   * Basic system setup for unpacking files: tar, gzip, unzip, bzip2, xz-utils
   * The git version control system (<https://git-scm.com/>)
   * wget for file retrieval (<https://www.gnu.org/software/wget/>)
