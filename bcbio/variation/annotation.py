@@ -58,8 +58,9 @@ def finalize_vcf(in_file, variantcaller, items):
         cls = [x for x in (contig_cl, header_cl) if x]
         if cls:
             post_cl = " | ".join(cls) + " | "
-        else:
-            post_cl = None
+            with file_transaction(out_file) as tx_out_file:
+                cmd = f"bcftools view {in_file} | {post_cl} bgzip -c > {tx_out_file}"
+                do.run(cmd, "Finalize vcf")
     if utils.file_exists(out_file):
         return vcfutils.bgzip_and_index(out_file, items[0]["config"])
     else:
@@ -97,6 +98,7 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
 
     Encode tumor/normal relationships in VCF header.
     Could also eventually handle more complicated pedigree information if useful.
+    returns a cmd
     """
     paired = vcfutils.get_paired(items)
     if paired:
@@ -106,8 +108,8 @@ def _add_vcf_header_sample_cl(in_file, items, base_file):
             toadd.append("##PEDIGREE=<Derived=%s,Original=%s>" % (paired.tumor_name, paired.normal_name))
         new_header = _update_header(in_file, base_file, toadd, _fix_generic_tn_names(paired))
         if vcfutils.vcf_has_variants(in_file):
-            cmd = "bcftools reheader -h {new_header} | bcftools view "
-            return cmd.format(**locals())
+            cmd = f"bcftools reheader -h {new_header} | bcftools view "
+            return cmd
 
 def _update_header(orig_vcf, base_file, new_lines, chrom_process_fn=None):
     """Fix header with additional lines and remapping of generic sample names.
