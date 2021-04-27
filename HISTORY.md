@@ -1,5 +1,5 @@
 ## 1.2.9 (in progress)
-
+- Fixed vcf header bug: T/N SAMPLE lines are back - needed for import to SolveBio
 
 ## 1.2.8 (14 April 2021)
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
