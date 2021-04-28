@@ -49,17 +49,17 @@ cd work
 bcbio_nextgen.py ../config/NA12878-exome-methodcmp.yaml -n 8
 ```
 
-Parameters of the analysis are specified in the yaml configuration file:
+Parameters of the analysis are specified in the yaml configuration [file](https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/NA12878-exome-methodcmp.yaml):
 
 ```yaml
 upload:
   dir: ../final
 details:
   - files: [../input/NA12878-NGv3-LAB1360-A_1.fastq.gz, ../input/NA12878-NGv3-LAB1360-A_2.fastq.gz]
-  description: NA12878
-  metadata:
-    sex: female
-  analysis: variant2
+    description: NA12878
+    metadata:
+      sex: female
+    analysis: variant2
     genome_build: hg38
     algorithm:
       aligner: bwa
