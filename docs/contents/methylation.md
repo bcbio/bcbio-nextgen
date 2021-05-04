@@ -224,7 +224,7 @@ bismark_methylation_extractor \
 --gzip /path/to/work/dedup/rep1/rep1.deduplicated.bam
 ```
 
-6. [bismark2report](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L44)
+6*. [bismark2report](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L44)
 ```bash
 bismark2report \
 --alignment_report /path/to/work/align/rep1/rep1_bismark/ENCSR481JIW_rep1_R1_val_1_bismark_bt2_PE_report.txt \
@@ -232,7 +232,7 @@ bismark2report \
 --mbias_report /path/to/work/cpg/rep1/rep1.deduplicated.M-bias.txt
 ```
 
-7. [generate QC metrics](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L39);
+7*. [generate QC metrics](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L39);
 [samtools sort](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L67)
 ```bash
 samtools sort -@ 16 -m 3276M -O BAM  \
@@ -240,7 +240,8 @@ samtools sort -@ 16 -m 3276M -O BAM  \
 -o /path/to/work/bcbiotx/tmpj82rrnlc/rep1.sorted.bam \
 /path/to/work/align/rep1/rep1.bam
 ```
-8. samtools index
+
+8*. samtools index
 ```bash
 samtools \
 index -@ 16 \
@@ -248,14 +249,14 @@ index -@ 16 \
 /path/to/work/bcbiotx/tmpr02on2ol/rep1.sorted.bam.bai
 ```
 
-9. samtools stats
+9*. samtools stats
 ```bash
 samtools stats -@ 16 \
 /path/to/work/align/rep1/rep1.sorted.bam > \
 /path/to/work/bcbiotx/tmp5e6gerdb/rep1.txt
 ```
 
-10. downsample for fastqc
+10*. downsample for fastqc
 ```bash
 samtools view -O BAM -@ 16 \
 -o /path/to/work/bcbiotx/tmp3z8btzek/rep1.sorted-downsample.bam \
@@ -263,7 +264,7 @@ samtools view -O BAM -@ 16 \
 /path/to/work/align/rep1/rep1.sorted.bam
 ```
 
-11. fastqc
+11*. fastqc
 ```bash
 fastqc \
 -d /path/to/work/qc/rep1/bcbiotx \
@@ -273,7 +274,7 @@ fastqc \
 -f bam /path/to/work/qc/rep1/rep1.sorted-downsample.bam
 ```
 
-12. samtools idxstats
+12*. samtools idxstats
 ```bash
 samtools idxstats /path/to/work/align/rep1/rep1.sorted.bam > \
 /path/to/work/bcbiotx/rep1-idxstats.txt
@@ -292,6 +293,7 @@ https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L128
 
 15. [upload project file to final](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L21);
 https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L777
+
 
 ## Benchmarking
 There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
