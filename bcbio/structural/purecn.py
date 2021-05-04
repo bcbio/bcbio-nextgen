@@ -143,8 +143,9 @@ def _get_purecn_dx_files(paired, out):
                      [("signatures",), "_signatures.csv"],
                      [("chrom_instability",), "_cin.csv"]]:
         cur_file = f"{out_base}{ext}"
-        out = tz.update_in(out, key, lambda x: cur_file)
-        all_files.append(os.path.basename(cur_file))
+        if utils.file_exists(cur_file):
+            out = tz.update_in(out, key, lambda x: cur_file)
+            all_files.append(os.path.basename(cur_file))
     return out_base, out, all_files
 
 def _run_purecn(paired, work_dir):
