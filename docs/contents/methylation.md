@@ -176,7 +176,7 @@ upload:
 1. [wgbsseqpipeline function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/main.py#L413)
 
 
-2*. [Read trimmming](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/trimming.py#L15)
+2. [Read trimmming](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/trimming.py#L15) *
 ```bash
 trim_galore  \
 --cores 4 \
@@ -189,7 +189,7 @@ trim_galore  \
 /path/to/ENCSR481JIW_rep1_R2.fastq.gz
 ```
 
-3*. [Bismark align](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L19)
+3. [Bismark align](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L19) *
 ```bash
 bismark \
 --bowtie2 \
@@ -203,14 +203,15 @@ bismark \
 -2 /path/to/work/trimmed/rep1/ENCSR481JIW_rep1_R2_val_2.fq.gz 
 ```
 
-4*. [deduplicate bismark](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/deduplication.py#L10)
+4. [deduplicate bismark](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/deduplication.py#L10) *
 ```bash
 deduplicate_bismark \
 --output_dir /path/to/work/dedup/rep1 \
 /path/to/work/align/rep1/rep1.bam
 ```
-5*. [bismark_calling](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L58)
-   [bismark_methylation_extractor](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L26)
+
+5. [bismark_calling](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L58) *
+   [bismark_methylation_extractor](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L26) *
 ```bash
 bismark_methylation_extractor \
 --no_overlap \
@@ -224,7 +225,7 @@ bismark_methylation_extractor \
 --gzip /path/to/work/dedup/rep1/rep1.deduplicated.bam
 ```
 
-6*. [bismark2report](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L44)
+6. [bismark2report](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L44) *
 ```bash
 bismark2report \
 --alignment_report /path/to/work/align/rep1/rep1_bismark/ENCSR481JIW_rep1_R1_val_1_bismark_bt2_PE_report.txt \
@@ -232,8 +233,8 @@ bismark2report \
 --mbias_report /path/to/work/cpg/rep1/rep1.deduplicated.M-bias.txt
 ```
 
-7*. [generate QC metrics](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L39);
-[samtools sort](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L67)
+7. [generate QC metrics](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L39);
+[samtools sort](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L67) *
 ```bash
 samtools sort -@ 16 -m 3276M -O BAM  \
 -T /path/to/work/bcbiotx/tmpj82rrnlc/rep1.sorted-sort \
@@ -241,7 +242,7 @@ samtools sort -@ 16 -m 3276M -O BAM  \
 /path/to/work/align/rep1/rep1.bam
 ```
 
-8*. samtools index
+8. samtools index *
 ```bash
 samtools \
 index -@ 16 \
@@ -249,14 +250,14 @@ index -@ 16 \
 /path/to/work/bcbiotx/tmpr02on2ol/rep1.sorted.bam.bai
 ```
 
-9*. samtools stats
+9. samtools stats *
 ```bash
 samtools stats -@ 16 \
 /path/to/work/align/rep1/rep1.sorted.bam > \
 /path/to/work/bcbiotx/tmp5e6gerdb/rep1.txt
 ```
 
-10*. downsample for fastqc
+10. downsample for fastqc *
 ```bash
 samtools view -O BAM -@ 16 \
 -o /path/to/work/bcbiotx/tmp3z8btzek/rep1.sorted-downsample.bam \
@@ -264,7 +265,7 @@ samtools view -O BAM -@ 16 \
 /path/to/work/align/rep1/rep1.sorted.bam
 ```
 
-11*. fastqc
+11. fastqc *
 ```bash
 fastqc \
 -d /path/to/work/qc/rep1/bcbiotx \
@@ -274,7 +275,7 @@ fastqc \
 -f bam /path/to/work/qc/rep1/rep1.sorted-downsample.bam
 ```
 
-12*. samtools idxstats
+12. samtools idxstats *
 ```bash
 samtools idxstats /path/to/work/align/rep1/rep1.sorted.bam > \
 /path/to/work/bcbiotx/rep1-idxstats.txt
@@ -289,10 +290,10 @@ multiqc -c /path/to/work/qc/multiqc/multiqc_config.yaml \
 ```
 
 14. [upload sample files to final](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L29);
-https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L128
+[also see here](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L128)
 
 15. [upload project file to final](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L21);
-https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L777
+[also see here](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L777)
 
 
 ## Benchmarking
