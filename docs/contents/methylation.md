@@ -146,6 +146,153 @@ resources:
 - bismark - Bismark output
 - bismark/sample.html - Bismark processing report
 
+## Steps
+
+* = a step is repeated for every sample
+
+bcbio.yaml
+```yaml
+details:
+- algorithm:
+    aligner: bismark
+  analysis: wgbs-seq
+  description: rep1
+  files:
+  - /path/to/ENCSR481JIW_rep1_R1.fastq.gz
+  - /path/to/ENCSR481JIW_rep1_R2.fastq.gz
+  genome_build: hg38
+- algorithm:
+    aligner: bismark
+  analysis: wgbs-seq
+  description: rep2
+  files:
+  - /path/to/ENCSR481JIW_rep2_R1.fastq.gz
+  - /path/to/ENCSR481JIW_rep2_R2.fastq.gz
+  genome_build: hg38
+upload:
+  dir: ../final
+```
+
+1. [wgbsseqpipeline function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/main.py#L413)
+
+
+2*. [Read trimmming](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/trimming.py#L15)
+```bash
+trim_galore  \
+--cores 4 \
+--length 30 \
+--quality 30 \
+--fastqc \
+--paired \
+-o /path/to/work/bcbiotx \
+/path/to/ENCSR481JIW_rep1_R1.fastq.gz \ 
+/path/to/ENCSR481JIW_rep1_R2.fastq.gz
+```
+
+3*. [Bismark align](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/ngsalign/bismark.py#L19)
+```bash
+bismark \
+--bowtie2 \
+--temp_dir /path/to/work/bcbiotx/ \
+--gzip \
+--parallel 5 \
+-o /path/to/work/bcbiotx \
+--unmapped \
+/path/to/genomes/Hsapiens/hg38/bismark/ \
+-1 /path/to/work/trimmed/rep1/ENCSR481JIW_rep1_R1_val_1.fq.gz \
+-2 /path/to/work/trimmed/rep1/ENCSR481JIW_rep1_R2_val_2.fq.gz 
+```
+
+4*. [deduplicate bismark](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/deduplication.py#L10)
+```bash
+deduplicate_bismark \
+--output_dir /path/to/work/dedup/rep1 \
+/path/to/work/align/rep1/rep1.bam
+```
+5*. [bismark_calling](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L58)
+   [bismark_methylation_extractor](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L26)
+```bash
+bismark_methylation_extractor \
+--no_overlap \
+--comprehensive \
+--cytosine_report \
+--genome_folder /path/to/genomes/Hsapiens/hg38/bismark/ \
+--merge_non_CpG \
+--multicore 1 \
+--buffer_size 5G \
+--bedGraph \
+--gzip /path/to/work/dedup/rep1/rep1.deduplicated.bam
+```
+
+6. [bismark2report](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/wgbsseq/cpg_caller.py#L44)
+```bash
+bismark2report \
+--alignment_report /path/to/work/align/rep1/rep1_bismark/ENCSR481JIW_rep1_R1_val_1_bismark_bt2_PE_report.txt \
+-o /path/to/work/cpg/rep1/bcbiotx/tmpypivttaa/rep1.html \
+--mbias_report /path/to/work/cpg/rep1/rep1.deduplicated.M-bias.txt
+```
+
+7. [generate QC metrics](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L39);
+[samtools sort](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/qcsummary.py#L67)
+```bash
+samtools sort -@ 16 -m 3276M -O BAM  \
+-T /path/to/work/bcbiotx/tmpj82rrnlc/rep1.sorted-sort \
+-o /path/to/work/bcbiotx/tmpj82rrnlc/rep1.sorted.bam \
+/path/to/work/align/rep1/rep1.bam
+```
+8. samtools index
+```bash
+samtools \
+index -@ 16 \
+/path/to/work/align/rep1/rep1.sorted.bam \
+/path/to/work/bcbiotx/tmpr02on2ol/rep1.sorted.bam.bai
+```
+
+9. samtools stats
+```bash
+samtools stats -@ 16 \
+/path/to/work/align/rep1/rep1.sorted.bam > \
+/path/to/work/bcbiotx/tmp5e6gerdb/rep1.txt
+```
+
+10. downsample for fastqc
+```bash
+samtools view -O BAM -@ 16 \
+-o /path/to/work/bcbiotx/tmp3z8btzek/rep1.sorted-downsample.bam \
+-s 42.735 \
+/path/to/work/align/rep1/rep1.sorted.bam
+```
+
+11. fastqc
+```bash
+fastqc \
+-d /path/to/work/qc/rep1/bcbiotx \
+-t 16 \
+--extract \
+-o /path/to/work/qc/rep1/bcbiotx \
+-f bam /path/to/work/qc/rep1/rep1.sorted-downsample.bam
+```
+
+12. samtools idxstats
+```bash
+samtools idxstats /path/to/work/align/rep1/rep1.sorted.bam > \
+/path/to/work/bcbiotx/rep1-idxstats.txt
+```
+
+13. [multiqc summary](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/qc/multiqc.py#L39)
+```bash
+multiqc -c /path/to/work/qc/multiqc/multiqc_config.yaml \
+-f -l \
+/path/to/work/qc/multiqc/list_files.txt \
+-o /path/to/work/bcbiotx/
+```
+
+14. [upload sample files to final](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L29);
+https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L128
+
+15. [upload project file to final](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L21);
+https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/upload/__init__.py#L777
+
 ## Benchmarking
 There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
 We ran a test with NA12878 nebemseq data, 125 mln reads (72.5mln read pairs).
