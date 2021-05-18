@@ -1,0 +1,27 @@
+details:
+- algorithm:
+    aligner: bwa
+    background: /path/to/1000g_pon.hg38.vcf.gz
+    mark_duplicates: false
+    recalibrate: false
+    realign: false
+    remove_lcr: true
+    platform: illumina
+    quality_format: standard
+    variantcaller: mutect2
+    vcfanno: somatic
+    tools_on:
+    - noalt_calling
+    variant_regions: /path/to/panel.bed
+    coverage: /path/to/panel.bed
+    effects_transcripts: canonical_cancer
+    min_allele_fraction: 0.5
+  analysis: variant2
+  description: sample_tumor
+  files: ../input/tumor.bam
+  genome_build: hg38
+  metadata:
+    batch: batch1
+    phenotype: tumor
+upload:
+  dir: ../final
