@@ -96,8 +96,7 @@ def get_somatic_variantcallers(items):
     return set(vcs)
 
 def check_paired_problems(items):
-    """Check for incorrectly paired tumor/normal samples in a batch.
-    """
+    """Check for incorrectly paired tumor/normal samples in a batch."""
     # ensure we're in a paired batch
     if not get_paired(items):
         return
@@ -115,7 +114,11 @@ def check_paired_problems(items):
         if "mutect" in vcs or "mutect2" in vcs or "strelka2" in vcs:
             paired = get_paired(items)
             if not (paired.normal_data or paired.normal_panel):
-                raise ValueError("MuTect, MuTect2 and Strelka2 somatic calling requires normal sample or panel: %s" %
+                # give a warning for mutect2, error out for mutect and strelka
+                if "mutect2" in vcs:
+                    logger.info("Using a PON or a normal sample is recommended!")
+                else:
+                    raise ValueError("MuTect and Strelka2 somatic calling requires normal sample or panel: %s" %
                                  [dd.get_sample_name(data) for data in items])
 
 def get_paired_phenotype(data):
