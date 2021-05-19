@@ -46,7 +46,7 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     if resources and resources.get("bismark_threads"):
         instances = resources.get("bismark_threads")
         logger.info(f"Using {instances} bismark instances - overriden by resources")
-    bowtie_threads = 1
+    bowtie_threads = 2
     if resources and resources.get("bowtie_threads"):
         bowtie_threads = resources.get("bowtie_threads")
     logger.info(f"Using {bowtie_threads} bowtie threads per bismark instance")
@@ -56,14 +56,12 @@ def align(fastq_file, pair_file, ref_file, names, align_dir, data):
     other_opts = ""
     if resources and resources.get("options", []):
         other_opts = resources.get("options", [])
-        # default --local --maxins 1000
-        if "--local" not in other_opts:
-            other_opts.append("--local")
-        if "--maxins" not in other_opts:
-            other_opts.extend(["--maxins", "1000"])
+        if "--non_directional" in other_opts:
+            if directional != "--non_directional":
+                directional = "--non_directional"
+                logger.info(f"Directional setting in the kit != setting in the yaml/resources, using {directional}")
+            other_opts.remove("--non_directional")
         other_opts = " ".join([str(x) for x in other_opts]).strip()
-    else: # no opts set
-        other_opts = "--local --maxins 1000"
 
     fastq_files = " ".join([fastq_file, pair_file]) if pair_file else fastq_file
     safe_makedir(align_dir)
