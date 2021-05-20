@@ -1,16 +1,16 @@
-## Internals
+# Internals
 
-### Overview
+## Overview
 
 ![variant calling overview](images/variant-calling-overview.png)
 
-### Parallel
+## Parallel
 
 bcbio calculates callable regions following alignment using [goleft depth](https://github.com/brentp/goleft/tree/master/depth). These regions determine breakpoints for analysis, allowing [parallelization by genomic regions](http://bcb.io/2013/05/22/scaling-variant-detection-pipelines-for-whole-genome-sequencing-analysis/) during variant calling. Defining non-callable regions allows bcbio to select breakpoints for parallelization within chromosomes where we won't accidentally impact small variant detection. The callable regions also supplement the variant calls to define positions where not called bases are homozygous reference, as opposed to true no-calls with no evidence. The callable regions plus variant calls is an alternative to gVCF output which explicitly enumerates reference calls in the output variant file.
 
 ![Overview of cluster types during parallel execution](images/parallel-clustertypes.png)
 
-### Somatic tumor only variant calling pipeline with UMIs step by step
+## Somatic tumor only variant calling pipeline with UMIs step by step
 
 Minor steps (like tabix'ing of vcfs, indexing of bams) and details (full paths) are omitted.
 
@@ -197,7 +197,7 @@ resources:
     tabix -f -0 -c '#' -s 1 -b 2 -e 3 samplex-effects-annotated-annotated-somatic-priority.tsv.gz
     ```
 
-### Tests
+## Tests
 
 To run bcbio automated tests, install bcbio and clone bcbio master repository. You are testing your installation with tests provided in bcbio-nextgen/tests:
 ```shell
