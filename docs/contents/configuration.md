@@ -1,4 +1,4 @@
-# Configuration parameters shared by many pipelines
+# Configuration
 
 ## Project structure
 bcbio encourages a project structure:
@@ -227,7 +227,6 @@ These BED files define the regions of the genome to analyze and report on. `vari
 ### Standard
 This pipeline implements `alignment` and `qc` tools. Furthermore, it will run [qsignature](http://sourceforge.net/p/adamajava/wiki/qSignature/) to detect possible duplicated samples, or mislabeling. It uses SNPs signature to create a distance matrix that helps easily to create groups. The project yaml file will show the number of total samples analyzed, the number of very similar samples, and samples that could be duplicated.
 
-#### Configuration
 We will assume that you installed bcbio-nextgen with the automated installer, and so your default [bcbio_system.yaml](http://github.com/bcbio/bcbio-nextgen/blob/master/config/bcbio_system.yaml) file is configured correctly with all of the tools pointing to the right places. If that is the case, to run bcbio-nextgen on a set of samples you just need to set up a YAML file that describes your samples and what you would like to do to them.
 
 Let's say that you have a single paired-end control lane, prepared with the [Illumina TruSeq Kit](https://www.illumina.com/products/by-type/sequencing-kits/library-prep-kits/truseq-rna-v2.html) from a human. Here is what a well-formed sample YAML file for that
@@ -433,7 +432,7 @@ resources:
     ```
 * `options` Adjust specific command line options for a program. This can be hard to support for many tools due to conflicts with other existing options but is available for some tools: - `mutect2`, `mutect2_filter`: Adjust for Mutect2 calls and filtering.
 
-#### Temporary directory
+### Temporary directory
 
 You also use the resource section to specify system specific parameters like global temporary directories:
 ```yaml
@@ -450,7 +449,7 @@ resources:
     dir: $YOUR_SCRATCH_LOCATION
 ```
 
-#### Sample or run specific resources
+### Sample or run specific resources
 
 To override any of the global resource settings in a sample specific manner, you write a resource section within your sample YAML configuration. For example, to create a sample specific temporary directory and pass a command line option to novoalign, write a sample resource specification like:
 ```yaml
@@ -519,7 +518,7 @@ it is important to have separate `tool-data` as well.
 
 ### Adding custom genomes
 
-[bcbio_setup_genome.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/bcbio_setup_genome.py) installs a custom genome for variant and bulk-RNA-seq analyses and updates the configuration files. 
+[bcbio_setup_genome.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/bcbio_setup_genome.py) installs a custom genome for variant and bulk-RNA-seq analyses and updates the configuration files.
 
 ```shell
 bcbio_setup_genome.py \
@@ -680,4 +679,3 @@ for all projects.
 
 Every pipeline has multiple steps. Bcbio saves intermediate results in the work directory. If a step has been successfully finished (alignment bam file is generated, variants vcf is calculated, purecn normal db is generated), and the pipeline failed one of the subsequent steps, then upon re-running the pipeline, the finished steps would not be re-calculated. If you'd like to re-generate data for a particular step, simply remove the corresponding `work/step` folder,
 for example, remove `work/gemini` if you'd like to re-generate a gemini database or purecn normaldb.
-
