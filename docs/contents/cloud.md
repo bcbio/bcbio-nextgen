@@ -1,4 +1,4 @@
-## Cloud
+# Cloud
 
 bcbio has two approaches to running on cloud providers like [Amazon Web Services (AWS)](https://aws.amazon.com/), [Google Cloud Platform (GCP)](https://cloud.google.com/) and [Microsoft Azure](https://azure.microsoft.com). For smaller projects we use a [simplified ansible based approach](https://github.com/bcbio/bcbio-nextgen/tree/master/scripts/ansible#simplified-bcbio-cloud-usage) which automates spinning up single multicore machines for running either traditional or [Common Workflow Language (CWL)](cwl) bcbio runs.
 
@@ -6,11 +6,11 @@ For larger distributed projects, we're actively working on using [Common Workflo
 
 For getting started, the CWL [Installation](contents/cwl:installation) documentation describes how to install [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm), which provides a wrapper around bcbio that automates interaction with cloud providers and [Docker](https://www.docker.com/). `bcbio_vm.py` also cleans up the command line usage to make it more intuitive and provides a superset of functionality available in `bcbio_nextgen.py`.
 
-### Google Cloud Platform
+## Google Cloud Platform
 
 Cromwell runs bcbio CWL pipelines on Google Cloud using the [Google Pipelines API](https://cloud.google.com/genomics/reference/rest/).
 
-#### GCP Setup
+### GCP Setup
 
 To setup a Google Compute environment, you'll make use of the [Web based console](https://console.cloud.google.com) and [gcloud and gsutil from the Google Cloud SDK](https://cloud.google.com/sdk/), which provide command line interfacts to manage data in Google Storage and Google Compute instances. You can install with:
 ```shell
@@ -35,7 +35,7 @@ gsutil mb gs://your-project
 ```
 Additional documentation for Cromwell: [Google Pipelines API](https://cromwell.readthedocs.io/en/stable/tutorials/PipelinesApi101/) and [Google authentication](https://cromwell.readthedocs.io/en/stable/backends/Google/).
 
-#### GCP data preparation
+### GCP data preparation
 
 Cromwell can localize data present in Google Storage buckets as part of the run process and bcbio will translate the data present in these storage bucket into references for the CWL run inputs.
 
@@ -60,7 +60,7 @@ bcbio_vm.py template --systemconfig bcbio_system-gcp.yaml ${TEMPLATE}-template.y
 bcbio_vm.py cwl --systemconfig bcbio_system-gcp.yaml $PNAME/config/$PNAME.yaml
 ```
 
-#### Running on GCP
+### Running on GCP
 
 Run the CWL using Cromwell by specifying the project and root Google Storage bucket for intermediates:
 ```shell
@@ -68,11 +68,11 @@ bcbio_vm.py cwlrun cromwell $PNAME-workflow --cloud-project your-project \
     --cloud-root gs://your-project/work_cromwell
 ```
 
-### Amazon Web Services
+## Amazon Web Services
 
 We're working to support [Amazon Web Services (AWS)](https://aws.amazon.com/) using AWS Batch and Cromwell, following the [AWS for Genomics documentation](https://docs.opendata.aws/genomics-workflows/). This documents the current work in progress; it is not yet fully running and needs [additional Cromwell development](https://github.com/broadinstitute/cromwell/issues/4586) for AWS CWL support.
 
-#### AWS Setup
+### AWS Setup
 
 Optionally, create a bcbio [IAM user](https://aws.amazon.com/iam/) and bcbio keypair for creating AWS Batch specific resources. bcbio-vm can automate this process, although they can also be pre-existing. If you'd like to use bcbio-vm automation, you'll need to have an account at Amazon and your Access Key ID and Secret Key ID from the [AWS security credentials page](https://console.aws.amazon.com/iam/home?#security_credential). These can be [IAM credentials](https://aws.amazon.com/iam/getting-started/) instead of root credentials as long as they have administrator privileges. Make them available to bcbio using the standard environmental variables:
 ```shell
@@ -106,7 +106,7 @@ Credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quick
     High priority Job Queue: arn:aws:batch:us-east-1:678711657553:job-queue/GenomicsHighPriorityQue-3bff21e3c4f44d4
     ```
 
-#### AWS data preparation
+### AWS data preparation
 
 The easiest way to organize AWS projects is using an analysis folder inside an [S3 bucket](https://aws.amazon.com/s3/). Create a bucket and folder for your analysis and upload input files (fastq or BAM) and other associated files. Bucket names should include only lowercase letters, numbers and hyphens (`-`) to conform to [S3 bucket naming restrictions](https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) and avoid issues with resolution of SSL keys. You can create buckets and upload files using the [the AWS cli client](https://aws.amazon.com/cli/) or [AWS S3 web console](https://console.aws.amazon.com/s3/):
 ```shell
@@ -128,7 +128,7 @@ bcbio_vm.py template --systemconfig bcbio_system-$CLOUD.yaml ${TEMPLATE}-templat
 bcbio_vm.py cwl --systemconfig bcbio_system-$CLOUD.yaml $PNAME/config/$PNAME.yaml
 ```
 
-#### Running on AWS
+### Running on AWS
 
 Run the CWL using Cromwell by specifying the batch job queue [Amazon Resource Name (ARN)](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html) and bucket from the setup process:
 ```shell
@@ -137,11 +137,11 @@ bcbio_vm.py cwlrun cromwell $PNAME-workflow \
   -cloud-root s3://your-project
 ```
 
-### Amazon Web Services (old)
+## Amazon Web Services (old)
 
 We're phasing out this approach to AWS support in bcbio and are actively moving to Common Workflow Language based approaches. This documents the old [Elasticluster](https://github.com/gc3-uzh-ch/elasticluster) approach to build a cluster on AWS with an encrypted NFS mounted drive and an optional Lustre shared filesystem.
 
-#### Data preparation
+### Data preparation
 
 You need a template file describing the type of run to do and a CSV file mapping samples in the bucket to names and any other metadata. See the [Automated sample configuration](contents/configuration:automated%20sample%20configuration) docs for more details about these files. Also upload both of these files to S3.
 
@@ -153,7 +153,7 @@ This will find the input files in the `s3://your-project/your-analysis` bucket, 
 
 We currently support human analysis with both the GRCh37 and hg19 genomes. We can also add additional genomes as needed by the community and generally welcome feedback and comments on reference data support.
 
-#### Cluster setup
+### Cluster setup
 
 The first time running bcbio on AWS you'll need to setup permissions, VPCs and local configuration files. We provide commands to automate all these steps and once finished, they can be re-used for subsequent runs. To start you'll need to have an account at Amazon and your Access Key ID and Secret Key ID from the [AWS security credentials page](https://console.aws.amazon.com/iam/home?#security_credential). These can be [IAM credentials](https://aws.amazon.com/iam/getting-started/) instead of root credentials as long as they have administrator privileges. Make them available to bcbio using the standard environmental variables:
 ```shell
@@ -170,7 +170,7 @@ bcbio_vm.py aws vpc --region=us-east-1
 ```
 The `aws vpc` command is idempotent and can run multiple times if you change or remove parts of the infrastructure. You can also rerun the `aws iam` command, but if you'd like to generate a new elasticluster configuration file (`~/.bcbio/elasticluster/config`) add the recreate flag: `bcbio_vm.py aws iam --recreate`. This generates a new set of IAM credentials and public/private keys. These are only stored in the `~/.bcbio` directory so you need to fully recreate them if you delete the old ones.
 
-#### Running a cluster
+### Running a cluster
 
 Following this setup, you're ready to run a bcbio cluster on AWS. We start from a standard Ubuntu AMI, installing all software for bcbio and the cluster as part of the boot process.
 
@@ -192,7 +192,7 @@ bcbio_vm.py aws cluster start
 ```
 The cluster will take five to ten minutes to start and be provisioned. If you encounter any intermittent failures, you can rerun the cluster configuration step with `bcbio_vm.py aws cluster setup` or the bcbio-specific installation with `bcbio_vm.py aws cluster bootstrap`.
 
-#### Running Lustre
+### Running Lustre
 
 Elasticluster mounts the `/encrypted` directory as a NFS share available across all of the worker machines. You can use this as a processing directory for smaller runs but for larger runs may need a scalable distributed file system. bcbio supports using [Intel Cloud Edition for Lustre (ICEL)](https://wiki.hpdd.intel.com/display/PUB/Intel+Cloud+Edition+for+Lustre*+Software) to set up a Lustre scratch filesystem on AWS.
 
@@ -210,7 +210,7 @@ If you encounter any intermittent failures when installing collectl plugin, that
     ```
 * The cluster instances will reboot with the Lustre filesystem mounted.
 
-#### Running an analysis
+### Running an analysis
 
 To run the analysis, connect to the head node with:
 ```shell
@@ -244,7 +244,7 @@ Where 60 is the total number of cores to use across all the worker nodes. Of you
 
 On successful completion, bcbio uploads the results of the analysis back into your s3 bucket and folder as `s3://your-project/your-analysis/final`. You can now cleanup the cluster and Lustre filesystem.
 
-#### Graphing resource usage
+### Graphing resource usage
 
 AWS runs include automatic monitoring of resource usage with [collectl](http://collectl.sourceforge.net/). bcbio_vm uses collectl statistics to plot CPU, memory, disk and network usage during each step of a run. To prepare resource usage plots after finishing an analysis, first copy the `bcbio-nextgen.log` file to your local computer. Either use `bcbio_vm.py elasticluster sftp bcbio` to copy from the work directory on AWS (`/encrypted/your-project/work/log/bcbio-nextgen.log`) or transfer it from the output S3 bucket (`your-project/your-analysis/final/DATE_your-project/bcbio-nextgen.log`).
 
@@ -269,7 +269,7 @@ And plot, slice, zoom it in an jupyter notebook using matplotlib, [highcharts](h
 
 In addition to plots, the [summarize_timing.py](https://github.com/bcbio/bcbio-nextgen/blob/master/scripts/utils/summarize_timing.py) utility script prepares a summary table of run times per step.
 
-#### Shutting down
+### Shutting down
 
 The bcbio Elasticluster and Lustre integration can spin up a lot of AWS resources. You'll be paying for these by the hour so you want to clean them up when you finish running your analysis. To stop the cluster:
 ```shell
@@ -281,6 +281,6 @@ bcbio_vm.py aws icel stop
 ```
 Double check that all instances have been properly stopped by looking in the AWS console.
 
-#### Manual configuration
+### Manual configuration
 
 Experienced [elasticluster](https://github.com/gc3-uzh-ch/elasticluster) users can edit the configuration files themselves. bcbio provides a small wrapper that automatically reads and writes these configurations to avoid users needing to understand elasticluster internals, but all functionality is fully available. Edit your `~/.bcbio/elasticluster/config` file to change parameters. You can also see the [latest example configuration](https://github.com/bcbio/bcbio-nextgen-vm/blob/master/elasticluster/config). in the bcbio-vm GitHub repository for more details on the other available options.
