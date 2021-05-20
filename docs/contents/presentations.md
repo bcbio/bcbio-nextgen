@@ -1,4 +1,4 @@
-## Presentations
+# Presentations
 
 * Variant calling and bcbio training for the [Harvard Chan Bioinformatics Core In Depth NGS Data Analysis Course](https://hbctraining.github.io/In-depth-NGS-Data-Analysis-Course/) (10 October 2018): [slides](https://github.com/chapmanb/bcbb/blob/master/talks/ngscourse2018_teaching/ngscourse2018_teaching.pdf)
 * Building a diverse set of validations; lightning talk at [the GCCBOSC2018 Bioinformatics Community Conference](https://gccbosc2018.sched.com/): [slides](https://github.com/chapmanb/bcbb/blob/master/talks/bosc2018_bcbio_validate/chapman_bcbio_validate.pdf)
@@ -42,7 +42,7 @@
 
 Feel free to reuse any images or text from these talks. The [slides are on GitHub](https://github.com/chapmanb/bcbb/tree/master/talks).
 
-### Abstract
+## Abstract
 
 __Community Development of Validated Variant Calling Pipelines__
 
@@ -55,7 +55,7 @@ Translational research relies on accurate identification of genomic variants. Ho
 * __Accessible:__ Results automatically feed into tools for query and investigation of variants. The [GEMINI framework](https://github.com/arq5x/gemini#readme) provides a queryable database associating variants with a wide variety of genome annotations. The [o8](https://github.com/chapmanb/o8#readme) web-based tool visualizes the work of variant prioritization and assessment.
 * __Community developed:__ bcbio-nextgen is widely used in multiple sequencing centers and research laboratories. We actively encourage contributors to the code base and make it easy to get started with a fully automated installer and updater that prepares all third party software and reference genomes.
 
-### Links from the presentation
+## Links from the presentation
 
 * [HugeSeq](https://github.com/StanfordBioinformatics/HugeSeq)
 * [Genome Comparison & Analytic Testing](https://www.mybiosoftware.com/gcat-genome-comparison-and-analytic-testing-platform.html) at Bioplanet
