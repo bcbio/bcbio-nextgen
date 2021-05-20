@@ -1,5 +1,7 @@
 # Common Workflow Language (CWL)
 
+**CWL functionality is not supported as of bcbio1.2.8**
+
 bcbio runs with [Common Workflow Language (CWL)](https://github.com/common-workflow-language/common-workflow-language) compatible parallelization software. bcbio generates a CWL workflow from a [standard bcbio sample YAML description file](configuration) and any tool that supports CWL input can run the workflow. CWL-based tools do the work of managing files and workflows, and bcbio performs the biological analysis using either a Docker container or a local installation.
 
 ## Current status
