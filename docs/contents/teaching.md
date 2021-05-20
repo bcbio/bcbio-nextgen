@@ -1,10 +1,10 @@
-## Teaching
+# Teaching
 
-## Single cell RNA-seq analysis
+# Single cell RNA-seq analysis
 
 [Setting up bcbio single cell RNA-seq analysis](https://github.com/hbc/tutorials/blob/master/scRNAseq/scRNAseq_analysis_tutorial/lessons/01_bcbio_run.md) tutorial outlines the steps needed to run bcbio in that use case.
 
-## Cancer tumor-normal variant calling
+# Cancer tumor-normal variant calling
 
 This is a teaching orientated example of using bcbio from the Cold Spring Harbor Laboratory's [Advanced Sequencing Technology and Applications course](https://meetings.cshl.edu/courses.aspx?course=C-SEQTEC&year=15). This uses cancer tumor normal data from the [ICGC-TCGA DREAM synthetic 3 challenge](https://www.synapse.org/#!Synapse:syn312572/wiki/58893), subset to exomes on chromosome 6 to reduce runtimes. It demonstrates:
 * Running a cancer tumor/normal workflow through bcbio.
@@ -15,13 +15,13 @@ This is a teaching orientated example of using bcbio from the Cold Spring Harbor
 * HLA typing.
 * Validation of both small and structural variants against truth sets.
 
-### Loading pre-run analysis
+## Loading pre-run analysis
 
 To save downloading the genome data and running the analysis, we have a pre-prepared AMI with the data and analysis run. Use the [AWS Console](https://console.aws.amazon.com/ec2) to launch the pre-built AMI -- search Community AMIs for ami-5e84fe34. Any small instance type is fine for exploring the configuration, run directory and output files. Make sure you associate a public IP and a security group that allows remote ssh.
 
 Once launched, ssh into the remote machine with `ssh -i your-keypair ubuntu@public.ip.address` to explore the inputs and outputs. The default PATH contains bcbio and third party programs in `/usr/local/bin`, with the biological data installed in `/usr/local/share/bcbio`. The run is in a `~/run/cancer-syn3-chr6`.
 
-### Input configuration file
+## Input configuration file
 
 To run bcbio, you prepare a small configuration file describing your analysis. You can [prepare it manually or use an automated configuration method](configuration). The example has a pre-written configuration file with tumor/normal data located in the `config` directory and this section walks through the settings.
 
@@ -78,7 +78,7 @@ svvalidate:
   INV: dream-syn3-crossmap/truth_INV.bed
 ```
 
-### Output files
+## Output files
 
 Output files are in `~/run/cancer-syn3-chr6/final`, extracted from the full work directory in `~/run/cancer-syn3-chr6/work`.
 
@@ -139,7 +139,7 @@ A top level summary of metrics for alignment, variant calling and coverage that 
 project-summary.yaml
 ```
 
-### Preparing and Running
+## Preparing and Running
 
 The steps to prepare an AMI from a bare machine and run the analysis. These are pre-done on the teaching AMI to save time:
 
