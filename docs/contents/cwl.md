@@ -1,8 +1,8 @@
-## Common Workflow Language (CWL)
+# Common Workflow Language (CWL)
 
 bcbio runs with [Common Workflow Language (CWL)](https://github.com/common-workflow-language/common-workflow-language) compatible parallelization software. bcbio generates a CWL workflow from a [standard bcbio sample YAML description file](configuration) and any tool that supports CWL input can run the workflow. CWL-based tools do the work of managing files and workflows, and bcbio performs the biological analysis using either a Docker container or a local installation.
 
-### Current status
+## Current status
 
 bcbio creates CWL for alignment, small variant calls (SNPs and indels), coverage assessment, HLA typing, quality control and structural variant calling. It generates a [CWL v1.0.2](https://www.commonwl.org/v1.0/) compatible workflow. The actual biological code execution during runs works with either a [bcbio docker container](https://github.com/bcbio/bcbio_docker) or a [local installation of bcbio](installation).
 
@@ -22,11 +22,11 @@ running on the [public Curoverse](https://playground.arvados.org/users/welcome) 
 
 We plan to continue to expand CWL support to include more components of bcbio, and also need to evaluate the workflow on larger, real life analyses. This includes supporting additional CWL runners. We're working on evaluating [Galaxy/Planemo](https://github.com/galaxyproject/planemo) for integration with the Galaxy community.
 
-### Installation
+## Installation
 
 [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm) installs all dependencies required to generate CWL and run bcbio, along with supported CWL runners. There are two install choices, depending on your usage of bcbio: running CWL with a existing local bcbio install, or running with containers.
 
-#### Install bcbio-vm with a local bcbio
+### Install bcbio-vm with a local bcbio
 
 To run bcbio without using containers, first and make it available in your path. You'll need both the bcbio code and tools. To only run the tests and bcbio validations, you don't need a full data installation so can install with `--nodata`.
 
@@ -38,7 +38,7 @@ Adding this to any future upgrades will also update the bcbio-vm wrapper code an
 
 When you begin running your own analysis and need the data available, pre-prepare your bcbio data directory with `bcbio_nextgen.py upgrade --data --cwl`.
 
-#### Install bcbio-vm with containers
+### Install bcbio-vm with containers
 
 If you don't have an existing local bcbio installation and want to run with CWL using the tools and data embedded in containers, you can do a stand along install of just bcbio-vm. To install using [Miniconda](https://docs.conda.io/en/latest/miniconda.html) and [bioconda
 packages](https://bioconda.github.io/) on Linux:
@@ -60,7 +60,7 @@ export PATH=$TARGETDIR/bin:$PATH
 ```
 This install includes bcbio-nextgen libraries, used in generating CWL and orchestrating runs, but is not a full bcbio installation. It requires [Docker](https://www.docker.com/) present on your system this is all you need to get started running examples, since the CWL runners will pull in Docker containers with the bcbio tools.
 
-### Getting started
+## Getting started
 
 To make it easy to get started, we have pre-built CWL descriptions that use test data. These run in under 5 minutes on a local machine and don't require a bcbio installation if you have Docker available on your machine:
 1. Download and unpack the [test repository](https://github.com/bcbio/test_bcbio_cwl):
@@ -69,7 +69,7 @@ To make it easy to get started, we have pre-built CWL descriptions that use test
     tar -xzvpf test_bcbio_cwl.tar.gz
     cd test_bcbio_cwl-master/somatic
     ```
-1.  Run the analysis using either Cromwell, Rabix bunny or Toil. If you have Docker available on your machine, the runner will download the correct [bcbio container](https://github.com/bcbio/bcbio_docker) and you don't need to install anything else to get started. If you have an old version of the container you want to update to the latest with `docker pull quay.io/bcbio/bcbio-vc`. There are shell scripts that provide the command lines for running:
+2.  Run the analysis using either Cromwell, Rabix bunny or Toil. If you have Docker available on your machine, the runner will download the correct [bcbio container](https://github.com/bcbio/bcbio_docker) and you don't need to install anything else to get started. If you have an old version of the container you want to update to the latest with `docker pull quay.io/bcbio/bcbio-vc`. There are shell scripts that provide the command lines for running:
     ```shell
     bash run_cromwell.sh
     bash run_bunny.sh
@@ -83,7 +83,7 @@ To make it easy to get started, we have pre-built CWL descriptions that use test
     ```
     These wrappers automatically handle temporary directories, permissions, logging and re-starts. If running without Docker, use a [local installation of bcbio](installation) add `--no-container` to the commands in the shell scripts.
 
-### Generating CWL for input to a tool
+## Generating CWL for input to a tool
 
 The first step in running your analysis project in bcbio is to generate CWL. If you're already familiar with bcbio, the [process of preparing information about your sample inputs and analysis](configuration) are almost identical:
 * A [standard bcbio sample configuration file](configuration) defining the samples. This can either be a full prepared YAML file or a [template file and CSV with sample data](contents/configuration:automated%20sample%20configuration).
@@ -114,7 +114,7 @@ On a first CWL generation run with a new genome, this process will run for a lon
 
 You can now run this with any CWL compatible runner and the `bcbio_vm.py cwlrun` wrappers standardize running across multiple tools in different environments.
 
-#### Running with Cromwell
+### Running with Cromwell
 
 The [Cromwell](https://cromwell.readthedocs.io/) workflow management system runs bcbio either locally on a single machine or distributed on a cluster using a scheduler like SLURM, SGE or PBSPro.
 
@@ -134,7 +134,7 @@ To control the resources used Cromwell, set `--joblimit` to the allowed jobs all
 
 Cromwell can also run directly on cloud resources: [Google Cloud Platform](contents/cloud:google%20cloud%20platform).
 
-### Running with Toil
+## Running with Toil
 
 The [Toil pipeline management system](https://github.com/BD2KGenomics/toil) runs CWL workflows in parallel on a local machine, on a cluster or at AWS.
 
@@ -149,7 +149,7 @@ To run distributed on a Slurm cluster:
 bcbio_vm.py cwlrun toil sample-workflow -- --batchSystem slurm
 ```
 
-### Running on Arvados
+## Running on Arvados
 
 bcbio generated CWL workflows run on [Arvados](https://arvados.org/) and these instructions detail how to run on the [Arvdos public instance](https://playground.arvados.org). [Arvados cwl-runner](https://github.com/curoverse/arvados) comes pre-installed with [bcbio-vm](https://github.com/bcbio/bcbio-nextgen-vm#installation). We have a publicly accessible project, called [bcbio_resources](https://workbench.qr1hi.arvadosapi.com/projects/qr1hi-j7d0g-8g1u4lh8mwev36n) that contains the latest Docker images, test data and genome references you can use for runs.
 
@@ -198,7 +198,7 @@ To run an analysis:
     bcbio_vm.py cwlrun arvados arvados_testcwl-workflow -- --project-uuid $PROJECT_ID
     ```
 
-### Running on DNAnexus
+## Running on DNAnexus
 
 bcbio runs on the [DNAnexus platform](https://www.dnanexus.com/) by converting bcbio generated CWL into DNAnexus workflows and apps using [dx-cwl](https://github.com/dnanexus/dx-cwl). This describes the process using the bcbio workflow app (bcbio-run-workflow) and [bcbio workflow applet (bcbio_resources:/applets/bcbio-run-workflow)](https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/applets) in the public [bcbio_resources](https://platform.dnanexus.com/projects/F541fX00f5v9vKJjJ34gvgbv/data/) project, both are [regularly updated and maintained on the DNAnexus platform](https://github.com/bcbio/bcbio-dnanexus-wrapper). Secondarily, we also show how to install and create workflows locally for additional control and debugging.
 
@@ -300,7 +300,7 @@ description of the workflow:
            --rootdir $FOLDER/dx-cwl-run
     ```
 
-### Running on Seven Bridges
+## Running on Seven Bridges
 
 bcbio runs on the [Seven Bridges](https://www.sevenbridges.com/) including the main platform and specialized data sources like the [Cancer Genomics Cloud](https://www.cancergenomicscloud.org/) and [Cavatica](https://cavatica.squarespace.com/). Seven Bridges uses generated CWL directly and bcbio has utilities to query your remote data on the platform and prepare CWL for direct submission.
 
@@ -340,7 +340,7 @@ uploader](https://docs.sevenbridges.com/docs/upload-via-the-command-line). We pl
     bcbio_vm.py cwlrun sbg ${PNAME}-workflow -- --project ${SBG_PROJECT}
     ```
 
-### Development notes
+## Development notes
 
 bcbio generates a common workflow language description. Internally, bcbio represents the files and information related to processing as [a comprehensive dictionary](contents/development:data). This world object describes the state of a run and associated files, and new processing steps update or add information to it. The world object is roughly equivalent to CWL's JSON-based input object, but CWL enforces additional annotations to identify files and models new inputs/outputs at each step. The work in bcbio is to move from our laissez-faire approach to the more structured CWL model.
 
@@ -352,7 +352,7 @@ The generated CWL workflow is in `run_info-cwl-workflow`:
 
 To help with defining the outputs at each step, there is a `WorldWatcher` object that can output changed files and world dictionary objects between steps in the pipeline when running a bcbio in the standard way. The [variant pipeline](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/pipeline/main.py) has examples using it. This is useful when preparing the CWL definitions of inputs and outputs for new steps in the [bcbio CWL step definitions](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/cwl/workflow.py).
 
-### ToDo
+## ToDo
 
 * Support the full variant calling workflow with additional steps like ensemble calling, heterogeneity detection and disambiguation.
 * Port RNA-seq and small RNA workflows to CWL.
