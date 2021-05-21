@@ -11,7 +11,7 @@
 
 ```bash
 wget https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-python bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --nodata
+python3 bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_tools_path] --nodata
 ```
 
 You have to specify where to install bcbio in your filesystem and where to install tools, for example:
@@ -134,7 +134,7 @@ If you are looking to quickly try out bcbio-nextgen on your personal machine bef
 * Install bcbio-nextgen (this should take about 30 minutes):
     ```shell
     vagrant ssh
-    python /vagrant/scripts/bcbio_nextgen_install.py ~/local/share/bcbio --tooldir=~/local --nodata
+    python3 /vagrant/scripts/bcbio_nextgen_install.py ~/local/share/bcbio --tooldir=~/local --nodata
     ```
 Optional steps:
 * Inside the VM (`vagrant ssh`):
