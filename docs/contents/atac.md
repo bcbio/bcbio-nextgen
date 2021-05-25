@@ -189,6 +189,8 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 │   ├── macs2 -- contains peak calls for each fraction, including the full peak calls
 ```
 
+read.bam contains only uniquely mapped non-duplicated reads, see [bam cleaning function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/chipseq/__init__.py#L18). The stats in the `project/multiqc/multiqc_report.html` include all reads (duplicated, multimappers).
+
 ## Downstream analysis
 
 ### Quality Control
