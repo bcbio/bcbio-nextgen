@@ -164,7 +164,8 @@ def _strand_flag(data):
     """
     strand_flag = {"unstranded": "0",
                    "firststrand": "2",
-                   "secondstrand": "1"}
+                   "secondstrand": "1",
+                   "auto": "0"}
     stranded = dd.get_strandedness(data)
 
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "

@@ -145,8 +145,12 @@ def salmon_quant_bam(bam_file, salmon_dir, gtf_file, data):
     return out_file
 
 def _libtype_string(bam_file, strandedness):
-    libtype = "-l I" if bam.is_paired(bam_file) else "-l "
-    strand = sailfish._sailfish_strand_string(strandedness)
+    # auto by default
+    libtype = "-l "
+    strand = "A"
+    if strandedness != "auto":
+        libtype = "-l I" if bam.is_paired(bam_file) else "-l "
+        strand = sailfish._sailfish_strand_string(strandedness)
     return libtype + strand
 
 def run_salmon_index(*samples):

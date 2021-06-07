@@ -320,7 +320,8 @@ def run_rnaseq(bam_file, data, out_dir):
     """
     strandedness = {"firststrand": "strand-specific-forward",
                     "secondstrand": "strand-specific-reverse",
-                    "unstranded": "non-strand-specific"}
+                    "unstranded": "non-strand-specific",
+                    "auto": "non-strand-specific"}
 
     # Qualimap results should be saved to a directory named after sample.
     # MultiQC (for parsing additional data) picks the sample name after the dir as follows:
