@@ -83,7 +83,8 @@ def _get_no_assembly_options(ref_file, data):
 def _get_stranded_flag(config):
     strand_flag = {"unstranded": "fr-unstranded",
                    "firststrand": "fr-firststrand",
-                   "secondstrand": "fr-secondstrand"}
+                   "secondstrand": "fr-secondstrand",
+                   "auto": "fr-unstranded"}
     stranded = get_in(config, ("algorithm", "strandedness"), "unstranded").lower()
     assert stranded in strand_flag, ("%s is not a valid strandedness value. "
                                      "Valid values are 'firststrand', "

@@ -168,11 +168,12 @@ def sailfish_index(gtf_file, ref_file, data, build):
     return out_dir
 
 def _libtype_string(fq1, fq2, strandedness):
-    """
-    supports just the Tophat unstranded/firstrand/secondstrand
-    """
-    libtype = "-l I" if fq2 else "-l "
-    strand = _sailfish_strand_string(strandedness)
+    """supports just the Tophat unstranded/firstrand/secondstrand"""
+    libtype = "-l "
+    strand = "A"
+    if strandedness != "auto":
+        libtype = "-l I" if fq2 else "-l "
+        strand = _sailfish_strand_string(strandedness)
     return libtype + strand
 
 def _sailfish_strand_string(strandedness):

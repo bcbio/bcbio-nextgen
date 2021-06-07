@@ -67,7 +67,8 @@ def run_count(bam_file, dexseq_gff, stranded, out_file, data):
 def _strand_flag(stranded):
     strand_flag = {"unstranded": "no",
                    "firststrand": "reverse",
-                   "secondstrand": "yes"}
+                   "secondstrand": "yes",
+                   "auto": "no"}
     return strand_flag.get(stranded, None)
 
 def _dexseq_count_path():
