@@ -45,9 +45,17 @@ details:
   - analysis: RNA-seq
     genome_build: hg38
     algorithm:
-      quality_format: standard
       aligner: star
-      strandedness: unstranded
+      expression_caller:
+      - salmon
+      - kallisto
+      fusion_caller:
+      - arriba
+      - pizzly
+      quality_format: standard      
+      strandedness: auto
+      trim_reads: false
+      quantify_genome_alignments: true
 upload:
   dir: ../final
 resources:
@@ -135,6 +143,7 @@ bcbio_nextgen.py ../config/seqc.yaml -n 72 -t ipython -s slurm -q medium -r t=0-
 * `spikein_fasta` A FASTA file of spike in sequences to quantitate. There are quantitated separately, so should be things you are not expecting to match anywhere to the genome or trancriptome of the species you are working with.
 * `quantify_genome_alignments` If set to True, run Salmon quantification using the genome alignments from STAR, when available. If STAR alignments are not available, use Salmon's SA mode with decoys.
 * `transcriptome_gtf` A GTF file to use to specify transcripts which will override the bcbio-installed versions. This is used if you have an alternate transcriptome you want to quantitate. You can also use this option to add your own transcripts to a set to quantitate, just append them to your GTF file and sort it.
+* `transcriptome_fasta` A fasta file - transcriptome fasta reference, use along with the transcriptome_gtf to override the installed references. How to generate the fasta with [gffread](http://ccb.jhu.edu/software/stringtie/gff.shtml#gffread_ex).
 * `strandedness`: `[unstranded (default), firststrand, secondstrand, auto]`. Set if your library is stranded. For dUTP marked libraries, firststrand is correct; for Scriptseq prepared libraries, secondstrand is correct. The wrongly set strandedness could cause up to 90% count loss in salmon. If you are unsure run one sample with `unstranded` and infer strandedness from the data, see more info in the [HBC knowledgebase](https://github.com/hbc/knowledgebase/blob/master/rnaseq/strandedness.md). For example dUTP + [xGEN IDT UMI](https://www.idtdna.com/pages/products/next-generation-sequencing/adapters/xgen-udi-umi-adapters) gives secondstrand, not firststrand. We don't set strandedness in STAR, because it is irreversible, see [this discussion](https://github.com/COMBINE-lab/salmon/issues/590#issuecomment-733417813). Currently we don't set strandedness in kallisto as well. `auto` forces strand auto-detection in salmon with `-l A` option. See why auto strandedness and the properly set known strandedness give slightly different counts [here](https://github.com/COMBINE-lab/salmon/issues/669).
 
 ## QC and Basic DE analysis
