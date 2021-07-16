@@ -301,8 +301,8 @@ def remove_low_quality_peaks(peakfile, qval=0.05):
     we define low quality peaks as peaks with a FDR (qval) higher than
     a cutoff, defaulting to 0.05
     """
-    # qvals are encoded in phred-style format so convert first
-    phredval = -10 * math.log10(qval)
+    # qvals are NOT encoded in phred-style format !
+    phredval = - math.log10(qval)
     peaks = read_peakfile(peakfile)
     return peaks[peaks["qValue"] > phredval]
 
