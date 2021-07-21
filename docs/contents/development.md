@@ -52,7 +52,7 @@ The most useful modules inside `bcbio`, ordered by likely interest:
 bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](https://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The GitHub help pages have detailed information on keeping your fork updated with the main GitHub repository (e.g. <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
 
 ## Creating a separate bcbio installation
-When developing, you'd like to avoid breaking your production bcbio instance. Use the installer script to create a separate bcbio instance without downloading any data. Before installing the second bcbio instance, investigate your PATH and PYTHONPATH variables and clean them from referenceing the production bcbio python. It is better to avoid mixing bcbio instances in the PATH. Also watch `~/.conda/environments.txt` and `~/.condarc`: having a reference to the production package cache: `/n/app/bcbio/dev/anaconda/pkgs` lead to `bcbio/tools/bin` not being populated in some installs.
+When developing, you'd like to avoid breaking your production bcbio instance. Use the installer script to create a separate bcbio instance without downloading any data. Before installing the second bcbio instance, investigate your PATH and PYTHONPATH variables and clean them from referenceing the production bcbio python. It is better to avoid mixing bcbio instances in the PATH. Also watch `~/.conda/environments.txt`, `~/.condarc` config files, CONDA_EXE, CONDA_PYTHON_EXE environment variables : having a reference to the production package cache: `/n/app/bcbio/dev/anaconda/pkgs` leads to `bcbio/tools/bin` not being populated in some installs.
 
 To install in `${HOME}/local/share/bcbio` (your location might be different, make sure you have ~30GB of disk quota there):
 ```shell
@@ -64,13 +64,16 @@ Make soft links to the data from your production bcbio instance (your installati
 ln -s /n/app/bcbio/biodata/genomes/ ${HOME}/local/share/genomes
 ln -s /n/app/bcbio/biodata/galaxy/tool-data ${HOME}/local/share/bcbio/galaxy/tool-data
 ```
-Add this directory to your `PATH` (note that it is better to clear you PATH from the path of the production bcbio instance and its tools):
-```shell
-echo $PATH
+
+Create `.bcbio_devel_profile` to clear PATH from the production bcbio executables and reference the development version:
+```bash
 # use everything you need except of production bcbio
 export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:
 export PATH=${HOME}/local/share/bcbio/anaconda/bin:${HOME}/local/bin:$PATH
+export CONDA_EXE=${HOME}/local/share/bcbio/anaconda/bin/conda
+export CONDA_PYTHON_EXE=${HOME}/local/share/bcbio/anaconda/bin/python
 ```
+
 Or directly call the testing bcbio:
 `${HOME}/local/share/bcbio/anaconda/bin/bcbio_nextgen.py`.
 
