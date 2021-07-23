@@ -3,7 +3,7 @@ perform exon-level counting using DEXSeq
 """
 import sys
 import os
-from bcbio.utils import R_package_path, file_exists, safe_makedir
+from bcbio.utils import R_sitelib, file_exists, safe_makedir, which
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
 from bcbio import bam
@@ -53,11 +53,13 @@ def run_count(bam_file, dexseq_gff, stranded, out_file, data):
     sort_flag = "name" if sort_order == "queryname" else "pos"
     is_paired = bam.is_paired(bam_file)
     paired_flag = "yes" if is_paired else "no"
-    bcbio_python = sys.executable
+    
+    anaconda = os.path.dirname(os.path.realpath(sys.executable))
+    r36_python = os.path.join(anaconda, "..", "envs", "r36", "bin", "python")
 
     if file_exists(out_file):
         return out_file
-    cmd = ("{bcbio_python} {dexseq_count} -f bam -r {sort_flag} -p {paired_flag} "
+    cmd = ("{r36_python} {dexseq_count} -f bam -r {sort_flag} -p {paired_flag} "
            "-s {strand_flag} {dexseq_gff} {bam_file} {tx_out_file}")
     message = "Counting exon-level counts with %s and %s." % (bam_file, dexseq_gff)
     with file_transaction(data, out_file) as tx_out_file:
@@ -72,10 +74,10 @@ def _strand_flag(stranded):
     return strand_flag.get(stranded, None)
 
 def _dexseq_count_path():
-    package_path = R_package_path("DEXSeq")
+    package_path = R_sitelib("r36")
     if not package_path:
         return None
-    return os.path.join(package_path, "python_scripts", "dexseq_count.py")
+    return os.path.join(package_path, "DEXSeq", "python_scripts", "dexseq_count.py")
 
 def _dexseq_gtf_path(genome_dir):
     return os.path.join(genome_dir, "rnaseq", "ref-transcripts.dexseq.gff")
