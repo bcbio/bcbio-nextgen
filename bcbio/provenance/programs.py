@@ -35,12 +35,12 @@ _cl_progs = [{"cmd": "bamtofastq", "name": "biobambam",
              {"cmd": "vcflib", "has_cl_version": False},
              {"cmd": "featureCounts", "args": "-v", "stdout_flag": "featureCounts"}]
 _manifest_progs = [
-    'atropos', 'bcbio-variation', 'bioconductor-bubbletree', 'cufflinks',
-    'cnvkit', 'fgbio', 'gatk4', 'hisat2', 'sailfish', 'salmon', 'grabix',
-    'htseq', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv', 'multiqc',
+    'atropos', 'bcbio-variation', 'bioconductor-bubbletree', 'bioconductor-dexseq', 'cufflinks',
+    'cnvkit', 'express', 'fgbio', 'gatk4', 'hisat2', 'sailfish', 'salmon', 'grabix',
+    'htseq', 'kallisto', 'lumpy-sv', 'manta', 'break-point-inspector', 'metasv', 'multiqc',
     'seq2c', 'mirdeep2', 'oncofuse', 'picard', 'phylowgs', 'platypus-variant',
     'rapmap', 'star', 'rtg-tools', 'sambamba', 'samblaster', 'scalpel',
-    'seqbuster', 'snpeff', 'vardict', 'vardict-java', 'varscan', 'ensembl-vep',
+    'seqbuster', 'snpeff', 'stringtie', 'vardict', 'vardict-java', 'varscan', 'ensembl-vep',
     'vt', 'wham', 'umis']
 
 def _broad_versioner(type):
