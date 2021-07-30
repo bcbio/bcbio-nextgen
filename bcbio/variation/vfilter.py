@@ -177,8 +177,10 @@ def _gatk_general():
     Generally useful metric identified by looking at 10x data.
     https://community.10xgenomics.com/t5/Genome-Exome-Forum/Best-practices-for-trimming-adapters-when-variant-calling/m-p/473
     https://github.com/bcbio/bcbio_validations/tree/master/gatk4#10x-adapter-trimming--low-frequency-allele-filter
+    
+    see https://github.com/bcbio/bcbio-nextgen/issues/3508
     """
-    return ["(QD < 10.0 && AD[0:1] / (AD[0:1] + AD[0:0]) < 0.25 && ReadPosRankSum < 0.0)"]
+    return ['(GT[0]="het" && QD < 10.0 && AD[0:1] / (AD[0:1] + AD[0:0]) < 0.25 && ReadPosRankSum < 0.0)']
 
 def gatk_snp_cutoff(in_file, data):
     """Perform cutoff-based soft filtering on GATK SNPs using best-practice recommendations.
@@ -208,7 +210,8 @@ def gatk_snp_cutoff(in_file, data):
     if not (vcfutils.is_gvcf_file(in_file) and variantcaller in ["gatk-haplotype", "haplotyper"]):
         filters += ["QD < 2.0"]
         filters += ["FS > 60.0"]
-        filters += _gatk_general()
+        if "gatk_ad_filter" not in tz.get_in(["config", "algorithm", "tools_off"], data, []):
+            filters += _gatk_general()
         filters += ["MQ < 30.0"]
     return cutoff_w_expression(in_file, 'TYPE="snp" && (%s)' % " || ".join(filters), data, "GATKCutoffSNP", "SNP",
                                extra_cmd=r"""| sed 's/\\"//g'""")
@@ -223,6 +226,7 @@ def gatk_indel_cutoff(in_file, data):
         filters += ["QD < 2.0"]
         filters += ["FS > 200.0"]
         filters += ["SOR > 10.0"]
-        filters += _gatk_general()
+        if "gatk_ad_filter" not in tz.get_in(["config", "algorithm", "tools_off"], data, []):
+            filters += _gatk_general()
     return cutoff_w_expression(in_file, 'TYPE="indel" && (%s)' % " || ".join(filters), data, "GATKCutoffIndel",
                                "INDEL", extra_cmd=r"""| sed 's/\\"//g'""")
