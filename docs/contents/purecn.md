@@ -219,6 +219,9 @@ resources:
     options: ["interval_padding", "100"]
 ```
 
+To update PureCN to the latest development:
+launch `bcbio/anaconda/envs/r36/bin/R`, run `BiocManager::install("lima1/PureCN")`
+
 ## References
 
 - [PureCN publication](https://scfbm.biomedcentral.com/articles/10.1186/s13029-016-0060-z)
