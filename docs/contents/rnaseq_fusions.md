@@ -5,6 +5,6 @@
 - `known_fusions` A TAB-delimited file of the format gene1<tab>gene2, where gene1 and gene2 are identifiers of genes specified under gene_name in the attributes part of the GTF file.
 
 
-Example config: https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/illumina-rnaseq.yaml
+[Example config](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/illumina-rnaseq.yaml)
   
-Validations: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6802306/
+[Validation](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6802306/)
