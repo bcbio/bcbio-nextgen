@@ -7,4 +7,4 @@
 
 [Example config](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/illumina-rnaseq.yaml)
   
-[Validation](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6802306/)
+Validation: [article](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6802306/) * [code](https://github.com/fusiontranscripts/FusionBenchmarking) * [data](https://data.broadinstitute.org/Trinity/CTAT_FUSIONTRANS_BENCHMARKING/)
