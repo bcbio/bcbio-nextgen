@@ -92,7 +92,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
         broad_runner = broad.runner_from_config(items[0]["config"])
         gatk_type = broad_runner.gatk_type()
         # shared Mutect2 settings for PureCN analysis in the case of:
-        # - PON creation 
+        # - PON creation
         # - Tumor-only PureCN run
         # - T/N PureCN run
         # PURECN requirement alters Mutect2 variants calling!
@@ -119,6 +119,7 @@ def mutect2_caller(align_bams, items, ref_file, assoc_files,
                     snv_pon = tz.get_in(["config", "algorithm", "background", "variant"], items[0])
                     if snv_pon and dd.get_batch(items[0]) != "pon_build":
                         params += ["-pon", snv_pon]
+                        params += ["--genotype-pon-sites"]
 
                 opt_list = config_utils.get_resources("mutect2", items[0]["config"]).get("options")
                 # default is 50, sometimes 100 or 200 is recommended for better sensitivity in detection
