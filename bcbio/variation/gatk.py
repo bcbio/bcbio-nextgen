@@ -59,10 +59,7 @@ def _shared_gatk_call_prep(align_bams, items, ref_file, region, out_file, num_co
     variant_regions = bedutils.population_variant_regions(items)
     region = subset_variant_regions(variant_regions, region, out_file, items)
     if region:
-        if gatk_type == "gatk4":
-            params += ["-L", bamprep.region_to_gatk(region), "--interval-set-rule", "INTERSECTION"]
-        else:
-            params += ["-L", bamprep.region_to_gatk(region), "--interval_set_rule", "INTERSECTION"]
+        params += ["-L", bamprep.region_to_gatk(region), "-isr", "INTERSECTION"]
     params += standard_cl_params(items)
     return broad_runner, params
 
