@@ -33,7 +33,7 @@ from bcbio.pipeline import datadict as dd
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
-    "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/master.tar.gz",
+    "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/%s.tar.gz",
     "genome_resources": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
@@ -350,7 +350,7 @@ def upgrade_bcbio_data(args, remotes):
         data_dir = _get_data_dir()
     tooldir = args.tooldir or get_defaults().get("tooldir")
     galaxy_home = os.path.join(data_dir, "galaxy")
-    cbl = get_cloudbiolinux(remotes)
+    cbl = get_cloudbiolinux(args, remotes)
     tool_data_table_conf_file = os.path.join(cbl["dir"], "installed_files", "tool_data_table_conf.xml")
     genome_opts = _get_biodata(cbl["biodata"], args)
     sys.path.insert(0, cbl["dir"])
@@ -498,7 +498,7 @@ def upgrade_thirdparty_tools(args, remotes):
     conda_bin = _get_mamba_bin()
     if not conda_bin:
         conda_bin = _get_conda_bin()
-    cbl = get_cloudbiolinux(remotes)
+    cbl = get_cloudbiolinux(args, remotes)
     if args.toolconf and os.path.exists(args.toolconf):
         package_yaml = args.toolconf
     else:
@@ -794,17 +794,20 @@ def add_subparser(subparsers):
                         dest="cwl", action="store_true", default=False)
     parser.add_argument("--isolate", help="Created an isolated installation without PATH updates",
                         dest="isolate", action="store_true", default=False)
+    parser.add_argument("--cloudbiolinux", help="Specify a cloudbiolinux git commit hash or tag to install",
+                        default="master")
     parser.add_argument("--distribution", help="Operating system distribution",
                         default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
     return parser
 
-def get_cloudbiolinux(remotes):
+def get_cloudbiolinux(args, remotes):
     base_dir = os.path.join(os.getcwd(), "cloudbiolinux")
+    cloudbiolinux_remote = remotes["cloudbiolinux"] % args.cloudbiolinux
     if not os.path.exists(base_dir):
         subprocess.check_call("wget --progress=dot:mega --no-check-certificate -O- %s | tar xz && "
-                              "(mv cloudbiolinux-master cloudbiolinux || mv master cloudbiolinux)"
-                              % remotes["cloudbiolinux"], shell=True)
+                              "(mv cloudbiolinux-%s cloudbiolinux || mv %s cloudbiolinux)"
+                              % (cloudbiolinux_remote, args.cloudbiolinux, args.cloudbiolinux), shell=True)
     return {"biodata": os.path.join(base_dir, "config", "biodata.yaml"),
             "dir": base_dir}
 

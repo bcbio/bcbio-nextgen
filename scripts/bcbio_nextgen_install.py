@@ -294,6 +294,8 @@ if __name__ == "__main__":
                         choices=["stable", "development"], default="stable")
     parser.add_argument("--revision", help="Specify a git commit hash or tag to install",
                         default="master")
+    parser.add_argument("--cloudbiolinux", help="Specify a cloudbiolinux git commit hash or tag to install",
+                        default="master")
     parser.add_argument("--distribution", help="Operating system distribution", default="",
                         choices=["ubuntu", "debian", "centos", "scientificlinux", "macosx"])
     if len(sys.argv) == 1:

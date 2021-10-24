@@ -246,7 +246,7 @@ if __name__ == "__main__":
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")
 
     os.environ["PATH"] += os.pathsep + os.path.dirname(sys.executable)
-    cbl = get_cloudbiolinux(REMOTES)
+    cbl = get_cloudbiolinux(args, REMOTES)
     sys.path.insert(0, cbl["dir"])
     genomemod = __import__("cloudbio.biodata", fromlist=["genomes"])
     # monkey patch cloudbiolinux to use this indexing command instead
