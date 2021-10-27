@@ -175,7 +175,7 @@ class BroadRunner:
         Starting up GATK takes a lot of resources so we do it once at start of analysis.
         """
         out = []
-        for name in ["gatk", "gatk4", "picard", "mutect"]:
+        for name in ["gatk3", "gatk", "picard", "mutect"]:
             v = tz.get_in(["resources", name, "version"], config)
             if not v:
                 try:
