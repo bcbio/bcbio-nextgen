@@ -532,7 +532,7 @@ def determine_indexes_to_make(samples):
     return tomake
 
 def load_tximport(data):
-    rcmd = Rscript_cmd("r36")
+    rcmd = Rscript_cmd("base")
     salmon_dir = os.path.join(dd.get_work_dir(data), "salmon")
     tx2gene_file = os.path.join(dd.get_work_dir(data), "inputs", "transcriptome", "tx2gene.csv")
     out_dir = os.path.join(salmon_dir, "combined")
@@ -560,8 +560,7 @@ def load_tximport(data):
 def load_summarizedexperiment(samples):
     """ create summarizedexperiment rds object
     fails with n_samples = 1 """
-    # using r36 (4.0) - will eventually drop R3.5
-    rcmd = Rscript_cmd("r36")
+    rcmd = Rscript_cmd("base")
     se_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
                              "R", "bcbio2se.R")
     data = samples[0][0]
@@ -592,7 +591,7 @@ def load_summarizedexperiment(samples):
 
 def generate_se_qc_report(work_dir):
     """ generate QC report based on SE RDS object"""
-    rcmd = Rscript_cmd("r36")
+    rcmd = Rscript_cmd("base")
     qc_script = os.path.join(os.path.dirname(__file__), os.pardir, "scripts",
                              "R", "se2qc.Rmd")
     out_file = os.path.join(work_dir, "qc", "bcbio-se.html")

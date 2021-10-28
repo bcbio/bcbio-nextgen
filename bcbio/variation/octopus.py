@@ -55,7 +55,8 @@ def _produce_compatible_vcf(out_file, data, is_somatic=False):
     - Changes phase set (PS) header to be type Integer.
     """
     base, ext = utils.splitext_plus(out_file)
-    legacy_file = "%s.legacy%s" % (base, ext)
+    #legacy_file = "%s.legacy%s" % (base, ext)
+    legacy_file=out_file
     if is_somatic:
         legacy_file = _covert_to_diploid(legacy_file, data)
     final_file = "%s.vcf.gz" % base
@@ -127,19 +128,20 @@ def _run_somatic(paired, ref_file, regions, out_file):
     # https://github.com/luntergroup/octopus/issues/29#issuecomment-428167979
     min_af = max([float(dd.get_min_allele_fraction(paired.tumor_data)) / 100.0, 0.004])
     min_af_floor = min_af / 4.0
+    # no somatic-snv-mutation-rate in octopus0.7.4 - use priors instead
     cmd = ("octopus --threads {cores} --reference {ref_file} --reads {align_bams} "
            "{regions} "
            "--min-credible-somatic-frequency {min_af_floor} --min-expected-somatic-frequency {min_af} "
            "--downsample-above 4000 --downsample-target 4000 --min-kmer-prune 5 --min-bubble-score 20 "
-           "--max-haplotypes 200 --somatic-snv-mutation-rate '5e-4' --somatic-indel-mutation-rate '1e-05' "
-           "--target-working-memory 5G --target-read-buffer-footprint 5G --max-somatic-haplotypes 3 "
+           "--max-haplotypes 200 --somatic-snv-prior '5e-4' --somatic-indel-prior '1e-05' "
+           "--target-working-memory 5G --target-read-buffer-memory 5G --max-somatic-haplotypes 3 "
            "--caller cancer "
            "--working-directory {tmp_dir} "
-           "-o {tx_out_file} --legacy")
+           "-o {tx_out_file}")
     if not paired.normal_bam:
         cmd += (" --tumour-germline-concentration 5")
     if dd.get_umi_type(paired.tumor_data) or _is_umi_consensus_bam(paired.tumor_bam):
-        cmd += (" --allow-octopus-duplicates --overlap-masking 0 "
+        cmd += (" --allow-octopus-duplicates --disable-overlap-masking "
                 "--somatic-filter-expression 'GQ < 200 | MQ < 30 | SB > 0.2 | SD[.25] > 0.1 "
                 "| BQ < 40 | DP < 100 | MF > 0.1 | AD < 5 | CC > 1.1 | GQD > 2'")
     with file_transaction(paired.tumor_data, out_file) as tx_out_file:

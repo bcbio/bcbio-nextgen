@@ -207,11 +207,15 @@ def _get_check_program_cmd(fn):
         if is_ok(os.path.join(os.path.dirname(sys.executable), name)):
             return (os.path.join(os.path.dirname(sys.executable), name))
         # find system bioconda installed programs if using private code install
+        # makes notfound out of picard
         program = expand_path(fn(name, pconfig, config, default))
         if is_ok(program):
             return program
         # search the PATH now
         for adir in os.environ['PATH'].split(":"):
+            apath = os.path.realpath(os.path.join(adir, name))
+            if is_ok(apath):
+                return apath
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
         raise CmdNotFound(" ".join(map(repr, (fn.__name__ if six.PY3 else fn.func_name, name, pconfig, default))))

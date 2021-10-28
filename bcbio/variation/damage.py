@@ -21,6 +21,11 @@ def run_filter(vrn_file, align_bam, ref_file, data, items):
 
     Moves damage estimation to INFO field, instead of leaving in FILTER.
     """
+    # can't parse octopus.vcf
+    caller = vrn_file.split("/")[-2]
+    if caller and caller == "octopus":
+        return data
+    
     if not should_filter(items) or not vcfutils.vcf_has_variants(vrn_file):
         return data
     else:

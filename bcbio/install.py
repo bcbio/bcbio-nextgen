@@ -80,6 +80,8 @@ def upgrade_bcbio(args):
 
     if args.tooldir:
         with bcbio_tmpdir():
+            import pdb
+            pdb.set_trace()
             print("Upgrading third party tools to latest versions")
             _symlink_bcbio(args, script="bcbio_nextgen.py")
             _symlink_bcbio(args, script="bcbio_setup_genome.py")

@@ -720,19 +720,21 @@ def R_sitelib(env="base"):
             raise OSError("The {env} environment does not have R installed.")
         return sitelib
 
-def R_package_script(env, package, script):
+def R_package_script(package, script, env="base"):
     """Return path to a script in an R package within env (PureCN)"""
     conda_dir = get_conda_dir()
-    script_path = os.path.join(conda_dir, "envs", env, "lib", "R", "library", package, script)
+    if env == "base":
+        env_dir = conda_dir
+    else:
+        env_dir = os.path.join(conda_dir, "envs", env)
+    script_path = os.path.join(env_dir, "envs", env, "lib", "R", "library", package, script)
     if not file_exists(script_path):
         return None
     else:
         return script_path
 
 def R_package_path(package):
-    """
-    return the path to an installed R package
-    """
+    """ return the path to an installed R package """
     local_sitelib = R_sitelib()
     rscript = Rscript_cmd()
     cmd = """{rscript} --vanilla -e '.libPaths(c("{local_sitelib}")); find.package("{package}")'"""
