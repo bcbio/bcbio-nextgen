@@ -536,7 +536,7 @@ def combine_variant_files(orig_files, out_file, ref_file, config,
             cmd = ["picard"] + broad.get_picard_opts(config, memscale) + \
                   ["MergeVcfs", "D=%s" % dict_file, "O=%s" % tx_out_file] + \
                   ["I=%s" % f for f in ready_files]
-            cmd = "%s && %s" % (utils.get_java_clprep(), " ".join(cmd))
+            cmd = "%s && %s" % (utils.get_java_clprep(os.path.realpath(utils.which("picard"))), " ".join(cmd))
             do.run(cmd, "Combine variant files")
     if out_file.endswith(".gz"):
         bgzip_and_index(out_file, config)

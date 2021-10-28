@@ -106,23 +106,23 @@ def _parse_result_file(result_file):
         return hits
 
 def _call_hla(hla_fq, out_dir, data):
-    """Run OptiType HLA calling for a specific fastq input.
-    """
-    bin_dir = os.path.dirname(os.path.realpath(sys.executable))
+    """Run OptiType HLA calling for a specific fastq input."""
     out_dir = utils.safe_makedir(out_dir)
     with tx_tmpdir(data, os.path.dirname(out_dir)) as tx_out_dir:
         config_file = os.path.join(tx_out_dir, "config.ini")
         with open(config_file, "w") as out_handle:
-            razers3 = os.path.join(bin_dir, "razers3")
+            razers3 = os.path.realpath(utils.which("razers3"))
             if not os.path.exists(razers3):
-                raise ValueError("Could not find razers3 executable at %s" % (razers3))
+                raise ValueError(f"Could not find razers3 executable at {razers3}")
             out_handle.write(CONFIG_TMPL.format(razers3=razers3, cores=dd.get_cores(data)))
         resources = config_utils.get_resources("optitype", data["config"])
         if resources.get("options"):
             opts = " ".join([str(x) for x in resources["options"]])
         else:
             opts = ""
-        cmd = ("OptiTypePipeline.py -v --dna {opts} -o {tx_out_dir} --enumerate 10 "
+        # optitype is looking for the reference in ./data which is in env/python3.6 not in tools/bin
+        optitype = os.path.realpath(utils.which("OptiTypePipeline.py"))
+        cmd = ("{optitype} -v --dna {opts} -o {tx_out_dir} --enumerate 10 "
                 "-i {hla_fq} -c {config_file}")
         do.run(cmd.format(**locals()), "HLA typing with OptiType")
         for outf in os.listdir(tx_out_dir):

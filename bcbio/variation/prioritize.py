@@ -55,8 +55,9 @@ def _apply_priority_filter(in_file, priority_file, data):
                               """-e "EPR[0] != 'pass'" |""")
             else:
                 filter_cmd = ""
+            # bcftools 1.13+ requires to skip TO
             cmd = ("bcftools annotate -a {priority_file} -h {header_file} "
-                   "-c CHROM,FROM,TO,REF,ALT,INFO/EPR {in_file} | "
+                   "-c CHROM,FROM,-,REF,ALT,INFO/EPR {in_file} | "
                    "{filter_cmd} bgzip -c > {tx_out_file}")
             do.run(cmd.format(**locals()), "Run external annotation based prioritization filtering")
     vcfutils.bgzip_and_index(out_file, data["config"])

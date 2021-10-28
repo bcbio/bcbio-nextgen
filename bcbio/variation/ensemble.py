@@ -240,9 +240,10 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
     out_vcf_file = os.path.join(base_dir, "{0}-ensemble.vcf.gz".format(batch_id))
     if not utils.file_exists(out_vcf_file):
         num_pass = _get_num_pass(edata, len(vrn_files))
+        bvr_cmd = config_utils.get_program("bcbio-variation-recall", 
+                                           edata["config"])
         cmd = [
-            config_utils.get_program(
-                "bcbio-variation-recall", edata["config"]),
+            bvr_cmd,
             "ensemble",
             "--cores=%s" % edata["config"]["algorithm"].get("num_cores", 1),
             "--numpass", str(num_pass),
@@ -252,9 +253,10 @@ def _run_ensemble_intersection(batch_id, vrn_files, callers, base_dir, edata):
         if not tz.get_in(["config", "algorithm", "ensemble", "use_filtered"], edata):
             cmd += ["--nofiltered"]
 
+        # b-v-r could be not in the main but in java env
         with file_transaction(edata, out_vcf_file) as tx_out_file:
             cmd += [tx_out_file, dd.get_ref_file(edata)] + vrn_files
-            cmd = "%s && %s" % (utils.get_java_clprep(), " ".join(str(x) for x in cmd))
+            cmd = "%s && %s" % (utils.get_java_clprep(bvr_cmd), " ".join(str(x) for x in cmd))
             do.run(cmd, "Ensemble intersection calling: %s" % (batch_id))
     in_data = utils.deepish_copy(edata)
     in_data["vrn_file"] = out_vcf_file

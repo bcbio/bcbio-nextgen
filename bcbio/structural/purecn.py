@@ -59,8 +59,8 @@ def _run_purecn_normaldb(paired, out):
     bed_file = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
     sample_name = dd.get_sample_name(sample)
     work_dir = _sv_workdir(sample)
-    rscript = utils.Rscript_cmd("r36")
-    purecn_r = utils.R_package_script("r36", "PureCN", "extdata/PureCN.R")
+    rscript = utils.Rscript_cmd()
+    purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R")
     intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
     bam_file = dd.get_align_bam(sample)
     # termline and somatic - just annotated and filters assigned
@@ -102,8 +102,8 @@ def _run_purecn_normaldb(paired, out):
             cmd.extend(["--normal", normal_coverage])
     if not os.path.exists(result_file):
         try:
-            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
-                                                              utils.get_R_exports(env = "r36"),
+            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "base"),
+                                                              utils.get_R_exports(env = "base"),
                                                               " ".join([str(x) for x in cmd]))
             do.run(cmd_line, "PureCN copy number calling")
             logger.debug("Saved PureCN output to " + work_dir)
@@ -115,8 +115,8 @@ def _run_purecn_normaldb(paired, out):
 def _run_purecn_dx(out, paired):
     """Extract signatures and mutational burdens from PureCN rds file."""
     out_base, out, all_files = _get_purecn_dx_files(paired, out)
-    rscript = utils.Rscript_cmd("r36")
-    purecndx_r = utils.R_package_script("r36", "PureCN", "extdata/Dx.R")
+    rscript = utils.Rscript_cmd()
+    purecndx_r = utils.R_package_script("PureCN", "extdata/Dx.R")
     simple_repeat_bed = dd.get_variation_resources(paired.tumor_data)["simple_repeat"]
     callable_bed = dd.get_sample_callable(paired.tumor_data)
     if not utils.file_uptodate(out["mutation_burden"], out["rds"]):
@@ -173,8 +173,8 @@ def _run_purecn(paired, work_dir):
             if dd.get_num_cores(paired.tumor_data) > 1:
                 cmd += ["--cores", str(dd.get_num_cores(paired.tumor_data))]
             try:
-                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env="r36"),
-                                                             utils.get_R_exports(env="r36"),
+                cmd = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env="base"),
+                                                             utils.get_R_exports(env="base"),
                                                              " ".join([str(x) for x in cmd]))
                 do.run(cmd, "PureCN copy number calling")
             except subprocess.CalledProcessError as msg:
@@ -348,8 +348,8 @@ def process_intervals(data):
     if os.path.exists(ready_file):
         return ready_file
     optimized_bed = basename + ".optimized.bed"
-    rscript = utils.Rscript_cmd("r36")
-    interval_file_r = utils.R_package_script("r36", "PureCN", "extdata/IntervalFile.R")
+    rscript = utils.Rscript_cmd("base")
+    interval_file_r = utils.R_package_script("base", "PureCN", "extdata/IntervalFile.R")
     ref_file = dd.get_ref_file(data)
     mappability_resource = dd.get_variation_resources(data)["purecn_mappability"]
     genome = dd.get_genome_build(data)
@@ -361,8 +361,8 @@ def process_intervals(data):
           "--export", optimized_bed,
           "--mappability", mappability_resource]
     try:
-        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
-                                                     utils.get_R_exports(env = "r36"),
+        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "base"),
+                                                     utils.get_R_exports(env = "base"),
                                                      " ".join([str(x) for x in cmd]))
         do.run(cmd_line, "PureCN intervals")
     except subprocess.CalledProcessError as msg:
@@ -378,8 +378,8 @@ def get_coverage(data):
     bed_file = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
     sample_name = dd.get_sample_name(data)
     work_dir = _sv_workdir(data)
-    rscript = utils.Rscript_cmd("r36")
-    coverage_r = utils.R_package_script("r36", "PureCN", "extdata/Coverage.R")
+    rscript = utils.Rscript_cmd("base")
+    coverage_r = utils.R_package_script("base", "PureCN", "extdata/Coverage.R")
     intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
     # PureCN resolves symlinks and the actual output PureCN coverage file name
     # is derived from the end bam not from bam_file
@@ -393,8 +393,8 @@ def get_coverage(data):
                "--bam", bam_file,
                "--intervals", intervals]
         try:
-            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
-                                                              utils.get_R_exports(env = "r36"),
+            cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "base"),
+                                                              utils.get_R_exports(env = "base"),
                                                               " ".join([str(x) for x in cmd]))
             do.run(cmd_line, "PureCN coverage")
         except subprocess.CalledProcessError as msg:
@@ -410,8 +410,8 @@ def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
               mapping_bias_hg38.rds
               normalDB_hg38.rds
     """
-    rscript = utils.Rscript_cmd("r36")
-    normaldb_r = utils.R_package_script("r36", "PureCN", "extdata/NormalDB.R")
+    rscript = utils.Rscript_cmd("base")
+    normaldb_r = utils.R_package_script("base", "PureCN", "extdata/NormalDB.R")
     cmd = [rscript, normaldb_r,
            "--outdir", out_dir,
            "--coveragefiles", coverage_files_txt,
@@ -419,8 +419,8 @@ def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
            "--genome", genome_build,
            "--force"]
     try:
-        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "r36"),
-                                                          utils.get_R_exports(env = "r36"),
+        cmd_line = "export R_LIBS_USER=%s && %s && %s" % (utils.R_sitelib(env = "base"),
+                                                          utils.get_R_exports(env = "base"),
                                                           " ".join([str(x) for x in cmd]))
         do.run(cmd_line, "PureCN normalDB")
     except subprocess.CalledProcessError as msg:
