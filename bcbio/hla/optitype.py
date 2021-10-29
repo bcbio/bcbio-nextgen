@@ -122,9 +122,11 @@ def _call_hla(hla_fq, out_dir, data):
             opts = ""
         # optitype is looking for the reference in ./data which is in env/python3.6 not in tools/bin
         optitype = os.path.realpath(utils.which("OptiTypePipeline.py"))
-        cmd = ("{optitype} -v --dna {opts} -o {tx_out_dir} --enumerate 10 "
-                "-i {hla_fq} -c {config_file}")
-        do.run(cmd.format(**locals()), "HLA typing with OptiType")
+        # techically, optitype is not a python package, conda is not able to set up its shebang properly
+        python_bin = os.path.join(os.path.dirname(optitype), "python")
+        cmd = f"{python_bin} {optitype} -v --dna {opts} -o {tx_out_dir} --enumerate 10 "\
+              f" -i {hla_fq} -c {config_file}"
+        do.run(cmd, "HLA typing with OptiType")
         for outf in os.listdir(tx_out_dir):
             shutil.move(os.path.join(tx_out_dir, outf), os.path.join(out_dir, outf))
     out_file = glob.glob(os.path.join(out_dir, "*", "*_result.tsv"))
