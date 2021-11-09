@@ -419,6 +419,7 @@ A [full evaluation of cancer calling](http://bcb.io/2015/03/05/cancerval/) valid
 
 ## References
 - [PON at UMCCR](https://umccr.org/blog/panel-of-normals/)
+- [1000g mutect PON](https://storage.googleapis.com/gatk-best-practices/somatic-hg38/1000g_pon.hg38.vcf.gz)
 
 ### CNV calling
 - [gatk-cnv](https://gatk.broadinstitute.org/hc/en-us/articles/360035531092--How-to-part-I-Sensitively-detect-copy-ratio-alterations-and-allelic-segments)
