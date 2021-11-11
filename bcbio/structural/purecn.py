@@ -165,7 +165,10 @@ def _run_purecn(paired, work_dir):
             # Use UCSC style naming for human builds to support BSgenome
             genome = ("hg19" if dd.get_genome_build(paired.tumor_data) in ["GRCh37", "hg19"]
                       else dd.get_genome_build(paired.tumor_data))
-            cmd = ["PureCN.R", "--seed", "42", "--out", tx_out_base, "--rds", "%s.rds" % tx_out_base,
+            rscript = utils.Rscript_cmd()
+            purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R")
+            cmd = [rscript, purecn_r, "--seed", "42", "--out", tx_out_base, 
+                   "--rds", "%s.rds" % tx_out_base,
                    "--sampleid", dd.get_sample_name(paired.tumor_data),
                    "--genome", genome,
                    "--vcf", vcf_file, "--tumor", cnr_file,
