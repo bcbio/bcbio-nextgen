@@ -182,7 +182,7 @@ def picard_bam_to_fastq(picard, in_bam, fastq_one, fastq_two=None):
                         ("--FASTQ", tx_out1),
                         ("--TMP_DIR", tmp_dir)]
                 if fastq_two is not None:
-                    opts += [("SECOND_END_FASTQ", fastq_two)]
+                    opts += [("--SECOND_END_FASTQ", fastq_two)]
                 picard.run("SamToFastq", opts)
     return (fastq_one, fastq_two)
 
