@@ -566,8 +566,8 @@ class PicardCmdRunner:
     def run(self, subcmd, opts, memscale=None):
         jvm_opts = get_picard_opts(self._config, memscale=memscale)
         cmd = ["export", "PATH=%s:\"$PATH\"" % utils.get_java_binpath(), "&&"] + \
-              [self._cmd] + jvm_opts + [subcmd] + ["%s=%s" % (x, y) for x, y in opts] + \
-              ["VALIDATION_STRINGENCY=SILENT"]
+              [self._cmd] + jvm_opts + [subcmd] + ["%s %s" % (x, y) for x, y in opts] + \
+              ["--VALIDATION_STRINGENCY SILENT"]
         do.run(utils.clear_java_home() + " && " + " ".join(cmd), "Picard: %s" % subcmd)
 
     def run_fn(self, name, *args, **kwds):

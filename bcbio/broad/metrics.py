@@ -359,10 +359,10 @@ class PicardMetrics(object):
             with bed_to_interval(bait_file, dup_bam) as ready_bait:
                 with bed_to_interval(target_file, dup_bam) as ready_target:
                     with file_transaction(metrics) as tx_metrics:
-                        opts = [("BAIT_INTERVALS", ready_bait),
-                                ("TARGET_INTERVALS", ready_target),
-                                ("INPUT", dup_bam),
-                                ("OUTPUT", tx_metrics)]
+                        opts = [("--BAIT_INTERVALS", ready_bait),
+                                ("--TARGET_INTERVALS", ready_target),
+                                ("--INPUT", dup_bam),
+                                ("--OUTPUT", tx_metrics)]
                         try:
                             self._picard.run("CollectHsMetrics", opts)
                         # HsMetrics fails regularly with memory errors
@@ -395,10 +395,10 @@ class PicardMetrics(object):
         if not file_exists(gc_metrics):
             with file_transaction(gc_graph, gc_metrics) as \
                      (tx_graph, tx_metrics):
-                opts = [("INPUT", dup_bam),
-                        ("OUTPUT", tx_metrics),
-                        ("CHART", tx_graph),
-                        ("R", ref_file)]
+                opts = [("--INPUT", dup_bam),
+                        ("--OUTPUT", tx_metrics),
+                        ("--CHART_OUTPUT", tx_graph),
+                        ("--REFERENCE_SEQUENCE", ref_file)]
                 self._picard.run("CollectGcBiasMetrics", opts)
         return gc_graph, gc_metrics
 
@@ -408,9 +408,9 @@ class PicardMetrics(object):
         if not file_exists(insert_metrics):
             with file_transaction(insert_graph, insert_metrics) as \
                      (tx_graph, tx_metrics):
-                opts = [("INPUT", dup_bam),
-                        ("OUTPUT", tx_metrics),
-                        ("H", tx_graph)]
+                opts = [("--INPUT", dup_bam),
+                        ("--OUTPUT", tx_metrics),
+                        ("--Histogram_FILE", tx_graph)]
                 self._picard.run("CollectInsertSizeMetrics", opts)
         return insert_graph, insert_metrics
 
@@ -418,9 +418,9 @@ class PicardMetrics(object):
         align_metrics = self._check_metrics_file(dup_bam, "align_metrics")
         if not file_exists(align_metrics):
             with file_transaction(align_metrics) as tx_metrics:
-                opts = [("INPUT", dup_bam),
-                        ("OUTPUT", tx_metrics),
-                        ("R", ref_file)]
+                opts = [("--INPUT", dup_bam),
+                        ("--OUTPUT", tx_metrics),
+                        ("--REFERENCE_SEQUENCE", ref_file)]
                 self._picard.run("CollectAlignmentSummaryMetrics", opts)
         return align_metrics
 
