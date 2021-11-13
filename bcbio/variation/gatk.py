@@ -213,11 +213,12 @@ def _supports_avx():
 def collect_artifact_metrics(data):
     """Run CollectSequencingArtifacts to collect pre-adapter ligation artifact metrics
     https://gatk.broadinstitute.org/hc/en-us/articles/360037429491-CollectSequencingArtifactMetrics-Picard-
+    use picard wrapper rather than gatk - works for gatk4 and gatk3 projects
+    refactor - move to broad/picardrun
     """
     OUT_SUFFIXES = [".bait_bias_detail_metrics", ".error_summary_metrics",
                     ".pre_adapter_detail_metrics", ".pre_adapter_summary_metrics"]
-    broad_runner = broad.runner_from_config(dd.get_config(data))
-    gatk_type = broad_runner.gatk_type()
+    picard = broad.runner_from_path("picard", dd.get_config(data))
     ref_file = dd.get_ref_file(data)
     bam_file = dd.get_work_bam(data)
     if not bam_file:
@@ -233,17 +234,15 @@ def collect_artifact_metrics(data):
     with file_transaction(data, out_dir) as tx_out_dir:
         utils.safe_makedir(tx_out_dir)
         out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
-        params = ["-T", "CollectSequencingArtifactMetrics",
-                  "--VALIDATION_STRINGENCY", "SILENT",
-                  "-R", ref_file,
-                  "-I", bam_file,
-                  "-O", out_base]
-        broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
+        params = [("-REFERENCE_SEQUENCE", ref_file),
+                  ("-INPUT", bam_file),
+                  ("-OUTPUT", out_base)]
+        # picard runner sets VALIDATION_STRINGENCY
+        picard.run("CollectSequencingArtifactMetrics", params)
     return out_files
 
 def collect_oxog_metrics(data):
-    """
-    extracts 8-oxoguanine (OxoG) artifact metrics from CollectSequencingArtifacts
+    """ extracts 8-oxoguanine (OxoG) artifact metrics from CollectSequencingArtifacts
     output so we don't have to run CollectOxoGMetrics.
     """
     input_base = os.path.join(dd.get_work_dir(data), "metrics", "artifact", dd.get_sample_name(data),
@@ -251,8 +250,7 @@ def collect_oxog_metrics(data):
     if not utils.file_exists(input_base + ".pre_adapter_detail_metrics"):
         return None
     OUT_SUFFIXES = [".oxog_metrics"]
-    broad_runner = broad.runner_from_config(dd.get_config(data))
-    gatk_type = broad_runner.gatk_type()
+    picard = broad.runner_from_path("picard", dd.get_config(data))
     out_dir = os.path.join(dd.get_work_dir(data), "metrics", "oxog", dd.get_sample_name(data))
     utils.safe_makedir(out_dir)
     ref_file = dd.get_ref_file(data)
@@ -263,14 +261,8 @@ def collect_oxog_metrics(data):
     with file_transaction(data, out_dir) as tx_out_dir:
         utils.safe_makedir(tx_out_dir)
         out_base = os.path.join(tx_out_dir, dd.get_sample_name(data))
-        params = ["-T", "ConvertSequencingArtifactToOxoG",
-                  "--INPUT_BASE", input_base,
-                  "-O", out_base,
-                  "-R", ref_file]
-        broad_runner.run_gatk(params, log_error=False, parallel_gc=True)
-        # multiqc <= 1.9 looks for INPUT not INPUT_BASE for these files
-        # see (https://github.com/ewels/MultiQC/pull/1310)
-        cmd = f"sed 's/INPUT_BASE/INPUT/g' {out_base}.oxog_metrics -i"
-        do.run(cmd, f"Fixing {out_base}.oxog_metrics to work with MultiQC.")
+        params = [("--INPUT_BASE", input_base),
+                  ("--OUTPUT_BASE", out_base),
+                  ("--REFERENCE_SEQUENCE", ref_file)]
+        picard.run("ConvertSequencingArtifactToOxoG", params)
     return out_files
-
