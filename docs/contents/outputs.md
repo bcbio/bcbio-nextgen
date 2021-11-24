@@ -33,6 +33,9 @@ Sometimes `ontarget_pct` < `usable_pct`, the difference is <=0.2% for UMI projec
 First of all, these two should not be confused with median coverage from mosdepth and qualimap (mean vs median).
 `bcbio_average_target` is calculated by [get_average_coverage](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/variation/coverage.py#L154), in the end it is coverage from `mosdepth`: `NA12878-exome-eval/work/coverage/NA12878/NA12878-variant_regions.regions.bed.gz ` for NA12878 WES project. It is calculated **excluding** duplicated reads and reads with unmapped mate. See also statistics here in the `bcbio project/work/coverage/mapped_stats.txt`. Qualimap includes these reads, so usually for WES data with and without UMIs `bcbio_average_target < qualimap_mean_coverage`. However, we've seen some projects with UMIs and panels where `bcbio_average_target_coverage >> qualimap_mean_coverage`. Use `bcbio_average`.
 
+## Why I am getting Ontarget_pct > 100?
+Try to show +-200 bp (Ontarget_padded_pct) column in multiqc. If it is < 100% that means the original bed file specified in the yaml `coverage: coverage.bed` is too fragmented. Some reads counted twice by hts_nim_tools (againts two overlapping baits) and the ontarget stats gets inflated. Solution: use variants.bed (padded 70bp) not coverage.bed in the yaml for `coverage`.
+
 ## Downstream analysis
 
 This section collects useful scripts and tools to do downstream analysis of bcbio-nextgen outputs. If you have pointers to useful tools, please add them to the documentation.
