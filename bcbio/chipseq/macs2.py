@@ -45,6 +45,10 @@ def run(name, chip_bam, input_bam, genome_build, out_dir, method, resources, dat
     genome_size = bam.fasta.total_sequence_length(dd.get_ref_file(data))
     genome_size = "" if options.find("-g") > -1 else "-g %s" % genome_size
     paired = "-f BAMPE" if bam.is_paired(chip_bam) else ""
+    chip_reads = sum([x.aligned for x in bam.idxstats(chip_bam, data)])
+    if chip_reads == 0:
+        logger.error(f"{chip_bam} has 0 reads. Please remove the sample and re-run")
+        raise RuntimeWarning(f"macs2 terminated - no reads in {chip_bam}. Please remove the sample and re-run")
     with utils.chdir(out_dir):
         cmd = _macs2_cmd(data)
         cmd += peaksettings
