@@ -14,9 +14,7 @@ import six
 
 
 def make_bcbiornaseq_object(data):
-    """
-    load the initial bcb.rda object using bcbioRNASeq
-    """
+    """ load the initial bcb.rda object using bcbioRNASeq """
     if "bcbiornaseq" not in dd.get_tools_on(data):
         return data
     upload_dir = tz.get_in(("upload", "dir"), data)
@@ -28,7 +26,7 @@ def make_bcbiornaseq_object(data):
     r_file = os.path.join(report_dir, "load_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
         memoize_write_file(loadstring, tmp_file)
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data", "bcb.rda"), "gene")
@@ -36,7 +34,7 @@ def make_bcbiornaseq_object(data):
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
         memoize_write_file(loadstring, tmp_file)
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading transcript-level bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data-transcript", "bcb.rda"), "transcript")
@@ -91,7 +89,7 @@ def rmarkdown_draft(filename, template, package):
     draft_string = draft_template.substitute(
         filename=filename, template=template, package=package)
     report_dir = os.path.dirname(filename)
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", "-e", draft_string], "Creating bcbioRNASeq quality control template.")
         do.run(["sed", "-i", "s/YYYY-MM-DD\///g", filename], "Editing bcbioRNAseq quality control template.")
@@ -107,7 +105,7 @@ def render_rmarkdown_file(filename):
     render_string = render_template.substitute(
         filename=filename)
     report_dir = os.path.dirname(filename)
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", "-e", render_string], "Rendering bcbioRNASeq quality control report.")
     return filename
@@ -146,9 +144,7 @@ def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
     return ";\n".join([libraryline, load_bcbio, flatline, saveline])
 
 def write_counts(bcb, level="gene"):
-    """
-    pull counts and metadata out of the bcbioRNASeq object
-    """
+    """ pull counts and metadata out of the bcbioRNASeq object """
     date = dt.strftime(dt.now(), "%Y-%m-%d")
     out_dir = os.path.join(os.path.dirname(bcb), "..", "results", date, level, "counts")
     out_dir_string = _quotestring(out_dir)
@@ -157,7 +153,7 @@ def write_counts(bcb, level="gene"):
     if file_exists(out_file):
         return out_file
     bcb_string = _quotestring(bcb)
-    rcmd = Rscript_cmd()
+    rcmd = Rscript_cmd(env = "rbcbiornaseq")
     render_string = (
             f'load({bcb_string});'
             f'date=format(Sys.time(), "%Y-%m-%d");'
