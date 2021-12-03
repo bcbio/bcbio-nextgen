@@ -35,7 +35,7 @@ REMOTES = {
     "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/%s.tar.gz",
     "genome_resources": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
-    "snpeff_dl_url": ("http://downloads.sourceforge.net/project/snpeff/databases/v{snpeff_ver}/"
+    "snpeff_dl_url": ("https://snpeff.blob.core.windows.net/databases/v{snpeff_ver}/"
                       "snpEff_v{snpeff_ver}_{genome}.zip")}
 SUPPORTED_GENOMES = ["GRCh37", "hg19", "hg38", "hg38-noalt", "mm10", "mm9",
                      "rn6", "rn5", "canFam3", "dm3", "galGal4", "phix",
@@ -413,8 +413,7 @@ def _upgrade_vep_data(galaxy_dir, tooldir):
         effects.prep_vep_cache(dbkey, ref_file, tooldir)
 
 def _upgrade_snpeff_data(galaxy_dir, args, remotes):
-    """Install or upgrade snpEff databases, localized to reference directory.
-    """
+    """Install or upgrade snpEff databases, localized to reference directory."""
     snpeff_version = effects.snpeff_version(args)
     if not snpeff_version:
         return
