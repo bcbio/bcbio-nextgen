@@ -1,8 +1,8 @@
-version: 45
+version: 46
 
 aliases:
   human: true
-  snpeff: GRCh38.86
+  snpeff: hg38kg
   ensembl: homo_sapiens_merged_vep_100_GRCh38
 
 variation:
