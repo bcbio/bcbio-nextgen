@@ -3,6 +3,8 @@
 - add strandedness: auto for -l A option in salmon
 - report 10x more peaks in CHIP/ATAC-seq - use 0.05 qvalue
 - fixed misleading RNA-seq duplicated reads statistics: thanks @sib-bcf 
+- reorganize conda environments
+- snpEff 5.0
 
 ## 1.2.8 (14 April 2021)
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
