@@ -29,7 +29,7 @@ def make_bcbiornaseq_object(data):
     rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
-        write_counts(os.path.join(report_dir, "data", "bcb.rda"), "gene")
+        write_counts(os.path.join(report_dir, "data", "bcb.rds"), "gene")
     loadstring = create_load_string(upload_dir, groups, organism, "transcript")
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
@@ -37,7 +37,7 @@ def make_bcbiornaseq_object(data):
     rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading transcript-level bcbioRNASeq object.")
-        write_counts(os.path.join(report_dir, "data-transcript", "bcb.rda"), "transcript")
+        write_counts(os.path.join(report_dir, "data-transcript", "bcb.rds"), "transcript")
     make_quality_report(data)
     return data
 
@@ -111,9 +111,7 @@ def render_rmarkdown_file(filename):
     return filename
 
 def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
-    """
-    create the code necessary to load the bcbioRNAseq object
-    """
+    """ create the code necessary to load the bcbioRNAseq object """
     libraryline = 'library(bcbioRNASeq)'
     load_template = Template(
         ('bcb <- bcbioRNASeq(uploadDir="$upload_dir",'
@@ -125,7 +123,7 @@ def create_load_string(upload_dir, groups=None, organism=None, level="gene"):
          'interestingGroups=$groups,'
          'level="$level",'
          'organism=NULL)'))
-    flatline = 'flat <- flatFiles(bcb)'
+    flatline = 'flat <- coerceToList(bcb)'
     if level == "gene":
         out_dir = '"data"'
     else:
@@ -155,13 +153,13 @@ def write_counts(bcb, level="gene"):
     bcb_string = _quotestring(bcb)
     rcmd = Rscript_cmd(env = "rbcbiornaseq")
     render_string = (
-            f'load({bcb_string});'
+            f'bcb<-readRDS({bcb_string});'
             f'date=format(Sys.time(), "%Y-%m-%d");'
             f'dir={out_dir_string};'
             f'library(tidyverse);'
             f'library(bcbioRNASeq);'
-            f'counts = bcbioRNASeq::counts(bcb) %>% as.data.frame() %>% round() %>% tibble::rownames_to_column("gene");'
-            f'metadata = colData(bcb) %>% as.data.frame() %>% tibble::rownames_to_column("sample");'
+            f'counts = bcbioRNASeq::counts(bcb) |> as.data.frame() |> round() |> tibble::rownames_to_column("gene");'
+            f'metadata = colData(bcb) |> as.data.frame() |> tibble::rownames_to_column("sample");'
             f'readr::write_csv(counts, file.path(dir, "counts.csv.gz"));'
             f'readr::write_csv(metadata, file.path(dir, "metadata.csv.gz"));')
     do.run([rcmd, "--vanilla", "-e", render_string], f"Writing counts table to {out_file}.")
