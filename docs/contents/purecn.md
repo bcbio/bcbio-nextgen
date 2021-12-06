@@ -35,6 +35,21 @@ to the original bam file and if there is no index, it crashes.*
 
 For better capture of the coverage panel.bed (or exome.bed) could be padded. To output gene-level
 CNA, gene names must be present in the bed file (4th column).
+
+If there are no gene names in the bed provided by the manufacturer:
+- generate a genes.bed file with gene names: https://github.com/naumenko-sa/bioscripts/blob/master/gene_panels/genes.R#L721
+- annotate panel.no_names.bed with gene names:
+```bash
+sort-bed genes.unsorted.bed > genes.sort-bed.bed
+bedmap \
+--echo \
+--echo-map-id \
+--fraction-ref 1 \
+panel.no_names.bed \
+genes.sort-bed.bed |  sed s/"|"/"\t"/ > panel.bed
+```
+
+Then expand and merge the intervals
 ```bash
 cat panel.bed | awk '{print $1"\t"$2-100"\t"$3+100"\t"$4}' > panel.padded100bp.bed 
 bedtools merge -i panel.padded100bp.bed -c 4 -o distinct > panel.padded100bp.merged.bed
