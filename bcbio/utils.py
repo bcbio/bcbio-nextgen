@@ -727,7 +727,7 @@ def R_package_script(package, script, env="base"):
         env_dir = conda_dir
     else:
         env_dir = os.path.join(conda_dir, "envs", env)
-    script_path = os.path.join(env_dir, "envs", env, "lib", "R", "library", package, script)
+    script_path = os.path.join(env_dir, "lib", "R", "library", package, script)
     if not file_exists(script_path):
         return None
     else:
