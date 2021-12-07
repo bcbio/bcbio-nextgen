@@ -60,7 +60,7 @@ def _run_purecn_normaldb(paired, out):
     sample_name = dd.get_sample_name(sample)
     work_dir = _sv_workdir(sample)
     rscript = utils.Rscript_cmd()
-    purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R")
+    purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R", env="base")
     intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], sample)
     bam_file = dd.get_align_bam(sample)
     # termline and somatic - just annotated and filters assigned
@@ -116,7 +116,7 @@ def _run_purecn_dx(out, paired):
     """Extract signatures and mutational burdens from PureCN rds file."""
     out_base, out, all_files = _get_purecn_dx_files(paired, out, require_exist = True)
     rscript = utils.Rscript_cmd()
-    purecndx_r = utils.R_package_script("PureCN", "extdata/Dx.R")
+    purecndx_r = utils.R_package_script("PureCN", "extdata/Dx.R", env="base")
     simple_repeat_bed = dd.get_variation_resources(paired.tumor_data)["simple_repeat"]
     callable_bed = dd.get_sample_callable(paired.tumor_data)
     if not utils.file_uptodate(out["mutation_burden"], out["rds"]):
@@ -165,7 +165,7 @@ def _run_purecn(paired, work_dir):
             genome = ("hg19" if dd.get_genome_build(paired.tumor_data) in ["GRCh37", "hg19"]
                       else dd.get_genome_build(paired.tumor_data))
             rscript = utils.Rscript_cmd()
-            purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R")
+            purecn_r = utils.R_package_script("PureCN", "extdata/PureCN.R", env="base")
             cmd = [rscript, purecn_r, "--seed", "42", "--out", tx_out_base, 
                    "--rds", "%s.rds" % tx_out_base,
                    "--sampleid", dd.get_sample_name(paired.tumor_data),
@@ -351,7 +351,7 @@ def process_intervals(data):
         return ready_file
     optimized_bed = basename + ".optimized.bed"
     rscript = utils.Rscript_cmd("base")
-    interval_file_r = utils.R_package_script("base", "PureCN", "extdata/IntervalFile.R")
+    interval_file_r = utils.R_package_script("PureCN", "extdata/IntervalFile.R", env="base")
     ref_file = dd.get_ref_file(data)
     mappability_resource = dd.get_variation_resources(data)["purecn_mappability"]
     genome = dd.get_genome_build(data)
@@ -381,7 +381,7 @@ def get_coverage(data):
     sample_name = dd.get_sample_name(data)
     work_dir = _sv_workdir(data)
     rscript = utils.Rscript_cmd("base")
-    coverage_r = utils.R_package_script("base", "PureCN", "extdata/Coverage.R")
+    coverage_r = utils.R_package_script("PureCN", "extdata/Coverage.R", env="base")
     intervals = tz.get_in(["config", "algorithm", "purecn_bed_ready"], data)
     # PureCN resolves symlinks and the actual output PureCN coverage file name
     # is derived from the end bam not from bam_file
@@ -413,7 +413,7 @@ def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
               normalDB_hg38.rds
     """
     rscript = utils.Rscript_cmd("base")
-    normaldb_r = utils.R_package_script("base", "PureCN", "extdata/NormalDB.R")
+    normaldb_r = utils.R_package_script("PureCN", "extdata/NormalDB.R", env="base")
     cmd = [rscript, normaldb_r,
            "--outdir", out_dir,
            "--coveragefiles", coverage_files_txt,
