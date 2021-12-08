@@ -206,7 +206,8 @@ PureCN results will be copied to the folder of the tumor sample in the final dir
 
 ## Troubleshooting
 
-We found useful to adjust memory parameters when running large cohorts with ipython (149 samples): [see issue 3230](https://github.com/bcbio/bcbio-nextgen/issues/3230).
+We found useful to adjust memory parameters when running large cohorts with ipython (149 samples): 
+[see issue 3230](https://github.com/bcbio/bcbio-nextgen/issues/3230).
 
 To detect deletions in cfDNA samples we found useful to set PureCN parameters in the yaml:
 ```yaml
@@ -217,8 +218,8 @@ resources:
 
 A patched implementation of PSCBS works better than the default, to install the patched version in bcbio:
 ```bash
-# run R from r36 conda environment:
-/path/to/bcbio/anaconda/envs/r36/bin/R
+# run R from the base conda environment:
+/path/to/bcbio/anaconda/bin/R
 # install patched PSCBS:
 BiocManager::install("lima1/PSCBS", ref="add_dnacopy_weighting")
 ```
@@ -235,7 +236,19 @@ resources:
 ```
 
 To update PureCN to the latest development:
-launch `bcbio/anaconda/envs/r36/bin/R`, run `BiocManager::install("lima1/PureCN")`
+launch `bcbio/anaconda/bin/R`, run `BiocManager::install("lima1/PureCN")`
+
+PureCN 2.0.1 fails when the offarget coverage is low (happens to some older WES data), 
+see this [discussion](https://github.com/lima1/PureCN/issues/209). To solve, use:
+
+```yaml
+details:
+- algorithm:
+  tools_off:
+  - purecn_offtarget
+```
+
+The fault mode is with `--offtarget` assuming that the default use case is panel data.
 
 ## References
 
