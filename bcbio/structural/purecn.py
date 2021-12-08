@@ -80,12 +80,12 @@ def _run_purecn_normaldb(paired, out):
             "--sampleid", sample_name,
             "--vcf", variants_vcf,
             "--normaldb", normaldb,
-            "--mappingbiasfile", mappingbiasfile,
+            "--mapping-bias-file", mappingbiasfile,
             "--intervals", intervals,
-            "--snpblacklist", simple_repeat_bed,
+            "--snp-blacklist", simple_repeat_bed,
             "--genome", genome,
             "--force",
-            "--postoptimize",
+            "--post-optimize",
             "--seed", "123",
             "--bootstrapn", "500",
             "--cores", dd.get_num_cores(sample)]
@@ -355,10 +355,16 @@ def process_intervals(data):
     ref_file = dd.get_ref_file(data)
     mappability_resource = dd.get_variation_resources(data)["purecn_mappability"]
     genome = dd.get_genome_build(data)
-    cmd = [rscript, interval_file_r, "--infile", bed_file,
+    tools_off = dd.get_tools_off(data)
+    if tools_off and "purecn_offtarget" in tools_off:
+        offtarget_flag = ""
+    else:
+        offtarget_flag = "--off-target"
+    cmd = [rscript, interval_file_r, 
+          "--in-file", bed_file,
           "--fasta", ref_file,
-          "--outfile", ready_file,
-          "--offtarget",
+          "--out-file", ready_file,
+          offtarget_flag,
           "--genome", genome,
           "--export", optimized_bed,
           "--mappability", mappability_resource]
@@ -391,7 +397,7 @@ def get_coverage(data):
     result_file = os.path.join(work_dir, bname + "_coverage_loess.txt.gz")
     if not os.path.exists(result_file):
         cmd = [rscript, coverage_r,
-               "--outdir", work_dir,
+               "--out-dir", work_dir,
                "--bam", bam_file,
                "--intervals", intervals]
         try:
@@ -415,9 +421,9 @@ def create_normal_db(coverage_files_txt, snv_pon, out_dir, genome_build):
     rscript = utils.Rscript_cmd("base")
     normaldb_r = utils.R_package_script("PureCN", "extdata/NormalDB.R", env="base")
     cmd = [rscript, normaldb_r,
-           "--outdir", out_dir,
-           "--coveragefiles", coverage_files_txt,
-           "--normal_panel" , snv_pon,
+           "--out-dir", out_dir,
+           "--coverage-files", coverage_files_txt,
+           "--normal-panel" , snv_pon,
            "--genome", genome_build,
            "--force"]
     try:
