@@ -114,12 +114,14 @@ def _run_purecn_normaldb(paired, out):
 
 def _run_purecn_dx(out, paired):
     """Extract signatures and mutational burdens from PureCN rds file."""
-    out_base, out, all_files = _get_purecn_dx_files(paired, out, require_exist = True)
     rscript = utils.Rscript_cmd()
     purecndx_r = utils.R_package_script("PureCN", "extdata/Dx.R", env="base")
     simple_repeat_bed = dd.get_variation_resources(paired.tumor_data)["simple_repeat"]
     callable_bed = dd.get_sample_callable(paired.tumor_data)
-    if not utils.file_uptodate(out["mutation_burden"], out["rds"]):
+    out_base = utils.splitext_plus(out["rds"])[0]
+    mutation_burden_csv = out_base + "_mutation_burden.csv"
+    if not utils.file_uptodate(mutation_burden_csv, out["rds"]):
+        # no signatures - so we generate them
         with file_transaction(paired.tumor_data, out_base) as tx_out_base:
             cmd = [rscript, purecndx_r, 
                    "--rds", out["rds"], 
@@ -128,6 +130,8 @@ def _run_purecn_dx(out, paired):
                    "--exclude", simple_repeat_bed,
                    "--out", tx_out_base]
             do.run(cmd, "PureCN Dx mutational burden and signatures")
+            out_base, out, all_files = _get_purecn_dx_files(paired, out, require_exist = True)
+            # if a file was not generated it would not go to the upload
             for f in all_files:
                 if os.path.exists(os.path.join(os.path.dirname(tx_out_base), f)):
                     shutil.move(os.path.join(os.path.dirname(tx_out_base), f),
