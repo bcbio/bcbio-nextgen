@@ -33,7 +33,9 @@ def run(items):
     # the right way of running purecn is with normaldb
     if normaldb:
         purecn_out = _run_purecn_normaldb(paired, work_dir)
-        purecn_out = _run_purecn_dx(purecn_out, paired)
+        # don't run signature analysis if there is no purecn solution
+        if "rds" in purecn_out:
+            purecn_out = _run_purecn_dx(purecn_out, paired)
     else:
         purecn_out = _run_purecn(paired, work_dir)
     out = []
@@ -114,6 +116,9 @@ def _run_purecn_normaldb(paired, out):
 
 def _run_purecn_dx(out, paired):
     """Extract signatures and mutational burdens from PureCN rds file."""
+    # no solution - no signatures
+    if not "rds" in out:
+        return out
     rscript = utils.Rscript_cmd()
     purecndx_r = utils.R_package_script("PureCN", "extdata/Dx.R", env="base")
     simple_repeat_bed = dd.get_variation_resources(paired.tumor_data)["simple_repeat"]
