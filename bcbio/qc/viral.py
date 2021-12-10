@@ -32,11 +32,12 @@ def run(bam_file, data, out_dir):
                                                 utils.splitext_plus(os.path.basename(viral_ref))[0]))
         out_file = "%s-completeness.txt" % utils.splitext_plus(viral_bam)[0]
         cores = dd.get_num_cores(data)
+        samtools = config_utils.get_program("samtools", data["config"])
         if not utils.file_uptodate(out_file, bam_file):
             if not utils.file_uptodate(viral_bam, bam_file):
                 with file_transaction(data, viral_bam) as tx_out_file:
                     tmpfile = "%s-tmp" % utils.splitext_plus(tx_out_file)[0]
-                    cmd = ("samtools view -u -f 4 {bam_file} | "
+                    cmd = ("{samtools} view -u -f 4 {bam_file} | "
                             "bamtofastq collate=0 | "
                             "bwa mem -t {cores} {viral_ref} - | "
                             "bamsort tmpfile={tmpfile} inputthreads={cores} outputthreads={cores} "
