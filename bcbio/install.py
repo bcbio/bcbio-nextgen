@@ -32,7 +32,7 @@ from bcbio.pipeline import datadict as dd
 
 REMOTES = {
     "requirements": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/requirements-conda.txt",
-    "gitrepo": "https://github.com/bcbio/bcbio-nextgen.git",
+    "gitrepo": "https://github.com/bcbio/bcbio-nextgen/archive/%s.tar.gz",
     "cloudbiolinux": "https://github.com/chapmanb/cloudbiolinux/archive/%s.tar.gz",
     "genome_resources": "https://raw.githubusercontent.com/bcbio/bcbio-nextgen/master/config/genomes/%s-resources.yaml",
     "snpeff_dl_url": ("https://snpeff.blob.core.windows.net/databases/v{snpeff_ver}/"
@@ -62,9 +62,11 @@ def upgrade_bcbio(args):
             _check_for_conda_problems()
             print("Upgrading bcbio-nextgen to latest development version")
             pip_bin = os.path.join(os.path.dirname(os.path.realpath(sys.executable)), "pip")
-            git_tag = "@%s" % args.revision if args.revision != "master" else ""
-            _pip_safe_ssl([[pip_bin, "install", "--upgrade", "--no-deps",
-                            "git+%s%s#egg=bcbio-nextgen" % (REMOTES["gitrepo"], git_tag)]], anaconda_dir)
+            # default is master
+            # egg installation with --update is not always working
+            git_url = REMOTES["gitrepo"] % args.revision
+            _pip_safe_ssl([[pip_bin, "install", "--force-reinstall", "--no-deps",
+                           git_url]], anaconda_dir)
             print("Upgrade of bcbio-nextgen development code complete.")
         else:
             _update_conda_packages()
