@@ -51,9 +51,7 @@ def make_bcbiornaseq_object(data):
         return data
 
 def make_quality_report(data):
-    """
-    create and render the bcbioRNASeq quality report
-    """
+    """ create and render the bcbioRNASeq quality report """
     MAX_SAMPLES = 100
     if "bcbiornaseq" not in dd.get_tools_on(data):
         return data
