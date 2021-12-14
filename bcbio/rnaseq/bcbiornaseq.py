@@ -30,6 +30,11 @@ def make_bcbiornaseq_object(data):
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data", "bcb.rds"), "gene")
+        date = dt.strftime(dt.now(), "%Y-%m-%d")
+        bcb_dir = f"rds/YYYY-MM-DD"
+        cmd = f"mkdir -p {bcb_dir}"
+        do.run(cmd)
+        shutil.copy("data/bcb.rds", f"{bcb_dir}/bcb.rds")
     loadstring = create_load_string(upload_dir, groups, organism, "transcript")
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
@@ -38,8 +43,12 @@ def make_bcbiornaseq_object(data):
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading transcript-level bcbioRNASeq object.")
         write_counts(os.path.join(report_dir, "data-transcript", "bcb.rds"), "transcript")
-    make_quality_report(data)
-    return data
+    try:
+        make_quality_report(data)
+    except:
+        logger.error("bcbiornaseq error at quality report")
+    finally:
+        return data
 
 def make_quality_report(data):
     """
@@ -55,7 +64,7 @@ def make_quality_report(data):
     safe_makedir(report_dir)
     quality_rmd = os.path.join(report_dir, "quality_control.Rmd")
     quality_html = os.path.join(report_dir, "quality_control.html")
-    quality_rmd = rmarkdown_draft(quality_rmd, "quality_control", "bcbioRNASeq")
+    quality_rmd = rmarkdown_draft(quality_rmd, "01-quality-control", "bcbioRNASeq")
     if nsamples > MAX_SAMPLES and not groups:
         logger.warn(f"{nsamples} detected, disabling a few bcbioRNASeq plots which break "
                     f"with many samples. Setting `interesting_groups` would allow these plots "
