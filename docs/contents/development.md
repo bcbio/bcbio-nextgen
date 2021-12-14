@@ -3,55 +3,7 @@ This section provides useful concepts for getting started digging into the code
 and contributing new functionality. We welcome contributors and hope these notes
 help make it easier to get started.
 
-## Goals
-bcbio-nextgen provides best-practice pipelines for automated analysis of high throughput sequencing data with the goal of being:
-* Quantifiable: Doing good science requires being able to accurately assess the quality of results and re-verify approaches as new algorithms and software become available.
-* Analyzable: Results feed into tools to make it easy to query and visualize the results.
-* Scalable: Handle large datasets and sample populations on distributed heterogeneous compute environments.
-* Reproducible: Track configuration, versions, provenance and command lines to enable debugging, extension and reproducibility of results.
-* Community developed: The development process is fully open and sustained by contributors from multiple institutions. By working together on a shared framework, we can overcome the challenges associated with maintaining complex pipelines in a rapidly changing area of research.
-* Accessible: Bioinformaticians, biologists and the general public should be able to run these tools on inputs ranging from research materials to clinical samples to personal genomes.
-
-During development we seek to maximize functionality and usefulness, while avoiding complexity. Since these goals are sometimes in conflict, it's useful to understand the design approaches:
-* Support high level configurability but avoid exposing all program options. Since pipelines support a wide variety of tools, each with a large number of options, we try to define configuration variables at high level based on biological intent and then translate these into best-practice options for each tool. The goal is to avoid having an overwhelming number of input configuration options.
-* Provide best-practice pipelines that make recommended decisions for processing. Coupled with goal of minimizing configuration parameters, this requires trust and discussion around algorithm choices. An example is bwa alignment, which uses `bwa aln` for reads shorter than 75bp and `bwa mem` for longer reads, based on recommendations from Heng Li. Our general goal is to encourage discussion and development of best-practices to make it easy to do the right thing.
-* Support extensive debugging output. In complex distributed systems, programs fail in unexpected ways even during production runs. We try to maximize logging to help identify and diagnose these type of unexpected problems.
-* Avoid making mistakes. This results in being conservative about decisions like deleting file intermediates. Coupled with extensive logging, we trade off disk usage for making it maximally easy to restart and debug problems. If you'd like to delete work or log directories automatically, we recommend doing this as part of your batch scripts wrapping bcbio-nextgen.
-* Strive for a clean, readable code base. We strive to make the code a secondary source of information after hand written docs. Practically, this means maximizing information content in source files while using in-line documentation to clarify as needed.
-* Focus on a functional coding style with minimal use of global mutable objects. This approach works well with distributed code and isolates debugging to individual functions rather than globally mutable state.
-* Make sure your changes integrate correctly by running the test suite before submitting a pull request. The pipeline is automatically tested in [Travis-CI](https://travis-ci.org/bcbio/bcbio-nextgen), and a red label will appear in the pull request if the former causes any issue.
-
-## Style guide
-General:
-* Delete unnecessary code (do not just comment it out)
-* Refactor existing code to help deliver new functionality
-* Specify exact version numbers for dependencies
-
-Python:
-* Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) and [PEP 20](https://www.python.org/dev/peps/pep-0020/)
-* Limit all lines to a maximum of 99 characters
-* Add docstrings to each module
-* Follow [PEP 257](https://www.python.org/dev/peps/pep-0257/) for docstrings:
-  * the `"""` that ends a multiline docstring should be on a line by itself
-  * for one-liner docstrings keep the closing `"""` on the same line
-* Clarify function calls with keyword arguments for readability
-* Use [type hints](https://www.python.org/dev/peps/pep-0484/)
-
-## Modules
-The most useful modules inside `bcbio`, ordered by likely interest:
-* `pipeline` -- Top level functionality that drives the analysis pipeline. `main.py` contains top level definitions of pipelines like variant calling and RNAseq, and is the best place to start understanding the overall organization of the code.
-* `ngsalign` -- Integration with aligners for high-throughput sequencing data. We support individual aligners with their own separate modules.
-* `variation` -- Tools for variant calling. Individual variant calling and processing approaches each have their own submodules.
-* `rnaseq` -- Run RNA-seq pipelines, currently supporting TopHat/Cufflinks.
-* `provenance` -- Track third party software versions, command lines and program flow. Handle writing of debugging details.
-* `distributed` -- Handle distribution of programs across multiple cores, or across multiple machines using IPython.
-* `workflow` -- Provide high level tools to run customized analyses. They tie into specialized analyses or visual front ends to make running bcbio-nextgen easier for specific common tasks.
-* `broad` -- Code to handle calling Broad tools like GATK and Picard, as well as other Java-based programs.
-
-## GitHub
-bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](https://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The GitHub help pages have detailed information on keeping your fork updated with the main GitHub repository (e.g. <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
-
-## Creating a separate bcbio installation
+## bcbio dev installation
 When developing, you'd like to avoid breaking your production bcbio instance. Use the installer script to create a separate bcbio instance without downloading any data. Before installing the second bcbio instance, investigate your PATH and PYTHONPATH variables and clean them from referenceing the production bcbio python. It is better to avoid mixing bcbio instances in the PATH. Also watch `~/.conda/environments.txt`, `~/.condarc` config files, CONDA_EXE, CONDA_PYTHON_EXE environment variables : having a reference to the production package cache: `/n/app/bcbio/dev/anaconda/pkgs` leads to `bcbio/tools/bin` not being populated in some installs.
 
 To install in `${HOME}/local/share/bcbio` (your location might be different, make sure you have ~30GB of disk quota there):
@@ -87,25 +39,6 @@ cd ~/code/bcbio-nextgen
 bcbio_python setup.py install
 ```
 One tricky part that we don't yet know how to work around is that pip and standard `setup.py install` have different ideas about how to write Python eggs. `setup.py install` will create an isolated python egg directory like `bcbio_nextgen-1.1.5-py3.6.egg`, while pip creates an egg pointing to a top level `bcbio` directory. Where this gets tricky is that the top level `bcbio` directory takes precedence. The best way to work around this problem is to manually remove the current pip installed bcbio-nextgen code (`rm -rf /path/to/anaconda/lib/python3.6/site-packages/bcbio*`) before managing it manually with `bcbio_python setup.py install`. We'd welcome tips about ways to force consistent installation across methods.
-
-## Installing development tools
-```shell
-conda install --file requirements-dev.txt
-```
-
-## Documentation
-To build this documentation locally and see how it looks like you can do so by
-installing the dependencies:
-```shell
-cd docs
-conda install --file requirements-local.txt --file requirements.txt
-```
-and running:
-```shell
-make html
-```
-The documentation will be built under `docs/_build/html`, open `index.html`
-with your browser to load your local build.
 
 ## Testing
 The test suite exercises the scripts driving the analysis, so are a good starting point to ensure correct installation. Tests use the [pytest](https://doc.pytest.org/en/latest/) framework. The tests are available in the bcbio source code:
@@ -154,6 +87,99 @@ export BCBIO_TEST_DIR=$(pwd)/output
 will put the output in your current working directory/output. 
 
 The test directory can be kept around after running by passing the `--keep-test-dir` flag.
+
+## New release checklist
+- [ ] pull from master to make sure you are up to date
+- [ ] inject the latest code to bcbio dev instance
+- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py`
+- [ ] run unit tests: `pytest -s -x tests/unit`
+- [ ] create a branch release_xyz_prep
+- [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
+- [ ] move all finished items from the pinned issue and add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md), start new (in progress) section
+- [ ] commit and push changes to bcbio
+- [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
+- [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
+- [ ] review and approve bioconda recipe once it passes the tests
+- [ ] merge recipe by commenting `@bioconda-bot please merge`
+- [ ] wait until new version is available on [bioconda](https://anaconda.org/bioconda/bcbio-nextgen/files)
+- [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt)
+- [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
+- [ ] push changes to bcbio
+- [ ] run installation test (`--no-data`)
+- [ ] run T/N end2end test
+
+### not working for now
+- [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
+- [ ] update BCBIO_REVISION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
+- [ ] push changes to bcbio_docker
+- [ ] make sure the image builds successfully
+
+## Goals
+bcbio-nextgen provides best-practice pipelines for automated analysis of high throughput sequencing data with the goal of being:
+* Quantifiable: Doing good science requires being able to accurately assess the quality of results and re-verify approaches as new algorithms and software become available.
+* Analyzable: Results feed into tools to make it easy to query and visualize the results.
+* Scalable: Handle large datasets and sample populations on distributed heterogeneous compute environments.
+* Reproducible: Track configuration, versions, provenance and command lines to enable debugging, extension and reproducibility of results.
+* Community developed: The development process is fully open and sustained by contributors from multiple institutions. By working together on a shared framework, we can overcome the challenges associated with maintaining complex pipelines in a rapidly changing area of research.
+* Accessible: Bioinformaticians, biologists and the general public should be able to run these tools on inputs ranging from research materials to clinical samples to personal genomes.
+
+During development we seek to maximize functionality and usefulness, while avoiding complexity. Since these goals are sometimes in conflict, it's useful to understand the design approaches:
+* Support high level configurability but avoid exposing all program options. Since pipelines support a wide variety of tools, each with a large number of options, we try to define configuration variables at high level based on biological intent and then translate these into best-practice options for each tool. The goal is to avoid having an overwhelming number of input configuration options.
+* Provide best-practice pipelines that make recommended decisions for processing. Coupled with goal of minimizing configuration parameters, this requires trust and discussion around algorithm choices. An example is bwa alignment, which uses `bwa aln` for reads shorter than 75bp and `bwa mem` for longer reads, based on recommendations from Heng Li. Our general goal is to encourage discussion and development of best-practices to make it easy to do the right thing.
+* Support extensive debugging output. In complex distributed systems, programs fail in unexpected ways even during production runs. We try to maximize logging to help identify and diagnose these type of unexpected problems.
+* Avoid making mistakes. This results in being conservative about decisions like deleting file intermediates. Coupled with extensive logging, we trade off disk usage for making it maximally easy to restart and debug problems. If you'd like to delete work or log directories automatically, we recommend doing this as part of your batch scripts wrapping bcbio-nextgen.
+* Strive for a clean, readable code base. We strive to make the code a secondary source of information after hand written docs. Practically, this means maximizing information content in source files while using in-line documentation to clarify as needed.
+* Focus on a functional coding style with minimal use of global mutable objects. This approach works well with distributed code and isolates debugging to individual functions rather than globally mutable state.
+* Make sure your changes integrate correctly by running the test suite before submitting a pull request. The pipeline is automatically tested in [Travis-CI](https://travis-ci.org/bcbio/bcbio-nextgen), and a red label will appear in the pull request if the former causes any issue.
+
+## Style guide
+General:
+* Delete unnecessary code (do not just comment it out)
+* Refactor existing code to help deliver new functionality
+* Specify exact version numbers for dependencies
+
+Python:
+* Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) and [PEP 20](https://www.python.org/dev/peps/pep-0020/)
+* Limit all lines to a maximum of 99 characters
+* Add docstrings to each module
+* Follow [PEP 257](https://www.python.org/dev/peps/pep-0257/) for docstrings:
+  * the `"""` that ends a multiline docstring should be on a line by itself
+  * for one-liner docstrings keep the closing `"""` on the same line
+* Clarify function calls with keyword arguments for readability
+* Use [type hints](https://www.python.org/dev/peps/pep-0484/)
+
+## Modules
+The most useful modules inside `bcbio`, ordered by likely interest:
+* `pipeline` -- Top level functionality that drives the analysis pipeline. `main.py` contains top level definitions of pipelines like variant calling and RNAseq, and is the best place to start understanding the overall organization of the code.
+* `ngsalign` -- Integration with aligners for high-throughput sequencing data. We support individual aligners with their own separate modules.
+* `variation` -- Tools for variant calling. Individual variant calling and processing approaches each have their own submodules.
+* `rnaseq` -- Run RNA-seq pipelines, currently supporting TopHat/Cufflinks.
+* `provenance` -- Track third party software versions, command lines and program flow. Handle writing of debugging details.
+* `distributed` -- Handle distribution of programs across multiple cores, or across multiple machines using IPython.
+* `workflow` -- Provide high level tools to run customized analyses. They tie into specialized analyses or visual front ends to make running bcbio-nextgen easier for specific common tasks.
+* `broad` -- Code to handle calling Broad tools like GATK and Picard, as well as other Java-based programs.
+
+## GitHub
+bcbio-nextgen uses GitHub for code development, and we welcome pull requests. GitHub makes it easy to establish custom forks of the code and contribute those back. The Biopython documentation has great information on [using git and GitHub](https://biopython.org/wiki/GitUsage) for a community developed project. In short, make a fork of the [bcbio code](https://github.com/bcbio/bcbio-nextgen) by clicking the `Fork` button in the upper right corner of the GitHub page, commit your changes to this custom fork and keep it up to date with the main bcbio repository as you develop. The GitHub help pages have detailed information on keeping your fork updated with the main GitHub repository (e.g. <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/syncing-a-fork>). After commiting changes, click `New Pull Request` from your fork when you'd like to submit your changes for integration in bcbio.
+
+## Installing development tools
+```shell
+conda install --file requirements-dev.txt
+```
+
+## Documentation
+To build this documentation locally and see how it looks like you can do so by
+installing the dependencies:
+```shell
+cd docs
+conda install --file requirements-local.txt --file requirements.txt
+```
+and running:
+```shell
+make html
+```
+The documentation will be built under `docs/_build/html`, open `index.html`
+with your browser to load your local build.
 
 ## Adding tools
 
@@ -227,28 +253,6 @@ is how to add the quality control reports from bismark methylation calling:
 ```
 
 Files that can be added for each tool in MultiQC can be found in the [MultiQC module documentation](https://multiqc.info/docs/#multiqc-modules)
-
-## New release checklist
-- [ ] pull from master to make sure you are up to date
-- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py`
-- [ ] run unit tests: `pytest -s -x tests/unit`
-- [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
-- [ ] add release date to [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) and start new (in progress) section
-- [ ] commit and push changes to bcbio
-- [ ] draft new release, copy and paste changes from [HISTORY.md](https://github.com/bcbio/bcbio-nextgen/blob/master/HISTORY.md) to the changelog
-- [ ] wait for [bioconda-recipes](https://github.com/bioconda/bioconda-recipes/pulls) to pick up the new release
-- [ ] review and approve bioconda recipe once it passes the tests
-- [ ] merge recipe by commenting `@bioconda-bot please merge`
-- [ ] wait until new version is available on [bioconda](https://anaconda.org/bioconda/bcbio-nextgen/files)
-- [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt)
-- [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
-- [ ] push changes to bcbio
-- [ ] run installation test (--no-data)
-- [ ] run T/N end2end test
-- [ ] update BCBIO_VERSION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
-- [ ] update BCBIO_REVISION in [bcbio_docker](https://github.com/bcbio/bcbio_docker/blob/master/.travis.yml)
-- [ ] push changes to bcbio_docker
-- [ ] make sure the image builds successfully
 
 ## Standard function arguments
 
