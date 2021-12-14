@@ -29,12 +29,8 @@ def make_bcbiornaseq_object(data):
     rcmd = Rscript_cmd(env = "rbcbiornaseq")
     with chdir(report_dir):
         do.run([rcmd, "--vanilla", r_file], "Loading bcbioRNASeq object.")
+        # bcbiornaseq 0.3.44 writes to data/bcb.rds
         write_counts(os.path.join(report_dir, "data", "bcb.rds"), "gene")
-        date = dt.strftime(dt.now(), "%Y-%m-%d")
-        bcb_dir = f"rds/YYYY-MM-DD"
-        cmd = f"mkdir -p {bcb_dir}"
-        do.run(cmd)
-        shutil.copy("data/bcb.rds", f"{bcb_dir}/bcb.rds")
     loadstring = create_load_string(upload_dir, groups, organism, "transcript")
     r_file = os.path.join(report_dir, "load_transcript_bcbioRNAseq.R")
     with file_transaction(r_file) as tmp_file:
