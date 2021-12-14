@@ -6,6 +6,7 @@ inform treatment.
 import glob
 import os
 import subprocess
+import time
 
 from bcbio import bam, utils
 from bcbio.distributed.transaction import file_transaction
@@ -14,6 +15,7 @@ from bcbio.pipeline import config_utils
 from bcbio.provenance import do
 from bcbio.variation import vcfutils
 from bcbio.heterogeneity import chromhacks
+from bcbio.log import logger
 
 def run(bam_file, data, out_dir):
     """Run viral QC analysis:
@@ -33,17 +35,26 @@ def run(bam_file, data, out_dir):
         out_file = "%s-completeness.txt" % utils.splitext_plus(viral_bam)[0]
         cores = dd.get_num_cores(data)
         samtools = config_utils.get_program("samtools", data["config"])
+        bamtofastq = config_utils.get_program("bamtofastq", data["config"])
+        bamsort = config_utils.get_program("bamsort", data["config"])
         if not utils.file_uptodate(out_file, bam_file):
             if not utils.file_uptodate(viral_bam, bam_file):
                 with file_transaction(data, viral_bam) as tx_out_file:
                     tmpfile = "%s-tmp" % utils.splitext_plus(tx_out_file)[0]
-                    cmd = ("{samtools} view -u -f 4 {bam_file} | "
-                            "bamtofastq collate=0 | "
-                            "bwa mem -t {cores} {viral_ref} - | "
-                            "bamsort tmpfile={tmpfile} inputthreads={cores} outputthreads={cores} "
-                            "inputformat=sam index=1 indexfilename={tx_out_file}.bai O={tx_out_file}")
-                    do.run(cmd.format(**locals()), "Align unmapped reads to viral genome")
-
+                    tmpbam = "%s-tmpbam" % utils.splitext_plus(tx_out_file)[0]
+                    # the weirdest bug
+                    # in bcbio1.2.9a ipython (only ipython not multicore) runs fail after this step with bgzf error, see issue 3581
+                    # what helps is to samtools view the file to restore the proper EOF
+                    cmd = (
+                        f"{samtools} view -u -f 4 {bam_file} | "
+                        f"{bamtofastq} collate=0 | "
+                        f"bwa mem -t {cores} {viral_ref} - | "
+                        f"{bamsort} tmpfile={tmpfile} inputthreads={cores} outputthreads={cores} "
+                        f"inputformat=sam index=1 indexfilename={tmpbam}.bai O={tmpbam}.bam &&"
+                        f"{samtools} view -bh {tmpbam}.bam > {tx_out_file} && "
+                        f"{samtools} index {tx_out_file}"
+                    )
+                    do.run(cmd, "Align unmapped reads to viral genome")
             total_reads = _count_reads(bam_file, data)
             assert total_reads > 0, 'Reads count is {total_reads}, is there a bug in counting the read count? {bam_file}'.format(**locals())
             with file_transaction(data, out_file) as tx_out_file:
