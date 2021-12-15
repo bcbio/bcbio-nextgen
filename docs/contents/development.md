@@ -97,7 +97,7 @@ pytest -s -x --keep-test-dir tests/integration/test_automated_analysis.py::faile
 ## New release checklist
 - [ ] pull from master to make sure you are up to date
 - [ ] inject the latest code to bcbio dev instance
-- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py` - 24 tests, breaks after the firt failed test
+- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py` - 24 tests, breaks after the first failed test
 - [ ] run unit tests: `pytest -s -x tests/unit`
 - [ ] create a branch release_xyz_prep
 - [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
