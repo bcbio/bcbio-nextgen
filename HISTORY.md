@@ -1,11 +1,19 @@
-## 1.2.9 (in progress)
-- Fixed vcf header bug: T/N SAMPLE lines are back - needed for import to SolveBio
+## 1.3.0 (in progress ~ Q2 2022)
+
+
+## 1.2.9 (14 December 2021)
+- Fix vcf header bug: T/N SAMPLE lines are back - needed for import to SolveBio
 - add strandedness: auto for -l A option in salmon
 - report 10x more peaks in CHIP/ATAC-seq - use 0.05 qvalue
-- fixed misleading RNA-seq duplicated reads statistics: thanks @sib-bcf 
+- fix misleading RNA-seq duplicated reads statistics: thanks @sib-bcf 
 - reorganize conda environments
 - snpEff 5.0
 - strandedness: auto
+- document WGBS pipeline steps
+- make --local an option, not default in bismark alignment - too slow
+- bcbioRNASeq update to 0.3.44
+- pureCN update to 2.0.1
+- octopus update to 0.7.4
 
 ## 1.2.8 (14 April 2021)
 - Set ENCODE library complexity flags properly for ChIP-seq. Thanks to @mistrm82.
