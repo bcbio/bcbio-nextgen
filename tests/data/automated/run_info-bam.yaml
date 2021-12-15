@@ -44,7 +44,7 @@ details:
       validate: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
       cwl_reporting: true
     analysis: variant2
-    description: VarOnly
+    description: Test1
     vrn_file: ../data/reference_material/7_100326_FC6107FAAXX-grade.vcf
     genome_build: hg19
     metadata:
