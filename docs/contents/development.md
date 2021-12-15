@@ -88,10 +88,16 @@ will put the output in your current working directory/output.
 
 The test directory can be kept around after running by passing the `--keep-test-dir` flag.
 
+Repeat a failed test:
+```bash
+export BCBIO_TEST_DIR=/path/to/test; \
+pytest -s -x --keep-test-dir tests/integration/test_automated_analysis.py::failed_test
+```
+
 ## New release checklist
 - [ ] pull from master to make sure you are up to date
 - [ ] inject the latest code to bcbio dev instance
-- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py`
+- [ ] run integration tests: `pytest -s -x tests/integration/test_automated_analysis.py` - 24 tests, breaks after the firt failed test
 - [ ] run unit tests: `pytest -s -x tests/unit`
 - [ ] create a branch release_xyz_prep
 - [ ] update version in [setup.py](https://github.com/bcbio/bcbio-nextgen/blob/master/setup.py) and [docs/conf.py](https://github.com/bcbio/bcbio-nextgen/blob/master/docs/conf.py)
