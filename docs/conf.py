@@ -26,7 +26,7 @@ copyright = '2021, bcbio-nextgen contributors'
 author = 'bcbio-nextgen contributors'
 
 # The full version, including alpha/beta/rc tags
-version = release = '1.2.8'
+version = release = '1.2.9'
 
 # -- General configuration ---------------------------------------------------
 
