@@ -94,6 +94,7 @@ def test_rnaseq_with_hisat2(install_test_files, data_dir, global_config):
 @pytest.mark.rnaseq
 @pytest.mark.singleend
 @pytest.mark.explant
+@pytest.mark.skip(reason="tophat is no longer supported.")
 def test_explant_with_tophat(install_test_files, data_dir, global_config):
     fc_dir = os.path.join(data_dir, os.pardir, '1_explant')
     run_config = os.path.join(data_dir, 'run_info-explant.yaml')
