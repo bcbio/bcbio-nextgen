@@ -144,7 +144,7 @@ def install_test_files(data_dir):
         DlInfo("singlecell-rnaseq-test-data.tar.gz", "Harvard-inDrop", 1)
     ]
     for dl in download_data:
-        url = f"https://bcbio-nextgen.s3.amazonaws.com/test_test/{dl}"
+        url = f"https://bcbio-nextgen.s3.amazonaws.com/test_data/{dl}"
         dirname = os.path.join(
             data_dir, os.pardir,
             dl.fname.replace(".tar.gz", "") if dl.dirname is None
