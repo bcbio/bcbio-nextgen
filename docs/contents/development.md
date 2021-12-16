@@ -111,6 +111,7 @@ pytest -s -x --keep-test-dir tests/integration/test_automated_analysis.py::faile
 - [ ] update [requirements-conda.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements-conda.txt)
 - [ ] update [requirements.txt](https://github.com/bcbio/bcbio-nextgen/blob/master/requirements.txt)
 - [ ] push changes to bcbio
+- [ ] create a synchronized release of cloudbiolinux
 - [ ] run installation test (`--no-data`)
 - [ ] run T/N end2end test
 
