@@ -1,8 +1,8 @@
-version: 21
+version: 22
 
 aliases:
   ensembl: saccharomyces_cerevisiae_vep_100_R64-1-1
-  snpeff: R64-1-1.86
+  snpeff: R64-1-1.99
 rnaseq:
   transcripts: ../rnaseq/ref-transcripts.gtf
   transcripts_mask: ../rnaseq/ref-transcripts-mask.gtf
