@@ -163,7 +163,9 @@ A more comprehensive QC and DE analysis is possible with [bcbiornaseq](https://b
 * `bcbiornaseq` A dictionary of key-value pairs to be passed as options to bcbioRNAseq. Currently supports _organism_ as a key and takes the latin name of the genome used (_mus musculus_, _homo sapiens_, etc) and _interesting_groups_ which will be used to color quality control plots:
 ```yaml
 algorithm:
-  tools_on: [bcbiornaseq]
+  tools_on:
+  - bcbiornaseq
+  - keep_gene_version
   bcbiornaseq:
     organism: homo sapiens
     interesting_groups: [treatment, genotype, etc, etc]
