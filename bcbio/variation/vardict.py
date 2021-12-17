@@ -44,12 +44,15 @@ def _vardict_options_from_config(items, config, out_file, target=None, is_rnaseq
     # Disable SV calling for vardict, causes issues with regional analysis
     # by detecting SVs outside of target regions, which messes up merging
     # SV calling will be worked on as a separate step
+    # use tools_on: vardict_sv to turn sv calling in vardict on (experimental)
+    tools_on = dd.get_in_samples(items, dd.get_tools_on)
+    vardict_sv_on = tools_on and "vardict_sv" in tools_on
     vardict_cl = get_vardict_command(items[0])
     version = programs.get_version_manifest(vardict_cl)
     # turn off structural variants
-    if (vardict_cl and version and
+    if ((vardict_cl and version and
         ((vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.5")) or
-         (vardict_cl == "vardict"))):
+         (vardict_cl == "vardict"))) and not vardict_sv_on):
         opts += ["--nosv"]
     if (vardict_cl and version and
          (vardict_cl == "vardict-java" and LooseVersion(version) >= LooseVersion("1.5.6"))):
