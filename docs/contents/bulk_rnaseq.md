@@ -165,7 +165,6 @@ A more comprehensive QC and DE analysis is possible with [bcbiornaseq](https://b
 algorithm:
   tools_on:
   - bcbiornaseq
-  - keep_gene_version
   bcbiornaseq:
     organism: homo sapiens
     interesting_groups: [treatment, genotype, etc, etc]
@@ -210,23 +209,21 @@ bcbioRNASeq directory:
 ```
 bcbioRNASeq/
 ├── data
-│ ├── bcb.rda -- bcbioRNASeq object with gene-level data
+│ ├── bcb.rds -- bcbioRNASeq object with gene-level data
 ├── data-transcript
-│ ├── bcb.rda -- bcbioRNASeq object with transcript-level data
+│ ├── bcb.rds -- bcbioRNASeq object with transcript-level data
 ├── quality_control.html -- quality control report
 ├── quality_control.Rmd -- RMarkdown that generated quality control report
-├── results
-│ └── 2019-11-21
+├── results/2021-12-18
 │ ├── gene -- gene level information
 │ │ └── counts
 │ │ ├── counts.csv.gz -- count matrix from tximport, suitable for count-based analyses
 │ │ └── metadata.csv.gz -- metadata and quality control data for samples
-│ ├── quality_control
-│ │ └── tpm.csv.gz -- TPM from tximport, use for visualization
-│ └── transcript -- transcript level information
-│ └── counts
-│ ├── counts.csv.gz -- transcript level count matrix, suitable for count-based analyses needed transcript-level data
-│ └── metadata.csv.gz -- metadata and quality control for samples
+│ ├── quality_control/bcb/assays
+│ │ └── tpm.csv -- TPM from tximport, use for visualization
+│ ├── transcript/counts -- transcript level information
+│ │ └── counts.csv.gz -- transcript level count matrix, suitable for count-based analyses needed transcript-level data
+│ │ └── metadata.csv.gz -- metadata and quality control for samples
 ```
 Workflow for analysis:
 
