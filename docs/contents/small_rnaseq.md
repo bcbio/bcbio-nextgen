@@ -4,6 +4,28 @@
 bcbio supports configurable best-practices pipeline for smallRNA-seq quality controls,
 adapter trimming, miRNA/isomiR quantification and other small RNA detection.
 
+[bcbio yaml config example](https://github.com/bcbio/bcbio-nextgen/blob/master/config/templates/illumina-srnaseq.yaml)
+```yaml
+upload:
+  dir: ../final
+details:
+  - analysis: smallRNA-seq
+    algorithm:
+      aligner: star # any other aligner is supported.
+      # change adapter according project
+      adapters: ["TGGAATTCTCGGGTGC"] 
+      expression_caller: [trna, seqcluster, mirdeep2]
+      # expression_caller: [trna, seqcluster, mirdeep2, mirge] Read docs to know how to use
+      # miRge tools: https://bcbio-nextgen.readthedocs.io/en/latest/contents/pipelines.html#smallrna-seq
+      species: hsa
+    genome_build: hg19
+#resources:
+#  atropos: 
+#    options: ["-u 4", "-u -4"]
+#  mirge: 
+#    options: ["-lib $PATH_TO_LIBS_FOLDER"]  
+```
+
 * Adapter trimming:
   * [atropos](https://atropos.readthedocs.io/en/latest/guide.html)
   * [dnapi](https://github.com/jnktsj/DNApi) for adapter de-novo detection
