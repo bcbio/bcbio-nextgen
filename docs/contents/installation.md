@@ -156,6 +156,8 @@ Optional steps:
 
 ## Upgrade
 
+**bcbio 1.2.9 has major changes in the conda environments. Please consider installing bcbio1.2.9 code/tools from scratch rather than upgrading from 1.2.8. You can re-use the data installation from bcbio<=1.2.8. snpeff databases has to be re-installed with the below command**
+
 We use the same automated installation process for performing upgrades of tools, software and data in place. Since there are multiple targets and we want to avoid upgrading anything unexpectedly, we have specific arguments for each. Generally, you'd want to upgrade the code, tools and data together with:
 ```shell
 bcbio_nextgen.py upgrade -u stable --tools --data
