@@ -67,6 +67,9 @@ Project directory:
 * `seqclusterViz` -- input file for interactive browser at <https://github.com/lpantano/seqclusterViz>
 * `report` -- Rmd template to help with downstream analysis like QC metrics, differential expression, and clustering.
 
+## References
+* [mirtrace](https://friedlanderlab.org/software/mirtrace/) - a QC tool
+
 Sample directories:
 * `SAMPLE-mirbase-ready.counts` -- counts for miRBase miRNAs.
 * `SAMPLE-novel-ready` -- counts for miRDeep2 novel miRNAs.
