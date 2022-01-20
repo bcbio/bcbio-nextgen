@@ -241,6 +241,8 @@ if __name__ == "__main__":
                         help="Name of organism, for example Hsapiens.")
     required.add_argument("-b", "--build", required=True,
                         help="Build of genome, for example hg19.")
+    parser.add_argument("--cloudbiolinux", help="Specify a cloudbiolinux git commit hash or tag to install",
+                            default="master")
     args = parser.parse_args()
  #   if not all([args.mirbase, args.srna_gtf]) and any([args.mirbase, args.srna_gtf]):
  #       raise ValueError("--mirbase and --srna_gtf both need a value.")
