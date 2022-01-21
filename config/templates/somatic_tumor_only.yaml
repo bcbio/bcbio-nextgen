@@ -1,6 +1,7 @@
 details:
 - algorithm:
     aligner: bwa
+    align_split_size: false
     background: /path/to/1000g_pon.hg38.vcf.gz
     mark_duplicates: false
     recalibrate: false
