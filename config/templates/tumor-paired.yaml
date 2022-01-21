@@ -13,6 +13,7 @@ details:
        phenotype: tumor # or "normal"
     algorithm:
       aligner: bwa
+      align_split_size: false
       variantcaller: [vardict, mutect2, strelka2]
       ensemble:
         numpass: 2
