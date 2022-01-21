@@ -8,6 +8,7 @@ details:
     #   batch: your-arbitrary-batch-name
     algorithm:
       aligner: bwa
+      align_split_size: false
       recalibrate: gatk
       variantcaller: gatk-haplotype
       # for targetted projects, set the region
