@@ -57,7 +57,7 @@ bcbio_nextgen.py ../config/project.yaml -n 72 -t ipython -s slurm -q medium -r t
 
 - this is a launcher job which goes to priority partition (queue), requests 1CPU/10G RAM; it is not doing any calculations;
 - it submits a controller job to the medium partition with MEM=20G;
-- the launcher and the controller could be one job, with ``--local_controller` option;
+- the launcher and the controller could be one job, with `--local_controller` option;
 - the controller job submits worker jobs to the medium; total cores for all workers = 72; cores/worker is configured in the bcbio system config;
 worker jobs walltime (72h) < launch job walltime (5days).
 
