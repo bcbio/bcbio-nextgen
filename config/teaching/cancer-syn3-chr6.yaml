@@ -7,9 +7,9 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     recalibrate: false
     realign: false
-    remove_lcr: true
     variant_regions: ../input/NGv3-chr6-hg38.bed
     min_allele_fraction: 2
     variantcaller: [vardict, freebayes, varscan]
@@ -27,6 +27,7 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     recalibrate: false
     realign: false
     variant_regions: ../input/NGv3-chr6-hg38.bed
@@ -37,7 +38,6 @@ details:
     svcaller: [lumpy, manta]
     svprioritize: cancer/civic
     hlacaller: optitype
-    remove_lcr: true
     validate: dream-syn3-crossmap/truth_small_variants.vcf.gz
     validate_regions: dream-syn3-crossmap/truth_regions.bed
     svvalidate:

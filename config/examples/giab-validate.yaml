@@ -19,10 +19,10 @@ details:
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      exclude_regions: [lcr]
       mark_duplicates: true
       recalibrate: false
       realign: false
-      remove_lcr: true
       tools_off: [vqsr, gemini]
       variantcaller: [samtools, freebayes, platypus, gatk-haplotype]
       validate: giab-NA12878/truth_small_variants.vcf.gz
@@ -37,10 +37,10 @@ details:
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      exclude_regions: [lcr]
       mark_duplicates: true
       recalibrate: false
       realign: false
-      remove_lcr: true
       tools_off: [vqsr, gemini]
       variantcaller: [samtools, freebayes, platypus, gatk-haplotype]
       validate: giab-NA24385/truth_small_variants.vcf.gz

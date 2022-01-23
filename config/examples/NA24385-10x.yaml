@@ -17,9 +17,9 @@ details:
     genome_build: GRCh37
     algorithm:
       aligner: bwa
+      exclude_regions: [lcr]
       trim_ends: [23, 0, 1, 0]
       save_diskspace: true
-      remove_lcr: true
       variantcaller: [freebayes, gatk-haplotype, strelka2]
       svcaller: [cnvkit, seq2c, manta, delly] # lumpy, gridss, wham
       vcfanno: [gemini]
