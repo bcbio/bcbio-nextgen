@@ -24,11 +24,11 @@ details:
     genome_build: hg38
     algorithm:
       aligner: bwa
+      exclude_regions: [lcr]
       save_diskspace: true
       mark_duplicates: true
       recalibrate: false
       realign: false
-      remove_lcr: true
       tools_off: [vqsr]
       variantcaller: [freebayes, gatk-haplotype]
       validate: giab-NA12878/truth_small_variants.vcf.gz

@@ -61,8 +61,8 @@ and reference it as ../input/NGv3.bed in the yaml.
 details:
 - algorithm:
     aligner: bwa
+    exclude_regions: [lcr]
     mark_duplicates: true
-    remove_lcr: true
     variantcaller: [mutect2, vardict]
     variant_regions: /path/to/bcbio/genomes/Hsapiens/hg38/coverage/capture_regions/NGv3.bed
   analysis: variant2

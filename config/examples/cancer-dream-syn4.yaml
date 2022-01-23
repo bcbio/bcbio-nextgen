@@ -6,10 +6,10 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     mark_duplicates: true
     recalibrate: false
     realign: false
-    remove_lcr: true
     platform: illumina
     quality_format: standard
     tools_on: [svplots]
@@ -30,10 +30,10 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     mark_duplicates: true
     recalibrate: false
     realign: false
-    remove_lcr: true
     platform: illumina
     quality_format: standard
     tools_on: [svplots]
@@ -62,10 +62,10 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     mark_duplicates: true
     recalibrate: false
     realign: false
-    remove_lcr: true
     platform: illumina
     quality_format: standard
     variantcaller: [vardict, mutect2, mutect, freebayes, varscan]
@@ -82,10 +82,10 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     mark_duplicates: true
     recalibrate: false
     realign: false
-    remove_lcr: true
     platform: illumina
     quality_format: standard
     variantcaller: [vardict, mutect2, mutect, freebayes, varscan]

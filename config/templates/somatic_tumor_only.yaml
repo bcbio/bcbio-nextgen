@@ -2,11 +2,11 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: false
+    exclude_regions: [lcr]
     background: /path/to/1000g_pon.hg38.vcf.gz
     mark_duplicates: false
     recalibrate: false
     realign: false
-    remove_lcr: true
     platform: illumina
     quality_format: standard
     variantcaller: mutect2

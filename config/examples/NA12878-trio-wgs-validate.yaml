@@ -18,11 +18,11 @@ details:
     genome_build: hg38
     algorithm:
       aligner: bwa
+      exclude_regions: [lcr]
       mark_duplicates: true
       recalibrate: false
       realign: false
       variantcaller: gatk-haplotype
-      remove_lcr: true
       validate: giab-NA12878/truth_small_variants.vcf.gz
       validate_regions: giab-NA12878/truth_regions.bed
   - files: [../input/NA12891_1.fastq.gz, ../input/NA12891_2.fastq.gz]

@@ -13,12 +13,12 @@ details:
     aligner: bwa
     background: /path/to/project/config/1000g_pon.hg38.vcf.gz
     disambiguate: mm10
+    exclude_regions: [lcr]
     mark_duplicates: true
     platform: illumina
     quality_format: standard
     realign: false
     recalibrate: false
-    remove_lcr: true
     tools_on:
     - noalt_calling
     variantcaller:

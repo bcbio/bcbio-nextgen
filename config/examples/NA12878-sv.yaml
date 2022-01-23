@@ -10,10 +10,10 @@ details:
 - algorithm:
     aligner: bwa
     align_split_size: 5000000
+    exclude_regions: [lcr]
     recalibrate: false
     realign: false
     variantcaller: false
-    remove_lcr: true
     svcaller: [lumpy, manta, cnvkit, metasv, wham]
     svvalidate:
       DEL: ../input/giab-svclassify-deletions-2015-05-22.bed
