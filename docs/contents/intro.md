@@ -9,9 +9,9 @@ and compares them against reference materials from NIST's
 
 ### 1. Install bcbio python package and tools
 
-```shell
+```bash
 wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
-python3 bcbio_nextgen_install.py [bcbio_path] --tooldir=[tools_path]/tools --nodata --mamba
+python3 bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_path]/tools --nodata --mamba
 ```
 
 ### 2. Install hg38 reference genome and bwa indices
