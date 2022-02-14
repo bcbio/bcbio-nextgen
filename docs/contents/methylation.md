@@ -42,7 +42,7 @@ resources:
   trim_galore:
     options: ["--clip_r1 4", "--clip_r2 4", "--three_prime_clip_r1 4", "--three_prime_clip_r2 4"]
   bismark:
-    bismark_threads: 4
+    bismark_threads: 16
     bowtie_threads: 2
 upload:
   dir: ../final
