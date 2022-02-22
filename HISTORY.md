@@ -1,5 +1,6 @@
 ## 1.3.0 (in progress ~ Q2 2022)
 - custom genome installation bug fixed - thanks @mistrm82
+- fixed peddy report when tools_on: gvcf
 
 ## 1.2.9 (14 December 2021)
 - Fix vcf header bug: T/N SAMPLE lines are back - needed for import to SolveBio
