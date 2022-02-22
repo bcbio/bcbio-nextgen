@@ -59,6 +59,7 @@ This is large whole genome analysis and the timing and disk space requirements f
 - [validation of germline DEL with HuRef benchmark](https://github.com/bcbio/bcbio_validations/blob/master/huref_sv/README.md)
 
 ## References
+- [Cleal.Baird.2022.Dysgu: efficient structural variant calling using short or long reads](https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac039/6517943?login=false), [svbench](https://github.com/kcleal/svbench)
 - [Sarwal et al 2020. A comprehensive benchmarking of WGS-based structural variant callers](https://www.biorxiv.org/content/10.1101/2020.04.16.045120v4.full.pdf)
 - [Kosugi et al 2019. Comprehensive evaluation of structural variation detection algorithms for whole genome sequencing](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1720-5)
 - See references to invidivual tools on the citations page.
