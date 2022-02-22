@@ -89,6 +89,17 @@ def run_peddy(samples, out_dir=None):
         return samples
     if file_exists(peddy_prefix + "-failed.log"):
         return samples
+    # peddy does not support gvcf
+    gvcf_safe = vcf_file
+    if "gvcf" in dd.get_tools_on(data):
+        vcf_for_peddy = utils.splitext_plus(vcf_file)[0] + ".for_peddy.vcf.gz"
+        cmd_gvcf2vcf = (f"gunzip -c {vcf_file} | "
+                        r"""awk '{if ($5!="<NON_REF>") print $0;}' | """
+                        r"""sed s/",<NON_REF>"// | """
+                        f"bgzip -c > {vcf_for_peddy}")
+        do.run(cmd_gvcf2vcf, "Converting GVCF to vcf")
+        vcfutils.tabix_index(vcf_for_peddy, data["config"])
+        gvcf_safe = vcf_for_peddy
     if not file_exists(peddy_report):
         ped_file = create_ped_file(samples, vcf_file, out_dir=out_dir)
         num_cores = dd.get_num_cores(data)
@@ -99,7 +110,7 @@ def run_peddy(samples, out_dir=None):
             sites_str = "--sites hg38" if dd.get_genome_build(data) == "hg38" else ""
             locale = utils.locale_export()
             cmd = ("{locale} {peddy} -p {num_cores} {sites_str} --plot --prefix {peddy_prefix_tx} "
-                   "{vcf_file} {ped_file} 2> {stderr_log}")
+                   "{gvcf_safe} {ped_file} 2> {stderr_log}")
             message = "Running peddy on {vcf_file} against {ped_file}."
             try:
                 do.run(cmd.format(**locals()), message.format(**locals()))
