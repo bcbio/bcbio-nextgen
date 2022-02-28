@@ -27,7 +27,7 @@ def is_sex(chrom):
     return chrom in ["X", "chrX", "Y", "chrY"]
 
 def is_mitochondrial(chrom):
-    return chrom in ["MT", "chrM", "chrMT"]
+    return chrom in ["MT", "chrM", "chrMT", "mitochondrion_genome"]
 
 def is_autosomal_or_x(chrom):
     return is_autosomal(chrom) or chrom in ["X", "chrX"]
