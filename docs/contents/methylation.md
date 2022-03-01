@@ -42,7 +42,7 @@ resources:
   trim_galore:
     options: ["--clip_r1 4", "--clip_r2 4", "--three_prime_clip_r1 4", "--three_prime_clip_r2 4"]
   bismark:
-    bismark_threads: 16
+    bismark_threads: 4
     bowtie_threads: 2
 upload:
   dir: ../final
@@ -58,8 +58,8 @@ upload:
 #SBATCH --partition=priority        # Partition (queue) priority
 #SBATCH --time=5-00:00              # Runtime in D-HH:MM format, 10:00:00 for hours
 #SBATCH --job-name=wgbs             # Job name
-#SBATCH -c 32		              	# cores
-#SBATCH --mem=100G                  # Memory
+#SBATCH -c 8		              	# cores
+#SBATCH --mem=50G                  # Memory
 #SBATCH --output=project_%j.out     # File to which STDOUT will be written, including job ID
 #SBATCH --error=project_%j.err      # File to which STDERR will be written, including job ID
 #SBATCH --mail-type=NONE            # Type of email notification (BEGIN, END, FAIL, ALL)
@@ -298,7 +298,7 @@ upload:
 There is an extensive discussion on Bismark and trim_galore performance, [Bismark github](https://github.com/FelixKrueger/Bismark/issues/96).
 We ran a test with NA12878 nebemseq data, 125 mln reads (72.5mln read pairs).
 We tested performance of bismark/bcbio using `--parallel` (bismark workers) and `-p` (bowtie threads) bismark settings.
-We measured the performance only of the alignment step using bcbio-nextgen-commands log timecodes. 16/2/100G RAM was an optimal parameters set, with other having 5X-10X longer runtimes. When running a cohort of samples ~50% passed with 16/2/100G, some processed broken bam files, re-running with 8/2/100G or 4/2/100G solved the issue, see more info [here](https://github.com/FelixKrueger/Bismark/issues/360). For Lambda Phage genome we re-used trimming step results and 4/2/30G settings.
+We measured the performance only of the alignment step using bcbio-nextgen-commands log timecodes. 16/2/100G RAM was an optimal parameters set, with other having 5X-10X longer runtimes. When running a cohort of samples ~50% passed with 16/2/100G, some processed broken bam files, re-running with 8/2/100G or 4/2/100G solved the issue, see more info [here](https://github.com/FelixKrueger/Bismark/issues/360). For Lambda Phage genome we re-used trimming step results and 4/2/30G settings. The allocated RAM depends on the sequencing depth. For ~40GB reads input (r1.fq.gz + r2.fq.gz) we used 50G RAM/4/2 bismark/8threads total. When running out of RAM, bismark could fail without giving a warning, and pipeline continues, which causes lower % mapping efficiency. When it happens, you'll see an error in the end of bcbio stderr from slurm. Use less cores and more RAM than, say 4/2/50G instead of 16/2/50G.
 
 bcbio.yaml:
 ```
