@@ -39,7 +39,6 @@ details:
     aligner: star
     strandedness: unstranded
     variantcaller: gatk-haplotype
-    jointcaller: gatk-haplotype-joint
     tools_off:
     - gatk4
   analysis: RNA-seq
