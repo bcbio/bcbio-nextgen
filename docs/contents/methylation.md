@@ -15,6 +15,24 @@ bcbio_nextgen.py upgrade \
 --aligners bismark
 ```
 
+### 2. (optional) Install phage Lambda genome
+phageL is often added to WGBS libraries as a spike-in to control the conversion ratio (phage DNA is unmethylated)
+- genome: https://www.ncbi.nlm.nih.gov/nuccore/J02459.1?report=fasta > lambda.fa
+- transcriptome: https://www.ncbi.nlm.nih.gov/nuccore/J02459.1?report=genbank (Send to -> Complete Record -> File > GFF3 > lambda.gff3)
+```bash
+gffread lambda.gff3 -T -o lambda.gtf
+
+bcbio_setup_genome.py \
+-f lambda.fa \
+-g lambda.gtf \
+-i seq bwa bowtie2 bismark \
+-n phage \
+-b lambda \
+--buildversion J02459_1 \
+-c 1
+```
+
+
 ### 2. Create bcbio project structure and download input fastq files
 This example run is based on data from [Encode](https://www.encodeproject.org/experiments/ENCSR890UQO/)
 
