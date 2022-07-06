@@ -131,6 +131,8 @@ def install_anaconda_python(args):
     """
     anaconda_dir = os.path.join(args.datadir, "anaconda")
     bindir = os.path.join(anaconda_dir, "bin")
+    # insert anaconda/bin the get python and conda from there
+    sys.path.insert(0, bindir)
     conda = os.path.join(bindir, "conda")
     if not os.path.exists(anaconda_dir) or not os.path.exists(conda):
         if os.path.exists(anaconda_dir):
