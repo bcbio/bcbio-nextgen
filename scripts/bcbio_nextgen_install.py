@@ -45,7 +45,7 @@ def main(args, sys_argv):
         print(f"Installing {conda_bin}")
         anaconda = install_mamba(anaconda, args)
         print("Installing conda-build")
-        subprocess.check_call([anaconda[conda_bin], "install", "--yes", "conda-build", "mamba=0.15.3"])
+        subprocess.check_call([anaconda[conda_bin], "install", "--yes", "conda-build", "mamba=0.24.0"])
         print("Installing bcbio-nextgen")
         bcbio = install_conda_pkgs(anaconda, args)
         bootstrap_bcbionextgen(anaconda, args)
