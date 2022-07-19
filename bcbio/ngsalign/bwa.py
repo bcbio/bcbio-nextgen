@@ -105,7 +105,7 @@ def _get_bwa_mem_cmd(data, out_file, ref_file, fastq1, fastq2="", with_hla=False
     # For UMI runs, pass along consensus tags
     c_tags = "-C" if "umi_bam" in data else ""
     pairing = "-p" if not fastq2 else ""
-    # Restrict seed occurances to 1/2 of default, manage memory usage for centromere repeats in hg38
+    # Restrict seed occurrences to 1/2 of default, manage memory usage for centromere repeats in hg38
     # https://sourceforge.net/p/bio-bwa/mailman/message/31514937/
     # http://ehc.ac/p/bio-bwa/mailman/message/32268544/
     mem_usage = "-c 250"
