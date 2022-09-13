@@ -111,11 +111,14 @@ For ChIP-seq, bcbio requires `batch` and `phenotype` in addition.
 
 However, please note that the `antibody` column should be added with caution.
 
-- Valid antibodies are: 
+- Valid broad antibodies are: 
 
-    {'h3k36me3', 'narrow', 'h3k4me1', 'h2afz', 'h3ac', 'h4k20me1', 'h3k4me3', 'h3k4me2', 
+    {'h3f3a', 'h3k27me3', 'h3k36me3', 'h3k4me1', 'h3k79me2', 'h3k79me3', 'h3k9me1', 'h3k9me2', 'h4k20me1', 'h3k9me3', 'broad'}
 
-    'h3k9ac', 'h3k79me2', 'h3k9me2', 'h3f3a', 'h3k79me3', 'h3k27me3', 'broad', 'h3k9me3', 'h3k9me1', 'h3k27ac'}. 
+- Valid narrow antibodies are: 
+
+    {'h2afz', 'h3ac', 'h3k27ac', 'h3k4me2', 'h3k4me3', 'h3k9ac', 'narrow'}
+
 
 If you know your antibody should be called with narrow or broad peaks, supply 'narrow' or 'broad' as the antibody.
 ```
