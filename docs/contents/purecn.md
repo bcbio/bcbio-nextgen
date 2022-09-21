@@ -89,7 +89,7 @@ $ bcbio_nextgen.py ../config/pon.yaml -n 20
 ```
 
 ### 4. Collect and save Normal DB and SNV PON
-Upon successfull bcbio run you may find resulting files in  `pon/final/[date]_pon`
+Upon successful bcbio run you may find resulting files in  `pon/final/[date]_pon`
 ```bash
 $ ls -1 pon/final/*_pon
 mapping_bias_hg38.rds
@@ -167,7 +167,7 @@ $ bcbio_nextgen.py ../config/ton.yaml -n 20
 ```
 
 ### 6. Collect PureCN results
-Upon successfull bcbio run PureCN results are saved in the folders of individual
+Upon successful bcbio run PureCN results are saved in the folders of individual
 samples
 ```
 $ ls -1 ton/final/sample1_T_FFPE/purecn

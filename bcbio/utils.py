@@ -339,14 +339,14 @@ def file_plus_index(fname):
         return [fname]
 
 def remove_plus(orig):
-    """Remove a fils, including biological index files.
+    """Remove a file, including biological index files.
     """
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
         if os.path.exists(orig + ext):
             remove_safe(orig + ext)
 
 def copy_plus(orig, new):
-    """Copy a fils, including biological index files.
+    """Copy a file, including biological index files.
     """
     for ext in ["", ".idx", ".gbi", ".tbi", ".bai"]:
         if os.path.exists(orig + ext) and (not os.path.lexists(new + ext) or not os.path.exists(new + ext)):

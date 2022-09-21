@@ -205,7 +205,7 @@ def split_snps_indels(orig_file, ref_file, config):
     return snp_file, indel_file
 
 def get_normal_sample(in_file):
-    """Retrieve normal sample if normal/turmor
+    """Retrieve normal sample if normal/tumor
     """
     with utils.open_gzipsafe(in_file) as in_handle:
         for line in in_handle:
