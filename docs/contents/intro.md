@@ -10,6 +10,8 @@ and compares them against reference materials from NIST's
 ### 1. Install bcbio python package and tools
 
 ```bash
+# make sure that bcbio installed python will be ahead of the system pythons/bcbio_installation/anaconda/bin:/bcbio_installation/tools/bin/bcbio_installation/anaconda/bin:/bcbio_installation/tools/bin
+export PATH=/bcbio_installation/anaconda/bin:/bcbio_installation/tools/bin:$PATH
 wget https://raw.github.com/bcbio/bcbio-nextgen/master/scripts/bcbio_nextgen_install.py
 python3 bcbio_nextgen_install.py [bcbio_path] --tooldir=[bcbio_path]/tools --nodata --mamba
 ```
