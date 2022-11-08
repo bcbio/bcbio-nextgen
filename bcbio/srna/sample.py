@@ -15,7 +15,7 @@ except ImportError:
                    " or add adapters: ['ADAPTER_SEQ'] to config file.")
     pass
 
-from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus)
+from bcbio.utils import (file_exists, append_stem, replace_directory, symlink_plus, safe_makedir)
 from bcbio.provenance import do
 from bcbio.distributed.transaction import file_transaction, tx_tmpdir
 from bcbio import utils
@@ -111,7 +111,7 @@ def sample_annotation(data):
     tools = dd.get_expression_caller(data)
     work_dir = os.path.join(dd.get_work_dir(data), "mirbase")
     out_dir = os.path.join(work_dir, names)
-    utils.safe_makedir(out_dir)
+    safe_makedir(out_dir)
     out_file = op.join(out_dir, names)
     if dd.get_mirbase_hairpin(data):
         mirbase = op.abspath(op.dirname(dd.get_mirbase_hairpin(data)))
@@ -141,7 +141,6 @@ def sample_annotation(data):
                                               op.join(dd.get_work_dir(data),
                                                       "mirdeep2", "novel"),
                                               data['config'])
-
     if "trna" in tools:
         data['trna'] = _mint_trna_annotation(data)
 
@@ -310,6 +309,7 @@ def _mint_trna_annotation(data):
     """
     name = dd.get_sample_name(data)
     work_dir = os.path.join(dd.get_work_dir(data), "trna_mint", name)
+    utils.safe_makedir(work_dir)
     if not dd.get_srna_mint_lookup(data):
         logger.info("There is no tRNA annotation to run MINTmap.")
         return work_dir
