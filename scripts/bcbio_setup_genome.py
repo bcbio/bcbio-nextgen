@@ -229,6 +229,8 @@ if __name__ == "__main__":
                         help="Add ERCC spike-ins.")
     parser.add_argument("--mirbase", help="species in mirbase for smallRNAseq data.")
     parser.add_argument("--srna_gtf", help="gtf to use for smallRNAseq data.")
+    parser.add_argument("--cloudbiolinux", help="Specify a cloudbiolinux git commit hash or tag to install",
+                        default="master")
     required = parser.add_argument_group('required named arguments')
     required.add_argument("--buildversion", required=True,
 	                      help=("String describing build of genome used. Examples: "
