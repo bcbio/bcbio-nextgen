@@ -166,6 +166,7 @@ LOOKUPS = {
     "vrn_file": {"keys": ["vrn_file"]},
     "exclude_regions": {"keys": ["config", "algorithm", "exclude_regions"], "default": [],
                         "always_list": True},
+    "bait_regions": {"keys": ["config", "algorithm", "bait_regions"]},
     "variant_regions": {"keys": ["config", "algorithm", "variant_regions"]},
     "variant_regions_merged": {"keys": ["config", "algorithm", "variant_regions_merged"]},
     "variant_regions_orig": {"keys": ["config", "algorithm", "variant_regions_orig"]},
