@@ -1,8 +1,8 @@
-version: 22
+version: 23
 
 aliases:
   ensembl: drosophila_melanogaster_vep_100_BDGP6.28
-  snpeff: BDGP6.86
+  snpeff: BDGP6.28.99
 
 srnaseq:
   srna_transcripts: ../srnaseq/srna-transcripts.gtf
