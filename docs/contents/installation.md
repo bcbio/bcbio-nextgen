@@ -1,6 +1,6 @@
 # Installation
 
-## Fresh installation (HPC cluster, server, AMI instance)
+## Fresh installation (HPC cluster, server, AMI instance, Linux only)
 
 ### 1. Install bcbio package and tools
 
@@ -117,42 +117,6 @@ Some useful arguments are:
     export PATH=/path_to_bcbio/anaconda/bin:/path_to_bcbio/tools/bin:$PATH
     ```
 * `--nodata` Do not install genome data.
-
-## On a Virtual Machine
-
-If you are looking to quickly try out bcbio-nextgen on your personal machine before installing it on your cluster, installing bcbio-nextgen on a virtual machine is easy using [Vagrant](https://www.vagrantup.com/).
-
-### macOS
-
-* Install [Git](https://git-scm.com/download/mac), [VirtualBox](https://download.virtualbox.org/virtualbox/6.1.6/VirtualBox-6.1.6-137129-OSX.dmg), and [Vagrant](https://releases.hashicorp.com/vagrant/2.2.7/vagrant_2.2.7_x86_64.dmg)
-* Download bcbio-nextgen and provision Vagrant VM:
-    ```shell
-    git clone git@github.com:bcbio/bcbio-nextgen.git
-    cd bcbio-nextgen
-    vagrant up
-    ```
-* Install bcbio-nextgen (this should take about 30 minutes):
-    ```shell
-    vagrant ssh
-    python3 /vagrant/scripts/bcbio_nextgen_install.py ~/local/share/bcbio --tooldir=~/local --nodata
-    ```
-Optional steps:
-* Inside the VM (`vagrant ssh`):
-  * Test your installation once it's complete:
-    ```shell
-    bcbio_nextgen.py --version
-    ```
-  * Set the time zone in the VM for easier log viewing, for example:
-    ```shell
-    sudo timedatectl set-timezone America/New_York
-    ```
-* Outside the VM:
-  * To make any additional data from the host available inside the VM (for example: reference genomes, pipeline inputs, etc) set `BCBIO_DATA_DIR` environment variable on the host to a directory that contains the data, for example:
-    ```shell
-    export BCBIO_DATA_DIR=~/biodata
-    vagrant reload
-    ```
-    This directory will be mounted inside Vagrant VM under `/data`
 
 ## Upgrade
 
