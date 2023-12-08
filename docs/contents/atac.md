@@ -1,22 +1,20 @@
 # ATAC-seq
 The ATAC-seq pipeline in bcbio follows recommendations from the [ENCODE ATAC-seq pipeline](https://www.encodeproject.org/atac-seq/) and [Yiwei Niu's excellent guide](https://yiweiniu.github.io/blog/2019/03/ATAC-seq-data-analysis-from-FASTQ-to-peaks/). 
 
-bcbio aligns the reads and cleans up the alignments, removing duplicates,
-multimappers and reads aligning to mitochondria. It then breaks up the BAM files
-into separate BAM files for nucleosome free (NF), mononucleosome (MN),
-dinucleosome (DN) and trinucleosome (TN) fractions and calls peaks separately on
-each fraction and also calls peaks on all of the fractions together.
+The following steps are taken within the bcbio pipeline:
 
-Consensus peaks of the nucleosome free peaks are created by choosing the peak
+* Aligns the reads
+* Cleans up the alignments by removing duplicates, multimappers and any reads aligning to mitochondria.
+* BAM files are then split into separate BAM files for nucleosome free (NF), mononucleosome (MN), dinucleosome (DN) and trinucleosome (TN) fractions
+* Peaks are called separately on each fraction and also calls peaks on all of the fractions together.
+* Consensus peaks of the nucleosome free peaks are created by choosing the peak
 with the highest score when peaks overlap, described more in depth in the
 [bedops
 documentation](https://bedops.readthedocs.io/en/latest/content/usage-examples/master-list.html).
-A matrix of peak counts is created with featureCounts that can be used with
+* A matrix of peak counts is created with featureCounts that can be used with
 downstream count-based differential expression callers like DESeq2/limma/edgeR.
 
 ENCODE quality control metrics and other quality control information is added to the [MultiQC](https://multiqc.info) report. A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
-
-For CHIP-seq analysis use this config: [chip_seq.yaml](https://github.com/bcbio/bcbio-nextgen/blob/master/config/examples/chip_seq.yaml).
 
 ## Description of example dataset
 We will be using [ENCSR312LQX](https://www.encodeproject.org/experiments/ENCSR312LQX) and
