@@ -3,10 +3,11 @@ The ATAC-seq pipeline in bcbio follows recommendations from the [ENCODE ATAC-seq
 
 The following steps are taken within the bcbio pipeline:
 
-* Aligns the reads
+* Trims reads prior to aligning them
 * Cleans up the alignments by removing duplicates, multimappers and any reads aligning to mitochondria.
 * BAM files are then split into separate BAM files for nucleosome free (NF), mononucleosome (MN), dinucleosome (DN) and trinucleosome (TN) fractions
 * Peaks are called separately on each fraction and also calls peaks on all of the fractions together.
+* Bigwig files are generated for the full BAM (all fractions together) and bedgraph (.bdg) files are generated for each fraction.
 * Consensus peaks of the nucleosome free peaks are created by choosing the peak
 with the highest score when peaks overlap, described more in depth in the
 [bedops
@@ -14,7 +15,12 @@ documentation](https://bedops.readthedocs.io/en/latest/content/usage-examples/ma
 * A matrix of peak counts is created with featureCounts that can be used with
 downstream count-based differential expression callers like DESeq2/limma/edgeR.
 
-ENCODE quality control metrics and other quality control information is added to the [MultiQC](https://multiqc.info) report. A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
+## QC
+
+### ENCODE quality control metrics and other quality control information is added to the [MultiQC](https://multiqc.info) report. 
+
+### ataqv
+A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
 
 ## Description of example dataset
 We will be using [ENCSR312LQX](https://www.encodeproject.org/experiments/ENCSR312LQX) and
@@ -84,46 +90,6 @@ hindbrain_rep2_R1.fastq.gz,hindbrain_rep2,hindbrain,rep2
 The only two fields required in this file are `samplename` and `description`, you can put whatever you want
 for the other columns. We recommend adding any additional metdata you know about the samples here.
 
-##### For ChIP-Seq
-```
-samplename,description,batch,phenotype,replicate,treatment,antibody
-Lib4.R1.bc.2.WTMTF2.fq,WTMTF2_1,pair1,chip,1,WT,narrow
-Lib9.R1R2.bc.19.WTMTF2.fq,WTMTF2_2,pair2,chip,2,WT,narrow
-Lib3.bc.1.WTH3K27ME3.fq,WTH3k27ME3_1,pair3,chip,1,WT,H3k27ME3
-Lib9.R1R2.bc.1.WTH3K27ME3.fq,WTH3k27ME3_2,pair4,chip,2,WT,H3k27ME3
-Lib2.bc.1.MKOFLAG.fq,MTF2KO_1,pair5,chip,1,MTF2KO,narrow
-Lib9.R1R2.bc.30.MKOFLAG.fq,MTF2KO_2,pair6,chip,2,MTF2KO,narrow
-Lib2.bc.2.MKOWTFLAG.fq,MTF2KO_WTRES_1,pair7,chip,1,MTF2KO_WTRES,narrow
-Lib9.R1R2.bc.31.MKOWTFLAG.fq,MTF2KO_WTRES_2,pair8,chip,2,MTF2KO_WTRES,narrow
-Lib2.bc.15.MKOMUTFLAG.fq,MTF2KO_MUTRES_1,pair9,chip,1,MTF2KO_MUTRES,narrow
-Lib9.R1R2.bc.32.MKOMUTFLAG.fq,MTF2KO_MUTRES_2,pair10,chip,2,MTF2KO_MUTRES,narrow
-Lib3.bc.7.EKOH3K27ME3.fq,EEDKO_1,pair11,chip,1,EEDKO,H3k27ME3
-Lib3.bc.8.EKOH3K27ME3.fq,EEDKO_2,pair12,chip,2,EEDKO,H3k27ME3
-Lib10.R1R2.bc.3.EKOWTRES.fq,EKOWT_1,pair13,chip,1,EKO_WT,H3k27ME3
-Lib10.R1R2.bc.5.EKOWTRES.fq,EKOWT_2,pair14,chip,2,EKO_WT,H3k27ME3
-Lib8.R1R2.bc.16.EKOMUTRES.fq,EKOMUT_1,pair15,chip,1,EKO_MUT,H3k27ME3
-Lib10.R1R2.bc.4.EKOMUTRES.fq,EKOMUT_2,pair16,chip,2,EKO_MUT,H3k27ME3
-Lib2.bc.14.INPUT.fq,input_global,pair1;pair2;pair3;pair4;pair5;pair6;pair7;pair8;pair9;pair10;pair11;pair12;pair13;pair14;pair15;pair16,input,1,WT,Input
-```
-For ChIP-seq, bcbio requires `batch` and `phenotype` in addition.
-
-However, please note that the `antibody` column should be added with caution.
-
-- Valid broad antibodies are: 
-
-    {'h3f3a', 'h3k27me3', 'h3k36me3', 'h3k4me1', 'h3k79me2', 'h3k79me3', 'h3k9me1', 'h3k9me2', 'h4k20me1', 'h3k9me3', 'broad'}
-
-- Valid narrow antibodies are: 
-
-    {'h2afz', 'h3ac', 'h3k27ac', 'h3k4me2', 'h3k4me3', 'h3k9ac', 'narrow'}
-
-
-If you know your antibody should be called with narrow or broad peaks, supply 'narrow' or 'broad' as the antibody.
-```
-Bcbio will call narrow peaks if you have a antibody column, but do not have a vaild antibody within that list.
-
-By default, you will get *.narrowPeak files if you do not have a antibody column.
-```
 
 ### 2. Generate YAML config file for analysis
 ```bash
