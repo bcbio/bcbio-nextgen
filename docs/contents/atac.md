@@ -15,19 +15,20 @@ documentation](https://bedops.readthedocs.io/en/latest/content/usage-examples/ma
 * A matrix of peak counts is created with featureCounts that can be used with
 downstream count-based differential expression callers like DESeq2/limma/edgeR.
 
-## QC
+**Quality control:**
 
-### ENCODE quality control metrics and other quality control information is added to the [MultiQC](https://multiqc.info) report. 
+* FastQC is run to assess per sample sequence quality levels
+* Samtools computes various alignment quality metrics
+* [ENCODE quality control metrics](https://www.encodeproject.org/data-standards/terms/#library) are computed for each sample and values are compared against the ATAC standards to categorize samples based on library complexity.
 
-### ataqv
+The quality control information from each of the above are aggregated into a single [MultiQC](https://multiqc.info) report. 
+
 A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
 
 ## Description of example dataset
 We will be using [ENCSR312LQX](https://www.encodeproject.org/experiments/ENCSR312LQX) and
 [ENCSR310MLB](https://www.encodeproject.org/experiments/ENCSR310MLB/) from the ENCODE project
-as our example datasets. These are P0 samples from the mouse hindbrain and mouse forebrain, each
-with a single replicate each. We'll use these samples to call differential affinity between the mouse 
-hindbrain and forebrain.
+as our example datasets. These are P0 samples from the mouse hindbrain and mouse forebrain, each with a single replicate each. We'll use these samples to call differential affinity between the mouse hindbrain and forebrain.
 
 ### 1. Download the example data and configuration files
 This downloads the input data, creates the project structure and example configuration files.
@@ -76,6 +77,12 @@ upload:
 
 ```bash
 wget --no-check-certificate http://s3.amazonaws.com/bcbio-nextgen/atac_userstory_data/hindbrain_forebrain.csv -O metadata/hindbrain_forebrain.csv
+
+--2023-12-13 22:23:52--  http://s3.amazonaws.com/bcbio-nextgen/atac_userstory_data/hindbrain_forebrain.csv
+Resolving s3.amazonaws.com (s3.amazonaws.com)... 52.217.230.0, 52.216.239.53, 52.217.224.136, ...
+Connecting to s3.amazonaws.com (s3.amazonaws.com)|52.217.230.0|:80... connected.
+HTTP request sent, awaiting response... 404 Not Found
+2023-12-13 22:23:52 ERROR 404: Not Found.
 ```
 
 #### For ATAC-Seq
@@ -87,8 +94,7 @@ forebrain_rep2_R1.fastq.gz,forebrain_rep2,forebrain,rep2
 hindbrain_rep1_R1.fastq.gz,hindbrain_rep1,hindbrain,rep1
 hindbrain_rep2_R1.fastq.gz,hindbrain_rep2,hindbrain,rep2
 ```
-The only two fields required in this file are `samplename` and `description`, you can put whatever you want
-for the other columns. We recommend adding any additional metdata you know about the samples here.
+The only two fields required in this file are `samplename` and `description`, you can put whatever you want for the other columns. The values provided in the description column are used to name the output files. We recommend adding any additional metdata you know about the samples here.
 
 
 ### 2. Generate YAML config file for analysis
@@ -100,9 +106,9 @@ In the result you should see a folder structure:
 ```
 hindbrain_forebrain
 |---config
-|---final
 |---work
 ```
+_The `final` folder will get created here once the bcbio run is complete._
 
 `hindbrain_forebrain/config/hindbrain_forebrain.yaml` is the main config file to run the bcbio project. You will
 see this file has a copy of the parameters in `atac-example.yaml` for each sample.
@@ -115,7 +121,7 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 ```
 
 ## Parameters
-* `peakcaller`: `[macs2]` bcbio just supports MACS2
+* `peakcaller`: `[macs2]` bcbio only supports MACS2 for ATAC-seq.
 * `aligner`: supports `bowtie2` and `bwa`. `bwa` will result in a superset of the peaks called by `bowtie2`.
 * `chip_method`: set to `atac` to run the ATAC-seq pipeline
 * `keep_duplicates`: do not remove duplicates before peak calling. Defaults to _False_.
@@ -156,7 +162,8 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 │   ├── macs2 -- contains peak calls for each fraction, including the full peak calls
 ```
 
-read.bam contains only uniquely mapped non-duplicated reads, see [bam cleaning function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/chipseq/__init__.py#L18). The stats in the `project/multiqc/multiqc_report.html` include all reads (duplicated, multimappers).
+* `ready.bam` contains only uniquely mapped non-duplicated reads, see [bam cleaning function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/chipseq/__init__.py#L18).
+* The stats in the `project/multiqc/multiqc_report.html` include all reads (duplicated, multimappers).
 
 ## Downstream analysis
 
@@ -202,18 +209,16 @@ can expect. As you can see, they can be all over the place.
 - [MultiQC report](http://atac-userstory.s3-website.us-east-2.amazonaws.com/multiqc_report.html)
 - [ataqv report](http://atac-userstory.s3-website.us-east-2.amazonaws.com)
 
-### Differential affinity analysis
-For doing differential affinity analysis we recommend loading the consensus peak
+### Differential accessibility analysis
+For a **simple two sample group comparison** (as we have in the user story) we recommend loading the consensus peak
 table from the `consensus/consensus.counts` file in the project directory. This
 is a table of counts per peak in the nucleosome-free fraction for each sample
 that you can use in any standard count-based differential expression tools like
 [DESeq2](
 https://bioconductor.org/packages/release/bioc/html/DESeq2.html)/[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html)/[limma](https://bioconductor.org/packages/release/bioc/html/limma.html).
-Often you will find tutorials using
-[DiffBind](https://bioconductor.org/packages/release/bioc/html/DiffBind.html)
-but that uses these callers under the hood, so you can just call them directly
-and skip an intermediate step if you want. Either way works. The DiffBind tutorials
-are great for understanding how to go about with your downstream analyses.
+
+If your dataset contains multiple samples groups, for which you plan to have multiple contrasts - the consensus matrix is not an ideal input. You will want to create your own consensus matrix using only the samples you are conisdering for the differential accessibility analysis. 
+
 
 #### hindbrain vs forebrain differential affinity reports
 - [RMarkdown](http://atac-userstory.s3-website.us-east-2.amazonaws.com/peaks.Rmd)
