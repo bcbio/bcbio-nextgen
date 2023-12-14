@@ -173,16 +173,22 @@ and at the **ataqv** report in the project directory under
 `ataqv/ataqv_report.html` have useful quality control information that you can
 use to help decide if your ATAC-seq project worked.
 
+**MultiQC**
+
 It is hard to give specific cutoffs of metrics to use since the kit, the sample
 material, the organism, the genome annotations and so on all affect all of the
 metrics. We generally look at the samples as a whole for an experiment and see
 if any of the samples are outliers in the important metrics. In the **MultiQC**
-report, we look at the percentage of reads in the peaks, the mapping percentage,
-the 
-[ENCODE library complexity statistics](https://www.encodeproject.org/data-standards/terms/) and the FastQC
-metrics to try to spot samples with problems.
+report, we look speicifically at:
 
-In the **ataqv** report, we look at the HQAA fragment length distribution plot.
+* the percentage of reads in the peaks
+* the mapping percentage
+* the [ENCODE library complexity statistics](https://www.encodeproject.org/data-standards/terms/)
+* the FastQC metrics 
+
+**ataqv**
+
+In the ataqv report, we look at the **HQAA fragment length distribution plot**.
 Ideally, this plot should show a periodic uptick every 200 bases, which
 corresponds to the different nucleosome fractions. The samples should be
 enriched for < 100 which is the nucleosome free fraction, 200 for the
@@ -191,15 +197,17 @@ trinucleosome fraction. Often you will not see this behavior though even in
 libraries that were successful. But if some of your samples have this and others
 do not, that is something to be concerned about.
 
-You should see an enrichment around the transcription start sites, if you are
-missing that then your experiment likely failed. The **peaks** table in the
-**tables** tab in the **ataqv** report has a measurement of the high quality
-autosomal alignments overlapping peaks, **ataqv** calculates this metric using
+Other impotrtant componentsofthe report include:
+
+* **TSS enrcihmment**: You should see an enrichment around the transcription start sites, if you are missing that then your experiment likely failed.
+* The **peaks** table in the **tables** tab in the ataqv report has a measurement of the high quality autosomal alignments overlapping peaks, **ataqv** calculates this metric using
 all of the peaks, not just the peaks from the nucleosome-free fraction, so this
-is useful to look at as well. See the [ataqv github
+is useful to look at as well.
+
+_See the [ataqv github
 repository](https://github.com/ParkerLab/ataqv/issues/13) for a discussion of
 the ranges of values you can expect to see for metrics in the **ataqv** report
-along with other values to look at that might be informative. The Parker lab
+along with other values to look at that might be informative._ The Parker lab
 reprocessed samples from many publications with **ataqv** and posted the reports
 [here](https://theparkerlab.med.umich.edu/data/porchard/ataqv-public-survey/)
 which is helpful to browse through to get an idea of what ranges of values you
@@ -217,7 +225,7 @@ that you can use in any standard count-based differential expression tools like
 [DESeq2](
 https://bioconductor.org/packages/release/bioc/html/DESeq2.html)/[edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html)/[limma](https://bioconductor.org/packages/release/bioc/html/limma.html).
 
-If your dataset contains multiple samples groups, for which you plan to have multiple contrasts - the consensus matrix is not an ideal input. You will want to create your own consensus matrix using only the samples you are conisdering for the differential accessibility analysis. 
+If your dataset contains multiple samples groups, for which you plan to have **multiple contrasts - the consensus matrix is not an ideal input**. You will want to create your own consensus matrix using only the samples you are conisdering for the differential accessibility analysis. 
 
 
 #### hindbrain vs forebrain differential affinity reports
