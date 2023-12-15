@@ -103,7 +103,7 @@ In the result you should see a folder structure:
 ```
 hindbrain_forebrain
 |---config
-|---work
+└── work
 ```
 _The `final` folder will get created here once the bcbio run is complete._
 
@@ -190,32 +190,25 @@ report, we look speicifically at:
 
 **ataqv**
 
-Here, we provide a [a quick video overview](https://www.dropbox.com/scl/fi/hzcfzj3fmm7e2a81bwhub/ataqv_walkthrough.mp4?rlkey=i3ae4glz3u18ufu37i5k140pg&dl=0) on interpreting the ataqv report.
+Here, we provide [a quick video overview](https://www.dropbox.com/scl/fi/hzcfzj3fmm7e2a81bwhub/ataqv_walkthrough.mp4?rlkey=i3ae4glz3u18ufu37i5k140pg&dl=0) on interpreting the ataqv report.
 
 In the ataqv report, we look at:
 
 * **HQAA fragment length distribution plot**.
 Ideally, this plot should show a periodic uptick every 200 bases, which
-corresponds to the different nucleosome fractions. The samples should be
-enriched for < 100 which is the nucleosome free fraction, 200 for the
-mononucleosome fraction, 400 for the dinucleosome fraction and 600 for the
-trinucleosome fraction. Often you will not see this behavior though even in
-libraries that were successful. But if some of your samples have this and others
-do not, that is something to be concerned about.
-* **TSS enrcihmment**: You should see an enrichment around the transcription start sites, if you are missing that then your experiment likely failed.
+corresponds to the different nucleosome fractions. Often you will not see this behavior though even in libraries that were successful. 
+* **TSS enrichment**: You should see an enrichment around the transcription start sites, if you are missing that then your experiment likely failed.
 * The **peaks** table in the **tables** tab in the ataqv report has a measurement of the high quality autosomal alignments overlapping peaks, **ataqv** calculates this metric using
 all of the peaks, not just the peaks from the nucleosome-free fraction, so this
 is useful to look at as well.
 
 Other useful references for ataqv:
 
-_See the [ataqv github
-repository](https://github.com/ParkerLab/ataqv/issues/13) for a discussion of
+* [ataqv github repository](https://github.com/ParkerLab/ataqv/issues/13) for a discussion of
 the ranges of values you can expect to see for metrics in the **ataqv** report
-along with other values to look at that might be informative._ The Parker lab
-reprocessed samples from many publications with **ataqv** and posted the reports
-[here](https://theparkerlab.med.umich.edu/data/porchard/ataqv-public-survey/)
-which is helpful to browse through to get an idea of what ranges of values you
+along with other values to look at that might be informative.
+* The Parker lab reprocessed samples from many publications with **ataqv** and posted the reports [here](https://theparkerlab.med.umich.edu/data/porchard/ataqv-public-survey/)
+ * These are helpful to browse through to get an idea of what ranges of values you
 can expect. As you can see, they can be all over the place.
 
 #### hindbrain vs forebrain QC reports
