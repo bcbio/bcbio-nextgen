@@ -3,11 +3,10 @@ The ATAC-seq pipeline in bcbio follows recommendations from the [ENCODE ATAC-seq
 
 The following steps are taken within the bcbio pipeline:
 
-* Trims reads prior to aligning them
 * Cleans up the alignments by removing duplicates, multimappers and any reads aligning to mitochondria.
 * BAM files are then split into separate BAM files for nucleosome free (NF), mononucleosome (MN), dinucleosome (DN) and trinucleosome (TN) fractions
 * Peaks are called separately on each fraction and also calls peaks on all of the fractions together.
-* Bigwig files are generated for the full BAM (all fractions together) and bedgraph (.bdg) files are generated for each fraction.
+* Bigwig (.bw) files are generated for the full BAM (all fractions together) and bedgraph (.bdg) files are generated for each fraction.
 * Consensus peaks of the nucleosome free peaks are created by choosing the peak
 with the highest score when peaks overlap, described more in depth in the
 [bedops
@@ -17,13 +16,11 @@ downstream count-based differential expression callers like DESeq2/limma/edgeR.
 
 **Quality control:**
 
-* FastQC is run to assess per sample sequence quality levels
-* Samtools computes various alignment quality metrics
-* [ENCODE quality control metrics](https://www.encodeproject.org/data-standards/terms/#library) are computed for each sample and values are compared against the ATAC standards to categorize samples based on library complexity.
-
-The quality control information from each of the above are aggregated into a single [MultiQC](https://multiqc.info) report. 
-
-A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
+* The quality control information from the tools listed below are aggregated into a single [MultiQC](https://multiqc.info) report. 
+  * FastQC is run to assess per sample sequence quality levels
+  * Samtools computes various alignment quality metrics
+  * [ENCODE quality control metrics](https://www.encodeproject.org/data-standards/terms/#library) are computed for each sample and values are compared against the ATAC standards to categorize samples based on library complexity.
+* A separate ATAC-seq specific quality control report is generated using [ataqv](https://github.com/ParkerLab/ataqv).
 
 ## Description of example dataset
 We will be using [ENCSR312LQX](https://www.encodeproject.org/experiments/ENCSR312LQX) and
@@ -132,7 +129,7 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 ### Project directory
 
 ```
-├── 2020-05-01_hindbrain_forebrain
+├── 2023-12-14_hindbrain_forebrain
 │   ├── ataqv
 │   │   ├── index.html -- QC report from ataqv
 │   ├── bcbio-nextgen-commands.log -- list of commands run by bcbio
@@ -145,9 +142,14 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 │   ├── multiqc
 │   │   ├── multiqc_report.html -- multiQC report with useful quality control metrics
 │   ├── programs.txt -- versions of programs run in the pipeline
+└── └── project-summary.yaml -- YAML description of project, with derived
+  metadata
 ```
 
 ### Sample directories
+In this directory you will find a number of different BAM files. This is because bcbio has run the alignment on the full sample and each of the individual fractions. The **full sample alignment is represented twice in this list**, which means that `-ready.bam` and `-full.bam` are the same file. It contains only uniquely mapped non-duplicated reads, see [bam cleaning function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/chipseq/__init__.py#L18).
+
+For more information on each output file and folder, please see the descriptions below.
 
 ```
 ├── forebrain_rep1
@@ -155,15 +157,13 @@ bcbio_nextgen.py ../config/hindbrain_forebrain.yaml -n 16
 │   ├── forebrain_rep1-full.bam -- all fraction alignments
 │   ├── forebrain_rep1-MN.bam -- mononucleosome alignments
 │   ├── forebrain_rep1-NF.bam -- nucleosome-free alignments
-│   ├── forebrain_rep1-ready.bam -- identifical to -full
+│   ├── forebrain_rep1-ready.bam -- identical to -full
 │   ├── forebrain_rep1-ready.bam.bai 
 │   ├── forebrain_rep1-ready.bw -- bigwig file of full alignments
 │   ├── forebrain_rep1-TN.bam -- trinucleosome alignments
-│   ├── macs2 -- contains peak calls for each fraction, including the full peak calls
+│   ├── macs2-- contains peak calls for each fraction, including the full peak calls
+└── └── qc -- folders containing QC results for the sample, which have been aggregated into the multiQC html report
 ```
-
-* `ready.bam` contains only uniquely mapped non-duplicated reads, see [bam cleaning function](https://github.com/bcbio/bcbio-nextgen/blob/master/bcbio/chipseq/__init__.py#L18).
-* The stats in the `project/multiqc/multiqc_report.html` include all reads (duplicated, multimappers).
 
 ## Downstream analysis
 
@@ -184,11 +184,17 @@ report, we look speicifically at:
 * the percentage of reads in the peaks
 * the mapping percentage
 * the [ENCODE library complexity statistics](https://www.encodeproject.org/data-standards/terms/)
-* the FastQC metrics 
+* the FastQC metrics
+
+**NOTE:** The stats in the `multiqc_report.html` is generated based on alignments pre-filtering. **The input BAM files include all reads (duplicated, multimappers)**.
 
 **ataqv**
 
-In the ataqv report, we look at the **HQAA fragment length distribution plot**.
+Here, we provide a [a quick video overview](https://www.dropbox.com/scl/fi/hzcfzj3fmm7e2a81bwhub/ataqv_walkthrough.mp4?rlkey=i3ae4glz3u18ufu37i5k140pg&dl=0) on interpreting the ataqv report.
+
+In the ataqv report, we look at:
+
+* **HQAA fragment length distribution plot**.
 Ideally, this plot should show a periodic uptick every 200 bases, which
 corresponds to the different nucleosome fractions. The samples should be
 enriched for < 100 which is the nucleosome free fraction, 200 for the
@@ -196,13 +202,12 @@ mononucleosome fraction, 400 for the dinucleosome fraction and 600 for the
 trinucleosome fraction. Often you will not see this behavior though even in
 libraries that were successful. But if some of your samples have this and others
 do not, that is something to be concerned about.
-
-Other impotrtant componentsofthe report include:
-
 * **TSS enrcihmment**: You should see an enrichment around the transcription start sites, if you are missing that then your experiment likely failed.
 * The **peaks** table in the **tables** tab in the ataqv report has a measurement of the high quality autosomal alignments overlapping peaks, **ataqv** calculates this metric using
 all of the peaks, not just the peaks from the nucleosome-free fraction, so this
 is useful to look at as well.
+
+Other useful references for ataqv:
 
 _See the [ataqv github
 repository](https://github.com/ParkerLab/ataqv/issues/13) for a discussion of
