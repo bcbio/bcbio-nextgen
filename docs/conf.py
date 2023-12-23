@@ -44,9 +44,9 @@ extensions = [
 # rather than 'path/to/file:heading'
 autosectionlabel_prefix_document = True
 
-source_suffix = {
-    '.md': 'markdown',
-}
+# source_suffix = {
+#    '.md': 'markdown',
+#}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['templates']
