@@ -1,5 +1,8 @@
 # Counting cells and transcripts for inDrops3 data
 
+**This user story is deprecated**, 
+please use [10X/Cell Ranger](https://www.10xgenomics.com/support/software/cell-ranger) instead.
+
 ## Workflow
 
 Bcbio installation paths in this workflow correspond to [O2 bcbio installation](https://wiki.rc.hms.harvard.edu/display/O2).
