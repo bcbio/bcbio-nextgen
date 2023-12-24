@@ -61,7 +61,7 @@ exclude_patterns = ['_build']
 
 
 # -- Options for HTML output -------------------------------------------------
-
+html_theme = 'sphinx_rtd_theme'
 # to use Read The Docs theme when building docs locally
 if not os.getenv('READTHEDOCS'):
     try:
