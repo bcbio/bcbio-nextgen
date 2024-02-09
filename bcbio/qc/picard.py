@@ -14,6 +14,7 @@ def run(bam_file, data, out_dir):
     ref_file = dd.get_ref_file(data)
     sample = dd.get_sample_name(data)
     target_file = dd.get_variant_regions(data) or dd.get_sample_callable(data)
+    bait_file = dd.get_bait_regions(data) or target_file
     broad_runner = broad.PicardCmdRunner("picard", data["config"])
     bam_fname = os.path.abspath(bam_file)
     path = os.path.dirname(bam_fname)
@@ -30,7 +31,7 @@ def run(bam_file, data, out_dir):
                 gen_metrics = PicardMetrics(broad_runner, tmp_dir)
                 gen_metrics.report(cur_bam, ref_file,
                                 bam.is_paired(bam_fname),
-                                target_file, target_file, None, data["config"])
+                                bait_file, target_file, None, data["config"])
         if utils.file_exists(hsmetric_file):
             do.run("sed -i 's/%s.bam//g' %s" % (out_base.replace(sample, ""), hsmetric_file), "")
         if utils.file_exists(hsinsert_file):
