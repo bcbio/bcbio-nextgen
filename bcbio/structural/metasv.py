@@ -4,7 +4,6 @@ https://github.com/chapmanb/metasv
 http://dx.doi.org/10.1093/bioinformatics/btv204
 """
 import os
-import sys
 
 from bcbio import utils
 from bcbio.provenance import do

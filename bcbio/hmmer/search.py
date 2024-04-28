@@ -6,8 +6,8 @@ From Nick Loman's EntrezAjax:
 
 https://github.com/nickloman/entrezajax
 """
-from __future__ import print_function
-from six.moves import urllib
+import urllib.parse
+import urllib.request
 import logging
 
 class SmartRedirectHandler(urllib.request.HTTPRedirectHandler):

@@ -3,7 +3,6 @@
 import os
 import shutil
 import subprocess
-import sys
 
 from bcbio import utils
 from bcbio.log import logger

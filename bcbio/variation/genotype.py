@@ -5,7 +5,6 @@ import collections
 import copy
 import pprint
 
-import six
 import toolz as tz
 
 from bcbio import bam, utils
@@ -294,7 +293,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
     """Split samples that potentially require multiple variant calling approaches.
     """
     callers = get_variantcaller(data, key, default, require_bam=require_bam)
-    if isinstance(callers, six.string_types):
+    if isinstance(callers, str):
         return [data]
     elif not callers:
         return []
@@ -309,7 +308,7 @@ def handle_multiple_callers(data, key, default=None, require_bam=True):
             # if splitting by variant caller, also split by jointcaller
             if key == "variantcaller":
                 jcallers = get_variantcaller(data, "jointcaller", [])
-                if isinstance(jcallers, six.string_types):
+                if isinstance(jcallers, str):
                     jcallers = [jcallers]
                 if jcallers:
                     base["config"]["algorithm"]["orig_jointcaller"] = jcallers

@@ -6,7 +6,6 @@ Modified from: https://github.com/vukasin/tornado-subprocess
 
 Copyright (c) 2012, Vukasin Toroman <vukasin@toroman.name>
 """
-from __future__ import print_function
 import subprocess
 import tornado.ioloop
 import time

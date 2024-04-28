@@ -4,7 +4,6 @@ Provides an automated way to generate a full set of analysis files from an inpu
 YAML template. Default templates are provided for common approaches which can be tweaked
 as needed.
 """
-from __future__ import print_function
 import collections
 import contextlib
 import copy
@@ -15,9 +14,9 @@ import fnmatch
 import itertools
 import os
 import shutil
-from six.moves import urllib
+import urllib.error
+import urllib.request
 
-import six
 import toolz as tz
 import yaml
 import sys
@@ -241,7 +240,7 @@ def _set_global_vars(metadata):
     fnames = collections.defaultdict(list)
     for sample in metadata.keys():
         for k, v in metadata[sample].items():
-            if isinstance(v, six.string_types) and os.path.isfile(v):
+            if isinstance(v, str) and os.path.isfile(v):
                 v = _expand_file(v)
                 metadata[sample][k] = v
                 fnames[v].append(k)
@@ -257,7 +256,7 @@ def _set_global_vars(metadata):
     #         global_vars[name] = fname
     # for sample in metadata.keys():
     #     for k, v in metadata[sample].items():
-    #         if isinstance(v, six.string_types) and v in global_var_sub:
+    #         if isinstance(v, str) and v in global_var_sub:
     #             metadata[sample][k] = global_var_sub[v]
     return metadata, global_vars
 
@@ -267,7 +266,7 @@ def _clean_string(v, sinfo):
     if isinstance(v, (list, tuple)):
         return [_clean_string(x, sinfo) for x in v]
     else:
-        assert isinstance(v, six.string_types), v
+        assert isinstance(v, str), v
         try:
             if hasattr(v, "decode"):
                 return str(v.decode("ascii"))
@@ -499,7 +498,7 @@ def _convert_to_relpaths(data, work_dir):
     data["files"] = [os.path.relpath(f, work_dir) for f in data["files"]]
     for topk in ["metadata", "algorithm"]:
         for k, v in data[topk].items():
-            if isinstance(v, six.string_types) and os.path.isfile(v) and os.path.isabs(v):
+            if isinstance(v, str) and os.path.isfile(v) and os.path.isabs(v):
                 data[topk][k] = os.path.relpath(v, work_dir)
     return data
 

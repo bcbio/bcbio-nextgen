@@ -2,7 +2,6 @@
 """
 import os
 
-import six
 import toolz as tz
 
 from bcbio import utils
@@ -79,7 +78,7 @@ def _fill_file_path(line, data):
                 f = _find_file(x, target)
                 if f:
                     return f
-        elif isinstance(xs, six.string_types) and os.path.exists(xs) and xs.endswith("/%s" % target):
+        elif isinstance(xs, str) and os.path.exists(xs) and xs.endswith("/%s" % target):
             return xs
     orig_file = line.split("=")[-1].replace('"', '').strip()
     full_file = _find_file(data, os.path.basename(orig_file))

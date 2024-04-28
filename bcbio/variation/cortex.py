@@ -7,7 +7,6 @@ prediction.
 
 http://cortexassembler.sourceforge.net/index_cortex_var.html
 """
-from __future__ import print_function
 import os
 import glob
 import subprocess

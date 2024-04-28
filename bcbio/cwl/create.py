@@ -1,6 +1,5 @@
 """Create Common Workflow Language (CWL) runnable files and tools from a world object.
 """
-from __future__ import print_function
 import collections
 import copy
 import dateutil
@@ -12,7 +11,6 @@ import os
 import tarfile
 
 import requests
-import six
 import toolz as tz
 import yaml
 
@@ -402,7 +400,7 @@ def _get_cur_remotes(path):
     elif isinstance(path, dict):
         for v in path.values():
             cur_remotes |= _get_cur_remotes(v)
-    elif path and isinstance(path, six.string_types):
+    elif path and isinstance(path, str):
         if path.startswith(tuple(INTEGRATION_MAP.keys())):
             cur_remotes.add(INTEGRATION_MAP.get(path.split(":")[0] + ":"))
     return cur_remotes
@@ -624,7 +622,7 @@ def _get_avro_type(val):
     elif val is None:
         return ["null"]
     # encode booleans as string True/False and unencode on other side
-    elif isinstance(val, bool) or isinstance(val, six.string_types) and val.lower() in ["true", "false", "none"]:
+    elif isinstance(val, bool) or isinstance(val, str) and val.lower() in ["true", "false", "none"]:
         return ["string", "null", "boolean"]
     elif isinstance(val, int):
         return "long"
@@ -747,7 +745,7 @@ def _item_to_cwldata(x, get_retriever, indexes=None):
     """
     if isinstance(x, (list, tuple)):
         return [_item_to_cwldata(subx, get_retriever) for subx in x]
-    elif (x and isinstance(x, six.string_types) and
+    elif (x and isinstance(x, str) and
           (((os.path.isfile(x) or os.path.isdir(x)) and os.path.exists(x)) or
            objectstore.is_remote(x))):
         if _file_local_or_remote(x, get_retriever):

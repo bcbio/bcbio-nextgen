@@ -1,7 +1,6 @@
 """
 perform exon-level counting using DEXSeq
 """
-import sys
 import os
 from bcbio.utils import R_sitelib, file_exists, safe_makedir, which
 from bcbio.distributed.transaction import file_transaction

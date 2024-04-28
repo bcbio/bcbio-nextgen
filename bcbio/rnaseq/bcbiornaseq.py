@@ -10,7 +10,6 @@ from datetime import datetime as dt
 from pathlib import Path
 from bcbio.log import logger
 
-import six
 
 
 def make_bcbiornaseq_object(data):
@@ -185,7 +184,7 @@ def _quotestring(string, double=True):
 
 def _list2Rlist(xs):
     """ convert a python list to an R list """
-    if isinstance(xs, six.string_types):
+    if isinstance(xs, str):
         xs = [xs]
     rlist = ",".join([_quotestring(x) for x in xs])
     return "c(" + rlist + ")"

@@ -3,7 +3,6 @@
 Enables automated installation tool and in-place updates to install additional
 data and software.
 """
-from __future__ import print_function
 import argparse
 import collections
 import contextlib
@@ -17,9 +16,8 @@ import shutil
 import subprocess
 import sys
 import glob
+import urllib.request
 
-import six
-from six.moves import urllib
 import toolz as tz
 import yaml
 

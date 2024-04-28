@@ -3,7 +3,6 @@ calculate coverage across a list of regions
 """
 import os
 
-import six
 import pandas as pd
 import pybedtools
 
@@ -121,9 +120,9 @@ def plot_multiple_regions_coverage(samples, out_file, data, region_bed=None, ste
         return out_file
     in_bams = [dd.get_align_bam(x) for x in samples]
     samplenames = [dd.get_sample_name(x) for x in samples]
-    if isinstance(region_bed, six.string_types):
+    if isinstance(region_bed, str):
         region_bed = pybedtools.BedTool(region_bed)
-    if isinstance(stem_bed, six.string_types):
+    if isinstance(stem_bed, str):
         stem_bed = pybedtools.BedTool(stem_bed)
     if stem_bed is not None:  # tabix indexed bedtools eval to false
         stem_bed = stem_bed.tabix()

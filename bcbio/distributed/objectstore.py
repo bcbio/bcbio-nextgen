@@ -13,7 +13,6 @@ import sys
 import time
 import zlib
 
-import six
 
 from bcbio.distributed.transaction import file_transaction
 from bcbio.provenance import do
@@ -23,8 +22,7 @@ SUPPORTED_REMOTES = ("s3://",)
 BIODATA_INFO = {"s3": "s3://biodata/prepped/{build}/{build}-{target}.tar.gz"}
 REGIONS_NEWPERMS = {"s3": ["eu-central-1"]}
 
-@six.add_metaclass(abc.ABCMeta)
-class FileHandle(object):
+class FileHandle(metaclass=abc.ABCMeta):
 
     """Contract class for the file handle."""
 
@@ -221,8 +219,7 @@ class BlobHandle(FileHandle):
         pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class StorageManager(object):
+class StorageManager(metaclass=abc.ABCMeta):
 
     """The contract class for all the storage managers."""
 

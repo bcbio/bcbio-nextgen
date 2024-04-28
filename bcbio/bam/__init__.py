@@ -1,6 +1,5 @@
 """Functionality to query and extract information from aligned BAM files.
 """
-from __future__ import print_function
 import collections
 import os
 import signal
@@ -10,7 +9,7 @@ import numpy
 import pybedtools
 import pysam
 import toolz as tz
-from six.moves import zip_longest
+from itertools import zip_longest
 
 from bcbio import broad, utils
 from bcbio.bam import ref

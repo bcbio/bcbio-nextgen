@@ -2,6 +2,7 @@
 """
 import os
 import gzip
+import sys
 from distutils.version import LooseVersion
 
 from bcbio import broad, utils
