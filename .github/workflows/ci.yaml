@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        include:
+          - name: Variant standard
+            env:
+              BCBIO_DOCKER_PRIVILEGED: True
+              ARVADOS_API_HOST: qr1hi.arvadosapi.com
+
+          - name: Variant CWL
+
+          - name: RNA-seq CWL
+
+    env:
+      ANACONDA_INSTALL_DIR: ~/install/bcbio-vm/anaconda
+
+    steps:
+      - name: Check if only Markdown files changed
+        run: |
+          if ! git diff --name-only ${{ github.event.before }}..${{ github.sha }} | grep -qvE '(.md)'
+          then
+            echo "Not running CI since only docs were changed"
+            exit 0
+          fi
+
+      - name: Update packages and install Miniconda
+        run: |
+          sudo apt update
+          wget --progress=dot:giga https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-Linux-x86_64.sh
+          bash Miniconda3-py37_4.8.2-Linux-x86_64.sh -b -p ${{ env.ANACONDA_INSTALL_DIR }}
+
+      - name: Install bcbio-nextgen and bcbio-nextgen-vm
+        run: |
+          export PATH=${{ env.ANACONDA_INSTALL_DIR }}/bin:$PATH
+          conda install --yes nomkl
+          conda install --yes -c conda-forge -c bioconda bcbio-nextgen python=3
+          conda install --yes -c conda-forge -c bioconda bcbio-nextgen-vm python=3
+          conda clean --yes --tarballs --index-cache
+          rm -rf ${{ env.ANACONDA_INSTALL_DIR }}/pkgs/qt-*
+          du -sch ${{ env.ANACONDA_INSTALL_DIR }}/pkgs/* | sort -h
+
+      - name: Update bcbio-nextgen code
+        run: |
+          rm -rf ${{ env.ANACONDA_INSTALL_DIR }}/lib/python*/site-packages/bcbio
+          rm -rf ${{ env.ANACONDA_INSTALL_DIR }}/lib/python*/site-packages/bcbio_nextgen-*
+          ${{ env.ANACONDA_INSTALL_DIR }}/bin/python setup.py install
+
+      - name: Variant tests
+        if: matrix.name == 'Variant standard' || matrix.name == 'Variant CWL'
+        run: |
+          docker pull quay.io/bcbio/bcbio-vc
+          docker images
+          bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-vc
+          py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s
+          docker ps -a -q | xargs --no-run-if-empty docker rm
+          docker rmi -f quay.io/bcbio/bcbio-vc
+          docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
+
+      - name: RNA-seq tests
+        if: matrix.name == 'RNA-seq CWL'
+        run: |
+          docker pull quay.io/bcbio/bcbio-rnaseq
+          docker images
+          bcbio_vm.py devel setup_install -i quay.io/bcbio/bcbio-rnaseq
+          py.test -p no:cacheprovider -p no:stepwise tests/bcbio_vm -v -s
+          docker ps -a -q | xargs --no-run-if-empty docker rm
+          docker rmi -f quay.io/bcbio/bcbio-rnaseq
+          docker images | grep '<none>' | awk '{print $3}' | xargs --no-run-if-empty docker rmi
+
+      - name: Cleanup
+        run: df -h
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Build failed"
+
