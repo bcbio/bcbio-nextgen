@@ -3,7 +3,6 @@
 Required configurable variables in upload:
   dir
 """
-from __future__ import print_function
 import collections
 import os
 import shutil

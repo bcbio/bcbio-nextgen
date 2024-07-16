@@ -6,7 +6,6 @@ import csv
 import glob
 import os
 import re
-import sys
 import shutil
 
 import toolz as tz

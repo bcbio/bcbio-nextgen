@@ -3,7 +3,6 @@
 Handles wrapping and integrating with multiple tools making it easier
 to run bcbio in a standard way in many environments.
 """
-from __future__ import print_function
 import glob
 import json
 import os

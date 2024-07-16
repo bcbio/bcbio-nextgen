@@ -1,7 +1,6 @@
 import os
 import glob
 import subprocess
-import sys
 
 from bcbio import utils
 from bcbio.provenance import do

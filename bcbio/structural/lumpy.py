@@ -9,7 +9,6 @@ import os
 import re
 import subprocess
 
-import six
 import vcf
 
 from bcbio import utils
@@ -95,10 +94,7 @@ def _prepare_smoove_bams(full_bams, sr_bams, disc_bams, items, tx_work_dir):
     return out
 
 def _allowed_errors(msg):
-    if six.PY3:
-        msg = str(msg)
-    else:
-        msg = unicode(msg).encode("ascii", "replace")
+    msg = str(msg)
     allowed = ["covmed: not enough reads to sample for bam stats",
                "missing pair end parameters:",
                "mean stdev read_length min_non_overlap"]

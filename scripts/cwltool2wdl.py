@@ -22,7 +22,6 @@ Needed for WDL finalization to support bcbio:
 - Associate secondary files (like `bai`, `tbi`) with primary file ('bam`, 'vcf.gz`)
   https://github.com/broadinstitute/cromwell/issues/2269
 """
-from __future__ import print_function
 import collections
 import os
 import subprocess
@@ -233,7 +232,7 @@ def _variable_type_to_read_fn(vartype, records):
     return fn_map[vartype]
 
 def _arg_to_dict(x, requirements):
-    if isinstance(x, basestring):
+    if isinstance(x, str):
         return {"prefix": "", "position": None, "value": x}
     elif isinstance(x, dict) and "valueFrom" in x and x["valueFrom"].startswith("sentinel_runtime"):
         for r in requirements:

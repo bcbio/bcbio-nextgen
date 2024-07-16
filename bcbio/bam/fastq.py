@@ -1,8 +1,6 @@
 """Utilities for working with fastq files.
 """
 
-import six
-from six.moves import zip
 from itertools import product
 import os
 import random
@@ -250,7 +248,7 @@ def downsample(f1, f2, N, quick=False):
     out_files = (outf1, outf2) if outf2 else (outf1)
 
     with file_transaction(out_files) as tx_out_files:
-        if isinstance(tx_out_files, six.string_types):
+        if isinstance(tx_out_files, str):
             tx_out_f1 = tx_out_files
         else:
             tx_out_f1, tx_out_f2 = tx_out_files

@@ -26,7 +26,6 @@ Usage:
      -s scheduler for ipython parallelization (lsf, sge, slurm, torque, pbspro)
      -q queue to submit jobs for ipython parallelization
 """
-from __future__ import print_function
 import os
 import argparse
 import sys

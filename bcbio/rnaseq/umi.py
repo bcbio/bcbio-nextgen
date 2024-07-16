@@ -24,7 +24,6 @@ from bcbio.bam.fastq import open_fastq
 from bcbio.log import logger
 from bcbio.rnaseq import gtf
 
-import six
 
 
 class SparseMatrix(object):
@@ -207,7 +206,7 @@ def filter_barcodes(data):
     bc2 = None
     bc3 = None
     umi_dir = os.path.join(dd.get_work_dir(data), "umis")
-    if isinstance(bc, six.string_types):
+    if isinstance(bc, str):
         bc1 = bc
     if len(bc) == 1:
         bc1 = bc[0]

@@ -11,7 +11,6 @@ import yaml
 
 import toolz as tz
 
-import six
 
 
 class CmdNotFound(Exception):
@@ -218,7 +217,7 @@ def _get_check_program_cmd(fn):
                 return apath
             if is_ok(os.path.join(adir, program)):
                 return os.path.join(adir, program)
-        raise CmdNotFound(" ".join(map(repr, (fn.__name__ if six.PY3 else fn.func_name, name, pconfig, default))))
+        raise CmdNotFound(" ".join(map(repr, (fn.__name__, name, pconfig, default))))
     return wrap
 
 @_get_check_program_cmd
@@ -227,7 +226,7 @@ def _get_program_cmd(name, pconfig, config, default):
     """
     if pconfig is None:
         return name
-    elif isinstance(pconfig, six.string_types):
+    elif isinstance(pconfig, str):
         return pconfig
     elif "cmd" in pconfig:
         return pconfig["cmd"]
@@ -241,7 +240,7 @@ def _get_program_dir(name, config):
     """
     if config is None:
         raise ValueError("Could not find directory in config for %s" % name)
-    elif isinstance(config, six.string_types):
+    elif isinstance(config, str):
         return config
     elif "dir" in config:
         return expand_path(config["dir"])
@@ -430,7 +429,7 @@ def use_vqsr(algs, call_file=None):
     coverage_intervals = set([])
     for alg in algs:
         callers = alg.get("variantcaller")
-        if isinstance(callers, six.string_types):
+        if isinstance(callers, str):
             callers = [callers]
         if not callers:  # no variant calling, no VQSR
             continue

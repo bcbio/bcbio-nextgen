@@ -13,7 +13,6 @@ import os
 import string
 import sys
 
-import six
 import toolz as tz
 import yaml
 from bcbio import install, utils, structural
@@ -70,7 +69,7 @@ def organize(dirs, config, run_info_yaml, sample_names=None, is_cwl=False,
         item["dirs"] = dirs
         if "name" not in item:
             item["name"] = ["", item["description"]]
-        elif isinstance(item["name"], six.string_types):
+        elif isinstance(item["name"], str):
             description = "%s-%s" % (item["name"], clean_name(item["description"]))
             item["name"] = [item["name"], description]
             item["description"] = description
@@ -346,11 +345,11 @@ def _clean_algorithm(data):
     for key in ["variantcaller", "jointcaller", "svcaller"]:
         val = tz.get_in(["algorithm", key], data)
         if val:
-            if not isinstance(val, (list, tuple)) and isinstance(val, six.string_types):
+            if not isinstance(val, (list, tuple)) and isinstance(val, str):
                 val = [val]
             # check for cases like [false] or [None]
             if isinstance(val, (list, tuple)):
-                if len(val) == 1 and not val[0] or (isinstance(val[0], six.string_types)
+                if len(val) == 1 and not val[0] or (isinstance(val[0], str)
                                                     and val[0].lower() in ["none", "false"]):
                     val = False
             data["algorithm"][key] = val
@@ -381,12 +380,12 @@ def _clean_background(data):
     if val:
         out = {}
         # old style specification, single string for variant
-        if isinstance(val, six.string_types):
+        if isinstance(val, str):
             out["variant"] = _file_to_abs(val, [os.getcwd()])
         elif isinstance(val, dict):
             for k, v in val.items():
                 if k in allowed_keys:
-                    if isinstance(v, six.string_types):
+                    if isinstance(v, str):
                         out[k] = _file_to_abs(v, [os.getcwd()])
                     else:
                         assert isinstance(v, dict)
@@ -408,7 +407,7 @@ def _clean_background(data):
 def _clean_characters(x):
     """Clean problem characters in sample lane or descriptions.
     """
-    if not isinstance(x, six.string_types):
+    if not isinstance(x, str):
         x = str(x)
     else:
         if not all(ord(char) < 128 for char in x):
@@ -822,9 +821,9 @@ def _file_to_abs(x, dnames, makedir=False):
     """
     if x is None or os.path.isabs(x):
         return x
-    elif isinstance(x, six.string_types) and objectstore.is_remote(x):
+    elif isinstance(x, str) and objectstore.is_remote(x):
         return x
-    elif isinstance(x, six.string_types) and x.lower() == "none":
+    elif isinstance(x, str) and x.lower() == "none":
         return None
     else:
         for dname in dnames:
@@ -843,7 +842,7 @@ def _normalize_files(item, fc_dir=None):
     """
     files = item.get("files")
     if files:
-        if isinstance(files, six.string_types):
+        if isinstance(files, str):
             files = [files]
         fastq_dir = flowcell.get_fastq_dir(fc_dir) if fc_dir else os.getcwd()
         files = [_file_to_abs(x, [os.getcwd(), fc_dir, fastq_dir]) for x in files]
@@ -961,7 +960,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
         if "upload" not in item and not is_cwl:
             upload = global_config.get("upload", {})
             # Handle specifying a local directory directly in upload
-            if isinstance(upload, six.string_types):
+            if isinstance(upload, str):
                 upload = {"dir": upload}
             if not upload:
                 upload["dir"] = "../final"
@@ -987,7 +986,7 @@ def _run_info_from_yaml(dirs, run_info_yaml, config, sample_names=None,
                              for f in item["files"]]
         elif "files" in item:
             del item["files"]
-        if item.get("vrn_file") and isinstance(item["vrn_file"], six.string_types):
+        if item.get("vrn_file") and isinstance(item["vrn_file"], str):
             item["vrn_file"] = genome.abs_file_paths(item["vrn_file"],
                                                      do_download=all(not x for x in integrations.values()))
             if os.path.isfile(item["vrn_file"]):
@@ -1113,7 +1112,7 @@ def _add_algorithm_defaults(algorithm, analysis, is_cwl):
             elif v is None:
                 algorithm[k] = []
         elif k in convert_to_single:
-            if v and not isinstance(v, six.string_types):
+            if v and not isinstance(v, str):
                 if isinstance(v, (list, tuple)) and len(v) == 1:
                     algorithm[k] = v[0]
                 else:
@@ -1132,7 +1131,7 @@ def _replace_global_vars(xs, global_vars):
     elif isinstance(xs, dict):
         final = {}
         for k, v in xs.items():
-            if isinstance(v, six.string_types) and v in global_vars:
+            if isinstance(v, str) and v in global_vars:
                 v = global_vars[v]
             final[k] = v
         return final

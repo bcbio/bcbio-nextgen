@@ -8,7 +8,6 @@ import tempfile
 
 import pybedtools
 import pysam
-import six
 import toolz as tz
 
 from bcbio import bam, broad, utils
@@ -251,7 +250,7 @@ def remove_exclude_regions(f):
     @functools.wraps(f)
     def wrapper(variant_regions, region, out_file, items=None, do_merge=True, data=None):
         region_bed = f(variant_regions, region, out_file, items, do_merge, data)
-        if region_bed and isinstance(region_bed, six.string_types) and os.path.exists(region_bed) and items:
+        if region_bed and isinstance(region_bed, str) and os.path.exists(region_bed) and items:
             for e in get_exclude_regions(items):
                 if e in exclude_fns:
                     region_bed = exclude_fns[e](region_bed, items)

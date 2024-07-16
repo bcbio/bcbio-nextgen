@@ -1,6 +1,5 @@
 """Run mirge tool"""
 import os
-import sys
 import shutil
 import glob
 from bcbio.distributed.transaction import tx_tmpdir

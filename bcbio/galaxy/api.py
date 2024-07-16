@@ -1,6 +1,7 @@
 """Access Galaxy NGLIMS functionality via the standard API.
 """
-from six.moves import urllib
+import urllib.parse
+import urllib.request
 import json
 import time
 

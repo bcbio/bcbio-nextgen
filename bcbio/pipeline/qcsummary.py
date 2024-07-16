@@ -3,6 +3,7 @@
 import collections
 import copy
 import csv
+import json
 import os
 
 import yaml
@@ -22,7 +23,6 @@ from bcbio.provenance import do
 from bcbio.rnaseq import gtf
 from bcbio.variation import damage, peddy, vcfutils, vcfanno
 
-import six
 
 
 # ## High level functions to generate summary
@@ -187,7 +187,7 @@ def _run_qc_tools(bam_file, data):
             # Check for files only output
             if "base" in out:
                 qc_files = out
-        elif out and isinstance(out, six.string_types) and os.path.exists(out):
+        elif out and isinstance(out, str) and os.path.exists(out):
             qc_files = {"base": out, "secondary": []}
         if not qc_files:
             qc_files = _organize_qc_files(program_name, cur_qc_dir)
@@ -315,7 +315,7 @@ def _merge_metadata(samples):
     sample_metrics = collections.defaultdict(dict)
     for s in samples:
         m = tz.get_in(['metadata'], s)
-        if isinstance(m, six.string_types):
+        if isinstance(m, str):
             m = json.loads(m)
         if m:
             for me in list(m.keys()):

@@ -8,7 +8,6 @@ Uses disambiguation scripts contributed by AstraZeneca, incorporated into
 bcbio-nextgen: https://github.com/mjafin/disambiguate
 """
 
-from __future__ import print_function
 import collections
 import copy
 import os
@@ -22,7 +21,6 @@ from bcbio.provenance import do
 from bcbio import bam
 
 
-import six
 
 
 def split(*items):
@@ -37,7 +35,7 @@ def split(*items):
                                         "base": True}
             out.append([data])
             # handle the instance where a single organism is disambiguated
-            if isinstance(dis_orgs, six.string_types):
+            if isinstance(dis_orgs, str):
                 dis_orgs = [dis_orgs]
             for dis_org in dis_orgs:
                 dis_data = copy.deepcopy(data)

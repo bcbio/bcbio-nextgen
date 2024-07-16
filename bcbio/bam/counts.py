@@ -3,7 +3,6 @@
 These are useful for plotting comparisons between BAM files to look at
 differences in defined or random regions.
 """
-from __future__ import print_function
 import random
 import collections
 

@@ -3,7 +3,6 @@ run the pizzly fusion caller for RNA-seq
 https://github.com/pmelsted/pizzly
 http://www.biorxiv.org/content/early/2017/07/20/166322
 """
-from __future__ import print_function
 
 import os
 

@@ -6,7 +6,6 @@ bcbio-nextgen. The defaults provide data files for human variant calling.
 
 Requires: git, wget, bgzip2, Python 3 or 2.7
 """
-from __future__ import print_function
 import argparse
 import collections
 import contextlib

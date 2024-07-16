@@ -1,5 +1,7 @@
 """Helpful utilities for building analysis pipelines.
 """
+
+import configparser
 import glob
 import gzip
 import os
@@ -15,7 +17,6 @@ import subprocess
 import sys
 import types
 
-import six
 import toolz as tz
 import yaml
 
@@ -284,7 +285,7 @@ def read_galaxy_amqp_config(galaxy_config, base_dir):
     """Read connection information on the RabbitMQ server from Galaxy config.
     """
     galaxy_config = add_full_path(galaxy_config, base_dir)
-    config = six.moves.configparser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(galaxy_config)
     amqp_config = {}
     for option in config.options("galaxy_amqp"):
@@ -379,15 +380,9 @@ def symlink_plus(orig, new):
 
 def open_gzipsafe(f, is_gz=False):
     if f.endswith(".gz") or is_gz:
-        if six.PY3:
-            return gzip.open(f, "rt", encoding="utf-8", errors="ignore")
-        else:
-            return gzip.open(f)
+        return gzip.open(f, "rt", encoding="utf-8", errors="ignore")
     else:
-        if six.PY3:
-            return open(f, encoding="utf-8", errors="ignore")
-        else:
-            return open(f)
+        return open(f, encoding="utf-8", errors="ignore")
 
 def is_empty_gzipsafe(f):
     h = open_gzipsafe(f)
@@ -467,8 +462,8 @@ def partition(pred, iterable, tolist=False):
     'Use a predicate to partition entries into false entries and true entries'
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
-    ifalse = six.moves.filterfalse(pred, t1)
-    itrue = six.moves.filter(pred, t2)
+    ifalse = itertools.filterfalse(pred, t1)
+    itrue = filter(pred, t2)
     if tolist:
         return list(ifalse), list(itrue)
     else:
@@ -572,7 +567,7 @@ def is_pair(arg):
     return is_sequence(arg) and len(arg) == 2
 
 def is_string(arg):
-    return isinstance(arg, six.string_types)
+    return isinstance(arg, str)
 
 
 def locate(pattern, root=os.curdir):

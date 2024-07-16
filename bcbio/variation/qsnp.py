@@ -3,7 +3,6 @@
 https://qcmg.org/bioinformatics/tiki-index.php?page=qSNP#EXAMPLES
 """
 
-from __future__ import print_function
 import os
 import shutil
 from re import sub
@@ -16,7 +15,6 @@ from bcbio.provenance import do
 from bcbio.variation import annotation, bedutils
 from bcbio.variation.vcfutils import get_paired_bams, bgzip_and_index, combine_variant_files, PairedData
 
-import six
 
 
 def is_installed(config):
@@ -87,7 +85,7 @@ def _clean_regions(items, region):
     with utils.tmpfile() as tx_out_file:
         target = subset_variant_regions(variant_regions, region, tx_out_file, items)
         if target:
-            if isinstance(target, six.string_types) and os.path.isfile(target):
+            if isinstance(target, str) and os.path.isfile(target):
                 target = _load_regions(target)
             else:
                 target = [target]

@@ -4,8 +4,7 @@ import collections
 import os
 import sys
 import uuid
-
-from six import StringIO
+from io import StringIO
 
 import tornado.gen
 import tornado.web

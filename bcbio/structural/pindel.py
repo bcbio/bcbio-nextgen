@@ -3,9 +3,7 @@
 http://gmt.genome.wustl.edu/packages/pindel/
 """
 
-from __future__ import print_function
 import os
-import six
 import time
 import shutil
 from bcbio import bam, utils, broad
@@ -15,7 +13,6 @@ from bcbio.pipeline.shared import subset_variant_regions, remove_lcr_regions
 from bcbio.variation.vcfutils import bgzip_and_index, get_paired_bams
 from bcbio.variation import annotation
 from bcbio.provenance import do
-from six.moves import zip
 
 def _pindel_options(items, config, out_file, region, tmp_path):
     """parse pindel options. Add region to cmd.
@@ -29,7 +26,7 @@ def _pindel_options(items, config, out_file, region, tmp_path):
     target = subset_variant_regions(variant_regions, region, out_file, items)
     opts = ""
     if target:
-        if isinstance(target, six.string_types) and os.path.isfile(target):
+        if isinstance(target, str) and os.path.isfile(target):
             target_bed = target
         else:
             target_bed = os.path.join(tmp_path, "tmp.bed")

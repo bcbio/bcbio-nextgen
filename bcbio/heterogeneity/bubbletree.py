@@ -3,7 +3,6 @@
 http://www.bioconductor.org/packages/release/bioc/html/BubbleTree.html
 http://www.bioconductor.org/packages/release/bioc/vignettes/BubbleTree/inst/doc/BubbleTree-vignette.html
 """
-from __future__ import print_function
 import collections
 import csv
 import os

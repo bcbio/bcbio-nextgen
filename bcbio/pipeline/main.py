@@ -2,7 +2,6 @@
 
 Handles running the full pipeline based on instructions
 """
-from __future__ import print_function
 from collections import defaultdict
 import copy
 import os

@@ -2,7 +2,9 @@
 """
 import os
 import glob
-from six.moves import urllib, http_cookiejar
+import urllib.parse
+import urllib.request
+import http.cookiejar
 import json
 
 def parse_dirname(fc_dir):
@@ -59,7 +61,7 @@ class GalaxySqnLimsApi:
     def __init__(self, base_url, user, passwd):
         self._base_url = base_url
         # build cookies so we keep track of being logged in
-        cj = http_cookiejar.LWPCookieJar()
+        cj = http.cookiejar.LWPCookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
         urllib.request.install_opener(opener)
         login = dict(email=user, password=passwd, login_button='Login')

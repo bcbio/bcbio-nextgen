@@ -4,7 +4,6 @@ Supported:
   oncofuse: http://www.unav.es/genetica/oncofuse.html
   github: https://github.com/mikessh/oncofuse
 """
-from __future__ import print_function
 import os
 import pysam
 import toolz as tz

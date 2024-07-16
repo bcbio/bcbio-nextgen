@@ -1,6 +1,5 @@
 """Integration with Galaxy nglims.
 """
-from __future__ import print_function
 import collections
 import copy
 import glob
@@ -9,7 +8,6 @@ import os
 import subprocess
 
 import joblib
-import six
 import yaml
 
 from bcbio import utils
@@ -106,7 +104,7 @@ def _select_default_algorithm(analysis):
 def _relative_paths(xs, base_path):
     """Adjust paths to be relative to the provided base path.
     """
-    if isinstance(xs, six.string_types):
+    if isinstance(xs, str):
         if xs.startswith(base_path):
             return xs.replace(base_path + "/", "", 1)
         else:

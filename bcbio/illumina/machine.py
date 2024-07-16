@@ -1,6 +1,5 @@
 """Support integration with Illumina sequencer machines.
 """
-from __future__ import print_function
 import glob
 import json
 import os
