@@ -7,6 +7,8 @@ that handles distributed execution, idempotent processing restarts and safe tran
 The goal is to provide a shared community resource that handles
 the data processing component of sequencing analysis, providing researchers with more time to focus on the downstream biology.
 
+**NOTE!!!! Please read the notice of [discontinuation of this project](https://github.com/bcbio/bcbio-nextgen/issues/3749) - 08-16-2024**
+
 # Contents
 
 ```{toctree}
