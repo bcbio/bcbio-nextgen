@@ -9,6 +9,8 @@ the data processing component of sequencing analysis, providing researchers with
 
 **NOTE!!!! Please read the notice of [discontinuation of this project](https://github.com/bcbio/bcbio-nextgen/issues/3749) - 08-16-2024**
 
+> In recent years, changes in personnel, advances in the field, and competing project commitments have made it increasingly challenging to support and continue the development and maintenance of bcbio. At the same time, Nextflow and the nf-core community have seen substantial growth, now hosting numerous globally-used bioinformatics pipelines. We are enthusiastic to join this larger community and to share our best practices within the Nextflow/nf-core framework. We have already contributed to the RNA-seq and small RNA-seq nf-core pipelines and plan to transition other bcbio analyses and new pipelines to nf-core.
+
 # Contents
 
 ```{toctree}
