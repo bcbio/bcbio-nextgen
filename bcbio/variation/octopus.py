@@ -6,7 +6,6 @@ import os
 import subprocess
 
 import pysam
-import six
 
 from bcbio import utils
 from bcbio.distributed.transaction import file_transaction
@@ -33,7 +32,7 @@ def _get_regions(region, out_file, items):
     vrs = bedutils.population_variant_regions(items)
     target = shared.subset_variant_regions(vrs, region, out_file, items=items, do_merge=True)
     if target:
-        if isinstance(target, six.string_types) and os.path.isfile(target):
+        if isinstance(target, str) and os.path.isfile(target):
             return "--regions-file %s" % target
         else:
             return "--regions %s" % bamprep.region_to_gatk(target)

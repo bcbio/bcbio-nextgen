@@ -2,7 +2,6 @@
 """
 Script to set up a custom genome for bcbio-nextgen
 """
-from __future__ import print_function
 
 from argparse import ArgumentParser
 import collections

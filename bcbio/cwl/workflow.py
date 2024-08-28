@@ -3,7 +3,6 @@
 import copy
 import pprint
 
-import six
 import toolz as tz
 
 from bcbio.pipeline import alignment
@@ -234,7 +233,7 @@ def _flatten_nested_input(v):
         for x in v["type"]:
             if isinstance(x, dict) and x["type"] == "array":
                 new_type = x["items"]
-            elif isinstance(x, six.string_types) and x == "null":
+            elif isinstance(x, str) and x == "null":
                 want_null = True
             else:
                 new_type = x
@@ -272,7 +271,7 @@ def _clean_output(v):
     return out
 
 def _get_string_vid(vid):
-    if isinstance(vid, six.string_types):
+    if isinstance(vid, str):
         return vid
     assert isinstance(vid, (list, tuple)), vid
     return "__".join(vid)
@@ -280,7 +279,7 @@ def _get_string_vid(vid):
 def _get_variable(vid, variables):
     """Retrieve an input variable from our existing pool of options.
     """
-    if isinstance(vid, six.string_types):
+    if isinstance(vid, str):
         vid = get_base_id(vid)
     else:
         vid = _get_string_vid(vid)
@@ -426,7 +425,7 @@ def _create_variable(orig_v, step, variables):
         v = _get_variable(orig_v["id"], variables)
     except ValueError:
         v = copy.deepcopy(orig_v)
-        if not isinstance(v["id"], six.string_types):
+        if not isinstance(v["id"], str):
             v["id"] = _get_string_vid(v["id"])
     for key, val in orig_v.items():
         if key not in ["id", "type"]:

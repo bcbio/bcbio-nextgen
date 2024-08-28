@@ -6,7 +6,6 @@ along with variant frequencies.
 https://github.com/morrislab/phylowgs
 http://genomebiology.com/2015/16/1/35
 """
-from __future__ import print_function
 import collections
 import os
 import sys

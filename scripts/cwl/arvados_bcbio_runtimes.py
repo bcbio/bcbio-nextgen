@@ -11,6 +11,7 @@ import operator
 import os
 import pprint
 import sys
+from functools import reduce
 
 import arrow
 

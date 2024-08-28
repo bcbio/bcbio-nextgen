@@ -10,9 +10,6 @@ import subprocess
 
 import toolz as tz
 
-import six
-from six.moves import zip
-
 from bcbio import broad, utils
 from bcbio.bam import ref
 from bcbio.distributed.multi import run_multicore, zeromq_aware_logging
@@ -376,7 +373,7 @@ def _sort_by_region(fnames, regions, ref_file, config):
         if fname not in added_fnames:
             if isinstance(region, (list, tuple)):
                 c, s, e = region
-            elif isinstance(region, six.string_types) and region.find(":") >= 0:
+            elif isinstance(region, str) and region.find(":") >= 0:
                 c, coords = region.split(":")
                 s, e = [int(x) for x in coords.split("-")]
             else:

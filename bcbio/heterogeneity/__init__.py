@@ -5,7 +5,6 @@ sub-clonal populations within a potentially mixed population. This attempts
 to infer these sub-clones to help improve variant calls and interpretation
 especially in complex cancer samples.
 """
-from __future__ import print_function
 import collections
 import os
 

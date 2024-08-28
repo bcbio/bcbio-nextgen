@@ -31,7 +31,6 @@ autopair assumes 3 sets of reads based on the way bcl2fastq exports index reads:
 If you're using a different approach to generate the UMIs, please
 maintain the same R1/R2/R3 naming scheme.
 """
-from __future__ import print_function
 import argparse
 import math
 import os

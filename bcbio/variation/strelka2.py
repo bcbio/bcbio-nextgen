@@ -2,7 +2,6 @@
 """
 import collections
 import os
-import six
 import sys
 import numpy as np
 
@@ -40,7 +39,7 @@ def get_region_bed(region, items, out_file, want_gzip=True):
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if not target:
         raise ValueError("Need BED input for strelka2 regions: %s %s" % (region, target))
-    if not isinstance(target, six.string_types) or not os.path.isfile(target):
+    if not isinstance(target, str) or not os.path.isfile(target):
         chrom, start, end = target
         target = "%s-regions.bed" % utils.splitext_plus(out_file)[0]
         with file_transaction(items[0], target) as tx_out_file:

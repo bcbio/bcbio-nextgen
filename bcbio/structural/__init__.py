@@ -16,7 +16,6 @@ from bcbio.structural import (battenberg, cn_mops, cnvkit, delly, gatkcnv, grids
 from bcbio.variation import validate as vcvalidate
 from bcbio.variation import vcfutils
 
-import six
 from functools import reduce
 
 
@@ -58,7 +57,7 @@ def get_svcallers(data):
     svs = data["config"]["algorithm"].get("svcaller")
     if svs is None:
         svs = []
-    elif isinstance(svs, six.string_types):
+    elif isinstance(svs, str):
         svs = [svs]
     return svs
 
@@ -193,7 +192,7 @@ def _batch_split_by_sv(samples, stage):
                 svcaller = tz.get_in(["config", "algorithm", "svcaller"], x)
                 batch = dd.get_batch(x) or dd.get_sample_name(x)
                 if stage in ["ensemble"]:  # no batching for ensemble methods
-                    if isinstance(batch, six.string_types) and batch != dd.get_sample_name(x):
+                    if isinstance(batch, str) and batch != dd.get_sample_name(x):
                         batch += "_%s" % dd.get_sample_name(x)
                     else:
                         batch = dd.get_sample_name(x)
@@ -375,7 +374,7 @@ def standardize_cnv_reference(data):
     """
     out = tz.get_in(["config", "algorithm", "background", "cnv_reference"], data, {})
     cur_callers = set(data["config"]["algorithm"].get("svcaller")) & _CNV_REFERENCE
-    if isinstance(out, six.string_types):
+    if isinstance(out, str):
         if not len(cur_callers) == 1:
             raise ValueError("Multiple CNV callers and single background reference for %s: %s" %
                                 data["description"], list(cur_callers))

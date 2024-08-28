@@ -10,7 +10,6 @@ splitting specific code.
 """
 import collections
 
-import six
 
 from bcbio import utils
 
@@ -60,7 +59,7 @@ def parallel_split_combine(args, split_fn, parallel_fn,
     split_args, combine_map, finished_out, extras = _get_split_tasks(args, split_fn, file_key,
                                                                      split_outfile_i)
     split_output = parallel_fn(parallel_name, split_args)
-    if isinstance(combiner, six.string_types):
+    if isinstance(combiner, str):
         combine_args, final_args = _organize_output(split_output, combine_map,
                                                     file_key, combine_arg_keys)
         parallel_fn(combiner, combine_args)

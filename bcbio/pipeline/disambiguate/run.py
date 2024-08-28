@@ -25,7 +25,6 @@ Included in bcbio-nextgen from: https://github.com/mjafin/disambiguate
 """
 
 
-from __future__ import print_function
 import sys, re, pysam
 from array import array
 from os import path, makedirs

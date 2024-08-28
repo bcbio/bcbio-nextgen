@@ -6,7 +6,6 @@ https://github.com/ekg/freebayes
 import os
 import sys
 
-import six
 import toolz as tz
 
 from bcbio import utils
@@ -51,7 +50,7 @@ def _freebayes_options_from_config(items, config, out_file, region=None):
     no_target_regions = False
     target = shared.subset_variant_regions(variant_regions, region, out_file, items)
     if target:
-        if isinstance(target, six.string_types) and os.path.isfile(target):
+        if isinstance(target, str) and os.path.isfile(target):
             if os.path.getsize(target) == 0:
                 no_target_regions = True
             else:
