@@ -234,11 +234,11 @@ def main(args):
         if nat_cmp(nexthumread.qname,nextmouread.qname) == 0:
             humlist.append(nexthumread)
             nexthumread = read_next_reads(myHumanFile, humlist) # read more reads with same qname (the function modifies humlist directly)
-            if nexthumread == None:
+            if nexthumread is None:
                 EOFhuman = True
             moulist.append(nextmouread)
             nextmouread = read_next_reads(myMouseFile, moulist) # read more reads with same qname (the function modifies moulist directly)
-            if nextmouread == None:
+            if nextmouread is None:
                 EOFmouse = True
 
         # perform comparison to check mouse, human or ambiguous
